@@ -1,7 +1,8 @@
-// src/components/Sidebar.tsx
+"use client"; // Añade esta directiva
+
 import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
-import { Button } from './ui/Button'; 
+import { Button } from './ui/Button';
 import styles from './Sidebar.module.scss';
 
 export default function Sidebar() {
@@ -47,7 +48,7 @@ export default function Sidebar() {
             )}
           </div>
           <div className={styles.footer}>
-            <UserButton />
+            <UserButton afterSignOutUrl="/sign-in" />
           </div>
         </aside>
       )}
