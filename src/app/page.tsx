@@ -1,10 +1,12 @@
-import { Button } from '@/components/ui/Button';
-export default function Home() {
-  return (
-    <main>
-      <h1>Bienvenido a My Task App</h1>
-      <Button>Click me</Button>
-      <Button disabled>Disabled</Button>
-    </main>
-  );
+// src/app/page.tsx
+import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server'; 
+
+export default async function Home() {
+  const { userId } = await auth();
+  if (userId) {
+    redirect('/dashboard/tasks');
+  } else {
+    redirect('/sign-in');
+  }
 }
