@@ -153,4 +153,12 @@
 .clerkLogo {
   max-width: 100px;
   margin-bottom: 1rem;
+}.clerkFooterLink {
+  color: var(--primary);
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+  }
 }
