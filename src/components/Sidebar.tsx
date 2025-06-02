@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import { Button } from './ui/Button';
-import styles from './Sidebar.module.scss';
+import styles from './sidebar.module.scss';
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
