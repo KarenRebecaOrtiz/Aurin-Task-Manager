@@ -1,4 +1,3 @@
-// src/middleware.ts
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
@@ -8,6 +7,9 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  if (req.nextUrl.pathname === '/_not-found') {
+    return NextResponse.next();
+  }
   if (isProtectedRoute(req)) {
     const { userId } = await auth();
     if (!userId) {
