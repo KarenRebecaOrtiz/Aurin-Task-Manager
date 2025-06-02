@@ -1,5 +1,5 @@
 // src/app/globals.scss
-@import './styles/variables';
-@import './styles/reset';
-@import './styles/base';
-@import './styles/components/button';
+@use './styles/variables';
+@use './styles/reset';
+@use './styles/base';
+@use './styles/components/button';
