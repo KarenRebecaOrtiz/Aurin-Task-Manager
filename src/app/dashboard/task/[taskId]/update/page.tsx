@@ -1,9 +1,14 @@
-// src/app/dashboard/task/[taskId]/update/page.tsx
-export default function UpdateTaskPage({ params }: { params: { taskId: string } }) {
+export default function UpdateTaskPage({
+    params,
+    searchParams,
+  }: {
+    params: { taskId: string };
+    searchParams: { [key: string]: string | string[] | undefined };
+  }) {
     return (
       <div>
         <h1>Actualizar Tarea {params.taskId}</h1>
-        <p>Formulario para registrar progreso (opcional, probablemente en sidebar)</p>
+        <p>Formulario para registrar progreso</p>
       </div>
     );
   }
