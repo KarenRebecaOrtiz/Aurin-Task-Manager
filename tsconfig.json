@@ -28,13 +28,17 @@
       {
         "name": "next"
       }
+    ],
+    "types": [
+      "@clerk/nextjs"
     ]
   },
   "include": [
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "next-env.d.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "src/types/**/*"
   ],
   "exclude": [
     "node_modules"

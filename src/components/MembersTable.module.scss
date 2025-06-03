@@ -1,0 +1,422 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .searchWrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  
+  .searchInput {
+    width: 100%;
+    height: 32px;
+    padding: 4px 12px;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    border: 1px solid #E4E4E7;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    color: #52525B;
+    opacity: 0.5;
+  
+    &::placeholder {
+      color: #52525B;
+    }
+  
+    &.dark {
+      background: #3A3A3A;
+      border-color: #555555;
+      color: #D1D1D1;
+  
+      &::placeholder {
+        color: #A1A1AA;
+      }
+    }
+  }
+  
+  .inviteButtonWrapper {
+    display: flex;
+    align-items: center;
+  }
+  
+  .inviteButton {
+    height: 32px;
+    padding: 0 12px;
+    background: #0A0A0A;
+    border-radius: 6px;
+    border: 1px solid #E4E4E7;
+    color: white;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  
+    &.dark {
+      background: #1A1A1A;
+      color: #D1D1D1;
+    }
+  }
+  
+  .invitePopupOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .invitePopup {
+    padding: 34px 36px;
+    background: white;
+    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    max-width: 400px;
+    width: 100%;
+  
+    &.dark {
+      background: #2D2D2D;
+    }
+  }
+  
+  .inviteContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .inviteTitle {
+    text-align: center;
+    color: #0D0D0D;
+    font-size: 16px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  
+    &.dark {
+      color: #D1D1D1;
+    }
+  }
+  
+  .inviteSubtitle {
+    text-align: center;
+    color: black;
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+  
+    &.dark {
+      color: #D1D1D1;
+    }
+  }
+  
+  .inviteField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .inviteLabel {
+    color: #0D0D0D;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  
+    &.dark {
+      color: #D1D1D1;
+    }
+  }
+  
+  .inviteInput {
+    width: 279px;
+    padding: 8px 10px;
+    background: white;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
+    border-radius: 4px;
+    border: 1px solid #D8D8D8;
+    color: rgba(12.75, 12.75, 12.75, 0.6);
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  
+    &.dark {
+      background: #3A3A3A;
+      border-color: #555555;
+      color: #D1D1D1;
+    }
+  
+    &::placeholder {
+      color: rgba(12.75, 12.75, 12.75, 0.6);
+    }
+  }
+  
+  .inviteSubmitButton {
+    width: 100%;
+    padding: 8px 10px;
+    background: #0D0D0D;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
+    border-radius: 4px;
+    border: 1px solid #0D0D0D;
+    color: white;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+  
+    &.dark {
+      background: #1A1A1A;
+      border-color: #1A1A1A;
+      color: #D1D1D1;
+    }
+  }
+  
+  .profileImage {
+    border-radius: 9999px;
+    object-fit: cover;
+  }
+  
+  .actionContainer {
+    position: relative;
+    z-index: 10;
+  }
+  
+  .actionButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+    border: 1px solid #E4E4E7;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+  
+    &.dark {
+      background: #2D2D2D;
+      border-color: #555555;
+    }
+  }
+  
+  .dropdownHeader {
+    padding: 6px 8px;
+    border-bottom: 1px solid #E4E4E7;
+    display: flex;
+    align-items: center;
+  
+    &.dark {
+      border-color: #555555;
+    }
+  }
+  
+  .dropdownTitle {
+    color: #09090B;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+  
+    &.dark {
+      color: #D1D1D1;
+    }
+  }
+  
+  .dropdownItem {
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #E4E4E7;
+  
+    &:last-child {
+      border-bottom: none;
+    }
+  
+    &.dark {
+      border-color: #555555;
+    }
+  
+    &:hover {
+      background: #F7F7F7;
+  
+      &.dark {
+        background: #3A3A3A;
+      }
+    }
+  
+    > span {
+      color: #09090B;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+  
+      &.dark {
+        color: #D1D1D1;
+      }
+    }
+  }
+  
+  .deleteText {
+    color: #DC2626;
+  
+    &.dark {
+      color: #F87171;
+    }
+  }
+  
+  .profilePopupOverlay {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .profilePopup {
+    padding: 10px 15px 34px;
+    background: white;
+    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    max-width: 400px;
+    width: 100%;
+  
+    &.dark {
+      background: #2D2D2D;
+    }
+  }
+  
+  .closeButton {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  
+  .profileContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .profileTitle {
+    text-align: center;
+    color: #0D0D0D;
+    font-size: 16px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  
+    &.dark {
+      color: #D1D1D1;
+    }
+  }
+  
+  .profileAvatar {
+    border-radius: 9999px;
+    object-fit: cover;
+  }
+  
+  .profileUsername {
+    text-align: center;
+    color: #0D0D0D;
+    font-size: 16px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  
+    &.dark {
+      color: #D1D1D1;
+    }
+  }
+  
+  .profileField {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .profileLabel {
+    color: #52525B;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  
+    &.dark {
+      color: #A1A1AA;
+    }
+  }
+  
+  .profileValue {
+    color: rgba(12.75, 12.75, 12.75, 0.6);
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  
+    &.dark {
+      color: #D1D1D1;
+    }
+  }
+  
+  .confirmButton {
+    width: 279px;
+    padding: 8px 10px;
+    background: #0D0D0D;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
+    border-radius: 4px;
+    border: 1px solid #0D0D0D;
+    color: white;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+  
+    &.dark {
+      background: #1A1A1A;
+      border-color: #1A1A1A;
+      color: #D1D1D1;
+    }
+  }

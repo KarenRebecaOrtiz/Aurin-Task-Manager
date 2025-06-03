@@ -14,7 +14,7 @@ export default function SignInPage() {
           appearance={{
             elements: {
               formButtonPrimary: {
-                fontSize: 14,
+                fontSize: 18,
                 textTransform: 'none',
                 border: '1px solid #d3df48',
                 color: '#121212',
@@ -22,6 +22,15 @@ export default function SignInPage() {
                 '&:hover, &:focus, &:active': {
                   backgroundColor: '#ffffff',
                 },
+              },
+
+              input: {
+                color: '#ffffff',
+                backgroundColor: '#121212',
+                fontSize: '14px',
+              },
+              inputPlaceholder: {
+                color: '#999999', 
               },
 
               card: {     

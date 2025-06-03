@@ -2,16 +2,18 @@
 import { useUser, UserButton } from '@clerk/nextjs';
 import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 
 interface HeaderProps {
-  selectedContainer: 'tareas' | 'clientes' | 'miembros';
+  selectedContainer: 'tareas' | 'proyectos' | 'cuentas' | 'miembros';
 }
 
 const Header: React.FC<HeaderProps> = ({ selectedContainer }) => {
   const { user } = useUser();
   const userName = user?.firstName || 'Usuario';
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const welcomeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Verificar el tema solo en el cliente
@@ -19,14 +21,42 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer }) => {
     setIsDarkMode(savedTheme === 'dark');
   }, []);
 
+  useEffect(() => {
+    // Typewriter para "Te damos la bienvenida de nuevo, {userName}"
+    if (welcomeRef.current) {
+      const text = `Te damos la bienvenida de nuevo, ${userName}`;
+      welcomeRef.current.innerHTML = '';
+      // Dividir el texto en caracteres, preservando espacios
+      text.split('').forEach((char, index) => {
+        const span = document.createElement('span');
+        span.innerHTML = char === ' ' ? '&nbsp;' : char; // Usar &nbsp; para espacios
+        span.style.opacity = '0';
+        span.className = styles.typewriterChar; // Clase para control de estilo
+        welcomeRef.current!.appendChild(span);
+        gsap.to(span, {
+          opacity: 1,
+          duration: 0.05,
+          delay: index * 0.05,
+          ease: 'power1.in',
+        });
+      });
+    }
+
+    return () => {
+      gsap.killTweensOf(welcomeRef.current);
+    };
+  }, [userName]);
+
   const getSubtitle = () => {
     switch (selectedContainer) {
       case 'tareas':
         return 'Esta es una lista de tus tareas actuales';
-      case 'clientes':
-        return 'Aquí puedes ver y gestionar todos los clientes asociadas a tu organización.';
+      case 'proyectos':
+        return 'Aquí puedes gestionar los proyectos asignados a cada cuenta';
+      case 'cuentas':
+        return 'Aquí puedes ver y gestionar todas las cuentas asociadas a tu organización';
       case 'miembros':
-        return 'Aquí puedes consultar y gestionar todos los miembros de tu organización.';
+        return 'Aquí puedes consultar y gestionar todos los miembros de tu organización';
       default:
         return 'Esta es una lista de tus tareas actuales';
     }
@@ -47,10 +77,9 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer }) => {
         >
           <div
             data-layer="Te damos la bienvenida de nuevo"
+            ref={welcomeRef}
             className={`${styles.welcome} ${isDarkMode ? styles.dark : ''}`}
-          >
-            Te damos la bienvenida de nuevo, {userName}
-          </div>
+          />
         </div>
         <div
           data-layer="Text"
