@@ -1,4 +1,40 @@
-@use '../../app/styles/components/button';
 .button {
-  @extend .button;
+  padding: 6px 12px;
+  background-color: transparent;
+  border-radius: 2px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Urbanist', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0D0D0D;
+  transition: background-color 0.2s ease;
+
+  &.active {
+    background-color: #F7F7F7;
+  }
+
+  &:hover {
+    background-color: #E5E5E5;
+  }
+
+  &.theme-toggler {
+    padding: 0;
+    width: 21px;
+    height: 21px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+  }
+
+  &.dark {
+    color: #FFFFFF;
+    &.active {
+      background-color: #0D0D0D;
+    }
+    &:hover {
+      background-color: #0D0D0D;
+    }
+  }
 }

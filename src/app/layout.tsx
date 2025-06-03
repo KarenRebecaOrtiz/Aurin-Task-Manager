@@ -1,5 +1,5 @@
 import { type Metadata } from 'next';
-import { ClerkProvider, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { ClerkProvider, SignedIn, UserButton } from '@clerk/nextjs';
 import './globals.scss';
 
 export const metadata: Metadata = {
@@ -15,6 +15,12 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang='es'>
+        <head>
+          <link
+            href='https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700&display=swap'
+            rel='stylesheet'
+          />
+        </head>
         <body>
           <header style={{ padding: '1rem', textAlign: 'right' }}>
             <SignedIn>

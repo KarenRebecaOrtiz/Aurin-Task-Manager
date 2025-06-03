@@ -3,3 +3,30 @@
 @use './styles/reset';
 @use './styles/base';
 @use './styles/components/button';
+
+:root {
+    --background: #FFFFFF;
+    --text-primary: #0D0D0D;
+    --text-secondary: #71717A;
+    --button-bg: transparent;
+    --button-bg-active: #F7F7F7;
+    --button-bg-hover: #E5E5E5;
+    --header-bg: transparent;
+  }
+  
+  .dark {
+    --background: #0D0D0D;
+    --text-primary: #FFFFFF;
+    --text-secondary: #A1A1AA;
+    --button-bg: transparent;
+    --button-bg-active: #333333;
+    --button-bg-hover: #444444;
+    --header-bg: #ffffff;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Urbanist', sans-serif;
+    background: var(--background);
+    color: var(--text-primary);
+  }
