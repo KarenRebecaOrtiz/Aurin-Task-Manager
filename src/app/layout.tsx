@@ -3,7 +3,7 @@ import { ClerkProvider, SignedIn, UserButton } from '@clerk/nextjs';
 import './globals.scss';
 
 export const metadata: Metadata = {
-  title: 'Sodio Plattform',
+  title: 'Aurin Task Manager',
   description: 'Gestión de proyectos para tu equipo',
 };
 

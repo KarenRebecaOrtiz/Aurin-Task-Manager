@@ -6,10 +6,11 @@ import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import OnboardingStepper from '@/components/OnboardingStepper';
 import Selector from '@/components/Selector';
 import MembersTable from '@/components/MembersTable';
-import styles from '@/components/Table.module.scss';
+import ClientsTable from '@/components/ClientsTable';
+import styles from '@/components/TasksPage.module.scss';
 
 export default function TasksPage() {
-  const [selectedContainer, setSelectedContainer] = useState<'tareas' | 'proyectos' | 'cuentas' | 'miembros'>('miembros');
+  const [selectedContainer, setSelectedContainer] = useState<'tareas' | 'cuentas' | 'miembros'>('miembros');
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -20,7 +21,6 @@ export default function TasksPage() {
       { opacity: 0, y: 20 },
       { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
     );
-
     return () => {
       gsap.killTweensOf([headerRef.current, selectorRef.current, contentRef.current]);
     };
@@ -48,8 +48,7 @@ export default function TasksPage() {
       </div>
       <div ref={contentRef} className={styles.content}>
         {selectedContainer === 'tareas' && <div>Tareas (próximamente)</div>}
-        {selectedContainer === 'proyectos' && <div>Aquí puedes gestionar los proyectos asignados a cada cuenta</div>}
-        {selectedContainer === 'cuentas' && <div>Cuentas (próximamente)</div>}
+        {selectedContainer === 'cuentas' && <ClientsTable />}
         {selectedContainer === 'miembros' && <MembersTable />}
       </div>
     </div>

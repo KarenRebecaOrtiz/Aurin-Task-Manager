@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Table from './Table';
 import Image from 'next/image';
+import { gsap } from 'gsap';
 import styles from './MembersTable.module.scss';
+import { memo } from 'react';
 
 interface User {
   id: string;
@@ -23,6 +25,7 @@ const MembersTable = () => {
   const [isProfileOpen, setIsProfileOpen] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const actionMenuRef = useRef<HTMLDivElement>(null);
+  const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const profilePopupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,19 +50,40 @@ const MembersTable = () => {
     fetchUsers();
   }, []);
 
-  useEffect(() => {
-    const filtered = users.filter(
+  const memoizedFilteredUsers = useMemo(() => {
+    return users.filter(
       (user) =>
         user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.role.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    setFilteredUsers(filtered);
   }, [searchQuery, users]);
+
+  useEffect(() => {
+    setFilteredUsers(memoizedFilteredUsers);
+  }, [memoizedFilteredUsers]);
+
+  useEffect(() => {
+    if (isActionMenuOpen && actionMenuRef.current) {
+      gsap.fromTo(
+        actionMenuRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+      );
+    }
+  }, [isActionMenuOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
-        setIsActionMenuOpen(null);
+        let clickedOnActionButton = false;
+        actionButtonRefs.current.forEach(buttonRef => {
+          if (buttonRef.contains(event.target as Node)) {
+            clickedOnActionButton = true;
+          }
+        });
+        if (!clickedOnActionButton) {
+          setIsActionMenuOpen(null);
+        }
       }
       if (profilePopupRef.current && !profilePopupRef.current.contains(event.target as Node)) {
         setIsProfileOpen(null);
@@ -69,20 +93,24 @@ const MembersTable = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSort = (key: string) => {
+  const handleSort = useCallback((key: string) => {
     if (key === sortKey) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortKey(key);
       setSortDirection('asc');
     }
-  };
+  }, [sortKey, sortDirection]);
 
-  const handleActionClick = (userId: string) => {
-    setIsActionMenuOpen(isActionMenuOpen === userId ? null : userId);
-  };
+  const handleActionHover = useCallback((userId: string) => {
+    setIsActionMenuOpen(userId);
+  }, []);
 
-  const handleInviteSubmit = async (e: React.FormEvent) => {
+  const handleActionLeave = useCallback(() => {
+    setIsActionMenuOpen(null);
+  }, []);
+
+  const handleInviteSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const response = await fetch('/api/invite', {
@@ -98,14 +126,14 @@ const MembersTable = () => {
       console.error('Error sending invite:', error);
       alert('Error al enviar la invitación');
     }
-  };
+  }, [inviteEmail]);
 
-  const handleProfileClick = (userId: string) => {
+  const handleProfileClick = useCallback((userId: string) => {
     setIsProfileOpen(userId);
     setIsActionMenuOpen(null);
-  };
+  }, []);
 
-  const handleDeleteRequest = async (user: User) => {
+  const handleDeleteRequest = useCallback(async (user: User) => {
     try {
       const response = await fetch('/api/request-delete', {
         method: 'POST',
@@ -119,9 +147,9 @@ const MembersTable = () => {
       alert('Error al solicitar la eliminación');
     }
     setIsActionMenuOpen(null);
-  };
+  }, []);
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       key: 'imageUrl',
       label: '',
@@ -133,6 +161,7 @@ const MembersTable = () => {
           width={38}
           height={38}
           className={styles.profileImage}
+          onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
         />
       ),
     },
@@ -151,8 +180,19 @@ const MembersTable = () => {
       label: 'Acciones',
       width: '10%',
       render: (user: User) => (
-        <div className={styles.actionContainer}>
-          <button onClick={() => handleActionClick(user.id)} className={styles.actionButton}>
+        <div
+          className={styles.actionContainer}
+          onMouseEnter={() => handleActionHover(user.id)}
+          onMouseLeave={handleActionLeave}
+        >
+          <button
+            ref={(el) => {
+              if (el) actionButtonRefs.current.set(user.id, el);
+              else actionButtonRefs.current.delete(user.id);
+            }}
+            className={styles.actionButton}
+            aria-label="Abrir acciones"
+          >
             <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
           </button>
           {isActionMenuOpen === user.id && (
@@ -171,7 +211,7 @@ const MembersTable = () => {
             </div>
           )}
           {isProfileOpen === user.id && (
-            <div className={styles.profilePopupOverlay} style={{ position: 'fixed' }}>
+            <div className={styles.profilePopupOverlay}>
               <div ref={profilePopupRef} className={styles.profilePopup}>
                 <button className={styles.closeButton} onClick={() => setIsProfileOpen(null)}>
                   <Image src="/arrow-left.svg" alt="Close" width={16} height={16} />
@@ -184,6 +224,7 @@ const MembersTable = () => {
                     width={109}
                     height={109}
                     className={styles.profileAvatar}
+                    onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
                   />
                   <div className={styles.profileUsername}>{user.fullName}</div>
                   <div className={styles.profileField}>
@@ -208,7 +249,7 @@ const MembersTable = () => {
         </div>
       ),
     },
-  ];
+  ], [isActionMenuOpen, isProfileOpen, handleActionHover, handleActionLeave, handleProfileClick, handleDeleteRequest]);
 
   return (
     <div className={styles.container}>
@@ -220,6 +261,7 @@ const MembersTable = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={styles.searchInput}
+            aria-label="Buscar miembros"
           />
         </div>
         <div className={styles.inviteButtonWrapper}>
@@ -238,7 +280,7 @@ const MembersTable = () => {
         onSort={handleSort}
       />
       {isInviteOpen && (
-        <div className={styles.invitePopupOverlay} style={{ position: 'fixed' }}>
+        <div className={styles.invitePopupOverlay}>
           <div className={styles.invitePopup}>
             <div className={styles.inviteContent}>
               <h2 className={styles.inviteTitle}>Invita a un nuevo miembro</h2>
@@ -247,18 +289,23 @@ const MembersTable = () => {
               </p>
               <form onSubmit={handleInviteSubmit}>
                 <div className={styles.inviteField}>
-                  <label className={styles.inviteLabel}>Correo electrónico:</label>
+                  <label htmlFor="inviteEmail" className={styles.inviteLabel}>Correo electrónico:</label>
                   <input
+                    id="inviteEmail"
                     type="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="mail@dominio.com"
                     className={styles.inviteInput}
                     required
+                    aria-required="true"
                   />
                 </div>
                 <button type="submit" className={styles.inviteSubmitButton}>
                   Enviar Invitación
+                </button>
+                <button type="button" onClick={() => { setIsInviteOpen(false); setInviteEmail(''); }} className={styles.cancelButton}>
+                  Cancelar
                 </button>
               </form>
             </div>
@@ -269,4 +316,4 @@ const MembersTable = () => {
   );
 };
 
-export default MembersTable;
+export default memo(MembersTable);

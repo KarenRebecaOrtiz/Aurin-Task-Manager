@@ -21,7 +21,7 @@
   .searchInput {
     width: 100%;
     height: 32px;
-    padding: 20px 12px;
+    padding: 8px 12px;
     box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
     border-radius: 6px;
     border: 1px solid #E4E4E7;
@@ -29,6 +29,7 @@
     font-family: 'Inter', sans-serif;
     font-weight: 500;
     color: #52525B;
+    background: white;
     opacity: 0.5;
   }
   .searchInput::placeholder {
@@ -44,14 +45,14 @@
     color: #A1A1AA;
   }
   
-  .inviteButtonWrapper {
+  .createButtonWrapper {
     display: flex;
     align-items: center;
   }
   
-  .inviteButton {
+  .createButton {
     height: 32px;
-    padding: 20px 12px;
+    padding: 8px 12px;
     background: #0A0A0A;
     border-radius: 6px;
     border: 1px solid #E4E4E7;
@@ -64,16 +65,55 @@
     gap: 10px;
     cursor: pointer;
   }
-  :global(body.dark) .inviteButton {
+  :global(body.dark) .createButton {
     background: #ffffff;
     border-color: #555555;
     color: #000000;
   }
-  :global(body.dark) .inviteButton img {
+  :global(body.dark) .createButton img {
     filter: invert(100) grayscale(1) brightness(1.5);
   }
   
-  .invitePopupOverlay {
+  .emptyState {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .emptyContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 489px;
+  }
+  
+  .emptyText {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .emptyText h2 {
+    color: #0D0D0D;
+    font-size: 16px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  }
+  .emptyText p {
+    color: #0D0D0D;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+  :global(body.dark) .emptyText h2 {
+    color: #D1D1D1;
+  }
+  :global(body.dark) .emptyText p {
+    color: #D1D1D1;
+  }
+  
+  .popupOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -86,11 +126,16 @@
     justify-content: center;
     align-items: center;
     z-index: 2000;
+    opacity: 1;
+    visibility: visible;
   }
   
-  .invitePopup {
-    position: relative;
-    padding: 34px 36px;
+  .popup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 34px 15px;
     background: white;
     box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
     border-radius: 10px;
@@ -103,12 +148,12 @@
     max-height: 90vh;
     overflow-y: auto;
   }
-  :global(body.dark) .invitePopup {
+  :global(body.dark) .popup {
     background: #2D2D2D;
     box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.2);
   }
   
-  .inviteContent {
+  .popupContent {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -116,48 +161,204 @@
     width: 100%;
   }
   
-  .inviteTitle {
+  .popupTitle {
     text-align: center;
     color: #0D0D0D;
     font-size: 16px;
     font-family: 'Inter', sans-serif;
     font-weight: 700;
   }
-  :global(body.dark) .inviteTitle {
+  :global(body.dark) .popupTitle {
     color: #D1D1D1;
   }
   
-  .inviteSubtitle {
+  .popupSubtitle {
     text-align: center;
     color: #737373;
     font-size: 12px;
     font-family: 'Inter', sans-serif;
     font-weight: 400;
   }
-  :global(body.dark) .inviteSubtitle {
+  .popupSubtitle strong {
+    font-weight: 700;
+  }
+  :global(body.dark) .popupSubtitle {
     color: #A1A1AA;
   }
   
-  .inviteField {
+  .avatar {
+    cursor: pointer;
+  }
+  
+  .avatarImage {
+    border-radius: 9999px;
+    object-fit: cover;
+  }
+  
+  .field {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
+    width: 279px;
   }
   
-  .inviteLabel {
+  .label {
     color: #0D0D0D;
     font-size: 12px;
     font-family: 'Inter', sans-serif;
     font-weight: 700;
   }
-  :global(body.dark) .inviteLabel {
+  :global(body.dark) .label {
     color: #D1D1D1;
   }
   
-  .inviteInput {
+  .required {
+    color: #B10000;
+  }
+  
+  .fieldDescription {
+    opacity: 0.7;
+    color: #0D0D0D;
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+  .fieldDescription strong {
+    font-weight: 700;
+  }
+  :global(body.dark) .fieldDescription {
+    color: #D1D1D1;
+  }
+  
+  .input {
     width: 100%;
     padding: 8px 10px;
+    background: white;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
+    border-radius: 4px;
+    border: 1px solid #D8D8D8;
+    color: rgba(12.75, 12.75, 12.75, 0.6);
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+  .input::placeholder {
+    color: rgba(12.75, 12.75, 12.75, 0.6);
+  }
+  :global(body.dark) .input {
+    background: #3A3A3A;
+    border-color: #555555;
+    color: #D1D1D1;
+  }
+  :global(body.dark) .input::placeholder {
+    color: #A1A1AA;
+  }
+  
+  .projectField {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .projectInputWrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .deleteProjectButton {
+    width: 28px;
+    height: 28px;
+    padding: 8px;
+    background: white;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
+    border-radius: 4px;
+    border: 1px solid #E03C3C;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .deleteProjectButton img {
+    filter: none;
+  }
+  :global(body.dark) .deleteProjectButton {
+    background: #3A3A3A;
+    border-color: #F87171;
+  }
+  :global(body.dark) .deleteProjectButton img {
+    filter: invert(1) grayscale(1) brightness(1.5);
+  }
+  
+  .deleteConfirm {
+    padding: 15px 10px;
+    background: #E03C3C;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  :global(body.dark) .deleteConfirm img {
+    filter: invert(1) grayscale(1) brightness(10);
+  }
+  
+  .deleteConfirmHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .deleteConfirmHeader h3 {
+    color: white;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  }
+  
+  .deleteConfirm p {
+    color: white;
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+  
+  .deleteConfirmInput {
+    width: 100%;
+    padding: 8px 10px;
+    background: #E03C3C;
+    border-radius: 4px;
+    border: 1px solid #EB5E5E;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+  .deleteConfirmInput::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+    opacity: 0.7;
+  }
+  
+  .deleteConfirmButton {
+    width: 100%;
+    padding: 8px 10px;
+    background: #EB5E5E;
+    border-radius: 4px;
+    border: none;
+    color: white;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .deleteConfirmButton:disabled {
+    background: #d14a4a;
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  
+  .addProjectButton {
+    width: 28px;
+    height: 28px;
+    padding: 8px;
     background: white;
     box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
     border-radius: 4px;
@@ -166,20 +367,18 @@
     font-size: 12px;
     font-family: 'Inter', sans-serif;
     font-weight: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
   }
-  .inviteInput::placeholder {
-    color: rgba(12.75, 12.75, 12.75, 0.6);
-  }
-  :global(body.dark) .inviteInput {
+  :global(body.dark) .addProjectButton {
     background: #3A3A3A;
     border-color: #555555;
     color: #D1D1D1;
   }
-  :global(body.dark) .inviteInput::placeholder {
-    color: #A1A1AA;
-  }
   
-  .inviteSubmitButton {
+  .submitButton {
     width: 100%;
     padding: 8px 10px;
     background: #0D0D0D;
@@ -192,7 +391,7 @@
     font-weight: 700;
     cursor: pointer;
   }
-  :global(body.dark) .inviteSubmitButton {
+  :global(body.dark) .submitButton {
     background: #1A1A1A;
     border-color: #1A1A1A;
     color: #D1D1D1;
@@ -213,6 +412,27 @@
     color: #A1A1AA;
   }
   
+  .deletePopup {
+    position: relative;
+    padding: 15px 10px;
+    background: #E03C3C;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  :global(body.dark) .deletePopup .cancelButton {
+    border: 1px solid white;
+    color: white;
+  }
+  :global(body.dark) .deletePopup img {
+    filter: invert(1) grayscale(1) brightness(10);
+  }
+  
   .profileImage {
     border-radius: 9999px;
     object-fit: cover;
@@ -221,7 +441,6 @@
   .actionContainer {
     position: relative;
     display: inline-block;
-    z-index: 10;
   }
   
   .actionButton {
@@ -262,28 +481,8 @@
     box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.15), 0px 4px 8px -1px rgba(0, 0, 0, 0.25);
   }
   
-  .dropdownHeader {
-    padding: 6px 8px;
-    border-bottom: 1px solid #E4E4E7;
-    display: flex;
-    align-items: center;
-  }
-  :global(body.dark) .dropdownHeader {
-    border-color: #555555;
-  }
-  
-  .dropdownTitle {
-    color: #09090B;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-  }
-  :global(body.dark) .dropdownTitle {
-    color: #D1D1D1;
-  }
-  
   .dropdownItem {
-    padding: 6px 8px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -296,23 +495,23 @@
   .dropdownItem:hover {
     background: #F7F7F7;
   }
-  :global(body.dark) .dropdownItem {
-    border-color: #555555;
-  }
-  :global(body.dark) .dropdownItem:hover {
-    background: #3A3A3A;
-  }
   .dropdownItem > span {
     color: #09090B;
     font-size: 14px;
     font-family: 'Inter', sans-serif;
     font-weight: 400;
   }
-  :global(body.dark) .dropdownItem > span {
-    color: #D1D1D1;
-  }
   .dropdownItem img {
     filter: none;
+  }
+  :global(body.dark) .dropdownItem {
+    border-color: #555555;
+  }
+  :global(body.dark) .dropdownItem:hover {
+    background: #3A3A3A;
+  }
+  :global(body.dark) .dropdownItem > span {
+    color: #D1D1D1;
   }
   :global(body.dark) .dropdownItem img {
     filter: invert(1) grayscale(1) brightness(1.5);
@@ -323,136 +522,4 @@
   }
   :global(body.dark) .deleteText {
     color: #F87171 !important;
-  }
-  
-  .profilePopupOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-  }
-  
-  .profilePopup {
-    position: relative;
-    padding: 10px 15px 34px;
-    background: white;
-    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 7px;
-    max-width: 400px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  :global(body.dark) .profilePopup {
-    background: #2D2D2D;
-    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.2);
-  }
-  
-  .closeButton {
-    align-self: flex-start;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-  }
-  .closeButton img {
-    filter: none;
-  }
-  :global(body.dark) .closeButton img {
-    filter: invert(1) grayscale(1) brightness(1.5);
-  }
-  
-  .profileContent {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-  }
-  
-  .profileTitle {
-    text-align: center;
-    color: #0D0D0D;
-    font-size: 16px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-  }
-  :global(body.dark) .profileTitle {
-    color: #D1D1D1;
-  }
-  
-  .profileAvatar {
-    border-radius: 9999px;
-    object-fit: cover;
-  }
-  
-  .profileUsername {
-    text-align: center;
-    color: #0D0D0D;
-    font-size: 16px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-  }
-  :global(body.dark) .profileUsername {
-    color: #D1D1D1;
-  }
-  
-  .profileField {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-  }
-  
-  .profileLabel {
-    color: #52525B;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-  }
-  :global(body.dark) .profileLabel {
-    color: #A1A1AA;
-  }
-  
-  .profileValue {
-    color: rgba(12.75, 12.75, 12.75, 0.6);
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 400;
-  }
-  :global(body.dark) .profileValue {
-    color: #D1D1D1;
-  }
-  
-  .confirmButton {
-    width: 100%;
-    max-width: 279px;
-    padding: 8px 10px;
-    background: #0D0D0D;
-    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
-    border-radius: 4px;
-    border: 1px solid #0D0D0D;
-    color: white;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  :global(body.dark) .confirmButton {
-    background: #1A1A1A;
-    border-color: #1A1A1A;
-    color: #D1D1D1;
   }

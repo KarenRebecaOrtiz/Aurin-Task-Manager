@@ -1,95 +1,103 @@
-// src/components/ui/Selector.tsx
 'use client';
-import { useEffect, useRef } from 'react';
+
+import { useLayoutEffect, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import styles from './Selector.module.scss';
 
-type Container = 'tareas' | 'proyectos' | 'cuentas' | 'miembros';
+type Container = 'tareas' | 'cuentas' | 'miembros';
 
 interface SelectorProps {
   selectedContainer: Container;
   setSelectedContainer: (container: Container) => void;
 }
 
-const Selector = ({ selectedContainer, setSelectedContainer }: SelectorProps) => {
-  const buttonsRef = useRef<Array<React.MutableRefObject<HTMLButtonElement | null>>>([
-    useRef(null),
-    useRef(null),
-    useRef(null),
-    useRef(null),
-  ]);
+const containers: Array<{ id: Container; label: string }> = [
+  { id: 'tareas', label: 'Tareas' },
+  { id: 'cuentas', label: 'Cuentas' },
+  { id: 'miembros', label: 'Miembros' },
+];
 
-  useEffect(() => {
-    // Animar el botón activo con GSAP
-    buttonsRef.current.forEach((ref, index) => {
-      const button = ref.current;
-      if (button) {
-        const isActive = button.dataset.container === selectedContainer;
-        gsap.to(button, {
-          backgroundColor: isActive ? '#171717' : '#0D0D0D',
-          duration: 0.3,
-          ease: 'power2.out',
-        });
-      }
-    });
-  }, [selectedContainer]);
-
-  const handleClick = (container: Container) => {
-    setSelectedContainer(container);
+export default function Selector({
+  selectedContainer,
+  setSelectedContainer,
+}: SelectorProps) {
+  /* ---------- refs dinámicos ---------- */
+  const btnRefs = useRef<HTMLButtonElement[]>([]);
+  const addRef = (el: HTMLButtonElement | null) => {
+    if (el && !btnRefs.current.includes(el)) btnRefs.current.push(el);
   };
 
+  /* ---------- estado del tema ---------- */
+  const [isDark, setIsDark] = useState(false); // siempre seguro en SSR
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return; // evita SSR
+
+    /* helper para saber si el doc está en dark */
+    const computeDark = () =>
+      document.documentElement.classList.contains('dark') ||
+      document.body.classList.contains('dark');
+
+    /* estado inicial tras montar */
+    setIsDark(computeDark());
+
+    /* observa cambios de clase "dark" */
+    const observer = new MutationObserver(() => setIsDark(computeDark()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    /* escucha cambios vía localStorage (toggle en otra pestaña) */
+    const storageListener = () => setIsDark(computeDark());
+    window.addEventListener('storage', storageListener);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('storage', storageListener);
+    };
+  }, []);
+
+  /* ---------- animación GSAP ---------- */
+  useLayoutEffect(() => {
+    if (btnRefs.current.length === 0) return;
+
+    const inactiveBg = isDark ? '#0D0D0D' : '#FFFFFF';
+    const activeBg = isDark ? '#171717' : '#F4F4F5';
+    const textColor = isDark ? '#FFFFFF' : '#09090B';
+
+    btnRefs.current.forEach((btn) => {
+      const isActive = btn.dataset.container === selectedContainer;
+      gsap.to(btn, {
+        backgroundColor: isActive ? activeBg : inactiveBg,
+        color: textColor,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    });
+  }, [selectedContainer, isDark]);
+
+  /* ---------- render ---------- */
   return (
     <div className={styles.menubar}>
-      <div className={styles.wrapper}>
-        <button
-          ref={buttonsRef.current[0]}
-          data-container="tareas"
-          className={`${styles.menuItem} ${selectedContainer === 'tareas' ? styles.active : ''}`}
-          onClick={() => handleClick('tareas')}
-        >
-          <div className={styles.text}>
-            <div className={styles.tareas}>Tareas</div>
-          </div>
-        </button>
-      </div>
-      <div className={styles.wrapper}>
-        <button
-          ref={buttonsRef.current[1]}
-          data-container="proyectos"
-          className={`${styles.menuItem} ${selectedContainer === 'proyectos' ? styles.active : ''}`}
-          onClick={() => handleClick('proyectos')}
-        >
-          <div className={styles.text}>
-            <div className={styles.proyectos}>Proyectos</div>
-          </div>
-        </button>
-      </div>
-      <div className={styles.wrapper}>
-        <button
-          ref={buttonsRef.current[2]}
-          data-container="cuentas"
-          className={`${styles.menuItem} ${selectedContainer === 'cuentas' ? styles.active : ''}`}
-          onClick={() => handleClick('cuentas')}
-        >
-          <div className={styles.text}>
-            <div className={styles.cuentas}>Cuentas</div>
-          </div>
-        </button>
-      </div>
-      <div className={styles.wrapper}>
-        <button
-          ref={buttonsRef.current[3]}
-          data-container="miembros"
-          className={`${styles.menuItem} ${selectedContainer === 'miembros' ? styles.active : ''}`}
-          onClick={() => handleClick('miembros')}
-        >
-          <div className={styles.text}>
-            <div className={styles.miembros}>Miembros</div>
-          </div>
-        </button>
-      </div>
+      {containers.map(({ id, label }) => (
+        <div key={id} className={styles.wrapper}>
+          <button
+            ref={addRef}
+            data-container={id}
+            className={`${styles.menuItem} ${
+              selectedContainer === id ? styles.active : ''
+            }`}
+            onClick={() => setSelectedContainer(id)}
+          >
+            <span className={styles.text}>{label}</span>
+          </button>
+        </div>
+      ))}
     </div>
   );
-};
-
-export default Selector;
+}

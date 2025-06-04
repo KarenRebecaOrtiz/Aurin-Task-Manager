@@ -2,39 +2,46 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 16px; /* Espacio entre la tabla y la paginación si están separados */
 }
 
 .table {
   display: flex;
   flex-direction: column;
   background: white;
-
-  &.dark {
-    background: #2D2D2D;
-  }
+  border-radius: 8px; /* Bordes redondeados para la tabla */
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06); /* Sombra sutil */
+}
+:global(body.dark) .table {
+  background: #0D0D0D; /* Fondo oscuro para la tabla */
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3), 0px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .header {
   display: flex;
-  align-items: center;
-  border-bottom: 1px solid rgba(113, 113, 122, 0.2);
+  justify-content: space-between;
+  border-bottom: 1px solid #E4E4E7; /* Borde más claro para light mode */
+}
+:global(body.dark) .header {
+  border-bottom: 1px solid #555555; /* Borde más oscuro para dark mode */
 }
 
 .headerCell {
-  padding: 12px 38px;
-  color: #09090B;
+  padding: 12px 24px; /* Ajuste de padding */
+  color: #3F3F46; /* Color de texto del header */
   font-size: 10px;
   font-family: 'Inter', sans-serif;
-  font-weight: 400;
+  font-weight: 500; /* Ligeramente más grueso */
+  text-transform: uppercase; /* Para un look más de "header" */
+  letter-spacing: 0.5px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
   gap: 10px;
-
-  &.dark {
-    color: #D1D1D1;
-  }
+  display: flex;
+  justify-content: space-between;
+  user-select: none; /* Evitar selección de texto al hacer clic */
+}
+:global(body.dark) .headerCell {
+  color: #A1A1AA; /* Color de texto del header en dark mode */
 }
 
 .sortIndicator {
@@ -43,22 +50,29 @@
 
 .row {
   display: flex;
-  align-items: center;
-  border-bottom: 1px solid rgba(113, 113, 122, 0.2);
+  justify-content: space-between;
+  border-bottom: 1px solid #F4F4F5; /* Borde de fila muy sutil */
+}
+.row:last-child {
+  border-bottom: none; /* Sin borde para la última fila */
+}
+:global(body.dark) .row {
+  border-bottom: 1px solid #3F3F46; /* Borde de fila en dark mode */
 }
 
+
 .cell {
-  padding: 12px 38px;
-  color: #09090B;
+  padding: 14px 24px; /* Ajuste de padding para más espacio */
+  color: #18181B; /* Color de texto de celda principal */
   font-size: 14px;
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   display: flex;
   align-items: center;
-
-  &.dark {
-    color: #D1D1D1;
-  }
+  line-height: 1.5; /* Mejor legibilidad */
+}
+:global(body.dark) .cell {
+  color: #D1D1D1; /* Color de texto de celda en dark mode */
 }
 
 .actionButton {
@@ -70,6 +84,13 @@
   align-items: center;
   justify-content: center;
 }
+.actionButton img { /* Para el ícono de elipsis en la tabla */
+  filter: none;
+}
+:global(body.dark) .actionButton img {
+  filter: invert(1) grayscale(1) brightness(1.5);
+}
+
 
 .pagination {
   display: flex;
@@ -90,25 +111,37 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+.paginationButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.paginationButton:not(:disabled):hover {
+  background-color: #F4F4F5; /* Hover sutil */
+}
+.paginationButton img { /* Para los íconos de paginación SVG */
+  filter: none;
+}
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &.dark {
-    background: #3A3A3A;
-    border-color: #555555;
-  }
+:global(body.dark) .paginationButton {
+  background: #0D0D0D;
+  border-color: #555555;
+}
+:global(body.dark) .paginationButton:not(:disabled):hover {
+  background-color: #0D0D0D;
+}
+:global(body.dark) .paginationButton img {
+  filter: invert(1) grayscale(1) brightness(1.5); /* Hace los SVGs blancos */
 }
 
 .pageInfo {
-  color: #09090B;
+  color: #3F3F46; /* Color de texto para la info de página */
   font-size: 14px;
   font-family: 'Inter', sans-serif;
   font-weight: 500;
-
-  &.dark {
-    color: #D1D1D1;
-  }
+  margin: 0 8px; /* Margen para separar de los botones */
+}
+:global(body.dark) .pageInfo {
+  color: #A1A1AA; /* Color de texto para info de página en dark mode */
 }

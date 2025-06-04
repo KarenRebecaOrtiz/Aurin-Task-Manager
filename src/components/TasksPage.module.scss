@@ -9,7 +9,7 @@
 }
 
 .selector {
-  margin-bottom: 1.3rem;
+  margin: 1.3rem 0rem;
 }
 
 .content {
@@ -21,4 +21,9 @@
   &.dark {
     color: #D1D1D1;
   }
+}
+
+.internal{
+  height: 2.75rem;
+  width: 2.75rem;
 }
