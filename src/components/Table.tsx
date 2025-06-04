@@ -19,11 +19,11 @@ interface TableProps {
   sortKey?: string;
   sortDirection?: 'asc' | 'desc';
   onSort?: (key: string) => void;
+  onRowClick?: (item: any) => void;
 }
 
 const Table: React.FC<TableProps> = memo(
-  ({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort }) => {
-    console.log('Table rendered'); // Para depuración, quitar en producción
+  ({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const tableRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +55,24 @@ const Table: React.FC<TableProps> = memo(
         columns.find((col) => col.key === key && col.key !== 'action' && !col.render)
       ) {
         onSort(key);
+      }
+    };
+
+    const handleCellClick = (item: any, column: Column, e: React.MouseEvent) => {
+      // Prevent row click for action cell to preserve action menu functionality
+      if (column.key === 'action') {
+        e.stopPropagation();
+        return;
+      }
+      if (onRowClick) {
+        gsap.to(e.currentTarget, {
+          scale: 0.98,
+          duration: 0.15,
+          ease: 'power1.out',
+          yoyo: true,
+          repeat: 1,
+        });
+        onRowClick(item);
       }
     };
 
@@ -104,9 +122,10 @@ const Table: React.FC<TableProps> = memo(
                   <div
                     key={column.key}
                     className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
-                      column.key === 'action' ? styles.actionCell : ''
+                      column.key === 'action' ? styles.actionCell : styles.clickableCell
                     }`}
                     style={{ width: column.width }}
+                    onClick={(e) => handleCellClick(item, column, e)}
                   >
                     {column.render ? column.render(item) : String(item[column.key] || '')}
                   </div>
@@ -158,7 +177,6 @@ const Table: React.FC<TableProps> = memo(
     );
   },
   (prevProps, nextProps) => {
-    // Comparación personalizada para evitar re-renders innecesarios
     return (
       prevProps.data === nextProps.data &&
       prevProps.sortKey === nextProps.sortKey &&

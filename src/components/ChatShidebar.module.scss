@@ -1,0 +1,210 @@
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700&family=Montserrat:wght@400;500;700&display=swap');
+
+.container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 450px;
+  height: 100%;
+  padding: 25px;
+  background: #0D0D0D;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: 12px 0 0 12px;
+  border: 1px solid #242428;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 3000;
+  transform: translateX(100%);
+}
+
+.open {
+  transform: translateX(0);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.arrowLeft, .ellipsis {
+  cursor: pointer;
+}
+
+.breadcrumb {
+  flex: 1;
+  color: #71717A;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Urbanist', sans-serif;
+  font-weight: 400;
+}
+
+.title {
+  color: #FAFAFA;
+  font-size: 19.2px; // 16px * 1.2
+  font-family: 'Urbanist', sans-serif;
+  font-weight: 700;
+}
+
+.description {
+  color: #71717A;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Urbanist', sans-serif;
+  font-weight: 400;
+}
+
+.details {
+  display: flex;
+  gap: 5px;
+}
+
+.card {
+  flex: 1;
+  padding: 10px;
+  background: #1F1F20;
+  box-shadow: 0px 4px 19px rgba(0, 0, 0, 0.04);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.cardLabel {
+  color: #E5E5E5;
+  font-size: 12px; // 10px * 1.2
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+}
+
+.cardValue {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: #E5E5E5;
+  font-size: 12px; // 10px * 1.2
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+}
+
+.avatar {
+  border-radius: 50%;
+}
+
+.chat {
+  flex: 1;
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.message {
+  display: flex;
+  gap: 10px;
+}
+
+.messageContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.messageHeader {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sender {
+  color: #E5E5E5;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+}
+
+.timestamp {
+  color: #E5E5E5;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+}
+
+.text {
+  color: white;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Urbanist', sans-serif;
+  font-weight: 400;
+}
+
+.inputWrapper {
+  width: 100%;
+}
+
+.inputContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #1F1F20;
+  padding: 19px;
+  border-radius: 10px;
+}
+
+.input {
+  width: 100%;
+  height: 26px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Urbanist', sans-serif;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Urbanist', sans-serif;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.sendButton {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  background: white;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.sendButton span {
+  color: black;
+  font-size: 14.4px; // 12px * 1.2
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+}

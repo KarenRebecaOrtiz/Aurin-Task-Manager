@@ -1,5 +1,5 @@
 import { type Metadata } from 'next';
-import { ClerkProvider, SignedIn, UserButton } from '@clerk/nextjs';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.scss';
 
 export const metadata: Metadata = {
@@ -33,11 +33,6 @@ export default function RootLayout({
           <meta name='theme-color' content='#ffffff' />
         </head>
         <body>
-          <header style={{ padding: '1rem', textAlign: 'right' }}>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header>
           {children}
         </body>
       </html>
