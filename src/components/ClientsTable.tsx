@@ -28,7 +28,7 @@ const ClientsTable = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState<string | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState<string | null>(null);
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState<string | null>(null);
+  const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('/empty-image.png');
@@ -40,7 +40,6 @@ const ClientsTable = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  // Debug state changes
   useEffect(() => {
     console.log('isCreateOpen:', isCreateOpen, 'isEditOpen:', isEditOpen);
   }, [isCreateOpen, isEditOpen]);
@@ -96,16 +95,15 @@ const ClientsTable = () => {
   }, [memoizedFilteredClients]);
 
   useEffect(() => {
-    if (isActionMenuOpen && actionMenuRef.current) {
+    if (actionMenuOpenId && actionMenuRef.current) {
       gsap.fromTo(
         actionMenuRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
       );
     }
-  }, [isActionMenuOpen]);
+  }, [actionMenuOpenId]);
 
-  // Close popup on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -115,29 +113,17 @@ const ClientsTable = () => {
       ) {
         resetForm();
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isCreateOpen, isEditOpen, resetForm]);
-
-  // Close action menu on click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
-        let clickedOnActionButton = false;
-        actionButtonRefs.current.forEach((buttonRef) => {
-          if (buttonRef.contains(event.target as Node)) {
-            clickedOnActionButton = true;
-          }
-        });
-        if (!clickedOnActionButton) {
-          setIsActionMenuOpen(null);
-        }
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node) &&
+        !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
+      ) {
+        setActionMenuOpenId(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isCreateOpen, isEditOpen, actionMenuOpenId, resetForm]);
 
   const handleSort = useCallback((key: string) => {
     if (key === sortKey) {
@@ -149,9 +135,8 @@ const ClientsTable = () => {
   }, [sortKey, sortDirection]);
 
   const handleActionClick = useCallback((clientId: string) => {
-    console.log('Action menu clicked for client:', clientId);
-    setIsActionMenuOpen(isActionMenuOpen === clientId ? null : clientId);
-  }, [isActionMenuOpen]);
+    setActionMenuOpenId((prev) => (prev === clientId ? null : clientId));
+  }, []);
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -198,25 +183,19 @@ const ClientsTable = () => {
       try {
         let imageUrl = imagePreview;
         if (imageFile) {
-          try {
-            const formData = new FormData();
-            formData.append('file', imageFile);
-            const response = await fetch('/api/upload-image', {
-              method: 'POST',
-              body: formData,
-            });
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.details || 'Failed to upload image');
-            }
-            const data = await response.json();
-            imageUrl = data.imageUrl;
-            console.log('Image uploaded via API:', imageUrl);
-          } catch (uploadError: any) {
-            console.error('Image upload failed, using default image:', uploadError.message);
-            imageUrl = '/empty-image.png';
-            alert(`No se pudo subir la imagen: ${uploadError.message}. Se usará la imagen por defecto.`);
+          const formData = new FormData();
+          formData.append('file', imageFile);
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData,
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || 'Failed to upload image');
           }
+          const data = await response.json();
+          imageUrl = data.imageUrl;
+          console.log('Image uploaded via API:', imageUrl);
         }
 
         const clientData: Client = {
@@ -270,7 +249,7 @@ const ClientsTable = () => {
     setImagePreview(client.imageUrl);
     setImageFile(null);
     setProjects(client.projects.length ? client.projects : ['']);
-    setIsActionMenuOpen(null);
+    setActionMenuOpenId(null);
     setIsCreateOpen(false);
   }, []);
 
@@ -286,6 +265,7 @@ const ClientsTable = () => {
         key: 'imageUrl',
         label: '',
         width: '10%',
+        mobileVisible: false,
         render: (client: Client) => (
           client && client.imageUrl ? (
             <Image
@@ -305,16 +285,19 @@ const ClientsTable = () => {
         key: 'name',
         label: 'Cuentas',
         width: 'auto',
+        mobileVisible: true,
       },
       {
         key: 'projectCount',
         label: 'Proyectos Asignados',
         width: '20%',
+        mobileVisible: false,
       },
       {
         key: 'action',
         label: 'Acciones',
         width: '10%',
+        mobileVisible: true,
         render: (client: Client) => (
           <div className={styles.actionContainer}>
             {user && client && client.createdBy === user.id && (
@@ -330,7 +313,7 @@ const ClientsTable = () => {
                 >
                   <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
                 </button>
-                {isActionMenuOpen === client.id && (
+                {actionMenuOpenId === client.id && (
                   <div ref={actionMenuRef} className={styles.dropdown}>
                     <div className={styles.dropdownItem} onClick={() => handleEditClick(client)}>
                       <Image src="/pencil.svg" alt="Edit" width={18} height={18} />
@@ -340,7 +323,7 @@ const ClientsTable = () => {
                       className={styles.dropdownItem}
                       onClick={() => {
                         setIsDeleteOpen(client.id);
-                        setIsActionMenuOpen(null);
+                        setActionMenuOpenId(null);
                       }}
                     >
                       <Image
@@ -362,7 +345,7 @@ const ClientsTable = () => {
         ),
       },
     ],
-    [user, handleActionClick, handleEditClick]
+    [user, handleActionClick, handleEditClick, actionMenuOpenId]
   );
 
   return (
@@ -466,7 +449,7 @@ const ClientsTable = () => {
                   alt="Avatar del cliente"
                   width={109}
                   height={109}
-                  className={styles.avatarImage}
+                  className={styles.modalImage}
                   onError={(e) => {
                     e.currentTarget.src = '/empty-image.png';
                   }}
@@ -481,7 +464,7 @@ const ClientsTable = () => {
                 />
               </div>
               <form onSubmit={(e) => handleSubmit(e, isEditOpen || undefined)}>
-                <div className={styles.field}>
+                <div className={styles.formField}>
                   <label htmlFor="clientName" className={styles.label}>
                     Nombre de Cuenta <span className={styles.required}>*</span>
                   </label>
@@ -499,7 +482,7 @@ const ClientsTable = () => {
                     aria-required="true"
                   />
                 </div>
-                <div className={styles.field}>
+                <div className={styles.formField}>
                   <label className={styles.label}>Proyectos</label>
                   <p className={styles.fieldDescription}>
                     Organiza las tareas de este cliente creando proyectos a tu medida.{' '}

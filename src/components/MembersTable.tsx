@@ -1,10 +1,9 @@
 'use client';
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import Table from './Table';
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
+import Table from './Table';
 import styles from './MembersTable.module.scss';
-import { memo } from 'react';
 
 interface User {
   id: string;
@@ -21,7 +20,7 @@ const MembersTable = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState<string | null>(null);
+  const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -42,7 +41,6 @@ const MembersTable = () => {
           description: user.publicMetadata.description || 'Sin descripción',
         }));
         setUsers(formattedUsers);
-        setFilteredUsers(formattedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
       }
@@ -63,35 +61,34 @@ const MembersTable = () => {
   }, [memoizedFilteredUsers]);
 
   useEffect(() => {
-    if (isActionMenuOpen && actionMenuRef.current) {
+    if (actionMenuOpenId && actionMenuRef.current) {
       gsap.fromTo(
         actionMenuRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
       );
     }
-  }, [isActionMenuOpen]);
+  }, [actionMenuOpenId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
-        let clickedOnActionButton = false;
-        actionButtonRefs.current.forEach(buttonRef => {
-          if (buttonRef.contains(event.target as Node)) {
-            clickedOnActionButton = true;
-          }
-        });
-        if (!clickedOnActionButton) {
-          setIsActionMenuOpen(null);
-        }
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node) &&
+        !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
+      ) {
+        setActionMenuOpenId(null);
       }
-      if (profilePopupRef.current && !profilePopupRef.current.contains(event.target as Node)) {
+      if (
+        profilePopupRef.current &&
+        !profilePopupRef.current.contains(event.target as Node)
+      ) {
         setIsProfileOpen(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [actionMenuOpenId]);
 
   const handleSort = useCallback((key: string) => {
     if (key === sortKey) {
@@ -102,12 +99,8 @@ const MembersTable = () => {
     }
   }, [sortKey, sortDirection]);
 
-  const handleActionHover = useCallback((userId: string) => {
-    setIsActionMenuOpen(userId);
-  }, []);
-
-  const handleActionLeave = useCallback(() => {
-    setIsActionMenuOpen(null);
+  const handleActionClick = useCallback((userId: string) => {
+    setActionMenuOpenId((prev) => (prev === userId ? null : userId));
   }, []);
 
   const handleInviteSubmit = useCallback(async (e: React.FormEvent) => {
@@ -130,7 +123,7 @@ const MembersTable = () => {
 
   const handleProfileClick = useCallback((userId: string) => {
     setIsProfileOpen(userId);
-    setIsActionMenuOpen(null);
+    setActionMenuOpenId(null);
   }, []);
 
   const handleDeleteRequest = useCallback(async (user: User) => {
@@ -146,7 +139,7 @@ const MembersTable = () => {
       console.error('Error requesting deletion:', error);
       alert('Error al solicitar la eliminación');
     }
-    setIsActionMenuOpen(null);
+    setActionMenuOpenId(null);
   }, []);
 
   const columns = useMemo(() => [
@@ -154,6 +147,7 @@ const MembersTable = () => {
       key: 'imageUrl',
       label: '',
       width: '10%',
+      mobileVisible: false,
       render: (user: User) => (
         <Image
           src={user.imageUrl}
@@ -169,33 +163,33 @@ const MembersTable = () => {
       key: 'fullName',
       label: 'Nombre',
       width: '60%',
+      mobileVisible: true,
     },
     {
       key: 'role',
       label: 'Rol',
       width: '20%',
+      mobileVisible: false,
     },
     {
       key: 'action',
       label: 'Acciones',
       width: '10%',
+      mobileVisible: true,
       render: (user: User) => (
-        <div
-          className={styles.actionContainer}
-          onMouseEnter={() => handleActionHover(user.id)}
-          onMouseLeave={handleActionLeave}
-        >
+        <div className={styles.actionContainer}>
           <button
             ref={(el) => {
               if (el) actionButtonRefs.current.set(user.id, el);
               else actionButtonRefs.current.delete(user.id);
             }}
+            onClick={() => handleActionClick(user.id)}
             className={styles.actionButton}
             aria-label="Abrir acciones"
           >
             <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
           </button>
-          {isActionMenuOpen === user.id && (
+          {actionMenuOpenId === user.id && (
             <div ref={actionMenuRef} className={styles.dropdown}>
               <div className={styles.dropdownHeader}>
                 <div className={styles.dropdownTitle}>Acciones</div>
@@ -206,7 +200,7 @@ const MembersTable = () => {
               </div>
               <div className={styles.dropdownItem} onClick={() => handleDeleteRequest(user)}>
                 <Image src="/trash-2.svg" alt="Delete" width={16} height={16} />
-                <span className={styles.deleteText}>Solicitar Eliminar Miembro</span>
+                <span className={styles.deleteText}>Solicitar eliminar miembro</span>
               </div>
             </div>
           )}
@@ -249,7 +243,7 @@ const MembersTable = () => {
         </div>
       ),
     },
-  ], [isActionMenuOpen, isProfileOpen, handleActionHover, handleActionLeave, handleProfileClick, handleDeleteRequest]);
+  ], [actionMenuOpenId, isProfileOpen, handleProfileClick, handleDeleteRequest]);
 
   return (
     <div className={styles.container}>
@@ -281,7 +275,7 @@ const MembersTable = () => {
       />
       {isInviteOpen && (
         <div className={styles.invitePopupOverlay}>
-          <div className={styles.invitePopup}>
+          <div className={styles.inviteModal}>
             <div className={styles.inviteContent}>
               <h2 className={styles.inviteTitle}>Invita a un nuevo miembro</h2>
               <p className={styles.inviteSubtitle}>
@@ -295,7 +289,7 @@ const MembersTable = () => {
                     type="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="mail@dominio.com"
+                    placeholder="mail@example.com"
                     className={styles.inviteInput}
                     required
                     aria-required="true"
