@@ -206,15 +206,16 @@ const ClientsTable = () => {
               body: formData,
             });
             if (!response.ok) {
-              throw new Error('Failed to upload image');
+              const errorData = await response.json();
+              throw new Error(errorData.details || 'Failed to upload image');
             }
             const data = await response.json();
             imageUrl = data.imageUrl;
             console.log('Image uploaded via API:', imageUrl);
-          } catch (uploadError) {
-            console.error('Image upload failed, using default image:', uploadError);
+          } catch (uploadError: any) {
+            console.error('Image upload failed, using default image:', uploadError.message);
             imageUrl = '/empty-image.png';
-            alert('No se pudo subir la imagen. Se usará la imagen por defecto.');
+            alert(`No se pudo subir la imagen: ${uploadError.message}. Se usará la imagen por defecto.`);
           }
         }
 
@@ -241,8 +242,8 @@ const ClientsTable = () => {
           setClients((prev) => [...prev, clientData]);
         }
         resetForm();
-      } catch (error) {
-        console.error('Error saving client:', error);
+      } catch (error: any) {
+        console.error('Error saving client:', error.message);
         alert('Error al guardar la cuenta.');
       }
     },
