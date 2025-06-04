@@ -2,46 +2,51 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px; /* Espacio entre la tabla y la paginación si están separados */
+  gap: 16px;
 }
 
 .table {
   display: flex;
   flex-direction: column;
   background: white;
-  border-radius: 8px; /* Bordes redondeados para la tabla */
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06); /* Sombra sutil */
+  border-radius: 8px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06);
 }
+
 :global(body.dark) .table {
-  background: #0D0D0D; /* Fondo oscuro para la tabla */
+  background: #0d0d0d;
   box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3), 0px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .header {
   display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #E4E4E7; /* Borde más claro para light mode */
+  border-bottom: 1px solid #e4e4e7;
 }
+
 :global(body.dark) .header {
-  border-bottom: 1px solid #555555; /* Borde más oscuro para dark mode */
+  border-bottom: 1px solid #555555;
 }
 
 .headerCell {
-  padding: 12px 24px; /* Ajuste de padding */
-  color: #3F3F46; /* Color de texto del header */
+  padding: 12px 24px;
+  color: #3f3f46;
   font-size: 10px;
   font-family: 'Inter', sans-serif;
-  font-weight: 500; /* Ligeramente más grueso */
-  text-transform: uppercase; /* Para un look más de "header" */
+  font-weight: 500;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
-  cursor: pointer;
-  gap: 10px;
   display: flex;
-  justify-content: space-between;
-  user-select: none; /* Evitar selección de texto al hacer clic */
+  align-items: center;
+  gap: 10px;
+  user-select: none;
 }
+
+.headerCell.sortable {
+  cursor: pointer;
+}
+
 :global(body.dark) .headerCell {
-  color: #A1A1AA; /* Color de texto del header en dark mode */
+  color: #a1a1aa;
 }
 
 .sortIndicator {
@@ -50,47 +55,74 @@
 
 .row {
   display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #F4F4F5; /* Borde de fila muy sutil */
-}
-.row:last-child {
-  border-bottom: none; /* Sin borde para la última fila */
-}
-:global(body.dark) .row {
-  border-bottom: 1px solid #3F3F46; /* Borde de fila en dark mode */
+  border-bottom: 1px solid #f4f4f5;
 }
 
+.row:last-child {
+  border-bottom: none;
+}
+
+:global(body.dark) .row {
+  border-bottom: 1px solid #3f3f46;
+}
 
 .cell {
-  padding: 14px 24px; /* Ajuste de padding para más espacio */
-  color: #18181B; /* Color de texto de celda principal */
+  padding: 14px 24px;
+  color: #18181b;
   font-size: 14px;
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   display: flex;
   align-items: center;
-  line-height: 1.5; /* Mejor legibilidad */
+  line-height: 1.5;
 }
+
 :global(body.dark) .cell {
-  color: #D1D1D1; /* Color de texto de celda en dark mode */
+  color: #d1d1d1;
+}
+
+.actionCell {
+  position: relative; /* Contenedor relativo para el botón de acción */
 }
 
 .actionButton {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: absolute; /* Posicionamiento absoluto */
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  z-index: 1000; /* Alta prioridad para estar por encima */
+  border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
 }
-.actionButton img { /* Para el ícono de elipsis en la tabla */
+
+.actionButton:hover {
+  background-color: #f4f4f5; /* Hover sutil */
+}
+
+:global(body.dark) .actionButton:hover {
+  background-color: #272727;
+}
+
+.actionButton img {
   filter: none;
 }
+
 :global(body.dark) .actionButton img {
   filter: invert(1) grayscale(1) brightness(1.5);
 }
 
+.hideOnMobile {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
 
 .pagination {
   display: flex;
@@ -106,42 +138,48 @@
   padding: 8px;
   background: white;
   border-radius: 6px;
-  border: 1px solid #E4E4E7;
+  border: 1px solid #e4e4e7;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
+
 .paginationButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
 .paginationButton:not(:disabled):hover {
-  background-color: #F4F4F5; /* Hover sutil */
+  background-color: #f4f4f5;
 }
-.paginationButton img { /* Para los íconos de paginación SVG */
+
+.paginationButton img {
   filter: none;
 }
 
 :global(body.dark) .paginationButton {
-  background: #0D0D0D;
+  background: #0d0d0d;
   border-color: #555555;
 }
+
 :global(body.dark) .paginationButton:not(:disabled):hover {
-  background-color: #0D0D0D;
+  background-color: #272727;
 }
+
 :global(body.dark) .paginationButton img {
-  filter: invert(1) grayscale(1) brightness(1.5); /* Hace los SVGs blancos */
+  filter: invert(1) grayscale(1) brightness(1.5);
 }
 
 .pageInfo {
-  color: #3F3F46; /* Color de texto para la info de página */
+  color: #3f3f46;
   font-size: 14px;
   font-family: 'Inter', sans-serif;
   font-weight: 500;
-  margin: 0 8px; /* Margen para separar de los botones */
+  margin: 0 8px;
 }
+
 :global(body.dark) .pageInfo {
-  color: #A1A1AA; /* Color de texto para info de página en dark mode */
+  color: #a1a1aa;
 }

@@ -1,79 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap');
+
 .container {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-  }
-  
-  .header {
+    gap: 24px;
+    padding: 16px;
+}
+
+.header {
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
-  }
-  
-  .searchWrapper {
+    gap: 16px;
+}
+
+.searchWrapper {
     flex: 1;
     display: flex;
     align-items: center;
-  }
-  
-  .searchInput {
+}
+
+.searchInput {
     width: 100%;
-    height: 32px;
-    padding: 20px 12px;
-    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
-    border-radius: 6px;
+    height: 40px;
+    padding: 10px 16px;
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
     border: 1px solid #E4E4E7;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 500;
     color: #52525B;
-    opacity: 0.5;
-  }
-  .searchInput::placeholder {
+    opacity: 0.8;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.searchInput:focus {
+    border-color: #3B82F6;
+    box-shadow: 0px 0px 0px 4px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+.searchInput::placeholder {
     color: #52525B;
-  }
-  :global(body.dark) .searchInput {
+}
+:global(body.dark) .searchInput {
     background: #0D0D0D;
     border-color: #555555;
     color: #D1D1D1;
     opacity: 1;
-  }
-  :global(body.dark) .searchInput::placeholder {
+}
+:global(body.dark) .searchInput::placeholder {
     color: #A1A1AA;
-  }
-  
-  .inviteButtonWrapper {
+}
+
+.inviteButtonWrapper {
     display: flex;
     align-items: center;
-  }
-  
-  .inviteButton {
-    height: 32px;
-    padding: 20px 12px;
+}
+
+.inviteButton {
+    height: 40px;
+    padding: 10px 16px;
     background: #0A0A0A;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #E4E4E7;
     color: white;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     cursor: pointer;
-  }
-  :global(body.dark) .inviteButton {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.inviteButton:hover {
+    background: #1F1F1F;
+}
+:global(body.dark) .inviteButton {
     background: #ffffff;
     border-color: #555555;
     color: #000000;
-  }
-  :global(body.dark) .inviteButton img {
+}
+:global(body.dark) .inviteButton:hover {
+    background: #E5E5E5;
+}
+:global(body.dark) .inviteButton img {
     filter: invert(100) grayscale(1) brightness(1.5);
-  }
-  
-  .invitePopupOverlay {
+}
+
+.invitePopupOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -86,246 +102,275 @@
     justify-content: center;
     align-items: center;
     z-index: 2000;
-  }
-  
-  .invitePopup {
+}
+
+.invitePopup {
     position: relative;
-    padding: 34px 36px;
+    padding: 40px 24px;
     background: white;
-    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
-    border-radius: 10px;
+    box-shadow: 0px 8px 60px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    max-width: 400px;
+    gap: 24px;
+    max-width: 480px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
-  }
-  :global(body.dark) .invitePopup {
+}
+:global(body.dark) .invitePopup {
     background: #2D2D2D;
-    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.2);
-  }
-  
-  .inviteContent {
+    box-shadow: 0px 8px 60px rgba(0, 0, 0, 0.3);
+}
+
+.inviteContent {
     display: flex;
     flex-direction: column;
+    background-color: white;
+    padding: 34px 36px;
+    border-radius: 10px;
     align-items: center;
-    gap: 10px;
+    gap: 16px;
     width: 100%;
-  }
-  
-  .inviteTitle {
+}
+
+.inviteTitle {
     text-align: center;
     color: #0D0D0D;
-    font-size: 16px;
-    font-family: 'Inter', sans-serif;
+    font-size: 19px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 700;
-  }
-  :global(body.dark) .inviteTitle {
+}
+:global(body.dark) .inviteTitle {
     color: #D1D1D1;
-  }
-  
-  .inviteSubtitle {
+}
+
+.inviteSubtitle {
     text-align: center;
     color: #737373;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 400;
-  }
-  :global(body.dark) .inviteSubtitle {
+}
+:global(body.dark) .inviteSubtitle {
     color: #A1A1AA;
-  }
-  
-  .inviteField {
+}
+
+.inviteField {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     width: 100%;
-  }
-  
-  .inviteLabel {
+}
+
+.inviteLabel {
     color: #0D0D0D;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    text-align: center;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 700;
-  }
-  :global(body.dark) .inviteLabel {
+}
+:global(body.dark) .inviteLabel {
     color: #D1D1D1;
-  }
-  
-  .inviteInput {
+}
+
+.inviteInput {
     width: 100%;
-    padding: 8px 10px;
+    padding: 10px 14px;
     background: white;
-    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
-    border-radius: 4px;
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
     border: 1px solid #D8D8D8;
-    color: rgba(12.75, 12.75, 12.75, 0.6);
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    color: #0D0D0D;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 400;
-  }
-  .inviteInput::placeholder {
+    height: 40px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.inviteInput:focus {
+    border-color: #3B82F6;
+    box-shadow: 0px 0px 0px 4px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+.inviteInput::placeholder {
     color: rgba(12.75, 12.75, 12.75, 0.6);
-  }
-  :global(body.dark) .inviteInput {
+}
+:global(body.dark) .inviteInput {
     background: #3A3A3A;
     border-color: #555555;
     color: #D1D1D1;
-  }
-  :global(body.dark) .inviteInput::placeholder {
+}
+:global(body.dark) .inviteInput::placeholder {
     color: #A1A1AA;
-  }
-  
-  .inviteSubmitButton {
+}
+
+.inviteSubmitButton {
     width: 100%;
-    padding: 8px 10px;
+    padding: 10px 14px;
     background: #0D0D0D;
-    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
-    border-radius: 4px;
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
     border: 1px solid #0D0D0D;
     color: white;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 700;
     cursor: pointer;
-  }
-  :global(body.dark) .inviteSubmitButton {
+    transition: background-color 0.2s ease;
+}
+.inviteSubmitButton:hover {
+    background: #1F1F1F;
+}
+:global(body.dark) .inviteSubmitButton {
     background: #1A1A1A;
     border-color: #1A1A1A;
     color: #D1D1D1;
-  }
-  
-  .cancelButton {
-    margin-top: 10px;
+}
+:global(body.dark) .inviteSubmitButton:hover {
+    background: #2A2A2A;
+}
+
+.cancelButton {
     background: transparent;
     border: 1px solid grey;
     color: grey;
     width: 100%;
-    padding: 8px 10px;
-    border-radius: 4px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
+    font-weight: 500;
     cursor: pointer;
-  }
-  :global(body.dark) .cancelButton {
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.cancelButton:hover {
+    border-color: #52525B;
+    color: #52525B;
+}
+:global(body.dark) .cancelButton {
     border: 1px solid #555555;
     color: #A1A1AA;
-  }
-  
-  .profileImage {
+}
+:global(body.dark) .cancelButton:hover {
+    border-color: #A1A1AA;
+    color: #D1D1D1;
+}
+
+.profileImage {
     border-radius: 9999px;
     object-fit: cover;
-  }
-  
-  .actionContainer {
+}
+
+.actionContainer {
     position: relative;
     display: inline-block;
     z-index: 10;
-  }
-  
-  .actionButton {
+}
+
+.actionButton {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0;
+    padding: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-  }
-  .actionButton img {
+}
+.actionButton img {
     filter: none;
-  }
-  :global(body.dark) .actionButton img {
+}
+:global(body.dark) .actionButton img {
     filter: invert(1) grayscale(1) brightness(1.5);
-  }
-  
-  .dropdown {
+}
+
+.dropdown {
     position: absolute;
     top: 100%;
     right: 0;
     background: white;
-    box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.06), 0px 4px 8px -1px rgba(0, 0, 0, 0.1);
-    border-radius: 6px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
     border: 1px solid #E4E4E7;
     display: flex;
     flex-direction: column;
     z-index: 1100;
-    min-width: 180px;
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  :global(body.dark) .dropdown {
+    min-width: 200px;
+    padding: 8px 0;
+}
+:global(body.dark) .dropdown {
     background: #2D2D2D;
     border-color: #555555;
-    box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.15), 0px 4px 8px -1px rgba(0, 0, 0, 0.25);
-  }
-  
-  .dropdownHeader {
-    padding: 6px 8px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dropdownHeader {
+    padding: 8px 12px;
     border-bottom: 1px solid #E4E4E7;
     display: flex;
     align-items: center;
-  }
-  :global(body.dark) .dropdownHeader {
+}
+:global(body.dark) .dropdownHeader {
     border-color: #555555;
-  }
-  
-  .dropdownTitle {
+}
+
+.dropdownTitle {
     color: #09090B;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 600;
-  }
-  :global(body.dark) .dropdownTitle {
+}
+:global(body.dark) .dropdownTitle {
     color: #D1D1D1;
-  }
-  
-  .dropdownItem {
-    padding: 6px 8px;
+}
+
+.dropdownItem {
+    padding: 10px 16px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     cursor: pointer;
     border-bottom: 1px solid #E4E4E7;
-  }
-  .dropdownItem:last-child {
+    transition: background-color 0.2s ease;
+}
+.dropdownItem:last-child {
     border-bottom: none;
-  }
-  .dropdownItem:hover {
+}
+.dropdownItem:hover {
     background: #F7F7F7;
-  }
-  :global(body.dark) .dropdownItem {
+}
+:global(body.dark) .dropdownItem {
     border-color: #555555;
-  }
-  :global(body.dark) .dropdownItem:hover {
+}
+:global(body.dark) .dropdownItem:hover {
     background: #3A3A3A;
-  }
-  .dropdownItem > span {
+}
+.dropdownItem > span {
     color: #09090B;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 400;
-  }
-  :global(body.dark) .dropdownItem > span {
+}
+:global(body.dark) .dropdownItem > span {
     color: #D1D1D1;
-  }
-  .dropdownItem img {
+}
+.dropdownItem img {
     filter: none;
-  }
-  :global(body.dark) .dropdownItem img {
+}
+:global(body.dark) .dropdownItem img {
     filter: invert(1) grayscale(1) brightness(1.5);
-  }
-  
-  .deleteText {
+}
+
+.deleteText {
     color: #DC2626 !important;
-  }
-  :global(body.dark) .deleteText {
+}
+:global(body.dark) .deleteText {
     color: #F87171 !important;
-  }
-  
-  .profilePopupOverlay {
+}
+
+.profilePopupOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -338,121 +383,128 @@
     justify-content: center;
     align-items: center;
     z-index: 2000;
-  }
-  
-  .profilePopup {
+}
+
+.profilePopup {
     position: relative;
-    padding: 10px 15px 34px;
+    padding: 24px 24px 40px;
     background: white;
-    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
-    border-radius: 10px;
+    box-shadow: 0px 8px 60px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 7px;
-    max-width: 400px;
+    gap: 16px;
+    max-width: 480px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
-  }
-  :global(body.dark) .profilePopup {
+}
+:global(body.dark) .profilePopup {
     background: #2D2D2D;
-    box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.2);
-  }
-  
-  .closeButton {
+    box-shadow: 0px 8px 60px rgba(0, 0, 0, 0.3);
+}
+
+.closeButton {
     align-self: flex-start;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0;
-  }
-  .closeButton img {
+    padding: 8px;
+}
+.closeButton img {
     filter: none;
-  }
-  :global(body.dark) .closeButton img {
+}
+:global(body.dark) .closeButton img {
     filter: invert(1) grayscale(1) brightness(1.5);
-  }
-  
-  .profileContent {
+}
+
+.profileContent {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 24px;
     width: 100%;
-  }
-  
-  .profileTitle {
+}
+
+.profileTitle {
     text-align: center;
     color: #0D0D0D;
-    font-size: 16px;
-    font-family: 'Inter', sans-serif;
+    font-size: 19px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 700;
-  }
-  :global(body.dark) .profileTitle {
+}
+:global(body.dark) .profileTitle {
     color: #D1D1D1;
-  }
-  
-  .profileAvatar {
+}
+
+.profileAvatar {
     border-radius: 9999px;
     object-fit: cover;
-  }
-  
-  .profileUsername {
+}
+
+.profileUsername {
     text-align: center;
     color: #0D0D0D;
-    font-size: 16px;
-    font-family: 'Inter', sans-serif;
+    font-size: 19px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 700;
-  }
-  :global(body.dark) .profileUsername {
+}
+:global(body.dark) .profileUsername {
     color: #D1D1D1;
-  }
-  
-  .profileField {
+}
+
+.profileField {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     width: 100%;
-  }
-  
-  .profileLabel {
+}
+
+.profileLabel {
     color: #52525B;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 700;
-  }
-  :global(body.dark) .profileLabel {
+}
+:global(body.dark) .profileLabel {
     color: #A1A1AA;
-  }
-  
-  .profileValue {
+}
+
+.profileValue {
     color: rgba(12.75, 12.75, 12.75, 0.6);
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 400;
-  }
-  :global(body.dark) .profileValue {
+}
+:global(body.dark) .profileValue {
     color: #D1D1D1;
-  }
-  
-  .confirmButton {
+}
+
+.confirmButton {
     width: 100%;
-    max-width: 279px;
-    padding: 8px 10px;
+    max-width: 320px;
+    padding: 10px 14px;
     background: #0D0D0D;
-    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.11);
-    border-radius: 4px;
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
     border: 1px solid #0D0D0D;
     color: white;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-family: 'Urbanist', sans-serif;
     font-weight: 700;
     cursor: pointer;
-  }
-  :global(body.dark) .confirmButton {
+    transition: background-color 0.2s ease;
+}
+.confirmButton:hover {
+    background: #1F1F1F;
+}
+:global(body.dark) .confirmButton {
     background: #1A1A1A;
     border-color: #1A1A1A;
     color: #D1D1D1;
-  }
+}
+:global(body.dark) .confirmButton:hover {
+    background: #2A2A2A;
+}
