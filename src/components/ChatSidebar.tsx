@@ -5,7 +5,7 @@ import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firesto
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
-import styles from './ChatSidebar.module.scss';
+import styles from './ChatShidebar.module.scss';
 import firebase from 'firebase/firestore';
 
 interface Message {

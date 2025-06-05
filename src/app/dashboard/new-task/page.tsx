@@ -11,7 +11,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import ThemeToggler from '@/components/ui/ThemeToggler';
 import { db } from '@/lib/firebase';
-import styles from '@/components/NewTaskPage.module.scss';
+import styles from '@/components/NewTaskStyles.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import memberStyles from '@/components/MembersTable.module.scss';
 
