@@ -52,20 +52,7 @@ interface Task {
   createdAt: string;
 }
 
-const ClientPopup = memo(function ClientPopup({
-  isOpen,
-  isEdit,
-  clientForm,
-  setClientForm,
-  fileInputRef,
-  handleImageChange,
-  handleProjectChange,
-  handleAddProject,
-  handleDeleteProjectClick,
-  handleDeleteProjectConfirm,
-  handleClientSubmit,
-  onClose,
-}: {
+interface ClientPopupProps {
   isOpen: boolean;
   isEdit: boolean;
   clientForm: {
@@ -77,7 +64,15 @@ const ClientPopup = memo(function ClientPopup({
     deleteProjectIndex: number | null;
     deleteConfirm: string;
   };
-  setClientForm: React.Dispatch<React.SetStateAction<typeof clientForm>>;
+  setClientForm: React.Dispatch<React.SetStateAction<{
+    id?: string;
+    name: string;
+    imageFile: File | null;
+    imagePreview: string;
+    projects: string[];
+    deleteProjectIndex: number | null;
+    deleteConfirm: string;
+  }>>;
   fileInputRef: React.RefObject<HTMLInputElement>;
   handleImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleProjectChange: (index: number, value: string) => void;
@@ -86,222 +81,250 @@ const ClientPopup = memo(function ClientPopup({
   handleDeleteProjectConfirm: () => void;
   handleClientSubmit: (e: React.FormEvent, clientId?: string) => Promise<void>;
   onClose: () => void;
-}) {
-  const popupRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  isClientLoading: boolean;
+}
 
-  useEffect(() => {
-    if (isOpen && popupRef.current) {
-      setIsLoading(true);
-      gsap.set(popupRef.current, { opacity: 0, scale: 0.8 });
-      setTimeout(() => {
-        setIsLoading(false);
-        gsap.to(popupRef.current, {
-          opacity: 1,
-          scale: 1,
-          duration: 0.2,
-          ease: 'power2.out',
-        });
-      }, 100);
-    }
-  }, [isOpen]);
+const ClientPopup: React.FC<ClientPopupProps> = memo(
+  ({
+    isOpen,
+    isEdit,
+    clientForm,
+    setClientForm,
+    fileInputRef,
+    handleImageChange,
+    handleProjectChange,
+    handleAddProject,
+    handleDeleteProjectClick,
+    handleDeleteProjectConfirm,
+    handleClientSubmit,
+    onClose,
+    isClientLoading,
+  }) => {
+    const popupRef = useRef<HTMLDivElement>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popupRef.current &&
-        !popupRef.current.contains(event.target as Node) &&
-        isOpen &&
-        !isLoading
-      ) {
-        gsap.to(popupRef.current, {
-          opacity: 0,
-          y: 50,
-          scale: 0.95,
-          duration: 0.3,
-          ease: 'power2.in',
-          onComplete: onClose,
-        });
+    useEffect(() => {
+      if (isOpen && popupRef.current) {
+        setIsLoading(true);
+        gsap.set(popupRef.current, { opacity: 0, scale: 0.8 });
+        setTimeout(() => {
+          setIsLoading(false);
+          gsap.to(popupRef.current, {
+            opacity: 1,
+            scale: 1,
+            duration: 0.2,
+            ease: 'power2.out',
+          });
+        }, 100);
       }
-    };
+    }, [isOpen]);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, isLoading, onClose]);
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          popupRef.current &&
+          !popupRef.current.contains(event.target as Node) &&
+          isOpen &&
+          !isClientLoading
+        ) {
+          gsap.to(popupRef.current, {
+            opacity: 0,
+            y: 50,
+            scale: 0.95,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: onClose,
+          });
+        }
+      };
 
-  if (!isOpen) return null;
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen, isClientLoading, onClose]);
 
-  return (
-    <div className={clientStyles.popupOverlay}>
-      <div className={clientStyles.popup} ref={popupRef}>
-        {isLoading ? (
-          <div className={clientStyles.loader}>
-            <div className={clientStyles.spinner}></div>
-          </div>
-        ) : (
-          <div className={clientStyles.popupContent}>
-            <h2 className={clientStyles.popupTitle}>
-              {isEdit ? 'Editar Cliente' : '¿Cómo se llama tu cliente o empresa?'}
-            </h2>
-            <p className={clientStyles.popupSubtitle}>
-              Elige un nombre claro para reconocer esta cuenta fácilmente.{' '}
-              <strong>Sólo tú puedes editar o eliminar esta cuenta.</strong>
-            </p>
-            <div
-              className={clientStyles.avatar}
-              onClick={() => fileInputRef.current?.click()}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-            >
-              <Image
-                src={clientForm.imagePreview}
-                alt="Avatar del cliente"
-                width={109}
-                height={109}
-                className={clientStyles.avatarImage}
-                onError={(e) => {
-                  e.currentTarget.src = '/empty-image.png';
-                }}
-              />
-              <input
-                type="file"
-                accept="image/*"
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                onChange={handleImageChange}
-                aria-label="Subir imagen de cliente"
-              />
+    if (!isOpen) return null;
+
+    return (
+      <div className={clientStyles.popupOverlay}>
+        <div className={clientStyles.popup} ref={popupRef}>
+          {isLoading || isClientLoading ? (
+            <div className={clientStyles.loader}>
+              <div className={clientStyles.spinner}></div>
             </div>
-            <form onSubmit={(e) => handleClientSubmit(e, isEdit ? clientForm.id : undefined)}>
-              <div className={clientStyles.field}>
-                <label htmlFor="clientName" className={clientStyles.label}>
-                  Nombre de Cuenta <span className={clientStyles.required}>*</span>
-                </label>
-                <p className={clientStyles.fieldDescription}>
-                  Este nombre aparecerá en todas las tareas, carpetas y vistas del sistema.
-                </p>
+          ) : (
+            <div className={clientStyles.popupContent}>
+              <h2 className={clientStyles.popupTitle}>
+                {isEdit ? 'Editar Cliente' : '¿Cómo se llama tu cliente o empresa?'}
+              </h2>
+              <p className={clientStyles.popupSubtitle}>
+                Elige un nombre claro para reconocer esta cuenta fácilmente.{' '}
+                <strong>Sólo tú puedes editar o eliminar esta cuenta.</strong>
+              </p>
+              <div
+                className={clientStyles.avatar}
+                onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+              >
+                <Image
+                  src={clientForm.imagePreview}
+                  alt="Avatar del cliente"
+                  width={109}
+                  height={109}
+                  className={clientStyles.avatarImage}
+                  onError={(e) => {
+                    e.currentTarget.src = '/empty-image.png';
+                  }}
+                />
                 <input
-                  id="clientName"
-                  type="text"
-                  value={clientForm.name}
-                  onChange={(e) => setClientForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ej. Coca-Cola, Agencia Delta, Clínica Sol"
-                  className={clientStyles.input}
-                  required
-                  aria-required="true"
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImageChange}
+                  aria-label="Subir imagen de cliente"
+                  disabled={isClientLoading}
                 />
               </div>
-              <div className={clientStyles.field}>
-                <label className={clientStyles.label}>Proyectos</label>
-                <p className={clientStyles.fieldDescription}>
-                  Organiza las tareas de este cliente creando proyectos a tu medida.{' '}
-                  <strong>Puedes añadir nuevos proyectos en cualquier momento desde el menú “Acciones” de la cuenta.</strong>
-                </p>
-                {clientForm.projects.map((project, index) => (
-                  <div key={index} className={clientStyles.projectField}>
-                    <div className={clientStyles.projectInputWrapper}>
-                      <input
-                        type="text"
-                        value={project}
-                        onChange={(e) => handleProjectChange(index, e.target.value)}
-                        placeholder={`Proyecto ${index + 1}`}
-                        className={clientStyles.input}
-                        aria-label={`Nombre del proyecto ${index + 1}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteProjectClick(index)}
-                        className={clientStyles.deleteProjectButton}
-                        aria-label={`Eliminar proyecto ${index + 1}`}
-                      >
-                        <Image
-                          src="/trash-2.svg"
-                          alt="Eliminar proyecto"
-                          width={16}
-                          height={16}
-                          className={clientStyles.trashWhite}
-                          onError={(e) => {
-                            e.currentTarget.src = '/fallback-trash.svg';
-                          }}
+              <form onSubmit={(e) => handleClientSubmit(e, isEdit ? clientForm.id : undefined)}>
+                <div className={clientStyles.field}>
+                  <label htmlFor="clientName" className={clientStyles.label}>
+                    Nombre de Cuenta <span className={clientStyles.required}>*</span>
+                  </label>
+                  <p className={clientStyles.fieldDescription}>
+                    Este nombre aparecerá en todas las tareas, carpetas y vistas del sistema.
+                  </p>
+                  <input
+                    id="clientName"
+                    type="text"
+                    value={clientForm.name}
+                    onChange={(e) => setClientForm((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ej. Coca-Cola, Agencia Delta, Clínica Sol"
+                    className={clientStyles.input}
+                    required
+                    aria-required="true"
+                    disabled={isClientLoading}
+                  />
+                </div>
+                <div className={clientStyles.field}>
+                  <label className={clientStyles.label}>Proyectos</label>
+                  <p className={clientStyles.fieldDescription}>
+                    Organiza las tareas de este cliente creando proyectos a tu medida.{' '}
+                    <strong>Puedes añadir nuevos proyectos en cualquier momento desde el menú “Acciones” de la cuenta.</strong>
+                  </p>
+                  {clientForm.projects.map((project, index) => (
+                    <div key={index} className={clientStyles.projectField}>
+                      <div className={clientStyles.projectInputWrapper}>
+                        <input
+                          type="text"
+                          value={project}
+                          onChange={(e) => handleProjectChange(index, e.target.value)}
+                          placeholder={`Proyecto ${index + 1}`}
+                          className={clientStyles.input}
+                          aria-label={`Nombre del proyecto ${index + 1}`}
+                          disabled={isClientLoading}
                         />
-                      </button>
-                    </div>
-                    {clientForm.deleteProjectIndex === index && (
-                      <div className={clientStyles.deleteConfirm}>
-                        <div className={clientStyles.deleteConfirmHeader}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProjectClick(index)}
+                          className={clientStyles.deleteProjectButton}
+                          aria-label={`Eliminar proyecto ${index + 1}`}
+                          disabled={isClientLoading}
+                        >
                           <Image
                             src="/trash-2.svg"
-                            alt="Confirmar eliminación"
-                            width={12}
-                            height={13.33}
+                            alt="Eliminar proyecto"
+                            width={16}
+                            height={16}
                             className={clientStyles.trashWhite}
                             onError={(e) => {
                               e.currentTarget.src = '/fallback-trash.svg';
                             }}
                           />
-                          <h3>
-                            ¿Estás seguro de que quieres eliminar el proyecto “
-                            {project || `Proyecto ${index + 1}`}”?
-                          </h3>
-                        </div>
-                        <p>
-                          Al eliminar este proyecto, también se eliminarán:
-                          <br />
-                          Todas las tareas asociadas
-                          <br />
-                          Historial de chats y actividad
-                          <br />
-                          Conocimiento generado por la IA para este proyecto
-                          <br />
-                          ⚠️ Esta acción es permanente y no se puede deshacer.
-                        </p>
-                        <input
-                          type="text"
-                          placeholder="Escribe ‘Eliminar’ para confirmar esta acción"
-                          value={clientForm.deleteConfirm}
-                          onChange={(e) => setClientForm((prev) => ({ ...prev, deleteConfirm: e.target.value }))}
-                          className={clientStyles.deleteConfirmInput}
-                          aria-label="Confirmar eliminación escribiendo 'Eliminar'"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleDeleteProjectConfirm}
-                          disabled={clientForm.deleteConfirm.toLowerCase() !== 'eliminar'}
-                          className={clientStyles.deleteConfirmButton}
-                        >
-                          Sí, eliminar todo
                         </button>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {clientForm.deleteProjectIndex === index && (
+                        <div className={clientStyles.deleteConfirm}>
+                          <div className={clientStyles.deleteConfirmHeader}>
+                            <Image
+                              src="/trash-2.svg"
+                              alt="Confirmar eliminación"
+                              width={12}
+                              height={13.33}
+                              className={clientStyles.trashWhite}
+                              onError={(e) => {
+                                e.currentTarget.src = '/fallback-trash.svg';
+                              }}
+                            />
+                            <h3>
+                              ¿Estás seguro de que quieres eliminar el proyecto “
+                              {project || `Proyecto ${index + 1}`}”?
+                            </h3>
+                          </div>
+                          <p>
+                            Al eliminar este proyecto, también se eliminarán:
+                            <br />
+                            Todas las tareas asociadas
+                            <br />
+                            Historial de chats y actividad
+                            <br />
+                            Conocimiento generado por la IA para este proyecto
+                            <br />
+                            ⚠️ Esta acción es permanente y no se puede deshacer.
+                          </p>
+                          <input
+                            type="text"
+                            placeholder="Escribe ‘Eliminar’ para confirmar esta acción"
+                            value={clientForm.deleteConfirm}
+                            onChange={(e) => setClientForm((prev) => ({ ...prev, deleteConfirm: e.target.value }))}
+                            className={clientStyles.deleteConfirmInput}
+                            aria-label="Confirmar eliminación escribiendo 'Eliminar'"
+                            disabled={isClientLoading}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProjectConfirm()}
+                            disabled={clientForm.deleteConfirm.toLowerCase() !== 'eliminar' || isClientLoading}
+                            className={clientStyles.deleteConfirmButton}
+                          >
+                            Sí, eliminar todo
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleAddProject}
+                    className={clientStyles.addProjectButton}
+                    aria-label="Añadir nuevo proyecto"
+                    disabled={isClientLoading}
+                  >
+                    +
+                  </button>
+                </div>
+                <button type="submit" className={clientStyles.submitButton} disabled={isClientLoading}>
+                  Guardar
+                </button>
                 <button
                   type="button"
-                  onClick={handleAddProject}
-                  className={clientStyles.addProjectButton}
-                  aria-label="Añadir nuevo proyecto"
+                  onClick={onClose}
+                  className={clientStyles.cancelButton}
+                  disabled={isClientLoading}
                 >
-                  +
+                  Cancelar
                 </button>
-              </div>
-              <button type="submit" className={clientStyles.submitButton}>
-                Guardar
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className={clientStyles.cancelButton}
-              >
-                Cancelar
-              </button>
-            </form>
-          </div>
-        )}
+              </form>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
+
+ClientPopup.displayName = 'ClientPopup';
 
 export default function TasksPage() {
   const { user } = useUser();
@@ -354,15 +377,15 @@ export default function TasksPage() {
       try {
         const response = await fetch('/api/users');
         if (!response.ok) throw new Error('Failed to fetch users');
-        const clerkUsers = await response.json();
-        const formattedUsers: User[] = clerkUsers.map((user: any) => ({
+        const clerkUsers: { id: string; imageUrl?: string; firstName?: string; lastName?: string; publicMetadata: { role?: string; description?: string } }[] = await response.json();
+        const usersData: User[] = clerkUsers.map((user) => ({
           id: user.id,
           imageUrl: user.imageUrl || '/default-avatar.png',
           fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre',
           role: user.publicMetadata.role || 'Sin rol',
           description: user.publicMetadata.description || 'Sin descripción',
         }));
-        setUsers(formattedUsers);
+        setUsers(usersData);
       } catch (error) {
         console.error('Error fetching users:', error);
         setUsers([]);
@@ -428,20 +451,28 @@ export default function TasksPage() {
 
   // Animations
   useEffect(() => {
-    gsap.fromTo(
-      [headerRef.current, selectorRef.current, contentRef.current],
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
-    );
+    const header = headerRef.current;
+    const selector = selectorRef.current;
+    const content = contentRef.current;
+    if (header && selector && content) {
+      gsap.fromTo(
+        [header, selector, content],
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
+      );
+    }
     return () => {
-      gsap.killTweensOf([headerRef.current, selectorRef.current, contentRef.current]);
+      if (header && selector && content) {
+        gsap.killTweensOf([header, selector, content]);
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (contentRef.current) {
+    const content = contentRef.current;
+    if (content) {
       gsap.fromTo(
-        contentRef.current,
+        content,
         { opacity: 0, x: 10 },
         { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }
       );
@@ -690,6 +721,7 @@ export default function TasksPage() {
         handleDeleteProjectConfirm={handleDeleteProjectConfirm}
         handleClientSubmit={handleClientSubmit}
         onClose={handleClientPopupClose}
+        isClientLoading={isClientLoading}
       />
       {isDeleteClientOpen && (
         <div className={clientStyles.popupOverlay}>

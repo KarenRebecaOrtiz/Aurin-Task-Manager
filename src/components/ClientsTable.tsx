@@ -113,7 +113,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       setActionMenuOpenId((prev) => (prev === clientId ? null : clientId));
     }, []);
 
-    // Renderizar el menú de acciones como una función separada
     const renderActionMenu = useCallback(
       (client: Client) => (
         <div className={styles.actionContainer}>
@@ -128,7 +127,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                 className={styles.actionButton}
                 aria-label="Abrir acciones"
               >
-                <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
+                <Image src="/ellipsis.svg" alt="Actions" width={16} height={16} />
               </button>
               {actionMenuOpenId === client.id && (
                 <div ref={actionMenuRef} className={styles.dropdown}>
@@ -174,7 +173,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         {
           key: 'imageUrl',
           label: '',
-          width: '20%', // Ajustado a 20%
+          width: '20%',
           mobileVisible: false,
           render: (client: Client) =>
             client.imageUrl ? (
@@ -193,19 +192,19 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         {
           key: 'name',
           label: 'Cuentas',
-          width: '60%', // Ajustado a 60%
+          width: '60%',
           mobileVisible: true,
         },
         {
           key: 'projectCount',
           label: 'Proyectos Asignados',
-          width: '10%', // Ajustado a 10%
+          width: '10%',
           mobileVisible: false,
         },
         {
           key: 'action',
           label: 'Acciones',
-          width: '10%', // Ajustado a 10%
+          width: '10%',
           mobileVisible: true,
           render: renderActionMenu,
         },
@@ -284,7 +283,9 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         )}
       </div>
     );
-  },
+  }
 );
+
+ClientsTable.displayName = 'ClientsTable';
 
 export default ClientsTable;

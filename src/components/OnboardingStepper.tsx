@@ -17,6 +17,8 @@ const OnboardingStepper = () => {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const stepper = stepperRef.current;
+    const content = contentRef.current;
     if (user && !user.publicMetadata?.onboardingCompleted) {
       setIsOpen(true);
       if (user.publicMetadata?.role) {
@@ -28,17 +30,17 @@ const OnboardingStepper = () => {
       if (user.publicMetadata?.currentStep) {
         setStep(user.publicMetadata.currentStep as number);
       }
-      if (stepperRef.current) {
+      if (stepper) {
         gsap.fromTo(
-          stepperRef.current,
+          stepper,
           { opacity: 0, scale: 0.8 },
           { opacity: 1, scale: 1, duration: 0.5, ease: 'power2.out' }
         );
       }
     }
     return () => {
-      gsap.killTweensOf(stepperRef.current);
-      gsap.killTweensOf(contentRef.current);
+      if (stepper) gsap.killTweensOf(stepper);
+      if (content) gsap.killTweensOf(content);
     };
   }, [user]);
 
@@ -56,8 +58,9 @@ const OnboardingStepper = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to update step');
 
-      if (contentRef.current) {
-        gsap.to(contentRef.current, {
+      const content = contentRef.current;
+      if (content) {
+        gsap.to(content, {
           opacity: 0,
           scale: 0.95,
           duration: 0.3,
@@ -65,7 +68,7 @@ const OnboardingStepper = () => {
           onComplete: () => {
             setStep(newStep);
             gsap.fromTo(
-              contentRef.current,
+              content,
               { opacity: 0, scale: 0.95 },
               { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }
             );
@@ -76,8 +79,9 @@ const OnboardingStepper = () => {
       }
 
       await user.reload();
-    } catch (err: any) {
-      setError(err.message || 'Error al cambiar de paso');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error al cambiar de paso';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -102,8 +106,9 @@ const OnboardingStepper = () => {
 
       await user.reload();
       await updateStep(2);
-    } catch (err: any) {
-      setError(err.message || 'Error al guardar el rol y descripción');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error al guardar el rol y descripción';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -124,8 +129,9 @@ const OnboardingStepper = () => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to complete onboarding');
 
-        if (stepperRef.current) {
-          gsap.to(stepperRef.current, {
+        const stepper = stepperRef.current;
+        if (stepper) {
+          gsap.to(stepper, {
             opacity: 0,
             scale: 0.8,
             duration: 0.5,
@@ -137,8 +143,9 @@ const OnboardingStepper = () => {
         }
 
         await user?.reload();
-      } catch (err: any) {
-        setError(err.message || 'Error al completar el onboarding');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Error al completar el onboarding';
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -155,6 +162,7 @@ const OnboardingStepper = () => {
       {[1, 2, 3, 4, 5].map((num) => (
         <button
           key={num}
+          type="button"
           className={step === num ? styles.frame2147225883 : styles.frame2147225882}
           onClick={() => updateStep(num)}
           disabled={loading}

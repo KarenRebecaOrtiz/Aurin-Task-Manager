@@ -11,7 +11,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import ThemeToggler from '@/components/ui/ThemeToggler';
 import { db } from '@/lib/firebase';
-import styles from '@/components/NewTaskStyles.module.scss';
+import styles from '@/components/NewTaskPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import memberStyles from '@/components/MembersTable.module.scss';
 
@@ -131,14 +131,14 @@ export default function NewTaskPage() {
       try {
         const response = await fetch('/api/users');
         if (!response.ok) throw new Error('Failed to fetch users');
-        const clerkUsers = await response.json();
-        const formattedUsers: User[] = clerkUsers.map((user: any) => ({
+        const clerkUsers: { id: string; imageUrl?: string; firstName?: string; lastName?: string; publicMetadata: { role?: string } }[] = await response.json();
+        const usersData: User[] = clerkUsers.map((user) => ({
           id: user.id,
           imageUrl: user.imageUrl || '/default-avatar.png',
           fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre',
           role: user.publicMetadata.role || 'Sin rol',
         }));
-        setUsers(formattedUsers);
+        setUsers(usersData);
       } catch (error) {
         console.error('Error fetching users:', error);
       }
@@ -154,7 +154,7 @@ export default function NewTaskPage() {
       if (section) {
         gsap.fromTo(
           section,
-          { opacity: 1, y: 20 },
+          { opacity: 0, y: 20 },
           {
             opacity: 1,
             y: 0,
@@ -198,15 +198,16 @@ export default function NewTaskPage() {
 
   // GSAP popup animations
   useEffect(() => {
-    if (isCreateClientOpen || isEditClientOpen) {
+    const popup = createEditPopupRef.current;
+    if ((isCreateClientOpen || isEditClientOpen) && popup) {
       gsap.fromTo(
-        createEditPopupRef.current,
-        { opacity: 1, y: 50, scale: 0.95 },
+        popup,
+        { opacity: 0, y: 50, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power2.out' },
       );
-    } else if (createEditPopupRef.current) {
-      gsap.to(createEditPopupRef.current, {
-        opacity: 1,
+    } else if (popup) {
+      gsap.to(popup, {
+        opacity: 0,
         y: 50,
         scale: 0.95,
         duration: 0.3,
@@ -220,15 +221,15 @@ export default function NewTaskPage() {
   }, [isCreateClientOpen, isEditClientOpen]);
 
   useEffect(() => {
-    if (isInviteMemberOpen) {
+    if (isInviteMemberOpen && invitePopupRef.current) {
       gsap.fromTo(
         invitePopupRef.current,
-        { opacity: 1, y: 50, scale: 0.95 },
+        { opacity: 0, y: 50, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power2.out' },
       );
     } else if (invitePopupRef.current) {
       gsap.to(invitePopupRef.current, {
-        opacity: 1,
+        opacity: 0,
         y: 50,
         scale: 0.95,
         duration: 0.3,
@@ -247,7 +248,7 @@ export default function NewTaskPage() {
         (isCreateClientOpen || isEditClientOpen)
       ) {
         gsap.to(createEditPopupRef.current, {
-          opacity: 1,
+          opacity: 0,
           y: 50,
           scale: 0.95,
           duration: 0.3,
@@ -264,7 +265,7 @@ export default function NewTaskPage() {
         isInviteMemberOpen
       ) {
         gsap.to(invitePopupRef.current, {
-          opacity: 1,
+          opacity: 0,
           y: 50,
           scale: 0.95,
           duration: 0.3,
@@ -324,21 +325,21 @@ export default function NewTaskPage() {
     if (isProjectDropdownOpen && projectDropdownRef.current) {
       gsap.fromTo(
         projectDropdownRef.current.querySelector(`.${styles.dropdownItems}`),
-        { opacity: 1, y: -10, scale: 0.95 },
+        { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
     }
     if (isStatusDropdownOpen && statusDropdownRef.current) {
       gsap.fromTo(
         statusDropdownRef.current.querySelector(`.${styles.dropdownItems}`),
-        { opacity: 1, y: -10, scale: 0.95 },
+        { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
     }
     if (isPriorityDropdownOpen && priorityDropdownRef.current) {
       gsap.fromTo(
         priorityDropdownRef.current.querySelector(`.${styles.dropdownItems}`),
-        { opacity: 1, y: -10, scale: 0.95 },
+        { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
     }
@@ -455,7 +456,7 @@ export default function NewTaskPage() {
           : [...prev, clientData]
       );
       gsap.to(createEditPopupRef.current, {
-        opacity: 1,
+        opacity: 0,
         y: 50,
         scale: 0.95,
         duration: 0.3,
@@ -485,10 +486,9 @@ export default function NewTaskPage() {
     try {
       // Placeholder for Clerk email notification
       console.log('Invite email:', inviteEmail);
-      // await fetch('/api/invite', { ... });
       alert(`Invitación enviada a ${inviteEmail}`);
       gsap.to(invitePopupRef.current, {
-        opacity: 1,
+        opacity: 0,
         y: 50,
         scale: 0.95,
         duration: 0.3,
@@ -524,7 +524,6 @@ export default function NewTaskPage() {
         createdAt: new Date(),
       };
       await setDoc(doc(collection(db, 'tasks')), taskData);
-      // Placeholder for email notifications
       console.log('Task created, notify:', task.LeadedBy, task.AssignedTo);
       router.push('/dashboard/tasks');
     } catch (error) {
@@ -640,9 +639,9 @@ export default function NewTaskPage() {
               </div>
               {isProjectDropdownOpen && (
                 <div className={styles.dropdownItems}>
-                  {clients.find((c) => c.id === task.clientId)?.projects.map((project, index) => (
+                  {clients.find((c) => c.id === task.clientId)?.projects.map((project) => (
                     <div
-                      key={index}
+                      key={project}
                       className={styles.dropdownItem}
                       onClick={(e) => handleProjectSelect(project, e)}
                     >
@@ -1160,7 +1159,7 @@ export default function NewTaskPage() {
                   onClick={(e) => {
                     animateClick(e.currentTarget);
                     gsap.to(invitePopupRef.current, {
-                      opacity: 1,
+                      opacity: 0,
                       y: 50,
                       scale: 0.95,
                       duration: 0.3,

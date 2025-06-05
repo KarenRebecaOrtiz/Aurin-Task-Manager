@@ -5,14 +5,15 @@ import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firesto
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
-import styles from './ChatShidebar.module.scss';
+import styles from './ChatSidebar.module.scss';
+import firebase from 'firebase/firestore';
 
 interface Message {
   id: string;
   senderId: string;
   senderName: string;
   text: string;
-  timestamp: any;
+  timestamp: firebase.Timestamp;
 }
 
 interface ChatSidebarProps {
@@ -140,7 +141,7 @@ export default function ChatSidebar({ isOpen, onClose, task, clientName, users =
         senderId: user.id,
         senderName: user.fullName || 'Usuario',
         text: newMessage.trim(),
-        timestamp: new Date(),
+        timestamp: firebase.Timestamp.now(),
       });
       setNewMessage('');
     } catch (error) {
@@ -162,7 +163,7 @@ export default function ChatSidebar({ isOpen, onClose, task, clientName, users =
           senderId: user.id,
           senderName: user.fullName || 'Usuario',
           text: `Añadió una entrada de tiempo de ${timeEntry}`,
-          timestamp: new Date(),
+          timestamp: firebase.Timestamp.now(),
         });
         setTimerSeconds(0);
       } catch (error) {

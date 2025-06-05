@@ -36,15 +36,15 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         try {
           const response = await fetch('/api/users');
           if (!response.ok) throw new Error('Failed to fetch users');
-          const clerkUsers = await response.json();
-          const formattedUsers: User[] = clerkUsers.map((user: any) => ({
+          const clerkUsers: { id: string; imageUrl?: string; firstName?: string; lastName?: string; publicMetadata: { role?: string; description?: string } }[] = await response.json();
+          const usersData: User[] = clerkUsers.map((user) => ({
             id: user.id,
             imageUrl: user.imageUrl || '/default-avatar.png',
             fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre',
             role: user.publicMetadata.role || 'Sin rol',
             description: user.publicMetadata.description || 'Sin descripción',
           }));
-          setUsers(formattedUsers);
+          setUsers(usersData);
         } catch (error) {
           console.error('Error fetching users:', error);
         }
@@ -125,7 +125,6 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       [],
     );
 
-    // Renderizar el menú de acciones como una función separada
     const renderActionMenu = useCallback(
       (user: User) => (
         <div className={styles.actionContainer}>
@@ -138,7 +137,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             className={styles.actionButton}
             aria-label="Abrir acciones"
           >
-            <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
+            <Image src="/ellipsis.svg" alt="Actions" width={16} height={16} />
           </button>
           {actionMenuOpenId === user.id && (
             <div ref={actionMenuRef} className={styles.dropdown}>
@@ -245,7 +244,9 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         />
       </div>
     );
-  },
+  }
 );
+
+MembersTable.displayName = 'MembersTable';
 
 export default MembersTable;

@@ -1,7 +1,6 @@
 import { Storage } from '@google-cloud/storage';
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
-import path from 'path';
 
 const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './src/config/Aurin Plattform Uploader.json';
 
@@ -49,13 +48,13 @@ export async function POST(request: NextRequest) {
     console.log('Image uploaded to GCS:', imageUrl);
 
     return NextResponse.json({ imageUrl }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error uploading image:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      details: error.details,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      code: (error as any).code,
+      details: (error as any).details,
     });
-    return NextResponse.json({ error: 'Failed to upload image', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to upload image', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

@@ -1,14 +1,12 @@
 'use client';
-import { useAuth, useUser } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { firebaseConfig } from '../../lib/firebaseConfig';
 import { useState } from 'react';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
 
 const getFirestoreData = async () => {
   const docRef = doc(db, 'example', 'example-document');

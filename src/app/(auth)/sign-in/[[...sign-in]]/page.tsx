@@ -1,7 +1,6 @@
-// src/app/(auth)/sign-in/[[...sign-in]]/page.tsx
+'use client';
 import { SignIn } from '@clerk/nextjs';
 import styles from './SignIn.module.scss';
-import { Backend } from 'firebase/ai';
 
 export default function SignInPage() {
   return (
@@ -10,7 +9,6 @@ export default function SignInPage() {
       </div>
       <div className={styles.rightColumn}>
         <SignIn
-
           appearance={{
             elements: {
               formButtonPrimary: {
@@ -23,39 +21,33 @@ export default function SignInPage() {
                   backgroundColor: '#ffffff',
                 },
               },
-
               input: {
                 color: '#ffffff',
                 backgroundColor: '#121212',
                 fontSize: '14px',
               },
               inputPlaceholder: {
-                color: '#999999', 
+                color: '#999999',
               },
-
-              card: {     
+              card: {
                 backgroundColor: '#121212',
               },
-
-              logoBox: {     
+              logoBox: {
                 borderRadius: '100px',
               },
-
-              headerTitle: {     
+              headerTitle: {
                 color: 'white',
               },
-
               socialButtonsBlockButtonText: {
                 color: 'white',
               },
-
               dividerLine: {
                 backgroundColor: '#ffffff40',
               },
               formFieldLabel: {
                 color: 'white',
               },
-              formFieldInput:{
+              formFieldInput: {
                 backgroundColor: '#121212',
                 border: '1px solid ffffff40'
               },
@@ -66,16 +58,13 @@ export default function SignInPage() {
                 color: 'white',
               },
               logoImage: {
-                borderRadius:'100px',
+                borderRadius: '100px',
               },
               providerIcon__apple: {
                 filter: 'invert(100)'
               }
-
-              
             },
           }}
-
           routing='path'
           path='/sign-in'
           signUpUrl='/sign-up'

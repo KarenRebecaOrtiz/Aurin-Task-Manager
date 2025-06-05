@@ -9,7 +9,8 @@ export async function POST(req: Request) {
     // Placeholder: Simular solicitud de eliminación
     console.log(`Simulating deletion request for user ${fullName} (${userId}) to admin email: karen@example.com`);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to request deletion' }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to request deletion';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
