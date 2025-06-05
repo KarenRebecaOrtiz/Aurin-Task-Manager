@@ -4,26 +4,31 @@ import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Table.module.scss';
 
-interface Column {
+// Interfaz base para garantizar que T tenga un id
+interface HasId {
+  id: string;
+}
+
+interface Column<T> {
   key: string;
   label: string;
   width: string;
   mobileVisible?: boolean;
-  render?: (item: any) => React.ReactNode;
+  render?: (item: T) => React.ReactNode;
 }
 
-interface TableProps {
-  data: any[];
-  columns: Column[];
+interface TableProps<T extends HasId> {
+  data: T[];
+  columns: Column<T>[];
   itemsPerPage?: number;
   sortKey?: string;
   sortDirection?: 'asc' | 'desc';
   onSort?: (key: string) => void;
-  onRowClick?: (item: any) => void;
+  onRowClick?: (item: T) => void;
 }
 
-const Table: React.FC<TableProps> = memo(
-  ({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick }) => {
+const Table = memo(
+  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick }: TableProps<T>) => {
     const [currentPage, setCurrentPage] = useState(1);
     const tableRef = useRef<HTMLDivElement>(null);
 
@@ -58,8 +63,7 @@ const Table: React.FC<TableProps> = memo(
       }
     };
 
-    const handleCellClick = (item: any, column: Column, e: React.MouseEvent) => {
-      // Prevent row click for action cell to preserve action menu functionality
+    const handleCellClick = (item: T, column: Column<T>, e: React.MouseEvent) => {
       if (column.key === 'action') {
         e.stopPropagation();
         return;
@@ -127,7 +131,11 @@ const Table: React.FC<TableProps> = memo(
                     style={{ width: column.width }}
                     onClick={(e) => handleCellClick(item, column, e)}
                   >
-                    {column.render ? column.render(item) : String(item[column.key] || '')}
+                    {column.render
+                      ? column.render(item)
+                      : column.key === 'action'
+                      ? ''
+                      : String((item as Record<string, unknown>)[column.key] ?? '')}
                   </div>
                 ))}
               </div>
@@ -184,7 +192,9 @@ const Table: React.FC<TableProps> = memo(
       prevProps.columns === nextProps.columns &&
       prevProps.itemsPerPage === nextProps.itemsPerPage
     );
-  },
+  }
 );
+
+Table.displayName = 'Table';
 
 export default Table;

@@ -31,7 +31,6 @@ interface Task {
 interface TasksTableProps {
   tasks: Task[];
   clients: Client[];
-  users: { id: string; fullName: string; imageUrl: string }[];
   onCreateClientOpen: () => void;
   onInviteMemberOpen: () => void;
   onNewTaskOpen: () => void;
@@ -41,7 +40,7 @@ interface TasksTableProps {
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(
-  ({ tasks, clients, users, onCreateClientOpen, onInviteMemberOpen, onNewTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
+  ({ tasks, clients, onCreateClientOpen, onInviteMemberOpen, onNewTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
     const { user } = useUser();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
     const [sortKey, setSortKey] = useState<string>('createdAt');
@@ -524,5 +523,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     );
   }
 );
+
+TasksTable.displayName = 'TasksTable';
 
 export default TasksTable;

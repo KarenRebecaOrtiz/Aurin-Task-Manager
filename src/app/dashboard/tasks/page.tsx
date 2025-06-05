@@ -681,7 +681,6 @@ export default function TasksPage() {
           <TasksTable
             tasks={tasks}
             clients={clients}
-            users={users}
             onCreateClientOpen={handleCreateClientOpen}
             onInviteMemberOpen={handleInviteOpen}
             onNewTaskOpen={handleNewTaskOpen}

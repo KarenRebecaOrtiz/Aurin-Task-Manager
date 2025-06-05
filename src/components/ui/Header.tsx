@@ -1,5 +1,4 @@
 'use client';
-
 import { useUser, UserButton } from '@clerk/nextjs';
 import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
@@ -34,15 +33,16 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer }) => {
 
   // Typewriter para bienvenida
   useEffect(() => {
-    if (welcomeRef.current) {
+    const currentWelcomeRef = welcomeRef.current;
+    if (currentWelcomeRef) {
       const text = `Te damos la bienvenida de nuevo, ${userName}`;
-      welcomeRef.current.innerHTML = '';
+      currentWelcomeRef.innerHTML = '';
       text.split('').forEach((char, index) => {
         const span = document.createElement('span');
-        span.innerHTML = char === ' ' ? '&nbsp;' : char;
+        span.innerHTML = char === ' ' ? ' ' : char;
         span.style.opacity = '0';
         span.className = styles.typewriterChar;
-        welcomeRef.current!.appendChild(span);
+        currentWelcomeRef.appendChild(span);
         gsap.to(span, {
           opacity: 1,
           duration: 0.05,
@@ -53,7 +53,9 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer }) => {
     }
 
     return () => {
-      gsap.killTweensOf(welcomeRef.current);
+      if (currentWelcomeRef) {
+        gsap.killTweensOf(currentWelcomeRef.querySelectorAll(`.${styles.typewriterChar}`));
+      }
     };
   }, [userName]);
 
@@ -74,11 +76,7 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer }) => {
   }, []);
 
   return (
-    <div
-      ref={wrapperRef}
-      data-layer="Wrapper"
-      className={styles.wrapper}
-    >
+    <div ref={wrapperRef} data-layer="Wrapper" className={styles.wrapper}>
       <div data-layer="Frame 14" className={styles.frame14}>
         <div data-layer="Title" className={styles.title}>
           <div
@@ -94,10 +92,7 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer }) => {
         </div>
       </div>
       <div data-layer="Frame 2147225819" className={styles.frame2147225819}>
-        <div
-          ref={iconRef}
-          className={styles.sunMoonWrapper}
-        >
+        <div ref={iconRef} className={styles.sunMoonWrapper}>
           <ThemeToggler />
         </div>
         <UserButton

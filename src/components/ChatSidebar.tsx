@@ -2,18 +2,18 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
 import styles from './ChatShidebar.module.scss';
-import firebase from 'firebase/firestore';
 
 interface Message {
   id: string;
   senderId: string;
   senderName: string;
   text: string;
-  timestamp: firebase.Timestamp;
+  timestamp: Timestamp;
 }
 
 interface ChatSidebarProps {
@@ -36,7 +36,7 @@ interface ChatSidebarProps {
   users: { id: string; fullName: string; imageUrl: string }[];
 }
 
-export default function ChatSidebar({ isOpen, onClose, task, clientName, users = [] }: ChatSidebarProps) {
+const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, clientName, users = [] }) => {
   const { user } = useUser();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -141,7 +141,7 @@ export default function ChatSidebar({ isOpen, onClose, task, clientName, users =
         senderId: user.id,
         senderName: user.fullName || 'Usuario',
         text: newMessage.trim(),
-        timestamp: firebase.Timestamp.now(),
+        timestamp: Timestamp.now(),
       });
       setNewMessage('');
     } catch (error) {
@@ -163,7 +163,7 @@ export default function ChatSidebar({ isOpen, onClose, task, clientName, users =
           senderId: user.id,
           senderName: user.fullName || 'Usuario',
           text: `Añadió una entrada de tiempo de ${timeEntry}`,
-          timestamp: firebase.Timestamp.now(),
+          timestamp: Timestamp.now(),
         });
         setTimerSeconds(0);
       } catch (error) {
@@ -285,4 +285,8 @@ export default function ChatSidebar({ isOpen, onClose, task, clientName, users =
       </div>
     </div>
   );
-}
+};
+
+ChatSidebar.displayName = 'ChatSidebar';
+
+export default ChatSidebar;

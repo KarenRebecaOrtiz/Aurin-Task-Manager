@@ -38,7 +38,7 @@ export default function SyncUserToFirestore() {
     };
 
     syncUser();
-  }, [userId, user, synced]);
+  }, [userId, user, synced, getToken]);
 
   return null;
 }

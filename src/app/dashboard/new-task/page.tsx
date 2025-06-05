@@ -150,7 +150,7 @@ export default function NewTaskPage() {
 
   // GSAP scroll animations for sections
   useEffect(() => {
-    sectionsRef.current.forEach((section, index) => {
+    sectionsRef.current.forEach((section) => {
       if (section) {
         gsap.fromTo(
           section,

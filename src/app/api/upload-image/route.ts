@@ -49,12 +49,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ imageUrl }, { status: 200 });
   } catch (error: unknown) {
+    const errorDetails = error as { code?: string; details?: unknown };
     console.error('Error uploading image:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      code: (error as any).code,
-      details: (error as any).details,
+      code: errorDetails.code,
+      details: errorDetails.details,
     });
-    return NextResponse.json({ error: 'Failed to upload image', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Failed to upload image',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }
