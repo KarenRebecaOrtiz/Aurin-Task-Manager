@@ -225,7 +225,7 @@
   color: #D1D1D1;
   font-size: 12px;
   font-family: "Inter Tight", sans-serif;
-  font-weight: 400;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
@@ -319,6 +319,20 @@
   gap: 5px;
 }
 
+.timerContainer div{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timerContainer div span{
+  color: white;
+}
+
+.timerContainer div img{
+  filter: invert(100) brightness(100);
+}
+
 .messageActions{
   display: flex;
   flex-direction: column-reverse;
@@ -357,130 +371,286 @@
   align-items: center;
 }
 
-.timer {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: white;
-  font-size: 14.4px;
-  font-family: "Inter Tight", sans-serif;
-  font-weight: 400;
-  cursor: pointer;
-}
-
-.timerDropdown {
-  position: fixed;
-  bottom: 300%; 
-  left: 248%;
-  transform: translateX(-50%);
+/* Estilos para el panel de timer fijo */
+.timerPanel {
+  overflow: hidden;
+  height: 0;
+  opacity: 0;
   background: #1f1f20;
-  border-radius: 8px;
-  border: 1px solid #1f1f20;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 3100;
-  padding: 20px ;
-  width: 400px;
-  pointer-events: auto;
+  border-radius: 8px 8px 0px 0px;
+  margin-bottom: 8px;
+  width: 100%;
 }
 
-:global(body.dark) .timerDropdown {
-  background: #2D2D2D;
-  border-color: #555555;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.timerDropdownContent {
+.timerPanelContent {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.timerDropdownRow {
+.timerRow {
   display: flex;
-  gap: 30px;
+  gap: 8px;
 }
 
-.timerDropdownCard {
+.timerCard {
   flex: 1;
-  padding: 2px 5px;
-  background: #3c3c3d;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-:global(body.dark) .timerDropdownCard {
-  background: #3A3A3A;
 }
 
 .timerInput {
   width: 100%;
   padding: 8px;
-  background: transparent;
-  border: none;
-  color: #747474;
-  font-size: 12px;
-  font-family: Inter, sans-serif;
-  font-weight: 400;
-}
-
-:global(body.dark) .timerInput {
-  color: #D1D1D1;
+  border: solid 1px #3c3c3d;
+  background-color: #3c3c3d;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.845);
+  font-family: "Inter Tight", sans-serif;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .timerCommentInput {
   width: 100%;
-  padding: 10px;
-  background: #3c3c3d;
-  border: none;
+  padding: 8px;
+  border: solid 1px #3c3c3d;
+  background-color: #3c3c3d;
   border-radius: 4px;
-  color: #ffffff;
-  font-size: 12px;
-  font-family: Inter, sans-serif;
-  font-weight: 400;
-  resize: none;
-  height: 80px;
+  color: white;
+  font-size: 14px;
+  font-family: "Inter Tight", sans-serif;
+  resize: vertical;
+  min-height: 60px;
 }
 
-:global(body.dark) .timerCommentInput {
-  background: #3A3A3A;
-  color: #D1D1D1;
-}
-
-.timerDropdownTotal {
-  color: #ffffff;
+.timerTotal {
   font-size: 12px;
-  font-family: Inter, sans-serif;
-  font-weight: 400;
+  color: #e2e2e2;
+  font-family: "Inter Tight", sans-serif;
+  margin-bottom: 10px;
   text-align: center;
 }
 
-:global(body.dark) .timerDropdownTotal {
-  color: #D1D1D1;
-}
-
-.timerDropdownActions {
+.timerActions {
   display: flex;
-  gap: 30px;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
-.timerAddButton, .timerCancelButton {
-  flex: 1;
-  padding: 5px;
-  background: #E7E7E7;
-  border-radius: 4px;
+.timerAddButton {
+  padding: 8px 16px;
+  background: #ffffff;
+  color: black;
   border: none;
-  color: #000000;
-  font-size: 12px;
-  font-family: Inter, sans-serif;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
   font-weight: 400;
-  text-align: center;
+  transition: background 0.3s ease;
+  &:hover {
+    background: #d0d0d1;
+  }
+}
+
+.timerCancelButton {
+  padding: 8px 16px;
+  background: #3c3c3d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  transition: background 0.3s ease;
+  &:hover {
+    background: #4b5563;
+  }
+}
+
+.calendarPopper {
+  z-index: 10;
+}
+
+
+.react-datepicker {
+  background-color: red;
+}
+
+/* Ajuste para taskMenuDropdown */
+.taskMenuDropdown {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background:#444546;
+  border: 1px solid #444546;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  min-width: 150px;
+}
+
+.taskMenuItem {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: white;
+  cursor: pointer;
+  &:hover {
+    background-color: #3c3c3d;
+  }
+}
+
+/* Estilos para statusDropdown */
+.statusCard {
+  position: relative;
+  &:hover {
+    cursor: pointer;
+    background-color: #444546;
+  }
+}
+
+.statusDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background:#444546;
+  border: 1px solid #444546;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  width: 100%;
+}
+
+.statusOption {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: white;
+  cursor: pointer;
+  &:hover {
+    background-color: #3c3c3d;
+  }
+}
+
+.clickable {
   cursor: pointer;
 }
 
-:global(body.dark) .timerAddButton, :global(body.dark) .timerCancelButton {
-  background: #3A3A3A;
-  color: #D1D1D1;
+/* Estilos para delete popup */
+.deletePopupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.deletePopup {
+  width: 400px;
+  padding: 34px 36px;
+  background: #1f1f20;
+  border-radius: 10px;
+  box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.deletePopupContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.warningIcon {
+  width: 24px;
+  height: 24px;
+}
+
+.deletePopupText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.deletePopupTitle {
+  color: white;
+  font-size: 16px;
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 700;
+  text-transform: capitalize;
+  text-align: center;
+}
+
+.deletePopupDescription {
+  color: white;
+  font-size: 14px;
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 300;
+  text-align: center;
+  strong {
+    font-weight: 700;
+  }
+}
+
+.deleteConfirmInput {
+  width: 100%;
+  padding: 8px;
+  background-color: #3c3c3d;
+  border: 1px solid #3c3c3d;
+  font-family: 'Inter Tight', sans-serif;
+
+  border-radius: 4px;
+  font-size: 14px;
+  color: #ffffff86;
+}
+
+.deletePopupActions {
+  display: flex;
+  gap: 10px;
+}
+
+.deleteConfirmButton {
+  padding: 8px 16px;
+  font-family: 'Inter Tight', sans-serif;
+
+  background: #c91111;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+}
+
+.deleteCancelButton {
+  padding: 8px 16px;
+  background: #3c3c3d;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Inter Tight', sans-serif;
+
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease; 
+  &:hover {
+    background: #4e4f50;
+  }
 }

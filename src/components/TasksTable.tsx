@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, addDoc, query, where, doc } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
 import Table from './Table';
@@ -44,6 +46,7 @@ interface TasksTableProps {
 const TasksTable: React.FC<TasksTableProps> = memo(
   ({ tasks, clients, onCreateClientOpen, onInviteMemberOpen, onNewTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
     const { user } = useUser();
+    const router = useRouter();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
     const [sortKey, setSortKey] = useState<string>('createdAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -55,12 +58,17 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
+    const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState('');
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const statusDropdownRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
+    const deletePopupRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
+    // Fetch tasks
     useEffect(() => {
       const fetchTasks = async () => {
         try {
@@ -97,6 +105,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       }
     }, [setTasks, user?.id]);
 
+    // Filter tasks
     const memoizedFilteredTasks = useMemo(() => {
       return tasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -111,20 +120,26 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       setFilteredTasks(memoizedFilteredTasks);
     }, [memoizedFilteredTasks]);
 
+    // GSAP animations
     useEffect(() => {
       if (actionMenuOpenId && actionMenuRef.current) {
         gsap.fromTo(
           actionMenuRef.current,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
         );
-        return () => {
-          if (actionMenuRef.current) {
-            gsap.killTweensOf(actionMenuRef.current);
-          }
-        };
       }
     }, [actionMenuOpenId]);
+
+    useEffect(() => {
+      if (isDeletePopupOpen && deletePopupRef.current) {
+        gsap.fromTo(
+          deletePopupRef.current,
+          { opacity: 0, scale: 0.95 },
+          { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }
+        );
+      }
+    }, [isDeletePopupOpen]);
 
     useEffect(() => {
       const statusItems = statusDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
@@ -132,11 +147,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         gsap.fromTo(
           statusItems,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
         );
-        return () => {
-          gsap.killTweensOf(statusItems);
-        };
       }
     }, [isStatusDropdownOpen]);
 
@@ -146,11 +158,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         gsap.fromTo(
           priorityItems,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
         );
-        return () => {
-          gsap.killTweensOf(priorityItems);
-        };
       }
     }, [isPriorityDropdownOpen]);
 
@@ -160,14 +169,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         gsap.fromTo(
           clientItems,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
         );
-        return () => {
-          gsap.killTweensOf(clientItems);
-        };
       }
     }, [isClientDropdownOpen]);
 
+    // Handle click outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -198,19 +205,29 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         ) {
           setIsClientDropdownOpen(false);
         }
+        if (
+          deletePopupRef.current &&
+          !deletePopupRef.current.contains(event.target as Node) &&
+          isDeletePopupOpen
+        ) {
+          setIsDeletePopupOpen(false);
+          setDeleteConfirm('');
+          setDeleteTaskId(null);
+        }
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId, isStatusDropdownOpen, isPriorityDropdownOpen, isClientDropdownOpen]);
+    }, [actionMenuOpenId, isStatusDropdownOpen, isPriorityDropdownOpen, isClientDropdownOpen, isDeletePopupOpen]);
 
-    const handleSort = useCallback((key: string) => {
+    // Sort tasks
+    const handleSort = (key: string) => {
       if (key === sortKey) {
         setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
       } else {
         setSortKey(key);
         setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
       }
-    }, [sortKey]);
+    };
 
     const sortedTasks = useMemo(() => {
       const sorted = [...filteredTasks];
@@ -252,7 +269,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return sorted;
     }, [filteredTasks, sortKey, sortDirection, clients]);
 
-    const animateClick = useCallback((element: HTMLElement) => {
+    // Animation handler
+    const animateClick = (element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
         opacity: 0.8,
@@ -261,68 +279,135 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         yoyo: true,
         repeat: 1,
       });
-    }, []);
+    };
 
-    const handleActionClick = useCallback((taskId: string) => {
-      setActionMenuOpenId((prev) => (prev === taskId ? null : taskId));
-    }, []);
+    // Handle task deletion
+    const handleDeleteTask = async () => {
+      if (!user?.id || !deleteTaskId || deleteConfirm.toLowerCase() !== 'eliminar') return;
 
-    const handleStatusSelect = useCallback((status: string, e: React.MouseEvent<HTMLDivElement>) => {
+      try {
+        console.log('Deleting task:', deleteTaskId);
+
+        // Eliminar mensajes
+        const messagesQuery = query(collection(db, `tasks/${deleteTaskId}/messages`));
+        const messagesSnapshot = await getDocs(messagesQuery);
+        await Promise.all(messagesSnapshot.docs.map((msgDoc) => deleteDoc(doc(db, `tasks/${deleteTaskId}/messages`, msgDoc.id))));
+        console.log('Deleted messages for task:', deleteTaskId);
+
+        // Eliminar notificaciones
+        const notificationsQuery = query(
+          collection(db, 'notifications'),
+          where('taskId', '==', deleteTaskId)
+        );
+        const notificationsSnapshot = await getDocs(notificationsQuery);
+        await Promise.all(notificationsSnapshot.docs.map((notifDoc) => deleteDoc(doc(db, 'notifications', notifDoc.id))));
+        console.log('Deleted notifications for task:', deleteTaskId);
+
+        // Notificar a involucrados
+        const task = tasks.find((t) => t.id === deleteTaskId);
+        if (task) {
+          const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+          if (task.CreatedBy) recipients.add(task.CreatedBy);
+          recipients.delete(user.id);
+          for (const recipientId of Array.from(recipients)) {
+            await addDoc(collection(db, 'notifications'), {
+              userId: user.id,
+              taskId: deleteTaskId,
+              message: `${user.firstName || 'Usuario'} eliminó la tarea ${task.name}`,
+              timestamp: Timestamp.now(),
+              read: false,
+              recipientId,
+            });
+          }
+          console.log('Notifications sent for task deletion');
+        }
+
+        // Eliminar tarea
+        await deleteDoc(doc(db, 'tasks', deleteTaskId));
+        console.log('Task deleted:', deleteTaskId);
+
+        // Actualizar lista de tareas
+        setTasks((prev) => prev.filter((t) => t.id !== deleteTaskId));
+
+        setIsDeletePopupOpen(false);
+        setDeleteConfirm('');
+        setDeleteTaskId(null);
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('Error al eliminar la tarea');
+      }
+    };
+
+    // Action menu renderer
+    const renderActionMenu = (task: Task) => (
+      <div className={styles.actionContainer}>
+        {user && (
+          <>
+            <button
+              ref={(el) => {
+                if (el) actionButtonRefs.current.set(task.id, el);
+                else actionButtonRefs.current.delete(task.id);
+              }}
+              onClick={task.CreatedBy === user.id ? () => setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id) : undefined}
+              className={`${styles.actionButton} ${task.CreatedBy !== user.id ? styles.disabled : ''}`}
+              aria-label="Abrir acciones"
+              disabled={task.CreatedBy !== user.id}
+            >
+              <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
+            </button>
+            {actionMenuOpenId === task.id && task.CreatedBy === user.id && (
+              <div ref={actionMenuRef} className={styles.dropdown}>
+                <div
+                  className={styles.dropdownItem}
+                  onClick={(e) => {
+                    animateClick(e.currentTarget);
+                    setActionMenuOpenId(null);
+                    router.push(`/dashboard/edit-task?taskId=${task.id}`);
+                  }}
+                >
+                  <Image src="/pencil.svg" alt="Edit" width={18} height={18} />
+                  <span>Editar Tarea</span>
+                </div>
+                <div
+                  className={styles.dropdownItem}
+                  onClick={(e) => {
+                    animateClick(e.currentTarget);
+                    setActionMenuOpenId(null);
+                    setIsDeletePopupOpen(true);
+                    setDeleteTaskId(task.id);
+                  }}
+                >
+                  <Image src="/trash-2.svg" alt="Delete" width={18} height={18} />
+                  <span>Eliminar Tarea</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+
+    // Filter handlers
+    const handleStatusSelect = (status: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setStatusFilter(status);
       setIsStatusDropdownOpen(false);
-    }, [animateClick]);
+    };
 
-    const handlePrioritySelect = useCallback((priority: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
-    }, [animateClick]);
+    };
 
-    const handleClientSelect = useCallback((clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
-    }, [animateClick]);
+    };
 
-    const renderActionMenu = useCallback(
-      (task: Task) => (
-        <div className={styles.actionContainer}>
-          {user && (
-            <>
-              <button
-                ref={(el) => {
-                  if (el) actionButtonRefs.current.set(task.id, el);
-                  else actionButtonRefs.current.delete(task.id);
-                }}
-                onClick={() => handleActionClick(task.id)}
-                className={styles.actionButton}
-                aria-label="Abrir acciones"
-              >
-                <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
-              </button>
-              {actionMenuOpenId === task.id && (
-                <div ref={actionMenuRef} className={styles.dropdown}>
-                  <div
-                    className={styles.dropdownItem}
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      setActionMenuOpenId(null);
-                    }}
-                  >
-                    <Image src="/pencil.svg" alt="Edit" width={18} height={18} />
-                    <span>Editar Tarea</span>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ),
-      [user?.id, actionMenuOpenId, handleActionClick, animateClick]
-    );
-
-    const baseColumns = useMemo(() => [
+    // Table columns
+    const baseColumns = [
       {
         key: 'clientId',
         label: 'Cuenta',
@@ -353,9 +438,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         width: '5%',
         mobileVisible: true,
       },
-    ], []);
+    ];
 
-    const columns = useMemo(() => baseColumns.map((col) => {
+    const columns = baseColumns.map((col) => {
       if (col.key === 'clientId') {
         return {
           ...col,
@@ -425,7 +510,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         };
       }
       return col;
-    }), [clients, renderActionMenu]);
+    });
 
     return (
       <div className={styles.container}>
@@ -553,6 +638,48 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           onSort={handleSort}
           onRowClick={onChatSidebarOpen}
         />
+        {isDeletePopupOpen && (
+          <div className={styles.deletePopupOverlay}>
+            <div className={styles.deletePopup} ref={deletePopupRef}>
+              <div className={styles.deletePopupContent}>
+
+                <div className={styles.deletePopupText}>
+                  <h2 className={styles.deletePopupTitle}>¿Seguro que quieres eliminar esta tarea?</h2>
+                  <p className={styles.deletePopupDescription}>
+                    Eliminar esta tarea borrará permanentemente todas sus conversaciones y datos asociados. Se notificará a todos los involucrados.{' '}
+                    <strong>Esta acción no se puede deshacer.</strong>
+                  </p>
+                </div>
+                <input
+                  type="text"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder="Escribe 'Eliminar' para confirmar"
+                  className={styles.deleteConfirmInput}
+                />
+                <div className={styles.deletePopupActions}>
+                  <button
+                    className={styles.deleteConfirmButton}
+                    onClick={handleDeleteTask}
+                    disabled={deleteConfirm.toLowerCase() !== 'eliminar'}
+                  >
+                    Confirmar Eliminación
+                  </button>
+                  <button
+                    className={styles.deleteCancelButton}
+                    onClick={() => {
+                      setIsDeletePopupOpen(false);
+                      setDeleteConfirm('');
+                      setDeleteTaskId(null);
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

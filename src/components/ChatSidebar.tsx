@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, deleteDoc, getDocs, where } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
@@ -30,8 +31,8 @@ interface ChatSidebarProps {
     description: string;
     status: string;
     priority: string;
-    startDate: Date | null;
-    endDate: Date | null;
+    startDate: string | null;
+    endDate: string | null;
     LeadedBy: string[];
     AssignedTo: string[];
     CreatedBy?: string;
@@ -40,14 +41,15 @@ interface ChatSidebarProps {
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
 }
 
-const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, clientName, users = [] }) => {
+const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initialTask, clientName, users = [] }) => {
   const { user } = useUser();
+  const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [isTimerDropdownOpen, setIsTimerDropdownOpen] = useState(false);
+  const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
   const [timerInput, setTimerInput] = useState('00:00');
   const [dateInput, setDateInput] = useState<Date>(new Date());
   const [commentInput, setCommentInput] = useState('');
@@ -56,24 +58,78 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
   const [editingText, setEditingText] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
+  const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [task, setTask] = useState(initialTask);
   const chatRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
-  const timerDropdownRef = useRef<HTMLDivElement>(null);
+  const timerPanelRef = useRef<HTMLDivElement>(null);
   const timerButtonRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const taskMenuRef = useRef<HTMLDivElement>(null);
+  const deletePopupRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
+
+  const isCreator = user?.id === task.CreatedBy;
+  const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
+
+  // Real-time task listener
+  useEffect(() => {
+    if (!task.id) return;
+
+    console.log('Setting up task listener for task:', task.id);
+    const unsubscribe = onSnapshot(doc(db, 'tasks', task.id), (doc) => {
+      if (doc.exists()) {
+        const taskData = doc.data();
+        setTask({
+          id: doc.id,
+          clientId: taskData.clientId || '',
+          project: taskData.project || '',
+          name: taskData.name || '',
+          description: taskData.description || '',
+          status: taskData.status || '',
+          priority: taskData.priority || '',
+          startDate: taskData.startDate ? taskData.startDate.toDate().toISOString() : null,
+          endDate: taskData.endDate ? taskData.endDate.toDate().toISOString() : null,
+          LeadedBy: taskData.LeadedBy || [],
+          AssignedTo: taskData.AssignedTo || [],
+          CreatedBy: taskData.CreatedBy || '',
+        });
+        console.log('Task updated:', taskData.status);
+      }
+    }, (error) => {
+      console.error('Error listening to task:', error.message, error.code);
+    });
+
+    return () => {
+      console.log('Unsubscribing task listener for task:', task.id);
+      unsubscribe();
+    };
+  }, [task.id]);
 
   // GSAP animation for open/close
   useEffect(() => {
     if (sidebarRef.current) {
-      gsap.to(sidebarRef.current, {
-        x: isOpen ? 0 : '100%',
-        opacity: isOpen ? 1 : 0,
-        duration: 0.3,
-        ease: isOpen ? 'power2.out' : 'power2.in',
-        onComplete: !isOpen ? onClose : undefined,
-      });
-      console.log('ChatSidebar animation triggered, isOpen:', isOpen);
+      if (isOpen) {
+        gsap.fromTo(
+          sidebarRef.current,
+          { x: '100%', opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' }
+        );
+        console.log('ChatSidebar opened');
+      } else {
+        gsap.to(sidebarRef.current, {
+          x: '100%',
+          opacity: 0,
+          duration: 0.3,
+          ease: 'power2.in',
+          onComplete: onClose,
+        });
+        console.log('ChatSidebar closed');
+      }
     }
   }, [isOpen, onClose]);
 
@@ -100,13 +156,30 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
         actionMenuOpenId
       ) {
         setActionMenuOpenId(null);
-        console.log('Closed action menu via outside click');
+        console.log('Closed message action menu via outside click');
+      }
+      if (
+        taskMenuRef.current &&
+        !taskMenuRef.current.contains(event.target as Node) &&
+        isTaskMenuOpen
+      ) {
+        setIsTaskMenuOpen(false);
+        console.log('Closed task menu via outside click');
+      }
+      if (
+        deletePopupRef.current &&
+        !deletePopupRef.current.contains(event.target as Node) &&
+        isDeletePopupOpen
+      ) {
+        setIsDeletePopupOpen(false);
+        setDeleteConfirm('');
+        console.log('Closed delete popup via outside click');
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose, actionMenuOpenId]);
+  }, [isOpen, onClose, actionMenuOpenId, isTaskMenuOpen, isDeletePopupOpen]);
 
   // Real-time messages listener
   useEffect(() => {
@@ -163,7 +236,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
     }
   }, [isOpen, messages, user?.id, task.id]);
 
-  // Notification sound only for new unread messages
+  // Notification sound for new unread messages
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio('/NotificationSound.mp3');
@@ -243,17 +316,54 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
     }
   }, [actionMenuOpenId]);
 
-  // GSAP animation for timer dropdown
+  // GSAP animation for status dropdown
   useEffect(() => {
-    if (isTimerDropdownOpen && timerDropdownRef.current) {
+    if (isStatusDropdownOpen && statusDropdownRef.current) {
       gsap.fromTo(
-        timerDropdownRef.current,
-        { opacity: 0, y: 10, scale: 0.95 },
+        statusDropdownRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('Timer dropdown animated');
+      console.log('Status dropdown animated');
     }
-  }, [isTimerDropdownOpen]);
+  }, [isStatusDropdownOpen]);
+
+  // GSAP animation for task menu
+  useEffect(() => {
+    if (isTaskMenuOpen && taskMenuRef.current) {
+      gsap.fromTo(
+        taskMenuRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+      console.log('Task menu animated');
+    }
+  }, [isTaskMenuOpen]);
+
+  // GSAP animation for timer panel
+  useEffect(() => {
+    if (timerPanelRef.current) {
+      gsap.to(timerPanelRef.current, {
+        height: isTimerPanelOpen ? 'auto' : 0,
+        opacity: isTimerPanelOpen ? 1 : 0,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+      console.log('Timer panel animated, open:', isTimerPanelOpen);
+    }
+  }, [isTimerPanelOpen]);
+
+  // GSAP animation for delete popup
+  useEffect(() => {
+    if (isDeletePopupOpen && deletePopupRef.current) {
+      gsap.fromTo(
+        deletePopupRef.current,
+        { opacity: 0, scale: 0.95 },
+        { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
+      );
+      console.log('Delete popup animated');
+    }
+  }, [isDeletePopupOpen]);
 
   const handleClick = (element: HTMLElement) => {
     gsap.to(element, {
@@ -266,9 +376,95 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
     });
   };
 
+  const handleStatusChange = async (status: string) => {
+    if (!isCreator || !user?.id) return;
+
+    try {
+      console.log('Changing task status to:', status);
+      await updateDoc(doc(db, 'tasks', task.id), {
+        status,
+      });
+      console.log('Task status updated:', status);
+
+      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+      if (task.CreatedBy) recipients.add(task.CreatedBy);
+      recipients.delete(user.id);
+      for (const recipientId of Array.from(recipients)) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: `${user.firstName || 'Usuario'} cambió el estado de la tarea ${task.name} a ${status}`,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+        });
+      }
+      console.log('Notifications sent for status change');
+    } catch (error) {
+      console.error('Error updating task status:', error.message, error.code);
+    }
+  };
+
+  const handleEditTask = () => {
+    if (!isCreator) return;
+    console.log('Navigating to edit task:', task.id);
+    router.push(`/dashboard/edit-task?taskId=${task.id}`);
+    setIsTaskMenuOpen(false);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!isCreator || !user?.id || deleteConfirm.toLowerCase() !== 'eliminar') return;
+
+    try {
+      console.log('Deleting task:', task.id);
+
+      // Eliminar mensajes
+      const messagesQuery = query(collection(db, `tasks/${task.id}/messages`));
+      const messagesSnapshot = await getDocs(messagesQuery);
+      await Promise.all(messagesSnapshot.docs.map((msgDoc) => deleteDoc(doc(db, `tasks/${task.id}/messages`, msgDoc.id))));
+      console.log('Deleted messages for task:', task.id);
+
+      // Eliminar notificaciones
+      const notificationsQuery = query(
+        collection(db, 'notifications'),
+        where('taskId', '==', task.id)
+      );
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      await Promise.all(notificationsSnapshot.docs.map((notifDoc) => deleteDoc(doc(db, 'notifications', notifDoc.id))));
+      console.log('Deleted notifications for task:', task.id);
+
+      // Notificar a involucrados
+      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+      if (task.CreatedBy) recipients.add(task.CreatedBy);
+      recipients.delete(user.id);
+      for (const recipientId of Array.from(recipients)) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: `${user.firstName || 'Usuario'} eliminó la tarea ${task.name}`,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+        });
+      }
+      console.log('Notifications sent for task deletion');
+
+      // Eliminar tarea
+      await deleteDoc(doc(db, 'tasks', task.id));
+      console.log('Task deleted:', task.id);
+
+      setIsDeletePopupOpen(false);
+      setDeleteConfirm('');
+      onClose();
+    } catch (error) {
+      console.error('Error deleting task:', error.message, error.code);
+      alert('Error al eliminar la tarea');
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!user || !newMessage.trim()) return;
+    if (!user?.id || !newMessage.trim()) return;
 
     try {
       console.log('Sending message:', newMessage);
@@ -305,7 +501,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
   };
 
   const handleEditMessage = async (messageId: string) => {
-    if (!user || !editingText.trim()) return;
+    if (!user?.id || !editingText.trim()) return;
 
     try {
       console.log('Editing message:', messageId);
@@ -322,7 +518,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!user) return;
+    if (!user?.id) return;
 
     try {
       console.log('Deleting message:', messageId);
@@ -341,7 +537,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
     setHasInteracted(true);
     console.log('Timer toggled, running:', !wasRunning);
 
-    if (wasRunning && user && timerSeconds > 0) {
+    if (wasRunning && user?.id && timerSeconds > 0) {
       const hours = Math.floor(timerSeconds / 3600);
       const minutes = Math.floor((timerSeconds % 3600) / 60);
       const timeEntry = `${hours}h ${minutes}m`;
@@ -364,15 +560,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
     }
   };
 
-  const toggleTimerDropdown = (e: React.MouseEvent) => {
-    handleClick(e.currentTarget as HTMLElement);
-    setIsTimerDropdownOpen((prev) => !prev);
+  const toggleTimerPanel = (e: React.MouseEvent<HTMLElement>) => {
+    handleClick(e.currentTarget as HTMLElement); 
+    setIsTimerPanelOpen((prev) => !prev);
     setHasInteracted(true);
-    console.log('Timer dropdown toggled');
+    console.log('Timer panel toggled');
   };
 
   const handleAddTimeEntry = async () => {
-    if (!user) return;
+    if (!user?.id) return;
 
     const [hours, minutes] = timerInput.split(':').map(Number);
     if (isNaN(hours) || isNaN(minutes)) return;
@@ -405,7 +601,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
       setTimerInput('00:00');
       setDateInput(new Date());
       setCommentInput('');
-      setIsTimerDropdownOpen(false);
+      setIsTimerPanelOpen(false);
+      setIsCalendarOpen(false);
       setHasInteracted(true);
       console.log('Manual time entry and comment added');
     } catch (error) {
@@ -420,14 +617,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const formatDate = (date: Date | null) => (date ? date.toLocaleDateString('es-ES') : 'N/A');
+  const formatDate = (date: string | null) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('es-ES');
+  };
 
   const totalHours = useMemo(() => {
-    const timeMessages = messages.filter((msg) => msg.text.startsWith('Añadió una entrada de tiempo de'));
+    const timeMessages = messages.filter((msg) => msg.text.startsWith('Añadó una entrada de tiempo de'));
     let totalMinutes = 0;
 
     timeMessages.forEach((msg) => {
-      const match = msg.text.match(/(\d+)h\s*(\d+)m/);
+      const match = msg.text.match(/(\d+)h\s+(\d+)m/);
       if (match) {
         const hours = parseInt(match[1], 10);
         const minutes = parseInt(match[2], 10);
@@ -466,21 +666,62 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
             {clientName} {'>'} {task.project}
           </div>
           <div
-            className={styles.ellipsis}
+            className={`${styles.ellipsis} ${isCreator ? styles.clickable : ''}`}
             onClick={(e) => {
-              handleClick(e.currentTarget);
-              setHasInteracted(true);
+              if (isCreator) {
+                handleClick(e.currentTarget);
+                setIsTaskMenuOpen((prev) => !prev);
+                setHasInteracted(true);
+                console.log('Toggled task menu');
+              }
             }}
           >
             <Image src="/elipsis.svg" alt="Options" width={16} height={16} />
           </div>
+          {isTaskMenuOpen && isCreator && (
+            <div ref={taskMenuRef} className={styles.taskMenuDropdown}>
+              <div
+                className={styles.taskMenuItem}
+                onClick={handleEditTask}
+              >
+                Editar Tarea
+              </div>
+              <div
+                className={styles.taskMenuItem}
+                onClick={() => {
+                  setIsDeletePopupOpen(true);
+                  setIsTaskMenuOpen(false);
+                  console.log('Opened delete popup');
+                }}
+              >
+                Eliminar Tarea
+              </div>
+            </div>
+          )}
         </div>
         <div className={styles.title}>{task.name}</div>
         <div className={styles.description}>{task.description || 'Sin descripción'}</div>
         <div className={styles.details}>
-          <div className={styles.card}>
+          <div
+            className={`${styles.card} ${isCreator ? styles.statusCard : ''}`}
+            onMouseEnter={() => isCreator && setIsStatusDropdownOpen(true)}
+            onMouseLeave={() => isCreator && setIsStatusDropdownOpen(false)}
+          >
             <div className={styles.cardLabel}>Estado de la tarea:</div>
             <div className={styles.cardValue}>{task.status}</div>
+            {isStatusDropdownOpen && isCreator && (
+              <div ref={statusDropdownRef} className={styles.statusDropdown}>
+                {statusOptions.map((status) => (
+                  <div
+                    key={status}
+                    className={styles.statusOption}
+                    onClick={() => handleStatusChange(status)}
+                  >
+                    {status}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className={styles.card}>
             <div className={styles.cardLabel}>Responsable:</div>
@@ -586,14 +827,74 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
               ) : (
                 <div className={styles.text}>{message.text}</div>
               )}
-              <div className={styles.readBy}>
-                Estado: {message.read ? 'Leído' : 'No leído'}
-              </div>
             </div>
           </div>
         ))}
       </div>
       <div className={styles.inputWrapper}>
+        <div ref={timerPanelRef} className={styles.timerPanel}>
+          <div className={styles.timerPanelContent}>
+            <div className={styles.timerRow}>
+              <div className={styles.timerCard}>
+              <input
+                  type="time"
+                  value={timerInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.match(/^[0-2][0-9]:[0-5][0-9]$/)) {
+                      setTimerInput(value);
+                    }
+                  }}
+                  step="900"
+                  className={styles.timerInput}
+                  pattern="[0-2][0-9]:[0-5][0-9]"
+                />
+              </div>
+              <div
+                className={styles.timerCard}
+                onMouseEnter={() => setIsCalendarOpen(true)}
+                onMouseLeave={() => setIsCalendarOpen(false)}
+              >
+                <DatePicker
+                  selected={dateInput}
+                  onChange={(date: Date | null) => setDateInput(date || new Date())}
+                  dateFormat="dd/MM/yy"
+                  className={styles.timerInput}
+                  popperClassName={styles.calendarPopper}
+                  open={isCalendarOpen}
+                />
+              </div>
+            </div>
+            <div className={styles.timerCard}>
+              <textarea
+                placeholder="Añadir comentario"
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                className={styles.timerCommentInput}
+              />
+            </div>
+            <div className={styles.timerTotal}>
+              Has invertido: {totalHours} en esta tarea.
+            </div>
+            <div className={styles.timerActions}>
+              <button
+                className={styles.timerAddButton}
+                onClick={handleAddTimeEntry}
+              >
+                Añadir entrada
+              </button>
+              <button
+                className={styles.timerCancelButton}
+                onClick={() => {
+                  setIsTimerPanelOpen(false);
+                  setIsCalendarOpen(false);
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
         <div className={styles.inputContainer}>
           <input
             type="text"
@@ -624,71 +925,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
               <div
                 ref={timerButtonRef}
                 className={styles.timer}
-                onClick={toggleTimerDropdown}
+                onClick={toggleTimerPanel}
               >
                 <span>{formatTimer(timerSeconds)}</span>
                 <Image src="/chevron-down.svg" alt="Timer" width={12} height={12} />
-                {isTimerDropdownOpen && (
-                  <div
-                    ref={timerDropdownRef}
-                    className={styles.timerDropdown}
-                  >
-                    <div className={styles.timerDropdownContent}>
-                      <div className={styles.timerDropdownRow}>
-                        <div className={styles.timerDropdownCard}>
-                          <input
-                            type="time"
-                            value={timerInput}
-                            onChange={(e) => setTimerInput(e.target.value)}
-                            step="900"
-                            className={styles.timerInput}
-                            pattern="[0-9]{2}:[0-9]{2}"
-                          />
-                        </div>
-                        <div
-                          className={styles.timerDropdownCard}
-                          onMouseEnter={() => setIsCalendarOpen(true)}
-                          onMouseLeave={() => setIsCalendarOpen(false)}
-                        >
-                          <DatePicker
-                            selected={dateInput}
-                            onChange={(date: Date | null) => setDateInput(date || new Date())}
-                            dateFormat="dd/MM/yy"
-                            className={styles.timerInput}
-                            popperClassName={styles.calendarPopper}
-                            open={isCalendarOpen}
-                            onClickOutside={() => setIsCalendarOpen(false)}
-                          />
-                        </div>
-                      </div>
-                      <div className={styles.timerDropdownCard}>
-                        <textarea
-                          placeholder="Añadir comentario"
-                          value={commentInput}
-                          onChange={(e) => setCommentInput(e.target.value)}
-                          className={styles.timerCommentInput}
-                        />
-                      </div>
-                      <div className={styles.timerDropdownTotal}>
-                        Has invertido: {totalHours} en esta tarea.
-                      </div>
-                      <div className={styles.timerDropdownActions}>
-                        <button
-                          className={styles.timerAddButton}
-                          onClick={handleAddTimeEntry}
-                        >
-                          Añadir entrada
-                        </button>
-                        <button
-                          className={styles.timerCancelButton}
-                          onClick={() => setIsTimerDropdownOpen(false)}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             <button className={styles.sendButton} onClick={handleSendMessage}>
@@ -697,6 +937,54 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
           </div>
         </div>
       </div>
+      {isDeletePopupOpen && (
+        <div className={styles.deletePopupOverlay}>
+          <div className={styles.deletePopup} ref={deletePopupRef}>
+            <div className={styles.deletePopupContent}>
+              <Image
+                src="/message-circle-warning.svg"
+                alt="Warning"
+                width={24}
+                height={24}
+                className={styles.warningIcon}
+              />
+              <div className={styles.deletePopupText}>
+                <h2 className={styles.deletePopupTitle}>¿Seguro que quieres eliminar esta tarea?</h2>
+                <p className={styles.deletePopupDescription}>
+                  Eliminar esta tarea borrará permanentemente todas sus conversaciones y datos asociados. Se notificará a todos los involucrados.{' '}
+                  <strong>Esta acción no se puede deshacer.</strong>
+                </p>
+              </div>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="Escribe 'Eliminar' para confirmar"
+                className={styles.deleteConfirmInput}
+              />
+              <div className={styles.deletePopupActions}>
+                <button
+                  className={styles.deleteConfirmButton}
+                  onClick={handleDeleteTask}
+                  disabled={deleteConfirm.toLowerCase() !== 'eliminar'}
+                >
+                  Confirmar Eliminación
+                </button>
+                <button
+                  className={styles.deleteCancelButton}
+                  onClick={() => {
+                    setIsDeletePopupOpen(false);
+                    setDeleteConfirm('');
+                    console.log('Cancelled task deletion');
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
