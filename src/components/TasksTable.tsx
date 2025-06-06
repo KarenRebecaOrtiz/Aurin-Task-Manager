@@ -44,7 +44,7 @@ interface TasksTableProps {
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(
-  ({ tasks, clients, onCreateClientOpen, onInviteMemberOpen, onNewTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
+  ({ tasks, clients, onNewTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
     const { user } = useUser();
     const router = useRouter();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
