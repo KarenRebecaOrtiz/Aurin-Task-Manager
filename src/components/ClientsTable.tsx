@@ -75,18 +75,19 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     }, [memoizedFilteredClients]);
 
     useEffect(() => {
-      if (actionMenuOpenId && actionMenuRef.current) {
+      const currentActionMenuRef = actionMenuRef.current;
+      if (actionMenuOpenId && currentActionMenuRef) {
         gsap.fromTo(
-          actionMenuRef.current,
+          currentActionMenuRef,
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
-        return () => {
-          if (actionMenuRef.current) {
-            gsap.killTweensOf(actionMenuRef.current);
-          }
-        };
       }
+      return () => {
+        if (currentActionMenuRef) {
+          gsap.killTweensOf(currentActionMenuRef);
+        }
+      };
     }, [actionMenuOpenId]);
 
     useEffect(() => {
@@ -117,7 +118,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
 
     const handleActionClick = useCallback((clientId: string) => {
       setActionMenuOpenId((prev) => (prev === clientId ? null : clientId));
-    }, []);
+    }, [user]);
 
     const renderActionMenu = useCallback(
       (client: Client) => (
@@ -227,7 +228,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         };
       }
       return col;
-    }), [renderActionMenu]);
+    }), [baseColumns, renderActionMenu]);
 
     return (
       <div className={styles.container}>

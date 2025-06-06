@@ -67,18 +67,19 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     }, [memoizedFilteredUsers]);
 
     useEffect(() => {
-      if (actionMenuOpenId && actionMenuRef.current) {
+      const currentActionMenuRef = actionMenuRef.current;
+      if (actionMenuOpenId && currentActionMenuRef) {
         gsap.fromTo(
-          actionMenuRef.current,
+          currentActionMenuRef,
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
-        return () => {
-          if (actionMenuRef.current) {
-            gsap.killTweensOf(actionMenuRef.current);
-          }
-        };
       }
+      return () => {
+        if (currentActionMenuRef) {
+          gsap.killTweensOf(currentActionMenuRef);
+        }
+      };
     }, [actionMenuOpenId]);
 
     useEffect(() => {
@@ -228,7 +229,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         };
       }
       return col;
-    }), [renderActionMenu]);
+    }), [baseColumns, renderActionMenu]);
 
     return (
       <div className={styles.container}>

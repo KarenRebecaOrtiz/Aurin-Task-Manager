@@ -5,16 +5,6 @@ import Image from 'next/image';
 import styles from './ClientsTable.module.scss';
 import { memo } from 'react';
 
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-  projectCount: number;
-  projects: string[];
-  createdBy: string;
-  createdAt: string;
-}
-
 interface ClientPopupProps {
   isOpen: boolean;
   isEdit: boolean;
@@ -106,10 +96,10 @@ const ClientPopup: React.FC<ClientPopupProps> = memo(
           });
         }
       };
-
+    
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isOpen, isClientLoading, onClose]);
+    }, [isOpen, isClientLoading, onClose, popupRef]);
 
     if (!isOpen) return null;
 

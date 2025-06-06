@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { gsap } from 'gsap';
@@ -13,7 +13,6 @@ import TasksTable from '@/components/TasksTable';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
 import ClientPopup from '@/components/ClientPopup';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
@@ -46,8 +45,8 @@ interface Task {
   description: string;
   status: string;
   priority: string;
-  startDate: Date | null;
-  endDate: Date | null;
+  startDate: string | null;
+  endDate: string | null;
   LeadedBy: string[];
   AssignedTo: string[];
   createdAt: string;
@@ -105,7 +104,13 @@ export default function TasksPage() {
     try {
       const response = await fetch('/api/users');
       if (!response.ok) throw new Error('Failed to fetch users');
-      const clerkUsers: { id: string; imageUrl?: string; firstName?: string; lastName?: string; publicMetadata: { role?: string; description?: string } }[] = await response.json();
+      const clerkUsers: {
+        id: string;
+        imageUrl?: string;
+        firstName?: string;
+        lastName?: string;
+        publicMetadata: { role?: string; description?: string };
+      }[] = await response.json();
       const usersData: User[] = clerkUsers.map((user) => ({
         id: user.id,
         imageUrl: user.imageUrl || '/default-avatar.png',
@@ -162,7 +167,7 @@ export default function TasksPage() {
           (task) =>
             task.AssignedTo.includes(user?.id || '') ||
             task.LeadedBy.includes(user?.id || '') ||
-            task.CreatedBy === user?.id
+            task.CreatedBy === user?.id,
         );
       setTasks(tasksData);
     } catch (error) {
@@ -248,7 +253,7 @@ export default function TasksPage() {
         setClients((prev) =>
           clientId
             ? prev.map((c) => (c.id === clientId ? clientData : c))
-            : [...prev, clientData]
+            : [...prev, clientData],
         );
         gsap.to(createEditPopupRef.current, {
           opacity: 0,
@@ -277,7 +282,7 @@ export default function TasksPage() {
         setIsClientLoading(false);
       }
     },
-    [user, clientForm, clients]
+    [user, clientForm, clients],
   );
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,33 +350,37 @@ export default function TasksPage() {
   }, []);
 
   useEffect(() => {
-    const header = headerRef.current;
-    const selector = selectorRef.current;
-    const content = contentRef.current;
-    if (header && selector && content) {
+    const currentHeaderRef = headerRef.current;
+    const currentSelectorRef = selectorRef.current;
+    const currentContentRef = contentRef.current;
+    if (currentHeaderRef && currentSelectorRef && currentContentRef) {
       gsap.fromTo(
-        [header, selector, content],
+        [currentHeaderRef, currentSelectorRef, currentContentRef],
         { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out' }
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out' },
       );
-      return () => {
-        gsap.killTweensOf([header, selector, content]);
-      };
     }
+    return () => {
+      if (currentHeaderRef && currentSelectorRef && currentContentRef) {
+        gsap.killTweensOf([currentHeaderRef, currentSelectorRef, currentContentRef]);
+      }
+    };
   }, []);
 
   useEffect(() => {
-    const content = contentRef.current;
-    if (content) {
+    const currentContentRef = contentRef.current;
+    if (currentContentRef) {
       gsap.fromTo(
-        content,
+        currentContentRef,
         { opacity: 0, x: 10 },
-        { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }
+        { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' },
       );
-      return () => {
-        gsap.killTweensOf(content);
-      };
     }
+    return () => {
+      if (currentContentRef) {
+        gsap.killTweensOf(currentContentRef);
+      }
+    };
   }, [selectedContainer]);
 
   return (
@@ -441,7 +450,7 @@ export default function TasksPage() {
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={deletePopupRef}>
             <h2>Confirmar Eliminación</h2>
-            <p>Escribe 'Eliminar' para confirmar:</p>
+            <p>Escribe {'Eliminar'} para confirmar:</p>
             <input
               type="text"
               value={deleteConfirm}

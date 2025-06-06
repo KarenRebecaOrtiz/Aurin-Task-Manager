@@ -29,8 +29,8 @@ interface HeaderProps {
     description: string;
     status: string;
     priority: string;
-    startDate: Date | null;
-    endDate: Date | null;
+    startDate: string | null;
+    endDate: string | null;
     LeadedBy: string[];
     AssignedTo: string[];
     createdAt: string;
@@ -43,8 +43,8 @@ interface HeaderProps {
     description: string;
     status: string;
     priority: string;
-    startDate: Date | null;
-    endDate: Date | null;
+    startDate: string | null;
+    endDate: string | null;
     LeadedBy: string[];
     AssignedTo: string[];
     createdAt: string;
@@ -272,7 +272,14 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
   return (
     <div ref={wrapperRef} data-layer="Wrapper" className={styles.wrapper}>
       <div className='lefContainer'>
-        <img src="/HomeGif.gif" alt="Welcome GIF" className={styles.welcomeGif} />
+      <Image
+          src="/HomeGif.gif"
+          alt="Welcome GIF"
+          width={200}
+          height={200}
+          className={styles.welcomeGif}
+        />
+
         <div data-layer="Frame 14" className={styles.frame14}>
           <div data-layer="Title" className={styles.title}>
             <div

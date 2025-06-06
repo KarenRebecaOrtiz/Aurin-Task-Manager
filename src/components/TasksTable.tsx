@@ -24,8 +24,8 @@ interface Task {
   description: string;
   status: string;
   priority: string;
-  startDate: Date | null;
-  endDate: Date | null;
+  startDate: string | null;
+  endDate: string | null;
   LeadedBy: string[];
   AssignedTo: string[];
   createdAt: string;
@@ -82,8 +82,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               description: doc.data().description || '',
               status: doc.data().status || '',
               priority: doc.data().priority || '',
-              startDate: doc.data().startDate ? new Date(doc.data().startDate.toDate()) : null,
-              endDate: doc.data().endDate ? new Date(doc.data().endDate.toDate()) : null,
+              startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
+              endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
               LeadedBy: doc.data().LeadedBy || [],
               AssignedTo: doc.data().AssignedTo || [],
               createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
@@ -93,7 +93,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               (task) =>
                 task.AssignedTo.includes(user?.id || '') ||
                 task.LeadedBy.includes(user?.id || '') ||
-                task.CreatedBy === user?.id
+                task.CreatedBy === user?.id,
             );
           setTasks(tasksData);
         } catch (error) {
@@ -122,23 +122,35 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     // GSAP animations
     useEffect(() => {
-      if (actionMenuOpenId && actionMenuRef.current) {
+      const currentActionMenuRef = actionMenuRef.current;
+      if (actionMenuOpenId && currentActionMenuRef) {
         gsap.fromTo(
-          actionMenuRef.current,
+          currentActionMenuRef,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
       }
+      return () => {
+        if (currentActionMenuRef) {
+          gsap.killTweensOf(currentActionMenuRef);
+        }
+      };
     }, [actionMenuOpenId]);
 
     useEffect(() => {
-      if (isDeletePopupOpen && deletePopupRef.current) {
+      const currentDeletePopupRef = deletePopupRef.current;
+      if (isDeletePopupOpen && currentDeletePopupRef) {
         gsap.fromTo(
-          deletePopupRef.current,
+          currentDeletePopupRef,
           { opacity: 0, scale: 0.95 },
-          { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }
+          { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
         );
       }
+      return () => {
+        if (currentDeletePopupRef) {
+          gsap.killTweensOf(currentDeletePopupRef);
+        }
+      };
     }, [isDeletePopupOpen]);
 
     useEffect(() => {
@@ -147,7 +159,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         gsap.fromTo(
           statusItems,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
       }
     }, [isStatusDropdownOpen]);
@@ -158,7 +170,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         gsap.fromTo(
           priorityItems,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
       }
     }, [isPriorityDropdownOpen]);
@@ -169,7 +181,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         gsap.fromTo(
           clientItems,
           { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
       }
     }, [isClientDropdownOpen]);
@@ -263,7 +275,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         sorted.sort((a, b) =>
           sortDirection === 'asc'
             ? String(a[sortKey as keyof Task]).localeCompare(String(b[sortKey as keyof Task]))
-            : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task]))
+            : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task])),
         );
       }
       return sorted;
@@ -295,10 +307,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         console.log('Deleted messages for task:', deleteTaskId);
 
         // Eliminar notificaciones
-        const notificationsQuery = query(
-          collection(db, 'notifications'),
-          where('taskId', '==', deleteTaskId)
-        );
+        const notificationsQuery = query(collection(db, 'notifications'), where('taskId', '==', deleteTaskId));
         const notificationsSnapshot = await getDocs(notificationsQuery);
         await Promise.all(notificationsSnapshot.docs.map((notifDoc) => deleteDoc(doc(db, 'notifications', notifDoc.id))));
         console.log('Deleted notifications for task:', deleteTaskId);
@@ -468,11 +477,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             <div className={styles.statusWrapper}>
               <Image
                 src={
-                  task.status === 'En Proceso' ? '/timer.svg' :
-                  task.status === 'Backlog' ? '/circle-help.svg' :
-                  task.status === 'Por Comenzar' ? '/circle.svg' :
-                  task.status === 'Cancelada' ? '/circle-x.svg' :
-                  '/timer.svg'
+                  task.status === 'En Proceso'
+                    ? '/timer.svg'
+                    : task.status === 'Backlog'
+                      ? '/circle-help.svg'
+                      : task.status === 'Por Comenzar'
+                        ? '/circle.svg'
+                        : task.status === 'Cancelada'
+                          ? '/circle-x.svg'
+                          : '/timer.svg'
                 }
                 alt={task.status}
                 width={16}
@@ -490,9 +503,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             <div className={styles.priorityWrapper}>
               <Image
                 src={
-                  task.priority === 'Alta' ? '/arrow-up.svg' :
-                  task.priority === 'Media' ? '/arrow-right.svg' :
-                  '/arrow-down.svg'
+                  task.priority === 'Alta'
+                    ? '/arrow-up.svg'
+                    : task.priority === 'Media'
+                      ? '/arrow-right.svg'
+                      : '/arrow-down.svg'
                 }
                 alt={task.priority}
                 width={16}
@@ -535,7 +550,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     setIsStatusDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image className='filterIcon' src="/filter.svg" alt="Status" width={16} height={16} />
+                  <Image className="filterIcon" src="/filter.svg" alt="Status" width={16} height={16} />
                   <span>{statusFilter || 'Estado'}</span>
                 </div>
                 {isStatusDropdownOpen && (
@@ -562,7 +577,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     setIsPriorityDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image className='filterIcon' src="/filter.svg" alt="Priority" width={16} height={16} />
+                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width={16} height={16} />
                   <span>{priorityFilter || 'Prioridad'}</span>
                 </div>
                 {isPriorityDropdownOpen && (
@@ -589,7 +604,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     setIsClientDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image className='filterIcon' src="/filter.svg" alt="Client" width={17} height={17} />
+                  <Image className="filterIcon" src="/filter.svg" alt="Client" width={17} height={17} />
                   <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                 </div>
                 {isClientDropdownOpen && (
@@ -621,6 +636,26 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               className={styles.createButton}
               onClick={(e) => {
                 animateClick(e.currentTarget);
+                onCreateClientOpen();
+              }}
+            >
+              <Image src="/wallet-cards.svg" alt="New Client" width={16} height={16} />
+              Nueva Cuenta
+            </button>
+            <button
+              className={styles.createButton}
+              onClick={(e) => {
+                animateClick(e.currentTarget);
+                onInviteMemberOpen();
+              }}
+            >
+              <Image src="/wallet-cards.svg" alt="Invite Member" width={16} height={16} />
+              Invitar Miembro
+            </button>
+            <button
+              className={styles.createButton}
+              onClick={(e) => {
+                animateClick(e.currentTarget);
                 onNewTaskOpen();
               }}
             >
@@ -642,7 +677,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           <div className={styles.deletePopupOverlay}>
             <div className={styles.deletePopup} ref={deletePopupRef}>
               <div className={styles.deletePopupContent}>
-
+                <Image
+                  src="/message-circle-warning.svg"
+                  alt="Warning"
+                  width={24}
+                  height={24}
+                  className={styles.warningIcon}
+                />
                 <div className={styles.deletePopupText}>
                   <h2 className={styles.deletePopupTitle}>¿Seguro que quieres eliminar esta tarea?</h2>
                   <p className={styles.deletePopupDescription}>
@@ -682,7 +723,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 TasksTable.displayName = 'TasksTable';
