@@ -632,26 +632,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               <Image src="/robot.svg" alt="AI" width={18} height={14} />
               Pregunta a la IA
             </button>
-            <button
-              className={styles.createButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onCreateClientOpen();
-              }}
-            >
-              <Image src="/wallet-cards.svg" alt="New Client" width={16} height={16} />
-              Nueva Cuenta
-            </button>
-            <button
-              className={styles.createButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onInviteMemberOpen();
-              }}
-            >
-              <Image src="/wallet-cards.svg" alt="Invite Member" width={16} height={16} />
-              Invitar Miembro
-            </button>
+          
             <button
               className={styles.createButton}
               onClick={(e) => {

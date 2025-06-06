@@ -284,8 +284,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
   // Scroll to bottom of chat
   useEffect(() => {
     if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
-      console.log('Scrolled to bottom of chat');
+      setTimeout(() => {
+        chatRef.current!.scrollTop = chatRef.current!.scrollHeight;
+        console.log('Scrolled to bottom of chat');
+      }, 0);
     }
   }, [messages]);
 
