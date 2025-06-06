@@ -113,7 +113,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           setSortDirection('asc');
         }
       },
-      [sortKey],
+      [sortKey]
     );
 
     const handleActionClick = useCallback((clientId: string) => {
