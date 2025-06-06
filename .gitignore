@@ -3,6 +3,10 @@
 /.pnp
 .pnp.js
 
+src/config/Aurin Plattform Uploader.json
+src/lib/firebase.ts
+src/lib/firebaseConfig.ts
+
 # Production
 /build
 /out
