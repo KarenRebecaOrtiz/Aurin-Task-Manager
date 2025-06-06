@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;700&family=Montserrat:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
 .container {
   position: fixed;
@@ -7,7 +7,8 @@
   width: 450px;
   height: 100%;
   padding: 25px;
-  background: #0D0D0D;
+  background: #000000ea;
+  backdrop-filter: blur(10px);
   box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.06);
   border-radius: 12px 0 0 12px;
   border: 1px solid #242428;
@@ -16,6 +17,13 @@
   justify-content: space-between;
   z-index: 3000;
   transform: translateX(100%);
+  box-shadow:
+    -5px 1px 11px rgba(0, 0, 0, 0.10),
+    -19px 3px 19px rgba(0, 0, 0, 0.09),
+    -43px 7px 26px rgba(0, 0, 0, 0.05),
+    -76px 12px 31px rgba(0, 0, 0, 0.01),
+    -118px 19px 34px rgba(0, 0, 0, 0.00);
+
 }
 
 .open {
@@ -25,7 +33,7 @@
 .header {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 5px;
 }
 
 .controls {
@@ -36,19 +44,20 @@
 
 .arrowLeft, .ellipsis {
   cursor: pointer;
+  filter: invert(100) brightness(100);
 }
 
 .title {
   color: #FAFAFA;
-  font-size: 19.2px; // 16px * 1.2
-  font-family: 'Urbanist', sans-serif;
+  font-size: 16px; // 16px * 1.2
+  font-family: "Inter Tight", sans-serif;
   font-weight: 700;
 }
 
 .subtitle {
   color: #A1A1AA;
-  font-size: 14.4px; // 12px * 1.2
-  font-family: 'Urbanist', sans-serif;
+  font-size: 14px; // 12px * 1.2
+  font-family: "Inter Tight", sans-serif;
   font-weight: 400;
 }
 
@@ -86,7 +95,7 @@
 .text {
   color: #FAFAFA;
   font-size: 14.4px; // 12px * 1.2
-  font-family: 'Urbanist', sans-serif;
+  font-family: "Inter Tight", sans-serif;
   font-weight: 400;
 }
 
@@ -96,8 +105,7 @@
 
 .inputContainer {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
   background: #1F1F20;
   padding: 19px;
   border-radius: 10px;
@@ -105,12 +113,11 @@
 
 .input {
   width: 100%;
-  height: 26px;
   background: transparent;
   border: none;
   color: white;
-  font-size: 14.4px; // 12px * 1.2
-  font-family: 'Urbanist', sans-serif;
+  font-size: 14px; 
+  font-family: "Inter Tight", sans-serif;
   font-weight: 400;
   opacity: 0.8;
 }
@@ -120,20 +127,15 @@
 }
 
 .sendButton {
-  align-self: flex-end;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 10px;
-  background: white;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-}
-
-.sendButton span {
-  color: black;
-  font-size: 14.4px; // 12px * 1.2
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 700;
-}
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+    background: white;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+  }
+  

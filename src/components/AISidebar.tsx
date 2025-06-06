@@ -87,7 +87,7 @@ export default function AISidebar({ isOpen, onClose }: AISidebarProps) {
             className={styles.ellipsis}
             onClick={(e) => handleClick(e.currentTarget)}
           >
-            <Image src="/ellipsis.svg" alt="Options" width={16} height={16} />
+            <Image src="/elipsis.svg" alt="Options" width={16} height={16} />
           </div>
         </div>
         <div className={styles.title}>Asistente de Proyectos</div>
@@ -136,8 +136,7 @@ export default function AISidebar({ isOpen, onClose }: AISidebarProps) {
             className={styles.sendButton}
             onClick={(e) => handleClick(e.currentTarget)}
           >
-            <span>Enviar</span>
-            <Image src="/send.svg" alt="Send" width={13} height={13} />
+            <Image src="/arrow-up.svg" alt="Send" width={13} height={13} />
           </button>
         </div>
       </div>

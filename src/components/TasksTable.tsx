@@ -11,6 +11,7 @@ import styles from './TasksTable.module.scss';
 interface Client {
   id: string;
   name: string;
+  imageUrl: string;
 }
 
 interface Task {
@@ -26,6 +27,7 @@ interface Task {
   LeadedBy: string[];
   AssignedTo: string[];
   createdAt: string;
+  CreatedBy?: string;
 }
 
 interface TasksTableProps {
@@ -59,34 +61,42 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const clientDropdownRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-    // Fetch tasks
     useEffect(() => {
       const fetchTasks = async () => {
         try {
           const querySnapshot = await getDocs(collection(db, 'tasks'));
-          const tasksData: Task[] = querySnapshot.docs.map((doc) => ({
-            id: doc.id,
-            clientId: doc.data().clientId || '',
-            project: doc.data().project || '',
-            name: doc.data().name || '',
-            description: doc.data().description || '',
-            status: doc.data().status || '',
-            priority: doc.data().priority || '',
-            startDate: doc.data().startDate ? new Date(doc.data().startDate.toDate()) : null,
-            endDate: doc.data().endDate ? new Date(doc.data().endDate.toDate()) : null,
-            LeadedBy: doc.data().LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
-            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-          }));
+          const tasksData: Task[] = querySnapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              clientId: doc.data().clientId || '',
+              project: doc.data().project || '',
+              name: doc.data().name || '',
+              description: doc.data().description || '',
+              status: doc.data().status || '',
+              priority: doc.data().priority || '',
+              startDate: doc.data().startDate ? new Date(doc.data().startDate.toDate()) : null,
+              endDate: doc.data().endDate ? new Date(doc.data().endDate.toDate()) : null,
+              LeadedBy: doc.data().LeadedBy || [],
+              AssignedTo: doc.data().AssignedTo || [],
+              createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+              CreatedBy: doc.data().CreatedBy || '',
+            }))
+            .filter(
+              (task) =>
+                task.AssignedTo.includes(user?.id || '') ||
+                task.LeadedBy.includes(user?.id || '') ||
+                task.CreatedBy === user?.id
+            );
           setTasks(tasksData);
         } catch (error) {
           console.error('Error fetching tasks:', error);
         }
       };
-      fetchTasks();
-    }, [setTasks]);
+      if (user?.id) {
+        fetchTasks();
+      }
+    }, [setTasks, user?.id]);
 
-    // Filter tasks
     const memoizedFilteredTasks = useMemo(() => {
       return tasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -101,7 +111,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       setFilteredTasks(memoizedFilteredTasks);
     }, [memoizedFilteredTasks]);
 
-    // GSAP animations for action menu
     useEffect(() => {
       if (actionMenuOpenId && actionMenuRef.current) {
         gsap.fromTo(
@@ -109,35 +118,56 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
+        return () => {
+          if (actionMenuRef.current) {
+            gsap.killTweensOf(actionMenuRef.current);
+          }
+        };
       }
     }, [actionMenuOpenId]);
 
-    // GSAP animations for dropdowns
     useEffect(() => {
-      if (isStatusDropdownOpen && statusDropdownRef.current) {
+      const statusItems = statusDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
+      if (isStatusDropdownOpen && statusItems) {
         gsap.fromTo(
-          statusDropdownRef.current.querySelector(`.${styles.dropdownItems}`),
+          statusItems,
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
+        return () => {
+          gsap.killTweensOf(statusItems);
+        };
       }
-      if (isPriorityDropdownOpen && priorityDropdownRef.current) {
-        gsap.fromTo(
-          priorityDropdownRef.current.querySelector(`.${styles.dropdownItems}`),
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-      if (isClientDropdownOpen && clientDropdownRef.current) {
-        gsap.fromTo(
-          clientDropdownRef.current.querySelector(`.${styles.dropdownItems}`),
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-    }, [isStatusDropdownOpen, isPriorityDropdownOpen, isClientDropdownOpen]);
+    }, [isStatusDropdownOpen]);
 
-    // Close action menu and dropdowns on outside click
+    useEffect(() => {
+      const priorityItems = priorityDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
+      if (isPriorityDropdownOpen && priorityItems) {
+        gsap.fromTo(
+          priorityItems,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+        );
+        return () => {
+          gsap.killTweensOf(priorityItems);
+        };
+      }
+    }, [isPriorityDropdownOpen]);
+
+    useEffect(() => {
+      const clientItems = clientDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
+      if (isClientDropdownOpen && clientItems) {
+        gsap.fromTo(
+          clientItems,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+        );
+        return () => {
+          gsap.killTweensOf(clientItems);
+        };
+      }
+    }, [isClientDropdownOpen]);
+
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -173,17 +203,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [actionMenuOpenId, isStatusDropdownOpen, isPriorityDropdownOpen, isClientDropdownOpen]);
 
-    // Sorting handler
     const handleSort = useCallback((key: string) => {
       if (key === sortKey) {
-        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
       } else {
         setSortKey(key);
         setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
       }
-    }, [sortKey, sortDirection]);
+    }, [sortKey]);
 
-    // Custom sorting logic
     const sortedTasks = useMemo(() => {
       const sorted = [...filteredTasks];
       if (sortKey === 'clientId') {
@@ -217,15 +245,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       } else {
         sorted.sort((a, b) =>
           sortDirection === 'asc'
-            ? a[sortKey].localeCompare(b[sortKey])
-            : b[sortKey].localeCompare(a[sortKey])
+            ? String(a[sortKey as keyof Task]).localeCompare(String(b[sortKey as keyof Task]))
+            : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task]))
         );
       }
       return sorted;
     }, [filteredTasks, sortKey, sortDirection, clients]);
 
-    // GSAP click animation
-    const animateClick = (element: HTMLElement) => {
+    const animateClick = useCallback((element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
         opacity: 0.8,
@@ -234,33 +261,30 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         yoyo: true,
         repeat: 1,
       });
-    };
+    }, []);
 
-    // Action menu handler
     const handleActionClick = useCallback((taskId: string) => {
       setActionMenuOpenId((prev) => (prev === taskId ? null : taskId));
     }, []);
 
-    // Filter handlers
-    const handleStatusSelect = (status: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const handleStatusSelect = useCallback((status: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setStatusFilter(status);
       setIsStatusDropdownOpen(false);
-    };
+    }, [animateClick]);
 
-    const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const handlePrioritySelect = useCallback((priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
-    };
+    }, [animateClick]);
 
-    const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const handleClientSelect = useCallback((clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
-    };
+    }, [animateClick]);
 
-    // Render action menu
     const renderActionMenu = useCallback(
       (task: Task) => (
         <div className={styles.actionContainer}>
@@ -283,7 +307,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     className={styles.dropdownItem}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      // Placeholder for edit/delete actions
                       setActionMenuOpenId(null);
                     }}
                   >
@@ -296,33 +319,66 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           )}
         </div>
       ),
-      [user, actionMenuOpenId, handleActionClick]
+      [user?.id, actionMenuOpenId, handleActionClick, animateClick]
     );
 
-    // Table columns
-    const columns = useMemo(
-      () => [
-        {
-          key: 'clientId',
-          label: 'Cuenta',
-          width: '20%',
-          mobileVisible: true,
+    const baseColumns = useMemo(() => [
+      {
+        key: 'clientId',
+        label: 'Cuenta',
+        width: '20%',
+        mobileVisible: true,
+      },
+      {
+        key: 'name',
+        label: 'Tarea',
+        width: '40%',
+        mobileVisible: true,
+      },
+      {
+        key: 'status',
+        label: 'Estado',
+        width: '15%',
+        mobileVisible: false,
+      },
+      {
+        key: 'priority',
+        label: 'Prioridad',
+        width: '15%',
+        mobileVisible: false,
+      },
+      {
+        key: 'action',
+        label: 'Acciones',
+        width: '5%',
+        mobileVisible: true,
+      },
+    ], []);
+
+    const columns = useMemo(() => baseColumns.map((col) => {
+      if (col.key === 'clientId') {
+        return {
+          ...col,
           render: (task: Task) => {
             const client = clients.find((c) => c.id === task.clientId);
-            return client ? client.name : 'Sin cuenta';
+            return client ? (
+              <Image
+                src={client.imageUrl || '/empty-image.png'}
+                alt={client.name || 'Client Image'}
+                width={32}
+                height={32}
+                className={styles.clientImage}
+                onError={(e) => {
+                  e.currentTarget.src = '/empty-image.png';
+                }}
+              />
+            ) : 'Sin cuenta';
           },
-        },
-        {
-          key: 'name',
-          label: 'Tarea',
-          width: '45%',
-          mobileVisible: true,
-        },
-        {
-          key: 'status',
-          label: 'Estado',
-          width: '15%',
-          mobileVisible: false,
+        };
+      }
+      if (col.key === 'status') {
+        return {
+          ...col,
           render: (task: Task) => (
             <div className={styles.statusWrapper}>
               <Image
@@ -340,12 +396,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               <span className={styles[`status-${task.status.replace(' ', '-')}`]}>{task.status}</span>
             </div>
           ),
-        },
-        {
-          key: 'priority',
-          label: 'Prioridad',
-          width: '15%',
-          mobileVisible: false,
+        };
+      }
+      if (col.key === 'priority') {
+        return {
+          ...col,
           render: (task: Task) => (
             <div className={styles.priorityWrapper}>
               <Image
@@ -361,17 +416,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
             </div>
           ),
-        },
-        {
-          key: 'action',
-          label: 'Acciones',
-          width: '5%',
-          mobileVisible: true,
+        };
+      }
+      if (col.key === 'action') {
+        return {
+          ...col,
           render: renderActionMenu,
-        },
-      ],
-      [clients, renderActionMenu]
-    );
+        };
+      }
+      return col;
+    }), [clients, renderActionMenu]);
 
     return (
       <div className={styles.container}>
@@ -393,10 +447,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   className={styles.dropdownTrigger}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                    setIsStatusDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image src="/circle-plus.svg" alt="Status" width={16} height={16} />
+                  <Image className='filterIcon' src="/filter.svg" alt="Status" width={16} height={16} />
                   <span>{statusFilter || 'Estado'}</span>
                 </div>
                 {isStatusDropdownOpen && (
@@ -420,10 +474,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   className={styles.dropdownTrigger}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                    setIsPriorityDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image src="/circle-plus.svg" alt="Priority" width={16} height={16} />
+                  <Image className='filterIcon' src="/filter.svg" alt="Priority" width={16} height={16} />
                   <span>{priorityFilter || 'Prioridad'}</span>
                 </div>
                 {isPriorityDropdownOpen && (
@@ -447,10 +501,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   className={styles.dropdownTrigger}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    setIsClientDropdownOpen(!isClientDropdownOpen);
+                    setIsClientDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image src="/vote.svg" alt="Client" width={17} height={17} />
+                  <Image className='filterIcon' src="/filter.svg" alt="Client" width={17} height={17} />
                   <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                 </div>
                 {isClientDropdownOpen && (
@@ -468,26 +522,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 )}
               </div>
             </div>
-            <button
-              className={styles.filterButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onCreateClientOpen();
-              }}
-            >
-              <Image src="/wallet-cards.svg" alt="New Client" width={17} height={17} />
-              Nuevo Cliente
-            </button>
-            <button
-              className={styles.filterButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onInviteMemberOpen();
-              }}
-            >
-              <Image src="/square-user-round.svg" alt="Invite Member" width={17} height={17} />
-              Invitar Miembro
-            </button>
             <button
               className={styles.filterButton}
               onClick={(e) => {

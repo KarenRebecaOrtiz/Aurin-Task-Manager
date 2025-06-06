@@ -1,5 +1,4 @@
-// Import Urbanist font
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
 // Color variables
 $white: #FFFFFF;
@@ -35,7 +34,7 @@ $gray-500: #82828A;
   display: flex;
   flex-direction: column;
   gap: 40px;
-  font-family: 'Urbanist', sans-serif;
+  font-family: "Inter Tight", sans-serif;
 }
 
 // Header
@@ -231,7 +230,7 @@ $gray-500: #82828A;
         color: $zinc-500;
         font-size: 12px;
         font-weight: 500;
-        font-family: 'Urbanist', sans-serif;
+        font-family: "Inter Tight", sans-serif;
         appearance: none;
         background-image: url('/chevron-down.svg');
         background-repeat: no-repeat;
@@ -263,7 +262,7 @@ $gray-500: #82828A;
         color: $zinc-500;
         font-size: 12px;
         font-weight: 500;
-        font-family: 'Urbanist', sans-serif;
+        font-family: "Inter Tight", sans-serif;
 
         &::placeholder {
           color: $zinc-500;
@@ -280,7 +279,7 @@ $gray-500: #82828A;
         color: $zinc-500;
         font-size: 12px;
         font-weight: 500;
-        font-family: 'Urbanist', sans-serif;
+        font-family: "Inter Tight", sans-serif;
         appearance: none;
         background-image: url('/chevron-down.svg');
         background-repeat: no-repeat;

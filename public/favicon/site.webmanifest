@@ -1,0 +1,14 @@
+{
+    "name": "SodioPlattform",
+    "short_name": "Sodio",
+    "icons": [
+      {
+        "src": "/favicon.ico",
+        "sizes": "64x64",
+        "type": "image/x-icon"
+      }
+    ],
+    "theme_color": "#ffffff",
+    "background_color": "#ffffff",
+    "display": "standalone"
+  }

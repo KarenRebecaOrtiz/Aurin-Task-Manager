@@ -1,10 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700&family=Inter:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
 .container {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 16px;
+}
+
+.clientImage{
+  border-radius: 999;
+}
+.filterIcon{
+  transform: scale(0.8);
 }
 
 .header {
@@ -25,11 +31,15 @@
   width: 100%;
   height: 40px;
   padding: 10px 16px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
-  border: 1px solid #E4E4E7;
-  font-size: 20.4px; // 17px * 1.2
-  font-family: 'Urbanist', sans-serif;
+  border: 1px solid #cbcbcb52;
+  box-shadow:   0px 2px 4px rgba(0, 0, 0, 0.01),
+  0px 7px 7px rgba(0, 0, 0, 0.02),
+  0px 15px 9px rgba(0, 0, 0, 0.02),
+  0px 27px 11px rgba(0, 0, 0, 0.003),
+  0px 42px 12px rgba(0, 0, 0, 0.00);;
+  font-size: 14px; // 17px * 1.2
+  font-family: "Inter Tight", sans-serif;
   font-weight: 500;
   color: #52525B;
   background: white;
@@ -38,7 +48,7 @@
 }
 
 .searchInput:focus {
-  border-color: #3B82F6;
+  border-color: #000000;
   box-shadow: 0px 0px 0px 4px rgba(59, 130, 246, 0.1);
   outline: none;
 }
@@ -49,7 +59,7 @@
 
 :global(body.dark) .searchInput {
   background: #0D0D0D;
-  border-color: #555555;
+  border-color: #ffffff;
   color: #D1D1D1;
   opacity: 1;
 }
@@ -65,30 +75,43 @@
 }
 
 .filter {
-  height: 32px;
+  height: 40px;
 }
 
 .filterButton {
-  height: 32px;
+  height: 40px;
   padding: 8px 12px;
   background: white;
   border-radius: 6px;
-  border: 1px solid #D7D7DB;
+  border: 1px solid #ffffff;
+  box-shadow:   0px 2px 4px rgba(0, 0, 0, 0.01),
+  0px 7px 7px rgba(0, 0, 0, 0.02),
+  0px 15px 9px rgba(0, 0, 0, 0.02),
+  0px 27px 11px rgba(0, 0, 0, 0.003),
+  0px 42px 12px rgba(0, 0, 0, 0.00);;
   color: #0D0D0D;
-  font-size: 14.4px; // 12px * 1.2
-  font-family: 'Inter', sans-serif;
+  font-size: 14px; // 12px * 1.2
+    font-family: "Inter Tight", sans-serif;
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: 
+    background-color 0.2s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
 }
 
 .filterButton:hover {
-  background: #F7F7F7;
+  transform: translateY(-1px);
+  box-shadow:
+    0px 15px 33px rgba(0, 0, 0, 0.044),
+    0px 60px 60px rgba(0, 0, 0, 0.057),
+    0px 136px 81px rgba(0, 0, 0, 0.05),
+    0px 241px 96px rgba(0, 0, 0, 0.01),
+    0px 377px 106px rgba(0, 0, 0, 0.00);
 }
-
 :global(body.dark) .filterButton {
   background: #0D0D0D;
   border-color: #555555;
@@ -104,24 +127,34 @@
 }
 
 .createButton {
-  height: 32px;
+  height: 40px;
   padding: 8px 12px;
   background: #0A0A0A;
   border-radius: 6px;
   color: white;
-  font-size: 14.4px; // 12px * 1.2
-  font-family: 'Inter', sans-serif;
+  font-size: 14px; 
+  font-family: "Inter Tight", sans-serif;
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: 
+    background-color 0.2s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
 }
 
 .createButton:hover {
-  background: #1F1F1F;
+  transform: translateY(-1px);
+  box-shadow:
+    0px 15px 33px rgba(0, 0, 0, 0.044),
+    0px 60px 60px rgba(0, 0, 0, 0.057),
+    0px 136px 81px rgba(0, 0, 0, 0.05),
+    0px 241px 96px rgba(0, 0, 0, 0.01),
+    0px 377px 106px rgba(0, 0, 0, 0.00);
 }
+
 
 :global(body.dark) .createButton {
   background: #ffffff;
@@ -138,27 +171,43 @@
 
 .dropdownContainer {
   position: relative;
+  
 }
 
 .dropdownTrigger {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  min-width: 100px;
+  box-shadow:   0px 2px 4px rgba(0, 0, 0, 0.01),
+  0px 7px 7px rgba(0, 0, 0, 0.02),
+  0px 15px 9px rgba(0, 0, 0, 0.02),
+  0px 27px 11px rgba(0, 0, 0, 0.003),
+  0px 42px 12px rgba(0, 0, 0, 0.00);;
   align-items: center;
-  height: 32px;
+  height: 40px;
   padding: 8px 12px;
   background: white;
   border-radius: 6px;
-  border: 1px solid #E4E4E7;
+  border: 1px solid #e4e4e72c;
   color: #09090B;
-  font-size: 14.4px; // 12px * 1.2
-  font-family: 'Inter', sans-serif;
+  font-size: 14px; // 12px * 1.2
+    font-family: "Inter Tight", sans-serif;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  transition: 
+    background-color 0.2s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
 }
 
 .dropdownTrigger:hover {
-  border-color: #A1A1AA;
+  transform: translateY(-1px);
+  box-shadow:
+    0px 15px 33px rgba(0, 0, 0, 0.044),
+    0px 60px 60px rgba(0, 0, 0, 0.057),
+    0px 136px 81px rgba(0, 0, 0, 0.05),
+    0px 241px 96px rgba(0, 0, 0, 0.01),
+    0px 377px 106px rgba(0, 0, 0, 0.00);
 }
 
 :global(body.dark) .dropdownTrigger {
@@ -168,16 +217,20 @@
 }
 
 .dropdownItems {
+  box-shadow:   0px 2px 4px rgba(0, 0, 0, 0.01),
+  0px 7px 7px rgba(0, 0, 0, 0.02),
+  0px 15px 9px rgba(0, 0, 0, 0.02),
+  0px 27px 11px rgba(0, 0, 0, 0.003),
+  0px 42px 12px rgba(0, 0, 0, 0.00);;
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   background: white;
   border-radius: 6px;
-  border: 1px solid #E4E4E7;
+  border: 1px solid #e4e4e72c;
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.06);
   z-index: 10;
-  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -187,10 +240,10 @@
 }
 
 .dropdownItem {
-  padding: 8px 12px;
+  padding: 4px;
   color: #09090B;
-  font-size: 14.4px; // 12px * 1.2
-  font-family: 'Inter', sans-serif;
+  font-size:12px; // 12px * 1.2
+    font-family: "Inter Tight", sans-serif;
   font-weight: 500;
   cursor: pointer;
 }
@@ -213,37 +266,6 @@
   gap: 8px;
 }
 
-.status-En-Proceso {
-  color: #38BDF8;
-}
-
-.status-Backlog {
-  color: #EAB308;
-}
-
-.status-Por-Comenzar {
-  color: #22C55E;
-}
-
-.status-Finalizado {
-  color: #6B7280;
-}
-
-.status-Cancelada {
-  color: #EF4444;
-}
-
-.priority-Alta {
-  color: #AF1A00;
-}
-
-.priority-Media {
-  color: #A5A15B;
-}
-
-.priority-Baja {
-  color: #1CA404;
-}
 
 .actionContainer {
   position: relative;
@@ -272,7 +294,7 @@
   background: white;
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
-  border: 1px solid #E4E4E7;
+  border: 1px solid #e4e4e72c;
   display: flex;
   flex-direction: column;
   z-index: 1100;
@@ -306,8 +328,8 @@
 
 .dropdownItem > span {
   color: #09090B;
-  font-size: 20.4px; // 17px * 1.2
-  font-family: 'Urbanist', sans-serif;
+  font-size: 14px;
+  font-family: "Inter Tight", sans-serif;
   font-weight: 400;
 }
 

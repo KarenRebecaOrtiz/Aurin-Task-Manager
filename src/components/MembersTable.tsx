@@ -73,6 +73,11 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
+        return () => {
+          if (actionMenuRef.current) {
+            gsap.killTweensOf(actionMenuRef.current);
+          }
+        };
       }
     }, [actionMenuOpenId]);
 
@@ -93,13 +98,13 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const handleSort = useCallback(
       (key: string) => {
         if (key === sortKey) {
-          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+          setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
         } else {
           setSortKey(key);
           setSortDirection('asc');
         }
       },
-      [sortKey, sortDirection],
+      [sortKey],
     );
 
     const handleActionClick = useCallback((userId: string) => {
@@ -137,7 +142,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             className={styles.actionButton}
             aria-label="Abrir acciones"
           >
-            <Image src="/ellipsis.svg" alt="Actions" width={16} height={16} />
+            <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
           </button>
           {actionMenuOpenId === user.id && (
             <div ref={actionMenuRef} className={styles.dropdown}>
@@ -168,16 +173,40 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           )}
         </div>
       ),
-      [actionMenuOpenId, handleActionClick, handleDeleteRequest, onProfileOpen],
+      [actionMenuOpenId, handleActionClick, handleDeleteRequest, onProfileOpen]
     );
 
-    const columns = useMemo(
-      () => [
-        {
-          key: 'imageUrl',
-          label: '',
-          width: '10%',
-          mobileVisible: false,
+    const baseColumns = useMemo(() => [
+      {
+        key: 'imageUrl',
+        label: '',
+        width: '10%',
+        mobileVisible: false,
+      },
+      {
+        key: 'fullName',
+        label: 'Nombre',
+        width: '50%',
+        mobileVisible: true,
+      },
+      {
+        key: 'role',
+        label: 'Rol',
+        width: '30%',
+        mobileVisible: false,
+      },
+      {
+        key: 'action',
+        label: 'Acciones',
+        width: '10%',
+        mobileVisible: true,
+      },
+    ], []);
+
+    const columns = useMemo(() => baseColumns.map((col) => {
+      if (col.key === 'imageUrl') {
+        return {
+          ...col,
           render: (user: User) => (
             <Image
               src={user.imageUrl}
@@ -190,29 +219,16 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               }}
             />
           ),
-        },
-        {
-          key: 'fullName',
-          label: 'Nombre',
-          width: '60%',
-          mobileVisible: true,
-        },
-        {
-          key: 'role',
-          label: 'Rol',
-          width: '20%',
-          mobileVisible: false,
-        },
-        {
-          key: 'action',
-          label: 'Acciones',
-          width: '10%',
-          mobileVisible: true,
+        };
+      }
+      if (col.key === 'action') {
+        return {
+          ...col,
           render: renderActionMenu,
-        },
-      ],
-      [renderActionMenu],
-    );
+        };
+      }
+      return col;
+    }), [renderActionMenu]);
 
     return (
       <div className={styles.container}>

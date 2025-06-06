@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import Table from './Table';
 import styles from './ClientsTable.module.scss';
 
+
 interface Client {
   id: string;
   name: string;
@@ -80,6 +81,11 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
+        return () => {
+          if (actionMenuRef.current) {
+            gsap.killTweensOf(actionMenuRef.current);
+          }
+        };
       }
     }, [actionMenuOpenId]);
 
@@ -100,13 +106,13 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     const handleSort = useCallback(
       (key: string) => {
         if (key === sortKey) {
-          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+          setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
         } else {
           setSortKey(key);
           setSortDirection('asc');
         }
       },
-      [sortKey, sortDirection],
+      [sortKey],
     );
 
     const handleActionClick = useCallback((clientId: string) => {
@@ -127,7 +133,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                 className={styles.actionButton}
                 aria-label="Abrir acciones"
               >
-                <Image src="/ellipsis.svg" alt="Actions" width={16} height={16} />
+                <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
               </button>
               {actionMenuOpenId === client.id && (
                 <div ref={actionMenuRef} className={styles.dropdown}>
@@ -165,16 +171,40 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           )}
         </div>
       ),
-      [user, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen],
+      [user?.id, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen]
     );
 
-    const columns = useMemo(
-      () => [
-        {
-          key: 'imageUrl',
-          label: '',
-          width: '20%',
-          mobileVisible: false,
+    const baseColumns = useMemo(() => [
+      {
+        key: 'imageUrl',
+        label: '',
+        width: '20%',
+        mobileVisible: false,
+      },
+      {
+        key: 'name',
+        label: 'Cuentas',
+        width: '50%',
+        mobileVisible: true,
+      },
+      {
+        key: 'projectCount',
+        label: 'Proyectos Asignados',
+        width: '20%',
+        mobileVisible: false,
+      },
+      {
+        key: 'action',
+        label: 'Acciones',
+        width: '10%',
+        mobileVisible: true,
+      },
+    ], []);
+
+    const columns = useMemo(() => baseColumns.map((col) => {
+      if (col.key === 'imageUrl') {
+        return {
+          ...col,
           render: (client: Client) =>
             client.imageUrl ? (
               <Image
@@ -188,29 +218,16 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                 }}
               />
             ) : null,
-        },
-        {
-          key: 'name',
-          label: 'Cuentas',
-          width: '60%',
-          mobileVisible: true,
-        },
-        {
-          key: 'projectCount',
-          label: 'Proyectos Asignados',
-          width: '10%',
-          mobileVisible: false,
-        },
-        {
-          key: 'action',
-          label: 'Acciones',
-          width: '10%',
-          mobileVisible: true,
+        };
+      }
+      if (col.key === 'action') {
+        return {
+          ...col,
           render: renderActionMenu,
-        },
-      ],
-      [renderActionMenu],
-    );
+        };
+      }
+      return col;
+    }), [renderActionMenu]);
 
     return (
       <div className={styles.container}>

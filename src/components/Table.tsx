@@ -1,10 +1,9 @@
 'use client';
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Table.module.scss';
 
-// Interfaz base para garantizar que T tenga un id
 interface HasId {
   id: string;
 }
@@ -34,7 +33,7 @@ const Table = memo(
 
     const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedData = data.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedData = useMemo(() => data.slice(startIndex, startIndex + itemsPerPage), [data, startIndex, itemsPerPage]);
 
     useEffect(() => {
       if (currentPage > totalPages && data.length > 0) {
@@ -46,24 +45,28 @@ const Table = memo(
 
     useEffect(() => {
       if (tableRef.current && paginatedData.length > 0) {
+        const rows = tableRef.current.querySelectorAll(`.${styles.row}`);
         gsap.fromTo(
-          tableRef.current.querySelectorAll(`.${styles.row}`),
+          rows,
           { opacity: 0, y: 10 },
           { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: 'power2.out' },
         );
+        return () => {
+          gsap.killTweensOf(rows);
+        };
       }
     }, [paginatedData]);
 
-    const handleSort = (key: string) => {
+    const handleSort = useCallback((key: string) => {
       if (
         onSort &&
         columns.find((col) => col.key === key && col.key !== 'action' && !col.render)
       ) {
         onSort(key);
       }
-    };
+    }, [onSort, columns]);
 
-    const handleCellClick = (item: T, column: Column<T>, e: React.MouseEvent) => {
+    const handleCellClick = useCallback((item: T, column: Column<T>, e: React.MouseEvent) => {
       if (column.key === 'action') {
         e.stopPropagation();
         return;
@@ -78,12 +81,30 @@ const Table = memo(
         });
         onRowClick(item);
       }
-    };
+    }, [onRowClick]);
 
-    const handleFirstPage = () => setCurrentPage(1);
-    const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
-    const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-    const handleLastPage = () => setCurrentPage(totalPages);
+    const handleFirstPage = useCallback(() => setCurrentPage(1), []);
+    const handlePrevPage = useCallback(() => setCurrentPage((prev) => Math.max(prev - 1, 1)), []);
+    const handleNextPage = useCallback(() => setCurrentPage((prev) => Math.min(prev + 1, totalPages)), [totalPages]);
+    const handleLastPage = useCallback(() => setCurrentPage(totalPages), [totalPages]);
+
+    const EmptyState = () => (
+      <div className={styles.emptyState}>
+        <Image
+          src="/emptyStateImage.png"
+          alt="No hay tareas asignadas"
+          width={189}
+          height={190}
+          className={styles.emptyStateImage}
+        />
+        <div className={styles.emptyStateText}>
+          <div className={styles.emptyStateTitle}>¡Todo en orden por ahora!</div>
+          <div className={styles.emptyStateSubtitle}>
+            No tienes tareas activas. ¿Por qué no comienzas creando una nueva?
+          </div>
+        </div>
+      </div>
+    );
 
     return (
       <div className={styles.tableContainer}>
@@ -111,14 +132,7 @@ const Table = memo(
             ))}
           </div>
           {paginatedData.length === 0 ? (
-            <div className={styles.row}>
-              <div
-                className={styles.cell}
-                style={{ width: '100%', textAlign: 'center', fontStyle: 'italic' }}
-              >
-                No hay datos para mostrar.
-              </div>
-            </div>
+            <EmptyState />
           ) : (
             paginatedData.map((item, index) => (
               <div key={item.id || `row-${index}`} className={styles.row}>
@@ -190,7 +204,9 @@ const Table = memo(
       prevProps.sortKey === nextProps.sortKey &&
       prevProps.sortDirection === nextProps.sortDirection &&
       prevProps.columns === nextProps.columns &&
-      prevProps.itemsPerPage === nextProps.itemsPerPage
+      prevProps.itemsPerPage === nextProps.itemsPerPage &&
+      prevProps.onSort === nextProps.onSort &&
+      prevProps.onRowClick === nextProps.onRowClick
     );
   }
 );

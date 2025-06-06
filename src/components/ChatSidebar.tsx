@@ -1,12 +1,14 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { db } from '@/lib/firebase';
-import styles from './ChatShidebar.module.scss';
+import styles from './ChatSidebar.module.scss';
 
 interface Message {
   id: string;
@@ -14,6 +16,7 @@ interface Message {
   senderName: string;
   text: string;
   timestamp: Timestamp;
+  read: boolean;
 }
 
 interface ChatSidebarProps {
@@ -31,9 +34,10 @@ interface ChatSidebarProps {
     endDate: Date | null;
     LeadedBy: string[];
     AssignedTo: string[];
+    CreatedBy?: string;
   };
   clientName: string;
-  users: { id: string; fullName: string; imageUrl: string }[];
+  users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
 }
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, clientName, users = [] }) => {
@@ -43,24 +47,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
   const [newMessage, setNewMessage] = useState('');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerDropdownOpen, setIsTimerDropdownOpen] = useState(false);
+  const [timerInput, setTimerInput] = useState('00:00');
+  const [dateInput, setDateInput] = useState<Date>(new Date());
+  const [commentInput, setCommentInput] = useState('');
+  const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const timerDropdownRef = useRef<HTMLDivElement>(null);
+  const timerButtonRef = useRef<HTMLDivElement>(null);
+  const prevMessagesRef = useRef<Message[]>([]);
 
   // GSAP animation for open/close
   useEffect(() => {
-    if (isOpen && sidebarRef.current) {
-      gsap.fromTo(
-        sidebarRef.current,
-        { x: '100%', opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' }
-      );
-    } else if (sidebarRef.current) {
+    if (sidebarRef.current) {
       gsap.to(sidebarRef.current, {
-        x: '100%',
-        opacity: 0,
+        x: isOpen ? 0 : '100%',
+        opacity: isOpen ? 1 : 0,
         duration: 0.3,
-        ease: 'power2.in',
-        onComplete: onClose,
+        ease: isOpen ? 'power2.out' : 'power2.in',
+        onComplete: !isOpen ? onClose : undefined,
       });
+      console.log('ChatSidebar animation triggered, isOpen:', isOpen);
     }
   }, [isOpen, onClose]);
 
@@ -79,34 +92,127 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
           ease: 'power2.in',
           onComplete: onClose,
         });
+        console.log('Closed ChatSidebar via outside click');
+      }
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node) &&
+        actionMenuOpenId
+      ) {
+        setActionMenuOpenId(null);
+        console.log('Closed action menu via outside click');
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, actionMenuOpenId]);
 
   // Real-time messages listener
   useEffect(() => {
+    if (!task.id) return;
+
+    console.log('Setting up messages listener for task:', task.id);
     const messagesQuery = query(
       collection(db, `tasks/${task.id}/messages`),
-      orderBy('timestamp', 'asc')
+      orderBy('timestamp', 'asc'),
     );
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      const newMessages: Message[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Message[];
-      setMessages(newMessages);
-    });
+    const unsubscribe = onSnapshot(
+      messagesQuery,
+      (snapshot) => {
+        const newMessages: Message[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          senderId: doc.data().senderId,
+          senderName: doc.data().senderName,
+          text: doc.data().text,
+          timestamp: doc.data().timestamp,
+          read: doc.data().read || false,
+        }));
+        console.log('Received messages:', newMessages.length, 'IDs:', newMessages.map(m => m.id));
+        setMessages(newMessages);
+      },
+      (error) => {
+        console.error('Error listening to messages:', error.message, error.code);
+      },
+    );
 
-    return () => unsubscribe();
+    return () => {
+      console.log('Unsubscribing messages listener for task:', task.id);
+      unsubscribe();
+    };
   }, [task.id]);
+
+  // Mark messages as read when sidebar opens
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      console.log('Checking unread messages for user:', user.id);
+      setHasInteracted(true);
+      const unreadMessages = messages.filter((msg) => !msg.read);
+      console.log('Unread messages:', unreadMessages.length, 'IDs:', unreadMessages.map(m => m.id));
+      unreadMessages.forEach(async (msg) => {
+        try {
+          console.log('Marking message as read:', msg.id);
+          await updateDoc(doc(db, `tasks/${task.id}/messages`, msg.id), {
+            read: true,
+          });
+          console.log('Message marked as read:', msg.id);
+        } catch (error) {
+          console.error('Error marking message as read:', error.message, error.code);
+        }
+      });
+    }
+  }, [isOpen, messages, user?.id, task.id]);
+
+  // Notification sound only for new unread messages
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio('/NotificationSound.mp3');
+      console.log('Initialized audioRef');
+    }
+
+    console.log('Sound useEffect triggered, messages:', messages.length, 'hasInteracted:', hasInteracted);
+    const newUnreadMessages = messages.filter(
+      (msg) =>
+        !msg.read &&
+        !prevMessagesRef.current.some(
+          (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId
+        )
+    );
+
+    console.log('New unread messages detected:', newUnreadMessages.length, 'IDs:', newUnreadMessages.map(m => m.id));
+    if (newUnreadMessages.length > 0 && user?.id && hasInteracted) {
+      const latestMessage = newUnreadMessages[newUnreadMessages.length - 1];
+      if (latestMessage.senderId !== user.id) {
+        console.log('Playing sound for new unread message:', latestMessage.id, 'from:', latestMessage.senderId);
+        audioRef.current.play().catch((error) => {
+          console.error('Error playing notification sound:', error.message);
+        });
+      } else {
+        console.log('Skipping sound: Message is from current user:', latestMessage.senderId);
+      }
+    } else {
+      console.log('No sound played: Conditions not met', {
+        newUnreadMessages: newUnreadMessages.length,
+        userId: user?.id,
+        hasInteracted,
+      });
+    }
+
+    prevMessagesRef.current = messages;
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        console.log('Paused audioRef on cleanup');
+      }
+    };
+  }, [messages, user?.id, hasInteracted]);
 
   // Scroll to bottom of chat
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      console.log('Scrolled to bottom of chat');
     }
   }, [messages]);
 
@@ -117,9 +223,37 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
       interval = setInterval(() => {
         setTimerSeconds((prev) => prev + 1);
       }, 1000);
+      console.log('Timer started');
     }
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      console.log('Timer cleared');
+    };
   }, [isTimerRunning]);
+
+  // GSAP animation for action menu
+  useEffect(() => {
+    if (actionMenuOpenId && actionMenuRef.current) {
+      gsap.fromTo(
+        actionMenuRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+      console.log('Action menu animated');
+    }
+  }, [actionMenuOpenId]);
+
+  // GSAP animation for timer dropdown
+  useEffect(() => {
+    if (isTimerDropdownOpen && timerDropdownRef.current) {
+      gsap.fromTo(
+        timerDropdownRef.current,
+        { opacity: 0, y: 10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+      console.log('Timer dropdown animated');
+    }
+  }, [isTimerDropdownOpen]);
 
   const handleClick = (element: HTMLElement) => {
     gsap.to(element, {
@@ -132,43 +266,150 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
     });
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     if (!user || !newMessage.trim()) return;
 
     try {
+      console.log('Sending message:', newMessage);
       await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: user.id,
-        senderName: user.fullName || 'Usuario',
+        senderName: user.firstName || 'Usuario',
         text: newMessage.trim(),
         timestamp: Timestamp.now(),
+        read: false,
       });
+
+      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+      if (task.CreatedBy) recipients.add(task.CreatedBy);
+      recipients.delete(user.id);
+      console.log('Notification recipients:', Array.from(recipients));
+      for (const recipientId of Array.from(recipients)) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+        });
+      }
+
       setNewMessage('');
+      setHasInteracted(true);
+      console.log('Message sent and notifications created');
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending message:', error.message, error.code);
+      throw error;
+    }
+  };
+
+  const handleEditMessage = async (messageId: string) => {
+    if (!user || !editingText.trim()) return;
+
+    try {
+      console.log('Editing message:', messageId);
+      await updateDoc(doc(db, `tasks/${task.id}/messages`, messageId), {
+        text: editingText.trim(),
+        timestamp: Timestamp.now(),
+      });
+      setEditingMessageId(null);
+      setEditingText('');
+      console.log('Message edited:', messageId);
+    } catch (error) {
+      console.error('Error editing message:', error.message, error.code);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user) return;
+
+    try {
+      console.log('Deleting message:', messageId);
+      await deleteDoc(doc(db, `tasks/${task.id}/messages`, messageId));
+      setActionMenuOpenId(null);
+      console.log('Message deleted:', messageId);
+    } catch (error) {
+      console.error('Error deleting message:', error.message, error.code);
     }
   };
 
   const toggleTimer = async (e: React.MouseEvent) => {
     handleClick(e.currentTarget as HTMLElement);
+    const wasRunning = isTimerRunning;
     setIsTimerRunning((prev) => !prev);
+    setHasInteracted(true);
+    console.log('Timer toggled, running:', !wasRunning);
 
-    if (isTimerRunning && user) {
+    if (wasRunning && user && timerSeconds > 0) {
       const hours = Math.floor(timerSeconds / 3600);
       const minutes = Math.floor((timerSeconds % 3600) / 60);
       const timeEntry = `${hours}h ${minutes}m`;
+      const timestamp = Timestamp.now();
 
       try {
+        console.log('Adding time entry:', timeEntry);
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
-          senderName: user.fullName || 'Usuario',
+          senderName: user.firstName || 'Usuario',
           text: `Añadió una entrada de tiempo de ${timeEntry}`,
-          timestamp: Timestamp.now(),
+          timestamp,
+          read: false,
         });
         setTimerSeconds(0);
+        console.log('Time entry added');
       } catch (error) {
-        console.error('Error adding time entry:', error);
+        console.error('Error adding time entry:', error.message, error.code);
       }
+    }
+  };
+
+  const toggleTimerDropdown = (e: React.MouseEvent) => {
+    handleClick(e.currentTarget as HTMLElement);
+    setIsTimerDropdownOpen((prev) => !prev);
+    setHasInteracted(true);
+    console.log('Timer dropdown toggled');
+  };
+
+  const handleAddTimeEntry = async () => {
+    if (!user) return;
+
+    const [hours, minutes] = timerInput.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return;
+
+    const timeEntry = `${hours}h ${minutes}m`;
+    const date = dateInput.toLocaleDateString('es-ES');
+    const timestamp = Timestamp.now();
+
+    try {
+      console.log('Adding manual time entry:', timeEntry, date);
+      await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        senderId: user.id,
+        senderName: user.firstName || 'Usuario',
+        text: `Añadió una entrada de tiempo de ${timeEntry} el ${date}`,
+        timestamp,
+        read: false,
+      });
+
+      if (commentInput.trim()) {
+        console.log('Adding comment:', commentInput);
+        await addDoc(collection(db, `tasks/${task.id}/messages`), {
+          senderId: user.id,
+          senderName: user.firstName || 'Usuario',
+          text: commentInput.trim(),
+          timestamp: new Timestamp(timestamp.seconds, timestamp.nanoseconds + 1000),
+          read: false,
+        });
+      }
+
+      setTimerInput('00:00');
+      setDateInput(new Date());
+      setCommentInput('');
+      setIsTimerDropdownOpen(false);
+      setHasInteracted(true);
+      console.log('Manual time entry and comment added');
+    } catch (error) {
+      console.error('Error adding time entry:', error.message, error.code);
     }
   };
 
@@ -180,6 +421,25 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
   };
 
   const formatDate = (date: Date | null) => (date ? date.toLocaleDateString('es-ES') : 'N/A');
+
+  const totalHours = useMemo(() => {
+    const timeMessages = messages.filter((msg) => msg.text.startsWith('Añadió una entrada de tiempo de'));
+    let totalMinutes = 0;
+
+    timeMessages.forEach((msg) => {
+      const match = msg.text.match(/(\d+)h\s*(\d+)m/);
+      if (match) {
+        const hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        totalMinutes += hours * 60 + minutes;
+      }
+    });
+
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+    console.log('Calculated total hours:', `${totalHours}h ${remainingMinutes}m`);
+    return `${totalHours}h ${remainingMinutes}m`;
+  }, [messages]);
 
   const pm = users.find((u) => task.LeadedBy.includes(u.id)) || { fullName: 'Sin responsable', imageUrl: '/default-avatar.png' };
 
@@ -203,19 +463,22 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
             <Image src="/arrow-left.svg" alt="Close" width={15} height={16} />
           </div>
           <div className={styles.breadcrumb}>
-            {clientName} &gt; {task.project}
+            {clientName} {'>'} {task.project}
           </div>
           <div
             className={styles.ellipsis}
-            onClick={(e) => handleClick(e.currentTarget)}
+            onClick={(e) => {
+              handleClick(e.currentTarget);
+              setHasInteracted(true);
+            }}
           >
-            <Image src="/ellipsis.svg" alt="Options" width={16} height={16} />
+            <Image src="/elipsis.svg" alt="Options" width={16} height={16} />
           </div>
         </div>
         <div className={styles.title}>{task.name}</div>
         <div className={styles.description}>{task.description || 'Sin descripción'}</div>
         <div className={styles.details}>
-          <div className={styles.card} style={{ background: '#FFF0B0' }}>
+          <div className={styles.card}>
             <div className={styles.cardLabel}>Estado de la tarea:</div>
             <div className={styles.cardValue}>{task.status}</div>
           </div>
@@ -238,6 +501,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
               {formatDate(task.startDate)} - {formatDate(task.endDate)}
             </div>
           </div>
+          <div className={styles.cardFullWidth}>
+            <div className={styles.cardLabel}>Horas totales dedicadas:</div>
+            <div className={styles.cardValue}>{totalHours}</div>
+          </div>
         </div>
       </div>
       <div className={styles.chat} ref={chatRef}>
@@ -253,11 +520,75 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
             <div className={styles.messageContent}>
               <div className={styles.messageHeader}>
                 <div className={styles.sender}>{message.senderName}</div>
-                <div className={styles.timestamp}>
-                  {message.timestamp.toDate().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                <div className={styles.messageActions}>
+                  <div className={styles.timestamp}>
+                    {message.timestamp.toDate().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  {user?.id === message.senderId && !message.text.startsWith('Añadió una entrada de tiempo de') && (
+                    <div className={styles.actionContainer}>
+                      <button
+                        className={styles.actionButton}
+                        onClick={() => {
+                          setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id);
+                          setHasInteracted(true);
+                        }}
+                      >
+                        <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
+                      </button>
+                      {actionMenuOpenId === message.id && (
+                        <div ref={actionMenuRef} className={styles.actionDropdown}>
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => {
+                              setEditingMessageId(message.id);
+                              setEditingText(message.text);
+                              setActionMenuOpenId(null);
+                            }}
+                          >
+                            Editar mensaje
+                          </div>
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => handleDeleteMessage(message.id)}
+                          >
+                            Eliminar mensaje
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className={styles.text}>{message.text}</div>
+              {editingMessageId === message.id ? (
+                <div className={styles.editContainer}>
+                  <input
+                    type="text"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className={styles.editInput}
+                  />
+                  <button
+                    className={styles.editSaveButton}
+                    onClick={() => handleEditMessage(message.id)}
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    className={styles.editCancelButton}
+                    onClick={() => {
+                      setEditingMessageId(null);
+                      setEditingText('');
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.text}>{message.text}</div>
+              )}
+              <div className={styles.readBy}>
+                Estado: {message.read ? 'Leído' : 'No leído'}
+              </div>
             </div>
           </div>
         ))}
@@ -269,16 +600,99 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task, client
             placeholder="Escribe tu mensaje aquí"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage(e);
+              }
+            }}
             className={styles.input}
           />
           <div className={styles.actions}>
-            <div className={styles.timer} onClick={toggleTimer}>
-              <span>{formatTimer(timerSeconds)}</span>
-              <Image src="/chevron-down.svg" alt="Timer" width={12} height={12} />
+            <div className={styles.timerContainer}>
+              <button
+                className={styles.playStopButton}
+                onClick={toggleTimer}
+              >
+                <Image
+                  src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
+                  alt={isTimerRunning ? 'Stop' : 'Play'}
+                  width={12}
+                  height={12}
+                />
+              </button>
+              <div
+                ref={timerButtonRef}
+                className={styles.timer}
+                onClick={toggleTimerDropdown}
+              >
+                <span>{formatTimer(timerSeconds)}</span>
+                <Image src="/chevron-down.svg" alt="Timer" width={12} height={12} />
+                {isTimerDropdownOpen && (
+                  <div
+                    ref={timerDropdownRef}
+                    className={styles.timerDropdown}
+                  >
+                    <div className={styles.timerDropdownContent}>
+                      <div className={styles.timerDropdownRow}>
+                        <div className={styles.timerDropdownCard}>
+                          <input
+                            type="time"
+                            value={timerInput}
+                            onChange={(e) => setTimerInput(e.target.value)}
+                            step="900"
+                            className={styles.timerInput}
+                            pattern="[0-9]{2}:[0-9]{2}"
+                          />
+                        </div>
+                        <div
+                          className={styles.timerDropdownCard}
+                          onMouseEnter={() => setIsCalendarOpen(true)}
+                          onMouseLeave={() => setIsCalendarOpen(false)}
+                        >
+                          <DatePicker
+                            selected={dateInput}
+                            onChange={(date: Date | null) => setDateInput(date || new Date())}
+                            dateFormat="dd/MM/yy"
+                            className={styles.timerInput}
+                            popperClassName={styles.calendarPopper}
+                            open={isCalendarOpen}
+                            onClickOutside={() => setIsCalendarOpen(false)}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.timerDropdownCard}>
+                        <textarea
+                          placeholder="Añadir comentario"
+                          value={commentInput}
+                          onChange={(e) => setCommentInput(e.target.value)}
+                          className={styles.timerCommentInput}
+                        />
+                      </div>
+                      <div className={styles.timerDropdownTotal}>
+                        Has invertido: {totalHours} en esta tarea.
+                      </div>
+                      <div className={styles.timerDropdownActions}>
+                        <button
+                          className={styles.timerAddButton}
+                          onClick={handleAddTimeEntry}
+                        >
+                          Añadir entrada
+                        </button>
+                        <button
+                          className={styles.timerCancelButton}
+                          onClick={() => setIsTimerDropdownOpen(false)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <button className={styles.sendButton} onClick={handleSendMessage}>
-              <span>Enviar</span>
-              <Image src="/send.svg" alt="Send" width={13} height={13} />
+              <Image src="/arrow-up.svg" alt="Send" width={13} height={13} />
             </button>
           </div>
         </div>

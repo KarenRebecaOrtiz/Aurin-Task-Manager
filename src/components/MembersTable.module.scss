@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
 .container {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    padding: 16px;
 }
 
 .header {
@@ -27,9 +26,15 @@
     padding: 10px 16px;
     box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
-    border: 1px solid #E4E4E7;
-    font-size: 17px;
-    font-family: 'Urbanist', sans-serif;
+
+    border: 1px solid #cbcbcb52;
+    box-shadow:   0px 2px 4px rgba(0, 0, 0, 0.01),
+    0px 7px 7px rgba(0, 0, 0, 0.02),
+    0px 15px 9px rgba(0, 0, 0, 0.02),
+    0px 27px 11px rgba(0, 0, 0, 0.003),
+    0px 42px 12px rgba(0, 0, 0, 0.00);;
+    font-size: 14px;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 500;
     color: #52525B;
     opacity: 0.8;
@@ -66,16 +71,26 @@
     border: 1px solid #E4E4E7;
     color: white;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 500;
     display: flex;
     align-items: center;
     gap: 12px;
     cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: 
+    background-color 0.2s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
 }
+
 .inviteButton:hover {
-    background: #1F1F1F;
+  transform: translateY(-1px);
+  box-shadow:
+    0px 15px 33px rgba(0, 0, 0, 0.044),
+    0px 60px 60px rgba(0, 0, 0, 0.057),
+    0px 136px 81px rgba(0, 0, 0, 0.05),
+    0px 241px 96px rgba(0, 0, 0, 0.01),
+    0px 377px 106px rgba(0, 0, 0, 0.00);
 }
 :global(body.dark) .inviteButton {
     background: #ffffff;
@@ -168,8 +183,8 @@
 .inviteTitle {
     text-align: center;
     color: #0D0D0D;
-    font-size: 19px;
-    font-family: 'Urbanist', sans-serif;
+    font-size: 14px;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 700;
 }
 :global(body.dark) .inviteTitle {
@@ -180,7 +195,7 @@
     text-align: center;
     color: #737373;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 400;
 }
 :global(body.dark) .inviteSubtitle {
@@ -198,7 +213,7 @@
     color: #0D0D0D;
     text-align: center;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 700;
 }
 :global(body.dark) .inviteLabel {
@@ -214,7 +229,7 @@
     border: 1px solid #D8D8D8;
     color: #0D0D0D;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 400;
     height: 40px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -245,7 +260,7 @@
     border: 1px solid #0D0D0D;
     color: white;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 700;
     cursor: pointer;
     transition: background-color 0.2s ease;
@@ -274,7 +289,7 @@
     padding: 10px 14px;
     border-radius: 6px;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 500;
     cursor: pointer;
     transition: border-color 0.2s ease, color 0.2s ease;
@@ -357,8 +372,8 @@
 
 .dropdownTitle {
     color: #09090B;
-    font-size: 17px;
-    font-family: 'Urbanist', sans-serif;
+    font-size: 14px;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 600;
 }
 :global(body.dark) .dropdownTitle {
@@ -388,8 +403,8 @@
 }
 .dropdownItem > span {
     color: #09090B;
-    font-size: 17px;
-    font-family: 'Urbanist', sans-serif;
+    font-size: 14px;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 400;
 }
 :global(body.dark) .dropdownItem > span {
@@ -469,8 +484,8 @@
 .profileTitle {
     text-align: center;
     color: #0D0D0D;
-    font-size: 19px;
-    font-family: 'Urbanist', sans-serif;
+    font-size: 16px;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 700;
 }
 :global(body.dark) .profileTitle {
@@ -485,8 +500,8 @@
 .profileUsername {
     text-align: center;
     color: #0D0D0D;
-    font-size: 19px;
-    font-family: 'Urbanist', sans-serif;
+    font-size: 16px;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 700;
 }
 :global(body.dark) .profileUsername {
@@ -504,7 +519,7 @@
 .profileLabel {
     color: #52525B;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 700;
 }
 :global(body.dark) .profileLabel {
@@ -514,7 +529,7 @@
 .profileValue {
     color: rgba(12.75, 12.75, 12.75, 0.6);
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 400;
 }
 :global(body.dark) .profileValue {
@@ -531,7 +546,7 @@
     border: 1px solid #0D0D0D;
     color: white;
     font-size: 14px;
-    font-family: 'Urbanist', sans-serif;
+    font-family: "Inter Tight", sans-serif;
     font-weight: 700;
     cursor: pointer;
     transition: background-color 0.2s ease;
