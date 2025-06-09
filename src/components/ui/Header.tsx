@@ -3,6 +3,7 @@ import { useUser, UserButton } from '@clerk/nextjs';
 import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import { collection, onSnapshot, query, orderBy, limit, doc, updateDoc, where } from 'firebase/firestore';
@@ -59,11 +60,13 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevNotificationsRef = useRef<Notification[]>([]);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   // Detectar interacción del usuario
   useEffect(() => {
@@ -74,6 +77,17 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
     document.addEventListener('click', handleInteraction);
     return () => document.removeEventListener('click', handleInteraction);
   }, []);
+
+  // Calcular posición del dropdown
+  useEffect(() => {
+    if (isNotificationsOpen && notificationButtonRef.current) {
+      const rect = notificationButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4, // 4px de separación
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [isNotificationsOpen]);
 
   const getSubtitle = () => {
     switch (selectedContainer) {
@@ -223,21 +237,33 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
     }
   }, [isNotificationsOpen]);
 
-  // Close notifications dropdown on outside click
+  // Close notifications dropdown on outside click or Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         notificationsRef.current &&
         !notificationsRef.current.contains(event.target as Node) &&
-        isNotificationsOpen
+        notificationButtonRef.current &&
+        !notificationButtonRef.current.contains(event.target as Node)
       ) {
         setIsNotificationsOpen(false);
         console.log('Closed notifications dropdown via outside click');
       }
     };
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isNotificationsOpen) {
+        setIsNotificationsOpen(false);
+        console.log('Closed notifications dropdown via Escape key');
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isNotificationsOpen]);
 
   const handleNotificationClick = async (notification: Notification) => {
@@ -269,17 +295,67 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
     return text.substring(0, maxLength - 3) + '...';
   };
 
+  // Componente para el dropdown (renderizado en un portal)
+  const NotificationDropdown = () => {
+    if (!isNotificationsOpen) return null;
+
+    return createPortal(
+      <div
+        ref={notificationsRef}
+        className={styles.notificationDropdown}
+        style={{
+          top: `${dropdownPosition.top}px`,
+          right: `${dropdownPosition.right}px`,
+        }}
+      >
+        {notifications.length === 0 ? (
+          <div className={styles.notificationItem}>No hay notificaciones</div>
+        ) : (
+          notifications.map((notification) => {
+            const sender = users.find((u) => u.id === notification.userId);
+            return (
+              <div
+                key={notification.id}
+                className={styles.notificationItem}
+                onClick={() => handleNotificationClick(notification)}
+              >
+                <Image
+                  src={sender?.imageUrl || '/default-avatar.png'}
+                  alt={sender?.firstName || 'Usuario'}
+                  width={24}
+                  height={24}
+                  className={styles.notificationAvatar}
+                />
+                <span>{truncateText(notification.message, 50)}</span>
+                <span className={styles.notificationTimestamp}>
+                  {notification.timestamp.toDate().toLocaleString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                  })}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>,
+      document.body
+    );
+  };
+
   return (
     <div ref={wrapperRef} data-layer="Wrapper" className={styles.wrapper}>
-      <div className='lefContainer'>
-      <Image
+      <div className={styles.lefContainer}>
+        <Image
           src="/HomeGif.gif"
           alt="Welcome GIF"
           width={200}
           height={200}
           className={styles.welcomeGif}
         />
-
         <div data-layer="Frame 14" className={styles.frame14}>
           <div data-layer="Title" className={styles.title}>
             <div
@@ -298,12 +374,29 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
       <div data-layer="Frame 2147225819" className={styles.frame2147225819}>
         <div className={styles.notificationContainer}>
           <button
+            ref={notificationButtonRef}
             className={styles.notificationButton}
             onClick={() => {
               setIsNotificationsOpen((prev) => !prev);
               setHasInteracted(true);
               console.log('Toggled notifications dropdown, isOpen:', !isNotificationsOpen);
             }}
+            onMouseEnter={() => {
+              setIsNotificationsOpen(true);
+              setHasInteracted(true);
+              console.log('Opened notifications dropdown via hover');
+            }}
+            onMouseLeave={() => {
+              setTimeout(() => {
+                if (!notificationsRef.current?.matches(':hover')) {
+                  setIsNotificationsOpen(false);
+                  console.log('Closed notifications dropdown via mouse leave');
+                }
+              }, 100);
+            }}
+            aria-label="Abrir notificaciones"
+            aria-expanded={isNotificationsOpen}
+            aria-controls="notification-dropdown"
           >
             <Image
               src={notifications.some((n) => !n.read) ? '/NewNotification.svg' : '/EmptyNotification.svg'}
@@ -312,43 +405,7 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
               height={24}
             />
           </button>
-          {isNotificationsOpen && (
-            <div ref={notificationsRef} className={styles.notificationDropdown}>
-              {notifications.length === 0 ? (
-                <div className={styles.notificationItem}>No hay notificaciones</div>
-              ) : (
-                notifications.map((notification) => {
-                  const sender = users.find((u) => u.id === notification.userId);
-                  return (
-                    <div
-                      key={notification.id}
-                      className={styles.notificationItem}
-                      onClick={() => handleNotificationClick(notification)}
-                    >
-                      <Image
-                        src={sender?.imageUrl || '/default-avatar.png'}
-                        alt={sender?.firstName || 'Usuario'}
-                        width={24}
-                        height={24}
-                        className={styles.notificationAvatar}
-                      />
-                      <span>{truncateText(notification.message, 50)}</span>
-                      <span className={styles.notificationTimestamp}>
-                        {notification.timestamp.toDate().toLocaleString('es-ES', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false,
-                        })}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
+          <NotificationDropdown />
         </div>
         <div ref={iconRef} className={styles.sunMoonWrapper}>
           <ThemeToggler />

@@ -1,0 +1,254 @@
+.container {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 400px;
+    border-radius: 12px 0 0 12px;
+
+    height: 100vh;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    box-shadow:
+    -5px 1px 11px rgba(0, 0, 0, 0.02),
+    -19px 3px 19px rgba(0, 0, 0, 0.02),
+    -43px 7px 26px rgba(0, 0, 0, 0.02),
+    -76px 12px 31px rgba(0, 0, 0, 0.01),
+    -118px 19px 34px rgba(0, 0, 0, 0.00);
+  }
+  
+  .open {
+    transform: translateX(0);
+  }
+  
+  .content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .closeButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin-right: 8px;
+  }
+  
+  .title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #374151;
+    text-align: center;
+
+  }
+  
+  .subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .field {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+  }
+  
+  .required {
+    color: #ef4444;
+  }
+  
+  .fieldDescription {
+    font-size: 12px;
+    color: #6b7280;
+  }
+  
+  .input {
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    color: #374151;
+  }
+  
+  .avatar {
+    cursor: pointer;
+    width: 109px;
+    height: 109px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  
+  .previewImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .projectField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .projectInputWrapper {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .deleteProjectButton {
+    background: #ef4444;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  .addProjectButton {
+    background: #e5e7eb;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 16px;
+    text-align: center;
+  }
+  
+  .deleteConfirm {
+    background: #fef2f2;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #fecaca;
+  }
+  
+  .deleteConfirmHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .deleteConfirmHeader h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: #b91c1c;
+  }
+  
+  .deleteConfirm p {
+    font-size: 12px;
+    color: #b91c1c;
+    margin-bottom: 8px;
+  }
+  
+  .deleteConfirmInput {
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    width: 100%;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+  }
+  
+  .deleteConfirmButton {
+    background: #b91c1c;
+    color: #fff;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .deleteConfirmButton:disabled {
+    background: #e5e7eb;
+    cursor: not-allowed;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
+    align-items: center ;
+  }
+  
+  .submitButton {
+    background: #2563eb;
+    color: #fff;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .submitButton:disabled {
+    background: #e5e7eb;
+    cursor: not-allowed;
+  }
+  
+  .cancelButton {
+    background: #e5e7eb;
+    color: #374151;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .cancelButton:disabled {
+    background: #f3f4f6;
+    cursor: not-allowed;
+  }
+  
+  .loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }

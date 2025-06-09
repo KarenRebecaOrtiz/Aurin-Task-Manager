@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
 import Table from './Table';
+import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
 
 interface Client {
@@ -347,55 +348,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       }
     };
 
-    // Action menu renderer
-    const renderActionMenu = (task: Task) => (
-      <div className={styles.actionContainer}>
-        {user && (
-          <>
-            <button
-              ref={(el) => {
-                if (el) actionButtonRefs.current.set(task.id, el);
-                else actionButtonRefs.current.delete(task.id);
-              }}
-              onClick={task.CreatedBy === user.id ? () => setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id) : undefined}
-              className={`${styles.actionButton} ${task.CreatedBy !== user.id ? styles.disabled : ''}`}
-              aria-label="Abrir acciones"
-              disabled={task.CreatedBy !== user.id}
-            >
-              <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
-            </button>
-            {actionMenuOpenId === task.id && task.CreatedBy === user.id && (
-              <div ref={actionMenuRef} className={styles.dropdown}>
-                <div
-                  className={styles.dropdownItem}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setActionMenuOpenId(null);
-                    router.push(`/dashboard/edit-task?taskId=${task.id}`);
-                  }}
-                >
-                  <Image src="/pencil.svg" alt="Edit" width={18} height={18} />
-                  <span>Editar Tarea</span>
-                </div>
-                <div
-                  className={styles.dropdownItem}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setActionMenuOpenId(null);
-                    setIsDeletePopupOpen(true);
-                    setDeleteTaskId(task.id);
-                  }}
-                >
-                  <Image src="/trash-2.svg" alt="Delete" width={18} height={18} />
-                  <span>Eliminar Tarea</span>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    );
-
     // Filter handlers
     const handleStatusSelect = (status: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
@@ -480,12 +432,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   task.status === 'En Proceso'
                     ? '/timer.svg'
                     : task.status === 'Backlog'
-                      ? '/circle-help.svg'
-                      : task.status === 'Por Comenzar'
-                        ? '/circle.svg'
-                        : task.status === 'Cancelada'
-                          ? '/circle-x.svg'
-                          : '/timer.svg'
+                    ? '/circle-help.svg'
+                    : task.status === 'Por Comenzar'
+                    ? '/circle.svg'
+                    : task.status === 'Cancelada'
+                    ? '/circle-x.svg'
+                    : '/timer.svg'
                 }
                 alt={task.status}
                 width={16}
@@ -506,8 +458,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   task.priority === 'Alta'
                     ? '/arrow-up.svg'
                     : task.priority === 'Media'
-                      ? '/arrow-right.svg'
-                      : '/arrow-down.svg'
+                    ? '/arrow-right.svg'
+                    : '/arrow-down.svg'
                 }
                 alt={task.priority}
                 width={16}
@@ -521,7 +473,25 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       if (col.key === 'action') {
         return {
           ...col,
-          render: renderActionMenu,
+          render: (task: Task) => (
+            <ActionMenu
+              task={task}
+              userId={user?.id}
+              isOpen={actionMenuOpenId === task.id}
+              onOpen={() => setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id)}
+              onEdit={() => router.push(`/dashboard/edit-task?taskId=${task.id}`)}
+              onDelete={() => {
+                setIsDeletePopupOpen(true);
+                setDeleteTaskId(task.id);
+              }}
+              animateClick={animateClick}
+              actionMenuRef={actionMenuRef}
+              actionButtonRef={(el) => {
+                if (el) actionButtonRefs.current.set(task.id, el);
+                else actionButtonRefs.current.delete(task.id);
+              }}
+            />
+          ),
         };
       }
       return col;
@@ -632,7 +602,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               <Image src="/robot.svg" alt="AI" width={18} height={14} />
               Pregunta a la IA
             </button>
-          
             <button
               className={styles.createButton}
               onClick={(e) => {

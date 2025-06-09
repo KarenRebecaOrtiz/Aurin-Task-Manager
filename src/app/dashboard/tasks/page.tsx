@@ -12,7 +12,7 @@ import ClientsTable from '@/components/ClientsTable';
 import TasksTable from '@/components/TasksTable';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
-import ClientPopup from '@/components/ClientPopup';
+import ClientPopup from '@/components/ClientSidebar';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
@@ -288,10 +288,13 @@ export default function TasksPage() {
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setClientForm((prev) => ({ ...prev, imageFile: file }));
-      const reader = new FileReader();
-      reader.onload = () => setClientForm((prev) => ({ ...prev, imagePreview: reader.result as string }));
-      reader.readAsDataURL(file);
+      console.log('Image selected:', file.name);
+      const previewUrl = URL.createObjectURL(file);
+      setClientForm((prev) => ({
+        ...prev,
+        imageFile: file,
+        imagePreview: previewUrl,
+      }));
     }
   }, []);
 

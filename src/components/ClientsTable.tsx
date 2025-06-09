@@ -6,8 +6,8 @@ import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
 import Table from './Table';
+import ActionMenu from './ui/ActionMenu';
 import styles from './ClientsTable.module.scss';
-
 
 interface Client {
   id: string;
@@ -29,7 +29,7 @@ interface ClientsTableProps {
 
 const ClientsTable: React.FC<ClientsTableProps> = memo(
   ({ clients, onCreateOpen, onEditOpen, onDeleteOpen, setClients }) => {
-    console.log('ClientsTable rendered'); // Para depuración, quitar en producción
+    console.log('ClientsTable rendered');
     const { user } = useUser();
     const [filteredClients, setFilteredClients] = useState<Client[]>([]);
     const [sortKey, setSortKey] = useState<string>('name');
@@ -39,28 +39,30 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
+    const fetchClients = useCallback(async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'clients'));
+        const clientsData: Client[] = querySnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            name: doc.data().name || '',
+            imageUrl: doc.data().imageUrl || '/empty-image.png',
+            projectCount: doc.data().projectCount || 0,
+            projects: doc.data().projects || [],
+            createdBy: doc.data().createdBy || '',
+            createdAt: doc.data().createdAt || new Date().toISOString(),
+          }))
+          .filter((client) => client.name && client.createdBy);
+        console.log('Fetched clients:', clientsData.map(c => ({ id: c.id, createdBy: c.createdBy, userId: user?.id })));
+        setClients(clientsData);
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+      }
+    }, [setClients, user?.id]);
+
     useEffect(() => {
-      const fetchClients = async () => {
-        try {
-          const querySnapshot = await getDocs(collection(db, 'clients'));
-          const clientsData: Client[] = querySnapshot.docs
-            .map((doc) => ({
-              id: doc.id,
-              name: doc.data().name || '',
-              imageUrl: doc.data().imageUrl || '/empty-image.png',
-              projectCount: doc.data().projectCount || 0,
-              projects: doc.data().projects || [],
-              createdBy: doc.data().createdBy || '',
-              createdAt: doc.data().createdAt || new Date().toISOString(),
-            }))
-            .filter((client) => client.name && client.createdBy);
-          setClients(clientsData);
-        } catch (error) {
-          console.error('Error fetching clients:', error);
-        }
-      };
       fetchClients();
-    }, [setClients]);
+    }, [fetchClients]);
 
     const memoizedFilteredClients = useMemo(() => {
       return clients.filter((client) =>
@@ -113,122 +115,117 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           setSortDirection('asc');
         }
       },
-      [sortKey]
+      [sortKey],
     );
 
     const handleActionClick = useCallback((clientId: string) => {
       setActionMenuOpenId((prev) => (prev === clientId ? null : clientId));
-    }, [user]);
+    }, []);
 
-    const renderActionMenu = useCallback(
-      (client: Client) => (
-        <div className={styles.actionContainer}>
-          {user && client.createdBy === user.id && (
-            <>
-              <button
-                ref={(el) => {
-                  if (el) actionButtonRefs.current.set(client.id, el);
-                  else actionButtonRefs.current.delete(client.id);
-                }}
-                onClick={() => handleActionClick(client.id)}
-                className={styles.actionButton}
-                aria-label="Abrir acciones"
-              >
-                <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
-              </button>
-              {actionMenuOpenId === client.id && (
-                <div ref={actionMenuRef} className={styles.dropdown}>
-                  <div
-                    className={styles.dropdownItem}
-                    onClick={() => {
+    const baseColumns = useMemo(
+      () => [
+        {
+          key: 'imageUrl',
+          label: '',
+          width: '20%',
+          mobileVisible: false,
+        },
+        {
+          key: 'name',
+          label: 'Cuentas',
+          width: '50%',
+          mobileVisible: true,
+        },
+        {
+          key: 'projectCount',
+          label: 'Proyectos Asignados',
+          width: '20%',
+          mobileVisible: false,
+        },
+        {
+          key: 'action',
+          label: 'Acciones',
+          width: '10%',
+          mobileVisible: true,
+        },
+      ],
+      [],
+    );
+
+    const columns = useMemo(
+      () =>
+        baseColumns.map((col) => {
+          if (col.key === 'imageUrl') {
+            return {
+              ...col,
+              render: (client: Client) =>
+                client.imageUrl ? (
+                  <Image
+                    src={client.imageUrl}
+                    alt={client.name || 'Client Image'}
+                    width={38}
+                    height={38}
+                    className={styles.profileImage}
+                    onError={(e) => {
+                      e.currentTarget.src = '/empty-image.png';
+                    }}
+                  />
+                ) : null,
+            };
+          }
+          if (col.key === 'action') {
+            return {
+              ...col,
+              render: (client: Client) => {
+                console.log('Rendering ActionMenu for client:', {
+                  clientId: client.id,
+                  createdBy: client.createdBy,
+                  userId: user?.id,
+                  isCreator: client.createdBy === user?.id,
+                });
+                return (
+                  <ActionMenu
+                    task={{
+                      id: client.id,
+                      clientId: '',
+                      project: '',
+                      name: client.name,
+                      description: '',
+                      status: '',
+                      priority: '',
+                      startDate: null,
+                      endDate: null,
+                      LeadedBy: [],
+                      AssignedTo: [],
+                      createdAt: client.createdAt,
+                      CreatedBy: client.createdBy,
+                    }}
+                    userId={user?.id}
+                    isOpen={actionMenuOpenId === client.id}
+                    onOpen={() => handleActionClick(client.id)}
+                    onEdit={() => {
                       onEditOpen(client);
                       setActionMenuOpenId(null);
                     }}
-                  >
-                    <Image src="/pencil.svg" alt="Edit" width={18} height={18} />
-                    <span>Editar Cliente</span>
-                  </div>
-                  <div
-                    className={styles.dropdownItem}
-                    onClick={() => {
+                    onDelete={() => {
                       onDeleteOpen(client.id);
                       setActionMenuOpenId(null);
                     }}
-                  >
-                    <Image
-                      src="/trash-2.svg"
-                      alt="Delete"
-                      width={16}
-                      height={16}
-                      onError={(e) => {
-                        e.currentTarget.src = '/fallback-trash.svg';
-                      }}
-                    />
-                    <span className={styles.deleteText}>Eliminar Cuenta</span>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ),
-      [user?.id, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen]
+                    animateClick={() => {}}
+                    actionMenuRef={actionMenuRef}
+                    actionButtonRef={(el) => {
+                      if (el) actionButtonRefs.current.set(client.id, el);
+                      else actionButtonRefs.current.delete(client.id);
+                    }}
+                  />
+                );
+              },
+            };
+          }
+          return col;
+        }),
+      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, user?.id],
     );
-
-    const baseColumns = useMemo(() => [
-      {
-        key: 'imageUrl',
-        label: '',
-        width: '20%',
-        mobileVisible: false,
-      },
-      {
-        key: 'name',
-        label: 'Cuentas',
-        width: '50%',
-        mobileVisible: true,
-      },
-      {
-        key: 'projectCount',
-        label: 'Proyectos Asignados',
-        width: '20%',
-        mobileVisible: false,
-      },
-      {
-        key: 'action',
-        label: 'Acciones',
-        width: '10%',
-        mobileVisible: true,
-      },
-    ], []);
-
-    const columns = useMemo(() => baseColumns.map((col) => {
-      if (col.key === 'imageUrl') {
-        return {
-          ...col,
-          render: (client: Client) =>
-            client.imageUrl ? (
-              <Image
-                src={client.imageUrl || '/empty-image.png'}
-                alt={client.name || 'Client Image'}
-                width={38}
-                height={38}
-                className={styles.profileImage}
-                onError={(e) => {
-                  e.currentTarget.src = '/empty-image.png';
-                }}
-              />
-            ) : null,
-        };
-      }
-      if (col.key === 'action') {
-        return {
-          ...col,
-          render: renderActionMenu,
-        };
-      }
-      return col;
-    }), [baseColumns, renderActionMenu]);
 
     return (
       <div className={styles.container}>
@@ -301,7 +298,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 ClientsTable.displayName = 'ClientsTable';
