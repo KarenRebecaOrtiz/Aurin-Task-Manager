@@ -429,10 +429,6 @@ export default function TasksPage() {
   }, []);
 
   const handleMessageSidebarOpen = useCallback((user: User) => {
-    if (!user?.id) {
-      console.error('No authenticated user, cannot open message sidebar');
-      return;
-    }
     setOpenSidebars((prev) => [
       ...prev,
       { id: uuidv4(), type: 'message', data: user },
@@ -627,7 +623,7 @@ export default function TasksPage() {
         />
       )}
       <AISidebar isOpen={isAISidebarOpen} onClose={() => setIsAISidebarOpen(false)} />
-      {openSidebars.map((sidebar) =>
+{openSidebars.map((sidebar) =>
   sidebar.type === 'message' && user?.id ? ( // Asegúrate de que user.id exista
     <MessageSidebar
       key={sidebar.id}

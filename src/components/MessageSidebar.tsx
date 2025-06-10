@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
 import {
@@ -19,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { gsap } from 'gsap';
+import ImagePreviewOverlay from './ImagePreviewOverlay';
 import styles from './MessageSidebar.module.scss';
 
 /* ---------- Tipado ---------- */
@@ -31,6 +33,7 @@ interface Message {
   fileUrl?: string | null;
   fileName?: string | null;
   fileType?: string | null;
+  filePath?: string | null;
   timestamp: FieldValue | Timestamp | null;
   isTyping: boolean;
 }
@@ -50,6 +53,18 @@ interface MessageSidebarProps {
   onOpenSidebar: (receiverId: string) => void;
   sidebarId: string;
 }
+
+/* ---------- Debounce Utility ---------- */
+const debounce = (func: (...args: any[]) => void, delay: number) => {
+  let timer: NodeJS.Timeout | null = null;
+  return (...args: any[]) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      func(...args);
+      timer = null;
+    }, delay);
+  };
+};
 
 /* ---------- Componente ---------- */
 const MessageSidebar: React.FC<MessageSidebarProps> = ({
@@ -74,14 +89,16 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
 
   /* ----- Refs ----- */
   const sidebarRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLUListElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const actionMenuRef = useRef<HTMLDivElement>(null);
-  const inputWrapperRef = useRef<HTMLDivElement>(null);
+  const inputWrapperRef = useRef<HTMLFormElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const messageRefs = useRef<Map<string, HTMLLIElement>>(new Map());
+  const actionMenuRef = useRef<HTMLDivElement>(null);
 
   const conversationId = [senderId, receiver.id].sort().join('_');
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -92,8 +109,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     const el = sidebarRef.current;
     if (isOpen) {
       gsap.fromTo(el, { x: '100%', opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' });
+      console.log('MessageSidebar opened');
     } else {
       gsap.to(el, { x: '100%', opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: onClose });
+      console.log('MessageSidebar closed');
     }
     return () => {
       if (sidebarRef.current) {
@@ -105,20 +124,44 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   /* ---------- Click fuera ---------- */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(e.target as Node) &&
+        (!actionMenuRef.current || !actionMenuRef.current.contains(e.target as Node))
+      ) {
         gsap.to(sidebarRef.current, { x: '100%', opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: onClose });
+        console.log('Closed MessageSidebar via outside click');
       }
       if (
         actionMenuRef.current &&
         !actionMenuRef.current.contains(e.target as Node) &&
-        actionMenuOpenId
+        actionMenuOpenId &&
+        !e.composedPath().includes(document.querySelector(`button[aria-label="Opciones"]`) as Node)
       ) {
+        console.log('Closing action menu via outside click', { messageId: actionMenuOpenId });
         setActionMenuOpenId(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose, actionMenuOpenId]);
+
+  /* ---------- Animación Action Menu ---------- */
+  useEffect(() => {
+    if (actionMenuOpenId && actionMenuRef.current) {
+      console.log('Rendering action menu with GSAP animation:', { messageId: actionMenuOpenId });
+      gsap.fromTo(
+        actionMenuRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+      );
+    }
+    return () => {
+      if (actionMenuRef.current) {
+        gsap.killTweensOf(actionMenuRef.current);
+      }
+    };
+  }, [actionMenuOpenId]);
 
   /* ---------- Listener Firestore ---------- */
   useEffect(() => {
@@ -137,7 +180,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
     console.log('MessageSidebar props:', { senderId, receiverId: receiver.id, conversationId });
 
-    // Asegurar documento de conversación
     const initConversation = async () => {
       try {
         await setDoc(
@@ -145,11 +187,11 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           { participants: [senderId, receiver.id], createdAt: serverTimestamp() },
           { merge: true },
         );
-        console.log('Conversation initialized:', conversationId);
+        console.log('Conversation created:', conversationId);
       } catch (err: any) {
         console.error('Error initializing conversation:', {
           message: err.message || 'Unknown error',
-          code: err.code || 'no-code',
+          code: err.code || 'unknown',
           stack: err.stack || 'No stack trace',
           conversationId,
         });
@@ -159,13 +201,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     };
     initConversation();
 
-    const msgsRef = collection(db, 'conversations', conversationId, 'messages');
-    const msgsQuery = query(msgsRef, orderBy('timestamp', 'asc'));
+    const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+    const messagesQuery = query(messagesRef, orderBy('timestamp', 'asc'));
 
     const unsubscribe = onSnapshot(
-      msgsQuery,
-      (snap) => {
-        const data: Message[] = snap.docs.map((d) => {
+      messagesQuery,
+      (snapshot) => {
+        const data: Message[] = snapshot.docs.map((d) => {
           const m = d.data();
           return {
             id: d.id,
@@ -176,18 +218,20 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             fileUrl: m.fileUrl ?? null,
             fileName: m.fileName ?? null,
             fileType: m.fileType ?? null,
+            filePath: m.filePath ?? null,
             timestamp: m.timestamp || null,
             isTyping: m.isTyping ?? false,
           };
         });
+        console.log('Received messages:', data.length, 'Ids:', data.map((m) => m.id));
         setMessages(data);
         setError(null);
         setIsLoading(false);
       },
-      (err) => {
+      (err: any) => {
         console.error('Firestore listener error:', {
           message: err.message || 'Unknown error',
-          code: err.code || 'no-code',
+          code: err.code || 'unknown',
           stack: err.stack || 'No stack trace',
           conversationId,
           userId: user?.id,
@@ -199,90 +243,112 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     );
 
     return () => {
+      console.log('Unsubscribing messages listener for conversation:', conversationId);
       unsubscribe();
       setIsLoading(false);
     };
   }, [isOpen, senderId, receiver.id, conversationId, user?.id]);
 
-  /* ---------- Typing ---------- */
-  const handleTyping = useCallback(async () => {
-    if (!user?.id || !conversationId || !auth.currentUser) {
-      console.error('Cannot handle typing: invalid user or conversation', {
-        userId: user?.id,
-        conversationId,
-        firebaseUserId: auth.currentUser?.uid,
-      });
-      return;
-    }
-
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
-    try {
-      let typingId = typingMessageId;
-
-      if (!typingId) {
-        const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), {
-          senderId: user.id,
-          receiverId: receiver.id,
-          timestamp: serverTimestamp(),
-          isTyping: true,
-          text: null,
-          imageUrl: null,
-          fileUrl: null,
-          fileName: null,
-          fileType: null,
+  /* ---------- Typing (Debounced) ---------- */
+  const handleTyping = useCallback(
+    debounce(async () => {
+      if (!user?.id || !conversationId || !auth.currentUser) {
+        console.error('Cannot handle typing: invalid user or conversation', {
+          userId: user?.id,
+          conversationId,
+          firebaseUserId: auth.currentUser?.uid,
         });
-        typingId = msgRef.id;
-        setTypingMessageId(typingId);
-        console.log('Created typing message:', typingId);
-      } else {
-        await updateDoc(doc(db, 'conversations', conversationId, 'messages', typingId), {
-          isTyping: true,
-          timestamp: serverTimestamp(),
-        });
-        console.log('Updated typing message:', typingId);
+        return;
       }
 
-      typingTimeoutRef.current = setTimeout(async () => {
-        if (typingId) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+      try {
+        let typingId = typingMessageId;
+
+        if (!typingId) {
+          const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), {
+            senderId: user.id,
+            receiverId: receiver.id,
+            timestamp: serverTimestamp(),
+            isTyping: true,
+            text: null,
+            imageUrl: null,
+            fileUrl: null,
+            fileName: null,
+            fileType: null,
+            filePath: null,
+          });
+          typingId = msgRef.id;
+          setTypingMessageId(typingId);
+          console.log('Created typing message:', typingId);
+        } else {
           await updateDoc(doc(db, 'conversations', conversationId, 'messages', typingId), {
-            isTyping: false,
+            isTyping: true,
             timestamp: serverTimestamp(),
           });
-          console.log('Stopped typing message:', typingId);
-          setTypingMessageId(null);
+          console.log('Updated typing message:', typingId);
         }
-      }, 3000);
-    } catch (err: any) {
-      console.error('Error updating typing status:', {
-        message: err.message || 'Unknown error',
-        code: err.code || 'no-code',
-        stack: err.stack || 'No stack trace',
-        conversationId,
-        messageId: typingMessageId,
-        userId: user?.id,
-        firebaseUserId: auth.currentUser?.uid,
-      });
-    }
-  }, [user?.id, conversationId, typingMessageId, receiver.id]);
+
+        typingTimeoutRef.current = setTimeout(async () => {
+          if (typingId) {
+            await updateDoc(doc(db, 'conversations', conversationId, 'messages', typingId), {
+              isTyping: false,
+              timestamp: serverTimestamp(),
+            });
+            console.log('Stopped typing message:', typingId);
+            setTypingMessageId(null);
+          }
+        }, 3000);
+      } catch (err: any) {
+        console.error('Error updating typing status:', {
+          message: err.message || 'Unknown error',
+          code: err.code || 'unknown',
+          stack: err.stack || 'No stack trace',
+          conversationId,
+          messageId: typingMessageId,
+          userId: user?.id,
+          firebaseUserId: auth.currentUser?.uid,
+        });
+      }
+    }, 500),
+    [user?.id, conversationId, typingMessageId]
+  );
 
   /* ---------- Auto-scroll ---------- */
   useEffect(() => {
     if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      setTimeout(() => {
+        chatRef.current!.scrollTop = chatRef.current!.scrollHeight;
+        console.log('Scrolled to bottom of chat');
+      }, 0);
     }
   }, [messages]);
 
-  /* ---------- Animación menú de acciones ---------- */
+  /* ---------- Animación de nuevos mensajes ---------- */
   useEffect(() => {
-    if (actionMenuOpenId && actionMenuRef.current) {
-      gsap.fromTo(
-        actionMenuRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-    }
-  }, [actionMenuOpenId]);
+    if (!messages.length || !chatRef.current) return;
+
+    const newMessages = messages.filter((m) => !messageRefs.current.has(m.id));
+    newMessages.forEach((m) => {
+      const li = chatRef.current?.querySelector(`[data-message-id="${m.id}"]`) as HTMLLIElement;
+      if (li) {
+        messageRefs.current.set(m.id, li);
+        gsap.fromTo(
+          li,
+          { y: 50, opacity: 0, scale: 0.95 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out', delay: 0.1 }
+        );
+        console.log('Animated new message:', m.id);
+      }
+    });
+
+    messageRefs.current.forEach((_, id) => {
+      if (!messages.find((m) => m.id === id)) {
+        messageRefs.current.delete(id);
+      }
+    });
+  }, [messages]);
 
   /* ---------- Selección de archivo ---------- */
   const selectFile = (f: File) => {
@@ -296,7 +362,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f && !f.name.includes('image-up.svg') && !f.name.includes('paperclip.svg')) {
+    if (f && !f.name.includes('/paperclip.svg') && !f.name.includes('/paperclip.svg')) {
       selectFile(f);
     }
     if (e.target) e.target.value = '';
@@ -306,7 +372,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     e.preventDefault();
     setIsDragging(false);
     const f = e.dataTransfer.files?.[0];
-    if (f && !f.name.includes('image-up.svg') && !f.name.includes('paperclip.svg')) {
+    if (f && !f.name.includes('/paperclip.svg') && !f.name.includes('/paperclip.svg')) {
       selectFile(f);
     }
   }, []);
@@ -319,6 +385,81 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const handleRemoveFile = () => {
     setFile(null);
     setPreviewUrl(null);
+  };
+
+  /* ---------- Abrir Action Menu ---------- */
+  const handleOpenActionMenu = (messageId: string) => {
+    console.log('Opening action menu:', { messageId });
+    setActionMenuOpenId(actionMenuOpenId === messageId ? null : messageId);
+  };
+
+  /* ---------- Editar / Borrar mensaje ---------- */
+  const handleEditMessage = async (messageId: string) => {
+    if (!user?.id || !editingText.trim()) {
+      setError('El mensaje no puede estar vacío.');
+      return;
+    }
+    try {
+      await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), {
+        text: editingText.trim(),
+        timestamp: serverTimestamp(),
+      });
+      console.log('Message edited:', messageId);
+      setEditingMessageId(null);
+      setEditingText('');
+      setActionMenuOpenId(null);
+    } catch (err: any) {
+      console.error('Error editing message:', {
+        message: err.message || 'Unknown error',
+        code: err.code || 'unknown',
+        stack: err.stack || 'No stack trace',
+        conversationId,
+        messageId,
+      });
+      setError('No se pudo editar el mensaje.');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user?.id) return;
+    try {
+      const message = messages.find((m) => m.id === messageId);
+      if (message && (message.fileUrl || message.imageUrl) && message.filePath) {
+        try {
+          const response = await fetch('/api/delete-file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filePath: message.filePath }),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete file');
+          }
+          console.log('Deleted GCS file:', message.filePath);
+        } catch (err: any) {
+          console.error('Error deleting GCS file:', {
+            message: err.message || 'Unknown error',
+            code: err.code || 'unknown',
+            stack: err.stack || 'No stack trace',
+            filePath: message.filePath,
+          });
+        }
+      }
+
+      await deleteDoc(doc(db, 'conversations', conversationId, 'messages', messageId));
+      console.log('Message deleted:', messageId);
+      setActionMenuOpenId(null);
+      if (messageId === typingMessageId) setTypingMessageId(null);
+    } catch (err: any) {
+      console.error('Error deleting message:', {
+        message: err.message || 'Unknown error',
+        code: err.code || 'unknown',
+        stack: err.stack || 'No stack trace',
+        conversationId,
+        messageId,
+      });
+      setError('No se pudo eliminar el mensaje.');
+    }
   };
 
   /* ---------- Enviar mensaje ---------- */
@@ -340,7 +481,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       try {
         console.log('Starting message send:', { senderId, receiverId: receiver.id, conversationId });
 
-        // Actualizar conversación
         await setDoc(
           doc(db, 'conversations', conversationId),
           {
@@ -348,7 +488,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             createdAt: serverTimestamp(),
             lastMessage: newMessage.trim() || file?.name || '[Archivo]',
           },
-          { merge: true },
+          { merge: true }
         );
         console.log('Conversation updated:', conversationId);
 
@@ -362,6 +502,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           fileUrl: null,
           fileName: null,
           fileType: null,
+          filePath: null,
         };
 
         if (file) {
@@ -380,7 +521,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
               throw new Error(errorData.error || 'Failed to upload file');
             }
 
-            const { url, fileName, fileType } = await response.json();
+            const { url, fileName, fileType, filePath } = await response.json();
             if (file.type.startsWith('image/')) {
               messageData.imageUrl = url;
             } else {
@@ -388,11 +529,12 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
               messageData.fileName = fileName;
               messageData.fileType = fileType;
             }
+            messageData.filePath = filePath;
             console.log('File uploaded via API:', url);
           } catch (err: any) {
             console.error('Failed to upload file:', {
               message: err.message || 'Unknown error',
-              code: err.code || 'no-code',
+              code: err.code || 'unknown',
               stack: err.stack || 'No stack trace',
               conversationId,
               fileName: file.name,
@@ -401,11 +543,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           }
         }
 
-        // Guardar mensaje
         const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), messageData);
         console.log('Message saved:', msgRef.id);
 
-        // Crear notificación
         await addDoc(collection(db, 'notifications'), {
           userId: senderId,
           message: `${user.firstName || 'Usuario'} te ha enviado un mensaje privado`,
@@ -417,7 +557,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         });
         console.log('Notification created for recipient:', receiver.id);
 
-        // Limpiar mensaje de escritura si existe
         if (typingMessageId) {
           await deleteDoc(doc(db, 'conversations', conversationId, 'messages', typingMessageId));
           setTypingMessageId(null);
@@ -431,7 +570,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       } catch (err: any) {
         console.error('Failed to send message:', {
           message: err.message || 'Unknown error',
-          code: err.code || 'no-code',
+          code: err.code || 'unknown',
           stack: err.stack || 'No stack trace',
           conversationId,
           senderId,
@@ -442,51 +581,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         setError('No se pudo enviar el mensaje.');
       }
     },
-    [senderId, receiver.id, newMessage, conversationId, user?.id, user?.firstName, file, typingMessageId],
+    [senderId, receiver.id, newMessage, conversationId, user?.id, user?.firstName, file, typingMessageId]
   );
-
-  /* ---------- Editar / Borrar mensaje ---------- */
-  const handleEditMessage = async (messageId: string) => {
-    if (!user?.id || !editingText.trim()) return;
-    try {
-      await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), {
-        text: editingText.trim(),
-        timestamp: serverTimestamp(),
-      });
-      console.log('Message edited:', messageId);
-      setEditingMessageId(null);
-      setEditingText('');
-      setActionMenuOpenId(null);
-    } catch (err: any) {
-      console.error('Error editing message:', {
-        message: err.message || 'Unknown error',
-        code: err.code || 'no-code',
-        stack: err.stack || 'No stack trace',
-        conversationId,
-        messageId,
-      });
-      setError('No se pudo editar el mensaje.');
-    }
-  };
-
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!user?.id) return;
-    try {
-      await deleteDoc(doc(db, 'conversations', conversationId, 'messages', messageId));
-      console.log('Message deleted:', messageId);
-      setActionMenuOpenId(null);
-      if (messageId === typingMessageId) setTypingMessageId(null);
-    } catch (err: any) {
-      console.error('Error deleting message:', {
-        message: err.message || 'Unknown error',
-        code: err.code || 'no-code',
-        stack: err.stack || 'No stack trace',
-        conversationId,
-        messageId,
-      });
-      setError('No se pudo eliminar el mensaje.');
-    }
-  };
 
   /* ---------- Render ---------- */
   if (!senderId || !user?.id) {
@@ -538,7 +634,17 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           >
             <Image src="/arrow-left.svg" alt="Cerrar" width={15} height={16} />
           </div>
-          <div className={styles.headerTitle}>{receiver.fullName}</div>
+          <Image
+            src={user.imageUrl || '/default-avatar.png'}
+            alt={receiver.fullName}
+            width={24}
+            height={24}
+            className={styles.headerAvatar}
+          />
+          <div className={styles.headerInfo}>
+            <div className={styles.headerTitle}>{receiver.fullName}</div>
+            <div className={styles.headerRole}>{receiver.role}</div>
+          </div>
         </div>
       </div>
 
@@ -554,18 +660,18 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           <li className={styles.noMessages}>No hay mensajes en esta conversación.</li>
         )}
         {messages.map((m) => {
+          // Hide typing indicator for current user
+          if (m.isTyping && m.senderId === user.id) return null;
+
           const isMe = m.senderId === user.id;
           const senderName = isMe ? (user.firstName || 'Yo') : receiver.fullName;
-          const avatarSrc = isMe
-            ? (user.imageUrl as string) || '/default-avatar.png'
-            : receiver.imageUrl || '/default-avatar.png';
 
           return (
             <li
               key={m.id}
+              data-message-id={m.id}
               className={`${styles.message} ${isMe ? styles.sent : styles.received}`}
             >
-              <Image src={avatarSrc} alt={senderName} width={40} height={40} className={styles.avatar} />
               <div className={styles.messageContent}>
                 <div className={styles.messageHeader}>
                   <span className={styles.sender}>{senderName}</span>
@@ -579,36 +685,53 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                       : 'Sin fecha'}
                   </span>
                   {isMe && !m.isTyping && (
-                    <button
-                      className={styles.actionButton}
-                      onClick={() =>
-                        setActionMenuOpenId(actionMenuOpenId === m.id ? null : m.id)
-                      }
-                    >
-                      <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
-                    </button>
-                  )}
-                  {actionMenuOpenId === m.id && isMe && (
-                    <div ref={actionMenuRef} className={styles.actionDropdown}>
-                      <div
-                        className={styles.actionDropdownItem}
-                        onClick={() => {
-                          setEditingMessageId(m.id);
-                          setEditingText(m.text || '');
-                          setActionMenuOpenId(null);
-                        }}
+                    <div className={styles.actionContainer}>
+                      <button
+                        className={styles.actionButton}
+                        onClick={() => handleOpenActionMenu(m.id)}
+                        aria-label="Opciones"
                       >
-                        Editar
-                      </div>
-                      <div
-                        className={styles.actionDropdownItem}
-                        onClick={() => handleDeleteMessage(m.id)}
-                      >
-                        Eliminar
-                      </div>
+                        <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
+                      </button>
+                      {actionMenuOpenId === m.id &&
+                        createPortal(
+                          <div ref={actionMenuRef} className={styles.actionDropdown}>
+                            <div
+                              className={styles.actionDropdownItem}
+                              onClick={() => {
+                                console.log('Opening edit mode for message:', m.id);
+                                setEditingMessageId(m.id);
+                                setEditingText(m.text || '');
+                                setActionMenuOpenId(null);
+                              }}
+                            >
+                              Editar mensaje
+                            </div>
+                            <div
+                              className={styles.actionDropdownItem}
+                              onClick={() => {
+                                console.log('Triggering delete for message:', m.id);
+                                handleDeleteMessage(m.id);
+                              }}
+                            >
+                              Eliminar mensaje
+                            </div>
+                          </div>,
+                          document.body
+                        )}
                     </div>
                   )}
                 </div>
+
+                {(m.fileUrl || m.imageUrl) && (
+                  <button
+                    className={styles.downloadButton}
+                    onClick={() => window.open(m.imageUrl || m.fileUrl, '_blank')}
+                    aria-label="Descargar archivo"
+                  >
+                    <Image src="/download.svg" alt="Descargar" width={16} height={16} />
+                  </button>
+                )}
 
                 {editingMessageId === m.id ? (
                   <div className={styles.editContainer}>
@@ -618,10 +741,12 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                       onChange={(e) => setEditingText(e.target.value)}
                       className={styles.editInput}
                       aria-label="Editar mensaje"
+                      autoFocus
                     />
                     <button
                       className={styles.editSaveButton}
                       onClick={() => handleEditMessage(m.id)}
+                      disabled={!editingText.trim()}
                     >
                       Guardar
                     </button>
@@ -645,17 +770,20 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                   <>
                     {m.text && <div className={styles.text}>{m.text}</div>}
                     {m.imageUrl && (
-                      <Image
-                        src={m.imageUrl}
-                        alt={m.fileName || 'Imagen'}
-                        width={200}
-                        height={200}
-                        className={styles.image}
-                        onError={(e) => {
-                          e.currentTarget.src = '/default-image.png';
-                          console.warn('Image load failed:', m.imageUrl);
-                        }}
-                      />
+                      <div className={styles.imageWrapper}>
+                        <Image
+                          src={m.imageUrl}
+                          alt={m.fileName || 'Imagen'}
+                          width={200}
+                          height={200}
+                          className={styles.image}
+                          onClick={() => setImagePreviewSrc(m.imageUrl!)}
+                          onError={(e) => {
+                            e.currentTarget.src = '/default-image.png';
+                            console.warn('Image load failed:', m.imageUrl);
+                          }}
+                        />
+                      </div>
                     )}
                     {m.fileUrl && !m.imageUrl && (
                       <a
@@ -686,59 +814,67 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         onDrop={handleDrop}
         onSubmit={handleSendMessage}
       >
-        {previewUrl && (
-          <div className={styles.imagePreview}>
-            <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-              <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
-            </button>
-          </div>
-        )}
-        {file && !previewUrl && (
-          <div className={styles.filePreview}>
-            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-            <span>{file.name}</span>
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-              <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
-            </button>
-          </div>
-        )}
-        <input
-          type="text"
-          placeholder="Escribe tu mensaje aquí"
-          value={newMessage}
-          onChange={(e) => {
-            setNewMessage(e.target.value);
-            handleTyping();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage(e);
-            }
-          }}
-          className={styles.input}
-          aria-label="Escribe un mensaje"
-          disabled={!!error}
-        />
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.imageButton}
-            onClick={() => fileInputRef.current?.click()}
+        <div className={styles.inputContainer}>
+          {previewUrl && (
+            <div className={styles.imagePreview}>
+              <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
+              <button className={styles.removeImageButton} onClick={handleRemoveFile}>
+                <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              </button>
+            </div>
+          )}
+          {file && !previewUrl && (
+            <div className={styles.filePreview}>
+              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+              <span>{file.name}</span>
+              <button className={styles.removeImageButton} onClick={handleRemoveFile}>
+                <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              </button>
+            </div>
+          )}
+          <input
+            type="text"
+            placeholder="Escribe tu mensaje aquí"
+            value={newMessage}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              handleTyping();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage(e);
+              }
+            }}
+            className={styles.input}
+            aria-label="Escribe un mensaje"
             disabled={!!error}
-            aria-label="Adjuntar archivo"
-          >
-            <Image src="/icons/paperclip.svg" alt="Adjuntar" width={16} height={16} />
-          </button>
+          />
+          <div className={styles.actions}>
           <button
-            type="submit"
-            className={styles.sendButton}
-            disabled={(!newMessage.trim() && !file) || !!error}
-            aria-label="Enviar mensaje"
-          >
-            <Image src="/icons/arrow-up.svg" alt="Enviar" width={13} height={13} />
-          </button>
+                type="button"
+                className={styles.imageButton}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!!error}
+                aria-label="Adjuntar archivo"
+                >
+                <Image
+                    src="/paperclip.svg"
+                    alt="Adjuntar"
+                    width={16}
+                    height={16}
+                    className={styles.iconInvert}
+                />
+                </button>
+            <button
+              type="submit"
+              className={styles.sendButton}
+              disabled={(!newMessage.trim() && !file) || !!error}
+              aria-label="Enviar mensaje"
+            >
+              <Image src="/arrow-up.svg" alt="Enviar" width={13} height={13} />
+            </button>
+          </div>
         </div>
         <input
           type="file"
@@ -748,6 +884,14 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           aria-label="Seleccionar archivo"
         />
       </form>
+
+    {imagePreviewSrc && (
+  <ImagePreviewOverlay
+        src={imagePreviewSrc}
+        alt="Vista previa de imagen"
+        onClose={() => setImagePreviewSrc(null)}
+    />
+)}
     </div>
   );
 };
