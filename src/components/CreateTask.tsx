@@ -271,7 +271,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
           setIsCreateClientOpen(false);
           setIsEditClientOpen(null);
         },
-      );
+      });
     }
   }, [isCreateClientOpen, isEditClientOpen]);
 
@@ -292,7 +292,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
         duration: 0.3,
         ease: 'power2.in',
         onComplete: () => setIsInviteMemberOpen(false),
-      );
+      });
     }
   }, [isInviteMemberOpen]);
 
@@ -734,7 +734,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       </div>
       {isOpen && (
         <div className={styles.content}>
-          <div className={styles.section} ref={(el) => (sectionsRef.current[0] = el)}>
+          <div className={styles.section} ref={(el) => { sectionsRef.current[0] = el; }}>
             <div className={styles.sectionTitle}>Cuenta Asignada:</div>
             <div className={styles.sectionSubtitle}>
               Selecciona la cuenta a la que se asignará esta tarea (por ejemplo, Pinaccle).
@@ -782,7 +782,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               </button>
             </div>
           </div>
-          <div className={styles.section} ref={(el) => (sectionsRef.current[1] = el)}>
+          <div className={styles.section} ref={(el) => { sectionsRef.current[1] = el; }}>
             <div className={styles.projectSection}>
               <div className={styles.sectionTitle}>Seleccionar Proyecto *</div>
               <div className={styles.sectionSubtitle}>Selecciona la carpeta a la que se asignará esta tarea.</div>
@@ -826,7 +826,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               )}
             </div>
           </div>
-          <div className={styles.section} ref={(el) => (sectionsRef.current[2] = el)}>
+          <div className={styles.section} ref={(el) => { sectionsRef.current[2] = el; }}>
             <div className={styles.sectionTitle}>1: Información Básica:</div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre de la tarea *</label>
@@ -869,7 +869,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                     placeholderText="Selecciona una fecha"
                     dateFormat="dd/MM/yyyy"
                     popperContainer={({ children }) => (
-                      <div className={styles.datePickerPopper} ref={(el) => (datePickerRefs.current[0] = el)}>
+                      <div className={styles.datePickerPopper} ref={(el) => { datePickerRefs.current[0] = el; }}>
                         {children}
                       </div>
                     )}
@@ -886,7 +886,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                     placeholderText="Selecciona una fecha"
                     dateFormat="dd/MM/yyyy"
                     popperContainer={({ children }) => (
-                      <div className={styles.datePickerPopper} ref={(el) => (datePickerRefs.current[1] = el)}>
+                      <div className={styles.datePickerPopper} ref={(el) => { datePickerRefs.current[1] = el; }}>
                         {children}
                       </div>
                     )}
@@ -953,7 +953,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               </div>
             </div>
           </div>
-          <div className={styles.section} ref={(el) => (sectionsRef.current[3] = el)}>
+          <div className={styles.section} ref={(el) => { sectionsRef.current[3] = el; }}>
             <div className={styles.sectionTitle}>2: Agregar información de equipo</div>
             <div className={styles.sectionTitle}>Persona Encargada de la tarea:</div>
             <div className={styles.sectionSubtitle}>
@@ -1067,7 +1067,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               />
             </div>
           </div>
-          <div className={styles.section} ref={(el) => (sectionsRef.current[4] = el)}>
+          <div className={styles.section} ref={(el) => { sectionsRef.current[4] = el; }}>
             <div className={styles.sectionTitle}>3: Recursos</div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Presupuesto Asignado *</label>
@@ -1093,7 +1093,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               />
             </div>
           </div>
-          <div className={styles.section} ref={(el) => (sectionsRef.current[5] = el)}>
+          <div className={styles.section} ref={(el) => { sectionsRef.current[5] = el; }}>
             <div className={styles.sectionTitle}>4: Gestión Avanzada</div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Metodología del Proyecto *</label>
@@ -1126,7 +1126,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               />
             </div>
           </div>
-          <div className={styles.submitSection} ref={(el) => (sectionsRef.current[6] = el)}>
+          <div className={styles.submitSection} ref={(el) => { sectionsRef.current[6] = el; }}>
             <div className={styles.submitText}>
               Has seleccionado {task.AssignedTo.length} personas asignadas a este proyecto.
               <br />

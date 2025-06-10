@@ -9,17 +9,13 @@ type Container = 'tareas' | 'cuentas' | 'miembros';
 interface SelectorProps {
   selectedContainer: Container;
   setSelectedContainer: (container: Container) => void;
+  options: { value: string; label: string }[]; // Added options prop
 }
-
-const containers: Array<{ id: Container; label: string }> = [
-  { id: 'tareas', label: 'Tareas' },
-  { id: 'cuentas', label: 'Cuentas' },
-  { id: 'miembros', label: 'Miembros' },
-];
 
 export default function Selector({
   selectedContainer,
   setSelectedContainer,
+  options,
 }: SelectorProps) {
   /* ---------- refs dinámicos ---------- */
   const btnRefs = useRef<HTMLButtonElement[]>([]);
@@ -84,15 +80,15 @@ export default function Selector({
   /* ---------- render ---------- */
   return (
     <div className={styles.menubar}>
-      {containers.map(({ id, label }) => (
-        <div key={id} className={styles.wrapper}>
+      {options.map(({ value, label }) => (
+        <div key={value} className={styles.wrapper}>
           <button
             ref={addRef}
-            data-container={id}
+            data-container={value}
             className={`${styles.menuItem} ${
-              selectedContainer === id ? styles.active : ''
+              selectedContainer === value ? styles.active : ''
             }`}
-            onClick={() => setSelectedContainer(id)}
+            onClick={() => setSelectedContainer(value as Container)}
           >
             <span className={styles.text}>{label}</span>
           </button>

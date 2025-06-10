@@ -52,6 +52,7 @@ interface MessageSidebarProps {
   receiver: UserCard;
   onOpenSidebar: (receiverId: string) => void;
   sidebarId: string;
+  conversationId: string; // Added conversationId prop
 }
 
 /* ---------- Debounce Utility ---------- */
@@ -74,6 +75,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   receiver,
   onOpenSidebar,
   sidebarId,
+  conversationId, // Destructure conversationId
 }) => {
   const { user } = useUser();
 
@@ -100,7 +102,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const messageRefs = useRef<Map<string, HTMLLIElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
-  const conversationId = [senderId, receiver.id].sort().join('_');
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
   /* ---------- Animación abrir/cerrar ---------- */
@@ -851,21 +852,21 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             disabled={!!error}
           />
           <div className={styles.actions}>
-          <button
-                type="button"
-                className={styles.imageButton}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!!error}
-                aria-label="Adjuntar archivo"
-                >
-                <Image
-                    src="/paperclip.svg"
-                    alt="Adjuntar"
-                    width={16}
-                    height={16}
-                    className={styles.iconInvert}
-                />
-                </button>
+            <button
+              type="button"
+              className={styles.imageButton}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!!error}
+              aria-label="Adjuntar archivo"
+            >
+              <Image
+                src="/paperclip.svg"
+                alt="Adjuntar"
+                width={16}
+                height={16}
+                className={styles.iconInvert}
+              />
+            </button>
             <button
               type="submit"
               className={styles.sendButton}
@@ -885,13 +886,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         />
       </form>
 
-    {imagePreviewSrc && (
-  <ImagePreviewOverlay
-        src={imagePreviewSrc}
-        alt="Vista previa de imagen"
-        onClose={() => setImagePreviewSrc(null)}
-    />
-)}
+      {imagePreviewSrc && (
+        <ImagePreviewOverlay
+          src={imagePreviewSrc}
+          alt="Vista previa de imagen"
+          onClose={() => setImagePreviewSrc(null)}
+        />
+      )}
     </div>
   );
 };

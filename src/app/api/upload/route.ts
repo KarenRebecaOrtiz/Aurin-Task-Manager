@@ -11,20 +11,42 @@ export async function POST(request: NextRequest) {
     await fs.access(keyPath);
     console.log('Service account key found at:', keyPath);
 
-    const { filePath } = await request.json();
-    if (!filePath) {
-      console.error('Missing filePath in request body');
-      return NextResponse.json({ error: 'filePath is required' }, { status: 400 });
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+    const conversationId = formData.get('conversationId') as string | null;
+
+    if (!file || !conversationId) {
+      console.error('Missing file or conversationId in formData');
+      return NextResponse.json({ error: 'File and conversationId are required' }, { status: 400 });
     }
 
-    console.log('Deleting file from GCS:', filePath);
-    await bucket.file(filePath).delete();
-    console.log('File deleted from GCS:', filePath);
+    console.log('File received:', file.name, file.type, file.size);
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `messages/${conversationId}/${Date.now()}_${sanitizedFileName}`;
+    const bucketFile = bucket.file(filePath);
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    const buffer = Buffer.from(await file.arrayBuffer());
+    console.log('Uploading file to GCS:', filePath, buffer.length, 'bytes');
+
+    await bucketFile.save(buffer, {
+      metadata: { contentType: file.type || 'application/octet-stream' },
+    });
+
+    const [signedUrl] = await bucketFile.getSignedUrl({
+      action: 'read',
+      expires: '03-09-2491',
+    });
+    console.log('File uploaded to GCS:', signedUrl);
+
+    return NextResponse.json({
+      url: signedUrl,
+      fileName: file.name,
+      fileType: file.type || 'application/octet-stream',
+      filePath, // Added for deletion
+    }, { status: 200 });
   } catch (error: unknown) {
     const errorDetails = error as { code?: string; details?: unknown };
-    console.error('Error deleting file:', {
+    console.error('Error uploading file:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       code: errorDetails.code,
@@ -32,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(
       {
-        error: 'Failed to delete file',
+        error: 'Failed to upload file',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

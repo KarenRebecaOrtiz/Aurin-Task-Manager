@@ -876,50 +876,50 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   // Calcular horas totales
-  const totalHours = useMemo(() => {
-    const timeMessages = messages.filter((msg) => msg.text.startsWith('Añadó una entrada de tiempo de') && msg.hours);
-    let totalMinutes = 0;
+const totalHours = useMemo(() => {
+  const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
+  let totalMinutes = 0;
 
-    timeMessages.forEach((msg) => {
-      totalMinutes += msg.hours! * 60;
-    });
+  timeMessages.forEach((msg) => {
+    totalMinutes += msg.hours * 60;
+  });
 
-    const totalHours = Math.floor(totalMinutes / 60);
-    const remainingMinutes = Math.round(totalMinutes % 60);
-    console.log('Calculated total hours:', `${totalHours}h ${remainingMinutes}m`);
-    return `${totalHours}h ${remainingMinutes}m`;
-  }, [messages]);
+  const totalHours = Math.floor(totalMinutes / 60);
+  const remainingMinutes = Math.round(totalMinutes % 60);
+  console.log('Calculated total hours:', `${totalHours}h ${remainingMinutes}m`, { timeMessages });
+  return `${totalHours}h ${remainingMinutes}m`;
+}, [messages]);
 
-  // Calcular horas por usuario para el dropdown
-  const hoursByUser = useMemo(() => {
-    const timeMessages = messages.filter((msg) => msg.text.startsWith('Añadó una entrada de tiempo de') && msg.hours);
-    const hoursMap: { [userId: string]: number } = {};
+// Calcular horas por usuario para el dropdown
+const hoursByUser = useMemo(() => {
+  const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
+  const hoursMap: { [userId: string]: number } = {};
 
-    timeMessages.forEach((msg) => {
-      hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours!;
-    });
+  timeMessages.forEach((msg) => {
+    hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours;
+  });
 
-    const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
-    return Array.from(involvedUsers)
-      .map((userId) => {
-        const u = users.find((u) => u.id === userId) || {
-          id: userId,
-          fullName: 'Desconocido',
-          firstName: 'Desconocido',
-          imageUrl: '/default-image.png',
-        };
-        const totalMinutes = (hoursMap[userId] || 0) * 60;
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = Math.round(totalMinutes % 60);
-        return {
-          id: userId,
-          firstName: u.firstName || u.fullName.split(' ')[0],
-          imageUrl: u.imageUrl,
-          hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
-        };
-      })
-      .filter((u) => hoursMap[u.id]);
-  }, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
+  const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
+  return Array.from(involvedUsers)
+    .map((userId) => {
+      const u = users.find((u) => u.id === userId) || {
+        id: userId,
+        fullName: 'Desconocido',
+        firstName: 'Desconocido',
+        imageUrl: '/default-image.png',
+      };
+      const totalMinutes = (hoursMap[userId] || 0) * 60;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = Math.round(totalMinutes % 60);
+      return {
+        id: userId,
+        firstName: u.firstName || u.fullName.split(' ')[0],
+        imageUrl: u.imageUrl,
+        hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
+      };
+    })
+    .filter((u) => hoursMap[u.id]);
+}, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
 
   // Obtener responsables para el dropdown
   const responsibleUsers = useMemo(() => {
