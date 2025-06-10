@@ -1,4 +1,5 @@
 'use client';
+
 import { useRef, useEffect } from 'react';
 import { memo } from 'react';
 import Image from 'next/image';

@@ -32,7 +32,13 @@ export default function RootLayout({
           <link rel="icon" type="image/png" sizes="512x512" href="/favicon/android-chrome-512x512.png" />
           <meta name="theme-color" content="#ffffff" />
         </head>
-        <body>{children}</body>
+
+        <body>
+          {children}
+
+          {/* ── 📌 NUEVO: raíz para React-Portal ── */}
+          <div id="portal-root"></div>
+        </body>
       </html>
     </ClerkProvider>
   );

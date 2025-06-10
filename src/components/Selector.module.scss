@@ -86,3 +86,11 @@
 .text {
   pointer-events: none;
 }
+
+
+@media (max-width: 820px) {
+
+  .menubar {
+    width: 100%;
+    justify-content: space-evenly;}
+}

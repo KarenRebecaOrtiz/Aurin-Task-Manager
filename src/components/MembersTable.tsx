@@ -1,7 +1,10 @@
 'use client';
+
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
+import { createPortal } from 'react-dom';
+import { useUser } from '@clerk/nextjs';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
 
@@ -15,34 +18,52 @@ interface User {
 
 interface MembersTableProps {
   users: User[];
-  onInviteOpen: () => void;
-  onProfileOpen: (userId: string) => void;
+  onInviteSidebarOpen: () => void;
+  onProfileSidebarOpen: (userId: string) => void;
+  onMessageSidebarOpen: (user: User) => void;
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
 }
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ users, onInviteOpen, onProfileOpen, setUsers }) => {
-    console.log('MembersTable rendered'); // Para depuración, quitar en producción
+  ({ users, onInviteSidebarOpen, onProfileSidebarOpen, onMessageSidebarOpen, setUsers }) => {
+    console.log('MembersTable rendered');
+    const { user } = useUser();
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [sortKey, setSortKey] = useState<string>('fullName');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [searchQuery, setSearchQuery] = useState('');
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
+    const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+    const portalContainer = useRef<HTMLElement | null>(null);
+
+    // Inicializar portal
+    useEffect(() => {
+      portalContainer.current = document.getElementById('portal-root');
+      if (!portalContainer.current) {
+        console.error('Portal root (#portal-root) not found in the DOM');
+      }
+    }, []);
 
     useEffect(() => {
       const fetchUsers = async () => {
         try {
           const response = await fetch('/api/users');
           if (!response.ok) throw new Error('Failed to fetch users');
-          const clerkUsers: { id: string; imageUrl?: string; firstName?: string; lastName?: string; publicMetadata: { role?: string; description?: string } }[] = await response.json();
-          const usersData: User[] = clerkUsers.map((user) => ({
-            id: user.id,
-            imageUrl: user.imageUrl || '/default-avatar.png',
-            fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre',
-            role: user.publicMetadata.role || 'Sin rol',
-            description: user.publicMetadata.description || 'Sin descripción',
+          const clerkUsers: {
+            id: string;
+            imageUrl?: string;
+            firstName?: string;
+            lastName?: string;
+            publicMetadata: { role?: string; description?: string };
+          }[] = await response.json();
+          const usersData: User[] = clerkUsers.map((u) => ({
+            id: u.id,
+            imageUrl: u.imageUrl || '/default-avatar.png',
+            fullName: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Sin nombre',
+            role: u.publicMetadata.role || 'Sin rol',
+            description: u.publicMetadata.description || 'Sin descripción',
           }));
           setUsers(usersData);
         } catch (error) {
@@ -52,19 +73,24 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       fetchUsers();
     }, [setUsers]);
 
-    const memoizedFilteredUsers = useMemo(
-      () =>
-        users.filter(
-          (user) =>
-            user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.role.toLowerCase().includes(searchQuery.toLowerCase()),
-        ),
-      [searchQuery, users],
-    );
+    const memoizedFilteredUsers = useMemo(() => {
+      const currentUser = users.find((u) => u.id === user?.id);
+      const otherUsers = users.filter((u) => u.id !== user?.id);
+      const sortedUsers = [...otherUsers].sort((a, b) =>
+        a.fullName.toLowerCase().localeCompare(b.fullName.toLowerCase()),
+      );
+      return currentUser ? [{ ...currentUser, fullName: `${currentUser.fullName} (Tú)` }, ...sortedUsers] : sortedUsers;
+    }, [users, user?.id]);
 
     useEffect(() => {
-      setFilteredUsers(memoizedFilteredUsers);
-    }, [memoizedFilteredUsers]);
+      setFilteredUsers(
+        memoizedFilteredUsers.filter(
+          (u) =>
+            u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.role.toLowerCase().includes(searchQuery.toLowerCase()),
+        ),
+      );
+    }, [memoizedFilteredUsers, searchQuery]);
 
     useEffect(() => {
       const currentActionMenuRef = actionMenuRef.current;
@@ -90,6 +116,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
         ) {
           setActionMenuOpenId(null);
+          console.log('Closed action menu via outside click');
         }
       };
       document.addEventListener('mousedown', handleClickOutside);
@@ -108,128 +135,143 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       [sortKey],
     );
 
-    const handleActionClick = useCallback((userId: string) => {
+    const handleActionClick = useCallback((userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      const button = e.currentTarget;
+      const rect = button.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 5,
+        left: rect.left + window.scrollX,
+      });
       setActionMenuOpenId((prev) => (prev === userId ? null : userId));
+      console.log('Action menu toggled for user:', userId);
     }, []);
 
-    const handleDeleteRequest = useCallback(
-      async (user: User) => {
-        try {
-          const response = await fetch('/api/request-delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id, fullName: user.fullName }),
-          });
-          if (!response.ok) throw new Error('Failed to request deletion');
-          alert(`Solicitud de eliminación enviada para ${user.fullName}`);
-        } catch (error) {
-          console.error('Error requesting deletion:', error);
-          alert('Error al solicitar la eliminación');
-        }
-        setActionMenuOpenId(null);
-      },
-      [],
-    );
+    const animateClick = useCallback((element: HTMLElement) => {
+      gsap.to(element, {
+        scale: 0.95,
+        opacity: 0.8,
+        duration: 0.15,
+        ease: 'power1.out',
+        yoyo: true,
+        repeat: 1,
+      });
+    }, []);
 
     const renderActionMenu = useCallback(
-      (user: User) => (
+      (u: User) => (
         <div className={styles.actionContainer}>
           <button
             ref={(el) => {
-              if (el) actionButtonRefs.current.set(user.id, el);
-              else actionButtonRefs.current.delete(user.id);
+              if (el) actionButtonRefs.current.set(u.id, el);
+              else actionButtonRefs.current.delete(u.id);
             }}
-            onClick={() => handleActionClick(user.id)}
+            onClick={(e) => handleActionClick(u.id, e)}
             className={styles.actionButton}
             aria-label="Abrir acciones"
           >
             <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
           </button>
-          {actionMenuOpenId === user.id && (
-            <div ref={actionMenuRef} className={styles.dropdown}>
-              <div className={styles.dropdownHeader}>
-                <div className={styles.dropdownTitle}>Acciones</div>
-              </div>
+          {actionMenuOpenId === u.id && portalContainer.current && (
+            createPortal(
               <div
-                className={styles.dropdownItem}
-                onClick={() => {
-                  onProfileOpen(user.id);
-                  setActionMenuOpenId(null);
-                }}
+                ref={actionMenuRef}
+                className={styles.dropdown}
+                style={{ position: 'absolute', top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px` }}
               >
-                <Image src="/user-round.svg" alt="Profile" width={16} height={16} />
-                <span>Perfil</span>
-              </div>
-              <div
-                className={styles.dropdownItem}
-                onClick={() => {
-                  handleDeleteRequest(user);
-                  setActionMenuOpenId(null);
-                }}
-              >
-                <Image src="/trash-2.svg" alt="Delete" width={16} height={16} />
-                <span className={styles.deleteText}>Eliminar Miembro</span>
-              </div>
-            </div>
+                <div
+                  className={styles.dropdownItem}
+                  onClick={(e) => {
+                    animateClick(e.currentTarget);
+                    onProfileSidebarOpen(u.id);
+                    setActionMenuOpenId(null);
+                  }}
+                >
+                  <Image src="/user-round.svg" alt="Profile" width={16} height={16} />
+                  <span>Ver perfil</span>
+                </div>
+                {u.id !== user?.id && (
+                  <div
+                    className={styles.dropdownItem}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      onMessageSidebarOpen(u);
+                      setActionMenuOpenId(null);
+                    }}
+                  >
+                    <Image src="/message-square.svg" alt="Mensaje" width={16} height={16} />
+                    <span>Enviar mensaje</span>
+                  </div>
+                )}
+              </div>,
+              portalContainer.current,
+            )
           )}
         </div>
       ),
-      [actionMenuOpenId, handleActionClick, handleDeleteRequest, onProfileOpen]
+      [actionMenuOpenId, dropdownPosition, animateClick, onProfileSidebarOpen, onMessageSidebarOpen, user?.id],
     );
 
-    const baseColumns = useMemo(() => [
-      {
-        key: 'imageUrl',
-        label: '',
-        width: '10%',
-        mobileVisible: false,
-      },
-      {
-        key: 'fullName',
-        label: 'Nombre',
-        width: '50%',
-        mobileVisible: true,
-      },
-      {
-        key: 'role',
-        label: 'Rol',
-        width: '30%',
-        mobileVisible: false,
-      },
-      {
-        key: 'action',
-        label: 'Acciones',
-        width: '10%',
-        mobileVisible: true,
-      },
-    ], []);
+    const baseColumns = useMemo(
+      () => [
+        {
+          key: 'imageUrl',
+          label: '',
+          width: '10%',
+          mobileVisible: false,
+        },
+        {
+          key: 'fullName',
+          label: 'Nombre',
+          width: '50%',
+          mobileVisible: true,
+        },
+        {
+          key: 'role',
+          label: 'Rol',
+          width: '30%',
+          mobileVisible: false,
+        },
+        {
+          key: 'action',
+          label: 'Acciones',
+          width: '10%',
+          mobileVisible: true,
+        },
+      ],
+      [],
+    );
 
-    const columns = useMemo(() => baseColumns.map((col) => {
-      if (col.key === 'imageUrl') {
-        return {
-          ...col,
-          render: (user: User) => (
-            <Image
-              src={user.imageUrl}
-              alt={user.fullName}
-              width={38}
-              height={38}
-              className={styles.profileImage}
-              onError={(e) => {
-                e.currentTarget.src = '/default-avatar.png';
-              }}
-            />
-          ),
-        };
-      }
-      if (col.key === 'action') {
-        return {
-          ...col,
-          render: renderActionMenu,
-        };
-      }
-      return col;
-    }), [baseColumns, renderActionMenu]);
+    const columns = useMemo(
+      () =>
+        baseColumns.map((col) => {
+          if (col.key === 'imageUrl') {
+            return {
+              ...col,
+              render: (user: User) => (
+                <Image
+                  src={user.imageUrl}
+                  alt={user.fullName}
+                  width={38}
+                  height={38}
+                  className={styles.profileImage}
+                  onError={(e) => {
+                    e.currentTarget.src = '/default-avatar.png';
+                  }}
+                />
+              ),
+            };
+          }
+          if (col.key === 'action') {
+            return {
+              ...col,
+              render: renderActionMenu,
+            };
+          }
+          return col;
+        }),
+        [baseColumns, renderActionMenu],
+    );
 
     return (
       <div className={styles.container}>
@@ -245,7 +287,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             />
           </div>
           <div className={styles.inviteButtonWrapper}>
-            <button onClick={onInviteOpen} className={styles.inviteButton}>
+            <button onClick={onInviteSidebarOpen} className={styles.inviteButton}>
               <Image src="/wallet-cards.svg" alt="Invite" width={17} height={17} />
               Invitar Miembro
             </button>
@@ -258,10 +300,13 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSort={handleSort}
+          onRowClick={(u: User, columnKey: string) =>
+            ['imageUrl', 'fullName', 'role'].includes(columnKey) && u.id !== user?.id && onMessageSidebarOpen(u)
+          }
         />
       </div>
     );
-  }
+  },
 );
 
 MembersTable.displayName = 'MembersTable';

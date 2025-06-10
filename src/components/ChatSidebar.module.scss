@@ -164,12 +164,14 @@
 .messageHeader {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: start;
+  max-height: 20px;
 }
 
 .messageActions {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: start;
   gap: 8px;
 }
 

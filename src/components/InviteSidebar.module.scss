@@ -1,0 +1,120 @@
+.container {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100%;
+    padding: 25px;
+    background: #000000ea;
+    backdrop-filter: blur(10px);
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 12px 0 0 12px;
+    display: flex;
+    flex-direction: column;
+    z-index: 3000;
+    transform: translateX(100%);
+  }
+  
+  :global(body.dark) .container {
+    background: #1f1f20;
+  }
+  
+  .open {
+    transform: translateX(0);
+  }
+  
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .arrowLeft {
+    cursor: pointer;
+    filter: invert(100%) brightness(100%);
+  }
+  
+  .title {
+    color: #fafafa;
+    font-size: 19.2px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+  }
+  
+  .subtitle {
+    color: #71717a;
+    font-size: 14.4px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 400;
+  }
+  
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 100%;
+    margin-top: 20px;
+  }
+  
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .label {
+    color: #e5e5e5;
+    font-size: 14px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 500;
+  }
+  
+  .input {
+    padding: 8px;
+    background: #1f1f20;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 14.4px;
+    font-family: 'Inter Tight', sans-serif;
+  }
+  
+  .submitButton {
+    padding: 10px;
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 500;
+    transition: background 0.2s;
+  
+    &:hover {
+      background: #e0e0e0;
+    }
+  }
+  
+  .cancelButton {
+    padding: 10px;
+    background: #555555;
+    color: #d1d1d1;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 500;
+    transition: background 0.2s;
+  
+    &:hover {
+      background: #666666;
+    }
+  }

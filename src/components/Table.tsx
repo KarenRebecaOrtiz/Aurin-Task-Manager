@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
@@ -23,7 +24,7 @@ interface TableProps<T extends HasId> {
   sortKey?: string;
   sortDirection?: 'asc' | 'desc';
   onSort?: (key: string) => void;
-  onRowClick?: (item: T) => void;
+  onRowClick?: (item: T, columnKey: string) => void;
 }
 
 const Table = memo(
@@ -79,7 +80,7 @@ const Table = memo(
           yoyo: true,
           repeat: 1,
         });
-        onRowClick(item);
+        onRowClick(item, column.key);
       }
     }, [onRowClick]);
 
@@ -208,7 +209,7 @@ const Table = memo(
       prevProps.onSort === nextProps.onSort &&
       prevProps.onRowClick === nextProps.onRowClick
     );
-  }
+  },
 );
 
 Table.displayName = 'Table';

@@ -1,8 +1,21 @@
 'use client';
+
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, deleteDoc, getDocs, where, setDoc, getDoc } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  updateDoc,
+  doc,
+  deleteDoc,
+  getDocs,
+  where,
+  setDoc,
+} from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
@@ -55,9 +68,17 @@ interface ChatSidebarProps {
   };
   clientName: string;
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
+  sidebarId: string;
 }
 
-const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initialTask, clientName, users = [] }) => {
+const ChatSidebar: React.FC<ChatSidebarProps> = ({
+  isOpen,
+  onClose,
+  task: initialTask,
+  clientName,
+  users = [],
+  sidebarId,
+}) => {
   const { user } = useUser();
   const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -82,7 +103,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
   const [isHoursDropdownOpen, setIsHoursDropdownOpen] = useState(false);
   const [isResponsibleDropdownOpen, setIsResponsibleDropdownOpen] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Nuevo estado para el loader
   const chatRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -98,7 +118,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isCreator = user?.id === task.CreatedBy;
-  const isInvolved = user?.id && (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
+  const isInvolved =
+    user?.id &&
+    (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
   // Real-time task listener
@@ -106,28 +128,32 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
     if (!task.id) return;
 
     console.log('Setting up task listener for task:', task.id);
-    const unsubscribe = onSnapshot(doc(db, 'tasks', task.id), (doc) => {
-      if (doc.exists()) {
-        const taskData = doc.data();
-        setTask({
-          id: doc.id,
-          clientId: taskData.clientId || '',
-          project: taskData.project || '',
-          name: taskData.name || '',
-          description: taskData.description || '',
-          status: taskData.status || '',
-          priority: taskData.priority || '',
-          startDate: taskData.startDate ? taskData.startDate.toDate().toISOString() : null,
-          endDate: taskData.endDate ? taskData.endDate.toDate().toISOString() : null,
-          LeadedBy: taskData.LeadedBy || [],
-          AssignedTo: taskData.AssignedTo || [],
-          CreatedBy: taskData.CreatedBy || '',
-        });
-        console.log('Task updated:', taskData.status);
-      }
-    }, (error) => {
-      console.error('Error listening to task:', error.message, error.code);
-    });
+    const unsubscribe = onSnapshot(
+      doc(db, 'tasks', task.id),
+      (doc) => {
+        if (doc.exists()) {
+          const taskData = doc.data();
+          setTask({
+            id: doc.id,
+            clientId: taskData.clientId || '',
+            project: taskData.project || '',
+            name: taskData.name || '',
+            description: taskData.description || '',
+            status: taskData.status || '',
+            priority: taskData.priority || '',
+            startDate: taskData.startDate ? taskData.startDate.toDate().toISOString() : null,
+            endDate: taskData.endDate ? taskData.endDate.toDate().toISOString() : null,
+            LeadedBy: taskData.LeadedBy || [],
+            AssignedTo: taskData.AssignedTo || [],
+            CreatedBy: taskData.CreatedBy || '',
+          });
+          console.log('Task updated:', taskData.status);
+        }
+      },
+      (error) => {
+        console.error('Error listening to task:', error.message, error.code);
+      },
+    );
 
     return () => {
       console.log('Unsubscribing task listener for task:', task.id);
@@ -141,37 +167,39 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
 
     console.log('Setting up timer listener for user:', user.id, 'task:', task.id);
     const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
-    const unsubscribe = onSnapshot(timerDocRef, (doc) => {
-      if (doc.exists()) {
-        const timerData = doc.data() as TimerState;
-        setIsTimerRunning(timerData.isRunning);
-        if (timerData.isRunning && timerData.startTime) {
-          const start = timerData.startTime.toDate().getTime();
-          const now = Date.now();
-          const elapsedSeconds = Math.floor((now - start) / 1000) + timerData.accumulatedSeconds;
-          setTimerSeconds(elapsedSeconds);
-          console.log('Timer synced:', elapsedSeconds, 'seconds');
+    const unsubscribe = onSnapshot(
+      timerDocRef,
+      (doc) => {
+        if (doc.exists()) {
+          const timerData = doc.data() as TimerState;
+          setIsTimerRunning(timerData.isRunning);
+          if (timerData.isRunning && timerData.startTime) {
+            const start = timerData.startTime.toDate().getTime();
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - start) / 1000) + timerData.accumulatedSeconds;
+            setTimerSeconds(elapsedSeconds);
+            console.log('Timer synced:', elapsedSeconds, 'seconds');
+          } else {
+            setTimerSeconds(timerData.accumulatedSeconds);
+            console.log('Timer stopped, accumulated:', timerData.accumulatedSeconds);
+          }
         } else {
-          setTimerSeconds(timerData.accumulatedSeconds);
-          console.log('Timer stopped, accumulated:', timerData.accumulatedSeconds);
+          setDoc(timerDocRef, {
+            userId: user.id,
+            isRunning: false,
+            startTime: null,
+            accumulatedSeconds: 0,
+          }).catch((error) => {
+            console.error('Error initializing timer:', error.message, error.code);
+          });
+          console.log('Initialized timer for user:', user.id);
         }
-      } else {
-        // Inicializar timer si no existe
-        setDoc(timerDocRef, {
-          userId: user.id,
-          isRunning: false,
-          startTime: null,
-          accumulatedSeconds: 0,
-        }).catch((error) => {
-          console.error('Error initializing timer:', error.message, error.code);
-        });
-        console.log('Initialized timer for user:', user.id);
-      }
-    }, (error) => {
-      console.error('Error listening to timer:', error.message, error.code);
-    });
+      },
+      (error) => {
+        console.error('Error listening to timer:', error.message, error.code);
+      },
+    );
 
-    // Actualizar timer cada segundo si está corriendo
     let interval: NodeJS.Timeout;
     if (isTimerRunning) {
       interval = setInterval(() => {
@@ -192,25 +220,26 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
 
     console.log('Setting up typing listener for task:', task.id);
     const typingQuery = query(collection(db, `tasks/${task.id}/typing`));
-    const unsubscribe = onSnapshot(typingQuery, (snapshot) => {
-      const typing: string[] = [];
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data() as TypingStatus;
-        console.log('Typing document:', doc.id, 'data:', data);
-        if (data.isTyping && data.userId !== user?.id) {
-          const timestamp = data.timestamp.toDate().getTime();
-          const now = Date.now();
-          console.log('Typing check:', data.userId, 'isTyping:', data.isTyping, 'age:', now - timestamp);
-          if (now - timestamp < 10000) {
-            typing.push(data.userId);
+    const unsubscribe = onSnapshot(
+      typingQuery,
+      (snapshot) => {
+        const typing: string[] = [];
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data() as TypingStatus;
+          if (data.isTyping && data.userId !== user?.id) {
+            const timestamp = data.timestamp.toDate().getTime();
+            if (Date.now() - timestamp < 5000) {
+              typing.push(data.userId);
+            }
           }
-        }
-      });
-      console.log('Typing users updated:', typing);
-      setTypingUsers(typing);
-    }, (error) => {
-      console.error('Error listening to typing status:', error.message, error.code);
-    });
+        });
+        setTypingUsers(typing);
+        console.log('Typing users:', typing);
+      },
+      (error) => {
+        console.error('Error listening to typing status:', error.message, error.code);
+      },
+    );
 
     return () => {
       console.log('Unsubscribing typing listener for task:', task.id);
@@ -231,8 +260,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       userId: user.id,
       isTyping: true,
       timestamp: Timestamp.now(),
-    }).then(() => {
-      console.log('Typing status set to true for user:', user.id);
     }).catch((error) => {
       console.error('Error updating typing status:', error.message);
     });
@@ -242,12 +269,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         userId: user.id,
         isTyping: false,
         timestamp: Timestamp.now(),
-      }).then(() => {
-        console.log('Typing status set to false for user:', user.id);
       }).catch((error) => {
         console.error('Error stopping typing status:', error.message);
       });
     }, 3000);
+
+    console.log('User typing:', user.id);
   }, [user?.id, task.id]);
 
   // GSAP animation for open/close
@@ -257,7 +284,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         gsap.fromTo(
           sidebarRef.current,
           { x: '100%', opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' }
+          { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
         );
         console.log('ChatSidebar opened');
       } else {
@@ -276,11 +303,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        sidebarRef.current &&
-        !sidebarRef.current.contains(event.target as Node) &&
-        isOpen
-      ) {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node) && isOpen) {
         gsap.to(sidebarRef.current, {
           x: '100%',
           opacity: 0,
@@ -335,47 +358,45 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose, actionMenuOpenId, isTaskMenuOpen, isDeletePopupOpen, isHoursDropdownOpen, isResponsibleDropdownOpen]);
+  }, [
+    isOpen,
+    onClose,
+    actionMenuOpenId,
+    isTaskMenuOpen,
+    isDeletePopupOpen,
+    isHoursDropdownOpen,
+    isResponsibleDropdownOpen,
+  ]);
 
   // Real-time messages listener
   useEffect(() => {
     if (!task.id) return;
 
     console.log('Setting up messages listener for task:', task.id);
-    const messagesQuery = query(
-      collection(db, `tasks/${task.id}/messages`),
-      orderBy('timestamp', 'asc'),
-    );
+    const messagesQuery = query(collection(db, `tasks/${task.id}/messages`), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(
       messagesQuery,
       (snapshot) => {
-        const newMessages: Message[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          console.log('Message received:', doc.id, 'hours:', data.hours, 'text:', data.text);
-          return {
-            id: doc.id,
-            senderId: data.senderId,
-            senderName: data.senderName,
-            text: data.text,
-            timestamp: data.timestamp,
-            read: data.read || false,
-            hours: data.hours || 0,
-          };
-        });
-        console.log('Messages updated:', newMessages.length, 'IDs:', newMessages.map(m => m.id));
+        const newMessages: Message[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          senderId: doc.data().senderId,
+          senderName: doc.data().senderName,
+          text: doc.data().text,
+          timestamp: doc.data().timestamp,
+          read: doc.data().read || false,
+          hours: doc.data().hours || 0,
+        }));
+        console.log('Received messages:', newMessages.length, 'IDs:', newMessages.map((m) => m.id));
         setMessages(newMessages);
-        setIsLoading(false);
       },
       (error) => {
         console.error('Error listening to messages:', error.message, error.code);
-        setIsLoading(false);
       },
     );
 
     return () => {
       console.log('Unsubscribing messages listener for task:', task.id);
       unsubscribe();
-      setIsLoading(false);
     };
   }, [task.id]);
 
@@ -385,7 +406,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       console.log('Checking unread messages for user:', user.id);
       setHasInteracted(true);
       const unreadMessages = messages.filter((msg) => !msg.read);
-      console.log('Unread messages:', unreadMessages.length, 'IDs:', unreadMessages.map(m => m.id));
+      console.log('Unread messages:', unreadMessages.length, 'IDs:', unreadMessages.map((m) => m.id));
       unreadMessages.forEach(async (msg) => {
         try {
           console.log('Marking message as read:', msg.id);
@@ -412,11 +433,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       (msg) =>
         !msg.read &&
         !prevMessagesRef.current.some(
-          (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId
-        )
+          (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId,
+        ),
     );
 
-    console.log('New unread messages detected:', newUnreadMessages.length, 'IDs:', newUnreadMessages.map(m => m.id));
+    console.log(
+      'New unread messages detected:',
+      newUnreadMessages.length,
+      'IDs:',
+      newUnreadMessages.map((m) => m.id),
+    );
     if (newUnreadMessages.length > 0 && user?.id && hasInteracted) {
       const latestMessage = newUnreadMessages[newUnreadMessages.length - 1];
       if (latestMessage.senderId !== user.id) {
@@ -428,7 +454,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         console.log('Skipping sound: Message is from current user:', latestMessage.senderId);
       }
     } else {
-      console.log('No sound played: Conditions not met', {
+      console.log('No sound played:', {
         newUnreadMessages: newUnreadMessages.length,
         userId: user?.id,
         hasInteracted,
@@ -447,13 +473,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
 
   // Scroll to bottom of chat
   useEffect(() => {
-    if (chatRef.current && !isLoading) {
+    if (chatRef.current) {
       setTimeout(() => {
         chatRef.current!.scrollTop = chatRef.current!.scrollHeight;
         console.log('Scrolled to bottom of chat');
       }, 0);
     }
-  }, [messages, typingUsers, isLoading]);
+  }, [messages, typingUsers]);
 
   // GSAP animations
   useEffect(() => {
@@ -461,7 +487,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       gsap.fromTo(
         actionMenuRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
       console.log('Action menu animated');
     }
@@ -472,7 +498,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       gsap.fromTo(
         statusDropdownRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
       console.log('Status dropdown animated');
     }
@@ -483,7 +509,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       gsap.fromTo(
         taskMenuRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
       console.log('Task menu animated');
     }
@@ -495,7 +521,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         height: isTimerPanelOpen ? 'auto' : 0,
         opacity: isTimerPanelOpen ? 1 : 0,
         duration: 0.3,
-        ease: 'power2.out'
+        ease: 'power2.out',
       });
       console.log('Timer panel animated, open:', isTimerPanelOpen);
     }
@@ -506,7 +532,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       gsap.fromTo(
         deletePopupRef.current,
         { opacity: 0, scale: 0.95 },
-        { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }
+        { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
       );
       console.log('Delete popup animated');
     }
@@ -517,7 +543,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       gsap.fromTo(
         hoursDropdownRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
       console.log('Hours dropdown animated');
     }
@@ -528,7 +554,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       gsap.fromTo(
         responsibleDropdownRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
       console.log('Responsible dropdown animated');
     }
@@ -590,28 +616,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
       // Eliminar mensajes
       const messagesQuery = query(collection(db, `tasks/${task.id}/messages`));
       const messagesSnapshot = await getDocs(messagesQuery);
-      await Promise.all(messagesSnapshot.docs.map((msgDoc) => deleteDoc(doc(db, `tasks/${task.id}/messages`, msgDoc.id))));
+      await Promise.all(
+        messagesSnapshot.docs.map((msgDoc) => deleteDoc(doc(db, `tasks/${task.id}/messages`, msgDoc.id))),
+      );
       console.log('Deleted messages for task:', task.id);
 
       // Eliminar timers
       const timersQuery = query(collection(db, `tasks/${task.id}/timers`));
       const timersSnapshot = await getDocs(timersQuery);
-      await Promise.all(timersSnapshot.docs.map((timerDoc) => deleteDoc(doc(db, `tasks/${task.id}/timers`, timerDoc.id))));
+      await Promise.all(
+        timersSnapshot.docs.map((timerDoc) => deleteDoc(doc(db, `tasks/${task.id}/timers`, timerDoc.id))),
+      );
       console.log('Deleted timers for task:', task.id);
 
       // Eliminar typing status
       const typingQuery = query(collection(db, `tasks/${task.id}/typing`));
       const typingSnapshot = await getDocs(typingQuery);
-      await Promise.all(typingSnapshot.docs.map((typingDoc) => deleteDoc(doc(db, `tasks/${task.id}/typing`, typingDoc.id))));
+      await Promise.all(
+        typingSnapshot.docs.map((typingDoc) => deleteDoc(doc(db, `tasks/${task.id}/typing`, typingDoc.id))),
+      );
       console.log('Deleted typing status for task:', task.id);
 
       // Eliminar notificaciones
-      const notificationsQuery = query(
-        collection(db, 'notifications'),
-        where('taskId', '==', task.id)
-      );
+      const notificationsQuery = query(collection(db, 'notifications'), where('taskId', '==', task.id));
       const notificationsSnapshot = await getDocs(notificationsQuery);
-      await Promise.all(notificationsSnapshot.docs.map((notifDoc) => deleteDoc(doc(db, 'notifications', notifDoc.id))));
+      await Promise.all(
+        notificationsSnapshot.docs.map((notifDoc) => deleteDoc(doc(db, 'notifications', notifDoc.id))),
+      );
       console.log('Deleted notifications for task:', task.id);
 
       // Notificar a involucrados
@@ -645,39 +676,55 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
 
   const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!user?.id || !newMessage.trim()) return;
-
+    if (!user?.id || !newMessage.trim()) {
+      console.error('Invalid message input:', { userId: user?.id, newMessage });
+      return;
+    }
+  
     try {
-      console.log('Sending message:', newMessage);
-      await addDoc(collection(db, `tasks/${task.id}/messages`), {
-        senderId: user.id,
-        senderName: user.firstName || 'Usuario',
-        text: newMessage.trim(),
-        timestamp: Timestamp.now(),
-        read: false,
-      });
-
+      console.log('Starting message send for task:', task.id);
+  
+      // Guardar mensaje
+      try {
+        await addDoc(collection(db, `tasks/${task.id}/messages`), {
+          senderId: user.id,
+          senderName: user.firstName || 'Usuario',
+          text: newMessage.trim(),
+          timestamp: Timestamp.now(),
+          read: false,
+        });
+        console.log('Message saved for task:', task.id);
+      } catch (err) {
+        console.error('Failed to save message:', err);
+      }
+  
+      // Crear notificaciones
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
       recipients.delete(user.id);
       console.log('Notification recipients:', Array.from(recipients));
+  
       for (const recipientId of Array.from(recipients)) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.id,
-          taskId: task.id,
-          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-        });
+        try {
+          await addDoc(collection(db, 'notifications'), {
+            userId: user.id,
+            taskId: task.id,
+            message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
+            timestamp: Timestamp.now(),
+            read: false,
+            recipientId,
+          });
+          console.log('Notification created for recipient:', recipientId);
+        } catch (err) {
+          console.error('Failed to create notification for recipient:', recipientId, err);
+        }
       }
-
+  
       setNewMessage('');
       setHasInteracted(true);
-      console.log('Message sent and notifications created');
-    } catch (error) {
-      console.error('Error sending message:', error.message, error.code);
-      throw error;
+      console.log('Message sent and notifications attempted');
+    } catch (err) {
+      console.error('Send message error:', err);
     }
   };
 
@@ -764,7 +811,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
     }
   };
 
-  const toggleTimerPanel = (e: React.MouseEvent<HTMLElement>) => {
+  const toggleTimerPanel = (e: React.MouseEvent) => {
     handleClick(e.currentTarget as HTMLElement);
     setIsTimerPanelOpen((prev) => !prev);
     setHasInteracted(true);
@@ -775,10 +822,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
     if (!user?.id) return;
 
     const [hours, minutes] = timerInput.split(':').map(Number);
-    if (isNaN(hours) || isNaN(minutes)) {
-      console.error('Invalid time input:', timerInput);
-      return;
-    }
+    if (isNaN(hours) || isNaN(minutes)) return;
 
     const totalHours = hours + minutes / 60;
     const timeEntry = `${hours}h ${minutes}m`;
@@ -833,7 +877,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
 
   // Calcular horas totales
   const totalHours = useMemo(() => {
-    const timeMessages = messages.filter((msg) => msg.hours > 0);
+    const timeMessages = messages.filter((msg) => msg.text.startsWith('Añadó una entrada de tiempo de') && msg.hours);
     let totalMinutes = 0;
 
     timeMessages.forEach((msg) => {
@@ -842,13 +886,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
 
     const totalHours = Math.floor(totalMinutes / 60);
     const remainingMinutes = Math.round(totalMinutes % 60);
-    console.log('Calculated total hours:', `${totalHours}h ${remainingMinutes}m`, 'Messages:', timeMessages);
+    console.log('Calculated total hours:', `${totalHours}h ${remainingMinutes}m`);
     return `${totalHours}h ${remainingMinutes}m`;
   }, [messages]);
 
   // Calcular horas por usuario para el dropdown
   const hoursByUser = useMemo(() => {
-    const timeMessages = messages.filter((msg) => msg.hours > 0);
+    const timeMessages = messages.filter((msg) => msg.text.startsWith('Añadó una entrada de tiempo de') && msg.hours);
     const hoursMap: { [userId: string]: number } = {};
 
     timeMessages.forEach((msg) => {
@@ -856,13 +900,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
     });
 
     const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
-    const result = Array.from(involvedUsers)
+    return Array.from(involvedUsers)
       .map((userId) => {
         const u = users.find((u) => u.id === userId) || {
           id: userId,
           fullName: 'Desconocido',
           firstName: 'Desconocido',
-          imageUrl: '/default-avatar.png',
+          imageUrl: '/default-image.png',
         };
         const totalMinutes = (hoursMap[userId] || 0) * 60;
         const hours = Math.floor(totalMinutes / 60);
@@ -875,8 +919,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         };
       })
       .filter((u) => hoursMap[u.id]);
-    console.log('Hours by user:', result, 'timeMessages:', timeMessages);
-    return result;
   }, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
 
   // Obtener responsables para el dropdown
@@ -886,7 +928,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         id: userId,
         fullName: 'Desconocido',
         firstName: 'Desconocido',
-        imageUrl: '/default-avatar.png',
+        imageUrl: '/default-image.png',
       };
       return {
         id: userId,
@@ -894,17 +936,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         imageUrl: u.imageUrl,
       };
     });
-    console.log('Responsible users:', pmUsers, 'task.LeadedBy:', task.LeadedBy, 'users:', users);
     return pmUsers.length > 0 ? pmUsers : null;
   }, [task.LeadedBy, users]);
 
   const creator = users.find((u) => u.id === task.CreatedBy) || {
     fullName: 'Desconocido',
     firstName: 'Desconocido',
-    imageUrl: '/default-avatar.png',
+    imageUrl: '/default-image.png',
   };
-
-  console.log('isInvolved:', isInvolved, 'user.id:', user?.id, 'task:', task);
 
   return (
     <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
@@ -929,24 +968,21 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
             {clientName} {'>'} {task.project}
           </div>
           <div
-            className={`${styles.ellipsis} ${isCreator ? styles.clickable : styles.disabled}`}
+            className={`${styles.elipsis} ${isCreator ? styles.clickable : styles.disabled}`}
             onClick={(e) => {
               if (isCreator) {
                 handleClick(e.currentTarget);
                 setIsTaskMenuOpen((prev) => !prev);
                 setHasInteracted(true);
-                console.log('Toggled task menu');
+                console.log('Toggling task menu');
               }
             }}
           >
             <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
           </div>
           {isTaskMenuOpen && isCreator && (
-            <div ref={taskMenuRef} className={styles.taskMenuDropdown}>
-              <div
-                className={styles.taskMenuItem}
-                onClick={handleEditTask}
-              >
+            <div ref={taskMenuRef} className={styles.taskMenu}>
+              <div className={styles.taskMenuItem} onClick={handleEditTask}>
                 Editar Tarea
               </div>
               <div
@@ -975,11 +1011,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
             {isStatusDropdownOpen && isCreator && (
               <div ref={statusDropdownRef} className={styles.statusDropdown}>
                 {statusOptions.map((status) => (
-                  <div
-                    key={status}
-                    className={styles.statusOption}
-                    onClick={() => handleStatusChange(status)}
-                  >
+                  <div key={status} className={styles.statusOption} onClick={() => handleStatusChange(status)}>
                     {status}
                   </div>
                 ))}
@@ -988,14 +1020,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
           </div>
           <div
             className={styles.card}
-            onMouseEnter={() => {
-              console.log('Mouse enter responsible card, isInvolved:', isInvolved);
-              isInvolved && setIsResponsibleDropdownOpen(true);
-            }}
-            onMouseLeave={() => {
-              console.log('Mouse leave responsible card');
-              isInvolved && setIsResponsibleDropdownOpen(false);
-            }}
+            onMouseEnter={() => isInvolved && setIsResponsibleDropdownOpen(true)}
+            onMouseLeave={() => isInvolved && setIsResponsibleDropdownOpen(false)}
           >
             <div className={styles.cardLabel}>Responsable:</div>
             <div className={styles.cardValue}>
@@ -1024,9 +1050,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
                     </div>
                   ))
                 ) : (
-                  <div className={styles.responsibleDropdownItem}>
-                    No hay más responsables en esta tarea
-                  </div>
+                  <div className={styles.responsibleDropdownItem}>No hay más responsables en esta tarea</div>
                 )}
               </div>
             )}
@@ -1039,14 +1063,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
           </div>
           <div
             className={styles.cardFullWidth}
-            onMouseEnter={() => {
-              console.log('Mouse enter hours card, isInvolved:', isInvolved);
-              isInvolved && setIsHoursDropdownOpen(true);
-            }}
-            onMouseLeave={() => {
-              console.log('Mouse leave hours card');
-              isInvolved && setIsHoursDropdownOpen(false);
-            }}
+            onMouseEnter={() => isInvolved && setIsHoursDropdownOpen(true)}
+            onMouseLeave={() => isInvolved && setIsHoursDropdownOpen(false)}
           >
             <div className={styles.cardLabel}>Tiempo registrado:</div>
             <div className={styles.cardValue}>{totalHours}</div>
@@ -1067,9 +1085,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
                     </div>
                   ))
                 ) : (
-                  <div className={styles.hoursDropdownItem}>
-                    Aún no hay tiempo registrado en esta tarea
-                  </div>
+                  <div className={styles.hoursDropdownItem}>Aún no hay tiempo registrado en esta tarea</div>
                 )}
               </div>
             )}
@@ -1077,114 +1093,97 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose, task: initia
         </div>
       </div>
       <div className={styles.chat} ref={chatRef}>
-        {isLoading ? (
-          <div className={styles.loaderWrapper}>
-            <div className={`${styles.loader} ${styles.loader_bubble}`}></div>
-          </div>
-        ) : (
-          <>
-            {messages.map((message) => (
-              <div key={message.id} className={styles.message}>
-                <Image
-                  src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
-                  alt={message.senderName || 'Avatar del remitente'}
-                  width={46}
-                  height={46}
-                  className={styles.avatar}
-                />
-                <div className={styles.messageContent}>
-                  <div className={styles.messageHeader}>
-                    <div className={styles.sender}>{message.senderName}</div>
-                    <div className={styles.messageActions}>
-                      <div className={styles.timestamp}>
-                        {message.timestamp.toDate().toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false,
-                        })}
-                      </div>
-                      {user?.id === message.senderId && !message.text.startsWith('Añadó una entrada de tiempo de') && (
-                        <div className={styles.actionContainer}>
-                          <button
-                            className={styles.actionButton}
+        {messages.map((message) => (
+          <div key={message.id} className={styles.message}>
+            <Image
+              src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-image.png'}
+              alt={message.senderName || 'Avatar del remitente'}
+              width={46}
+              height={46}
+              className={styles.avatar}
+            />
+            <div className={styles.messageContent}>
+              <div className={styles.messageHeader}>
+                <div className={styles.sender}>{message.senderName}</div>
+                <div className={styles.messageActions}>
+                  <div className={styles.timestamp}>
+                    {message.timestamp.toDate().toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                    })}
+                  </div>
+                  {user?.id === message.senderId && !message.text.startsWith('Añadó una entrada de tiempo de') && (
+                    <div className={styles.actionContainer}>
+                      <button
+                        className={styles.actionButton}
+                        onClick={() => {
+                          setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id);
+                          setHasInteracted(true);
+                        }}
+                      >
+                        <Image src="/elipsis.svg" alt="Acciones" width={16} height={16} />
+                      </button>
+                      {actionMenuOpenId === message.id && (
+                        <div ref={actionMenuRef} className={styles.actionDropdown}>
+                          <div
+                            className={styles.actionDropdownItem}
                             onClick={() => {
-                              setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id);
-                              setHasInteracted(true);
+                              setEditingMessageId(message.id);
+                              setEditingText(message.text);
+                              setActionMenuOpenId(null);
                             }}
                           >
-                            <Image src="/elipsis.svg" alt="Acciones" width={16} height={16} />
-                          </button>
-                          {actionMenuOpenId === message.id && (
-                            <div ref={actionMenuRef} className={styles.actionDropdown}>
-                              <div
-                                className={styles.actionDropdownItem}
-                                onClick={(e) => {
-                                  handleClick(e.currentTarget);
-                                  setEditingMessageId(message.id);
-                                  setEditingText(message.text);
-                                  setActionMenuOpenId(null);
-                                }}
-                              >
-                                <Image src="/pencil.svg" alt="Editar" width={18} height={18} />
-                                Editar mensaje
-                              </div>
-                              <div
-                                className={styles.actionDropdownItem}
-                                onClick={(e) => {
-                                  handleClick(e.currentTarget);
-                                  handleDeleteMessage(message.id);
-                                }}
-                              >
-                                <Image src="/trash-2.svg" alt="Eliminar" width={18} height={18} />
-                                Eliminar mensaje
-                              </div>
-                            </div>
-                          )}
+                            Editar mensaje
+                          </div>
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => handleDeleteMessage(message.id)}
+                          >
+                            Eliminar mensaje
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                  {editingMessageId === message.id ? (
-                    <div className={styles.editContainer}>
-                      <input
-                        type="text"
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        className={styles.editInput}
-                      />
-                      <button
-                        className={styles.editSaveButton}
-                        onClick={() => handleEditMessage(message.id)}
-                      >
-                        Guardar
-                      </button>
-                      <button
-                        className={styles.editCancelButton}
-                        onClick={() => {
-                          setEditingMessageId(null);
-                          setEditingText('');
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <div className={styles.text}>{message.text}</div>
                   )}
                 </div>
               </div>
-            ))}
-            {typingUsers.length > 0 && (
-              <div className={styles.typingIndicator}>
-                <div className={styles.typingDots}>
-                  <span></span>
-                  <span></span>
-                  <span></span>
+              {editingMessageId === message.id ? (
+                <div className={styles.editContainer}>
+                  <input
+                    type="text"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className={styles.editInput}
+                  />
+                  <button className={styles.editSaveButton} onClick={() => handleEditMessage(message.id)}>
+                    Guardar
+                  </button>
+                  <button
+                    className={styles.editCancelButton}
+                    onClick={() => {
+                      setEditingMessageId(null);
+                      setEditingText('');
+                    }}
+                  >
+                    Cancelar
+                  </button>
                 </div>
-                <span>{users.find((u) => typingUsers.includes(u.id))?.firstName || 'Alguien'} está escribiendo...</span>
-              </div>
-            )}
-          </>
+              ) : (
+                <div className={styles.text}>{message.text}</div>
+              )}
+            </div>
+          </div>
+        ))}
+        {typingUsers.length > 0 && (
+          <div className={styles.typingIndicator}>
+            <div className={styles.typingDots}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span>{users.find((u) => typingUsers.includes(u.id))?.firstName || 'Alguien'} está escribiendo...</span>
+          </div>
         )}
       </div>
       <div className={styles.inputWrapper}>

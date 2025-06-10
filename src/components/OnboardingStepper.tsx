@@ -207,8 +207,6 @@ const OnboardingStepper = () => {
               <div className={styles.frame24}>
                 <div className={styles.sioUsername}>
                   <div className={styles.username}>¿Cuál es tu rol en el equipo?</div>
-                </div>
-                <div className={styles.inputFrame}>
                   <input
                     type="text"
                     value={role}
@@ -220,8 +218,6 @@ const OnboardingStepper = () => {
                 </div>
                 <div className={styles.sioUsername}>
                   <div className={styles.username}>Descripción breve</div>
-                </div>
-                <div className={styles.inputFrame}>
                   <input
                     type="text"
                     value={description}

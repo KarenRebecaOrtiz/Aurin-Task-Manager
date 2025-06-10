@@ -372,32 +372,32 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'clientId',
         label: 'Cuenta',
-        width: '20%',
-        mobileVisible: true,
+        width: '10%',
+        mobileVisible: false, // Oculta en móviles
       },
       {
         key: 'name',
         label: 'Tarea',
-        width: '40%',
+        width: '50%', // Ajustado para responsividad en móviles
         mobileVisible: true,
       },
       {
         key: 'status',
         label: 'Estado',
-        width: '15%',
-        mobileVisible: false,
+        width: '30%', // Ajustado para responsividad en móviles
+        mobileVisible: true,
       },
       {
         key: 'priority',
         label: 'Prioridad',
-        width: '15%',
-        mobileVisible: false,
+        width: '10%',
+        mobileVisible: false, // Oculta en móviles
       },
       {
         key: 'action',
         label: 'Acciones',
-        width: '5%',
-        mobileVisible: true,
+        width: '10%',
+        mobileVisible: false, // Oculta en móviles
       },
     ];
 
@@ -408,11 +408,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           render: (task: Task) => {
             const client = clients.find((c) => c.id === task.clientId);
             return client ? (
-              <Image
+              <Image style={{borderRadius:"999px"}}
                 src={client.imageUrl || '/empty-image.png'}
                 alt={client.name || 'Client Image'}
-                width={32}
-                height={32}
+                width={40}
+                height={40}
                 className={styles.clientImage}
                 onError={(e) => {
                   e.currentTarget.src = '/empty-image.png';
@@ -520,7 +520,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     setIsStatusDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image className="filterIcon" src="/filter.svg" alt="Status" width={16} height={16} />
+                  <Image className="filterIcon" src="/filter.svg" alt="Status" width="16" height="16" />
                   <span>{statusFilter || 'Estado'}</span>
                 </div>
                 {isStatusDropdownOpen && (
@@ -547,7 +547,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     setIsPriorityDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width={16} height={16} />
+                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width="16" height="16" />
                   <span>{priorityFilter || 'Prioridad'}</span>
                 </div>
                 {isPriorityDropdownOpen && (
@@ -574,7 +574,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     setIsClientDropdownOpen((prev) => !prev);
                   }}
                 >
-                  <Image className="filterIcon" src="/filter.svg" alt="Client" width={17} height={17} />
+                  <Image className="filterIcon" src="/filter.svg" alt="Client" width="17" height="17" />
                   <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                 </div>
                 {isClientDropdownOpen && (

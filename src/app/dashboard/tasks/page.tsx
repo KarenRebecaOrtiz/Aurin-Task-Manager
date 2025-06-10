@@ -1,7 +1,20 @@
 'use client';
+
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, collection, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import {
+  doc,
+  collection,
+  setDoc,
+  deleteDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  where,
+  updateDoc,
+  orderBy,
+} from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import { gsap } from 'gsap';
 import Header from '@/components/ui/Header';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
@@ -13,11 +26,14 @@ import TasksTable from '@/components/TasksTable';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
 import ClientPopup from '@/components/ClientSidebar';
+import InviteSidebar from '@/components/InviteSidebar';
+import MessageSidebar from '@/components/MessageSidebar';
+import ProfileSidebar from '@/components/ProfileSidebar';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
-import memberStyles from '@/components/MembersTable.module.scss';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Client {
   id: string;
@@ -53,6 +69,24 @@ interface Task {
   CreatedBy?: string;
 }
 
+interface Notification {
+  id: string;
+  userId: string;
+  message: string;
+  timestamp: Timestamp;
+  read: boolean;
+  recipientId: string;
+  conversationId?: string;
+  taskId?: string;
+  type?: string;
+}
+
+interface Sidebar {
+  id: string;
+  type: 'message' | 'chat';
+  data: User | Task;
+}
+
 export default function TasksPage() {
   const { user } = useUser();
   const router = useRouter();
@@ -60,11 +94,15 @@ export default function TasksPage() {
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
   const [isEditClientOpen, setIsEditClientOpen] = useState<string | null>(null);
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
-  const [isInviteMemberOpen, setIsInviteMemberOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState<string | null>(null);
+  const [isInviteSidebarOpen, setIsInviteSidebarOpen] = useState(false);
+  const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
-  const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [openSidebars, setOpenSidebars] = useState<Sidebar[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isClientLoading, setIsClientLoading] = useState(false);
   const [clientForm, setClientForm] = useState<{
     id?: string;
     name: string;
@@ -81,19 +119,12 @@ export default function TasksPage() {
     deleteProjectIndex: null,
     deleteConfirm: '',
   });
-  const [inviteEmail, setInviteEmail] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState('');
-  const [clients, setClients] = useState<Client[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isClientLoading, setIsClientLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
   const createEditPopupRef = useRef<HTMLDivElement>(null);
   const deletePopupRef = useRef<HTMLDivElement>(null);
-  const invitePopupRef = useRef<HTMLDivElement>(null);
-  const profilePopupRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const memoizedClients = useMemo(() => clients, [clients]);
@@ -176,13 +207,52 @@ export default function TasksPage() {
     }
   }, [user?.id]);
 
+  const fetchNotifications = useCallback(() => {
+    if (!user?.id) {
+      console.warn('No user ID, skipping notifications fetch');
+      return;
+    }
+  
+    console.log('Setting up notifications listener for user:', user.id);
+    const notificationsQuery = query(
+      collection(db, 'notifications'),
+      where('recipientId', '==', user.id),
+      orderBy('timestamp', 'desc'),
+    );
+    const unsubscribe = onSnapshot(
+      notificationsQuery,
+      (snapshot) => {
+        const notificationsData: Notification[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          userId: doc.data().userId,
+          message: doc.data().message,
+          timestamp: doc.data().timestamp,
+          read: doc.data().read || false,
+          recipientId: doc.data().recipientId,
+          conversationId: doc.data().conversationId,
+          taskId: doc.data().taskId,
+          type: doc.data().type,
+        }));
+        console.log('Notifications fetched:', notificationsData.length);
+        setNotifications(notificationsData);
+      },
+      (err) => {
+        console.error('Error fetching notifications:', err);
+      },
+    );
+  
+    return unsubscribe;
+  }, [user?.id]);
+
   useEffect(() => {
     if (user?.id) {
       fetchUsers();
       fetchClients();
       fetchTasks();
+      const unsubscribe = fetchNotifications();
+      return () => unsubscribe && unsubscribe();
     }
-  }, [fetchUsers, fetchClients, fetchTasks, user?.id]);
+  }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id]);
 
   const handleCreateClientOpen = useCallback(() => {
     setClientForm({
@@ -347,10 +417,61 @@ export default function TasksPage() {
     setIsAISidebarOpen(true);
   }, []);
 
-  const handleChatSidebarOpen = useCallback((task: Task) => {
-    setSelectedTask(task);
-    setIsChatSidebarOpen(true);
+  const handleInviteSidebarOpen = useCallback(() => {
+    setIsInviteSidebarOpen(true);
   }, []);
+
+  const handleChatSidebarOpen = useCallback((task: Task) => {
+    setOpenSidebars((prev) => [
+      ...prev,
+      { id: uuidv4(), type: 'chat', data: task },
+    ]);
+  }, []);
+
+  const handleMessageSidebarOpen = useCallback((user: User) => {
+    if (!user?.id) {
+      console.error('No authenticated user, cannot open message sidebar');
+      return;
+    }
+    setOpenSidebars((prev) => [
+      ...prev,
+      { id: uuidv4(), type: 'message', data: user },
+    ]);
+  }, []);
+
+  const handleOpenSidebar = useCallback(
+    (receiverId: string) => {
+      const selectedUser = users.find((u) => u.id === receiverId);
+      if (selectedUser) {
+        handleMessageSidebarOpen(selectedUser);
+      }
+    },
+    [users, handleMessageSidebarOpen],
+  );
+
+  const handleCloseSidebar = useCallback((sidebarId: string) => {
+    setOpenSidebars((prev) => prev.filter((sidebar) => sidebar.id !== sidebarId));
+  }, []);
+
+  const handleNotificationClick = useCallback(
+    async (notification: Notification) => {
+      try {
+        await updateDoc(doc(db, 'notifications', notification.id), { read: true });
+        if (notification.type === 'private_message' && notification.conversationId) {
+          const receiverId = notification.userId === user?.id ? notification.recipientId : notification.userId;
+          handleOpenSidebar(receiverId);
+        } else if (notification.taskId) {
+          const task = tasks.find((t) => t.id === notification.taskId);
+          if (task) {
+            handleChatSidebarOpen(task);
+          }
+        }
+      } catch (err) {
+        console.error('Error handling notification click:', err);
+      }
+    },
+    [user?.id, tasks, handleOpenSidebar, handleChatSidebarOpen],
+  );
 
   useEffect(() => {
     const currentHeaderRef = headerRef.current;
@@ -395,11 +516,16 @@ export default function TasksPage() {
           onChatSidebarOpen={handleChatSidebarOpen}
           tasks={memoizedTasks}
           users={memoizedUsers}
+          notifications={notifications}
+          onNotificationClick={handleNotificationClick}
         />
       </div>
       <OnboardingStepper />
       <div ref={selectorRef} className={styles.selector}>
-        <Selector selectedContainer={selectedContainer} setSelectedContainer={setSelectedContainer} />
+        <Selector
+          selectedContainer={selectedContainer}
+          setSelectedContainer={setSelectedContainer}
+        />
       </div>
       <div ref={contentRef} className={styles.content}>
         {selectedContainer === 'tareas' && (
@@ -407,7 +533,7 @@ export default function TasksPage() {
             tasks={memoizedTasks}
             clients={memoizedClients}
             onCreateClientOpen={handleCreateClientOpen}
-            onInviteMemberOpen={() => setIsInviteMemberOpen(true)}
+            onInviteMemberOpen={handleInviteSidebarOpen}
             onNewTaskOpen={handleNewTaskOpen}
             onAISidebarOpen={handleAISidebarOpen}
             onChatSidebarOpen={handleChatSidebarOpen}
@@ -426,13 +552,13 @@ export default function TasksPage() {
         {selectedContainer === 'miembros' && (
           <MembersTable
             users={memoizedUsers}
-            onInviteOpen={() => setIsInviteMemberOpen(true)}
-            onProfileOpen={(userId) => setIsProfileOpen(userId)}
+            onInviteSidebarOpen={handleInviteSidebarOpen}
+            onProfileSidebarOpen={setIsProfileSidebarOpen}
+            onMessageSidebarOpen={handleMessageSidebarOpen}
             setUsers={setUsers}
           />
         )}
       </div>
-
       <ClientPopup
         isOpen={isCreateClientOpen || !!isEditClientOpen}
         isEdit={!!isEditClientOpen}
@@ -448,12 +574,11 @@ export default function TasksPage() {
         onClose={handleClientPopupClose}
         isClientLoading={isClientLoading}
       />
-
       {isDeleteClientOpen && (
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={deletePopupRef}>
             <h2>Confirmar Eliminación</h2>
-            <p>Escribe {'Eliminar'} para confirmar:</p>
+            <p>Escribe 'Eliminar' para confirmar:</p>
             <input
               type="text"
               value={deleteConfirm}
@@ -492,101 +617,39 @@ export default function TasksPage() {
           </div>
         </div>
       )}
-
-      {isInviteMemberOpen && (
-        <div className={memberStyles.invitePopupOverlay}>
-          <div className={memberStyles.invitePopup} ref={invitePopupRef}>
-            <h2 className={memberStyles.inviteTitle}>Invita a un nuevo miembro</h2>
-            <p className={memberStyles.inviteSubtitle}>
-              Escribe el correo electrónico de la persona que quieres invitar a esta cuenta.
-            </p>
-            <form
-              style={{ minWidth: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}
-              onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  console.log('Invite email:', inviteEmail);
-                  alert(`Invitación enviada a ${inviteEmail}`);
-                  gsap.to(invitePopupRef.current, {
-                    opacity: 0,
-                    y: 50,
-                    scale: 0.95,
-                    duration: 0.3,
-                    ease: 'power2.in',
-                    onComplete: () => {
-                      setIsInviteMemberOpen(false);
-                      setInviteEmail('');
-                    },
-                  });
-                } catch (error) {
-                  console.error('Error sending invite:', error);
-                  alert('Error al enviar la invitación');
-                }
-              }}
-            >
-              <div className={memberStyles.inviteField}>
-                <label htmlFor="inviteEmail" className={memberStyles.inviteLabel}>
-                  Correo electrónico:
-                </label>
-                <input
-                  id="inviteEmail"
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="mail@example.com"
-                  className={memberStyles.inviteInput}
-                  required
-                  aria-required="true"
-                />
-              </div>
-              <button type="submit" className={memberStyles.inviteSubmitButton}>
-                Enviar Invitación
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  gsap.to(invitePopupRef.current, {
-                    opacity: 0,
-                    y: 50,
-                    scale: 0.95,
-                    duration: 0.3,
-                    ease: 'power2.in',
-                    onComplete: () => setIsInviteMemberOpen(false),
-                  });
-                }}
-                className={memberStyles.cancelButton}
-              >
-                Cancelar
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {isProfileOpen && (
-        <div className={memberStyles.profilePopupOverlay}>
-          <div className={memberStyles.profilePopup} ref={profilePopupRef}>
-            {/* Contenido del perfil */}
-          </div>
-        </div>
-      )}
-
-      <AISidebar isOpen={isAISidebarOpen} onClose={() => setIsAISidebarOpen(false)} />
-
-      {selectedTask && (
-        <ChatSidebar
-          isOpen={isChatSidebarOpen}
-          onClose={() => {
-            setIsChatSidebarOpen(false);
-            setSelectedTask(null);
-          }}
-          task={selectedTask}
-          clientName={clients.find((c) => c.id === selectedTask.clientId)?.name || 'Sin cuenta'}
+      <InviteSidebar isOpen={isInviteSidebarOpen} onClose={() => setIsInviteSidebarOpen(false)} />
+      {isProfileSidebarOpen && (
+        <ProfileSidebar
+          isOpen={!!isProfileSidebarOpen}
+          onClose={() => setIsProfileSidebarOpen(null)}
+          userId={isProfileSidebarOpen}
           users={memoizedUsers}
         />
       )}
-
-      {/* 🌫️ Viñetas superiores e inferiores */}
+      <AISidebar isOpen={isAISidebarOpen} onClose={() => setIsAISidebarOpen(false)} />
+      {openSidebars.map((sidebar) =>
+  sidebar.type === 'message' && user?.id ? ( // Asegúrate de que user.id exista
+    <MessageSidebar
+      key={sidebar.id}
+      sidebarId={sidebar.id}
+      isOpen={true}
+      onClose={() => handleCloseSidebar(sidebar.id)}
+      senderId={user.id} // Usa user.id directamente
+      receiver={sidebar.data as User}
+      onOpenSidebar={handleOpenSidebar}
+    />
+  ) : sidebar.type === 'chat' ? (
+    <ChatSidebar
+      key={sidebar.id}
+      sidebarId={sidebar.id}
+      isOpen={true}
+      onClose={() => handleCloseSidebar(sidebar.id)}
+      task={sidebar.data as Task}
+      clientName={clients.find((c) => c.id === (sidebar.data as Task).clientId)?.name || 'Sin cuenta'}
+      users={memoizedUsers}
+    />
+  ) : null,
+)}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
     </div>

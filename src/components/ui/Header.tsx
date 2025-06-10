@@ -1,4 +1,5 @@
 'use client';
+
 import { useUser, UserButton } from '@clerk/nextjs';
 import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
@@ -6,18 +7,18 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import Image from 'next/image';
-import { collection, onSnapshot, query, orderBy, limit, doc, updateDoc, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Timestamp } from 'firebase/firestore';
 
 interface Notification {
   id: string;
   userId: string;
-  taskId: string;
+  taskId?: string;
   message: string;
   timestamp: Timestamp;
   read: boolean;
   recipientId: string;
+  conversationId?: string;
+  type?: string;
 }
 
 interface HeaderProps {
@@ -51,24 +52,52 @@ interface HeaderProps {
     createdAt: string;
   }[];
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
+  notifications: Notification[];
+  onNotificationClick: (notification: Notification) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, tasks, users }) => {
+const Header: React.FC<HeaderProps> = ({
+  selectedContainer,
+  onChatSidebarOpen,
+  tasks,
+  users,
+  notifications,
+  onNotificationClick,
+}) => {
   const { user } = useUser();
   const userName = user?.firstName || 'Usuario';
+
+  /* ────────────────────────────────────────────
+     REFS
+  ──────────────────────────────────────────── */
   const welcomeRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
-  const notificationsRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevNotificationsRef = useRef<Notification[]>([]);
+
+  /* ────────────────────────────────────────────
+     STATE
+  ──────────────────────────────────────────── */
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [hasViewedNotifications, setHasViewedNotifications] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
-  // Detectar interacción del usuario
+  /* ────────────────────────────────────────────
+     EFFECTS – AUDIO INIT
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    audioRef.current = new Audio('/NotificationSound.mp3');
+    return () => audioRef.current?.pause();
+  }, []);
+
+  /* ────────────────────────────────────────────
+     EFFECTS – USER INTERACTION TRACKING
+  ──────────────────────────────────────────── */
   useEffect(() => {
     const handleInteraction = () => {
       setHasInteracted(true);
@@ -78,16 +107,142 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
     return () => document.removeEventListener('click', handleInteraction);
   }, []);
 
-  // Calcular posición del dropdown
+  /* ────────────────────────────────────────────
+     EFFECTS – WATCH FOR NEW NOTIFICATIONS
+     (PLAYS SOUND ON ARRIVAL)
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    const newUnread = notifications.filter(
+      (n) =>
+        !n.read &&
+        !prevNotificationsRef.current.some((p) => p.id === n.id),
+    );
+
+    if (newUnread.length > 0) {
+      setHasViewedNotifications(false);
+      // Reproduce el sonido sólo al recibir la notificación
+      if (audioRef.current && (hasInteracted || audioRef.current.autoplay !== false)) {
+        audioRef.current.play().catch(() => {});
+      }
+    }
+
+    prevNotificationsRef.current = notifications;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifications]);
+
+  /* ────────────────────────────────────────────
+     EFFECTS – DROPDOWN POSITION
+  ──────────────────────────────────────────── */
   useEffect(() => {
     if (isNotificationsOpen && notificationButtonRef.current) {
       const rect = notificationButtonRef.current.getBoundingClientRect();
       setDropdownPosition({
-        top: rect.bottom + 4, // 4px de separación
+        top: rect.bottom + 4,
         right: window.innerWidth - rect.right,
       });
     }
   }, [isNotificationsOpen]);
+
+  /* ────────────────────────────────────────────
+     EFFECTS – MARK AS VIEWED WHEN OPENED
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (isNotificationsOpen) setHasViewedNotifications(true);
+  }, [isNotificationsOpen]);
+
+  /* ────────────────────────────────────────────
+     EFFECTS – TYPEWRITER WELCOME
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    const el = welcomeRef.current;
+    if (!el) return;
+    const text = `Te damos la bienvenida de nuevo, ${userName}`;
+    el.innerHTML = '';
+    let charIndex = 0;
+    text.split(' ').forEach((word, idx, arr) => {
+      const span = document.createElement('span');
+      span.className = styles.typewriterChar;
+      span.style.opacity = '0';
+      span.textContent = word;
+      el.appendChild(span);
+      if (idx < arr.length - 1) el.appendChild(document.createTextNode(' '));
+      gsap.to(span, {
+        opacity: 1,
+        duration: 0.2,
+        delay: charIndex * 0.1,
+        ease: 'power1.in',
+      });
+      charIndex += word.length + 1;
+    });
+    return () => gsap.killTweensOf(el.querySelectorAll(`.${styles.typewriterChar}`));
+  }, [userName]);
+
+  /* ────────────────────────────────────────────
+     EFFECTS – SUN/MOON ICON ENTRANCE
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (iconRef.current) {
+      gsap.fromTo(
+        iconRef.current,
+        { scale: 0 },
+        { scale: 1, duration: 0.6, ease: 'elastic.out(1,0.6)' },
+      );
+    }
+  }, []);
+
+  /* ────────────────────────────────────────────
+     EFFECTS – DROPDOWN ANIMATION
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (isNotificationsOpen) {
+      setIsNotificationsVisible(true);
+      gsap.fromTo(
+        notificationsRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+    } else if (isNotificationsVisible && notificationsRef.current) {
+      gsap.to(notificationsRef.current, {
+        opacity: 0,
+        y: -10,
+        scale: 0.95,
+        duration: 0.2,
+        ease: 'power2.in',
+        onComplete: () => setIsNotificationsVisible(false),
+      });
+    }
+  }, [isNotificationsOpen, isNotificationsVisible]);
+
+  /* ────────────────────────────────────────────
+     EFFECTS – CLOSE DROPDOWN ON OUTSIDE CLICK / ESC
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(e.target as Node) &&
+        notificationButtonRef.current &&
+        !notificationButtonRef.current.contains(e.target as Node)
+      ) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsNotificationsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
+  /* ────────────────────────────────────────────
+     HELPERS
+  ──────────────────────────────────────────── */
+  const truncateText = (txt: string, max: number) =>
+    txt.length <= max ? txt : `${txt.slice(0, max - 3)}...`;
 
   const getSubtitle = () => {
     switch (selectedContainer) {
@@ -104,293 +259,118 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
     }
   };
 
-  // Typewriter para bienvenida
-  useEffect(() => {
-    const currentWelcomeRef = welcomeRef.current;
-    if (currentWelcomeRef) {
-      const text = `Te damos la bienvenida de nuevo, ${userName}`;
-      currentWelcomeRef.innerHTML = '';
-      text.split('').forEach((char, index) => {
-        const span = document.createElement('span');
-        span.innerHTML = char === ' ' ? ' ' : char;
-        span.style.opacity = '0';
-        span.className = styles.typewriterChar;
-        currentWelcomeRef.appendChild(span);
-        gsap.to(span, {
-          opacity: 1,
-          duration: 0.05,
-          delay: index * 0.05,
-          ease: 'power1.in',
-        });
-      });
-    }
-
-    return () => {
-      if (currentWelcomeRef) {
-        gsap.killTweensOf(currentWelcomeRef.querySelectorAll(`.${styles.typewriterChar}`));
-      }
-    };
-  }, [userName]);
-
-  // Animación GSAP del ícono
-  useEffect(() => {
-    if (iconRef.current) {
-      gsap.fromTo(
-        iconRef.current,
-        { scale: 0, rotate: 0 },
-        {
-          scale: 1,
-          rotate: 0,
-          duration: 0.6,
-          ease: 'elastic.out(1, 0.6)',
-        }
-      );
-    }
-  }, []);
-
-  // Escuchar notificaciones en tiempo real
-  useEffect(() => {
-    if (!user?.id) return;
-
-    console.log('Setting up notifications listener for user:', user.id);
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      where('recipientId', '==', user.id),
-      orderBy('timestamp', 'desc'),
-      limit(10)
-    );
-    const unsubscribe = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const newNotifications: Notification[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          userId: doc.data().userId || '',
-          taskId: doc.data().taskId || '',
-          message: doc.data().message || '',
-          timestamp: doc.data().timestamp || Timestamp.now(),
-          read: doc.data().read || false,
-          recipientId: doc.data().recipientId || '',
-        }));
-
-        const newUnread = newNotifications.filter(
-          (notif) =>
-            !notif.read &&
-            !prevNotificationsRef.current.some((prev) => prev.id === notif.id)
-        );
-        console.log('New unread notifications:', newUnread.length, 'IDs:', newUnread.map(n => n.id));
-        if (!audioRef.current) {
-          audioRef.current = new Audio('/NotificationSound.mp3');
-          console.log('Initialized audioRef in Header');
-        }
-        if (hasInteracted && newUnread.length > 0) {
-          console.log('Playing sound for new unread notifications:', newUnread.map(n => n.id));
-          audioRef.current.play().catch((error) => {
-            console.error('Error playing notification sound:', error.message);
-          });
-        } else {
-          console.log('No sound played for notifications', { newUnread: newUnread.length, hasInteracted });
-        }
-
-        setNotifications(newNotifications);
-        prevNotificationsRef.current = newNotifications;
-      },
-      (error) => {
-        console.error('Error listening to notifications:', error.message, error.code);
-      }
-    );
-
-    return () => {
-      console.log('Unsubscribing notifications listener for user:', user.id);
-      unsubscribe();
-    };
-  }, [user?.id, hasInteracted]);
-
-  // Marcar notificaciones como leídas al abrir el dropdown
-  useEffect(() => {
-    if (isNotificationsOpen && user?.id) {
-      console.log('Notifications dropdown opened, marking unread as read');
-      const unreadNotifications = notifications.filter((notif) => !notif.read);
-      console.log('Unread notifications:', unreadNotifications.length, 'IDs:', unreadNotifications.map(n => n.id));
-      unreadNotifications.forEach(async (notif) => {
-        try {
-          console.log('Marking notification as read:', notif.id);
-          await updateDoc(doc(db, 'notifications', notif.id), {
-            read: true,
-          });
-          console.log('Notification marked as read:', notif.id);
-        } catch (error) {
-          console.error('Error marking notification as read:', error.message, error.code);
-        }
-      });
-    }
-  }, [isNotificationsOpen, notifications, user?.id]);
-
-  // GSAP animation for notifications dropdown
-  useEffect(() => {
-    if (isNotificationsOpen && notificationsRef.current) {
-      gsap.fromTo(
-        notificationsRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
-      );
-      console.log('Notifications dropdown animated');
-    }
-  }, [isNotificationsOpen]);
-
-  // Close notifications dropdown on outside click or Escape
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        notificationsRef.current &&
-        !notificationsRef.current.contains(event.target as Node) &&
-        notificationButtonRef.current &&
-        !notificationButtonRef.current.contains(event.target as Node)
-      ) {
-        setIsNotificationsOpen(false);
-        console.log('Closed notifications dropdown via outside click');
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isNotificationsOpen) {
-        setIsNotificationsOpen(false);
-        console.log('Closed notifications dropdown via Escape key');
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isNotificationsOpen]);
-
-  const handleNotificationClick = async (notification: Notification) => {
+  /* ────────────────────────────────────────────
+     NOTIFICATION BUTTON HANDLERS
+  ──────────────────────────────────────────── */
+  const toggleNotifications = () => {
+    setIsNotificationsOpen((prev) => !prev);
     setHasInteracted(true);
-    if (!notification.read) {
-      try {
-        console.log('Clicking notification, marking as read:', notification.id);
-        await updateDoc(doc(db, 'notifications', notification.id), {
-          read: true,
-        });
-        console.log('Notification marked as read on click:', notification.id);
-      } catch (error) {
-        console.error('Error marking notification as read on click:', error.message, error.code);
-      }
-    }
-
-    const task = tasks.find((t) => t.id === notification.taskId);
-    if (task) {
-      console.log('Opening ChatSidebar for task:', task.id);
-      onChatSidebarOpen(task);
-    } else {
-      console.warn(`Task with ID ${notification.taskId} not found in tasks array`);
-    }
-    setIsNotificationsOpen(false);
   };
 
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength - 3) + '...';
-  };
+  const hasUnread = notifications.some((n) => !n.read);
+  const iconSrc =
+    hasUnread && !hasViewedNotifications ? '/NewNotification.svg' : '/EmptyNotification.svg';
 
-  // Componente para el dropdown (renderizado en un portal)
-  const NotificationDropdown = () => {
-    if (!isNotificationsOpen) return null;
+  /* ────────────────────────────────────────────
+     DROPDOWN COMPONENT
+  ──────────────────────────────────────────── */
+  const NotificationDropdown = () =>
+    isNotificationsVisible
+      ? createPortal(
+          <div
+            ref={(el) => {
+              notificationsRef.current = el;
+            }}
+            className={styles.notificationDropdown}
+            style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
+            onMouseEnter={() => setIsNotificationsOpen(true)}
+            onMouseLeave={() => {
+              setTimeout(() => {
+                if (!notificationButtonRef.current?.matches(':hover')) {
+                  setIsNotificationsOpen(false);
+                }
+              }, 100);
+            }}
+          >
+            {notifications.length === 0 ? (
+              <div className={styles.notificationItem}>No hay notificaciones</div>
+            ) : (
+              notifications.slice(0, 20).map((n) => {
+                const sender = users.find((u) => u.id === n.userId);
+                return (
+                  <div
+                    key={n.id}
+                    className={`${styles.notificationItem} ${n.read ? styles.read : ''}`}
+                    onClick={() => {
+                      onNotificationClick(n);
+                      setIsNotificationsOpen(false);
+                    }}
+                  >
+                    <Image
+                      src={sender?.imageUrl || '/default-avatar.png'}
+                      alt={sender?.firstName || 'Usuario'}
+                      width={24}
+                      height={24}
+                      className={styles.notificationAvatar}
+                    />
+                    <span>{truncateText(n.message, 50)}</span>
+                    <span className={styles.notificationTimestamp}>
+                      {n.timestamp.toDate().toLocaleString('es-ES', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>,
+          document.body,
+        )
+      : null;
 
-    return createPortal(
-      <div
-        ref={notificationsRef}
-        className={styles.notificationDropdown}
-        style={{
-          top: `${dropdownPosition.top}px`,
-          right: `${dropdownPosition.right}px`,
-        }}
-      >
-        {notifications.length === 0 ? (
-          <div className={styles.notificationItem}>No hay notificaciones</div>
-        ) : (
-          notifications.map((notification) => {
-            const sender = users.find((u) => u.id === notification.userId);
-            return (
-              <div
-                key={notification.id}
-                className={styles.notificationItem}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <Image
-                  src={sender?.imageUrl || '/default-avatar.png'}
-                  alt={sender?.firstName || 'Usuario'}
-                  width={24}
-                  height={24}
-                  className={styles.notificationAvatar}
-                />
-                <span>{truncateText(notification.message, 50)}</span>
-                <span className={styles.notificationTimestamp}>
-                  {notification.timestamp.toDate().toLocaleString('es-ES', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false,
-                  })}
-                </span>
-              </div>
-            );
-          })
-        )}
-      </div>,
-      document.body
-    );
-  };
-
+  /* ────────────────────────────────────────────
+     RENDER
+  ──────────────────────────────────────────── */
   return (
     <div ref={wrapperRef} data-layer="Wrapper" className={styles.wrapper}>
+      {/* LEFT: Avatar + Welcome */}
       <div className={styles.lefContainer}>
-        <Image
-          src="/HomeGif.gif"
-          alt="Welcome GIF"
-          width={200}
-          height={200}
-          className={styles.welcomeGif}
+        <UserButton
+          appearance={{
+            elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
+          }}
         />
         <div data-layer="Frame 14" className={styles.frame14}>
           <div data-layer="Title" className={styles.title}>
-            <div
-              data-layer="Te damos la bienvenida de nuevo"
-              ref={welcomeRef}
-              className={styles.welcome}
-            />
+            <div ref={welcomeRef} className={styles.welcome} />
           </div>
           <div data-layer="Text" className={styles.text}>
-            <div data-layer="Subtitle" className={styles.subtitle}>
-              {getSubtitle()}
-            </div>
+            <div className={styles.subtitle}>{getSubtitle()}</div>
           </div>
         </div>
       </div>
+
+      {/* RIGHT: Notifications + Theme */}
       <div data-layer="Frame 2147225819" className={styles.frame2147225819}>
         <div className={styles.notificationContainer}>
           <button
             ref={notificationButtonRef}
             className={styles.notificationButton}
-            onClick={() => {
-              setIsNotificationsOpen((prev) => !prev);
-              setHasInteracted(true);
-              console.log('Toggled notifications dropdown, isOpen:', !isNotificationsOpen);
-            }}
+            onClick={toggleNotifications}
             onMouseEnter={() => {
               setIsNotificationsOpen(true);
+              setHasViewedNotifications(true);
               setHasInteracted(true);
-              console.log('Opened notifications dropdown via hover');
             }}
             onMouseLeave={() => {
               setTimeout(() => {
                 if (!notificationsRef.current?.matches(':hover')) {
                   setIsNotificationsOpen(false);
-                  console.log('Closed notifications dropdown via mouse leave');
                 }
               }, 100);
             }}
@@ -398,28 +378,14 @@ const Header: React.FC<HeaderProps> = ({ selectedContainer, onChatSidebarOpen, t
             aria-expanded={isNotificationsOpen}
             aria-controls="notification-dropdown"
           >
-            <Image
-              src={notifications.some((n) => !n.read) ? '/NewNotification.svg' : '/EmptyNotification.svg'}
-              alt="Notifications"
-              width={24}
-              height={24}
-            />
+            <Image src={iconSrc} alt="Notifications" width={24} height={24} />
           </button>
           <NotificationDropdown />
         </div>
+
         <div ref={iconRef} className={styles.sunMoonWrapper}>
           <ThemeToggler />
         </div>
-        <UserButton
-          appearance={{
-            elements: {
-              userButtonAvatarBox: {
-                width: '60px',
-                height: '60px',
-              },
-            },
-          }}
-        />
       </div>
     </div>
   );
