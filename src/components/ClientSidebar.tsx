@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './ClientSidebar.module.scss';
@@ -8,7 +9,7 @@ import { memo } from 'react';
 interface ClientSidebarProps {
   isOpen: boolean;
   isEdit: boolean;
-  clientForm: {
+  initialForm?: {
     id?: string;
     name: string;
     imageFile: File | null;
@@ -17,53 +18,33 @@ interface ClientSidebarProps {
     deleteProjectIndex: number | null;
     deleteConfirm: string;
   };
-  setClientForm: React.Dispatch<
-    React.SetStateAction<{
-      id?: string;
-      name: string;
-      imageFile: File | null;
-      imagePreview: string;
-      projects: string[];
-      deleteProjectIndex: number | null;
-      deleteConfirm: string;
-    }>
-  >;
-  fileInputRef: React.RefObject<HTMLInputElement>;
-  handleImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleProjectChange: (index: number, value: string) => void;
-  handleAddProject: () => void;
-  handleDeleteProjectClick: (index: number) => void;
-  handleDeleteProjectConfirm: () => void;
-  handleClientSubmit: (e: React.FormEvent, clientId?: string) => Promise<void>;
+  onFormSubmit: (form: {
+    id?: string;
+    name: string;
+    imageFile: File | null;
+    imagePreview: string;
+    projects: string[];
+  }) => Promise<void>;
   onClose: () => void;
   isClientLoading: boolean;
 }
 
 const ClientSidebar: React.FC<ClientSidebarProps> = memo(
-  ({
-    isOpen,
-    isEdit,
-    clientForm,
-    setClientForm,
-    fileInputRef,
-    handleImageChange,
-    handleProjectChange,
-    handleAddProject,
-    handleDeleteProjectClick,
-    handleDeleteProjectConfirm,
-    handleClientSubmit,
-    onClose,
-    isClientLoading,
-  }) => {
+  ({ isOpen, isEdit, initialForm, onFormSubmit, onClose, isClientLoading }) => {
     const sidebarRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [form, setForm] = useState({
+      id: initialForm?.id,
+      name: initialForm?.name || '',
+      imageFile: initialForm?.imageFile || null,
+      imagePreview: initialForm?.imagePreview || '/default-avatar.png',
+      projects: initialForm?.projects || [''],
+      deleteProjectIndex: initialForm?.deleteProjectIndex || null,
+      deleteConfirm: initialForm?.deleteConfirm || '',
+    });
 
-    // Log para rastrear renderizados
-    useEffect(() => {
-      console.log('ClientSidebar rendered', { isOpen, imagePreview: clientForm.imagePreview });
-    }, [isOpen, clientForm.imagePreview]);
-
-    // Animación de entrada/salida como ChatSidebar
+    // Animation effect
     useEffect(() => {
       if (sidebarRef.current) {
         if (isOpen) {
@@ -79,7 +60,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
               onComplete: () => setIsLoading(false),
             },
           );
-          console.log('ClientSidebar opened');
         } else {
           gsap.to(sidebarRef.current, {
             x: '100%',
@@ -88,7 +68,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
             ease: 'power2.in',
             onComplete: onClose,
           });
-          console.log('ClientSidebar closed');
         }
       }
       return () => {
@@ -98,7 +77,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
       };
     }, [isOpen, onClose]);
 
-    // Cierre por clic fuera
+    // Click outside to close
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -114,13 +93,82 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
             ease: 'power2.in',
             onComplete: onClose,
           });
-          console.log('Closed ClientSidebar via outside click');
         }
       };
 
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isOpen, isClientLoading, onClose]);
+
+    // Reset form when initialForm changes
+    useEffect(() => {
+      if (initialForm) {
+        setForm({
+          id: initialForm.id,
+          name: initialForm.name || '',
+          imageFile: initialForm.imageFile || null,
+          imagePreview: initialForm.imagePreview || '/default-avatar.png',
+          projects: initialForm.projects || [''],
+          deleteProjectIndex: initialForm.deleteProjectIndex || null,
+          deleteConfirm: initialForm.deleteConfirm || '',
+        });
+      }
+    }, [initialForm]);
+
+    const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setForm((prev) => ({ ...prev, imageFile: file }));
+        const reader = new FileReader();
+        reader.onload = () => setForm((prev) => ({ ...prev, imagePreview: reader.result as string }));
+        reader.readAsDataURL(file);
+      }
+    }, []);
+
+    const handleProjectChange = useCallback((index: number, value: string) => {
+      setForm((prev) => {
+        const newProjects = [...prev.projects];
+        newProjects[index] = value;
+        return { ...prev, projects: newProjects };
+      });
+    }, []);
+
+    const handleAddProject = useCallback(() => {
+      setForm((prev) => ({ ...prev, projects: [...prev.projects, ''] }));
+    }, []);
+
+    const handleDeleteProjectClick = useCallback((index: number) => {
+      setForm((prev) => ({ ...prev, deleteProjectIndex: index }));
+    }, []);
+
+    const handleDeleteProjectConfirm = useCallback(() => {
+      if (form.deleteConfirm.toLowerCase() === 'eliminar') {
+        setForm((prev) => ({
+          ...prev,
+          projects: prev.projects.filter((_, i) => i !== prev.deleteProjectIndex),
+          deleteProjectIndex: null,
+          deleteConfirm: '',
+        }));
+      }
+    }, [form.deleteConfirm]);
+
+    const handleSubmit = useCallback(
+      async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!form.name.trim()) {
+          alert('El nombre de la cuenta es obligatorio.');
+          return;
+        }
+        await onFormSubmit({
+          id: form.id,
+          name: form.name,
+          imageFile: form.imageFile,
+          imagePreview: form.imagePreview,
+          projects: form.projects.filter((p) => p.trim()),
+        });
+      },
+      [form, onFormSubmit],
+    );
 
     if (!isOpen) return null;
 
@@ -156,10 +204,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
               Elige un nombre claro para reconocer esta cuenta fácilmente.{' '}
               <strong>Sólo tú puedes editar o eliminar esta cuenta.</strong>
             </p>
-            <form
-              onSubmit={(e) => handleClientSubmit(e, isEdit ? clientForm.id : undefined)}
-              className={styles.form}
-            >
+            <form onSubmit={handleSubmit} className={styles.form}>
               <div className={styles.field}>
                 <label className={styles.label}>Imagen de Cuenta</label>
                 <div
@@ -167,17 +212,15 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                   onClick={() => fileInputRef.current?.click()}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) =>
-                    e.key === 'Enter' && fileInputRef.current?.click()
-                  }
+                  onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
                 >
                   <Image
-                    src={clientForm.imagePreview || '/empty-image.png'}
+                    src={form.imagePreview || '/empty-image.png'}
                     alt="Avatar del cliente"
                     width={109}
                     height={109}
                     className={styles.previewImage}
-                    onError={() => console.warn('Image load failed:', clientForm.imagePreview)}
+                    onError={() => console.warn('Image load failed:', form.imagePreview)}
                   />
                   <input
                     type="file"
@@ -200,10 +243,8 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                 <input
                   id="clientName"
                   type="text"
-                  value={clientForm.name}
-                  onChange={(e) =>
-                    setClientForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
+                  value={form.name}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="Ej. Coca-Cola, Agencia Delta, Clínica Sol"
                   className={styles.input}
                   required
@@ -215,12 +256,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                 <label className={styles.label}>Proyectos</label>
                 <p className={styles.fieldDescription}>
                   Organiza las tareas de este cliente creando proyectos a tu medida.{' '}
-                  <strong>
-                    Puedes añadir nuevos proyectos en cualquier momento desde el menú
-                    “Acciones” de la cuenta.
-                  </strong>
+                  <strong>Puedes añadir nuevos proyectos en cualquier momento desde el menú “Acciones” de la cuenta.</strong>
                 </p>
-                {clientForm.projects.map((project, index) => (
+                {form.projects.map((project, index) => (
                   <div key={index} className={styles.projectField}>
                     <div className={styles.projectInputWrapper}>
                       <input
@@ -250,7 +288,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                         />
                       </button>
                     </div>
-                    {clientForm.deleteProjectIndex === index && (
+                    {form.deleteProjectIndex === index && (
                       <div className={styles.deleteConfirm}>
                         <div className={styles.deleteConfirmHeader}>
                           <Image
@@ -259,7 +297,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                             width={12}
                             height={13.33}
                             onError={(e) => {
-                              e.currentTarget.src = '/fallback-trash.svg';
+                              e.currentTarget.src = '/fallback-trash';
                             }}
                           />
                           <h3>
@@ -281,9 +319,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                         <input
                           type="text"
                           placeholder="Escribe ‘Eliminar’ para confirmar esta acción"
-                          value={clientForm.deleteConfirm}
+                          value={form.deleteConfirm}
                           onChange={(e) =>
-                            setClientForm((prev) => ({
+                            setForm((prev) => ({
                               ...prev,
                               deleteConfirm: e.target.value,
                             }))
@@ -294,11 +332,8 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                         />
                         <button
                           type="button"
-                          onClick={() => handleDeleteProjectConfirm()}
-                          disabled={
-                            clientForm.deleteConfirm.toLowerCase() !== 'eliminar' ||
-                            isClientLoading
-                          }
+                          onClick={handleDeleteProjectConfirm}
+                          disabled={form.deleteConfirm.toLowerCase() !== 'eliminar' || isClientLoading}
                           className={styles.deleteConfirmButton}
                         >
                           Sí, eliminar todo

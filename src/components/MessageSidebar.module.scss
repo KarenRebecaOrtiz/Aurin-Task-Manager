@@ -467,3 +467,13 @@ $primary: #845ef7;
     background-color: #f0f0f0;
   }
 }
+
+.fileName {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #b197fc;
+    font: 400 12px 'Inter Tight';
+    margin-top: 4px;
+    text-decoration: none;
+  }

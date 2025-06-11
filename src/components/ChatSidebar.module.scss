@@ -219,7 +219,7 @@
 
 .actionDropdown {
   position: absolute;
-  top: 100%;
+  top: -20px;
   right: 0;
   font-family: "Inter Tight", sans-serif;
   background: #1f1f20;
@@ -879,4 +879,139 @@
   100% {
     transform: translate3d(0, 0, 0) rotate(360deg);
   }
+}
+
+
+/* Image and file */
+.image {
+  max-width: 200px;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+
+.imageWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  text-decoration: none;
+  margin-top: 5px;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.fileName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  font: 400 12px 'Inter Tight';
+  margin-top: 4px;
+  text-decoration: none;
+}
+
+.downloadButton {
+  background: none;
+  filter: invert(100) brightness(100);
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 8px;
+}
+
+/* Image button */
+.imageButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  filter: invert(100%) brightness(100%);
+  transition: background 0.3s ease-in-out, transform 0.3s ease-in-out;
+  &:hover {
+    background: #d4d4d4;
+    transform: translateY(-2px);
+  }
+}
+
+.fileActionsRow {
+  display: flex;
+  align-items: row;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.iconInvert {
+  filter: invert(100%) brightness(100%);
+}
+
+/* Image and file preview */
+.imagePreview,
+.filePreview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  padding: 5px;
+  background: #1f1f20;
+  border-radius: 4px;
+  margin-bottom: 5px;
+}
+
+.previewImage {
+  border-radius: 4px;
+}
+
+.removeImageButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Image preview overlay */
+.imagePreviewOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 4000;
+}
+
+.imagePreviewContainer {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+}
+
+.closeButton {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  &:hover {
+    color:  white;
+  }
+}
+
+/* Empty state */
+.noMessages {
+  text-align: center;
+  color: white;
+  padding: 10px;
+  font: 14px 'Inter Tight';
 }

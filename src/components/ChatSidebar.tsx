@@ -15,8 +15,11 @@ import {
   getDocs,
   where,
   setDoc,
+  serverTimestamp,
+  Timestamp,
+  FieldValue,
+  getDoc,
 } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
 import DatePicker from 'react-datepicker';
@@ -24,6 +27,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import TimePicker from 'react-time-picker';
 import 'react-time-picker/dist/TimePicker.css';
 import { db } from '@/lib/firebase';
+import ImagePreviewOverlay from './ImagePreviewOverlay';
 import styles from './ChatSidebar.module.scss';
 
 interface Message {
@@ -31,9 +35,14 @@ interface Message {
   senderId: string;
   senderName: string;
   text: string;
-  timestamp: Timestamp;
+  timestamp: Timestamp | FieldValue;
   read: boolean;
   hours?: number;
+  imageUrl?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  filePath?: string | null;
 }
 
 interface TypingStatus {
@@ -79,6 +88,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   users = [],
   sidebarId,
 }) => {
+
   const { user } = useUser();
   const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -103,6 +113,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isHoursDropdownOpen, setIsHoursDropdownOpen] = useState(false);
   const [isResponsibleDropdownOpen, setIsResponsibleDropdownOpen] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const chatRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -114,8 +129,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const hoursDropdownRef = useRef<HTMLDivElement>(null);
   const responsibleDropdownRef = useRef<HTMLDivElement>(null);
   const datePickerWrapperRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputWrapperRef = useRef<HTMLFormElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
   const isCreator = user?.id === task.CreatedBy;
   const isInvolved =
@@ -385,12 +404,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           timestamp: doc.data().timestamp,
           read: doc.data().read || false,
           hours: doc.data().hours || 0,
+          imageUrl: doc.data().imageUrl || null,
+          fileUrl: doc.data().fileUrl || null,
+          fileName: doc.data().fileName || null,
+          fileType: doc.data().fileType || null,
+          filePath: doc.data().filePath || null,
         }));
         console.log('Received messages:', newMessages.length, 'IDs:', newMessages.map((m) => m.id));
         setMessages(newMessages);
+        setIsLoading(false);
       },
       (error) => {
         console.error('Error listening to messages:', error.message, error.code);
+        setIsLoading(false);
       },
     );
 
@@ -471,18 +497,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, [messages, user?.id, hasInteracted]);
 
+  // Scroll handling for closing action menu
   useEffect(() => {
     const handleScroll = () => {
       setActionMenuOpenId(null);
       console.log('Closed action menu on scroll');
     };
-  
+
     const chatEl = chatRef.current;
     if (chatEl) {
       chatEl.addEventListener('scroll', handleScroll);
     }
     window.addEventListener('scroll', handleScroll);
-  
+
     return () => {
       if (chatEl) {
         chatEl.removeEventListener('scroll', handleScroll);
@@ -500,6 +527,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       }, 0);
     }
   }, [messages, typingUsers]);
+
+  // Clean up preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        console.log('Revoked preview URL');
+      }
+    };
+  }, [previewUrl]);
 
   // GSAP animations
   useEffect(() => {
@@ -637,7 +674,38 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const messagesQuery = query(collection(db, `tasks/${task.id}/messages`));
       const messagesSnapshot = await getDocs(messagesQuery);
       await Promise.all(
-        messagesSnapshot.docs.map((msgDoc) => deleteDoc(doc(db, `tasks/${task.id}/messages`, msgDoc.id))),
+        messagesSnapshot.docs.map(async (msgDoc) => {
+          const msgData = msgDoc.data();
+          if (msgData.filePath) {
+            try {
+              console.log('Attempting to delete GCS file for message:', msgDoc.id, msgData.filePath);
+              const response = await fetch('/api/delete-file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filePath: msgData.filePath }),
+              });
+              const responseData = await response.json();
+              if (!response.ok) {
+                console.error('Failed to delete GCS file:', {
+                  status: response.status,
+                  error: responseData.error,
+                  details: responseData.details,
+                  filePath: msgData.filePath,
+                });
+              } else {
+                console.log('Successfully deleted GCS file:', msgData.filePath);
+              }
+            } catch (err: any) {
+              console.error('Error deleting GCS file:', {
+                message: err.message || 'Unknown error',
+                code: err.code || 'unknown',
+                stack: err.stack || 'No stack trace',
+                filePath: msgData.filePath,
+              });
+            }
+          }
+          await deleteDoc(doc(db, `tasks/${task.id}/messages`, msgDoc.id));
+        }),
       );
       console.log('Deleted messages for task:', task.id);
 
@@ -694,36 +762,124 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    if (!user?.id || !newMessage.trim()) {
-      console.error('Invalid message input:', { userId: user?.id, newMessage });
+  const selectFile = (f: File) => {
+    if (f.size > MAX_FILE_SIZE) {
+      alert('El archivo supera los 10 MB.');
+      console.log('File too large:', f.size);
       return;
     }
-  
+    setFile(f);
+    setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
+    console.log('File selected:', f.name, f.type, f.size);
+  };
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f && !f.name.includes('/paperclip.svg')) {
+      selectFile(f);
+    }
+    if (e.target) e.target.value = '';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f && !f.name.includes('/paperclip.svg')) {
+      selectFile(f);
+    }
+    console.log('File dropped:', f?.name);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleRemoveFile = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    console.log('Removed selected file');
+  };
+
+  const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    if (!user?.id || (!newMessage.trim() && !file)) {
+      console.error('Invalid message input:', { userId: user?.id, newMessage, file });
+      return;
+    }
+
     try {
       console.log('Starting message send for task:', task.id);
-  
-      // Guardar mensaje
-      try {
-        await addDoc(collection(db, `tasks/${task.id}/messages`), {
-          senderId: user.id,
-          senderName: user.firstName || 'Usuario',
-          text: newMessage.trim(),
-          timestamp: Timestamp.now(),
-          read: false,
-        });
-        console.log('Message saved for task:', task.id);
-      } catch (err) {
-        console.error('Failed to save message:', err);
+
+      const messageData: Partial<Message> = {
+        senderId: user.id,
+        senderName: user.firstName || 'Usuario',
+        text: newMessage.trim() || null,
+        timestamp: serverTimestamp(),
+        read: false,
+        imageUrl: null,
+        fileUrl: null,
+        fileName: null,
+        fileType: null,
+        filePath: null,
+      };
+
+      if (file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('conversationId', task.id);
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to upload file');
+          }
+
+          const { url, fileName, fileType, filePath } = await response.json();
+          console.log('File uploaded via API:', { url, fileName, fileType, filePath });
+
+          messageData.fileName = fileName;
+          messageData.fileType = fileType;
+          messageData.filePath = filePath;
+
+          if (file.type.startsWith('image/')) {
+            messageData.imageUrl = url;
+          } else {
+            messageData.fileUrl = url;
+          }
+        } catch (err: any) {
+          console.error('Failed to upload file:', {
+            message: err.message || 'Unknown error',
+            code: err.code || 'unknown',
+            stack: err.stack || 'No stack trace',
+            taskId: task.id,
+            fileName: file.name,
+          });
+          alert('Error al subir el archivo');
+          return;
+        }
       }
-  
+
+      if (newMessage.trim()) {
+        messageData.text = newMessage.trim();
+      }
+
+      // Guardar mensaje
+      await addDoc(collection(db, `tasks/${task.id}/messages`), messageData);
+      console.log('Message saved for task:', task.id);
+
       // Crear notificaciones
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
       recipients.delete(user.id);
       console.log('Notification recipients:', Array.from(recipients));
-  
+
       for (const recipientId of Array.from(recipients)) {
         try {
           await addDoc(collection(db, 'notifications'), {
@@ -739,12 +895,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           console.error('Failed to create notification for recipient:', recipientId, err);
         }
       }
-  
+
       setNewMessage('');
+      setFile(null);
+      setPreviewUrl(null);
       setHasInteracted(true);
       console.log('Message sent and notifications attempted');
     } catch (err) {
       console.error('Send message error:', err);
+      alert('Error al enviar el mensaje');
     }
   };
 
@@ -770,7 +929,40 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
     try {
       console.log('Deleting message:', messageId);
-      await deleteDoc(doc(db, `tasks/${task.id}/messages`, messageId));
+      const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
+      const messageDoc = await getDoc(messageRef);
+      if (messageDoc.exists()) {
+        const messageData = messageDoc.data();
+        if (messageData.filePath) {
+          try {
+            console.log('Attempting to delete GCS file:', messageData.filePath);
+            const response = await fetch('/api/delete-file', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filePath: messageData.filePath }),
+            });
+            const responseData = await response.json();
+            if (!response.ok) {
+              console.error('Failed to delete GCS file:', {
+                status: response.status,
+                error: responseData.error,
+                details: responseData.details,
+                filePath: messageData.filePath,
+              });
+            } else {
+              console.log('Successfully deleted GCS file:', messageData.filePath);
+            }
+          } catch (err: any) {
+            console.error('Error deleting GCS file:', {
+              message: err.message || 'Unknown error',
+              code: err.code || 'unknown',
+              stack: err.stack || 'No stack trace',
+              filePath: messageData.filePath,
+            });
+          }
+        }
+      }
+      await deleteDoc(messageRef);
       setActionMenuOpenId(null);
       console.log('Message deleted:', messageId);
     } catch (error) {
@@ -800,7 +992,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
           senderName: user.firstName || 'Usuario',
-          text: `Añadió una entrada de tiempo de ${timeEntry}`,
+          text: `Añadó una entrada de tiempo de ${timeEntry}`,
           timestamp,
           read: false,
           hours,
@@ -839,47 +1031,69 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   const handleAddTimeEntry = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('No user ID available');
+      alert('No se puede añadir la entrada de tiempo: usuario no autenticado.');
+      return;
+    }
 
     const [hours, minutes] = timerInput.split(':').map(Number);
-    if (isNaN(hours) || isNaN(minutes)) return;
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.error('Invalid time input:', timerInput);
+      alert('Por favor, introduce un formato de tiempo válido (HH:mm).');
+      return;
+    }
 
     const totalHours = hours + minutes / 60;
     const timeEntry = `${hours}h ${minutes}m`;
     const date = dateInput.toLocaleDateString('es-ES');
-    const timestamp = Timestamp.now();
 
     try {
-      console.log('Adding manual time entry:', timeEntry, date, 'hours:', totalHours);
+      console.log('Adding manual time entry:', { timeEntry, date, totalHours, taskId: task.id });
+      const timestamp = Timestamp.now();
+
+      // Add time entry message
       await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: user.id,
         senderName: user.firstName || 'Usuario',
-        text: `Añadió una entrada de tiempo de ${timeEntry} el ${date}`,
+        text: `Añadó una entrada de tiempo de ${timeEntry} el ${date}`,
         timestamp,
         read: false,
         hours: totalHours,
       });
+      console.log('Time entry message added successfully');
 
+      // Add comment message if provided
       if (commentInput.trim()) {
         console.log('Adding comment:', commentInput);
+        // Use a new timestamp with a slight delay to ensure ordering
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
           senderName: user.firstName || 'Usuario',
           text: commentInput.trim(),
-          timestamp: new Timestamp(timestamp.seconds, timestamp.nanoseconds + 1000),
+          timestamp: Timestamp.fromMillis(timestamp.toMillis() + 1),
           read: false,
         });
+        console.log('Comment message added successfully');
       }
 
+      // Reset form state
       setTimerInput('00:00');
       setDateInput(new Date());
       setCommentInput('');
       setIsTimerPanelOpen(false);
       setIsCalendarOpen(false);
       setHasInteracted(true);
-      console.log('Manual time entry and comment added');
-    } catch (error) {
-      console.error('Error adding time entry:', error.message, error.code);
+      console.log('Manual time entry and comment processed successfully');
+    } catch (error: any) {
+      console.error('Error adding time entry:', {
+        message: error.message || 'Unknown error',
+        code: error.code || 'unknown',
+        stack: error.stack || 'No stack trace',
+        taskId: task.id,
+        userId: user.id,
+      });
+      alert(`Error al añadir la entrada de tiempo: ${error.message || 'Inténtalo de nuevo.'}`);
     }
   };
 
@@ -896,50 +1110,50 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   // Calcular horas totales
-const totalHours = useMemo(() => {
-  const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
-  let totalMinutes = 0;
+  const totalHours = useMemo(() => {
+    const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
+    let totalMinutes = 0;
 
-  timeMessages.forEach((msg) => {
-    totalMinutes += msg.hours * 60;
-  });
+    timeMessages.forEach((msg) => {
+      totalMinutes += msg.hours * 60;
+    });
 
-  const totalHours = Math.floor(totalMinutes / 60);
-  const remainingMinutes = Math.round(totalMinutes % 60);
-  console.log('Calculated total hours:', `${totalHours}h ${remainingMinutes}m`, { timeMessages });
-  return `${totalHours}h ${remainingMinutes}m`;
-}, [messages]);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = Math.round(totalMinutes % 60);
+    console.log('Calculated total hours:', `${totalHours}h ${remainingMinutes}m`, { timeMessages });
+    return `${totalHours}h ${remainingMinutes}m`;
+  }, [messages]);
 
-// Calcular horas por usuario para el dropdown
-const hoursByUser = useMemo(() => {
-  const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
-  const hoursMap: { [userId: string]: number } = {};
+  // Calcular horas por usuario para el dropdown
+  const hoursByUser = useMemo(() => {
+    const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
+    const hoursMap: { [userId: string]: number } = {};
 
-  timeMessages.forEach((msg) => {
-    hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours;
-  });
+    timeMessages.forEach((msg) => {
+      hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours;
+    });
 
-  const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
-  return Array.from(involvedUsers)
-    .map((userId) => {
-      const u = users.find((u) => u.id === userId) || {
-        id: userId,
-        fullName: 'Desconocido',
-        firstName: 'Desconocido',
-        imageUrl: '/default-image.png',
-      };
-      const totalMinutes = (hoursMap[userId] || 0) * 60;
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = Math.round(totalMinutes % 60);
-      return {
-        id: userId,
-        firstName: u.firstName || u.fullName.split(' ')[0],
-        imageUrl: u.imageUrl,
-        hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
-      };
-    })
-    .filter((u) => hoursMap[u.id]);
-}, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
+    const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
+    return Array.from(involvedUsers)
+      .map((userId) => {
+        const u = users.find((u) => u.id === userId) || {
+          id: userId,
+          fullName: 'Desconocido',
+          firstName: 'Desconocido',
+          imageUrl: '/default-image.png',
+        };
+        const totalMinutes = (hoursMap[userId] || 0) * 60;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = Math.round(totalMinutes % 60);
+        return {
+          id: userId,
+          firstName: u.firstName || u.fullName.split(' ')[0],
+          imageUrl: u.imageUrl,
+          hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
+        };
+      })
+      .filter((u) => hoursMap[u.id]);
+  }, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
 
   // Obtener responsables para el dropdown
   const responsibleUsers = useMemo(() => {
@@ -966,7 +1180,10 @@ const hoursByUser = useMemo(() => {
   };
 
   return (
-    <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
+    <div
+      className={`${styles.container} ${isOpen ? styles.open : ''} ${isDragging ? styles.dragging : ''}`}
+      ref={sidebarRef}
+    >
       <div className={styles.header}>
         <div className={styles.controls}>
           <div
@@ -1120,6 +1337,14 @@ const hoursByUser = useMemo(() => {
           console.log('Closed action menu on chat scroll');
         }}
       >
+        {isLoading && (
+          <div className={styles.loader}>
+            <div className={styles.spinner} />
+          </div>
+        )}
+        {!isLoading && messages.length === 0 && (
+          <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
+        )}
         {messages.map((message) => (
           <div key={message.id} className={styles.message}>
             <Image
@@ -1134,13 +1359,15 @@ const hoursByUser = useMemo(() => {
                 <div className={styles.sender}>{message.senderName}</div>
                 <div className={styles.messageActions}>
                   <div className={styles.timestamp}>
-                    {message.timestamp.toDate().toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                    })}
+                    {message.timestamp instanceof Timestamp
+                      ? message.timestamp.toDate().toLocaleTimeString('es-ES', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })
+                      : 'Sin fecha'}
                   </div>
-                  {user?.id === message.senderId && !message.text.startsWith('Añadó una entrada de tiempo de') && (
+                  {user?.id === message.senderId && (
                     <div className={styles.actionContainer}>
                       <button
                         className={styles.actionButton}
@@ -1149,20 +1376,22 @@ const hoursByUser = useMemo(() => {
                           setHasInteracted(true);
                         }}
                       >
-                        <Image src="/elipsis.svg" alt="Acciones" width={16} height={24} />
+                        <Image src="/elipsis.svg" alt="Acciones" width={16} height={16} />
                       </button>
                       {actionMenuOpenId === message.id && (
                         <div ref={actionMenuRef} className={styles.actionDropdown}>
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              setEditingMessageId(message.id);
-                              setEditingText(message.text);
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Editar mensaje
-                          </div>
+                          {message.text && !message.text.startsWith('Añadó una entrada de tiempo de') && (
+                            <div
+                              className={styles.actionDropdownItem}
+                              onClick={() => {
+                                setEditingMessageId(message.id);
+                                setEditingText(message.text || '');
+                                setActionMenuOpenId(null);
+                              }}
+                            >
+                              Editar mensaje
+                            </div>
+                          )}
                           <div
                             className={styles.actionDropdownItem}
                             onClick={() => handleDeleteMessage(message.id)}
@@ -1197,7 +1426,53 @@ const hoursByUser = useMemo(() => {
                   </button>
                 </div>
               ) : (
-                <div className={styles.text}>{message.text}</div>
+                <>
+                  {message.text && <div className={styles.text}>{message.text}</div>}
+                  {(message.fileUrl || message.imageUrl) && (
+                    <div className={styles.fileActionsRow}>
+                      <button
+                        className={styles.downloadButton}
+                        onClick={() => window.open(message.imageUrl || message.fileUrl, '_blank')}
+                        aria-label="Descargar archivo"
+                      >
+                        <Image src="/download.svg" alt="Descargar" width={16} height={16} />
+                      </button>
+                      {message.imageUrl ? (
+                        <div className={styles.imageWrapper}>
+                          <Image
+                            src={message.imageUrl}
+                            alt={message.fileName || 'Imagen'}
+                            width={200}
+                            height={200}
+                            className={styles.image}
+                            onClick={() => setImagePreviewSrc(message.imageUrl!)}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-image.png';
+                              console.warn('Image load failed:', message.imageUrl);
+                            }}
+                          />
+                          {message.fileName && (
+                            <div className={styles.fileName}>
+                              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+                              {message.fileName}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <a
+                          href={message.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.file}
+                          download={message.fileName}
+                        >
+                          <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+                          {message.fileName}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -1213,7 +1488,14 @@ const hoursByUser = useMemo(() => {
           </div>
         )}
       </div>
-      <div className={styles.inputWrapper}>
+      <form
+        className={`${styles.inputWrapper} ${isDragging ? styles.dragging : ''}`}
+        ref={inputWrapperRef}
+        onDragOver={handleDragOver}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onSubmit={handleSendMessage}
+      >
         <div ref={timerPanelRef} className={styles.timerPanel}>
           <div className={styles.timerPanelContent}>
             <div className={styles.timerRow}>
@@ -1258,10 +1540,7 @@ const hoursByUser = useMemo(() => {
               Has invertido: {totalHours} en esta tarea.
             </div>
             <div className={styles.timerActions}>
-              <button
-                className={styles.timerAddButton}
-                onClick={handleAddTimeEntry}
-              >
+              <button className={styles.timerAddButton} onClick={handleAddTimeEntry}>
                 Añadir entrada
               </button>
               <button
@@ -1277,6 +1556,23 @@ const hoursByUser = useMemo(() => {
           </div>
         </div>
         <div className={styles.inputContainer}>
+          {previewUrl && (
+            <div className={styles.imagePreview}>
+              <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
+              <button className={styles.removeImageButton} onClick={handleRemoveFile}>
+                <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              </button>
+            </div>
+          )}
+          {file && !previewUrl && (
+            <div className={styles.filePreview}>
+              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+              <span>{file.name}</span>
+              <button className={styles.removeImageButton} onClick={handleRemoveFile}>
+                <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              </button>
+            </div>
+          )}
           <input
             type="text"
             placeholder="Escribe tu mensaje aquí"
@@ -1295,10 +1591,7 @@ const hoursByUser = useMemo(() => {
           />
           <div className={styles.actions}>
             <div className={styles.timerContainer}>
-              <button
-                className={styles.playStopButton}
-                onClick={toggleTimer}
-              >
+              <button className={styles.playStopButton} onClick={toggleTimer}>
                 <Image
                   src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
                   alt={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
@@ -1306,21 +1599,32 @@ const hoursByUser = useMemo(() => {
                   height={12}
                 />
               </button>
-              <div
-                ref={timerButtonRef}
-                className={styles.timer}
-                onClick={toggleTimerPanel}
-              >
+              <div ref={timerButtonRef} className={styles.timer} onClick={toggleTimerPanel}>
                 <span>{formatTimer(timerSeconds)}</span>
                 <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
               </div>
             </div>
+            <button
+              type="button"
+              className={styles.imageButton}
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Adjuntar archivo"
+            >
+              <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} className={styles.iconInvert} />
+            </button>
             <button className={styles.sendButton} onClick={handleSendMessage}>
               <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
             </button>
           </div>
         </div>
-      </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          hidden
+          onChange={handleFileInputChange}
+          aria-label="Seleccionar archivo"
+        />
+      </form>
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>
           <div className={styles.deletePopup} ref={deletePopupRef}>
@@ -1335,8 +1639,8 @@ const hoursByUser = useMemo(() => {
               <div className={styles.deletePopupText}>
                 <h2 className={styles.deletePopupTitle}>¿Seguro que quieres eliminar esta tarea?</h2>
                 <p className={styles.deletePopupDescription}>
-                  Eliminar esta tarea borrará permanentemente todas sus conversaciones y datos asociados. Se notificará a todos los involucrados.{' '}
-                  <strong>Esta acción no se puede deshacer.</strong>
+                  Eliminar esta tarea borrará permanentemente todas sus conversaciones y datos asociados. Se notificará a
+                  todos los involucrados. <strong>Esta acción no se puede deshacer.</strong>
                 </p>
               </div>
               <input
@@ -1368,6 +1672,13 @@ const hoursByUser = useMemo(() => {
             </div>
           </div>
         </div>
+      )}
+      {imagePreviewSrc && (
+        <ImagePreviewOverlay
+          src={imagePreviewSrc}
+          alt="Vista previa de imagen"
+          onClose={() => setImagePreviewSrc(null)}
+        />
       )}
     </div>
   );

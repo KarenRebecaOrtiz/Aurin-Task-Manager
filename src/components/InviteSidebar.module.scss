@@ -2,12 +2,12 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: 400px;
+    width: 450px;
     height: 100%;
     padding: 25px;
     background: #000000ea;
     backdrop-filter: blur(10px);
-    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+    box-shadow: -5px 1px 11px rgba(0, 0, 0, 0.1);
     border-radius: 12px 0 0 12px;
     display: flex;
     flex-direction: column;
@@ -32,7 +32,7 @@
   .controls {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 10px;
   }
   
   .arrowLeft {
@@ -47,6 +47,14 @@
     font-weight: 700;
   }
   
+  .content {
+    flex: 1;
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
   .subtitle {
     color: #71717a;
     font-size: 14.4px;
@@ -57,36 +65,41 @@
   .form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 16px;
     min-width: 100%;
-    margin-top: 20px;
   }
   
   .field {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
   }
   
   .label {
     color: #e5e5e5;
-    font-size: 14px;
+    font-size: 12px;
     font-family: 'Inter Tight', sans-serif;
-    font-weight: 500;
+    font-weight: 700;
   }
   
   .input {
+    width: 100%;
     padding: 8px;
     background: #1f1f20;
     border: 1px solid #555555;
     border-radius: 4px;
-    color: #ffffff;
+    color: white;
     font-size: 14.4px;
     font-family: 'Inter Tight', sans-serif;
+  
+    &:focus {
+      outline: none;
+      border-color: #ffffff;
+    }
   }
   
   .submitButton {
-    padding: 10px;
+    padding: 8px 16px;
     background: #ffffff;
     color: #000000;
     border: none;
@@ -95,15 +108,14 @@
     font-size: 14px;
     font-family: 'Inter Tight', sans-serif;
     font-weight: 500;
-    transition: background 0.2s;
   
     &:hover {
-      background: #e0e0e0;
+      background: #d0d0d1;
     }
   }
   
   .cancelButton {
-    padding: 10px;
+    padding: 8px 16px;
     background: #555555;
     color: #d1d1d1;
     border: none;
@@ -112,9 +124,8 @@
     font-size: 14px;
     font-family: 'Inter Tight', sans-serif;
     font-weight: 500;
-    transition: background 0.2s;
   
     &:hover {
-      background: #666666;
+      background: #4b5563;
     }
   }

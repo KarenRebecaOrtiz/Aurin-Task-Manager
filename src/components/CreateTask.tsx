@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, setDoc, getDocs, addDoc } from 'firebase/firestore';
@@ -8,6 +10,10 @@ import { createPortal } from 'react-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useRouter } from 'next/navigation';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import { Navigation } from 'swiper/modules';
 import { db } from '@/lib/firebase';
 import styles from '@/components/NewTaskStyles.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
@@ -17,15 +23,15 @@ import { Timestamp } from 'firebase/firestore';
 gsap.registerPlugin(ScrollTrigger);
 
 const debounce = (func: (...args: any[]) => void, delay: number) => {
-    let timer: NodeJS.Timeout | null = null;
-    return (...args: any[]) => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        func(...args);
-        timer = null;
-      }, delay);
-    };
+  let timer: NodeJS.Timeout | null = null;
+  return (...args: any[]) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      func(...args);
+      timer = null;
+    }, delay);
   };
+};
 
 interface Client {
   id: string;
@@ -68,9 +74,19 @@ interface CreateTaskProps {
   isOpen: boolean;
   onToggle: () => void;
   onHasUnsavedChanges: (hasChanges: boolean) => void;
+  onCreateClientOpen: () => void;
+  onEditClientOpen: (client: Client) => void;
+  onInviteSidebarOpen: () => void;
 }
 
-const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedChanges }) => {
+const CreateTask: React.FC<CreateTaskProps> = ({
+  isOpen,
+  onToggle,
+  onHasUnsavedChanges,
+  onCreateClientOpen,
+  onEditClientOpen,
+  onInviteSidebarOpen,
+}) => {
   const { user } = useUser();
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
@@ -99,46 +115,35 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const initialTaskState = useRef<Task>({ ...task });
-  const [clientSlideIndex, setClientSlideIndex] = useState(0);
-  const [pmSlideIndex, setPmSlideIndex] = useState(0);
-  const [searchCollaborator, setSearchCollaborator] = useState('');
-  const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
-  const [isEditClientOpen, setIsEditClientOpen] = useState<string | null>(null);
-  const [isInviteMemberOpen, setIsInviteMemberOpen] = useState(false);
-  const [clientForm, setClientForm] = useState({
-    name: '',
-    imageFile: null as File | null,
-    imagePreview: '/default-avatar.png',
-    projects: [''],
-    deleteProjectIndex: null as number | null,
-    deleteConfirm: '',
-  });
-  const [inviteEmail, setInviteEmail] = useState('');
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
+  const [isCollaboratorDropdownOpen, setIsCollaboratorDropdownOpen] = useState(false);
+  const [projectDropdownPosition, setProjectDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [collaboratorDropdownPosition, setCollaboratorDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
   const [startDatePosition, setStartDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [endDatePosition, setEndDatePosition] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const clientSlidesRef = useRef<HTMLDivElement>(null);
-  const pmSlidesRef = useRef<HTMLDivElement>(null);
-  const createEditPopupRef = useRef<HTMLDivElement>(null);
-  const invitePopupRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
+  const collaboratorInputRef = useRef<HTMLInputElement>(null);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
   const startDatePopperRef = useRef<HTMLDivElement>(null);
   const endDatePopperRef = useRef<HTMLDivElement>(null);
+  const projectDropdownPopperRef = useRef<HTMLDivElement>(null);
+  const statusDropdownPopperRef = useRef<HTMLDivElement>(null);
+  const priorityDropdownPopperRef = useRef<HTMLDivElement>(null);
+  const collaboratorDropdownPopperRef = useRef<HTMLDivElement>(null);
   const advancedSectionRef = useRef<HTMLDivElement>(null);
-  const clientDragRef = useRef<HTMLDivElement>(null);
-  const pmDragRef = useRef<HTMLDivElement>(null);
+  const [searchCollaborator, setSearchCollaborator] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
 
   // Track unsaved changes
@@ -257,72 +262,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     };
   }, []);
 
-  // GSAP slideshow animations
-  useEffect(() => {
-    if (clientSlidesRef.current) {
-      gsap.to(clientSlidesRef.current, {
-        xPercent: -clientSlideIndex * 100,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
-    }
-  }, [clientSlideIndex]);
-
-  useEffect(() => {
-    if (pmSlidesRef.current) {
-      gsap.to(pmSlidesRef.current, {
-        xPercent: -pmSlideIndex * 100,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
-    }
-  }, [pmSlideIndex]);
-
-  // GSAP popup animations for create/edit client
-  useEffect(() => {
-    const popup = createEditPopupRef.current;
-    if (popup && (isCreateClientOpen || isEditClientOpen)) {
-      gsap.fromTo(
-        popup,
-        { opacity: 0, y: 50, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power2.out' },
-      );
-    } else if (popup) {
-      gsap.to(popup, {
-        opacity: 0,
-        y: 50,
-        scale: 0.95,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => {
-          setIsCreateClientOpen(false);
-          setIsEditClientOpen(null);
-        },
-      });
-    }
-  }, [isCreateClientOpen, isEditClientOpen]);
-
-  // GSAP popup animations for invite member
-  useEffect(() => {
-    const popup = invitePopupRef.current;
-    if (popup && isInviteMemberOpen) {
-      gsap.fromTo(
-        popup,
-        { opacity: 0, y: 50, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power2.out' },
-      );
-    } else if (popup) {
-      gsap.to(popup, {
-        opacity: 0,
-        y: 50,
-        scale: 0.95,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => setIsInviteMemberOpen(false),
-      });
-    }
-  }, [isInviteMemberOpen]);
-
   // GSAP animation for advanced section
   useEffect(() => {
     if (advancedSectionRef.current) {
@@ -335,57 +274,32 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     }
   }, [isAdvancedOpen]);
 
-  // Close DatePickers on scroll
+  // Close DatePickers and Dropdowns on scroll
   useEffect(() => {
     const handleScroll = debounce(() => {
-      if (isStartDateOpen || isEndDateOpen) {
-        console.log('Closing date pickers due to scroll');
+      if (isStartDateOpen || isEndDateOpen || isProjectDropdownOpen || isStatusDropdownOpen || isPriorityDropdownOpen || isCollaboratorDropdownOpen) {
+        console.log('Closing date pickers and dropdowns due to scroll');
         setIsStartDateOpen(false);
         setIsEndDateOpen(false);
+        setIsProjectDropdownOpen(false);
+        setIsStatusDropdownOpen(false);
+        setIsPriorityDropdownOpen(false);
+        setIsCollaboratorDropdownOpen(false);
       }
     }, 100);
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isStartDateOpen, isEndDateOpen]);
+  }, [isStartDateOpen, isEndDateOpen, isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen, isCollaboratorDropdownOpen]);
 
   // Close popups and dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        createEditPopupRef.current &&
-        !createEditPopupRef.current.contains(event.target as Node) &&
-        (isCreateClientOpen || isEditClientOpen)
-      ) {
-        gsap.to(createEditPopupRef.current, {
-          opacity: 0,
-          y: 50,
-          scale: 0.95,
-          duration: 0.3,
-          ease: 'power2.in',
-          onComplete: () => {
-            setIsCreateClientOpen(false);
-            setIsEditClientOpen(null);
-          },
-        });
-      }
-      if (
-        invitePopupRef.current &&
-        !invitePopupRef.current.contains(event.target as Node) &&
-        isInviteMemberOpen
-      ) {
-        gsap.to(invitePopupRef.current, {
-          opacity: 0,
-          y: 50,
-          scale: 0.95,
-          duration: 0.3,
-          ease: 'power2.in',
-          onComplete: () => setIsInviteMemberOpen(false),
-        });
-      }
-      if (
         projectDropdownRef.current &&
         !projectDropdownRef.current.contains(event.target as Node) &&
+        projectDropdownPopperRef.current &&
+        !projectDropdownPopperRef.current.contains(event.target as Node) &&
         isProjectDropdownOpen
       ) {
         setIsProjectDropdownOpen(false);
@@ -393,6 +307,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       if (
         statusDropdownRef.current &&
         !statusDropdownRef.current.contains(event.target as Node) &&
+        statusDropdownPopperRef.current &&
+        !statusDropdownPopperRef.current.contains(event.target as Node) &&
         isStatusDropdownOpen
       ) {
         setIsStatusDropdownOpen(false);
@@ -400,6 +316,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       if (
         priorityDropdownRef.current &&
         !priorityDropdownRef.current.contains(event.target as Node) &&
+        priorityDropdownPopperRef.current &&
+        !priorityDropdownPopperRef.current.contains(event.target as Node) &&
         isPriorityDropdownOpen
       ) {
         setIsPriorityDropdownOpen(false);
@@ -420,56 +338,29 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       ) {
         setIsEndDateOpen(false);
       }
+      if (
+        collaboratorInputRef.current &&
+        !collaboratorInputRef.current.contains(event.target as Node) &&
+        collaboratorDropdownPopperRef.current &&
+        !collaboratorDropdownPopperRef.current.contains(event.target as Node) &&
+        isCollaboratorDropdownOpen
+      ) {
+        setIsCollaboratorDropdownOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [
-    isCreateClientOpen,
-    isEditClientOpen,
-    isInviteMemberOpen,
     isProjectDropdownOpen,
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
     isStartDateOpen,
     isEndDateOpen,
+    isCollaboratorDropdownOpen,
   ]);
 
-  // GSAP dropdown animations
-  useEffect(() => {
-    if (isProjectDropdownOpen && projectDropdownRef.current) {
-      const dropdownItems = projectDropdownRef.current.querySelector(`.${styles.dropdownItems}`);
-      if (dropdownItems) {
-        gsap.fromTo(
-          dropdownItems,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-    }
-    if (isStatusDropdownOpen && statusDropdownRef.current) {
-      const dropdownItems = statusDropdownRef.current.querySelector(`.${styles.dropdownItems}`);
-      if (dropdownItems) {
-        gsap.fromTo(
-          dropdownItems,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-    }
-    if (isPriorityDropdownOpen && priorityDropdownRef.current) {
-      const dropdownItems = priorityDropdownRef.current.querySelector(`.${styles.dropdownItems}`);
-      if (dropdownItems) {
-        gsap.fromTo(
-          dropdownItems,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-    }
-  }, [isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen]);
-
-  // Position DatePicker poppers
+  // Position DatePicker and Dropdown poppers
   useEffect(() => {
     if (isStartDateOpen && startDateInputRef.current) {
       const rect = startDateInputRef.current.getBoundingClientRect();
@@ -485,52 +376,79 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
         left: rect.left + window.scrollX,
       });
     }
-  }, [isStartDateOpen, isEndDateOpen]);
+    if (isProjectDropdownOpen && projectDropdownRef.current) {
+      const rect = projectDropdownRef.current.getBoundingClientRect();
+      setProjectDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isStatusDropdownOpen && statusDropdownRef.current) {
+      const rect = statusDropdownRef.current.getBoundingClientRect();
+      setStatusDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isPriorityDropdownOpen && priorityDropdownRef.current) {
+      const rect = priorityDropdownRef.current.getBoundingClientRect();
+      setPriorityDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isCollaboratorDropdownOpen && collaboratorInputRef.current) {
+      const rect = collaboratorInputRef.current.getBoundingClientRect();
+      setCollaboratorDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [isStartDateOpen, isEndDateOpen, isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen, isCollaboratorDropdownOpen]);
 
-  // GSAP click animation handler
+  // GSAP dropdown animations
+  useEffect(() => {
+    if (isProjectDropdownOpen && projectDropdownPopperRef.current) {
+      gsap.fromTo(
+        projectDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+    }
+    if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
+      gsap.fromTo(
+        statusDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+    }
+    if (isPriorityDropdownOpen && priorityDropdownPopperRef.current) {
+      gsap.fromTo(
+        priorityDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+    }
+    if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
+      gsap.fromTo(
+        collaboratorDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+    }
+  }, [isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen, isCollaboratorDropdownOpen]);
+
+  // GSAP click animation handler (subtle)
   const animateClick = (element: HTMLElement) => {
     gsap.to(element, {
-      scale: 0.95,
-      opacity: 0.8,
+      scale: 0.98,
+      opacity: 0.9,
       duration: 0.15,
       ease: 'power1.out',
       yoyo: true,
       repeat: 1,
     });
   };
-
-  // Slideshow navigation
-  const handleClientSlideNext = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      animateClick(e.currentTarget);
-      setClientSlideIndex((prev) => (prev + 1) % Math.ceil(clients.length / 6));
-    },
-    [clients.length],
-  );
-
-  const handleClientSlidePrev = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      animateClick(e.currentTarget);
-      setClientSlideIndex((prev) => (prev - 1 + Math.ceil(clients.length / 6)) % Math.ceil(clients.length / 6));
-    },
-    [clients.length],
-  );
-
-  const handlePmSlideNext = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      animateClick(e.currentTarget);
-      setPmSlideIndex((prev) => (prev + 1) % Math.ceil(users.length / 6));
-    },
-    [users.length],
-  );
-
-  const handlePmSlidePrev = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      animateClick(e.currentTarget);
-      setPmSlideIndex((prev) => (prev - 1 + Math.ceil(users.length / 6)) % Math.ceil(users.length / 6));
-    },
-    [users.length],
-  );
 
   // Form handlers
   const handleClientSelect = useCallback(
@@ -567,7 +485,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       if (!task.LeadedBy.includes(userId)) {
         setTask((prev) => ({
           ...prev,
-          AssignedTo: prev.AssignedTo.includes(userId) ? prev.AssignedTo.filter((id) => id !== userId) : [...prev.AssignedTo, userId],
+          AssignedTo: prev.AssignedTo.includes(userId)
+            ? prev.AssignedTo.filter((id) => id !== userId)
+            : [...prev.AssignedTo, userId],
         }));
         setSearchCollaborator('');
         setErrors((prev) => ({ ...prev, AssignedTo: undefined }));
@@ -576,91 +496,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     [task.LeadedBy],
   );
 
-  const handleClientFormSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!user || !clientForm.name.trim()) {
-        alert('El nombre de la cuenta es obligatorio.');
-        return;
-      }
-
-      try {
-        let imageUrl = clientForm.imagePreview;
-        if (clientForm.imageFile) {
-          const formData = new FormData();
-          formData.append('file', clientForm.imageFile);
-          const response = await fetch('/api/upload-image', {
-            method: 'POST',
-            body: formData,
-          });
-          if (!response.ok) throw new Error('Failed to upload image');
-          const data = await response.json();
-          imageUrl = data.imageUrl;
-        }
-
-        const clientData: Client = {
-          id: isEditClientOpen || doc(collection(db, 'clients')).id,
-          name: clientForm.name.trim(),
-          imageUrl: imageUrl || '/default-avatar.png',
-          projects: clientForm.projects.filter((p) => p.trim()),
-          createdBy: user.id,
-        };
-
-        await setDoc(doc(db, 'clients', clientData.id), clientData);
-        setClients((prev) =>
-          isEditClientOpen
-            ? prev.map((c) => (c.id === isEditClientOpen ? clientData : c))
-            : [...prev, clientData],
-        );
-        gsap.to(createEditPopupRef.current, {
-          opacity: 0,
-          y: 50,
-          scale: 0.95,
-          duration: 0.3,
-          ease: 'power2.in',
-          onComplete: () => {
-            setIsCreateClientOpen(false);
-            setIsEditClientOpen(null);
-          },
-        });
-        setClientForm({
-          name: '',
-          imageFile: null,
-          imagePreview: '/default-avatar.png',
-          projects: [''],
-          deleteProjectIndex: null,
-          deleteConfirm: '',
-        });
-      } catch (error) {
-        console.error('Error saving client:', error);
-        alert('Error al guardar la cuenta.');
-      }
+  const handleCollaboratorRemove = useCallback(
+    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+      animateClick(e.currentTarget);
+      setTask((prev) => ({
+        ...prev,
+        AssignedTo: prev.AssignedTo.filter((id) => id !== userId),
+      }));
+      setErrors((prev) => ({ ...prev, AssignedTo: undefined }));
     },
-    [user, clientForm, isEditClientOpen],
-  );
-
-  const handleInviteSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      animateClick(e.currentTarget as HTMLElement);
-      try {
-        console.log('Invite email:', inviteEmail);
-        alert(`Invitación enviada a ${inviteEmail}`);
-        gsap.to(invitePopupRef.current, {
-          opacity: 0,
-          y: 50,
-          scale: 0.95,
-          duration: 0.3,
-          ease: 'power2.in',
-          onComplete: () => setIsInviteMemberOpen(false),
-        });
-        setInviteEmail('');
-      } catch (error) {
-        console.error('Error sending invite:', error);
-        alert('Error al enviar la invitación');
-      }
-    },
-    [inviteEmail],
+    [],
   );
 
   const validateTask = () => {
@@ -807,7 +652,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
         <div className={styles.headerTitle}>Crear Tarea</div>
         <button className={styles.toggleButton} onClick={onToggle}>
           <Image
-            src={isOpen ? '/chevron-up.svg' : '/chevron-down.svg'}
+            src={isOpen ? '/x.svg' : '/x.svg'}
             alt={isOpen ? 'Cerrar' : 'Abrir'}
             width={16}
             height={16}
@@ -823,45 +668,43 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               Selecciona la cuenta a la que se asignará esta tarea (por ejemplo, Pinaccle).
             </div>
             <div className={styles.slideshow}>
-              <button className={styles.slideButton} onClick={handleClientSlidePrev} disabled={clientSlideIndex === 0}>
+              <Swiper
+                modules={[Navigation]}
+                slidesPerView={6}
+                spaceBetween={20}
+                navigation={{
+                  prevEl: `.${styles.clientPrev}`,
+                  nextEl: `.${styles.clientNext}`,
+                }}
+                breakpoints={{
+                  1024: { slidesPerView: 4 },
+                  767: { slidesPerView: 2 },
+                  480: { slidesPerView: 1 },
+                }}
+                className={styles.swiper}
+              >
+                {clients.map((client) => (
+                  <SwiperSlide key={client.id}>
+                    <div
+                      className={`${styles.slideCard} ${task.clientId === client.id ? styles.selected : ''}`}
+                      onClick={(e) => handleClientSelect(client.id, e)}
+                    >
+                      <Image
+                        src={client.imageUrl}
+                        alt={client.name}
+                        width={36}
+                        height={36}
+                        className={styles.clientImage}
+                      />
+                      <div className={styles.clientName}>{client.name}</div>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+              <button className={`${styles.slideButton} ${styles.clientPrev}`}>
                 <Image src="/chevron-left.svg" alt="Previous" width={24} height={52} />
               </button>
-              <div className={styles.slidesContainer}>
-                <Draggable
-                  axis="x"
-                  bounds={{ left: -(clients.length - 6) * 150, right: 0 }}
-                  nodeRef={clientDragRef}
-                  onDrag={(e, data) => {
-                    const slideWidth = 150; // Approximate card width + gap
-                    const newIndex = Math.round(-data.x / slideWidth);
-                    setClientSlideIndex(newIndex);
-                  }}
-                >
-                  <div className={styles.slides} ref={clientDragRef}>
-                    {clients.map((client) => (
-                      <div
-                        key={client.id}
-                        className={`${styles.slideCard} ${task.clientId === client.id ? styles.selected : ''}`}
-                        onClick={(e) => handleClientSelect(client.id, e)}
-                      >
-                        <Image
-                          src={client.imageUrl}
-                          alt={client.name}
-                          width={36}
-                          height={36}
-                          className={styles.clientImage}
-                        />
-                        <div className={styles.clientName}>{client.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                </Draggable>
-              </div>
-              <button
-                className={styles.slideButton}
-                onClick={handleClientSlideNext}
-                disabled={clientSlideIndex >= Math.ceil(clients.length / 6) - 1}
-              >
+              <button className={`${styles.slideButton} ${styles.clientNext}`}>
                 <Image src="/chevron-right.svg" alt="Next" width={24} height={52} />
               </button>
             </div>
@@ -874,7 +717,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                 className={styles.addButton}
                 onClick={(e) => {
                   animateClick(e.currentTarget);
-                  setIsCreateClientOpen(true);
+                  onCreateClientOpen();
                 }}
               >
                 + Agregar Cuenta
@@ -883,34 +726,55 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
           </div>
           <div className={styles.section} ref={(el) => { sectionsRef.current[1] = el; }}>
             <div className={styles.projectSection}>
-              <div className={styles.sectionTitle}>Seleccionar Proyecto *</div>
-              <div className={styles.sectionSubtitle}>Selecciona la carpeta a la que se asignará esta tarea.</div>
+              <div className={styles.sectionSubtitle}>Selecciona la carpeta a la que se asignará esta tarea:</div>
               <div className={styles.dropdownContainer} ref={projectDropdownRef}>
-                <div
+                <div style={{border:'solid 1px #f2f2f3', padding :'10px', overflow: 'hidden' , borderRadius: '5px', marginTop: '5px'}}
                   className={styles.dropdownTrigger}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
                     setIsProjectDropdownOpen(!isProjectDropdownOpen);
                   }}
                 >
-                  <span>{task.project || 'Selecciona la carpeta'}</span>
+                  <span style={{fontSize: '14px', fontWeight:'500'}}>{task.project || 'Seleccionar un Proyecto'}</span>
                   <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
                 </div>
-                {isProjectDropdownOpen && (
-                  <div className={styles.dropdownItems}>
-                    {clients
-                      .find((c) => c.id === task.clientId)
-                      ?.projects.map((project) => (
-                        <div
-                          key={project}
-                          className={styles.dropdownItem}
-                          onClick={(e) => handleProjectSelect(project, e)}
-                        >
-                          {project}
-                        </div>
-                      ))}
-                  </div>
-                )}
+                {isProjectDropdownOpen &&
+                  createPortal(
+                    <div
+                      className={styles.dropdownItems}
+                      style={{
+                        top: projectDropdownPosition?.top,
+                        left: projectDropdownPosition?.left,
+                        position: 'absolute',
+                        zIndex: 150000,
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '5px',
+                        overflow: 'hidden',
+                        boxShadow: `
+                          0px 2px 4px rgba(0, 0, 0, 0.04),
+                          0px 7px 7px rgba(0, 0, 0, 0.03),
+                          0px 15px 9px rgba(0, 0, 0, 0.02),
+                          0px 27px 11px rgba(0, 0, 0, 0.01),
+                          0px 42px 12px rgba(0, 0, 0, 0.00)
+                        `,
+                      }}
+                      ref={projectDropdownPopperRef}
+                    >
+                      {clients
+                        .find((c) => c.id === task.clientId)
+                        ?.projects.map((project) => (
+                          <div
+                            key={project}
+                            className={styles.dropdownItem}
+                            onClick={(e) => handleProjectSelect(project, e)}
+                            style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                          >
+                            {project}
+                          </div>
+                        ))}
+                    </div>,
+                    document.body
+                  )}
               </div>
               {errors.project && <div className={styles.error}>{errors.project}</div>}
               {task.clientId && clients.find((c) => c.id === task.clientId)?.createdBy === user?.id && (
@@ -918,7 +782,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                   className={styles.addButton}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    setIsEditClientOpen(task.clientId);
+                    const client = clients.find((c) => c.id === task.clientId);
+                    if (client) {
+                      onEditClientOpen(client);
+                    }
                   }}
                 >
                   + Nueva Carpeta
@@ -1052,19 +919,42 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                       <span>{task.status}</span>
                       <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
                     </div>
-                    {isStatusDropdownOpen && (
-                      <div className={styles.dropdownItems}>
-                        {['Por comenzar', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelada'].map((status) => (
-                          <div
-                            key={status}
-                            className={styles.dropdownItem}
-                            onClick={(e) => handleStatusSelect(status, e)}
-                          >
-                            {status}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {isStatusDropdownOpen &&
+                      createPortal(
+                        <div
+                          className={styles.dropdownItems}
+                          style={{
+                            top: statusDropdownPosition?.top,
+                            left: statusDropdownPosition?.left,
+                            position: 'absolute',
+                            zIndex: 150000,
+                            width: statusDropdownRef.current?.offsetWidth,
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '5px',
+                            overflow: 'hidden',
+                            boxShadow: `
+                              0px 2px 4px rgba(0, 0, 0, 0.04),
+                              0px 7px 7px rgba(0, 0, 0, 0.03),
+                              0px 15px 9px rgba(0, 0, 0, 0.02),
+                              0px 27px 11px rgba(0, 0, 0, 0.01),
+                              0px 42px 12px rgba(0, 0, 0, 0.00)
+                            `,
+                          }}
+                          ref={statusDropdownPopperRef}
+                        >
+                          {['Por comenzar', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelada'].map((status) => (
+                            <div
+                              key={status}
+                              className={styles.dropdownItem}
+                              onClick={(e) => handleStatusSelect(status, e)}
+                              style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                            >
+                              {status}
+                            </div>
+                          ))}
+                        </div>,
+                        document.body
+                      )}
                   </div>
                 </div>
               </div>
@@ -1082,19 +972,42 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                       <span>{task.priority}</span>
                       <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
                     </div>
-                    {isPriorityDropdownOpen && (
-                      <div className={styles.dropdownItems}>
-                        {['Baja', 'Media', 'Alta'].map((priority) => (
-                          <div
-                            key={priority}
-                            className={styles.dropdownItem}
-                            onClick={(e) => handlePrioritySelect(priority, e)}
-                          >
-                            {priority}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {isPriorityDropdownOpen &&
+                      createPortal(
+                        <div
+                          className={styles.dropdownItems}
+                          style={{
+                            top: priorityDropdownPosition?.top,
+                            left: priorityDropdownPosition?.left,
+                            position: 'absolute',
+                            zIndex: 150000,
+                            width: priorityDropdownRef.current?.offsetWidth,
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '5px',
+                            overflow: 'hidden',
+                            boxShadow: `
+                              0px 2px 4px rgba(0, 0, 0, 0.04),
+                              0px 7px 7px rgba(0, 0, 0, 0.03),
+                              0px 15px 9px rgba(0, 0, 0, 0.02),
+                              0px 27px 11px rgba(0, 0, 0, 0.01),
+                              0px 42px 12px rgba(0, 0, 0, 0.00)
+                            `,
+                          }}
+                          ref={priorityDropdownPopperRef}
+                        >
+                          {['Baja', 'Media', 'Alta'].map((priority) => (
+                            <div
+                              key={priority}
+                              className={styles.dropdownItem}
+                              onClick={(e) => handlePrioritySelect(priority, e)}
+                              style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                            >
+                              {priority}
+                            </div>
+                          ))}
+                        </div>,
+                        document.body
+                      )}
                   </div>
                 </div>
               </div>
@@ -1108,46 +1021,44 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               Selecciona la persona principal responsable de la tarea. Esta persona será el punto de contacto y supervisará el progreso.
             </div>
             <div className={styles.slideshow}>
-              <button className={styles.slideButton} onClick={handlePmSlidePrev} disabled={pmSlideIndex === 0}>
+              <Swiper
+                modules={[Navigation]}
+                slidesPerView={6}
+                spaceBetween={20}
+                navigation={{
+                  prevEl: `.${styles.pmPrev}`,
+                  nextEl: `.${styles.pmNext}`,
+                }}
+                breakpoints={{
+                  1024: { slidesPerView: 4 },
+                  767: { slidesPerView: 2 },
+                  480: { slidesPerView: 1 },
+                }}
+                className={styles.swiper}
+              >
+                {users.map((user) => (
+                  <SwiperSlide key={user.id}>
+                    <div
+                      className={`${styles.slideCard} ${task.LeadedBy.includes(user.id) ? styles.selected : ''}`}
+                      onClick={(e) => handlePmSelect(user.id, e)}
+                    >
+                      <Image
+                        src={user.imageUrl}
+                        alt={user.fullName}
+                        width={36}
+                        height={36}
+                        className={styles.userImage}
+                      />
+                      <div className={styles.userName}>{user.fullName}</div>
+                      <div className={styles.userRole}>{user.role}</div>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+              <button className={`${styles.slideButton} ${styles.pmPrev}`}>
                 <Image src="/chevron-left.svg" alt="Previous" width={24} height={52} />
               </button>
-              <div className={styles.slidesContainer}>
-                <Draggable
-                  axis="x"
-                  bounds={{ left: -(users.length - 6) * 150, right: 0 }}
-                  nodeRef={pmDragRef}
-                  onDrag={(e, data) => {
-                    const slideWidth = 150; // Approximate card width + gap
-                    const newIndex = Math.round(-data.x / slideWidth);
-                    setPmSlideIndex(newIndex);
-                  }}
-                >
-                  <div className={styles.slides} ref={pmDragRef}>
-                    {users.map((user) => (
-                      <div
-                        key={user.id}
-                        className={`${styles.slideCard} ${task.LeadedBy.includes(user.id) ? styles.selected : ''}`}
-                        onClick={(e) => handlePmSelect(user.id, e)}
-                      >
-                        <Image
-                          src={user.imageUrl}
-                          alt={user.fullName}
-                          width={36}
-                          height={36}
-                          className={styles.userImage}
-                        />
-                        <div className={styles.userName}>{user.fullName}</div>
-                        <div className={styles.userRole}>{user.role}</div>
-                      </div>
-                    ))}
-                  </div>
-                </Draggable>
-              </div>
-              <button
-                className={styles.slideButton}
-                onClick={handlePmSlideNext}
-                disabled={pmSlideIndex >= Math.ceil(users.length / 6) - 1}
-              >
+              <button className={`${styles.slideButton} ${styles.pmNext}`}>
                 <Image src="/chevron-right.svg" alt="Next" width={24} height={52} />
               </button>
             </div>
@@ -1160,26 +1071,84 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                 type="text"
                 className={styles.input}
                 value={searchCollaborator}
-                onChange={(e) => setSearchCollaborator(e.target.value)}
+                onChange={(e) => {
+                  setSearchCollaborator(e.target.value);
+                  setIsCollaboratorDropdownOpen(e.target.value.trim() !== '');
+                }}
+                onBlur={() => {
+                  // Delay closing to allow clicks on dropdown items
+                  setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
+                }}
                 placeholder="Ej: John Doe"
+                ref={collaboratorInputRef}
               />
-              {searchCollaborator && (
-                <div className={styles.dropdown}>
-                  {filteredCollaborators.length ? (
-                    filteredCollaborators.map((u) => (
+              {isCollaboratorDropdownOpen &&
+                createPortal(
+                  <div
+                    className={styles.dropdown}
+                    style={{
+                      top: collaboratorDropdownPosition?.top,
+                      left: collaboratorDropdownPosition?.left,
+                      position: 'absolute',
+                      zIndex: 150000,
+                      width: collaboratorInputRef.current?.offsetWidth,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '5px',
+                      overflow: 'hidden',
+                      boxShadow: `
+                        0px 2px 4px rgba(0, 0, 0, 0.04),
+                        0px 7px 7px rgba(0, 0, 0, 0.03),
+                        0px 15px 9px rgba(0, 0, 0, 0.02),
+                        0px 27px 11px rgba(0, 0, 0, 0.01),
+                        0px 42px 12px rgba(0, 0, 0, 0.00)
+                      `,
+                    }}
+                    ref={collaboratorDropdownPopperRef}
+                  >
+                    {filteredCollaborators.length ? (
+                      filteredCollaborators.map((u) => (
+                        <div
+                          key={u.id}
+                          className={`${styles.dropdownItem} ${task.LeadedBy.includes(u.id) ? styles.disabled : ''}`}
+                          onClick={(e) => !task.LeadedBy.includes(u.id) && handleCollaboratorSelect(u.id, e)}
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            padding: '12px',
+                            border: '1px solid rgba(243, 243, 243, 0.47)',
+                            borderRadius: '2px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {u.fullName} ({u.role}) {task.AssignedTo.includes(u.id) && '(Seleccionado)'}
+                        </div>
+                      ))
+                    ) : (
                       <div
-                        key={u.id}
-                        className={`${styles.dropdownItem} ${task.LeadedBy.includes(u.id) ? styles.disabled : ''}`}
-                        onClick={(e) => !task.LeadedBy.includes(u.id) && handleCollaboratorSelect(u.id, e)}
+                        className={styles.dropdownItem}
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          padding: '12px',
+                          border: '1px solid rgba(243, 243, 243, 0.47)',
+                          borderRadius: '2px',
+                        }}
                       >
-                        {u.fullName} ({u.role}) {task.AssignedTo.includes(u.id) && '(Seleccionado)'}
+                        No hay coincidencias
                       </div>
-                    ))
-                  ) : (
-                    <div className={styles.dropdownItem}>No hay coincidencias</div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>,
+                  document.body
+                )}
+              <div className={styles.tags}>
+                {task.AssignedTo.map((userId) => {
+                  const collaborator = users.find((u) => u.id === userId);
+                  return collaborator ? (
+                    <div key={userId} className={styles.tag}>
+                      {collaborator.fullName}
+                      <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
+                    </div>
+                  ) : null;
+                })}
+              </div>
               <div className={styles.addButtonWrapper}>
                 <div className={styles.addButtonText}>
                   ¿No encuentras algún colaborador? <strong>Agrega una nueva.</strong>
@@ -1188,7 +1157,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                   className={styles.addButton}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    setIsInviteMemberOpen(true);
+                    onInviteSidebarOpen();
                   }}
                 >
                   + Invitar Colaborador
@@ -1230,7 +1199,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
             <button className={styles.advancedToggle} onClick={toggleAdvancedSection}>
               4: Configuración Avanzada
               <Image
-                src={isAdvancedOpen ? '/chevron-up.svg' : '/chevron-down.svg'}
+                src={isAdvancedOpen ? '/chevron-down.svg' : '/chevron-up.svg'}
                 alt={isAdvancedOpen ? 'Cerrar' : 'Abrir'}
                 width={16}
                 height={16}
@@ -1286,251 +1255,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       {isSaving && (
         <div className={styles.loaderOverlay}>
           <div className={styles.loader}></div>
-        </div>
-      )}
-      {(isCreateClientOpen || isEditClientOpen) && (
-        <div className={clientStyles.popupOverlay}>
-          <div className={clientStyles.popup} ref={createEditPopupRef}>
-            <div className={clientStyles.popupContent}>
-              <h2 className={clientStyles.popupTitle}>
-                {isEditClientOpen ? 'Editar Cliente' : '¿Cómo se llama tu cliente o empresa?'}
-              </h2>
-              <p className={clientStyles.popupSubtitle}>
-                Elige un nombre claro para reconocer esta cuenta fácilmente.{' '}
-                <strong>Sólo tú puedes editar o eliminar esta cuenta.</strong>
-              </p>
-              <div
-                className={clientStyles.avatar}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  fileInputRef.current?.click();
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-              >
-                <Image
-                  src={clientForm.imagePreview}
-                  alt="Avatar del cliente"
-                  width={109}
-                  height={109}
-                  className={clientStyles.modalImage}
-                  onError={(e) => {
-                    e.currentTarget.src = '/default-avatar.png';
-                  }}
-                />
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setClientForm((prev) => ({ ...prev, imageFile: file }));
-                      const reader = new FileReader();
-                      reader.onload = () => setClientForm((prev) => ({ ...prev, imagePreview: reader.result as string }));
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  aria-label="Subir imagen de cliente"
-                />
-              </div>
-              <form onSubmit={handleClientFormSubmit}>
-                <div className={clientStyles.formField}>
-                  <label htmlFor="clientName" className={clientStyles.label}>
-                    Nombre de Cuenta <span className={clientStyles.required}>*</span>
-                  </label>
-                  <p className={clientStyles.fieldDescription}>
-                    Este nombre aparecerá en todas las tareas, carpetas y vistas del sistema.
-                  </p>
-                  <input
-                    id="clientName"
-                    type="text"
-                    value={clientForm.name}
-                    onChange={(e) => setClientForm((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Ej. Coca-Cola, Agencia Delta, Clínica Sol"
-                    className={clientStyles.input}
-                    required
-                    aria-required="true"
-                  />
-                </div>
-                <div className={clientStyles.formField}>
-                  <label className={clientStyles.label}>Proyectos</label>
-                  <p className={clientStyles.fieldDescription}>
-                    Organiza las tareas de este cliente creando proyectos a tu medida.{' '}
-                    <strong>Puedes añadir nuevos proyectos en cualquier momento desde el menú “Acciones” de la cuenta.</strong>
-                  </p>
-                  {clientForm.projects.map((project, index) => (
-                    <div key={index} className={clientStyles.projectField}>
-                      <div className={clientStyles.projectInputWrapper}>
-                        <input
-                          type="text"
-                          value={project}
-                          onChange={(e) => {
-                            const newProjects = [...clientForm.projects];
-                            newProjects[index] = e.target.value;
-                            setClientForm((prev) => ({ ...prev, projects: newProjects }));
-                          }}
-                          placeholder={`Proyecto ${index + 1}`}
-                          className={clientStyles.input}
-                          aria-label={`Nombre del proyecto ${index + 1}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            animateClick(e.currentTarget);
-                            setClientForm((prev) => ({ ...prev, deleteProjectIndex: index }));
-                          }}
-                          className={clientStyles.deleteProjectButton}
-                          aria-label={`Eliminar proyecto ${index + 1}`}
-                        >
-                          <Image
-                            src="/trash-2.svg"
-                            alt="Eliminar proyecto"
-                            width={16}
-                            height={16}
-                            onError={(e) => {
-                              e.currentTarget.src = '/fallback-trash.svg';
-                            }}
-                          />
-                        </button>
-                      </div>
-                      {clientForm.deleteProjectIndex === index && (
-                        <div className={clientStyles.deleteConfirm}>
-                          <div className={clientStyles.deleteConfirmHeader}>
-                            <Image
-                              src="/trash-2.svg"
-                              alt="Confirmar eliminación"
-                              width={12}
-                              height={13.33}
-                              onError={(e) => {
-                                e.currentTarget.src = '/fallback-trash.svg';
-                              }}
-                            />
-                            <h3>
-                              ¿Estás seguro de que quieres eliminar el proyecto “{project || `Proyecto ${index + 1}`}”?
-                            </h3>
-                          </div>
-                          <p>
-                            Al eliminar este proyecto, también se eliminarán:
-                            <br />
-                            Todas las tareas asociadas
-                            <br />
-                            Historial de chats y actividad
-                            <br />
-                            Conocimiento generado por la IA para este proyecto
-                            <br />
-                            ⚠️ Esta acción es permanente y no se puede deshacer.
-                          </p>
-                          <input
-                            type="text"
-                            placeholder="Escribe ‘Eliminar’ para confirmar esta acción"
-                            value={clientForm.deleteConfirm}
-                            onChange={(e) => setClientForm((prev) => ({ ...prev, deleteConfirm: e.target.value }))}
-                            className={clientStyles.deleteConfirmInput}
-                            aria-label="Confirmar eliminación escribiendo 'Eliminar'"
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              animateClick(e.currentTarget);
-                              if (clientForm.deleteConfirm.toLowerCase() === 'eliminar') {
-                                setClientForm((prev) => ({
-                                  ...prev,
-                                  projects: prev.projects.filter((_, i) => i !== prev.deleteProjectIndex),
-                                  deleteProjectIndex: null,
-                                  deleteConfirm: '',
-                                }));
-                              }
-                            }}
-                            disabled={clientForm.deleteConfirm.toLowerCase() !== 'eliminar'}
-                            className={clientStyles.deleteConfirmButton}
-                          >
-                            Sí, eliminar todo
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      setClientForm((prev) => ({ ...prev, projects: [...prev.projects, ''] }));
-                    }}
-                    className={clientStyles.addProjectButton}
-                    aria-label="Añadir nuevo proyecto"
-                  >
-                    +
-                  </button>
-                </div>
-                <button
-                  type="submit"
-                  className={clientStyles.submitButton}
-                  onClick={(e) => animateClick(e.currentTarget)}
-                >
-                  Guardar
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-      {isInviteMemberOpen && (
-        <div className={memberStyles.invitePopupOverlay}>
-          <div className={memberStyles.inviteModal} ref={invitePopupRef}>
-            <div className={memberStyles.inviteContent}>
-              <h2 className={memberStyles.inviteTitle}>Invita a un nuevo miembro</h2>
-              <p className={memberStyles.inviteSubtitle}>
-                Escribe el correo electrónico de la persona que quieres invitar a esta cuenta.
-              </p>
-              <form
-                style={{ minWidth: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}
-                onSubmit={handleInviteSubmit}
-              >
-                <div className={memberStyles.inviteField}>
-                  <label htmlFor="inviteEmail" className={memberStyles.inviteLabel}>
-                    Correo electrónico:
-                  </label>
-                  <input
-                    id="inviteEmail"
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="mail@example.com"
-                    className={memberStyles.inviteInput}
-                    required
-                    aria-required="true"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className={memberStyles.inviteSubmitButton}
-                  onClick={(e) => animateClick(e.currentTarget)}
-                >
-                  Enviar Invitación
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    gsap.to(invitePopupRef.current, {
-                      opacity: 0,
-                      y: 50,
-                      scale: 0.95,
-                      duration: 0.3,
-                      ease: 'power2.in',
-                      onComplete: () => setIsInviteMemberOpen(false),
-                    });
-                  }}
-                  className={memberStyles.cancelButton}
-                >
-                  Cancelar
-                </button>
-              </form>
-            </div>
-          </div>
         </div>
       )}
     </div>

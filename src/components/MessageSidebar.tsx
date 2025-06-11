@@ -584,10 +584,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         });
         return;
       }
-
+  
       try {
         console.log('Starting message send:', { senderId, receiverId: receiver.id, conversationId });
-
+  
         await setDoc(
           doc(db, 'conversations', conversationId),
           {
@@ -598,7 +598,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           { merge: true }
         );
         console.log('Conversation updated:', conversationId);
-
+  
         const messageData: Partial<Message> = {
           senderId,
           receiverId: receiver.id,
@@ -611,33 +611,37 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           fileType: null,
           filePath: null,
         };
-
+  
         if (file) {
           try {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('conversationId', conversationId);
-
+  
             const response = await fetch('/api/upload', {
               method: 'POST',
               body: formData,
             });
-
+  
             if (!response.ok) {
               const errorData = await response.json();
-              throw new Error(errorData.error || 'Failed to delete file');
+              throw new Error(errorData.error || 'Failed to upload file');
             }
-
+  
             const { url, fileName, fileType, filePath } = await response.json();
+            console.log('File uploaded via API:', { url, fileName, fileType, filePath });
+  
+            // Guardar siempre fileName, fileType y filePath
+            messageData.fileName = fileName;
+            messageData.fileType = fileType;
+            messageData.filePath = filePath;
+  
+            // Distinguir entre imágenes y otros archivos
             if (file.type.startsWith('image/')) {
               messageData.imageUrl = url;
             } else {
               messageData.fileUrl = url;
-              messageData.fileName = fileName;
-              messageData.fileType = fileType;
             }
-            messageData.filePath = filePath;
-            console.log('File uploaded via API:', url);
           } catch (err: any) {
             console.error('Failed to upload file:', {
               message: err.message || 'Unknown error',
@@ -649,10 +653,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             throw err;
           }
         }
-
+  
         const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), messageData);
         console.log('Message saved:', msgRef.id);
-
+  
         await addDoc(collection(db, 'notifications'), {
           userId: senderId,
           message: `${user.firstName || 'Usuario'} te ha enviado un mensaje privado`,
@@ -663,13 +667,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           type: 'private_message',
         });
         console.log('Notification created for recipient:', receiver.id);
-
+  
         if (typingMessageId) {
           await deleteDoc(doc(db, 'conversations', conversationId, 'messages', typingMessageId));
           setTypingMessageId(null);
           console.log('Deleted typing message:', typingMessageId);
         }
-
+  
         setNewMessage('');
         setFile(null);
         setPreviewUrl(null);
@@ -690,7 +694,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     },
     [senderId, receiver.id, newMessage, conversationId, user?.id, user?.firstName, file, typingMessageId]
   );
-
 
   useEffect(() => {
     const chatEl = chatRef.current;
@@ -932,7 +935,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                     {m.text && <div className={styles.text}>{m.text}</div>}
                     {m.imageUrl && (
                         <div className={styles.imageWrapper}>
-                        <Image
+                            <Image
                             src={m.imageUrl}
                             alt={m.fileName || 'Imagen'}
                             width={200}
@@ -940,12 +943,30 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                             className={styles.image}
                             onClick={() => setImagePreviewSrc(m.imageUrl!)}
                             onError={(e) => {
-                            e.currentTarget.src = '/default-image.png';
-                            console.warn('Image load failed:', m.imageUrl);
+                                e.currentTarget.src = '/default-image.png';
+                                console.warn('Image load failed:', m.imageUrl);
                             }}
-                        />
+                            />
+                            {m.fileName && (
+                            <div className={styles.fileName}>
+                                <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+                                {m.fileName}
+                            </div>
+                            )}
                         </div>
-                    )}
+                        )}
+                        {m.fileUrl && !m.imageUrl && (
+                        <a
+                            href={m.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.file}
+                            download={m.fileName}
+                        >
+                            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+                            {m.fileName}
+                        </a>
+                        )}
                     {m.fileUrl && !m.imageUrl && (
                         <a
                         href={m.fileUrl}

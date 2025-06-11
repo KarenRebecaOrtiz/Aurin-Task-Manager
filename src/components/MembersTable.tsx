@@ -16,8 +16,25 @@ interface User {
   description?: string;
 }
 
+interface Task {
+  id: string;
+  clientId: string;
+  project: string;
+  name: string;
+  description: string;
+  status: string;
+  priority: string;
+  startDate: string | null;
+  endDate: string | null;
+  LeadedBy: string[];
+  AssignedTo: string[];
+  createdAt: string;
+  CreatedBy?: string;
+}
+
 interface MembersTableProps {
   users: User[];
+  tasks: Task[]; // Nueva prop para las tareas
   onInviteSidebarOpen: () => void;
   onProfileSidebarOpen: (userId: string) => void;
   onMessageSidebarOpen: (user: User) => void;
@@ -25,7 +42,7 @@ interface MembersTableProps {
 }
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ users, onInviteSidebarOpen, onProfileSidebarOpen, onMessageSidebarOpen, setUsers }) => {
+  ({ users, tasks, onInviteSidebarOpen, onProfileSidebarOpen, onMessageSidebarOpen, setUsers }) => {
     console.log('MembersTable rendered');
     const { user } = useUser();
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -46,33 +63,23 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       }
     }, []);
 
-    useEffect(() => {
-      const fetchUsers = async () => {
-        try {
-          const response = await fetch('/api/users');
-          if (!response.ok) throw new Error('Failed to fetch users');
-          const clerkUsers: {
-            id: string;
-            imageUrl?: string;
-            firstName?: string;
-            lastName?: string;
-            publicMetadata: { role?: string; description?: string };
-          }[] = await response.json();
-          const usersData: User[] = clerkUsers.map((u) => ({
-            id: u.id,
-            imageUrl: u.imageUrl || '/default-avatar.png',
-            fullName: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Sin nombre',
-            role: u.publicMetadata.role || 'Sin rol',
-            description: u.publicMetadata.description || 'Sin descripción',
-          }));
-          setUsers(usersData);
-        } catch (error) {
-          console.error('Error fetching users:', error);
-        }
-      };
-      fetchUsers();
-    }, [setUsers]);
+    // Calcular proyectos activos por usuario
+    const activeProjectsCount = useMemo(() => {
+      const validStatuses = ['En Proceso', 'Diseño', 'Desarrollo'];
+      const counts: { [userId: string]: number } = {};
 
+      users.forEach((u) => {
+        counts[u.id] = tasks.filter(
+          (task) =>
+            validStatuses.includes(task.status) &&
+            (task.AssignedTo.includes(u.id) || task.LeadedBy.includes(u.id)),
+        ).length;
+      });
+
+      return counts;
+    }, [users, tasks]);
+
+    // Filtrar y ordenar usuarios
     const memoizedFilteredUsers = useMemo(() => {
       const currentUser = users.find((u) => u.id === user?.id);
       const otherUsers = users.filter((u) => u.id !== user?.id);
@@ -92,6 +99,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       );
     }, [memoizedFilteredUsers, searchQuery]);
 
+    // Animaciones GSAP
     useEffect(() => {
       const currentActionMenuRef = actionMenuRef.current;
       if (actionMenuOpenId && currentActionMenuRef) {
@@ -108,6 +116,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       };
     }, [actionMenuOpenId]);
 
+    // Manejar clics fuera del menú
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -123,6 +132,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [actionMenuOpenId]);
 
+    // Ordenamiento
     const handleSort = useCallback(
       (key: string) => {
         if (key === sortKey) {
@@ -135,6 +145,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       [sortKey],
     );
 
+    // Manejar clic en acciones
     const handleActionClick = useCallback((userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       const button = e.currentTarget;
@@ -147,6 +158,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       console.log('Action menu toggled for user:', userId);
     }, []);
 
+    // Animación de clic
     const animateClick = useCallback((element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
@@ -158,6 +170,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       });
     }, []);
 
+    // Renderizar menú de acciones
     const renderActionMenu = useCallback(
       (u: User) => (
         <div className={styles.actionContainer}>
@@ -212,6 +225,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       [actionMenuOpenId, dropdownPosition, animateClick, onProfileSidebarOpen, onMessageSidebarOpen, user?.id],
     );
 
+    // Definir columnas
     const baseColumns = useMemo(
       () => [
         {
@@ -223,13 +237,19 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         {
           key: 'fullName',
           label: 'Nombre',
-          width: '50%',
+          width: '40%',
           mobileVisible: true,
         },
         {
           key: 'role',
           label: 'Rol',
           width: '30%',
+          mobileVisible: false,
+        },
+        {
+          key: 'activeProjects',
+          label: 'Proyectos activos',
+          width: '10%',
           mobileVisible: false,
         },
         {
@@ -262,6 +282,14 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               ),
             };
           }
+          if (col.key === 'activeProjects') {
+            return {
+              ...col,
+              render: (user: User) => (
+                <span className={styles.activeProjects}>{activeProjectsCount[user.id] || 0}</span>
+              ),
+            };
+          }
           if (col.key === 'action') {
             return {
               ...col,
@@ -270,7 +298,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           }
           return col;
         }),
-        [baseColumns, renderActionMenu],
+      [baseColumns, renderActionMenu, activeProjectsCount],
     );
 
     return (
@@ -301,7 +329,9 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           sortDirection={sortDirection}
           onSort={handleSort}
           onRowClick={(u: User, columnKey: string) =>
-            ['imageUrl', 'fullName', 'role'].includes(columnKey) && u.id !== user?.id && onMessageSidebarOpen(u)
+            ['imageUrl', 'fullName', 'role', 'activeProjects'].includes(columnKey) &&
+            u.id !== user?.id &&
+            onMessageSidebarOpen(u)
           }
         />
       </div>
