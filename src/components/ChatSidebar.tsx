@@ -471,6 +471,26 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, [messages, user?.id, hasInteracted]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setActionMenuOpenId(null);
+      console.log('Closed action menu on scroll');
+    };
+  
+    const chatEl = chatRef.current;
+    if (chatEl) {
+      chatEl.addEventListener('scroll', handleScroll);
+    }
+    window.addEventListener('scroll', handleScroll);
+  
+    return () => {
+      if (chatEl) {
+        chatEl.removeEventListener('scroll', handleScroll);
+      }
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   // Scroll to bottom of chat
   useEffect(() => {
     if (chatRef.current) {
@@ -1092,7 +1112,14 @@ const hoursByUser = useMemo(() => {
           </div>
         </div>
       </div>
-      <div className={styles.chat} ref={chatRef}>
+      <div
+        className={styles.chat}
+        ref={chatRef}
+        onScroll={() => {
+          setActionMenuOpenId(null);
+          console.log('Closed action menu on chat scroll');
+        }}
+      >
         {messages.map((message) => (
           <div key={message.id} className={styles.message}>
             <Image
@@ -1122,7 +1149,7 @@ const hoursByUser = useMemo(() => {
                           setHasInteracted(true);
                         }}
                       >
-                        <Image src="/elipsis.svg" alt="Acciones" width={16} height={16} />
+                        <Image src="/elipsis.svg" alt="Acciones" width={16} height={24} />
                       </button>
                       {actionMenuOpenId === message.id && (
                         <div ref={actionMenuRef} className={styles.actionDropdown}>

@@ -52,7 +52,7 @@ interface MessageSidebarProps {
   receiver: UserCard;
   onOpenSidebar: (receiverId: string) => void;
   sidebarId: string;
-  conversationId: string; // Added conversationId prop
+  conversationId: string;
 }
 
 /* ---------- Debounce Utility ---------- */
@@ -75,7 +75,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   receiver,
   onOpenSidebar,
   sidebarId,
-  conversationId, // Destructure conversationId
+  conversationId,
 }) => {
   const { user } = useUser();
 
@@ -92,6 +92,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
+  const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [showDownArrow, setShowDownArrow] = useState(false);
+  const lastScrollTop = useRef(0);
 
   /* ----- Refs ----- */
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -109,7 +112,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     if (!sidebarRef.current) return;
     const el = sidebarRef.current;
     if (isOpen) {
-      gsap.fromTo(el, { x: '100%', opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' });
+      gsap.fromTo(el, { x: '100%', opacity: 1 }, { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' });
       console.log('MessageSidebar opened');
     } else {
       gsap.to(el, { x: '100%', opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: onClose });
@@ -136,11 +139,11 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       if (
         actionMenuRef.current &&
         !actionMenuRef.current.contains(e.target as Node) &&
-        actionMenuOpenId &&
-        !e.composedPath().includes(document.querySelector(`button[aria-label="Opciones"]`) as Node)
+        actionMenuOpenId
       ) {
         console.log('Closing action menu via outside click', { messageId: actionMenuOpenId });
         setActionMenuOpenId(null);
+        setActionMenuPosition(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -163,6 +166,59 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       }
     };
   }, [actionMenuOpenId]);
+
+  /* ---------- Scroll tracking for down arrow and action menu ---------- */
+  useEffect(() => {
+    if (!chatRef.current) return;
+
+    const chat = chatRef.current;
+    const isAtBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50;
+
+    const debouncedHandleScroll = debounce(() => {
+      console.log('Scroll detected in chat, checking states:', { actionMenuOpenId, showDownArrow });
+      if (isAtBottom()) {
+        setShowDownArrow(false);
+        console.log('User scrolled to bottom, hiding down arrow');
+      } else if (chat.scrollTop > lastScrollTop.current && !showDownArrow) {
+        setShowDownArrow(true);
+        console.log('User scrolled up, showing down arrow');
+      }
+      if (actionMenuOpenId) {
+        console.log('Closing action menu due to chat scroll', { messageId: actionMenuOpenId });
+        setActionMenuOpenId(null);
+        setActionMenuPosition(null);
+      }
+      lastScrollTop.current = chat.scrollTop;
+    }, 100);
+
+    const handleScroll = () => {
+      console.log('Raw scroll event fired');
+      debouncedHandleScroll();
+    };
+
+    chat.addEventListener('scroll', handleScroll);
+
+    // Handle new messages
+    if (messages.length > 0) {
+      const wasAtBottom = isAtBottom();
+      const prevMessages = messageRefs.current.size;
+      const hasNewMessages = messages.length > prevMessages;
+
+      if (hasNewMessages && !wasAtBottom && messages[messages.length - 1].senderId !== user?.id) {
+        setShowDownArrow(true);
+        console.log('New message received, showing down arrow');
+      } else if (wasAtBottom) {
+        chat.scrollTop = chat.scrollHeight;
+        setShowDownArrow(false);
+        console.log('Scrolled to bottom due to being at bottom or sending message');
+      }
+    }
+
+    return () => {
+      console.log('Cleaning up scroll listener');
+      chat.removeEventListener('scroll', handleScroll);
+    };
+  }, [messages, user?.id]);
 
   /* ---------- Listener Firestore ---------- */
   useEffect(() => {
@@ -316,16 +372,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     [user?.id, conversationId, typingMessageId]
   );
 
-  /* ---------- Auto-scroll ---------- */
-  useEffect(() => {
-    if (chatRef.current) {
-      setTimeout(() => {
-        chatRef.current!.scrollTop = chatRef.current!.scrollHeight;
-        console.log('Scrolled to bottom of chat');
-      }, 0);
-    }
-  }, [messages]);
-
   /* ---------- Animación de nuevos mensajes ---------- */
   useEffect(() => {
     if (!messages.length || !chatRef.current) return;
@@ -389,9 +435,28 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   };
 
   /* ---------- Abrir Action Menu ---------- */
-  const handleOpenActionMenu = (messageId: string) => {
-    console.log('Opening action menu:', { messageId });
+  const handleOpenActionMenu = (messageId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    console.log('Opening action menu:', { messageId, currentOpenId: actionMenuOpenId });
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const menuWidth = 150;
+    const menuHeight = 80;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    let left = rect.left + window.scrollX;
+    let top = rect.bottom + window.scrollY + 4;
+
+    if (left + menuWidth > viewportWidth) {
+      left = viewportWidth - menuWidth - 8;
+    }
+    if (top + menuHeight > viewportHeight) {
+      top = rect.top + window.scrollY - menuHeight - 4;
+    }
+
+    setActionMenuPosition({ top, left });
     setActionMenuOpenId(actionMenuOpenId === messageId ? null : messageId);
+    console.log('Action menu position set:', { top, left, rect, viewportWidth, viewportHeight });
   };
 
   /* ---------- Editar / Borrar mensaje ---------- */
@@ -422,35 +487,76 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('No user authenticated for message deletion', { messageId });
+      setError('Usuario no autenticado.');
+      return;
+    }
+  
     try {
+      console.log('Starting message deletion:', { messageId, conversationId });
+  
       const message = messages.find((m) => m.id === messageId);
-      if (message && (message.fileUrl || message.imageUrl) && message.filePath) {
-        try {
-          const response = await fetch('/api/delete-file', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filePath: message.filePath }),
-          });
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to delete file');
-          }
-          console.log('Deleted GCS file:', message.filePath);
-        } catch (err: any) {
-          console.error('Error deleting GCS file:', {
-            message: err.message || 'Unknown error',
-            code: err.code || 'unknown',
-            stack: err.stack || 'No stack trace',
-            filePath: message.filePath,
-          });
-        }
+      if (!message) {
+        console.warn('Message not found for deletion:', messageId);
+        throw new Error('Mensaje no encontrado.');
       }
-
+  
+      // Eliminar archivo en GCS si existe
+      if (message.fileUrl || message.imageUrl) {
+        if (!message.filePath) {
+          console.warn('No filePath provided for file deletion:', {
+            messageId,
+            fileUrl: message.fileUrl,
+            imageUrl: message.imageUrl,
+          });
+        } else {
+          console.log('Attempting to delete GCS file:', message.filePath);
+          try {
+            const response = await fetch('/api/delete-file', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filePath: message.filePath }),
+            });
+  
+            const responseData = await response.json();
+            if (!response.ok) {
+              console.error('Failed to delete GCS file:', {
+                status: response.status,
+                error: responseData.error,
+                details: responseData.details,
+                filePath: message.filePath,
+              });
+              throw new Error(responseData.error || 'Failed to delete file');
+            }
+  
+            console.log('Successfully deleted GCS file:', message.filePath);
+          } catch (err: any) {
+            console.error('Error deleting GCS file:', {
+              message: err.message || 'Unknown error',
+              code: err.code || 'unknown',
+              stack: err.stack || 'No stack trace',
+              filePath: message.filePath,
+            });
+            // No lanzamos error para continuar con la eliminación del mensaje
+          }
+        }
+      } else {
+        console.log('No file associated with message, skipping GCS deletion:', messageId);
+      }
+  
+      // Eliminar mensaje en Firestore
+      console.log('Deleting message from Firestore:', messageId);
       await deleteDoc(doc(db, 'conversations', conversationId, 'messages', messageId));
-      console.log('Message deleted:', messageId);
+      console.log('Message deleted from Firestore:', messageId);
+  
+      // Limpiar estados
       setActionMenuOpenId(null);
-      if (messageId === typingMessageId) setTypingMessageId(null);
+      setActionMenuPosition(null);
+      if (messageId === typingMessageId) {
+        console.log('Cleared typing message ID:', typingMessageId);
+        setTypingMessageId(null);
+      }
     } catch (err: any) {
       console.error('Error deleting message:', {
         message: err.message || 'Unknown error',
@@ -519,7 +625,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
             if (!response.ok) {
               const errorData = await response.json();
-              throw new Error(errorData.error || 'Failed to upload file');
+              throw new Error(errorData.error || 'Failed to delete file');
             }
 
             const { url, fileName, fileType, filePath } = await response.json();
@@ -584,6 +690,24 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     },
     [senderId, receiver.id, newMessage, conversationId, user?.id, user?.firstName, file, typingMessageId]
   );
+
+
+  useEffect(() => {
+    const chatEl = chatRef.current;
+    if (!chatEl) return;
+  
+    const handleScroll = () => {
+      if (actionMenuOpenId !== null) {
+        setActionMenuOpenId(null);
+        console.log('Closed action menu on chat scroll');
+      }
+    };
+  
+    chatEl.addEventListener('scroll', handleScroll);
+    return () => {
+      chatEl.removeEventListener('scroll', handleScroll);
+    };
+  }, [actionMenuOpenId]);
 
   /* ---------- Render ---------- */
   if (!senderId || !user?.id) {
@@ -650,161 +774,212 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       </div>
 
       {/* ---------- Chat ---------- */}
-      <ul className={styles.chat} ref={chatRef}>
+      <ul
+        className={styles.chat}
+        ref={chatRef}
+        onScroll={() => {
+            console.log('Chat scroll event triggered via onScroll');
+            if (actionMenuOpenId !== null) {
+            console.log('Closed action menu via onScroll');
+            setActionMenuOpenId(null);
+            setActionMenuPosition(null);
+            }
+        }}
+        >
         {error && <li className={styles.error}>{error}</li>}
         {isLoading && (
-          <li className={styles.loader}>
+            <li className={styles.loader}>
             <div className={styles.spinner} />
-          </li>
+            </li>
         )}
         {!isLoading && messages.length === 0 && (
-          <li className={styles.noMessages}>No hay mensajes en esta conversación.</li>
+            <li className={styles.noMessages}>No hay mensajes en esta conversación.</li>
         )}
         {messages.map((m) => {
-          // Hide typing indicator for current user
-          if (m.isTyping && m.senderId === user.id) return null;
+            // Hide typing indicator for current user
+            if (m.isTyping && m.senderId === user.id) return null;
 
-          const isMe = m.senderId === user.id;
-          const senderName = isMe ? (user.firstName || 'Yo') : receiver.fullName;
+            const isMe = m.senderId === user.id;
+            const senderName = isMe ? (user.firstName || 'Yo') : receiver.fullName;
 
-          return (
+            return (
             <li
-              key={m.id}
-              data-message-id={m.id}
-              className={`${styles.message} ${isMe ? styles.sent : styles.received}`}
+                key={m.id}
+                data-message-id={m.id}
+                className={`${styles.message} ${isMe ? styles.sent : styles.received}`}
             >
-              <div className={styles.messageContent}>
+                <div className={styles.messageContent}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.sender}>{senderName}</span>
-                  <span className={styles.timestamp}>
+                    <span className={styles.sender}>{senderName}</span>
+                    <span className={styles.timestamp}>
                     {m.timestamp instanceof Timestamp
-                      ? m.timestamp.toDate().toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false,
+                        ? m.timestamp.toDate().toLocaleTimeString('es-ES', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
                         })
-                      : 'Sin fecha'}
-                  </span>
-                  {isMe && !m.isTyping && (
+                        : 'Sin fecha'}
+                    </span>
+                    {isMe && !m.isTyping && (
                     <div className={styles.actionContainer}>
-                      <button
+                        <button
                         className={styles.actionButton}
-                        onClick={() => handleOpenActionMenu(m.id)}
+                        onClick={(e) => handleOpenActionMenu(m.id, e)}
                         aria-label="Opciones"
-                      >
+                        >
                         <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
-                      </button>
-                      {actionMenuOpenId === m.id &&
+                        </button>
+                        {actionMenuOpenId === m.id &&
                         createPortal(
-                          <div ref={actionMenuRef} className={styles.actionDropdown}>
                             <div
-                              className={styles.actionDropdownItem}
-                              onClick={() => {
+                            ref={(el) => {
+                                actionMenuRef.current = el;
+                                if (el) {
+                                console.log('Action menu mounted:', {
+                                    messageId: m.id,
+                                    position: actionMenuPosition,
+                                    rect: el.getBoundingClientRect(),
+                                    style: el.style,
+                                });
+                                }
+                            }}
+                            className={styles.actionDropdown}
+                            style={{
+                                top: actionMenuPosition ? `${actionMenuPosition.top}px` : '0px',
+                                left: actionMenuPosition ? `${actionMenuPosition.left}px` : '0px',
+                                position: 'absolute',
+                                zIndex: 130000,
+                                opacity: 1,
+                            }}
+                            >
+                            <div
+                                className={styles.actionDropdownItem}
+                                onClick={(e) => {
+                                e.stopPropagation();
                                 console.log('Opening edit mode for message:', m.id);
                                 setEditingMessageId(m.id);
                                 setEditingText(m.text || '');
                                 setActionMenuOpenId(null);
-                              }}
+                                setActionMenuPosition(null);
+                                }}
                             >
-                              Editar mensaje
+                                Editar mensaje
                             </div>
                             <div
-                              className={styles.actionDropdownItem}
-                              onClick={() => {
+                                className={styles.actionDropdownItem}
+                                onClick={(e) => {
+                                e.stopPropagation();
                                 console.log('Triggering delete for message:', m.id);
                                 handleDeleteMessage(m.id);
-                              }}
+                                setActionMenuOpenId(null);
+                                setActionMenuPosition(null);
+                                }}
                             >
-                              Eliminar mensaje
+                                Eliminar mensaje
                             </div>
-                          </div>,
-                          document.body
+                            </div>,
+                            document.body
                         )}
                     </div>
-                  )}
+                    )}
                 </div>
 
                 {(m.fileUrl || m.imageUrl) && (
-                  <button
+                    <button
                     className={styles.downloadButton}
                     onClick={() => window.open(m.imageUrl || m.fileUrl, '_blank')}
                     aria-label="Descargar archivo"
-                  >
+                    >
                     <Image src="/download.svg" alt="Descargar" width={16} height={16} />
-                  </button>
+                    </button>
                 )}
 
                 {editingMessageId === m.id ? (
-                  <div className={styles.editContainer}>
+                    <div className={styles.editContainer}>
                     <input
-                      type="text"
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      className={styles.editInput}
-                      aria-label="Editar mensaje"
-                      autoFocus
+                        type="text"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        className={styles.editInput}
+                        aria-label="Editar mensaje"
+                        autoFocus
                     />
                     <button
-                      className={styles.editSaveButton}
-                      onClick={() => handleEditMessage(m.id)}
-                      disabled={!editingText.trim()}
+                        className={styles.editSaveButton}
+                        onClick={() => handleEditMessage(m.id)}
+                        disabled={!editingText.trim()}
                     >
-                      Guardar
+                        Guardar
                     </button>
                     <button
-                      className={styles.editCancelButton}
-                      onClick={() => {
+                        className={styles.editCancelButton}
+                        onClick={() => {
                         setEditingMessageId(null);
                         setEditingText('');
-                      }}
+                        }}
                     >
-                      Cancelar
+                        Cancelar
                     </button>
-                  </div>
+                    </div>
                 ) : m.isTyping ? (
-                  <div className={styles.typingDots}>
+                    <div className={styles.typingDots}>
                     <span></span>
                     <span></span>
                     <span></span>
-                  </div>
+                    </div>
                 ) : (
-                  <>
+                    <>
                     {m.text && <div className={styles.text}>{m.text}</div>}
                     {m.imageUrl && (
-                      <div className={styles.imageWrapper}>
+                        <div className={styles.imageWrapper}>
                         <Image
-                          src={m.imageUrl}
-                          alt={m.fileName || 'Imagen'}
-                          width={200}
-                          height={200}
-                          className={styles.image}
-                          onClick={() => setImagePreviewSrc(m.imageUrl!)}
-                          onError={(e) => {
+                            src={m.imageUrl}
+                            alt={m.fileName || 'Imagen'}
+                            width={200}
+                            height={200}
+                            className={styles.image}
+                            onClick={() => setImagePreviewSrc(m.imageUrl!)}
+                            onError={(e) => {
                             e.currentTarget.src = '/default-image.png';
                             console.warn('Image load failed:', m.imageUrl);
-                          }}
+                            }}
                         />
-                      </div>
+                        </div>
                     )}
                     {m.fileUrl && !m.imageUrl && (
-                      <a
+                        <a
                         href={m.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={styles.file}
                         download={m.fileName}
-                      >
+                        >
                         <Image src="/file.svg" alt="Archivo" width={16} height={16} />
                         {m.fileName}
-                      </a>
+                        </a>
                     )}
-                  </>
+                    </>
                 )}
-              </div>
+                </div>
             </li>
-          );
+            );
         })}
-      </ul>
+        </ul>
+      {showDownArrow && (
+        <button
+          className={styles.downArrowButton}
+          onClick={() => {
+            if (chatRef.current) {
+              chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
+              setShowDownArrow(false);
+              console.log('Clicked down arrow, scrolling to bottom');
+            }
+          }}
+          aria-label="Ver nuevos mensajes"
+        >
+          <Image src="/chevron-down.svg" alt="Nuevos mensajes" width={24} height={24} />
+        </button>
+      )}
 
       {/* ---------- Input ---------- */}
       <form

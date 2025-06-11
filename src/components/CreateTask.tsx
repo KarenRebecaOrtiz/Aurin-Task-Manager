@@ -1,13 +1,13 @@
-'use client';
-
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, setDoc, getDocs, addDoc } from 'firebase/firestore';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Image from 'next/image';
+import { createPortal } from 'react-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/NewTaskStyles.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
@@ -15,6 +15,17 @@ import memberStyles from '@/components/MembersTable.module.scss';
 import { Timestamp } from 'firebase/firestore';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const debounce = (func: (...args: any[]) => void, delay: number) => {
+    let timer: NodeJS.Timeout | null = null;
+    return (...args: any[]) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        func(...args);
+        timer = null;
+      }, delay);
+    };
+  };
 
 interface Client {
   id: string;
@@ -61,6 +72,7 @@ interface CreateTaskProps {
 
 const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedChanges }) => {
   const { user } = useUser();
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [task, setTask] = useState<Task>({
@@ -85,6 +97,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     createdAt: new Date(),
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const initialTaskState = useRef<Task>({ ...task });
   const [clientSlideIndex, setClientSlideIndex] = useState(0);
   const [pmSlideIndex, setPmSlideIndex] = useState(0);
@@ -104,6 +117,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+  const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+  const [startDatePosition, setStartDatePosition] = useState<{ top: number; left: number } | null>(null);
+  const [endDatePosition, setEndDatePosition] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const clientSlidesRef = useRef<HTMLDivElement>(null);
   const pmSlidesRef = useRef<HTMLDivElement>(null);
@@ -114,7 +132,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
   const projectDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
-  const datePickerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const startDateInputRef = useRef<HTMLInputElement>(null);
+  const endDateInputRef = useRef<HTMLInputElement>(null);
+  const startDatePopperRef = useRef<HTMLDivElement>(null);
+  const endDatePopperRef = useRef<HTMLDivElement>(null);
+  const advancedSectionRef = useRef<HTMLDivElement>(null);
+  const clientDragRef = useRef<HTMLDivElement>(null);
+  const pmDragRef = useRef<HTMLDivElement>(null);
+  const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
 
   // Track unsaved changes
   useEffect(() => {
@@ -135,6 +160,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       setTask({ ...initialTaskState.current });
       setHasUnsavedChanges(false);
       onHasUnsavedChanges(false);
+      setIsAdvancedOpen(false);
+      setErrors({});
     }
   }, [isOpen, onHasUnsavedChanges]);
 
@@ -296,7 +323,33 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     }
   }, [isInviteMemberOpen]);
 
-  // Close popups on outside click
+  // GSAP animation for advanced section
+  useEffect(() => {
+    if (advancedSectionRef.current) {
+      gsap.to(advancedSectionRef.current, {
+        height: isAdvancedOpen ? 'auto' : 0,
+        opacity: isAdvancedOpen ? 1 : 0,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    }
+  }, [isAdvancedOpen]);
+
+  // Close DatePickers on scroll
+  useEffect(() => {
+    const handleScroll = debounce(() => {
+      if (isStartDateOpen || isEndDateOpen) {
+        console.log('Closing date pickers due to scroll');
+        setIsStartDateOpen(false);
+        setIsEndDateOpen(false);
+      }
+    }, 100);
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isStartDateOpen, isEndDateOpen]);
+
+  // Close popups and dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -351,6 +404,22 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       ) {
         setIsPriorityDropdownOpen(false);
       }
+      if (
+        startDatePopperRef.current &&
+        !startDatePopperRef.current.contains(event.target as Node) &&
+        isStartDateOpen &&
+        !startDateInputRef.current?.contains(event.target as Node)
+      ) {
+        setIsStartDateOpen(false);
+      }
+      if (
+        endDatePopperRef.current &&
+        !endDatePopperRef.current.contains(event.target as Node) &&
+        isEndDateOpen &&
+        !endDateInputRef.current?.contains(event.target as Node)
+      ) {
+        setIsEndDateOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -362,20 +431,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     isProjectDropdownOpen,
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
+    isStartDateOpen,
+    isEndDateOpen,
   ]);
-
-  // GSAP date picker animations
-  useEffect(() => {
-    datePickerRefs.current.forEach((picker) => {
-      if (picker) {
-        gsap.fromTo(
-          picker,
-          { opacity: 0, scale: 0.95 },
-          { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
-        );
-      }
-    });
-  }, []);
 
   // GSAP dropdown animations
   useEffect(() => {
@@ -410,6 +468,24 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       }
     }
   }, [isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen]);
+
+  // Position DatePicker poppers
+  useEffect(() => {
+    if (isStartDateOpen && startDateInputRef.current) {
+      const rect = startDateInputRef.current.getBoundingClientRect();
+      setStartDatePosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isEndDateOpen && endDateInputRef.current) {
+      const rect = endDateInputRef.current.getBoundingClientRect();
+      setEndDatePosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [isStartDateOpen, isEndDateOpen]);
 
   // GSAP click animation handler
   const animateClick = (element: HTMLElement) => {
@@ -461,6 +537,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setTask((prev) => ({ ...prev, clientId, project: '' }));
+      setErrors((prev) => ({ ...prev, clientId: undefined }));
     },
     [],
   );
@@ -468,22 +545,18 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
   const handlePmSelect = useCallback(
     (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      setTask((prev) => ({
-        ...prev,
-        LeadedBy: prev.LeadedBy.includes(userId) ? prev.LeadedBy : [...prev.LeadedBy, userId],
-        AssignedTo: prev.AssignedTo.filter((id) => id !== userId),
-      }));
-    },
-    [],
-  );
-
-  const handlePmUnselect = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      animateClick(e.currentTarget);
-      setTask((prev) => ({
-        ...prev,
-        LeadedBy: prev.LeadedBy.filter((id) => id !== userId),
-      }));
+      setTask((prev) => {
+        const isSelected = prev.LeadedBy.includes(userId);
+        const newLeadedBy = isSelected
+          ? prev.LeadedBy.filter((id) => id !== userId)
+          : [...prev.LeadedBy, userId];
+        return {
+          ...prev,
+          LeadedBy: newLeadedBy,
+          AssignedTo: prev.AssignedTo.filter((id) => id !== userId),
+        };
+      });
+      setErrors((prev) => ({ ...prev, LeadedBy: undefined }));
     },
     [],
   );
@@ -494,23 +567,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       if (!task.LeadedBy.includes(userId)) {
         setTask((prev) => ({
           ...prev,
-          AssignedTo: prev.AssignedTo.includes(userId) ? prev.AssignedTo : [...prev.AssignedTo, userId],
+          AssignedTo: prev.AssignedTo.includes(userId) ? prev.AssignedTo.filter((id) => id !== userId) : [...prev.AssignedTo, userId],
         }));
         setSearchCollaborator('');
+        setErrors((prev) => ({ ...prev, AssignedTo: undefined }));
       }
     },
     [task.LeadedBy],
-  );
-
-  const handleCollaboratorRemove = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      animateClick(e.currentTarget);
-      setTask((prev) => ({
-        ...prev,
-        AssignedTo: prev.AssignedTo.filter((id) => id !== userId),
-      }));
-    },
-    [],
   );
 
   const handleClientFormSubmit = useCallback(
@@ -600,31 +663,37 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
     [inviteEmail],
   );
 
+  const validateTask = () => {
+    const newErrors: Partial<Record<keyof Task, string>> = {};
+    if (!task.name.trim()) newErrors.name = 'El nombre es obligatorio';
+    if (!task.description.trim()) newErrors.description = 'La descripción es obligatoria';
+    if (!task.clientId) newErrors.clientId = 'Selecciona una cuenta';
+    if (!task.project) newErrors.project = 'Selecciona un proyecto';
+    if (!task.startDate) newErrors.startDate = 'La fecha de inicio es obligatoria';
+    if (!task.endDate) newErrors.endDate = 'La fecha de finalización es obligatoria';
+    if (task.status === 'Seleccionar') newErrors.status = 'Selecciona un estado';
+    if (task.priority === 'Seleccionar') newErrors.priority = 'Selecciona una prioridad';
+    if (!task.LeadedBy.length) newErrors.LeadedBy = 'Selecciona al menos un encargado';
+    if (!task.AssignedTo.length) newErrors.AssignedTo = 'Selecciona al menos un colaborador';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleTaskSubmit = useCallback(
     async (e: React.MouseEvent<HTMLButtonElement>) => {
       animateClick(e.currentTarget);
       e.preventDefault();
-      if (
-        !user ||
-        !task.name.trim() ||
-        !task.description.trim() ||
-        !task.clientId ||
-        !task.project ||
-        !task.startDate ||
-        !task.endDate ||
-        !task.budget ||
-        !task.hours ||
-        !task.LeadedBy.length
-      ) {
+      if (!user || !validateTask()) {
         alert('Por favor, completa todos los campos obligatorios.');
         return;
       }
 
-      if (task.startDate > task.endDate) {
+      if (task.startDate && task.endDate && task.startDate > task.endDate) {
         alert('La fecha de inicio debe ser anterior a la fecha de finalización.');
         return;
       }
 
+      setIsSaving(true);
       try {
         const taskDocRef = doc(collection(db, 'tasks'));
         const taskId = taskDocRef.id;
@@ -674,13 +743,15 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
         });
         setHasUnsavedChanges(false);
         onHasUnsavedChanges(false);
-        onToggle();
+        setIsSaving(false);
+        router.push('/');
       } catch (error) {
         console.error('Error saving task:', error);
         alert('Error al guardar la tarea.');
+        setIsSaving(false);
       }
     },
-    [user, task, onToggle, onHasUnsavedChanges],
+    [user, task, router, onHasUnsavedChanges],
   );
 
   const filteredCollaborators = useMemo(() => {
@@ -697,6 +768,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       animateClick(e.currentTarget);
       setTask((prev) => ({ ...prev, project }));
       setIsProjectDropdownOpen(false);
+      setErrors((prev) => ({ ...prev, project: undefined }));
     },
     [],
   );
@@ -706,6 +778,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       animateClick(e.currentTarget);
       setTask((prev) => ({ ...prev, status }));
       setIsStatusDropdownOpen(false);
+      setErrors((prev) => ({ ...prev, status: undefined }));
     },
     [],
   );
@@ -715,12 +788,21 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       animateClick(e.currentTarget);
       setTask((prev) => ({ ...prev, priority }));
       setIsPriorityDropdownOpen(false);
+      setErrors((prev) => ({ ...prev, priority: undefined }));
+    },
+    [],
+  );
+
+  const toggleAdvancedSection = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      animateClick(e.currentTarget);
+      setIsAdvancedOpen((prev) => !prev);
     },
     [],
   );
 
   return (
-    <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={containerRef}>
+    <div className={`${styles.container} ${isOpen ? styles.open : ''} ${isSaving ? styles.saving : ''}`} ref={containerRef}>
       <div className={styles.header}>
         <div className={styles.headerTitle}>Crear Tarea</div>
         <button className={styles.toggleButton} onClick={onToggle}>
@@ -734,39 +816,56 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
       </div>
       {isOpen && (
         <div className={styles.content}>
+          {/* Container 0: Account and Project */}
           <div className={styles.section} ref={(el) => { sectionsRef.current[0] = el; }}>
             <div className={styles.sectionTitle}>Cuenta Asignada:</div>
             <div className={styles.sectionSubtitle}>
               Selecciona la cuenta a la que se asignará esta tarea (por ejemplo, Pinaccle).
             </div>
             <div className={styles.slideshow}>
-              <button className={styles.slideButton} onClick={handleClientSlidePrev}>
-                <Image src="/chevron-left.svg" alt="Previous" width={6} height={13} />
+              <button className={styles.slideButton} onClick={handleClientSlidePrev} disabled={clientSlideIndex === 0}>
+                <Image src="/chevron-left.svg" alt="Previous" width={24} height={52} />
               </button>
               <div className={styles.slidesContainer}>
-                <div className={styles.slides} ref={clientSlidesRef}>
-                  {clients.map((client) => (
-                    <div
-                      key={client.id}
-                      className={`${styles.slideCard} ${task.clientId === client.id ? styles.selected : ''}`}
-                      onClick={(e) => handleClientSelect(client.id, e)}
-                    >
-                      <Image
-                        src={client.imageUrl}
-                        alt={client.name}
-                        width={36}
-                        height={36}
-                        className={styles.clientImage}
-                      />
-                      <div className={styles.clientName}>{client.name}</div>
-                    </div>
-                  ))}
-                </div>
+                <Draggable
+                  axis="x"
+                  bounds={{ left: -(clients.length - 6) * 150, right: 0 }}
+                  nodeRef={clientDragRef}
+                  onDrag={(e, data) => {
+                    const slideWidth = 150; // Approximate card width + gap
+                    const newIndex = Math.round(-data.x / slideWidth);
+                    setClientSlideIndex(newIndex);
+                  }}
+                >
+                  <div className={styles.slides} ref={clientDragRef}>
+                    {clients.map((client) => (
+                      <div
+                        key={client.id}
+                        className={`${styles.slideCard} ${task.clientId === client.id ? styles.selected : ''}`}
+                        onClick={(e) => handleClientSelect(client.id, e)}
+                      >
+                        <Image
+                          src={client.imageUrl}
+                          alt={client.name}
+                          width={36}
+                          height={36}
+                          className={styles.clientImage}
+                        />
+                        <div className={styles.clientName}>{client.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Draggable>
               </div>
-              <button className={styles.slideButton} onClick={handleClientSlideNext}>
-                <Image src="/chevron-right.svg" alt="Next" width={6} height={13} />
+              <button
+                className={styles.slideButton}
+                onClick={handleClientSlideNext}
+                disabled={clientSlideIndex >= Math.ceil(clients.length / 6) - 1}
+              >
+                <Image src="/chevron-right.svg" alt="Next" width={24} height={52} />
               </button>
             </div>
+            {errors.clientId && <div className={styles.error}>{errors.clientId}</div>}
             <div className={styles.addButtonWrapper}>
               <div className={styles.addButtonText}>
                 ¿No encuentras alguna cuenta? <strong>Agrega una nueva.</strong>
@@ -813,6 +912,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                   </div>
                 )}
               </div>
+              {errors.project && <div className={styles.error}>{errors.project}</div>}
               {task.clientId && clients.find((c) => c.id === task.clientId)?.createdBy === user?.id && (
                 <button
                   className={styles.addButton}
@@ -826,186 +926,236 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
               )}
             </div>
           </div>
+          {/* Container 1: Basic Information */}
           <div className={styles.section} ref={(el) => { sectionsRef.current[2] = el; }}>
             <div className={styles.sectionTitle}>1: Información Básica:</div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Nombre de la tarea *</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.name}
-                onChange={(e) => setTask((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ej: Crear wireframe"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Descripción *</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.description}
-                onChange={(e) => setTask((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Ej: Diseñar wireframes para la nueva app móvil"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Objetivos</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.objectives}
-                onChange={(e) => setTask((prev) => ({ ...prev, objectives: e.target.value }))}
-                placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
-              />
-            </div>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Fecha de Inicio Prevista *</label>
-                <div className={styles.datePickerContainer}>
-                  <DatePicker
-                    selected={task.startDate}
-                    onChange={(date: Date) => setTask((prev) => ({ ...prev, startDate: date }))}
-                    className={styles.input}
-                    placeholderText="Selecciona una fecha"
-                    dateFormat="dd/MM/yyyy"
-                    popperContainer={({ children }) => (
-                      <div className={styles.datePickerPopper} ref={(el) => { datePickerRefs.current[0] = el; }}>
-                        {children}
-                      </div>
-                    )}
+            <div className={styles.level1Grid}>
+              <div className={styles.level1Column}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nombre de la tarea *{errors.name && <span className={styles.error}>{errors.name}</span>}</label>
+                  <input
+                    type="text"
+                    className={`${styles.input} ${errors.name ? styles.errorInput : ''}`}
+                    value={task.name}
+                    onChange={(e) => setTask((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ej: Crear wireframe"
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Descripción *{errors.description && <span className={styles.error}>{errors.description}</span>}</label>
+                  <input
+                    type="text"
+                    className={`${styles.input} ${errors.description ? styles.errorInput : ''}`}
+                    value={task.description}
+                    onChange={(e) => setTask((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="Ej: Diseñar wireframes para la nueva app móvil"
                   />
                 </div>
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Fecha de Finalización Prevista *</label>
-                <div className={styles.datePickerContainer}>
-                  <DatePicker
-                    selected={task.endDate}
-                    onChange={(date: Date) => setTask((prev) => ({ ...prev, endDate: date }))}
+              <div className={styles.level1Column}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Objetivos</label>
+                  <input
+                    type="text"
                     className={styles.input}
-                    placeholderText="Selecciona una fecha"
-                    dateFormat="dd/MM/yyyy"
-                    popperContainer={({ children }) => (
-                      <div className={styles.datePickerPopper} ref={(el) => { datePickerRefs.current[1] = el; }}>
-                        {children}
-                      </div>
-                    )}
+                    value={task.objectives}
+                    onChange={(e) => setTask((prev) => ({ ...prev, objectives: e.target.value }))}
+                    placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
                   />
                 </div>
-              </div>
-            </div>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Estado Inicial del Proyecto *</label>
-                <div className={styles.dropdownContainer} ref={statusDropdownRef}>
-                  <div
-                    className={styles.dropdownTrigger}
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      setIsStatusDropdownOpen(!isStatusDropdownOpen);
-                    }}
-                  >
-                    <span>{task.status}</span>
-                    <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                  </div>
-                  {isStatusDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {['Por comenzar', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelada'].map((status) => (
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Fecha de Inicio *{errors.startDate && <span className={styles.error}>{errors.startDate}</span>}</label>
+                    <input
+                      type="text"
+                      className={`${styles.input} ${errors.startDate ? styles.errorInput : ''}`}
+                      value={task.startDate ? task.startDate.toLocaleDateString('es-ES') : ''}
+                      onClick={() => setIsStartDateOpen(true)}
+                      placeholder="Selecciona una fecha"
+                      readOnly
+                      ref={startDateInputRef}
+                    />
+                    {isStartDateOpen &&
+                      createPortal(
                         <div
-                          key={status}
-                          className={styles.dropdownItem}
-                          onClick={(e) => handleStatusSelect(status, e)}
+                          className={styles.datePickerPopper}
+                          style={{
+                            top: startDatePosition?.top,
+                            left: startDatePosition?.left,
+                            position: 'absolute',
+                            zIndex: 130000,
+                          }}
+                          ref={startDatePopperRef}
                         >
-                          {status}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          <DatePicker
+                            selected={task.startDate}
+                            onChange={(date: Date) => {
+                              setTask((prev) => ({ ...prev, startDate: date }));
+                              setErrors((prev) => ({ ...prev, startDate: undefined }));
+                            }}
+                            inline
+                            dateFormat="dd/MM/yyyy"
+                          />
+                        </div>,
+                        document.body
+                      )}
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Fecha de Finalización *{errors.endDate && <span className={styles.error}>{errors.endDate}</span>}</label>
+                    <input
+                      type="text"
+                      className={`${styles.input} ${errors.endDate ? styles.errorInput : ''}`}
+                      value={task.endDate ? task.endDate.toLocaleDateString('es-ES') : ''}
+                      onClick={() => setIsEndDateOpen(true)}
+                      placeholder="Selecciona una fecha"
+                      readOnly
+                      ref={endDateInputRef}
+                    />
+                    {isEndDateOpen &&
+                      createPortal(
+                        <div
+                          className={styles.datePickerPopper}
+                          style={{
+                            top: endDatePosition?.top,
+                            left: endDatePosition?.left,
+                            position: 'absolute',
+                            zIndex: 130000,
+                          }}
+                          ref={endDatePopperRef}
+                        >
+                          <DatePicker
+                            selected={task.endDate}
+                            onChange={(date: Date) => {
+                              setTask((prev) => ({ ...prev, endDate: date }));
+                              setErrors((prev) => ({ ...prev, endDate: undefined }));
+                            }}
+                            inline
+                            dateFormat="dd/MM/yyyy"
+                          />
+                        </div>,
+                        document.body
+                      )}
+                  </div>
                 </div>
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Prioridad del Proyecto *</label>
-                <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
-                  <div
-                    className={styles.dropdownTrigger}
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
-                    }}
-                  >
-                    <span>{task.priority}</span>
-                    <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                  </div>
-                  {isPriorityDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {['Baja', 'Media', 'Alta'].map((priority) => (
-                        <div
-                          key={priority}
-                          className={styles.dropdownItem}
-                          onClick={(e) => handlePrioritySelect(priority, e)}
-                        >
-                          {priority}
-                        </div>
-                      ))}
+              <div className={styles.level1Column}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Estado Inicial *{errors.status && <span className={styles.error}>{errors.status}</span>}</label>
+                  <div className={styles.dropdownContainer} ref={statusDropdownRef}>
+                    <div
+                      className={styles.dropdownTrigger}
+                      onClick={(e) => {
+                        animateClick(e.currentTarget);
+                        setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                      }}
+                    >
+                      <span>{task.status}</span>
+                      <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
                     </div>
-                  )}
+                    {isStatusDropdownOpen && (
+                      <div className={styles.dropdownItems}>
+                        {['Por comenzar', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelada'].map((status) => (
+                          <div
+                            key={status}
+                            className={styles.dropdownItem}
+                            onClick={(e) => handleStatusSelect(status, e)}
+                          >
+                            {status}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className={styles.level1Column}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Prioridad *{errors.priority && <span className={styles.error}>{errors.priority}</span>}</label>
+                  <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
+                    <div
+                      className={styles.dropdownTrigger}
+                      onClick={(e) => {
+                        animateClick(e.currentTarget);
+                        setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                      }}
+                    >
+                      <span>{task.priority}</span>
+                      <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                    </div>
+                    {isPriorityDropdownOpen && (
+                      <div className={styles.dropdownItems}>
+                        {['Baja', 'Media', 'Alta'].map((priority) => (
+                          <div
+                            key={priority}
+                            className={styles.dropdownItem}
+                            onClick={(e) => handlePrioritySelect(priority, e)}
+                          >
+                            {priority}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          {/* Container 2: Team */}
           <div className={styles.section} ref={(el) => { sectionsRef.current[3] = el; }}>
             <div className={styles.sectionTitle}>2: Agregar información de equipo</div>
-            <div className={styles.sectionTitle}>Persona Encargada de la tarea:</div>
+            <div className={styles.sectionTitle}>Persona Encargada de la tarea: *{errors.LeadedBy && <span className={styles.error}>{errors.LeadedBy}</span>}</div>
             <div className={styles.sectionSubtitle}>
-              Selecciona la persona principal responsable de la tarea. Esta persona será el punto de contacto y supervisará
-              el progreso.
+              Selecciona la persona principal responsable de la tarea. Esta persona será el punto de contacto y supervisará el progreso.
             </div>
             <div className={styles.slideshow}>
-              <button className={styles.slideButton} onClick={handlePmSlidePrev}>
-                <Image src="/chevron-left.svg" alt="Previous" width={6} height={13} />
+              <button className={styles.slideButton} onClick={handlePmSlidePrev} disabled={pmSlideIndex === 0}>
+                <Image src="/chevron-left.svg" alt="Previous" width={24} height={52} />
               </button>
               <div className={styles.slidesContainer}>
-                <div className={styles.slides} ref={pmSlidesRef}>
-                  {users.map((user) => (
-                    <div
-                      key={user.id}
-                      className={`${styles.slideCard} ${task.LeadedBy.includes(user.id) ? styles.selected : ''}`}
-                      onClick={(e) => handlePmSelect(user.id, e)}
-                    >
-                      <Image
-                        src={user.imageUrl}
-                        alt={user.fullName}
-                        width={36}
-                        height={36}
-                        className={styles.userImage}
-                      />
-                      <div className={styles.userName}>{user.fullName}</div>
-                      <div className={styles.userRole}>{user.role}</div>
-                    </div>
-                  ))}
-                </div>
+                <Draggable
+                  axis="x"
+                  bounds={{ left: -(users.length - 6) * 150, right: 0 }}
+                  nodeRef={pmDragRef}
+                  onDrag={(e, data) => {
+                    const slideWidth = 150; // Approximate card width + gap
+                    const newIndex = Math.round(-data.x / slideWidth);
+                    setPmSlideIndex(newIndex);
+                  }}
+                >
+                  <div className={styles.slides} ref={pmDragRef}>
+                    {users.map((user) => (
+                      <div
+                        key={user.id}
+                        className={`${styles.slideCard} ${task.LeadedBy.includes(user.id) ? styles.selected : ''}`}
+                        onClick={(e) => handlePmSelect(user.id, e)}
+                      >
+                        <Image
+                          src={user.imageUrl}
+                          alt={user.fullName}
+                          width={36}
+                          height={36}
+                          className={styles.userImage}
+                        />
+                        <div className={styles.userName}>{user.fullName}</div>
+                        <div className={styles.userRole}>{user.role}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Draggable>
               </div>
-              <button className={styles.slideButton} onClick={handlePmSlideNext}>
-                <Image src="/chevron-right.svg" alt="Next" width={6} height={13} />
+              <button
+                className={styles.slideButton}
+                onClick={handlePmSlideNext}
+                disabled={pmSlideIndex >= Math.ceil(users.length / 6) - 1}
+              >
+                <Image src="/chevron-right.svg" alt="Next" width={24} height={52} />
               </button>
             </div>
-            <div className={styles.selectedPms}>
-              {task.LeadedBy.map((userId) => {
-                const pm = users.find((u) => u.id === userId);
-                return pm ? (
-                  <div key={userId} className={styles.tag}>
-                    {pm.fullName}
-                    <button onClick={(e) => handlePmUnselect(userId, e)}>X</button>
-                  </div>
-                ) : null;
-              })}
+            <div className={styles.sectionTitle}>Colaboradores: *{errors.AssignedTo && <span className={styles.error}>{errors.AssignedTo}</span>}</div>
+            <div className={styles.sectionSubtitle}>
+              Agrega a los miembros del equipo que trabajarán en la tarea. Puedes incluir varios colaboradores según sea necesario.
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Colaboradores:</label>
-              <div className={styles.sectionSubtitle}>
-                Agrega a los miembros del equipo que trabajarán en la tarea. Puedes incluir varios colaboradores según sea
-                necesario.
-              </div>
               <input
                 type="text"
                 className={styles.input}
@@ -1022,7 +1172,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                         className={`${styles.dropdownItem} ${task.LeadedBy.includes(u.id) ? styles.disabled : ''}`}
                         onClick={(e) => !task.LeadedBy.includes(u.id) && handleCollaboratorSelect(u.id, e)}
                       >
-                        {u.fullName} ({u.role})
+                        {u.fullName} ({u.role}) {task.AssignedTo.includes(u.id) && '(Seleccionado)'}
                       </div>
                     ))
                   ) : (
@@ -1030,17 +1180,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                   )}
                 </div>
               )}
-              <div className={styles.tags}>
-                {task.AssignedTo.map((userId) => {
-                  const collaborator = users.find((u) => u.id === userId);
-                  return collaborator ? (
-                    <div key={userId} className={styles.tag}>
-                      {collaborator.fullName}
-                      <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
-                    </div>
-                  ) : null;
-                })}
-              </div>
               <div className={styles.addButtonWrapper}>
                 <div className={styles.addButtonText}>
                   ¿No encuentras algún colaborador? <strong>Agrega una nueva.</strong>
@@ -1056,87 +1195,97 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onToggle, onHasUnsavedC
                 </button>
               </div>
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Stakeholders</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.stakeholders}
-                onChange={(e) => setTask((prev) => ({ ...prev, stakeholders: e.target.value }))}
-                placeholder="Ej: Cliente: Juan Pérez (juan@empresa.com)"
-              />
-            </div>
           </div>
+          {/* Container 3: Resources */}
           <div className={styles.section} ref={(el) => { sectionsRef.current[4] = el; }}>
             <div className={styles.sectionTitle}>3: Recursos</div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Presupuesto Asignado *</label>
-              <div className={styles.currencyInput}>
-                <span className={styles.currencySymbol}>$</span>
+            <div className={styles.resourceRow}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Presupuesto Asignado</label>
+                <div className={styles.currencyInput}>
+                  <span className={styles.currencySymbol}>$</span>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={task.budget}
+                    onChange={(e) => setTask((prev) => ({ ...prev, budget: e.target.value.replace('$', '') }))}
+                    placeholder="1000.00"
+                  />
+                </div>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Horas Asignadas</label>
                 <input
                   type="text"
                   className={styles.input}
-                  value={task.budget}
-                  onChange={(e) => setTask((prev) => ({ ...prev, budget: e.target.value.replace('$', '') }))}
-                  placeholder="1000.00"
+                  value={task.hours}
+                  onChange={(e) => setTask((prev) => ({ ...prev, hours: e.target.value }))}
+                  placeholder="120"
                 />
               </div>
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Horas Asignadas *</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.hours}
-                onChange={(e) => setTask((prev) => ({ ...prev, hours: e.target.value }))}
-                placeholder="120"
-              />
-            </div>
           </div>
+          {/* Container 4: Advanced Configuration */}
           <div className={styles.section} ref={(el) => { sectionsRef.current[5] = el; }}>
-            <div className={styles.sectionTitle}>4: Gestión Avanzada</div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Metodología del Proyecto *</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.methodology}
-                onChange={(e) => setTask((prev) => ({ ...prev, methodology: e.target.value }))}
-                placeholder="Selecciona una metodología"
+            <button className={styles.advancedToggle} onClick={toggleAdvancedSection}>
+              4: Configuración Avanzada
+              <Image
+                src={isAdvancedOpen ? '/chevron-up.svg' : '/chevron-down.svg'}
+                alt={isAdvancedOpen ? 'Cerrar' : 'Abrir'}
+                width={16}
+                height={16}
               />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Riesgos Potenciales</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.risks}
-                onChange={(e) => setTask((prev) => ({ ...prev, risks: e.target.value }))}
-                placeholder="Ej: Retrasos en entregas, Falta de recursos"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Estrategias de Mitigación</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={task.mitigation}
-                onChange={(e) => setTask((prev) => ({ ...prev, mitigation: e.target.value }))}
-                placeholder="Ej: Contratar freelancers como respaldo"
-              />
+            </button>
+            <div className={styles.advancedContent} ref={advancedSectionRef}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Metodología del Proyecto</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={task.methodology}
+                  onChange={(e) => setTask((prev) => ({ ...prev, methodology: e.target.value }))}
+                  placeholder="Selecciona una metodología"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Riesgos Potenciales</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={task.risks}
+                  onChange={(e) => setTask((prev) => ({ ...prev, risks: e.target.value }))}
+                  placeholder="Ej: Retrasos en entregas, Falta de recursos"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Estrategias de Mitigación</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={task.mitigation}
+                  onChange={(e) => setTask((prev) => ({ ...prev, mitigation: e.target.value }))}
+                  placeholder="Ej: Contratar freelancers como respaldo"
+                />
+              </div>
             </div>
           </div>
+          {/* Submit Section */}
           <div className={styles.submitSection} ref={(el) => { sectionsRef.current[6] = el; }}>
             <div className={styles.submitText}>
               Has seleccionado {task.AssignedTo.length} personas asignadas a este proyecto.
               <br />
-              Al presionar “Registrar Progreso” se notificarán a las personas involucradas en la tarea a través de mail. Si
+              Al presionar “Registrar Tarea” se notificarán a las personas involucradas en la tarea a través de mail. Si
               cometieras un error, tendrás que comunicarlo y solicitar una corrección.
             </div>
-            <button className={styles.submitButton} onClick={handleTaskSubmit}>
+            <button className={styles.submitButton} onClick={handleTaskSubmit} disabled={isSaving}>
               Registrar Tarea
             </button>
           </div>
+        </div>
+      )}
+      {isSaving && (
+        <div className={styles.loaderOverlay}>
+          <div className={styles.loader}></div>
         </div>
       )}
       {(isCreateClientOpen || isEditClientOpen) && (
