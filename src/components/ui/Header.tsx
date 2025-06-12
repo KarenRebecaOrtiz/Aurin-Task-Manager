@@ -5,7 +5,7 @@ import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { gsap } from 'gsap';
+import { gsap } from 'gsap'; // Importar GSAP
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 
@@ -91,6 +91,10 @@ const Header: React.FC<HeaderProps> = ({
   const [hasViewedNotifications, setHasViewedNotifications] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const [isCleared, setIsCleared] = useState(false);
+  const [time, setTime] = useState(new Date());
+  const [location, setLocation] = useState("Loading...");
+  const [temperature, setTemperature] = useState("Loading...");
+  const [weatherIcon, setWeatherIcon] = useState<string | null>(null); // Estado para el icono
 
   /* ────────────────────────────────────────────
      EFFECTS – AUDIO INIT
@@ -248,6 +252,89 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   /* ────────────────────────────────────────────
+     EFFECTS – CLOCK LOGIC
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    getLocation();
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          fetchWeather(latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setLocation("Unknown");
+        }
+      );
+    } else {
+      setLocation("Geolocation not supported");
+    }
+  };
+
+  const fetchWeather = async (lat: number, lon: number) => {
+    try {
+      const weatherResponse = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`
+      );
+      if (!weatherResponse.ok) {
+        const errorText = await weatherResponse.text();
+        console.error("Weather API error:", errorText);
+        throw new Error(`HTTP error! status: ${weatherResponse.status}, message: ${errorText}`);
+      }
+      const weatherData = await weatherResponse.json();
+      if (weatherData.main && typeof weatherData.main.temp === 'number') {
+        setLocation(weatherData.name || "Unknown Location");
+        setTemperature(`${Math.round(weatherData.main.temp)}°`);
+        // Determinar icono basado en el clima
+        const weatherMain = weatherData.weather[0].main.toLowerCase();
+        switch (weatherMain) {
+          case 'clouds':
+            setWeatherIcon('/weather/Cloudy.svg');
+            break;
+          case 'clear':
+            setWeatherIcon(new Date().getHours() >= 6 && new Date().getHours() < 18 ? '/weather/CoolDay.svg' : '/weather/CoolNight.svg');
+            break;
+          case 'rain':
+            setWeatherIcon('/weather/Rainy.svg');
+            break;
+          case 'snow':
+            setWeatherIcon('/weather/Snowy.svg');
+            break;
+          case 'thunderstorm':
+            setWeatherIcon('/weather/Storm.svg');
+            break;
+          case 'windy':
+          case 'gust':
+            setWeatherIcon('/weather/Windy.svg');
+            break;
+          default:
+            setWeatherIcon(null); // Sin icono si no coincide
+        }
+      } else {
+        console.warn("Weather data structure invalid:", weatherData);
+        setLocation("Data unavailable");
+        setTemperature("N/A");
+        setWeatherIcon(null);
+      }
+    } catch (error) {
+      console.error("Error fetching weather:", error);
+      setLocation("Error");
+      setTemperature("N/A");
+      setWeatherIcon(null);
+    }
+  };
+
+  const date = time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const formattedTime = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  /* ────────────────────────────────────────────
      HELPERS
   ──────────────────────────────────────────── */
   const truncateText = (txt: string, max: number) =>
@@ -386,36 +473,72 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* RIGHT: Notifications + Theme */}
-      <div data-layer="Frame 2147225819" className={styles.frame2147225819}>
-        <div className={styles.notificationContainer}>
-          <button
-            ref={notificationButtonRef}
-            className={styles.notificationButton}
-            onClick={toggleNotifications}
-            onMouseEnter={() => {
-              setIsNotificationsOpen(true);
-              setHasViewedNotifications(true);
-              setHasInteracted(true);
-            }}
-            onMouseLeave={() => {
-              setTimeout(() => {
-                if (!notificationsRef.current?.matches(':hover')) {
-                  setIsNotificationsOpen(false);
-                }
-              }, 100);
-            }}
-            aria-label="Abrir notificaciones"
-            aria-expanded={isNotificationsOpen}
-            aria-controls="notification-dropdown"
-          >
-            <Image src={iconSrc} alt="Notifications" width={24} height={24} />
-          </button>
-          <NotificationDropdown />
-        </div>
+      {/* RIGHT: Clock and Buttons in vertical stack */}
+      <div data-layer="Frame 2147225819" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px'}}>
 
-        <div ref={iconRef} className={styles.sunMoonWrapper}>
-          <ThemeToggler />
+        <div style={{ display: 'flex', flexDirection: 'row' , gap: '10px'}}>
+          <div className={styles.notificationContainer}>
+            <button
+              ref={notificationButtonRef}
+              className={styles.notificationButton}
+              onClick={toggleNotifications}
+              onMouseEnter={() => {
+                setIsNotificationsOpen(true);
+                setHasViewedNotifications(true);
+                setHasInteracted(true);
+              }}
+              onMouseLeave={() => {
+                setTimeout(() => {
+                  if (!notificationsRef.current?.matches(':hover')) {
+                    setIsNotificationsOpen(false);
+                  }
+                }, 100);
+              }}
+              aria-label="Abrir notificaciones"
+              aria-expanded={isNotificationsOpen}
+              aria-controls="notification-dropdown"
+            >
+              <Image src={iconSrc} alt="Notifications" width={24} height={24} />
+            </button>
+            <NotificationDropdown />
+          </div>
+          <div ref={iconRef} className={styles.sunMoonWrapper}>
+            <ThemeToggler />
+          </div>
+        </div>
+        <div className={styles.Clock}>
+          <div style={{ fontSize: '10px', fontFamily: 'Inconsolata, monospace' }} className="ClockDate">
+            {date}
+          </div>
+          <div style={{ fontSize: '10px',fontWeight: '600', fontFamily: 'Inconsolata, monospace' }} className="ClockTime">
+            {formattedTime}
+          </div>
+          <div style={{alignItems:'start', display: 'flex', fontSize: '10px', fontFamily: 'Inconsolata, monospace' }} className="ClockTemperature">
+            {location} {temperature}
+            {weatherIcon && (
+              <Image
+                src={weatherIcon}
+                draggable= 'false'
+                alt="Weather Icon"
+                width={15}
+                height={15}
+                style={{
+                  marginLeft: '5px',
+                  transition: 'transform 0.3s ease, filter 0.3s ease', 
+                  filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))', // Sombra perrona
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.2)';
+                  e.currentTarget.style.filter = 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.filter = 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))'; // Regresa a sombra normal
+                }}
+              />
+            )}
+          </div>
+        
         </div>
       </div>
     </div>

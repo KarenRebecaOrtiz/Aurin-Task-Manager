@@ -1,0 +1,69 @@
+/* src/components/DigitalClock.module.css */
+.DigitalClock_clockContainer__UUU_I {
+    position: fixed !important; /* Fijar posición */
+    top: 0 !important; /* Parte superior */
+    left: 50% !important; /* Centrar horizontalmente */
+    transform: translateX(-50%) !important; /* Solo traslación horizontal */
+    width: auto;
+    height: auto;
+    border-radius: 10px;
+    cursor: move;
+    isolation: isolate;
+    touch-action: none;
+    box-shadow: 0px 6px 24px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 20px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+  
+    /* Liquid Glass styles */
+    position: relative;
+  }
+  
+  .DigitalClock_clockContainer__UUU_I::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 28px;
+    box-shadow: inset 0 0 25px -10px rgba(255, 255, 255, 0.62);
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .DigitalClock_clockContainer__UUU_I::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 28px;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  
+  /* Estados para animación */
+  .DigitalClock_clockContainer__UUU_I.visible {
+    transform: translateX(-50%) translateY(0) !important;
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .DigitalClock_clockContainer__UUU_I.hidden {
+    transform: translateX(-50%) translateY(100%) !important;
+    opacity: 0;
+    visibility: hidden;
+  }
+  
+  /* Transición suave */
+  .DigitalClock_clockContainer__UUU_I {
+    transition: transform 0.5s ease, opacity 0.5s ease, visibility 0s linear 0.5s;
+  }
+  
+  .DigitalClock_clockText {
+    font-size: 14px;
+    color: black;
+    font-weight: 600;
+  }

@@ -37,6 +37,7 @@ import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import { v4 as uuidv4 } from 'uuid';
+import ClientClock from '@/components/DigitalClock'; 
 
 interface Client {
   id: string;
@@ -227,7 +228,7 @@ export default function TasksPage() {
       collection(db, 'notifications'),
       where('recipientId', '==', user.id),
       orderBy('timestamp', 'desc'),
-      limit(20) // Limit to 20 notifications
+      limit(20),
     );
     const unsubscribe = onSnapshot(
       notificationsQuery,
@@ -254,46 +255,40 @@ export default function TasksPage() {
     return unsubscribe;
   }, [user?.id]);
 
-  // Clear all notifications
   const handleClearNotifications = useCallback(async () => {
     if (!user?.id) return;
 
     try {
       const q = query(
         collection(db, 'notifications'),
-        where('recipientId', '==', user.id)
+        where('recipientId', '==', user.id),
       );
       const querySnapshot = await getDocs(q);
       const deletePromises = querySnapshot.docs.map((docSnapshot) =>
-        deleteDoc(doc(db, 'notifications', docSnapshot.id))
+        deleteDoc(doc(db, 'notifications', docSnapshot.id)),
       );
       await Promise.all(deletePromises);
-      setNotifications([]); // Clear local state
+      setNotifications([]);
     } catch (error) {
       console.error('Error clearing notifications:', error);
       alert('Error al eliminar las notificaciones');
     }
   }, [user?.id]);
 
-  // Limit notifications to 20
   const handleLimitNotifications = useCallback(async (currentNotifications: Notification[]) => {
     if (!user?.id || currentNotifications.length <= 20) return;
 
     try {
-      // Sort notifications by timestamp (ascending, oldest first)
       const sortedNotifications = [...currentNotifications].sort(
-        (a, b) => a.timestamp!.toMillis() - b.timestamp!.toMillis()
+        (a, b) => a.timestamp!.toMillis() - b.timestamp!.toMillis(),
       );
-      // Identify notifications to delete (oldest ones)
       const notificationsToDelete = sortedNotifications.slice(0, currentNotifications.length - 20);
 
-      // Delete notifications from Firestore
       const deletePromises = notificationsToDelete.map((notification) =>
-        deleteDoc(doc(db, 'notifications', notification.id))
+        deleteDoc(doc(db, 'notifications', notification.id)),
       );
       await Promise.all(deletePromises);
 
-      // Update local state with the 20 most recent notifications
       const updatedNotifications = sortedNotifications.slice(-20);
       setNotifications(updatedNotifications);
     } catch (error) {
@@ -311,31 +306,39 @@ export default function TasksPage() {
     }
   }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id]);
 
-  // GSAP animation for confirmation popup
   useEffect(() => {
-    const popup = confirmExitPopupRef.current;
-    if (popup && isConfirmExitOpen) {
+    const currentHeaderRef = headerRef.current;
+    const currentSelectorRef = selectorRef.current;
+    const currentContentRef = contentRef.current;
+    if (currentHeaderRef && currentSelectorRef && currentContentRef) {
       gsap.fromTo(
-        popup,
-        { opacity: 0, y: 50, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power2.out' },
+        [currentHeaderRef, currentSelectorRef, currentContentRef],
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out' },
       );
-    } else if (popup) {
-      gsap.to(popup, {
-        opacity: 0,
-        y: 50,
-        scale: 0.95,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => setIsConfirmExitOpen(false),
-      });
     }
     return () => {
-      if (popup) {
-        gsap.killTweensOf(popup);
+      if (currentHeaderRef && currentSelectorRef && currentContentRef) {
+        gsap.killTweensOf([currentHeaderRef, currentSelectorRef, currentContentRef]);
       }
     };
-  }, [isConfirmExitOpen]);
+  }, []);
+
+  useEffect(() => {
+    const currentContentRef = contentRef.current;
+    if (currentContentRef) {
+      gsap.fromTo(
+        currentContentRef,
+        { opacity: 0, x: 10 },
+        { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' },
+      );
+    }
+    return () => {
+      if (currentContentRef) {
+        gsap.killTweensOf(currentContentRef);
+      }
+    };
+  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen]);
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -386,7 +389,7 @@ export default function TasksPage() {
         alert('El nombre de la cuenta es obligatorio.');
         return;
       }
-  
+
       setIsClientLoading(true);
       try {
         let imageUrl = form.imagePreview;
@@ -401,7 +404,7 @@ export default function TasksPage() {
           const data = await response.json();
           imageUrl = data.imageUrl;
         }
-  
+
         const clientData: Client = {
           id: form.id || doc(collection(db, 'clients')).id,
           name: form.name.trim(),
@@ -411,7 +414,7 @@ export default function TasksPage() {
           createdBy: user.id,
           createdAt: new Date().toISOString(),
         };
-  
+
         await setDoc(doc(db, 'clients', clientData.id), clientData);
         setClients((prev) =>
           form.id
@@ -582,40 +585,6 @@ export default function TasksPage() {
     setIsConfirmExitOpen(false);
     setPendingContainer(null);
   }, []);
-
-  useEffect(() => {
-    const currentHeaderRef = headerRef.current;
-    const currentSelectorRef = selectorRef.current;
-    const currentContentRef = contentRef.current;
-    if (currentHeaderRef && currentSelectorRef && currentContentRef) {
-      gsap.fromTo(
-        [currentHeaderRef, currentSelectorRef, currentContentRef],
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out' },
-      );
-    }
-    return () => {
-      if (currentHeaderRef && currentSelectorRef && currentContentRef) {
-        gsap.killTweensOf([currentHeaderRef, currentSelectorRef, currentContentRef]);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const currentContentRef = contentRef.current;
-    if (currentContentRef) {
-      gsap.fromTo(
-        currentContentRef,
-        { opacity: 0, x: 10 },
-        { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' },
-      );
-    }
-    return () => {
-      if (currentContentRef) {
-        gsap.killTweensOf(currentContentRef);
-      }
-    };
-  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen]);
 
   return (
     <div className={styles.container}>
@@ -839,6 +808,7 @@ export default function TasksPage() {
       )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
+
     </div>
   );
 }
