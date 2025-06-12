@@ -140,7 +140,7 @@ const Table = memo(
                 {columns.map((column) => (
                   <div
                     key={column.key}
-                    className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
+                    className={`${styles.cell} ${column.key !== 'action' ? styles.glass : ''} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
                       column.key === 'action' ? styles.actionCell : styles.clickableCell
                     }`}
                     style={{ width: column.width }}

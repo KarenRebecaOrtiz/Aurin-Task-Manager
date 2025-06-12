@@ -54,6 +54,8 @@ interface HeaderProps {
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
+  onClearNotifications: () => void; // Nueva prop para eliminar todas las notificaciones
+  onLimitNotifications: (notifications: Notification[]) => void; // Nueva prop para limitar a 20
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -63,6 +65,8 @@ const Header: React.FC<HeaderProps> = ({
   users,
   notifications,
   onNotificationClick,
+  onClearNotifications,
+  onLimitNotifications,
 }) => {
   const { user } = useUser();
   const userName = user?.firstName || 'Usuario';
@@ -86,6 +90,7 @@ const Header: React.FC<HeaderProps> = ({
   const [hasInteracted, setHasInteracted] = useState(false);
   const [hasViewedNotifications, setHasViewedNotifications] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+  const [isCleared, setIsCleared] = useState(false);
 
   /* ────────────────────────────────────────────
      EFFECTS – AUDIO INIT
@@ -109,7 +114,7 @@ const Header: React.FC<HeaderProps> = ({
 
   /* ────────────────────────────────────────────
      EFFECTS – WATCH FOR NEW NOTIFICATIONS
-     (PLAYS SOUND ON ARRIVAL)
+     (PLAYS SOUND ON ARRIVAL & LIMITS TO 20)
   ──────────────────────────────────────────── */
   useEffect(() => {
     const newUnread = notifications.filter(
@@ -120,15 +125,19 @@ const Header: React.FC<HeaderProps> = ({
 
     if (newUnread.length > 0) {
       setHasViewedNotifications(false);
-      // Reproduce el sonido sólo al recibir la notificación
+      setIsCleared(false);
       if (audioRef.current && (hasInteracted || audioRef.current.autoplay !== false)) {
         audioRef.current.play().catch(() => {});
       }
     }
 
+    // Verificar si hay más de 20 notificaciones y eliminar las más antiguas
+    if (notifications.length > 20) {
+      onLimitNotifications(notifications);
+    }
+
     prevNotificationsRef.current = notifications;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications]);
+  }, [notifications, onLimitNotifications]);
 
   /* ────────────────────────────────────────────
      EFFECTS – DROPDOWN POSITION
@@ -267,6 +276,12 @@ const Header: React.FC<HeaderProps> = ({
     setHasInteracted(true);
   };
 
+  const handleClearNotifications = () => {
+    setIsCleared(true);
+    onClearNotifications(); // Elimina todas las notificaciones en Firestore
+    setIsNotificationsOpen(true);
+  };
+
   const hasUnread = notifications.some((n) => !n.read);
   const iconSrc =
     hasUnread && !hasViewedNotifications ? '/NewNotification.svg' : '/EmptyNotification.svg';
@@ -292,8 +307,24 @@ const Header: React.FC<HeaderProps> = ({
               }, 100);
             }}
           >
-            {notifications.length === 0 ? (
-              <div className={styles.notificationItem}>No hay notificaciones</div>
+            {/* Botón Limpiar Notificaciones */}
+            {notifications.length > 0 && !isCleared && (
+              <div className={styles.clearNotificationsContainer}>
+                <button
+                  className={styles.clearNotificationsButton}
+                  onClick={handleClearNotifications}
+                  aria-label="Limpiar todas las notificaciones"
+                >
+                  Limpiar Notificaciones
+                </button>
+              </div>
+            )}
+
+            {/* Contenido del dropdown */}
+            {isCleared || notifications.length === 0 ? (
+              <div className={styles.notificationItem}>
+                No hay notificaciones nuevas por ahora...
+              </div>
             ) : (
               notifications.slice(0, 20).map((n) => {
                 const sender = users.find((u) => u.id === n.userId);

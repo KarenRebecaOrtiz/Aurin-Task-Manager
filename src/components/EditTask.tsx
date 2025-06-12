@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, collection, setDoc, getDocs, addDoc } from 'firebase/firestore';
+import { doc, collection, setDoc, getDocs, getDoc, addDoc } from 'firebase/firestore';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Image from 'next/image';
@@ -49,6 +49,7 @@ interface User {
 }
 
 interface Task {
+  id: string;
   clientId: string;
   project: string;
   name: string;
@@ -70,18 +71,20 @@ interface Task {
   createdAt: Date;
 }
 
-interface CreateTaskProps {
+interface EditTaskProps {
   isOpen: boolean;
   onToggle: () => void;
+  taskId: string;
   onHasUnsavedChanges: (hasChanges: boolean) => void;
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
   onInviteSidebarOpen: () => void;
 }
 
-const CreateTask: React.FC<CreateTaskProps> = ({
+const EditTask: React.FC<EditTaskProps> = ({
   isOpen,
   onToggle,
+  taskId,
   onHasUnsavedChanges,
   onCreateClientOpen,
   onEditClientOpen,
@@ -91,30 +94,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [task, setTask] = useState<Task>({
-    clientId: '',
-    project: '',
-    name: '',
-    description: '',
-    objectives: '',
-    startDate: null,
-    endDate: null,
-    status: 'Seleccionar',
-    priority: 'Seleccionar',
-    budget: '',
-    hours: '',
-    methodology: '',
-    risks: '',
-    mitigation: '',
-    stakeholders: '',
-    CreatedBy: user?.id || '',
-    LeadedBy: [],
-    AssignedTo: [],
-    createdAt: new Date(),
-  });
+  const [task, setTask] = useState<Task | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const initialTaskState = useRef<Task>({ ...task });
+  const [loading, setLoading] = useState(true);
+  const initialTaskState = useRef<Task | null>(null);
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
@@ -146,32 +130,55 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const [searchCollaborator, setSearchCollaborator] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
 
-  // Track unsaved changes
+  // Fetch task, clients, and users
   useEffect(() => {
-    const isChanged = Object.keys(task).some((key) => {
-      if (key === 'createdAt') return false;
-      if (Array.isArray(task[key as keyof Task])) {
-        return (task[key as keyof Task] as string[]).join() !== (initialTaskState.current[key as keyof Task] as string[]).join();
+    if (!taskId || !user?.id) return;
+
+    const fetchTask = async () => {
+      try {
+        const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+        if (!taskDoc.exists()) {
+          console.warn('Task not found:', taskId);
+          router.push('/dashboard/tasks');
+          return;
+        }
+        const taskData = taskDoc.data();
+        if (taskData.CreatedBy !== user.id) {
+          console.warn('User not authorized to edit task:', taskId);
+          router.push('/dashboard/tasks');
+          return;
+        }
+        const fetchedTask: Task = {
+          id: taskDoc.id,
+          clientId: taskData.clientId || '',
+          project: taskData.project || '',
+          name: taskData.name || '',
+          description: taskData.description || '',
+          objectives: taskData.objectives || '',
+          startDate: taskData.startDate ? taskData.startDate.toDate() : null,
+          endDate: taskData.endDate ? taskData.endDate.toDate() : null,
+          status: taskData.status || 'Seleccionar',
+          priority: taskData.priority || 'Seleccionar',
+          budget: taskData.budget ? taskData.budget.toString() : '',
+          hours: taskData.hours ? taskData.hours.toString() : '',
+          methodology: taskData.methodology || '',
+          risks: taskData.risks || '',
+          mitigation: taskData.mitigation || '',
+          stakeholders: taskData.stakeholders || '',
+          CreatedBy: taskData.CreatedBy || '',
+          LeadedBy: taskData.LeadedBy || [],
+          AssignedTo: taskData.AssignedTo || [],
+          createdAt: taskData.createdAt ? taskData.createdAt.toDate() : new Date(),
+        };
+        setTask(fetchedTask);
+        initialTaskState.current = { ...fetchedTask };
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching task:', error);
+        router.push('/dashboard/tasks');
       }
-      return task[key as keyof Task] !== initialTaskState.current[key as keyof Task];
-    });
-    setHasUnsavedChanges(isChanged);
-    onHasUnsavedChanges(isChanged);
-  }, [task, onHasUnsavedChanges]);
+    };
 
-  // Reset form when closing
-  useEffect(() => {
-    if (!isOpen) {
-      setTask({ ...initialTaskState.current });
-      setHasUnsavedChanges(false);
-      onHasUnsavedChanges(false);
-      setIsAdvancedOpen(false);
-      setErrors({});
-    }
-  }, [isOpen, onHasUnsavedChanges]);
-
-  // Fetch clients and users
-  useEffect(() => {
     const fetchClients = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'clients'));
@@ -211,9 +218,35 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       }
     };
 
+    fetchTask();
     fetchClients();
     fetchUsers();
-  }, []);
+  }, [taskId, user?.id, router]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (!task || !initialTaskState.current) return;
+    const isChanged = Object.keys(task).some((key) => {
+      if (key === 'createdAt') return false;
+      if (Array.isArray(task[key as keyof Task])) {
+        return (task[key as keyof Task] as string[]).join() !== (initialTaskState.current[key as keyof Task] as string[]).join();
+      }
+      return task[key as keyof Task] !== initialTaskState.current[key as keyof Task];
+    });
+    setHasUnsavedChanges(isChanged);
+    onHasUnsavedChanges(isChanged);
+  }, [task, onHasUnsavedChanges]);
+
+  // Reset form when closing
+  useEffect(() => {
+    if (!isOpen && task) {
+      setTask(initialTaskState.current);
+      setHasUnsavedChanges(false);
+      onHasUnsavedChanges(false);
+      setIsAdvancedOpen(false);
+      setErrors({});
+    }
+  }, [isOpen, onHasUnsavedChanges]);
 
   // GSAP animations for container
   useEffect(() => {
@@ -454,7 +487,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const handleClientSelect = useCallback(
     (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      setTask((prev) => ({ ...prev, clientId, project: '' }));
+      setTask((prev) => ({ ...prev!, clientId, project: '' }));
       setErrors((prev) => ({ ...prev, clientId: undefined }));
     },
     [],
@@ -464,14 +497,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setTask((prev) => {
-        const isSelected = prev.LeadedBy.includes(userId);
+        const isSelected = prev!.LeadedBy.includes(userId);
         const newLeadedBy = isSelected
-          ? prev.LeadedBy.filter((id) => id !== userId)
-          : [...prev.LeadedBy, userId];
+          ? prev!.LeadedBy.filter((id) => id !== userId)
+          : [...prev!.LeadedBy, userId];
         return {
-          ...prev,
+          ...prev!,
           LeadedBy: newLeadedBy,
-          AssignedTo: prev.AssignedTo.filter((id) => id !== userId),
+          AssignedTo: prev!.AssignedTo.filter((id) => id !== userId),
         };
       });
       setErrors((prev) => ({ ...prev, LeadedBy: undefined }));
@@ -482,26 +515,26 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const handleCollaboratorSelect = useCallback(
     (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      if (!task.LeadedBy.includes(userId)) {
+      if (!task!.LeadedBy.includes(userId)) {
         setTask((prev) => ({
-          ...prev,
-          AssignedTo: prev.AssignedTo.includes(userId)
-            ? prev.AssignedTo.filter((id) => id !== userId)
-            : [...prev.AssignedTo, userId],
+          ...prev!,
+          AssignedTo: prev!.AssignedTo.includes(userId)
+            ? prev!.AssignedTo.filter((id) => id !== userId)
+            : [...prev!.AssignedTo, userId],
         }));
         setSearchCollaborator('');
         setErrors((prev) => ({ ...prev, AssignedTo: undefined }));
       }
     },
-    [task.LeadedBy],
+    [task],
   );
 
   const handleCollaboratorRemove = useCallback(
     (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
       animateClick(e.currentTarget);
       setTask((prev) => ({
-        ...prev,
-        AssignedTo: prev.AssignedTo.filter((id) => id !== userId),
+        ...prev!,
+        AssignedTo: prev!.AssignedTo.filter((id) => id !== userId),
       }));
       setErrors((prev) => ({ ...prev, AssignedTo: undefined }));
     },
@@ -510,16 +543,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
   const validateTask = () => {
     const newErrors: Partial<Record<keyof Task, string>> = {};
-    if (!task.name.trim()) newErrors.name = 'El nombre es obligatorio';
-    if (!task.description.trim()) newErrors.description = 'La descripción es obligatoria';
-    if (!task.clientId) newErrors.clientId = 'Selecciona una cuenta';
-    if (!task.project) newErrors.project = 'Selecciona un proyecto';
-    if (!task.startDate) newErrors.startDate = 'La fecha de inicio es obligatoria';
-    if (!task.endDate) newErrors.endDate = 'La fecha de finalización es obligatoria';
-    if (task.status === 'Seleccionar') newErrors.status = 'Selecciona un estado';
-    if (task.priority === 'Seleccionar') newErrors.priority = 'Selecciona una prioridad';
-    if (!task.LeadedBy.length) newErrors.LeadedBy = 'Selecciona al menos un encargado';
-    if (!task.AssignedTo.length) newErrors.AssignedTo = 'Selecciona al menos un colaborador';
+    if (!task!.name.trim()) newErrors.name = 'El nombre es obligatorio';
+    if (!task!.description.trim()) newErrors.description = 'La descripción es obligatoria';
+    if (!task!.clientId) newErrors.clientId = 'Selecciona una cuenta';
+    if (!task!.project) newErrors.project = 'Selecciona un proyecto';
+    if (!task!.startDate) newErrors.startDate = 'La fecha de inicio es obligatoria';
+    if (!task!.endDate) newErrors.endDate = 'La fecha de finalización es obligatoria';
+    if (task!.status === 'Seleccionar') newErrors.status = 'Selecciona un estado';
+    if (task!.priority === 'Seleccionar') newErrors.priority = 'Selecciona una prioridad';
+    if (!task!.LeadedBy.length) newErrors.LeadedBy = 'Selecciona al menos un encargado';
+    if (!task!.AssignedTo.length) newErrors.AssignedTo = 'Selecciona al menos un colaborador';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -528,7 +561,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     async (e: React.MouseEvent<HTMLButtonElement>) => {
       animateClick(e.currentTarget);
       e.preventDefault();
-      if (!user || !validateTask()) {
+      if (!user || !task || !validateTask()) {
         alert('Por favor, completa todos los campos obligatorios.');
         return;
       }
@@ -540,78 +573,53 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
       setIsSaving(true);
       try {
-        const taskDocRef = doc(collection(db, 'tasks'));
-        const taskId = taskDocRef.id;
         const taskData = {
           ...task,
           budget: parseFloat(task.budget.replace('$', '')) || 0,
           hours: parseInt(task.hours) || 0,
-          CreatedBy: user.id,
-          createdAt: Timestamp.fromDate(new Date()),
-          id: taskId,
+          createdAt: Timestamp.fromDate(task.createdAt),
         };
-        await setDoc(taskDocRef, taskData);
+        await setDoc(doc(db, 'tasks', task.id), taskData);
 
         const recipients = new Set<string>([...task.LeadedBy, ...task.AssignedTo]);
         recipients.delete(user.id);
         for (const recipientId of Array.from(recipients)) {
           await addDoc(collection(db, 'notifications'), {
             userId: user.id,
-            taskId,
-            message: `${user.firstName || 'Usuario'} te asignó la tarea ${task.name}`,
+            taskId: task.id,
+            message: `${user.firstName || 'Usuario'} actualizó la tarea ${task.name}`,
             timestamp: Timestamp.now(),
             read: false,
             recipientId,
           });
         }
 
-        setTask({
-          clientId: '',
-          project: '',
-          name: '',
-          description: '',
-          objectives: '',
-          startDate: null,
-          endDate: null,
-          status: 'Seleccionar',
-          priority: 'Seleccionar',
-          budget: '',
-          hours: '',
-          methodology: '',
-          risks: '',
-          mitigation: '',
-          stakeholders: '',
-          CreatedBy: user?.id || '',
-          LeadedBy: [],
-          AssignedTo: [],
-          createdAt: new Date(),
-        });
         setHasUnsavedChanges(false);
         onHasUnsavedChanges(false);
         setIsSaving(false);
-        router.push('/');
+        onToggle();
       } catch (error) {
-        console.error('Error saving task:', error);
+        console.error('Error updating task:', error);
         alert('Error al guardar la tarea.');
         setIsSaving(false);
       }
     },
-    [user, task, router, onHasUnsavedChanges],
+    [user, task, onToggle, onHasUnsavedChanges],
   );
 
   const filteredCollaborators = useMemo(() => {
     return users.filter(
       (u) =>
-        !task.LeadedBy.includes(u.id) &&
+        !task?.LeadedBy.includes(u.id) &&
         (u.fullName.toLowerCase().includes(searchCollaborator.toLowerCase()) ||
          u.role.toLowerCase().includes(searchCollaborator.toLowerCase())),
     );
-  }, [users, task.LeadedBy, searchCollaborator]);
+  }, [users, task?.LeadedBy, searchCollaborator]);
 
   const handleProjectSelect = useCallback(
     (project: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      setTask((prev) => ({ ...prev, project }));
+      setTask((prev) => ({ ...prev!, project }));
       setIsProjectDropdownOpen(false);
       setErrors((prev) => ({ ...prev, project: undefined }));
     },
@@ -621,7 +629,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const handleStatusSelect = useCallback(
     (status: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      setTask((prev) => ({ ...prev, status }));
+      setTask((prev) => ({ ...prev!, status }));
       setIsStatusDropdownOpen(false);
       setErrors((prev) => ({ ...prev, status: undefined }));
     },
@@ -631,7 +639,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const handlePrioritySelect = useCallback(
     (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      setTask((prev) => ({ ...prev, priority }));
+      setTask((prev) => ({ ...prev!, priority }));
       setIsPriorityDropdownOpen(false);
       setErrors((prev) => ({ ...prev, priority: undefined }));
     },
@@ -646,10 +654,18 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     [],
   );
 
+  if (loading) {
+    return <div className={styles.container}>Cargando...</div>;
+  }
+
+  if (!task) {
+    return <div className={styles.container}>Tarea no encontrada</div>;
+  }
+
   return (
     <div className={`${styles.container} ${isOpen ? styles.open : ''} ${isSaving ? styles.saving : ''}`} ref={containerRef}>
       <div className={styles.header}>
-        <div className={styles.headerTitle}>Crear Tarea</div>
+        <div className={styles.headerTitle}>Editar Tarea</div>
         <button className={styles.toggleButton} onClick={onToggle}>
           <Image
             src={isOpen ? '/x.svg' : '/x.svg'}
@@ -701,7 +717,12 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   </SwiperSlide>
                 ))}
               </Swiper>
-              
+              <button className={`${styles.slideButton} ${styles.clientPrev}`}>
+                <Image src="/chevron-left.svg" alt="Previous" width={24} height={52} />
+              </button>
+              <button className={`${styles.slideButton} ${styles.clientNext}`}>
+                <Image src="/chevron-right.svg" alt="Next" width={24} height={52} />
+              </button>
             </div>
             {errors.clientId && <div className={styles.error}>{errors.clientId}</div>}
             <div className={styles.addButtonWrapper}>
@@ -723,14 +744,15 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             <div className={styles.projectSection}>
               <div className={styles.sectionSubtitle}>Selecciona la carpeta a la que se asignará esta tarea:</div>
               <div className={styles.dropdownContainer} ref={projectDropdownRef}>
-                <div style={{border:'solid 1px #f2f2f3', padding :'10px', overflow: 'hidden' , borderRadius: '5px', marginTop: '5px'}}
+                <div 
+                  style={{ border: 'solid 1px #f2f2f3', padding: '10px', overflow: 'hidden', borderRadius: '5px', marginTop: '5px' }}
                   className={styles.dropdownTrigger}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
                     setIsProjectDropdownOpen(!isProjectDropdownOpen);
                   }}
                 >
-                  <span style={{fontSize: '14px', fontWeight:'500'}}>{task.project || 'Seleccionar un Proyecto'}</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>{task.project || 'Seleccionar un Proyecto'}</span>
                   <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
                 </div>
                 {isProjectDropdownOpen &&
@@ -755,18 +777,18 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                       }}
                       ref={projectDropdownPopperRef}
                     >
-                      {clients
-                        .find((c) => c.id === task.clientId)
-                        ?.projects.map((project, index) => (
-                          <div
-                            key={`${project}-${index}`} // Combine project name with index for uniqueness
-                            className={styles.dropdownItem}
-                            onClick={(e) => handleProjectSelect(project, e)}
-                            style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
-                          >
-                            {project}
-                          </div>
-                        ))}
+                            {clients
+                            .find((c) => c.id === task.clientId)
+                            ?.projects.map((project, index) => (
+                                <div
+                                key={`${project}-${index}`} 
+                                className={styles.dropdownItem}
+                                onClick={(e) => handleProjectSelect(project, e)}
+                                style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                                >
+                                {project}
+                                </div>
+                            ))}
                     </div>,
                     document.body
                   )}
@@ -799,7 +821,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     type="text"
                     className={`${styles.input} ${errors.name ? styles.errorInput : ''}`}
                     value={task.name}
-                    onChange={(e) => setTask((prev) => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setTask((prev) => ({ ...prev!, name: e.target.value }))}
                     placeholder="Ej: Crear wireframe"
                   />
                 </div>
@@ -809,7 +831,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     type="text"
                     className={`${styles.input} ${errors.description ? styles.errorInput : ''}`}
                     value={task.description}
-                    onChange={(e) => setTask((prev) => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => setTask((prev) => ({ ...prev!, description: e.target.value }))}
                     placeholder="Ej: Diseñar wireframes para la nueva app móvil"
                   />
                 </div>
@@ -821,7 +843,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     type="text"
                     className={styles.input}
                     value={task.objectives}
-                    onChange={(e) => setTask((prev) => ({ ...prev, objectives: e.target.value }))}
+                    onChange={(e) => setTask((prev) => ({ ...prev!, objectives: e.target.value }))}
                     placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
                   />
                 </div>
@@ -852,7 +874,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           <DatePicker
                             selected={task.startDate}
                             onChange={(date: Date) => {
-                              setTask((prev) => ({ ...prev, startDate: date }));
+                              setTask((prev) => ({ ...prev!, startDate: date }));
                               setErrors((prev) => ({ ...prev, startDate: undefined }));
                             }}
                             inline
@@ -888,7 +910,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           <DatePicker
                             selected={task.endDate}
                             onChange={(date: Date) => {
-                              setTask((prev) => ({ ...prev, endDate: date }));
+                              setTask((prev) => ({ ...prev!, endDate: date }));
                               setErrors((prev) => ({ ...prev, endDate: undefined }));
                             }}
                             inline
@@ -1050,7 +1072,12 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   </SwiperSlide>
                 ))}
               </Swiper>
-            
+              <button className={`${styles.slideButton} ${styles.pmPrev}`}>
+                <Image src="/chevron-left.svg" alt="Previous" width={24} height={52} />
+              </button>
+              <button className={`${styles.slideButton} ${styles.pmNext}`}>
+                <Image src="/chevron-right.svg" alt="Next" width={24} height={52} />
+              </button>
             </div>
             <div className={styles.sectionTitle}>Colaboradores: *{errors.AssignedTo && <span className={styles.error}>{errors.AssignedTo}</span>}</div>
             <div className={styles.sectionSubtitle}>
@@ -1066,7 +1093,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   setIsCollaboratorDropdownOpen(e.target.value.trim() !== '');
                 }}
                 onBlur={() => {
-                  // Delay closing to allow clicks on dropdown items
                   setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
                 }}
                 placeholder="Ej: John Doe"
@@ -1156,8 +1182,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             </div>
           </div>
           {/* Container 3: Resources */}
-          <div  className={styles.section} ref={(el) => { sectionsRef.current[4] = el; }}>
-            <div  className={styles.sectionTitle}>3: Recursos</div>
+          <div className={styles.section} ref={(el) => { sectionsRef.current[4] = el; }}>
+            <div className={styles.sectionTitle}>3: Recursos</div>
             <div className={styles.resourceRow}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Presupuesto Asignado</label>
@@ -1167,7 +1193,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     type="text"
                     className={styles.input}
                     value={task.budget}
-                    onChange={(e) => setTask((prev) => ({ ...prev, budget: e.target.value.replace('$', '') }))}
+                    onChange={(e) => setTask((prev) => ({ ...prev!, budget: e.target.value.replace('$', '') }))}
                     placeholder="1000.00"
                   />
                 </div>
@@ -1178,7 +1204,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   type="text"
                   className={styles.input}
                   value={task.hours}
-                  onChange={(e) => setTask((prev) => ({ ...prev, hours: e.target.value }))}
+                  onChange={(e) => setTask((prev) => ({ ...prev!, hours: e.target.value }))}
                   placeholder="120"
                 />
               </div>
@@ -1202,7 +1228,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   type="text"
                   className={styles.input}
                   value={task.methodology}
-                  onChange={(e) => setTask((prev) => ({ ...prev, methodology: e.target.value }))}
+                  onChange={(e) => setTask((prev) => ({ ...prev!, methodology: e.target.value }))}
                   placeholder="Selecciona una metodología"
                 />
               </div>
@@ -1212,7 +1238,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   type="text"
                   className={styles.input}
                   value={task.risks}
-                  onChange={(e) => setTask((prev) => ({ ...prev, risks: e.target.value }))}
+                  onChange={(e) => setTask((prev) => ({ ...prev!, risks: e.target.value }))}
                   placeholder="Ej: Retrasos en entregas, Falta de recursos"
                 />
               </div>
@@ -1222,7 +1248,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   type="text"
                   className={styles.input}
                   value={task.mitigation}
-                  onChange={(e) => setTask((prev) => ({ ...prev, mitigation: e.target.value }))}
+                  onChange={(e) => setTask((prev) => ({ ...prev!, mitigation: e.target.value }))}
                   placeholder="Ej: Contratar freelancers como respaldo"
                 />
               </div>
@@ -1233,11 +1259,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             <div className={styles.submitText}>
               Has seleccionado {task.AssignedTo.length} personas asignadas a este proyecto.
               <br />
-              Al presionar “Registrar Tarea” se notificarán a las personas involucradas en la tarea a través de mail. Si
-              cometieras un error, tendrás que comunicarlo y solicitar una corrección.
+              Al presionar “Guardar Cambios” se actualizará la tarea y se notificará a las personas involucradas.
             </div>
             <button className={styles.submitButton} onClick={handleTaskSubmit} disabled={isSaving}>
-              Registrar Tarea
+              Guardar Cambios
             </button>
           </div>
         </div>
@@ -1251,4 +1276,4 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   );
 };
 
-export default CreateTask;
+export default EditTask;

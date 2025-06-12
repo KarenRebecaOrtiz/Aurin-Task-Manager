@@ -8,8 +8,8 @@ type Container = 'tareas' | 'cuentas' | 'miembros';
 
 interface SelectorProps {
   selectedContainer: Container;
-  setSelectedContainer: (container: Container) => void;
-  options: { value: string; label: string }[]; // Added options prop
+  setSelectedContainer: (c: Container) => void;
+  options: { value: string; label: string }[];
 }
 
 export default function Selector({
@@ -17,69 +17,85 @@ export default function Selector({
   setSelectedContainer,
   options,
 }: SelectorProps) {
-  /* ---------- refs dinámicos ---------- */
+  /* ---------------- refs ---------------- */
   const btnRefs = useRef<HTMLButtonElement[]>([]);
   const addRef = (el: HTMLButtonElement | null) => {
     if (el && !btnRefs.current.includes(el)) btnRefs.current.push(el);
   };
 
-  /* ---------- estado del tema ---------- */
-  const [isDark, setIsDark] = useState(false); // siempre seguro en SSR
+  const menubarRef = useRef<HTMLDivElement>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+
+  /* ------------- tema (oscuro / claro) ------------ */
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return; // evita SSR
-
-    /* helper para saber si el doc está en dark */
     const computeDark = () =>
       document.documentElement.classList.contains('dark') ||
       document.body.classList.contains('dark');
-
-    /* estado inicial tras montar */
     setIsDark(computeDark());
 
-    /* observa cambios de clase "dark" */
-    const observer = new MutationObserver(() => setIsDark(computeDark()));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
+    const obs = new MutationObserver(() => setIsDark(computeDark()));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-    /* escucha cambios vía localStorage (toggle en otra pestaña) */
     const storageListener = () => setIsDark(computeDark());
     window.addEventListener('storage', storageListener);
 
     return () => {
-      observer.disconnect();
+      obs.disconnect();
       window.removeEventListener('storage', storageListener);
     };
   }, []);
 
-  /* ---------- animación GSAP ---------- */
+  /* ------------- GSAP: “liquid glass” slide ------------- */
   useLayoutEffect(() => {
-    if (btnRefs.current.length === 0) return;
+    if (!menubarRef.current || !indicatorRef.current) return;
+    const activeBtn = btnRefs.current.find(b => b.dataset.container === selectedContainer);
+    if (!activeBtn) return;
 
-    const inactiveBg = isDark ? '#0D0D0D' : '#FFFFFF';
-    const activeBg = isDark ? '#171717' : '#F4F4F5';
-    const textColor = isDark ? '#FFFFFF' : '#09090B';
+    const btnRect = activeBtn.getBoundingClientRect();
+    const barRect = menubarRef.current.getBoundingClientRect();
 
-    btnRefs.current.forEach((btn) => {
+    const x = btnRect.left - barRect.left;
+    const y = btnRect.top - barRect.top;
+    const w = btnRect.width;
+    const h = btnRect.height;
+
+    gsap.to(indicatorRef.current, {
+      x,
+      y,
+      width: w,
+      height: h,
+      duration: 0.45,
+      ease: 'power3.out',
+      borderRadius: 12,
+    });
+  }, [selectedContainer]);
+
+  /* ------------- colour tween (texto / bg fallback) ------------- */
+  useLayoutEffect(() => {
+    const inactive = 'transparent';
+    const active = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+    const color   = isDark ? '#ffffff' : '#09090b';
+
+    btnRefs.current.forEach(btn => {
       const isActive = btn.dataset.container === selectedContainer;
       gsap.to(btn, {
-        backgroundColor: isActive ? activeBg : inactiveBg,
-        color: textColor,
-        duration: 0.3,
+        backgroundColor: isActive ? active : inactive,
+        color,
+        duration: 0.25,
         ease: 'power2.out',
       });
     });
   }, [selectedContainer, isDark]);
 
-  /* ---------- render ---------- */
+  /* ---------------- render ---------------- */
   return (
-    <div className={styles.menubar}>
+    <div ref={menubarRef} className={styles.menubar}>
+      {/* cristal deslizante */}
+      <div ref={indicatorRef} className={styles.indicator} />
+
       {options.map(({ value, label }) => (
         <div key={value} className={styles.wrapper}>
           <button

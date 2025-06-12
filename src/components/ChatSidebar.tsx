@@ -805,7 +805,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     if (!user?.id || (!newMessage.trim() && !file)) {
-      console.error('Invalid message input:', { userId: user?.id, newMessage, file });
+      console.warn('[ChatSidebar] invalid message input:', { userId: user?.id, newMessage, file });
       return;
     }
 
@@ -1496,8 +1496,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         onDrop={handleDrop}
         onSubmit={handleSendMessage}
       >
-        <div ref={timerPanelRef} className={styles.timerPanel}>
-          <div className={styles.timerPanelContent}>
+          <div ref={timerPanelRef} className={styles.timerPanel} id="timerPanel">          <div className={styles.timerPanelContent}>
             <div className={styles.timerRow}>
               <div className={styles.timerCard}>
                 <TimePicker
@@ -1604,6 +1603,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
               </div>
             </div>
+            <div style={{display:'flex', flexDirection: 'row', gap:'10px' }}>
             <button
               type="button"
               className={styles.imageButton}
@@ -1612,9 +1612,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             >
               <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} className={styles.iconInvert} />
             </button>
-            <button className={styles.sendButton} onClick={handleSendMessage}>
+            <button
+              className={styles.sendButton}
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() && !file}
+              aria-label="Enviar mensaje"
+            >
               <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
             </button>
+
+            </div>
           </div>
         </div>
         <input
@@ -1629,13 +1636,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <div className={styles.deletePopupOverlay}>
           <div className={styles.deletePopup} ref={deletePopupRef}>
             <div className={styles.deletePopupContent}>
-              <Image
-                src="/message-circle-warning.svg"
-                alt="Advertencia"
-                width={24}
-                height={24}
-                className={styles.warningIcon}
-              />
+
               <div className={styles.deletePopupText}>
                 <h2 className={styles.deletePopupTitle}>¿Seguro que quieres eliminar esta tarea?</h2>
                 <p className={styles.deletePopupDescription}>

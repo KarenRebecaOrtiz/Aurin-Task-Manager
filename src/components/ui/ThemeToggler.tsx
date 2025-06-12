@@ -35,17 +35,39 @@ const ThemeToggler = () => {
       data-layer="sun-moon"
       className={styles.sunMoon}
     >
-      <button
+     <button
+     className='togglerDark'
         onClick={toggleTheme}
-        className={`${styles.button} ${styles.themeToggler} ${isDarkMode ? styles.dark : ''}`}
+        style={{
+          width: '64px',
+          height: '64px',
+          padding: '24px',
+          background: isDarkMode ? '#1E1E1E' : '#F1F5F9',
+          borderRadius: '24px',
+          display: 'inline-flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '8px',
+          border: 'none',
+          cursor: 'pointer',
+          boxShadow: isDarkMode
+            ? '8px 8px 16px rgba(0, 0, 0, 0.6), -8px -8px 16px rgba(255, 255, 255, 0.05)'
+            : '-8px -8px 16px white, 8px 8px 16px rgba(0, 0, 0, 0.10)',
+          transition: 'all 0.3s ease',
+        }}
       >
         <Image
           src="/sun-moon.svg"
           alt="Theme Toggler"
-          width={17.5}
-          height={17.5}
+          width={27.5}
+          height={27.5}
+          style={{
+            filter: isDarkMode ? 'invert(100%) brightness(130%)' : 'none',
+            transition: 'filter 0.3s ease',
+          }}
         />
       </button>
+
     </div>
   );
 };

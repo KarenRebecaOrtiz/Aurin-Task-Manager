@@ -9,25 +9,51 @@
   width: 450px;
   height: 100%;
   padding: 25px;
-  background: #000000de;
+  background: #f6f6f6;
   backdrop-filter: blur(10px);
-  box-shadow:
-    -5px 1px 11px rgba(0, 0, 0, 0.10),
-    -19px 3px 19px rgba(0, 0, 0, 0.09),
-    -43px 7px 26px rgba(0, 0, 0, 0.05),
-    -76px 12px 31px rgba(0, 0, 0, 0.01),
-    -118px 19px 34px rgba(0, 0, 0, 0.00);
-  border-radius: 12px 0 0 12px;
+  border-radius: 24px 0 0 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   z-index: 110000;
   transform: translateX(100%);
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+  box-shadow:
+    -5px 1px 11px rgba(0, 0, 0, 0.05),
+    -19px 3px 19px rgba(0, 0, 0, 0.009),
+    -43px 7px 26px rgba(0, 0, 0, 0.005),
+    -76px 12px 31px rgba(0, 0, 0, 0.001),
+    -118px 19px 34px rgba(0, 0, 0, 0.00);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png'); // ← reemplaza esta ruta
+    background-size: cover; // o 'contain' si prefieres
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.2; 
+    z-index: 0;
+    pointer-events: none;
+  }
 }
 
+// 🌑 Dark Mode
 :global(body.dark) .container {
   background: #1f1f20;
+  box-shadow:
+    -8px -8px 16px rgba(255, 255, 255, 0.05),
+    8px 8px 16px rgba(0, 0, 0, 0.4);
+
+  &::before {
+    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png'); // ← imagen alternativa para dark mode
+    opacity: 0.08;
+  }
 }
+
+
 
 .open {
   transform: translateX(0);
@@ -48,24 +74,28 @@
 
 .arrowLeft, .ellipsis {
   cursor: pointer;
-  filter: invert(100%) brightness(100%);
 }
 
 .ellipsis.disabled {
+  cursor: not-allowed;
+  filter: brightness(100) invert(100);
+}
+
+.sendButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 .breadcrumb {
   flex: 1;
-  color: #ffffffbb;
+  color: #1f2732;
   font-size: 14px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 500;
 }
 
 .title {
-  color: #FAFAFA;
+  color: #182735;
   font-size: 19.2px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 700;
@@ -85,38 +115,43 @@
   margin-top: 20px;
   gap: 5px;
 }
+.card,
+.cardFullWidth {
+  padding: 16px;
+  background: #f6f6f6;
+  border-radius: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.004),
+    6px 6px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease-in-out;
+}
 
+// 🔲 Card pequeña con ancho mínimo
 .card {
   flex: 1;
-  padding: 10px;
-  background: #1F1F20;
-  box-shadow: 0px 4px 19px rgba(0, 0, 0, 0.04);
-  border-radius: 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
   min-width: 120px;
-  position: relative;
 }
 
+// 🔳 Card de ancho completo
 .cardFullWidth {
   width: 100%;
-  padding: 10px;
-  background: #1F1F20;
-  box-shadow: 0px 4px 19px rgba(0, 0, 0, 0.04);
-  border-radius: 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+}
+:global(body.dark) .card,
+:global(body.dark) .cardFullWidth {
+  background: #232323;
 }
 
+
+
 .cardLabel {
-  color: #E5E5E5;
+  color: #182735;
   font-size: 12px;
   font-family: 'Montserrat', sans-serif;
   text-align: center;
@@ -127,7 +162,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #E5E5E5;
+  color: #182735;
   font-size: 12px;
   font-family: 'Montserrat', sans-serif;
   font-weight: 500;
@@ -152,6 +187,7 @@
 .message {
   display: flex;
   gap: 10px;
+  padding: 10px 0px 0px 0px ;
 }
 
 .messageContent {
@@ -159,6 +195,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+
 }
 
 .messageHeader {
@@ -176,22 +213,22 @@
 }
 
 .sender {
-  color: #E5E5E5;
+  color: #1b2734;
   font-size: 14px;
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
 }
 
 .timestamp {
-  color: #E5E5E5;
+  color: #1b2734;
   font-size: 14px;
   font-family: 'Montserrat', sans-serif;
   font-weight: 400;
 }
 
 .text {
-  color: white;
-  font-size: 14.4px;
+  color:#1b2734;
+  font-size: 14px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
 }
@@ -207,6 +244,7 @@
 /* Contenedor de acciones (ActionMenu) */
 .actionContainer {
   position: relative;
+  
 }
 
 .actionButton {
@@ -214,7 +252,6 @@
   border: none;
   cursor: pointer;
   padding: 4px;
-  filter: invert(100%) brightness(100%);
 }
 
 .actionDropdown {
@@ -224,16 +261,21 @@
   font-family: "Inter Tight", sans-serif;
   background: #1f1f20;
   border-radius: 6px;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 3300; 
   padding: 8px 0;
   pointer-events: auto;
+  box-shadow:
+  -5px 1px 11px rgba(0, 0, 0, 0.10),
+  -19px 3px 19px rgba(0, 0, 0, 0.09),
+  -43px 7px 26px rgba(0, 0, 0, 0.05),
+  -76px 12px 31px rgba(0, 0, 0, 0.01),
+  -118px 19px 34px rgba(0, 0, 0, 0.00);
   display: flex;
   flex-direction: column;
 }
 
 .actionDropdownItem {
-  padding: 8px 12px;
+  padding: 12px;
   color: #D1D1D1;
   font-size: 12px;
   font-family: "Inter Tight", sans-serif;
@@ -246,7 +288,7 @@
 }
 
 .actionDropdownItem:hover {
-  background: #3A3A3A;
+  background: #e1e1e1;
 }
 
 /* Contenedor de edición de mensajes */
@@ -288,46 +330,73 @@
 .inputWrapper {
   width: 100%;
 }
-
 .inputContainer {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: #1F1F20;
-  padding: 19px;
-  border-radius: 10px;
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 16px;
+  position: relative;
   box-shadow:
-    -5px 1px 11px rgba(0, 0, 0, 0.10),
-    -19px 3px 19px rgba(0, 0, 0, 0.09),
-    -43px 7px 26px rgba(0, 0, 0, 0.05),
-    -76px 12px 31px rgba(0, 0, 0, 0.01),
-    -118px 19px 34px rgba(0, 0, 0, 0.00);
+    -6px -6px 12px rgba(255, 255, 255, 0.004),
+    6px 6px 12px rgba(0, 0, 0, 0.10);
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
 }
 
+// 🌑 DARK MODE (ajuste para coherencia futura, aunque ya está dark)
 :global(body.dark) .inputContainer {
+  background: #1f1f20;
   box-shadow:
-    -5px 1px 11px rgba(0, 0, 0, 0.10),
-    -19px 3px 19px rgba(0, 0, 0, 0.09),
-    -43px 7px 26px rgba(0, 0, 0, 0.05),
-    -76px 12px 31px rgba(0, 0, 0, 0.01),
-    -118px 19px 34px rgba(0, 0, 0, 0.00);
+    -6px -6px 12px rgba(255, 255, 255, 0.04),
+    6px 6px 12px rgba(0, 0, 0, 0.4);
 }
 
+// 📝 Campo de texto
 .input {
   width: 100%;
-  height: 26px;
-  background: transparent;
+  height: 36px;
+  padding: 8px 12px;
+  background: #f3f3f3; // leve tono para distinguir input
   border: none;
-  color: white;
-  font-size: 14.4px;
+  border-radius: 10px;
+  color: #1b2734d9;
+  font-size: 15px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
-  opacity: 0.8;
+  opacity: 0.85;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
 }
 
+// 🔍 Enfocado
 .input:focus {
   outline: none;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset -1px -1px 3px rgba(255, 255, 255, 0.1),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 0 1px #e4e4e4; // highlight tenue en foco
 }
+
+:global(body.dark) .input{
+  background-color: rgb(36, 36, 36);
+  color: white;
+}
+:global(body.dark) .playStopButton img,
+:global(body.dark) .arrowLeft,
+:global(body.dark) .actionButton,
+:global(body.dark) .clickable,
+:global(body.dark) .imageButton img,
+:global(body.dark) .sendButton img,
+:global(body.dark) .timerContainer div span,
+:global(body.dark) .timerContainer div img {
+  filter: invert(80) brightness(80);
+}
+
 
 /* Contenedor del temporizador */
 .timerContainer {
@@ -343,184 +412,252 @@
 }
 
 .timerContainer div span {
-  color: white;
+  color: #1b2734d9;
 }
 
-.timerContainer div img {
-  filter: invert(100%) brightness(100%);
-}
-
-.playStopButton {
-  display: flex;
-  height: 40px;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  width: 40px;
-  border-radius: 100px;
-  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
-}
-
-.playStopButton:hover {
-  background: #000000;
-  cursor: pointer;
-}
-.playStopButton:hover img {
-  filter: invert(100%) brightness(100%);
-}
-
-/* Botón de enviar */
+.playStopButton,
 .sendButton {
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 40px;
   justify-content: center;
+  text-align: center;
+  height: 40px;
   width: 40px;
-  background: white;
   border-radius: 100px;
   border: none;
+  background: #f1f5f9;
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(209, 217, 230, 0.8);
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.3s ease,
+    background-color 0.3s ease-in-out;
   cursor: pointer;
-  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
+  padding: 0;
 }
 
+// 🧲 Hover tipo press-in neumorfista
+.playStopButton:hover,
+.sendButton:hover {
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+  background: #e4e8ee;
+  transform: translateY(-1px);
+}
+
+// 🌚 Dark Mode
+:global(body.dark) .playStopButton,
+:global(body.dark) .sendButton {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+:global(body.dark) .playStopButton:hover,
+:global(body.dark) .sendButton:hover {
+  background: #2c2c2f;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+
+
+// 🔁 Animación de rotación sólo para botón de enviar
 .sendButton:hover {
   transform: rotate(90deg);
-  background: #000000;
 }
 
-.sendButton:hover img {
-  filter: invert(100%) brightness(100%);
-}
 
 .actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 /* Panel de temporizador */
 .timerPanel {
   overflow: hidden;
   height: 0;
   opacity: 0;
-  background: #1f1f20;
-  border-radius: 8px 8px 0px 0px;
+  background: #d3e048;
+  border-radius: 16px ;
   margin-bottom: 8px;
   width: 100%;
+  position: relative;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.004),
+    6px 6px 12px rgba(0, 0, 0, 0.10);
+  transition: all 0.3s ease-in-out;
 }
 
 .timerPanelContent {
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
 .timerRow {
   display: flex;
-  gap: 8px;
+  gap: 16px;
 }
 
 .timerCard {
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.timerInput {
-  width: 100%;
-  padding: 8px;
-  border: solid 1px #3c3c3d;
-  background-color: #3c3c3d;
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.845);
+/* Inputs flotando sobre el panel */
+.timerInput,
+.react-time-picker__inputGroup,
+.timerCommentInput {
+  background: #f5f5f519;
+  border-radius: 14px;
+  padding: 10px 14px;
   font-family: "Inter Tight", sans-serif;
   font-size: 14px;
+  color: #00000084;
+  border: none;
+  width: 100%;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.004),
+    4px 4px 8px rgba(0, 0, 0, 0.05);
+  transition:
+    background-color 0.4s ease,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
 }
 
-.react-time-picker__wrapper {
-  border: none !important;
+/* Focus neumorfista suave */
+.timerInput:focus,
+.react-time-picker__inputGroup:focus-within,
+.timerCommentInput:focus {
+  outline: none;
+  background-color: #dce876b2; // tono más claro y translúcido
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+    inset 2px 2px 5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
+
+/* Estilo interno del time picker */
 .react-time-picker__inputGroup {
   display: flex;
   align-items: center;
-  background: #3c3c3d;
-  border-radius: 4px;
-  padding: 8px;
+  gap: 4px;
 }
 
 .react-time-picker__inputGroup__input {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.845);
+  color: #1b2734d9;
   font-family: "Inter Tight", sans-serif;
   font-size: 14px;
-  width: 30px;
   text-align: center;
+  width: 30px;
 }
 
 .react-time-picker__inputGroup__divider {
-  color: rgba(255, 255, 255, 0.845);
+  color: #1b2734d9;
 }
 
+/* Comentario */
 .timerCommentInput {
-  width: 100%;
-  padding: 8px;
-  border: solid 1px #3c3c3d;
-  background-color: #3c3c3d;
-  border-radius: 4px;
-  color: white;
-  font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
   resize: vertical;
   min-height: 60px;
 }
 
+/* Texto resumen de tiempo */
 .timerTotal {
-  font-size: 12px;
-  color: #e2e2e2;
+  font-size: 13px;
+  color: #1b2734d9;
   font-family: "Inter Tight", sans-serif;
   margin-bottom: 10px;
   text-align: center;
+  opacity: 0.8;
 }
 
+/* Botones */
 .timerActions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   justify-content: flex-end;
 }
 
-.timerAddButton {
-  padding: 8px 16px;
-  background: #ffffff;
-  color: black;
+.timerAddButton{
+  box-shadow:
+  -4px -4px 8px rgba(255, 255, 255, 0.005),
+  4px 4px 8px rgba(0, 0, 0, 0.05);
+}
+.timerAddButton,
+.timerCancelButton {
+  padding: 10px 20px;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 14px;
   font-size: 14px;
-  font-weight: 400;
-  transition: background 0.3s ease;
+  font-weight: 500;
+  font-family: "Inter Tight", sans-serif;
+  transition: all 0.3s ease-in-out;
+
+}
+.timerAddButton {
+  background: #e2ed69;
+  color: #1b2734d9;
+  border: none;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "Inter Tight", sans-serif;
+  padding: 10px 20px;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.1),
+    4px 4px 8px rgba(0, 0, 0, 0.05);
+  transition:
+    background-color 0.4s ease,
+    box-shadow 0.4s ease,
+    transform 0.3s ease;
 }
 
 .timerAddButton:hover {
-  background: #d0d0d1;
+  background-color: #d4e55f;
+  transform: translateY(-1px);
+  box-shadow:
+    inset -1px -1px 2px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Botón neumorfista claro estilo cancelar */
 .timerCancelButton {
-  padding: 8px 16px;
-  background: #3c3c3d;
-  color: white;
+  background: #dde96071;
+  color: #1b2734d9;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 14px;
   font-size: 14px;
-  font-weight: 400;
-  transition: background 0.3s ease;
+  font-weight: 500;
+  font-family: "Inter Tight", sans-serif;
+  padding: 10px 20px;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.008),
+    4px 4px 8px rgba(0, 0, 0, 0.008);
+  transition:
+    background-color 0.4s ease,
+    box-shadow 0.4s ease,
+    transform 0.3s ease;
 }
 
 .timerCancelButton:hover {
-  background: #4b5563;
+  background-color: #d7e85e8f;
+  transform: translateY(-1px);
+  box-shadow:
+    inset -1px -1px 2px rgba(255, 255, 255, 0.05),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.15);
 }
+
 
 /* Popup del calendario */
 .calendarPopper {
@@ -533,95 +670,163 @@
   color: white;
   font-family: "Inter Tight", sans-serif;
 }
-
 /* Dropdown del menú de tarea */
 .taskMenuDropdown {
   position: absolute;
   top: 50px;
   right: 0;
-  background: #1f1f20;
-  border: 1px solid #444546;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  background: #f1f5f9;
+  border-radius: 16px;
+  padding: 8px 0;
   z-index: 3200;
-  min-width: 150px;
+  box-shadow:
+    -6px -6px 12px #ffffff,
+    6px 6px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
 }
 
+/* Ítems del menú */
 .taskMenuItem {
-  padding: 8px 12px;
+  padding: 12px 16px;
   font-size: 14px;
-  color: white;
+  color: #1b2734d9;
+  font-family: "Inter Tight", sans-serif;
   cursor: pointer;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.2s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
 }
 
+/* Hover neumorfista */
 .taskMenuItem:hover {
-  background-color: #3c3c3d;
+  background-color: #e2e8f0;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.2),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
-/* Dropdown de estado */
+/* Tarjeta de estado con hover táctil */
 .statusCard {
-  position: relative;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .statusCard:hover {
   cursor: pointer;
-  background-color: #444546;
+  background-color: #e2e8f0;
+  box-shadow:
+    inset -2px -2px 3px rgba(255, 255, 255, 0.06),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.08);
 }
 
+/* Dropdown del estado */
 .statusDropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  background: #1f1f20;
-  border: 1px solid #444546;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 3200;
   width: 100%;
+  background: #f1f5f9;
+  border-radius: 16px;
+  padding: 8px 0;
+  z-index: 3200;
+  box-shadow:
+    -6px -6px 12px #ffffff,
+    6px 6px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
 }
 
+/* Opciones internas */
 .statusOption {
-  padding: 8px 12px;
+  padding: 12px 16px;
   font-size: 14px;
   font-family: "Inter Tight", sans-serif;
-  color: white;
+  color: #1b2734d9;
+  background: transparent;
   cursor: pointer;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
+/* Hover neumorfista */
 .statusOption:hover {
-  background-color: #3c3c3d;
+  background-color: #e2e8f0;
+  box-shadow:
+    inset -1px -1px 3px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
+/* Estado clickable */
 .clickable {
   cursor: pointer;
 }
 
-/* Popup de eliminación */
+
+:global(body.dark) .statusDropdown {
+  background: #1f1f20;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.04),
+    6px 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+:global(body.dark) .statusOption {
+  color: #ffffffcc;
+}
+
+:global(body.dark) .statusOption:hover {
+  background-color: #2c2c2f;
+  box-shadow:
+    inset -1px -1px 3px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Overlay del popup */
 .deletePopupOverlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.15); 
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 3100;
 }
 
+
+/* Contenedor principal del popup */
 .deletePopup {
-  width: 400px;
+  width: 420px;
   padding: 34px 36px;
-  background: #1f1f20;
-  border-radius: 10px;
-  box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.05);
+  background: #f1f5f9;
+  border-radius: 20px;
+  box-shadow:
+    -8px -8px 16px #ffffff,
+    8px 8px 16px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
+  transition: all 0.3s ease-in-out;
 }
 
+/* Contenido interno */
 .deletePopupContent {
   display: flex;
   flex-direction: column;
@@ -630,22 +835,24 @@
   width: 100%;
 }
 
+/* Icono de advertencia */
 .warningIcon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
+/* Texto del popup */
 .deletePopupText {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   width: 100%;
 }
 
 .deletePopupTitle {
-  color: white;
-  font-size: 16px;
+  color: #1b2734d9;
+  font-size: 18px;
   font-family: 'Inter Tight', sans-serif;
   font-weight: 700;
   text-transform: capitalize;
@@ -653,10 +860,10 @@
 }
 
 .deletePopupDescription {
-  color: white;
+  color: #1b2734b3;
   font-size: 14px;
   font-family: 'Inter Tight', sans-serif;
-  font-weight: 300;
+  font-weight: 400;
   text-align: center;
 }
 
@@ -664,32 +871,53 @@
   font-weight: 700;
 }
 
+/* Input de confirmación */
 .deleteConfirmInput {
   width: 100%;
-  padding: 8px;
-  background-color: #3c3c3d;
-  border: 1px solid #3c3c3d;
-  border-radius: 4px;
+  padding: 10px 14px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: none;
   font-size: 14px;
-  color: #ffffff86;
   font-family: 'Inter Tight', sans-serif;
+  color: #1b2734d9;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
 }
 
+.deleteConfirmInput:focus {
+  outline: none;
+  background-color: #f9f6f6;
+  box-shadow:
+    inset -1px -1px 2px rgba(255, 255, 255, 0.1),
+    inset 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Acciones del popup */
 .deletePopupActions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
 }
 
+/* Botón de confirmar */
 .deleteConfirmButton {
-  padding: 8px 16px;
+  padding: 10px 20px;
   background: #c91111;
   color: white;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   border: none;
-  border-radius: 4px;
+  border-radius: 14px;
   cursor: pointer;
   font-family: 'Inter Tight', sans-serif;
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.06),
+    2px 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
 }
 
 .deleteConfirmButton:disabled {
@@ -701,90 +929,195 @@
   background: #b91c1c;
 }
 
+/* Botón de cancelar */
 .deleteCancelButton {
-  padding: 8px 16px;
-  background: #3c3c3d;
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 10px 20px;
+  background: #f1f5f9;
+  color: #1b2734d9;
+  font-size: 14px;
+  font-weight: 600;
   border: none;
-  border-radius: 4px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: background 0.3s ease;
   font-family: 'Inter Tight', sans-serif;
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.06),
+    2px 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
 }
 
 .deleteCancelButton:hover {
-  background: #4e4f50;
+  background: #e2e8f0;
+  box-shadow:
+    inset -1px -1px 2px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Dropdown de responsables */
+
+:global(body.dark) .deletePopup {
+  background: #1f1f20;
+  box-shadow:
+    -8px -8px 16px rgba(255, 255, 255, 0.04),
+    8px 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+:global(body.dark) .deletePopupTitle,
+:global(body.dark) .deletePopupDescription,
+:global(body.dark) .deletePopupDescription strong {
+  color: #ffffffcc;
+}
+
+:global(body.dark) .deleteConfirmInput {
+  background: #2c2c2f;
+  color: #ffffffcc;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+:global(body.dark) .deleteConfirmInput:focus {
+  background-color: #3a3a3d;
+  box-shadow:
+    inset -1px -1px 2px rgba(255, 255, 255, 0.05),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+:global(body.dark) .deleteCancelButton {
+  background: #1f1f20;
+  color: #ffffffcc;
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.04),
+    2px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+:global(body.dark) .deleteCancelButton:hover {
+  background-color: #2c2c2f;
+  box-shadow:
+    inset -1px -1px 2px rgba(255, 255, 255, 0.05),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+
+/* ===== Dropdown de responsables ===== */
 .responsibleDropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  background: #1f1f20;
-  border: 1px solid #444546;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 3200;
   width: 100%;
+  background: #f1f5f9;
+  border-radius: 16px;
   padding: 8px 0;
+  z-index: 3200;
   pointer-events: auto;
+  box-shadow:
+    -6px -6px 12px #ffffff,
+    6px 6px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
 }
 
 .responsibleDropdownItem {
   display: flex;
-  font-family: "Inter Tight", sans-serif;
   align-items: center;
-  padding: 8px 12px;
   gap: 8px;
+  padding: 12px 16px;
   font-size: 14px;
-  color: white;
-  cursor: default;
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
+  color: #1b2734d9;
+  cursor: default;
+  background: transparent;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
 }
 
+.responsibleDropdownItem:hover {
+  background-color: #e2e8f0;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
 
-
-/* Dropdown de tiempo registrado */
+/* ===== Dropdown de tiempo registrado ===== */
 .hoursDropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  background: #1f1f20;
-  border: 1px solid #444546;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 3200;
   width: 100%;
+  background: #f1f5f9;
+  border-radius: 16px;
   padding: 8px 0;
-  cursor: pointer;
+  z-index: 3200;
   pointer-events: auto;
+  box-shadow:
+    -6px -6px 12px #ffffff,
+    6px 6px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .hoursDropdownItem {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
   gap: 8px;
+  padding: 12px 16px;
   font-size: 14px;
-  color: white;
+  color: #1b2734d9;
   cursor: default;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
 }
 
+.hoursDropdownItem:hover {
+  background-color: #e2e8f0;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
 
+/* Tipografía interna */
 .hoursUserName {
   flex: 1;
   font-family: "Inter Tight", sans-serif;
   font-weight: 500;
+  color: #1b2734d9;
 }
 
 .hoursValue {
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
+  color: #1b2734d9;
 }
+
+/* ===== MODO OSCURO ===== */
+:global(body.dark) .responsibleDropdown,
+:global(body.dark) .hoursDropdown {
+  background: #1f1f20;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.03),
+    6px 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+:global(body.dark) .responsibleDropdownItem,
+:global(body.dark) .hoursDropdownItem {
+  color: #ffffffcc;
+}
+
+:global(body.dark) .responsibleDropdownItem:hover,
+:global(body.dark) .hoursDropdownItem:hover {
+  background-color: #2c2c2f;
+  box-shadow:
+    inset -2px -2px 3px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+:global(body.dark) .hoursUserName,
+:global(body.dark) .hoursValue {
+  color: #ffffffcc;
+}
+
 
 /* Animación "Escribiendo" */
 .typingIndicator {
@@ -826,60 +1159,6 @@
   50% { transform: translateY(-6px); }
 }
 
-/* Contenedor del loader */
-.loaderWrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 3100;
-}
-
-/* Loader de burbujas */
-.loader {
-  position: relative;
-  display: block;
-  width: 44px;
-  height: 44px;
-  font-size: 15px;
-  box-shadow: 9px 9px 33px #d1d1d1, -9px -9px 33px #ffffff;
-}
-
-.loader::before,
-.loader::after {
-  content: '';
-  position: absolute;
-  display: block;
-}
-
-.loader_bubble::before {
-  top: 10px;
-  left: 10px;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border-radius: 50%;
-}
-
-.loader_bubble {
-  background: linear-gradient(180deg, rgb(0, 91, 228) 10%, rgb(75, 127, 240) 100%);
-  border-radius: 50%;
-  transform-origin: 50% 50%;
-  animation: bubble7234 1200ms cubic-bezier(0.645, 0.045, 0.355, 1) infinite;
-}
-
-@keyframes bubble7234 {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotate(360deg);
-  }
-}
 
 
 /* Image and file */
@@ -925,20 +1204,49 @@
   margin-left: 8px;
 }
 
-/* Image button */
-.imageButton {
-  background: none;
+/* Image button */.imageButton {
+  background: #f1f5f9;
   border: none;
-  cursor: pointer;
-  padding: 6px;
   border-radius: 50%;
-  filter: invert(100%) brightness(100%);
-  transition: background 0.3s ease-in-out, transform 0.3s ease-in-out;
+  height: 40px;
+  width: 40px;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease-in-out,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(0, 0, 0, 0.050);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   &:hover {
-    background: #d4d4d4;
+    background-color: #e2e8f0;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
   }
 }
+:global(body.dark) .imageButton {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background-color: #2c2c2f;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
 
 .fileActionsRow {
   display: flex;
@@ -1011,7 +1319,102 @@
 /* Empty state */
 .noMessages {
   text-align: center;
-  color: white;
+  color: #212731;
   padding: 10px;
-  font: 14px 'Inter Tight';
+  font-size: 14pxs;
+  font-weight: 500;
+}
+
+:global(body.dark) .breadcrumb,
+:global(body.dark) .title,
+:global(body.dark) .description,
+:global(body.dark) .cardLabel,
+:global(body.dark) .cardValue,
+:global(body.dark) .sender,
+:global(body.dark) .timestamp,
+:global(body.dark) .text,
+:global(body.dark) .readBy {
+  color: #ffffffcc;
+}
+
+:global(body.dark) .chat {
+  background-color: #1f1f20;
+}
+
+:global(body.dark) .editInput {
+  background: #2c2c2f;
+  border-color: #555;
+  color: #ffffffcc;
+}
+
+:global(body.dark) .editSaveButton {
+  background: #f1f5f9;
+  color: #1b2734;
+}
+
+:global(body.dark) .editCancelButton {
+  background: #2c2c2f;
+  color: #ffffffcc;
+}
+
+:global(body.dark) .actionDropdown {
+  background: #1f1f20;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.04),
+    6px 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+:global(body.dark) .actionDropdownItem {
+  color: #ffffffcc;
+}
+
+:global(body.dark) .actionDropdownItem:hover {
+  background: #2c2c2f;
+}
+
+/* === Animaciones === */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animación para dropdowns */
+.taskMenuDropdown,
+.statusDropdown,
+.responsibleDropdown,
+.hoursDropdown,
+.actionDropdown {
+  animation: fadeScale 0.3s ease-out;
+}
+
+/* Animación para nuevos mensajes */
+.message {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Animación para panel del temporizador */
+.timerPanel {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Animación para popups */
+.deletePopup {
+  animation: fadeScale 0.3s ease-out;
 }

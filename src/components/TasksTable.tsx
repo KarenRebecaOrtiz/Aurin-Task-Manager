@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, getDocs, deleteDoc, addDoc, query, where, doc } from 'firebase/firestore';
@@ -39,13 +40,16 @@ interface TasksTableProps {
   onCreateClientOpen: () => void;
   onInviteMemberOpen: () => void;
   onNewTaskOpen: () => void;
+  onEditTaskOpen: (taskId: string) => void; // New prop
   onAISidebarOpen: () => void;
   onChatSidebarOpen: (task: Task) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
+const MASTER_USER_IDS = ['user_2yHDV3l5yqe3wxigQvLw1vDUlQ7', 'user_2y40r8oOP4NdMrwUg3yLeJwGfr8'];
+
 const TasksTable: React.FC<TasksTableProps> = memo(
-  ({ tasks, clients, onNewTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
+  ({ tasks, clients, onNewTaskOpen, onEditTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
     const { user } = useUser();
     const router = useRouter();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
@@ -69,9 +73,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const deletePopupRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
+    const userId = useMemo(() => user?.id || '', [user]);
+    const isMasterUser = useMemo(() => userId && MASTER_USER_IDS.includes(userId), [userId]);
+
     // Fetch tasks
     useEffect(() => {
       const fetchTasks = async () => {
+        if (!userId) return;
+
         try {
           const querySnapshot = await getDocs(collection(db, 'tasks'));
           const tasksData: Task[] = querySnapshot.docs
@@ -90,21 +99,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
               CreatedBy: doc.data().CreatedBy || '',
             }))
-            .filter(
-              (task) =>
-                task.AssignedTo.includes(user?.id || '') ||
-                task.LeadedBy.includes(user?.id || '') ||
-                task.CreatedBy === user?.id,
-            );
+            .filter((task) => isMasterUser || (
+              task.AssignedTo.includes(userId) ||
+              task.LeadedBy.includes(userId) ||
+              task.CreatedBy === userId
+            ));
+          console.log('Fetched tasks:', tasksData.length, 'user:', userId);
           setTasks(tasksData);
         } catch (error) {
           console.error('Error fetching tasks:', error);
         }
       };
-      if (user?.id) {
-        fetchTasks();
-      }
-    }, [setTasks, user?.id]);
+      fetchTasks();
+    }, [setTasks, userId, isMasterUser]);
 
     // Filter tasks
     const memoizedFilteredTasks = useMemo(() => {
@@ -296,55 +303,86 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     // Handle task deletion
     const handleDeleteTask = async () => {
-      if (!user?.id || !deleteTaskId || deleteConfirm.toLowerCase() !== 'eliminar') return;
+      if (!userId || !deleteTaskId || deleteConfirm.toLowerCase() !== 'eliminar') return;
 
       try {
-        console.log('Deleting task:', deleteTaskId);
+        console.log('Deleting task:', deleteTaskId, 'by user:', userId);
 
-        // Eliminar mensajes
+        // Find task
+        const task = tasks.find((t) => t.id === deleteTaskId);
+        if (!task) {
+          throw new Error('Task not found');
+        }
+
+        // Delete messages (only those user is authorized to delete, or all for master/creator)
         const messagesQuery = query(collection(db, `tasks/${deleteTaskId}/messages`));
         const messagesSnapshot = await getDocs(messagesQuery);
-        await Promise.all(messagesSnapshot.docs.map((msgDoc) => deleteDoc(doc(db, `tasks/${deleteTaskId}/messages`, msgDoc.id))));
-        console.log('Deleted messages for task:', deleteTaskId);
+        for (const msgDoc of messagesSnapshot.docs) {
+          const msgData = msgDoc.data();
+          if (msgData.senderId === userId || task.CreatedBy === userId || isMasterUser) {
+            try {
+              await deleteDoc(doc(db, `tasks/${deleteTaskId}/messages`, msgDoc.id));
+              console.log('Deleted message:', msgDoc.id);
+            } catch (error) {
+              console.warn('Failed to delete message:', msgDoc.id, error);
+            }
+          }
+        }
 
-        // Eliminar notificaciones
-        const notificationsQuery = query(collection(db, 'notifications'), where('taskId', '==', deleteTaskId));
+        // Delete notifications (only those user created)
+        const notificationsQuery = query(
+          collection(db, 'notifications'),
+          where('taskId', '==', deleteTaskId),
+          where('userId', '==', userId)
+        );
         const notificationsSnapshot = await getDocs(notificationsQuery);
-        await Promise.all(notificationsSnapshot.docs.map((notifDoc) => deleteDoc(doc(db, 'notifications', notifDoc.id))));
-        console.log('Deleted notifications for task:', deleteTaskId);
+        for (const notifDoc of notificationsSnapshot.docs) {
+          try {
+            await deleteDoc(doc(db, 'notifications', notifDoc.id));
+            console.log('Deleted notification:', notifDoc.id);
+          } catch (error) {
+            console.warn('Failed to delete notification:', notifDoc.id, error);
+          }
+        }
 
-        // Notificar a involucrados
-        const task = tasks.find((t) => t.id === deleteTaskId);
-        if (task) {
-          const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-          if (task.CreatedBy) recipients.add(task.CreatedBy);
-          recipients.delete(user.id);
-          for (const recipientId of Array.from(recipients)) {
+        // Notify involved users
+        const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+        if (task.CreatedBy) recipients.add(task.CreatedBy);
+        recipients.delete(userId);
+        for (const recipientId of Array.from(recipients)) {
+          try {
             await addDoc(collection(db, 'notifications'), {
-              userId: user.id,
+              userId: userId,
               taskId: deleteTaskId,
-              message: `${user.firstName || 'Usuario'} eliminó la tarea ${task.name}`,
+              message: `${user?.firstName || 'Usuario'} eliminó la tarea ${task.name}`,
               timestamp: Timestamp.now(),
               read: false,
               recipientId,
             });
+            console.log('Sent notification to:', recipientId);
+          } catch (error) {
+            console.warn('Failed to send notification to:', recipientId, error);
           }
-          console.log('Notifications sent for task deletion');
         }
 
-        // Eliminar tarea
+        // Delete task
         await deleteDoc(doc(db, 'tasks', deleteTaskId));
         console.log('Task deleted:', deleteTaskId);
 
-        // Actualizar lista de tareas
+        // Update task list
         setTasks((prev) => prev.filter((t) => t.id !== deleteTaskId));
 
         setIsDeletePopupOpen(false);
         setDeleteConfirm('');
         setDeleteTaskId(null);
-      } catch (error) {
-        console.error('Error deleting task:', error);
-        alert('Error al eliminar la tarea');
+      } catch (error: any) {
+        console.error('Error deleting task:', {
+          message: error.message || 'Unknown error',
+          code: error.code || 'unknown',
+          taskId: deleteTaskId,
+          userId,
+        });
+        alert(`Error al eliminar la tarea: ${error.message || 'Inténtalo de nuevo.'}`);
       }
     };
 
@@ -373,31 +411,31 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         key: 'clientId',
         label: 'Cuenta',
         width: '10%',
-        mobileVisible: false, // Oculta en móviles
+        mobileVisible: false,
       },
       {
         key: 'name',
         label: 'Tarea',
-        width: '50%', // Ajustado para responsividad en móviles
+        width: '50%',
         mobileVisible: true,
       },
       {
         key: 'status',
         label: 'Estado',
-        width: '30%', // Ajustado para responsividad en móviles
+        width: '30%',
         mobileVisible: true,
       },
       {
         key: 'priority',
         label: 'Prioridad',
         width: '10%',
-        mobileVisible: false, // Oculta en móviles
+        mobileVisible: false,
       },
       {
         key: 'action',
         label: 'Acciones',
         width: '10%',
-        mobileVisible: false, // Oculta en móviles
+        mobileVisible: false,
       },
     ];
 
@@ -408,7 +446,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           render: (task: Task) => {
             const client = clients.find((c) => c.id === task.clientId);
             return client ? (
-              <Image style={{borderRadius:"999px"}}
+              <Image
+                style={{ borderRadius: '999px' }}
                 src={client.imageUrl || '/empty-image.png'}
                 alt={client.name || 'Client Image'}
                 width={40}
@@ -476,10 +515,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           render: (task: Task) => (
             <ActionMenu
               task={task}
-              userId={user?.id}
+              userId={userId}
               isOpen={actionMenuOpenId === task.id}
               onOpen={() => setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id)}
-              onEdit={() => router.push(`/dashboard/edit-task?taskId=${task.id}`)}
+              onEdit={() => onEditTaskOpen(task.id)} // Updated to use callback
               onDelete={() => {
                 setIsDeletePopupOpen(true);
                 setDeleteTaskId(task.id);
@@ -609,7 +648,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 onNewTaskOpen();
               }}
             >
-              <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
+              <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height="16" />
               Crear Tarea
             </button>
           </div>
@@ -627,13 +666,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           <div className={styles.deletePopupOverlay}>
             <div className={styles.deletePopup} ref={deletePopupRef}>
               <div className={styles.deletePopupContent}>
-                <Image
-                  src="/message-circle-warning.svg"
-                  alt="Warning"
-                  width={24}
-                  height={24}
-                  className={styles.warningIcon}
-                />
                 <div className={styles.deletePopupText}>
                   <h2 className={styles.deletePopupTitle}>¿Seguro que quieres eliminar esta tarea?</h2>
                   <p className={styles.deletePopupDescription}>

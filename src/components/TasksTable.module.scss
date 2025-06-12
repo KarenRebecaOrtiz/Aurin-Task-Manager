@@ -22,9 +22,9 @@
   gap: 16px;
 
   @media (max-width: 819px) {
-    flex-direction: column; /* Apila searchWrapper y filtersWrapper verticalmente */
-    align-items: stretch; /* Estira los elementos para ocupar todo el ancho */
-    gap: 12px; /* Espacio entre searchWrapper y filtersWrapper */
+    flex-direction: column; 
+    align-items: stretch; 
+    gap: 12px;
   }
 }
 
@@ -37,58 +37,80 @@
     width: 100%; /* Ocupa todo el ancho */
   }
 }
-
 .searchInput {
   width: 100%;
-  height: 40px;
-  padding: 10px 16px;
   min-width: 200px;
-  border-radius: 8px;
-  border: 1px solid #cbcbcb52;
-  box-shadow: 
-    0px 2px 4px rgba(0, 0, 0, 0.01),
-    0px 7px 7px rgba(0, 0, 0, 0.02),
-    0px 15px 9px rgba(0, 0, 0, 0.02),
-    0px 27px 11px rgba(0, 0, 0, 0.003),
-    0px 42px 12px rgba(0, 0, 0, 0.00);
+  height: 48px;
+  padding: 10px 16px;
+
+  background: #F7F9FA;
+  border-radius: 10px;
+  border: none;
+
   font-size: 14px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 500;
-  color: #52525B;
-  background: white;
-  opacity: 0.8;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color: #0F172A;
+
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05),
+    0 4px 6px rgba(0, 0, 0, 0.02);
+
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.2s ease;
+
+  &::placeholder {
+    color: #A0A0A0;
+    font-weight: 400;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 0 0 4px rgba(59, 130, 246, 0.12);
+    background: #ffffff;
+  }
 }
 
-.searchInput:focus {
-  border-color: #000000;
-  box-shadow: 0px 0px 0px 4px rgba(59, 130, 246, 0.1);
-  outline: none;
-}
-
-.searchInput::placeholder {
-  color: #52525B;
-}
-
+/* 🌙 Modo oscuro neumorfista */
 :global(body.dark) .searchInput {
   background: #0D0D0D;
-  border-color: #ffffff;
   color: #D1D1D1;
-  opacity: 1;
-}
+  border: none;
 
-:global(body.dark) .searchInput::placeholder {
-  color: #A1A1AA;
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.6),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.06),
+    0 4px 6px rgba(255, 255, 255, 0.02);
+
+  &::placeholder {
+    color: #A1A1AA;
+    font-weight: 400;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow:
+      inset -2px -2px 4px rgba(0, 0, 0, 0.7),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.08),
+      0 0 0 4px rgba(59, 130, 246, 0.12);
+    background: #1A1A1A;
+  }
 }
 
 .filtersWrapper {
   display: flex;
-  align-items: center;
+  align-items: start;
   gap: 8px;
 
   @media (max-width: 819px) {
     flex-wrap: wrap; /* Permite que los filtros se wrapeen si es necesario */
-    justify-content: center; /* Centra los filtros */
+    justify-content: start; /* Centra los filtros */
     width: 100%; /* Ocupa todo el ancho */
   }
 }
@@ -96,190 +118,294 @@
 .filter {
   height: 40px;
 }
-
+/* 🌤️ Botón AI estilizado */
 .filterButton {
-  height: 40px;
-  padding: 8px 12px;
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #ffffff;
-  box-shadow: 
-    0px 2px 4px rgba(0, 0, 0, 0.01),
-    0px 7px 7px rgba(0, 0, 0, 0.02),
-    0px 15px 9px rgba(0, 0, 0, 0.02),
-    0px 27px 11px rgba(0, 0, 0, 0.003),
-    0px 42px 12px rgba(0, 0, 0, 0.00);
+  height: 48px;
+  padding: 8px 16px;
+  background: #F7F9FA;
+  border-radius: 10px;
+  border: none;
+
   color: #0D0D0D;
   font-size: 14px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 500;
+
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+
   cursor: pointer;
-  transition: 
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05),
+    0 4px 8px rgba(0, 0, 0, 0.03);
+
+  transition:
     background-color 0.2s ease,
     box-shadow 0.3s ease,
     transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 8px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &:active {
+    transform: scale(0.97);
+    box-shadow:
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.3);
+  }
+
+  img {
+    transition: filter 0.3s ease;
+  }
 }
 
-.filterButton:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0px 15px 33px rgba(0, 0, 0, 0.044),
-    0px 60px 60px rgba(0, 0, 0, 0.057),
-    0px 136px 81px rgba(0, 0, 0, 0.05),
-    0px 241px 96px rgba(0, 0, 0, 0.01),
-    0px 377px 106px rgba(0, 0, 0, 0.00);
-}
-
+/* 🌙 Modo oscuro refinado */
 :global(body.dark) .filterButton {
   background: #0D0D0D;
-  border-color: #555555;
   color: #D1D1D1;
+
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.6),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.06),
+    0 4px 6px rgba(255, 255, 255, 0.02);
+
+  img {
+    filter: invert(1) grayscale(1) brightness(1.4);
+  }
+
+  &:hover {
+    background: #1A1A1A;
+    box-shadow:
+      inset -2px -2px 4px rgba(0, 0, 0, 0.7),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.08),
+      0 6px 10px rgba(255, 255, 255, 0.03);
+  }
+
+  &:active {
+    transform: scale(0.97);
+    box-shadow:
+      inset 2px 2px 6px rgba(255, 255, 255, 0.04),
+      inset -2px -2px 6px rgba(0, 0, 0, 0.5);
+  }
 }
 
-:global(body.dark) .filterButton:hover {
-  background: #272727;
-}
-
-:global(body.dark) .filterButton img {
-  filter: invert(1) grayscale(1) brightness(1.5);
-}
 
 .createButton {
-  height: 40px;
-  padding: 8px 12px;
+  height: 48px;
+  padding: 8px 16px;
   background: #0A0A0A;
-  border-radius: 6px;
-  color: white;
-  font-size: 14px; 
+  border-radius: 10px;
+
+  color: #FFFFFF;
+  font-size: 14px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 500;
+
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+
   cursor: pointer;
-  transition: 
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+
+  transition:
     background-color 0.2s ease,
     box-shadow 0.3s ease,
     transform 0.3s ease;
+
+  &:hover {
+    background: #121212;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.6),
+      0 4px 8px rgba(0, 0, 0, 0.5);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    background: #0A0A0A;
+    transform: scale(0.97);
+    box-shadow:
+      inset 1px 1px 4px rgba(0, 0, 0, 0.6),
+      inset -1px -1px 4px rgba(255, 255, 255, 0.05);
+  }
 }
 
-.createButton:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0px 15px 33px rgba(0, 0, 0, 0.044),
-    0px 60px 60px rgba(0, 0, 0, 0.057),
-    0px 136px 81px rgba(0, 0, 0, 0.05),
-    0px 241px 96px rgba(0, 0, 0, 0.01),
-    0px 377px 106px rgba(0, 0, 0, 0.00);
-}
-
+/* 🌙 Dark Mode inverso */
 :global(body.dark) .createButton {
-  background: #ffffff;
+  background: #FFFFFF;
   color: #000000;
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.05),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 :global(body.dark) .createButton:hover {
   background: #E5E5E5;
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.05),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+:global(body.dark) .createButton:active {
+  transform: scale(0.97);
+  background: #ffffff;
+  box-shadow:
+    inset 1px 1px 4px rgba(0, 0, 0, 0.2),
+    inset -1px -1px 4px rgba(255, 255, 255, 0.2);
 }
 
 :global(body.dark) .createButton img {
   filter: invert(1) grayscale(1) brightness(1.5);
 }
 
+
+
 .dropdownContainer {
   position: relative;
 }
-
+/* 🌤️ Modo claro neumorfista */
 .dropdownTrigger {
   display: flex;
   justify-content: center;
-  min-width: 100px;
-  box-shadow: 
-    0px 2px 4px rgba(0, 0, 0, 0.01),
-    0px 7px 7px rgba(0, 0, 0, 0.02),
-    0px 15px 9px rgba(0, 0, 0, 0.02),
-    0px 27px 11px rgba(0, 0, 0, 0.003),
-    0px 42px 12px rgba(0, 0, 0, 0.00);
   align-items: center;
-  height: 40px;
-  padding: 8px 12px;
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #e4e4e72c;
-  color: #09090B;
-  font-size: 14px;
+  min-width: 100px;
+  height: 48px;
+  padding: 12px 20px;
+  background: #F7F9FA;
+  border-radius: 10px;
+  border: none;
+
   font-family: "Inter Tight", sans-serif;
   font-weight: 500;
+  font-size: 14px;
+  color: #0F172A;
+
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05),
+    0 4px 8px rgba(0, 0, 0, 0.03);
+
   cursor: pointer;
-  transition: 
+  transition:
     background-color 0.2s ease,
     box-shadow 0.3s ease,
     transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 8px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow:
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.3);
+  }
+
+  img {
+    transition: filter 0.3s ease;
+  }
 }
 
-.dropdownTrigger:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0px 15px 33px rgba(0, 0, 0, 0.044),
-    0px 60px 60px rgba(0, 0, 0, 0.057),
-    0px 136px 81px rgba(0, 0, 0, 0.05),
-    0px 241px 96px rgba(0, 0, 0, 0.01),
-    0px 377px 106px rgba(0, 0, 0, 0.00);
-}
-
+/* 🌙 Modo oscuro neumorfista invertido */
 :global(body.dark) .dropdownTrigger {
   background: #0D0D0D;
-  border-color: #555555;
   color: #D1D1D1;
+
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.6),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.06),
+    0 4px 6px rgba(255, 255, 255, 0.02);
+
+  img {
+    filter: invert(1) grayscale(1) brightness(1.4);
+  }
+
+  &:hover {
+    background: #1A1A1A;
+    box-shadow:
+      inset -2px -2px 4px rgba(0, 0, 0, 0.7),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.08),
+      0 6px 10px rgba(255, 255, 255, 0.03);
+  }
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow:
+      inset 2px 2px 6px rgba(255, 255, 255, 0.04),
+      inset -2px -2px 6px rgba(0, 0, 0, 0.5);
+  }
 }
 
+/* Contenedor de ítems desplegables */
 .dropdownItems {
-  box-shadow: 
-    0px 2px 4px rgba(0, 0, 0, 0.01),
-    0px 7px 7px rgba(0, 0, 0, 0.02),
-    0px 15px 9px rgba(0, 0, 0, 0.02),
-    0px 27px 11px rgba(0, 0, 0, 0.003),
-    0px 42px 12px rgba(0, 0, 0, 0.00);
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #e4e4e72c;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.06);
   z-index: 10;
   overflow-y: auto;
+  border-radius: 12px;
+  padding: 8px 0;
+  background: #F7F9FA;
+  box-shadow:
+    -8px -8px 16px white,
+    4px 4px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(200, 200, 200, 0.2);
 }
 
-:global(body.dark) .dropdownItems {
-  background: #0D0D0D;
-  border-color: #555555;
-}
-
+/* Estilo para cada opción */
 .dropdownItem {
-  padding: 4px;
-  color: #09090B;
-  font-size: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 500;
+  color: #0F172A;
   cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #E4E7EB;
+  }
 }
 
-.dropdownItem:hover {
-  background: #F4F4F5;
+/* 🌙 Dropdowns en modo oscuro */
+:global(body.dark) .dropdownItems {
+  background: #0D0D0D;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 2px 2px 6px rgba(255, 255, 255, 0.03),
+    inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(255, 255, 255, 0.02);
 }
 
 :global(body.dark) .dropdownItem {
   color: #D1D1D1;
+
+  &:hover {
+    background: #1E1E1E;
+  }
 }
 
-:global(body.dark) .dropdownItem:hover {
-  background: #272727;
-}
 
 .statusWrapper, .priorityWrapper {
   display: flex;
@@ -290,9 +416,14 @@
 .status-En-Proceso {
   color: #18181b;
 }
-
+:global(body.dark) .status-En-Proceso {
+  color: #ffffff;
+}
 .status-Backlog {
   color: #18181b;
+}
+:global(body.dark) .status-Backlog {
+  color: #ffffff;
 }
 
 .status-Por-Comenzar {
@@ -306,9 +437,17 @@
 .status-Cancelada {
   color: #18181b;
 }
+:global(body.dark) .status-Cancelada {
+  color: #ffffff;
+}
 
 .priority-Alta {
   color: #18181b;
+}
+:global(body.dark) .priority-Alta,
+:global(body.dark) .priority-Media, 
+:global(body.dark) .priority-Baja{
+  color: #ffffff;
 }
 
 .priority-Media {

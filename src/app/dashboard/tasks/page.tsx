@@ -13,6 +13,7 @@ import {
   where,
   updateDoc,
   orderBy,
+  limit,
 } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { gsap } from 'gsap';
@@ -24,6 +25,7 @@ import MembersTable from '@/components/MembersTable';
 import ClientsTable from '@/components/ClientsTable';
 import TasksTable from '@/components/TasksTable';
 import CreateTask from '@/components/CreateTask';
+import EditTask from '@/components/EditTask';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
 import ClientSidebar from '@/components/ClientSidebar';
@@ -82,23 +84,6 @@ interface Notification {
   type?: string;
 }
 
-interface SelectorProps {
-  selectedContainer: 'tareas' | 'cuentas' | 'miembros';
-  setSelectedContainer: (newContainer: 'tareas' | 'cuentas' | 'miembros') => void;
-  options: { value: string; label: string }[];
-}
-
-interface MessageSidebarProps {
-  key: string;
-  sidebarId: string;
-  isOpen: boolean;
-  onClose: () => void;
-  senderId: string;
-  receiver: User;
-  onOpenSidebar: (receiverId: string) => void;
-  conversationId: string;
-}
-
 interface Sidebar {
   id: string;
   type: 'message' | 'chat' | 'client-sidebar' | 'invite-sidebar';
@@ -119,6 +104,8 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState<boolean>(false);
+  const [isEditTaskOpen, setIsEditTaskOpen] = useState<boolean>(false);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isConfirmExitOpen, setIsConfirmExitOpen] = useState<boolean>(false);
   const [pendingContainer, setPendingContainer] = useState<'tareas' | 'cuentas' | 'miembros' | null>(null);
@@ -240,6 +227,7 @@ export default function TasksPage() {
       collection(db, 'notifications'),
       where('recipientId', '==', user.id),
       orderBy('timestamp', 'desc'),
+      limit(20) // Limit to 20 notifications
     );
     const unsubscribe = onSnapshot(
       notificationsQuery,
@@ -264,6 +252,53 @@ export default function TasksPage() {
     );
 
     return unsubscribe;
+  }, [user?.id]);
+
+  // Clear all notifications
+  const handleClearNotifications = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const q = query(
+        collection(db, 'notifications'),
+        where('recipientId', '==', user.id)
+      );
+      const querySnapshot = await getDocs(q);
+      const deletePromises = querySnapshot.docs.map((docSnapshot) =>
+        deleteDoc(doc(db, 'notifications', docSnapshot.id))
+      );
+      await Promise.all(deletePromises);
+      setNotifications([]); // Clear local state
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+      alert('Error al eliminar las notificaciones');
+    }
+  }, [user?.id]);
+
+  // Limit notifications to 20
+  const handleLimitNotifications = useCallback(async (currentNotifications: Notification[]) => {
+    if (!user?.id || currentNotifications.length <= 20) return;
+
+    try {
+      // Sort notifications by timestamp (ascending, oldest first)
+      const sortedNotifications = [...currentNotifications].sort(
+        (a, b) => a.timestamp!.toMillis() - b.timestamp!.toMillis()
+      );
+      // Identify notifications to delete (oldest ones)
+      const notificationsToDelete = sortedNotifications.slice(0, currentNotifications.length - 20);
+
+      // Delete notifications from Firestore
+      const deletePromises = notificationsToDelete.map((notification) =>
+        deleteDoc(doc(db, 'notifications', notification.id))
+      );
+      await Promise.all(deletePromises);
+
+      // Update local state with the 20 most recent notifications
+      const updatedNotifications = sortedNotifications.slice(-20);
+      setNotifications(updatedNotifications);
+    } catch (error) {
+      console.error('Error limiting notifications:', error);
+    }
   }, [user?.id]);
 
   useEffect(() => {
@@ -450,6 +485,14 @@ export default function TasksPage() {
 
   const handleNewTaskOpen = useCallback(() => {
     setIsCreateTaskOpen(true);
+    setIsEditTaskOpen(false);
+    setEditTaskId(null);
+  }, []);
+
+  const handleEditTaskOpen = useCallback((taskId: string) => {
+    setIsEditTaskOpen(true);
+    setEditTaskId(taskId);
+    setIsCreateTaskOpen(false);
   }, []);
 
   const handleAISidebarOpen = useCallback(() => {
@@ -510,21 +553,25 @@ export default function TasksPage() {
 
   const handleContainerChange = useCallback(
     (newContainer: 'tareas' | 'cuentas' | 'miembros') => {
-      if (isCreateTaskOpen && hasUnsavedChanges && selectedContainer !== newContainer) {
+      if ((isCreateTaskOpen || isEditTaskOpen) && hasUnsavedChanges && selectedContainer !== newContainer) {
         setPendingContainer(newContainer);
         setIsConfirmExitOpen(true);
       } else {
         setSelectedContainer(newContainer);
         setIsCreateTaskOpen(false);
+        setIsEditTaskOpen(false);
+        setEditTaskId(null);
       }
     },
-    [isCreateTaskOpen, hasUnsavedChanges, selectedContainer],
+    [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges, selectedContainer],
   );
 
   const handleConfirmExit = useCallback(() => {
     if (pendingContainer) {
       setSelectedContainer(pendingContainer);
       setIsCreateTaskOpen(false);
+      setIsEditTaskOpen(false);
+      setEditTaskId(null);
       setIsConfirmExitOpen(false);
       setPendingContainer(null);
       setHasUnsavedChanges(false);
@@ -568,7 +615,7 @@ export default function TasksPage() {
         gsap.killTweensOf(currentContentRef);
       }
     };
-  }, [selectedContainer, isCreateTaskOpen]);
+  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen]);
 
   return (
     <div className={styles.container}>
@@ -581,6 +628,8 @@ export default function TasksPage() {
           users={memoizedUsers}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
+          onClearNotifications={handleClearNotifications}
+          onLimitNotifications={handleLimitNotifications}
         />
       </div>
       <OnboardingStepper />
@@ -596,19 +645,20 @@ export default function TasksPage() {
         />
       </div>
       <div ref={contentRef} className={styles.content}>
-        {selectedContainer === 'tareas' && !isCreateTaskOpen && (
+        {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && (
           <TasksTable
             tasks={memoizedTasks}
             clients={memoizedClients}
             onCreateClientOpen={handleCreateClientOpen}
             onInviteMemberOpen={handleInviteSidebarOpen}
             onNewTaskOpen={handleNewTaskOpen}
+            onEditTaskOpen={handleEditTaskOpen}
             onAISidebarOpen={handleAISidebarOpen}
             onChatSidebarOpen={handleChatSidebarOpen}
             setTasks={setTasks}
           />
         )}
-        {selectedContainer === 'cuentas' && !isCreateTaskOpen && (
+        {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
           <ClientsTable
             clients={memoizedClients}
             onCreateOpen={handleCreateClientOpen}
@@ -617,20 +667,34 @@ export default function TasksPage() {
             setClients={setClients}
           />
         )}
-      {selectedContainer === 'miembros' && !isCreateTaskOpen && (
-        <MembersTable
-          users={memoizedUsers}
-          tasks={memoizedTasks}
-          onInviteSidebarOpen={handleInviteSidebarOpen}
-          onProfileSidebarOpen={setIsProfileSidebarOpen}
-          onMessageSidebarOpen={handleMessageSidebarOpen}
-          setUsers={setUsers}
-        />
-      )}
+        {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
+          <MembersTable
+            users={memoizedUsers}
+            tasks={memoizedTasks}
+            onInviteSidebarOpen={handleInviteSidebarOpen}
+            onProfileSidebarOpen={setIsProfileSidebarOpen}
+            onMessageSidebarOpen={handleMessageSidebarOpen}
+            setUsers={setUsers}
+          />
+        )}
         {isCreateTaskOpen && (
           <CreateTask
             isOpen={isCreateTaskOpen}
             onToggle={() => setIsCreateTaskOpen(false)}
+            onHasUnsavedChanges={setHasUnsavedChanges}
+            onCreateClientOpen={handleCreateClientOpen}
+            onEditClientOpen={handleEditClientOpen}
+            onInviteSidebarOpen={handleInviteSidebarOpen}
+          />
+        )}
+        {isEditTaskOpen && editTaskId && (
+          <EditTask
+            isOpen={isEditTaskOpen}
+            onToggle={() => {
+              setIsEditTaskOpen(false);
+              setEditTaskId(null);
+            }}
+            taskId={editTaskId}
             onHasUnsavedChanges={setHasUnsavedChanges}
             onCreateClientOpen={handleCreateClientOpen}
             onEditClientOpen={handleEditClientOpen}
@@ -686,21 +750,20 @@ export default function TasksPage() {
           <div className={clientStyles.deletePopup} ref={confirmExitPopupRef}>
             <h2>¿Salir sin guardar?</h2>
             <p>¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado.</p>
-            
-            <button
-              onClick={handleCancelExit}
-              className={clientStyles.cancelButton}
-            >
-              Cancelar
-            </button>
-            
-            <button
-              onClick={handleConfirmExit}
-              className={clientStyles.deleteConfirmButton}
-            >
-              Salir
-            </button>
-
+            <div className={clientStyles.popupActions}>
+              <button
+                onClick={handleConfirmExit}
+                className={clientStyles.deleteConfirmButton}
+              >
+                Salir
+              </button>
+              <button
+                onClick={handleCancelExit}
+                className={clientStyles.cancelButton}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

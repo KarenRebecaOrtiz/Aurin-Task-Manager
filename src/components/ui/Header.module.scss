@@ -1,199 +1,351 @@
-.wrapper {
-  width: 100%;
-  height: 100%;
-  display: inline-flex;
-  z-index: 31000;
-  justify-content: space-between;
-  align-items: center;
+/* ────────────────────────────────────────────────────────────────
+   NotificationDropdown.module.scss
+   Apariencia “Liquid Glass Neumorphism” SIN custom-properties.
+   Lista para copiar y pegar.
+──────────────────────────────────────────────────────────────── */
 
-  @media (max-width: 768px) {
-    flex-direction: column;
+/* ==============================================================
+   ESTRUCTURA GENERAL (sin cambios funcionales)
+   ================================================================= */
+   .wrapper {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    z-index: 31000;
+    justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-  }
-}
-
-.notificationTimestamp {
-  font-size: 12px;
-  color: #666;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-.lefContainer {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 10px;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-}
-
-.frame14 {
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  align-items: flex-start;
-  display: inline-flex;
-
-  @media (max-width: 768px) {
-    max-width: 100%;
-    align-items: center;
-  }
-}
-
-.title {
-  justify-content: center;
-  align-items: center;
-  color: rgb(23, 23, 23);
-  gap: 10px;
-  font-size: 22px;
-  font-family: "Inter Tight", sans-serif;
-  font-weight: 600;
-  display: inline-flex;
-
-  :global(.dark) & {
-    color: #ffffff;
-  }
-
-  .badge {
-    color: #0D0D0D;
-    font-size: 24px;
-    font-family: "Inter Tight", sans-serif;
-    font-weight: 700;
-    word-wrap: break-word;
-
-    :global(.dark) & {
-      color: #ffffff;
+  
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
     }
   }
-}
-
-.text {
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  display: inline-flex;
-
-  .subtitle {
-    color: #71717A;
-    font-size: 16px;
-    font-family: "Inter Tight", sans-serif;
-    font-weight: 400;
-    word-wrap: break-word;
-
+  
+  .notificationTimestamp {
+    font-size: 12px;
+    color: #666;
+    margin-left: auto;
+    white-space: nowrap;
+  
     :global(.dark) & {
       color: #A1A1AA;
     }
   }
-}
-
-.frame2147225819 {
-  width: auto;
-  justify-content: flex-end;
-  align-items: center;
-  z-index: 31000;
-  gap: 20px;
-  display: flex;
-
-  @media (max-width: 768px) {
+  
+  .lefContainer {
+    display: flex;
     justify-content: center;
+    align-items: flex-start;
+    gap: 10px;
+  
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  }
+  
+  .frame14 {
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    align-items: flex-start;
+    display: inline-flex;
+  
+    @media (max-width: 768px) {
+      max-width: 100%;
+      align-items: center;
+    }
+  }
+  
+  .title {
+    justify-content: center;
+    align-items: center;
+    color: rgb(23, 23, 23);
+    gap: 10px;
+    font-size: 22px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 600;
+    display: inline-flex;
+  
+    :global(.dark) & {
+      color: #ffffff;
+    }
+  
+    .badge {
+      color: #0D0D0D;
+      font-size: 24px;
+      font-family: "Inter Tight", sans-serif;
+      font-weight: 700;
+      word-wrap: break-word;
+  
+      :global(.dark) & {
+        color: #ffffff;
+      }
+    }
+  }
+  
+  .text {
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    display: inline-flex;
+  
+    .subtitle {
+      color: #71717A;
+      font-size: 16px;
+      font-family: "Inter Tight", sans-serif;
+      font-weight: 400;
+      word-wrap: break-word;
+  
+      :global(.dark) & {
+        color: #A1A1AA;
+      }
+    }
+  }
+  
+  .frame2147225819 {
+    width: auto;
+    justify-content: flex-end;
+    align-items: center;
+    z-index: 31000;
+    gap: 20px;
+    display: flex;
+  
+    @media (max-width: 768px) {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+  
+  .notificationContainer {
+    position: relative;
+    z-index: 32000;
+  }
+  
+  .notificationButton {
+    width: 50px;
+    height: 50px;
+    padding: 30px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    background: #F1F5F9;
+    box-shadow:
+      -6px -6px 12px #ffffff,
+      6px 6px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+  
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        -4px -4px 10px #ffffff,
+        4px 4px 10px rgba(0, 0, 0, 0.12);
+    }
+  
+    &:active {
+      transform: translateY(0px);
+      box-shadow:
+        inset -2px -2px 6px #ffffff,
+        inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    }
+  
+    :global(.dark) & {
+      background: #1E1E1E;
+      box-shadow:
+        6px 6px 12px rgba(0, 0, 0, 0.5),
+        -6px -6px 12px rgba(255, 255, 255, 0.05);
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          4px 4px 10px rgba(0, 0, 0, 0.6),
+          -4px -4px 10px rgba(255, 255, 255, 0.03);
+      }
+  
+      &:active {
+        box-shadow:
+          inset 2px 2px 6px rgba(0, 0, 0, 0.3),
+          inset -2px -2px 6px rgba(255, 255, 255, 0.02);
+      }
+  
+      img {
+        filter: invert(100%) brightness(130%);
+      }
+    }
+  }
+  
+  /* ==============================================================
+     🔮 LIQUID-GLASS NOTIFICATION DROPDOWN
+     ================================================================= */
+  .notificationDropdown {
+    /* Posicionamiento original */
+    position: fixed;
+    display: block;
+    z-index: 100000;
+    max-width: 350px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 8px 0;
+    pointer-events: auto;
+  
+    /* Aspecto “glass” sin variables */
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    background: rgba(255, 255, 255, 0.40);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    isolation: isolate;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.20);
+  
+    /* Inner tint & shadow overlay */
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: inset 0 0 20px -5px rgba(255, 255, 255, 0.70);
+      background-color: rgba(255, 255, 255, 0.40);
+      pointer-events: none;
+      z-index: 1;
+    }
+  
+    /* Noise/distortion overlay (SVG filter) */
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      filter: url('#glass-distortion');
+      -webkit-filter: url('#glass-distortion');
+      pointer-events: none;
+      z-index: 0;
+    }
+  
+    /* Modo oscuro */
+    :global(.dark) & {
+      background: rgba(45, 45, 45, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  
+      &::before {
+        background-color: rgba(45, 45, 45, 0.35);
+      }
+    }
+  }
+  
+  /* ==============================================================
+     ITEMS
+     ================================================================= */
+  .notificationItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    color: #0D0D0D;
+    font-size: 14px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  
+    &.read {
+      background: #F9FAFB;
+  
+      :global(.dark) & {
+        background: #3A3A3A;
+      }
+    }
+  
+    &:hover {
+      background: rgba(244, 244, 245, 0.65);
+  
+      :global(.dark) & {
+        background: rgba(58, 58, 58, 0.65);
+      }
+    }
+  
+    :global(.dark) & {
+      color: #D1D1D1;
+    }
+  }
+  
+  .notificationAvatar {
+    border-radius: 50%;
+  }
+  
+  .sunMoon {
+    width: 32px;
+    height: 32px;
+    position: relative;
+    overflow: visible;
+    transform-origin: center;
+  
+    :global(.dark) & {
+      filter: invert(100%) brightness(100%);
+    }
+  
+    &:hover :global(svg) {
+      transform: scale(1.4) rotate(20deg);
+    }
+  }
+  
+  .typewriterChar {
+    display: inline-block;
+    opacity: 0;
+  }
+  
+  /* ==============================================================
+     “Clear all” ─ botón coherente con estilo
+     ================================================================= */
+  .clearNotificationsContainer {
+    padding: 8px;
+    border-bottom: 1px solid rgba(228, 228, 231, 0.35);
+    display: flex;
+    justify-content: center;
+  
+    :global(.dark) & {
+      border-bottom-color: rgba(85, 85, 85, 0.35);
+    }
+  }
+  
+  .clearNotificationsButton {
+    background-color: #000000;
+    color: #ffffff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 12px;
+    cursor: pointer;
     width: 100%;
+    font-size: 14px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 500;
+    transition: background-color 0.25s ease, transform 0.25s ease;
+  
+    &:hover {
+      background-color: #101010;
+      transform: translateY(-2px);
+    }
+  
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+    }
+  
+    :global(.dark) & {
+      background-color: #B91C1C;
+  
+      &:hover {
+        background-color: #991B1B;
+      }
+  
+      &:focus {
+        box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.35);
+      }
+    }
   }
-}
-
-.notificationContainer {
-  position: relative;
-  z-index: 32000;
-}
-
-.notificationButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-
-  :global(.dark) & {
-    filter: invert(100) brightness(100);
-  }
-}
-
-.notificationDropdown {
-  position: fixed;
-  display: block;
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #e4e4e7;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 100000;
-  max-width: 350px;
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 8px 0;
-  pointer-events: auto;
-}
-
-:global(.dark) .notificationDropdown {
-  background: #2D2D2D;
-  border-color: #555555;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.notificationItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  color: #0D0D0D;
-  font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
-  font-weight: 400;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.notificationItem:hover {
-  background: #F4F4F5;
-}
-
-:global(.dark) .notificationItem {
-  color: #D1D1D1;
-}
-
-:global(.dark) .notificationItem:hover {
-  background: #3A3A3A;
-}
-
-.notificationAvatar {
-  border-radius: 50%;
-}
-
-.sunMoon {
-  width: 32px;
-  height: 32px;
-  position: relative;
-  overflow: visible;
-  transform-origin: center;
-
-  :global(.dark) & {
-    filter: invert(100) brightness(100);
-  }
-
-  &:hover :global(svg) {
-    transform: scale(1.4) rotate(20deg);
-  }
-
-
-}
-
-.typewriterChar {
-  display: inline-block;
-  opacity: 0;
-}

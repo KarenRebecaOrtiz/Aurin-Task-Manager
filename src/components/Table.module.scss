@@ -3,12 +3,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-
-  
 }
 
+/* ESTADOS VACÍOS */
 .emptyStateTitle {
-  padding-top: 20px ;
+  padding-top: 20px;
   color: #3f3f46;
   font-size: 20px;
   font-family: 'Inter', sans-serif;
@@ -19,24 +18,21 @@
 
 :global(body.dark) .emptyStateTitle {
   color: #ffffffbb;
-
 }
 
-.emptyStateSubtitle{
+.emptyStateSubtitle {
   color: #6b7280;
   font-size: 16px;
   font-family: 'Inter', sans-serif;
   font-weight: 400;
   text-align: center;
-
 }
 
 :global(body.dark) .emptyStateSubtitle {
   color: #ffffffbb;
-
 }
 
-.emptyState{
+.emptyState {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -44,39 +40,42 @@
   align-items: center;
 }
 
+/* TABLA */
 .table {
-  background: #fff;
-  border-radius: 12px;
+  background: #F7F9FA;
+  border-radius: 16px;
   padding: 16px;
-  box-shadow:
-    0px 2px 4px rgba(0, 0, 0, 0.04),
-    0px 7px 7px rgba(0, 0, 0, 0.03),
-    0px 15px 9px rgba(0, 0, 0, 0.02),
-    0px 27px 11px rgba(0, 0, 0, 0.01),
-    0px 42px 12px rgba(0, 0, 0, 0.00);
-}
 
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.04),
+    0 4px 6px rgba(0, 0, 0, 0.03);
+}
 
 :global(body.dark) .table {
-  background: #1a1a1a;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3), 0px 1px 2px rgba(0, 0, 0, 0.2);
+  background: #0d0d0d;
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.6),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.05),
+    0 2px 4px rgba(255, 255, 255, 0.02);
 }
 
+/* CABECERA */
 .header {
   display: flex;
   border-bottom: 1px solid #e4e4e7;
 }
 
 :global(body.dark) .header {
-  border-bottom: 1px solid #555555;
+  border-bottom: 1px solid #444;
 }
 
 .headerCell {
   padding: 12px 24px;
   color: #3f3f46;
-  font-size: 10px;
+  font-size: 11px;
   font-family: 'Inter', sans-serif;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
@@ -93,30 +92,72 @@
   color: #a1a1aa;
 }
 
-.sortIndicator {
-  font-size: 12px;
-}
-
+/* FILAS */
+/* Table.module.scss */
 .row {
   display: flex;
-  border-bottom: 1px solid #f4f4f5;
+  align-items: stretch;
+  gap: 0;
+  border-radius: 16px;
+  position: relative;
+  z-index: 0;
+  cursor: pointer;
+  margin: 10px 10px 0px 0px;
+
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  box-shadow:
+    -4px -4px 6px rgba(255, 255, 255, 0.4),
+    4px 4px 10px rgba(0, 0, 0, 0.04);
+
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.4s ease,
+    background 0.4s ease;
 }
 
-.row:last-child {
-  border-bottom: none;
+/* Hover mejorado */
+.row:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.12);
+
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.4),
+    6px 6px 12px rgba(0, 0, 0, 0.05);
 }
 
+/* 🌑 Modo oscuro */
 :global(body.dark) .row {
-  border-bottom: 1px solid #3f3f46;
+  background: rgba(24, 24, 27, 0.35);
+  border-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px) saturate(110%);
+  -webkit-backdrop-filter: blur(12px) saturate(110%);
+
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.5),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.03);
 }
 
+/* Hover oscuro */
+:global(body.dark) .row:hover {
+  background: rgba(30, 30, 33, 0.5);
+  box-shadow:
+    -6px -6px 10px rgba(0, 0, 0, 0.6),
+    6px 6px 10px rgba(255, 255, 255, 0.03);
+  transform: translateY(-3px);
+}
+
+
+/* CELDAS */
 .cell {
   padding: 14px 24px;
   color: #18181b;
   font-size: 14px;
   font-family: 'Inter', sans-serif;
   font-weight: 400;
-  cursor: pointer;
   display: flex;
   align-items: center;
   line-height: 1.5;
@@ -126,8 +167,9 @@
   color: #d1d1d1;
 }
 
+/* ACCIONES */
 .actionCell {
-  position: relative; /* Contenedor relativo para el botón de acción */
+  position: relative;
 }
 
 .actionButton {
@@ -135,20 +177,15 @@
   border: none;
   cursor: pointer;
   padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease-in-out;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute; /* Posicionamiento absoluto */
-  top: 50%;
-  right: 16px;
-  transform: translateY(-50%);
-  z-index: 1000; /* Alta prioridad para estar por encima */
-  border-radius: 4px;
-  transition: background-color 0.2s ease-in-out;
 }
 
 .actionButton:hover {
-  background-color: #f4f4f5; /* Hover sutil */
+  background-color: #f0f0f0;
 }
 
 :global(body.dark) .actionButton:hover {
@@ -156,19 +193,29 @@
 }
 
 .actionButton img {
-  filter: none;
+  transition: filter 0.3s ease;
 }
 
 :global(body.dark) .actionButton img {
   filter: invert(1) grayscale(1) brightness(1.5);
 }
 
+/* IMÁGENES */
+.TasksTable_clientImage__aZq2W {
+  border-radius: 999px;
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.6),
+    2px 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* RESPONSIVE */
 .hideOnMobile {
   @media (max-width: 768px) {
     display: none;
   }
 }
 
+/* PAGINACIÓN */
 .pagination {
   display: flex;
   align-items: center;
@@ -181,14 +228,18 @@
   width: 32px;
   height: 32px;
   padding: 8px;
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #e4e4e7;
+  background: #F7F9FA;
+  border-radius: 10px;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.7),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
 
 .paginationButton:disabled {
@@ -197,20 +248,18 @@
 }
 
 .paginationButton:not(:disabled):hover {
-  background-color: #f4f4f5;
-}
-
-.paginationButton img {
-  filter: none;
+  background: #e6e8ea;
 }
 
 :global(body.dark) .paginationButton {
   background: #0d0d0d;
-  border-color: #555555;
+  box-shadow:
+    inset -2px -2px 4px rgba(0, 0, 0, 0.5),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.06);
 }
 
 :global(body.dark) .paginationButton:not(:disabled):hover {
-  background-color: #272727;
+  background: #1f1f1f;
 }
 
 :global(body.dark) .paginationButton img {

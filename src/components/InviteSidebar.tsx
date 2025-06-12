@@ -74,6 +74,7 @@ const InviteSidebar: React.FC<InviteSidebarProps> = ({ isOpen, onClose }) => {
     <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
       <div className={styles.header}>
         <div className={styles.controls}>
+          <div style={{display:'flex', flexDirection: 'row'}}>
           <div
             className={styles.arrowLeft}
             onClick={() => {
@@ -90,8 +91,9 @@ const InviteSidebar: React.FC<InviteSidebarProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
         <h2 className={styles.title}>Invita a un nuevo miembro</h2>
+        </div>
         <p className={styles.subtitle}>
-          Escribe el correo electrónico de la persona que quieres invitar a esta cuenta.
+          Escribe el correo electrónico de la persona que quieres invitar a tu organización.
         </p>
       </div>
       <form className={styles.form} onSubmit={handleSubmit}>

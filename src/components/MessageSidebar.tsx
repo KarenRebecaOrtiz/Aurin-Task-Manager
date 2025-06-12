@@ -765,8 +765,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           <Image
             src={user.imageUrl || '/default-avatar.png'}
             alt={receiver.fullName}
-            width={24}
-            height={24}
+            width={50}
+            height={50}
+            style={{borderRadius: '100px', overflow: 'hidden',marginRight: '10px'}}
             className={styles.headerAvatar}
           />
           <div className={styles.headerInfo}>
