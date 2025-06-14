@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, getDocs, deleteDoc, addDoc, query, where, doc } from 'firebase/firestore';
+import { collection, deleteDoc, addDoc, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,8 @@ import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
+import { getAuth } from 'firebase/auth';
+import UserSwiper from '@/components/UserSwiper';
 
 interface Client {
   id: string;
@@ -40,92 +42,123 @@ interface TasksTableProps {
   onCreateClientOpen: () => void;
   onInviteMemberOpen: () => void;
   onNewTaskOpen: () => void;
-  onEditTaskOpen: (taskId: string) => void; // New prop
+  onEditTaskOpen: (taskId: string) => void;
   onAISidebarOpen: () => void;
   onChatSidebarOpen: (task: Task) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
-const MASTER_USER_IDS = ['user_2yHDV3l5yqe3wxigQvLw1vDUlQ7', 'user_2y40r8oOP4NdMrwUg3yLeJwGfr8'];
-
 const TasksTable: React.FC<TasksTableProps> = memo(
   ({ tasks, clients, onNewTaskOpen, onEditTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
     const { user } = useUser();
     const router = useRouter();
-    const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+    const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
     const [sortKey, setSortKey] = useState<string>('createdAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
     const [clientFilter, setClientFilter] = useState<string>('');
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
-    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
     const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState('');
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [isAdminLoaded, setIsAdminLoaded] = useState<boolean>(false);
     const actionMenuRef = useRef<HTMLDivElement>(null);
-    const statusDropdownRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
     const deletePopupRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-    const userId = useMemo(() => user?.id || '', [user]);
-    const isMasterUser = useMemo(() => userId && MASTER_USER_IDS.includes(userId), [userId]);
+    const userId = useMemo(() => {
+      const id = user?.id || '';
+      console.log('[TasksTable] User ID:', { userId: id });
+      return id;
+    }, [user]);
 
-    // Fetch tasks
+    // Fetch admin status
     useEffect(() => {
-      const fetchTasks = async () => {
-        if (!userId) return;
-
+      const fetchAdminStatus = async () => {
+        if (!userId) {
+          console.warn('[TasksTable] No userId, skipping admin status fetch');
+          setIsAdmin(false);
+          setIsAdminLoaded(true);
+          return;
+        }
         try {
-          const querySnapshot = await getDocs(collection(db, 'tasks'));
-          const tasksData: Task[] = querySnapshot.docs
-            .map((doc) => ({
-              id: doc.id,
-              clientId: doc.data().clientId || '',
-              project: doc.data().project || '',
-              name: doc.data().name || '',
-              description: doc.data().description || '',
-              status: doc.data().status || '',
-              priority: doc.data().priority || '',
-              startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-              endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
-              LeadedBy: doc.data().LeadedBy || [],
-              AssignedTo: doc.data().AssignedTo || [],
-              createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-              CreatedBy: doc.data().CreatedBy || '',
-            }))
-            .filter((task) => isMasterUser || (
-              task.AssignedTo.includes(userId) ||
-              task.LeadedBy.includes(userId) ||
-              task.CreatedBy === userId
-            ));
-          console.log('Fetched tasks:', tasksData.length, 'user:', userId);
-          setTasks(tasksData);
+          console.log('[TasksTable] Fetching admin status for user:', userId);
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            const access = userDoc.data().access;
+            setIsAdmin(access === 'admin');
+            console.log('[TasksTable] Admin status fetched:', {
+              userId,
+              access,
+              isAdmin: access === 'admin',
+              userDocData: userDoc.data(),
+            });
+          } else {
+            setIsAdmin(false);
+            console.warn('[TasksTable] User document not found for ID:', userId);
+          }
         } catch (error) {
-          console.error('Error fetching tasks:', error);
+          console.error('[TasksTable] Error fetching admin status:', {
+            error: error instanceof Error ? error.message : JSON.stringify(error),
+            userId,
+          });
+          setIsAdmin(false);
+        } finally {
+          setIsAdminLoaded(true);
+          console.log('[TasksTable] Admin status load completed:', { userId, isAdmin });
         }
       };
-      fetchTasks();
-    }, [setTasks, userId, isMasterUser]);
+      fetchAdminStatus();
+    }, [userId]);
 
-    // Filter tasks
+    // Initialize filteredTasks when tasks prop changes
+    useEffect(() => {
+      setFilteredTasks(tasks);
+      console.log('[TasksTable] Initialized filteredTasks:', {
+        totalTasks: tasks.length,
+        taskIds: tasks.map((t) => t.id),
+      });
+    }, [tasks]);
+
+    // Filter tasks based on search, priority, and client
     const memoizedFilteredTasks = useMemo(() => {
-      return tasks.filter((task) => {
+      const filtered = tasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = !statusFilter || task.status === statusFilter;
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
-        return matchesSearch && matchesStatus && matchesPriority && matchesClient;
+        const passesFilters = matchesSearch && matchesPriority && matchesClient;
+        console.log('[TasksTable] Task filter check:', {
+          taskId: task.id,
+          taskName: task.name,
+          matchesSearch,
+          matchesPriority,
+          matchesClient,
+          passesFilters,
+          searchQuery,
+          priorityFilter,
+          clientFilter,
+        });
+        return passesFilters;
       });
-    }, [tasks, searchQuery, statusFilter, priorityFilter, clientFilter]);
+      console.log('[TasksTable] Filtered tasks:', {
+        filteredCount: filtered.length,
+        filteredTaskIds: filtered.map((t) => t.id),
+      });
+      return filtered;
+    }, [tasks, searchQuery, priorityFilter, clientFilter]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
+      console.log('[TasksTable] Updated filteredTasks:', {
+        filteredCount: memoizedFilteredTasks.length,
+        filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
+      });
     }, [memoizedFilteredTasks]);
 
     // GSAP animations
@@ -137,6 +170,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
+        console.log('[TasksTable] Action menu animated for task:', actionMenuOpenId);
       }
       return () => {
         if (currentActionMenuRef) {
@@ -153,6 +187,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           { opacity: 0, scale: 0.95 },
           { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
         );
+        console.log('[TasksTable] Delete popup animated');
       }
       return () => {
         if (currentDeletePopupRef) {
@@ -162,17 +197,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     }, [isDeletePopupOpen]);
 
     useEffect(() => {
-      const statusItems = statusDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
-      if (isStatusDropdownOpen && statusItems) {
-        gsap.fromTo(
-          statusItems,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-    }, [isStatusDropdownOpen]);
-
-    useEffect(() => {
       const priorityItems = priorityDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
       if (isPriorityDropdownOpen && priorityItems) {
         gsap.fromTo(
@@ -180,6 +204,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
+        console.log('[TasksTable] Priority dropdown animated');
       }
     }, [isPriorityDropdownOpen]);
 
@@ -191,6 +216,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
+        console.log('[TasksTable] Client dropdown animated');
       }
     }, [isClientDropdownOpen]);
 
@@ -203,13 +229,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
         ) {
           setActionMenuOpenId(null);
-        }
-        if (
-          statusDropdownRef.current &&
-          !statusDropdownRef.current.contains(event.target as Node) &&
-          isStatusDropdownOpen
-        ) {
-          setIsStatusDropdownOpen(false);
+          console.log('[TasksTable] Action menu closed via outside click');
         }
         if (
           priorityDropdownRef.current &&
@@ -217,6 +237,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           isPriorityDropdownOpen
         ) {
           setIsPriorityDropdownOpen(false);
+          console.log('[TasksTable] Priority dropdown closed via outside click');
         }
         if (
           clientDropdownRef.current &&
@@ -224,6 +245,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           isClientDropdownOpen
         ) {
           setIsClientDropdownOpen(false);
+          console.log('[TasksTable] Client dropdown closed via outside click');
         }
         if (
           deletePopupRef.current &&
@@ -233,11 +255,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           setIsDeletePopupOpen(false);
           setDeleteConfirm('');
           setDeleteTaskId(null);
+          console.log('[TasksTable] Delete popup closed via outside click');
         }
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId, isStatusDropdownOpen, isPriorityDropdownOpen, isClientDropdownOpen, isDeletePopupOpen]);
+    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isDeletePopupOpen]);
 
     // Sort tasks
     const handleSort = (key: string) => {
@@ -247,6 +270,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         setSortKey(key);
         setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
       }
+      console.log('[TasksTable] Sorting tasks:', { sortKey: key, sortDirection });
     };
 
     const sortedTasks = useMemo(() => {
@@ -260,7 +284,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             : clientB.localeCompare(clientA);
         });
       } else if (sortKey === 'status') {
-        const statusOrder = ['En Proceso', 'Backlog', 'Por Comenzar', 'Finalizado', 'Cancelada'];
+        const statusOrder = ['En Proceso', 'Backlog', 'Por Iniciar', 'Finalizado', 'Cancelado'];
         sorted.sort((a, b) => {
           const indexA = statusOrder.indexOf(a.status);
           const indexB = statusOrder.indexOf(b.status);
@@ -286,6 +310,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task])),
         );
       }
+      console.log('[TasksTable] Tasks sorted:', {
+        sortedCount: sorted.length,
+        sortedTaskIds: sorted.map((t) => t.id),
+        sortKey,
+        sortDirection,
+      });
       return sorted;
     }, [filteredTasks, sortKey, sortDirection, clients]);
 
@@ -299,58 +329,112 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         yoyo: true,
         repeat: 1,
       });
+      console.log('[TasksTable] Click animation triggered');
     };
 
-    // Handle task deletion
     const handleDeleteTask = async () => {
-      if (!userId || !deleteTaskId || deleteConfirm.toLowerCase() !== 'eliminar') return;
+      const auth = getAuth();
+      console.log('[TasksTable] Firebase auth user:', {
+        uid: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        displayName: auth.currentUser?.displayName,
+      });
+
+      if (!userId || !deleteTaskId || deleteConfirm.toLowerCase() !== 'eliminar') {
+        console.warn('[TasksTable] Invalid deletion attempt:', {
+          userId,
+          deleteTaskId,
+          deleteConfirm,
+          isConfirmValid: deleteConfirm.toLowerCase() === 'eliminar',
+        });
+        return;
+      }
 
       try {
-        console.log('Deleting task:', deleteTaskId, 'by user:', userId);
+        console.log('[TasksTable] Attempting to delete task:', {
+          taskId: deleteTaskId,
+          userId,
+          isAdmin,
+          deleteConfirm,
+        });
 
         // Find task
         const task = tasks.find((t) => t.id === deleteTaskId);
         if (!task) {
           throw new Error('Task not found');
         }
+        console.log('[TasksTable] Task details:', {
+          taskId: task.id,
+          taskName: task.name,
+          CreatedBy: task.CreatedBy,
+          isAdmin,
+          userId,
+          isCreator: task.CreatedBy === userId,
+        });
 
-        // Delete messages (only those user is authorized to delete, or all for master/creator)
-        const messagesQuery = query(collection(db, `tasks/${deleteTaskId}/messages`));
-        const messagesSnapshot = await getDocs(messagesQuery);
-        for (const msgDoc of messagesSnapshot.docs) {
-          const msgData = msgDoc.data();
-          if (msgData.senderId === userId || task.CreatedBy === userId || isMasterUser) {
-            try {
-              await deleteDoc(doc(db, `tasks/${deleteTaskId}/messages`, msgDoc.id));
-              console.log('Deleted message:', msgDoc.id);
-            } catch (error) {
-              console.warn('Failed to delete message:', msgDoc.id, error);
-            }
+        // Verify permissions locally
+        if (!isAdmin && task.CreatedBy !== userId) {
+          throw new Error('Unauthorized to delete task');
+        }
+        console.log('[TasksTable] Local permission check passed:', {
+          isAdmin,
+          isCreator: task.CreatedBy === userId,
+        });
+
+        // Delete messages
+        console.log('[TasksTable] Attempting to delete messages for task:', deleteTaskId);
+        try {
+          const messagesQuery = query(collection(db, `tasks/${deleteTaskId}/messages`));
+          const messagesSnapshot = await getDocs(messagesQuery);
+          console.log('[TasksTable] Messages found:', {
+            messageCount: messagesSnapshot.size,
+            messageIds: messagesSnapshot.docs.map((doc) => doc.id),
+          });
+          for (const msgDoc of messagesSnapshot.docs) {
+            await deleteDoc(doc(db, `tasks/${deleteTaskId}/messages`, msgDoc.id));
+            console.log('[TasksTable] Deleted message:', msgDoc.id);
           }
+        } catch (error) {
+          console.warn('[TasksTable] Error deleting messages:', {
+            taskId: deleteTaskId,
+            error: error instanceof Error ? error.message : JSON.stringify(error),
+          });
         }
 
-        // Delete notifications (only those user created)
-        const notificationsQuery = query(
-          collection(db, 'notifications'),
-          where('taskId', '==', deleteTaskId),
-          where('userId', '==', userId)
-        );
-        const notificationsSnapshot = await getDocs(notificationsQuery);
-        for (const notifDoc of notificationsSnapshot.docs) {
-          try {
+        // Delete notifications
+        console.log('[TasksTable] Attempting to delete notifications for task:', deleteTaskId);
+        try {
+          const notificationsQuery = query(
+            collection(db, 'notifications'),
+            where('taskId', '==', deleteTaskId),
+          );
+          const notificationsSnapshot = await getDocs(notificationsQuery);
+          console.log('[TasksTable] Notifications found:', {
+            notificationCount: notificationsSnapshot.size,
+            notificationIds: notificationsSnapshot.docs.map((doc) => doc.id),
+          });
+          for (const notifDoc of notificationsSnapshot.docs) {
             await deleteDoc(doc(db, 'notifications', notifDoc.id));
-            console.log('Deleted notification:', notifDoc.id);
-          } catch (error) {
-            console.warn('Failed to delete notification:', notifDoc.id, error);
+            console.log('[TasksTable] Deleted notification:', notifDoc.id);
           }
+        } catch (error) {
+          console.warn('[TasksTable] Error deleting notifications:', {
+            taskId: deleteTaskId,
+            error: error instanceof Error ? error.message : JSON.stringify(error),
+          });
         }
 
         // Notify involved users
-        const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-        if (task.CreatedBy) recipients.add(task.CreatedBy);
-        recipients.delete(userId);
-        for (const recipientId of Array.from(recipients)) {
-          try {
+        console.log('[TasksTable] Preparing to notify involved users for task:', deleteTaskId);
+        try {
+          const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+          if (task.CreatedBy) recipients.add(task.CreatedBy);
+          recipients.delete(userId);
+          console.log('[TasksTable] Notification recipients:', {
+            recipientCount: recipients.size,
+            recipientIds: Array.from(recipients),
+          });
+          for (const recipientId of Array.from(recipients)) {
             await addDoc(collection(db, 'notifications'), {
               userId: userId,
               taskId: deleteTaskId,
@@ -359,50 +443,60 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               read: false,
               recipientId,
             });
-            console.log('Sent notification to:', recipientId);
-          } catch (error) {
-            console.warn('Failed to send notification to:', recipientId, error);
+            console.log('[TasksTable] Sent notification to:', recipientId);
           }
+        } catch (error) {
+          console.warn('[TasksTable] Error sending notifications:', {
+            taskId: deleteTaskId,
+            error: error instanceof Error ? error.message : JSON.stringify(error),
+          });
         }
 
         // Delete task
+        console.log('[TasksTable] Attempting to delete task document:', deleteTaskId);
         await deleteDoc(doc(db, 'tasks', deleteTaskId));
-        console.log('Task deleted:', deleteTaskId);
+        console.log('[TasksTable] Task deleted successfully:', deleteTaskId);
 
         // Update task list
-        setTasks((prev) => prev.filter((t) => t.id !== deleteTaskId));
+        setTasks((prev) => {
+          const updatedTasks = prev.filter((t) => t.id !== deleteTaskId);
+          console.log('[TasksTable] Updated tasks list:', {
+            remainingTasks: updatedTasks.length,
+            removedTaskId: deleteTaskId,
+          });
+          return updatedTasks;
+        });
 
         setIsDeletePopupOpen(false);
         setDeleteConfirm('');
         setDeleteTaskId(null);
-      } catch (error: any) {
-        console.error('Error deleting task:', {
-          message: error.message || 'Unknown error',
-          code: error.code || 'unknown',
+      } catch (error) {
+        console.error('[TasksTable] Error deleting task:', {
+          error: error.message,
           taskId: deleteTaskId,
           userId,
+          isAdmin,
         });
         alert(`Error al eliminar la tarea: ${error.message || 'Inténtalo de nuevo.'}`);
+        setIsDeletePopupOpen(false);
+        setDeleteConfirm('');
+        setDeleteTaskId(null);
       }
     };
 
     // Filter handlers
-    const handleStatusSelect = (status: string, e: React.MouseEvent<HTMLDivElement>) => {
-      animateClick(e.currentTarget);
-      setStatusFilter(status);
-      setIsStatusDropdownOpen(false);
-    };
-
     const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
+      console.log('[TasksTable] Priority filter selected:', priority);
     };
 
     const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
+      console.log('[TasksTable] Client filter selected:', clientId);
     };
 
     // Table columns
@@ -445,6 +539,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           ...col,
           render: (task: Task) => {
             const client = clients.find((c) => c.id === task.clientId);
+            console.log('[TasksTable] Rendering client column:', {
+              taskId: task.id,
+              clientId: task.clientId,
+              clientName: client?.name,
+            });
             return client ? (
               <Image
                 style={{ borderRadius: '999px' }}
@@ -464,119 +563,135 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       if (col.key === 'status') {
         return {
           ...col,
-          render: (task: Task) => (
-            <div className={styles.statusWrapper}>
-              <Image
-                src={
-                  task.status === 'En Proceso'
-                    ? '/timer.svg'
-                    : task.status === 'Backlog'
-                    ? '/circle-help.svg'
-                    : task.status === 'Por Comenzar'
-                    ? '/circle.svg'
-                    : task.status === 'Cancelada'
-                    ? '/circle-x.svg'
-                    : '/timer.svg'
-                }
-                alt={task.status}
-                width={16}
-                height={16}
-              />
-              <span className={styles[`status-${task.status.replace(' ', '-')}`]}>{task.status}</span>
-            </div>
-          ),
+          render: (task: Task) => {
+            console.log('[TasksTable] Rendering status column:', {
+              taskId: task.id,
+              status: task.status,
+            });
+            return (
+              <div className={styles.statusWrapper}>
+                <Image
+                  src={
+                    task.status === 'En Proceso'
+                      ? '/timer.svg'
+                      : task.status === 'Backlog'
+                      ? '/circle-help.svg'
+                      : task.status === 'Por Iniciar'
+                      ? '/circle.svg'
+                      : task.status === 'Cancelado'
+                      ? '/circle-x.svg'
+                      : '/timer.svg'
+                  }
+                  alt={task.status}
+                  width={16}
+                  height={16}
+                />
+                <span className={styles[`status-${task.status.replace(' ', '-')}`]}>{task.status}</span>
+              </div>
+            );
+          },
         };
       }
       if (col.key === 'priority') {
         return {
           ...col,
-          render: (task: Task) => (
-            <div className={styles.priorityWrapper}>
-              <Image
-                src={
-                  task.priority === 'Alta'
-                    ? '/arrow-up.svg'
-                    : task.priority === 'Media'
-                    ? '/arrow-right.svg'
-                    : '/arrow-down.svg'
-                }
-                alt={task.priority}
-                width={16}
-                height={16}
-              />
-              <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
-            </div>
-          ),
+          render: (task: Task) => {
+            console.log('[TasksTable] Rendering priority column:', {
+              taskId: task.id,
+              priority: task.priority,
+            });
+            return (
+              <div className={styles.priorityWrapper}>
+                <Image
+                  src={
+                    task.priority === 'Alta'
+                      ? '/arrow-up.svg'
+                      : task.priority === 'Media'
+                      ? '/arrow-right.svg'
+                      : '/arrow-down.svg'
+                  }
+                  alt={task.priority}
+                  width={16}
+                  height={16}
+                />
+                <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
+              </div>
+            );
+          },
         };
       }
       if (col.key === 'action') {
         return {
           ...col,
-          render: (task: Task) => (
-            <ActionMenu
-              task={task}
-              userId={userId}
-              isOpen={actionMenuOpenId === task.id}
-              onOpen={() => setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id)}
-              onEdit={() => onEditTaskOpen(task.id)} // Updated to use callback
-              onDelete={() => {
-                setIsDeletePopupOpen(true);
-                setDeleteTaskId(task.id);
-              }}
-              animateClick={animateClick}
-              actionMenuRef={actionMenuRef}
-              actionButtonRef={(el) => {
-                if (el) actionButtonRefs.current.set(task.id, el);
-                else actionButtonRefs.current.delete(task.id);
-              }}
-            />
-          ),
+          render: (task: Task) => {
+            if (isAdmin || task.CreatedBy === userId) {
+              console.log('[TasksTable] Rendering action column:', {
+                taskId: task.id,
+                taskName: task.name,
+                CreatedBy: task.CreatedBy,
+                userId,
+                isAdmin,
+                canEditOrDelete: isAdmin || task.CreatedBy === userId,
+              });
+              return (
+                <ActionMenu
+                  task={task}
+                  userId={userId}
+                  isOpen={actionMenuOpenId === task.id}
+                  onOpen={() => {
+                    setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id);
+                    console.log('[TasksTable] Action menu toggled for task:', task.id);
+                  }}
+                  onEdit={() => {
+                    onEditTaskOpen(task.id);
+                    console.log('[TasksTable] Edit action triggered for task:', task.id);
+                  }}
+                  onDelete={() => {
+                    setIsDeletePopupOpen(true);
+                    setDeleteTaskId(task.id);
+                    console.log('[TasksTable] Delete action triggered for task:', task.id);
+                  }}
+                  animateClick={animateClick}
+                  actionMenuRef={actionMenuRef}
+                  actionButtonRef={(el) => {
+                    if (el) {
+                      actionButtonRefs.current.set(task.id, el);
+                      console.log('[TasksTable] Action button ref set for task:', task.id);
+                    } else {
+                      actionButtonRefs.current.delete(task.id);
+                      console.log('[TasksTable] Action button ref removed for task:', task.id);
+                    }
+                  }}
+                  isAdmin={isAdmin}
+                />
+              );
+            }
+            return null;
+          },
         };
       }
       return col;
     });
 
     return (
+      
       <div className={styles.container}>
+        <UserSwiper />
         <div className={styles.header}>
           <div className={styles.searchWrapper}>
             <input
               type="text"
               placeholder="Buscar Tareas"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                console.log('[TasksTable] Search query updated:', e.target.value);
+              }}
               className={styles.searchInput}
               aria-label="Buscar tareas"
             />
           </div>
           <div className={styles.filtersWrapper}>
-            <div className={styles.filter}>
-              <div className={styles.dropdownContainer} ref={statusDropdownRef}>
-                <div
-                  className={styles.dropdownTrigger}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setIsStatusDropdownOpen((prev) => !prev);
-                  }}
-                >
-                  <Image className="filterIcon" src="/filter.svg" alt="Status" width="16" height="16" />
-                  <span>{statusFilter || 'Estado'}</span>
-                </div>
-                {isStatusDropdownOpen && (
-                  <div className={styles.dropdownItems}>
-                    {['En Proceso', 'Backlog', 'Por Comenzar', 'Finalizado', 'Cancelada', ''].map((status) => (
-                      <div
-                        key={status || 'all'}
-                        className={styles.dropdownItem}
-                        onClick={(e) => handleStatusSelect(status, e)}
-                      >
-                        {status || 'Todos'}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
             <div className={styles.filter}>
               <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
                 <div
@@ -584,9 +699,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   onClick={(e) => {
                     animateClick(e.currentTarget);
                     setIsPriorityDropdownOpen((prev) => !prev);
+                    console.log('[TasksTable] Priority dropdown toggled');
                   }}
                 >
-                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width="16" height="16" />
+                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
                   <span>{priorityFilter || 'Prioridad'}</span>
                 </div>
                 {isPriorityDropdownOpen && (
@@ -611,9 +727,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   onClick={(e) => {
                     animateClick(e.currentTarget);
                     setIsClientDropdownOpen((prev) => !prev);
+                    console.log('[TasksTable] Client dropdown toggled');
                   }}
                 >
-                  <Image className="filterIcon" src="/filter.svg" alt="Client" width="17" height="17" />
+                  <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
                   <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                 </div>
                 {isClientDropdownOpen && (
@@ -636,19 +753,20 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               onClick={(e) => {
                 animateClick(e.currentTarget);
                 onAISidebarOpen();
+                console.log('[TasksTable] AI sidebar opened');
               }}
             >
-              <Image src="/robot.svg" alt="AI" width={18} height={14} />
-              Pregunta a la IA
+              <Image src="/robot.svg" alt="AI" width={18} height={14} /> Pregunta a la IA
             </button>
             <button
               className={styles.createButton}
               onClick={(e) => {
                 animateClick(e.currentTarget);
                 onNewTaskOpen();
+                console.log('[TasksTable] New task creation triggered');
               }}
             >
-              <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height="16" />
+              <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
               Crear Tarea
             </button>
           </div>
@@ -660,7 +778,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSort={handleSort}
-          onRowClick={onChatSidebarOpen}
+          onRowClick={(task: Task) => {
+            onChatSidebarOpen(task);
+            console.log('[TasksTable] Row clicked, opening chat for task:', task.id);
+          }}
         />
         {isDeletePopupOpen && (
           <div className={styles.deletePopupOverlay}>
@@ -676,14 +797,26 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 <input
                   type="text"
                   value={deleteConfirm}
-                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  onChange={(e) => {
+                    setDeleteConfirm(e.target.value);
+                    console.log('[TasksTable] Delete confirm input updated:', e.target.value);
+                  }}
                   placeholder="Escribe 'Eliminar' para confirmar"
                   className={styles.deleteConfirmInput}
                 />
                 <div className={styles.deletePopupActions}>
                   <button
                     className={styles.deleteConfirmButton}
-                    onClick={handleDeleteTask}
+                    onClick={(e) => {
+                      console.log('[TasksTable] Confirm delete button clicked:', {
+                        taskId: deleteTaskId,
+                        deleteConfirm,
+                        isValid: deleteConfirm.toLowerCase() === 'eliminar',
+                        userId,
+                        isAdmin,
+                      });
+                      handleDeleteTask();
+                    }}
                     disabled={deleteConfirm.toLowerCase() !== 'eliminar'}
                   >
                     Confirmar Eliminación
@@ -694,6 +827,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                       setIsDeletePopupOpen(false);
                       setDeleteConfirm('');
                       setDeleteTaskId(null);
+                      console.log('[TasksTable] Delete cancelled');
                     }}
                   >
                     Cancelar

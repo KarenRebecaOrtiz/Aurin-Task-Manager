@@ -1,373 +1,566 @@
 /* ────────────────────────────────────────────────────────────────
-   NotificationDropdown.module.scss
-   Apariencia “Liquid Glass Neumorphism” SIN custom-properties.
-   Lista para copiar y pegar.
+   Header.module.scss
+   Apariencia neumorfista para el centro de notificaciones
 ──────────────────────────────────────────────────────────────── */
 
 /* ==============================================================
-   ESTRUCTURA GENERAL (sin cambios funcionales)
+   ESTRUCTURA GENERAL 
    ================================================================= */
-   .wrapper {
-    width: 100%;
-    height: 100%;
-    display: inline-flex;
-    z-index: 31000;
-    justify-content: space-between;
+.wrapper {
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  z-index: 31000;
+  justify-content: space-between;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
     align-items: center;
-  
-    @media (max-width: 768px) {
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 0;
+    gap: 10px;
+    padding: 10px 0;
+  }
+}
+
+.lefContainer {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
+
+.frame14 {
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  align-items: flex-start;
+  display: inline-flex;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    align-items: center;
+  }
+}
+
+.title {
+  justify-content: center;
+  align-items: center;
+  color: rgb(23, 23, 23);
+  gap: 10px;
+  font-size: 22px;
+  font-family: "Inter Tight", sans-serif;
+  font-weight: 600;
+  display: inline-flex;
+
+  :global(.dark) & {
+    color: #ffffff;
+  }
+
+  .badge {
+    color: #0D0D0D;
+    font-size: 24px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 700;
+    word-wrap: break-word;
+
+    :global(.dark) & {
+      color: #ffffff;
     }
   }
-  
-  .notificationTimestamp {
-    font-size: 12px;
-    color: #666;
-    margin-left: auto;
-    white-space: nowrap;
-  
+}
+
+.text {
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  display: inline-flex;
+
+  .subtitle {
+    color: #71717A;
+    font-size: 16px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    word-wrap: break-word;
+
     :global(.dark) & {
       color: #A1A1AA;
     }
   }
-  
-  .lefContainer {
-    display: flex;
+}
+
+.frame2147225819 {
+  width: auto;
+  justify-content: flex-end;
+  align-items: center;
+  z-index: 31000;
+  gap: 20px;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 768px) {
     justify-content: center;
-    align-items: flex-start;
-    gap: 10px;
-  
-    @media (max-width: 768px) {
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-    }
-  }
-  
-  .frame14 {
-    flex-direction: column;
-    justify-content: center;
-    gap: 5px;
-    align-items: flex-start;
-    display: inline-flex;
-  
-    @media (max-width: 768px) {
-      max-width: 100%;
-      align-items: center;
-    }
-  }
-  
-  .title {
-    justify-content: center;
-    align-items: center;
-    color: rgb(23, 23, 23);
-    gap: 10px;
-    font-size: 22px;
-    font-family: "Inter Tight", sans-serif;
-    font-weight: 600;
-    display: inline-flex;
-  
-    :global(.dark) & {
-      color: #ffffff;
-    }
-  
-    .badge {
-      color: #0D0D0D;
-      font-size: 24px;
-      font-family: "Inter Tight", sans-serif;
-      font-weight: 700;
-      word-wrap: break-word;
-  
-      :global(.dark) & {
-        color: #ffffff;
-      }
-    }
-  }
-  
-  .text {
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    display: inline-flex;
-  
-    .subtitle {
-      color: #71717A;
-      font-size: 16px;
-      font-family: "Inter Tight", sans-serif;
-      font-weight: 400;
-      word-wrap: break-word;
-  
-      :global(.dark) & {
-        color: #A1A1AA;
-      }
-    }
-  }
-  
-  .frame2147225819 {
-    width: auto;
-    justify-content: flex-end;
-    align-items: center;
-    z-index: 31000;
-    gap: 20px;
-    display: flex;
-    flex-direction: column;
-  
-    @media (max-width: 768px) {
-      justify-content: center;
-      width: 100%;
-    }
-  }
-  
-  .notificationContainer {
-    position: relative;
-    z-index: 32000;
-  }
-  
-  .notificationButton {
-    width: 50px;
-    height: 50px;
-    padding: 30px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    cursor: pointer;
-    background: #F1F5F9;
-    box-shadow:
-      -6px -6px 12px #ffffff,
-      6px 6px 12px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-  
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow:
-        -4px -4px 10px #ffffff,
-        4px 4px 10px rgba(0, 0, 0, 0.12);
-    }
-  
-    &:active {
-      transform: translateY(0px);
-      box-shadow:
-        inset -2px -2px 6px #ffffff,
-        inset 2px 2px 6px rgba(0, 0, 0, 0.1);
-    }
-  
-    :global(.dark) & {
-      background: #1E1E1E;
-      box-shadow:
-        6px 6px 12px rgba(0, 0, 0, 0.5),
-        -6px -6px 12px rgba(255, 255, 255, 0.05);
-      
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow:
-          4px 4px 10px rgba(0, 0, 0, 0.6),
-          -4px -4px 10px rgba(255, 255, 255, 0.03);
-      }
-  
-      &:active {
-        box-shadow:
-          inset 2px 2px 6px rgba(0, 0, 0, 0.3),
-          inset -2px -2px 6px rgba(255, 255, 255, 0.02);
-      }
-  
-      img {
-        filter: invert(100%) brightness(130%);
-      }
-    }
-  }
-  
-  /* ==============================================================
-     🔮 LIQUID-GLASS NOTIFICATION DROPDOWN
-     ================================================================= */
-  .notificationDropdown {
-    /* Posicionamiento original */
-    position: fixed;
-    display: block;
-    z-index: 100000;
-    max-width: 350px;
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 8px 0;
-    pointer-events: auto;
-  
-    /* Aspecto “glass” sin variables */
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    background: rgba(255, 255, 255, 0.40);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    isolation: isolate;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.20);
-  
-    /* Inner tint & shadow overlay */
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      box-shadow: inset 0 0 20px -5px rgba(255, 255, 255, 0.70);
-      background-color: rgba(255, 255, 255, 0.40);
-      pointer-events: none;
-      z-index: 1;
-    }
-  
-    /* Noise/distortion overlay (SVG filter) */
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      filter: url('#glass-distortion');
-      -webkit-filter: url('#glass-distortion');
-      pointer-events: none;
-      z-index: 0;
-    }
-  
-    /* Modo oscuro */
-    :global(.dark) & {
-      background: rgba(45, 45, 45, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-  
-      &::before {
-        background-color: rgba(45, 45, 45, 0.35);
-      }
-    }
-  }
-  
-  /* ==============================================================
-     ITEMS
-     ================================================================= */
-  .notificationItem {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    color: #0D0D0D;
-    font-size: 14px;
-    font-family: "Inter Tight", sans-serif;
-    font-weight: 400;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  
-    &.read {
-      background: #F9FAFB;
-  
-      :global(.dark) & {
-        background: #3A3A3A;
-      }
-    }
-  
-    &:hover {
-      background: rgba(244, 244, 245, 0.65);
-  
-      :global(.dark) & {
-        background: rgba(58, 58, 58, 0.65);
-      }
-    }
-  
-    :global(.dark) & {
-      color: #D1D1D1;
-    }
-  }
-  
-  .notificationAvatar {
-    border-radius: 50%;
-  }
-  
-  .sunMoon {
-    width: 32px;
-    height: 32px;
-    position: relative;
-    overflow: visible;
-    transform-origin: center;
-  
-    :global(.dark) & {
-      filter: invert(100%) brightness(100%);
-    }
-  
-    &:hover :global(svg) {
-      transform: scale(1.4) rotate(20deg);
-    }
-  }
-  
-  .typewriterChar {
-    display: inline-block;
-    opacity: 0;
-  }
-  
-  /* ==============================================================
-     “Clear all” ─ botón coherente con estilo
-     ================================================================= */
-  .clearNotificationsContainer {
-    padding: 8px;
-    border-bottom: 1px solid rgba(228, 228, 231, 0.35);
-    display: flex;
-    justify-content: center;
-  
-    :global(.dark) & {
-      border-bottom-color: rgba(85, 85, 85, 0.35);
-    }
-  }
-  
-  .clearNotificationsButton {
-    background-color: #000000;
-    color: #ffffff;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 12px;
-    cursor: pointer;
     width: 100%;
-    font-size: 14px;
-    font-family: "Inter Tight", sans-serif;
-    font-weight: 500;
-    transition: background-color 0.25s ease, transform 0.25s ease;
-  
+  }
+}
+
+.notificationContainer {
+  position: relative;
+  z-index: 32000;
+}
+.notificationButton {
+  /* ——— Dimensiones y layout ——— */
+  width: 50px;
+  height: 50px;
+  padding: 30px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
+  cursor: pointer;
+
+  /* ——— Textura cristalizada ——— */
+  background: rgba(241, 245, 249, 0.7); /* Semi-transparent F1F5F9 */
+  backdrop-filter: blur(8px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(8px); /* Safari support */
+
+  /* ——— Sombras cristalizadas ——— */
+  box-shadow:
+    /* Outset: Neomorphic highlight and shadow */
+    -6px -6px 12px rgba(255, 255, 255, 0.9),
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    /* Inset: Carved effect */
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
+
+  /* ——— Transiciones ——— */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+
+  /* ——— Hover: Levitar con brillo ——— */
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -4px -4px 10px rgba(255, 255, 255, 0.95),
+      4px 4px 10px rgba(0, 0, 0, 0.12),
+      inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+      inset 6px 6px 12px rgba(209, 217, 230, 0.4);
+  }
+
+  /* ——— Active: Presionado con efecto hundido ——— */
+  &:active {
+    transform: translateY(0);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+      inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+      -2px -2px 6px rgba(255, 255, 255, 0.85),
+      2px 2px 6px rgba(0, 0, 0, 0.06);
+  }
+
+  /* ——— Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(30, 30, 30, 0.7); /* Semi-transparent #1E1E1E */
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      /* Outset: Dark neomorphic */
+      6px 6px 12px rgba(0, 0, 0, 0.5),
+      -6px -6px 12px rgba(255, 255, 255, 0.05),
+      /* Inset: Carved effect */
+      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+      inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+
     &:hover {
-      background-color: #101010;
-      transform: translateY(-2px);
+      transform: translateY(-2px) scale(1.02);
+      background: rgba(30, 30, 30, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        4px 4px 10px rgba(0, 0, 0, 0.6),
+        -4px -4px 10px rgba(255, 255, 255, 0.03),
+        inset -6px -6px 12px rgba(0, 0, 0, 0.45),
+        inset 6px 6px 12px rgba(255, 255, 255, 0.04);
     }
-  
-    &:focus {
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+
+    &:active {
+      background: rgba(30, 30, 30, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 2px 2px 6px rgba(0, 0, 0, 0.35),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.02),
+        2px 2px 6px rgba(0, 0, 0, 0.45),
+        -2px -2px 6px rgba(255, 255, 255, 0.04);
     }
-  
-    :global(.dark) & {
-      background-color: #B91C1C;
-  
-      &:hover {
-        background-color: #991B1B;
-      }
-  
-      &:focus {
-        box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.35);
-      }
+
+    img {
+      filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
     }
   }
 
+  /* ——— Responsividad ——— */
+  @media (max-width: 1024px) {
+    width: 44px;
+    height: 44px;
+    padding: 26px;
+  }
 
-/* Clock.module.scss  ───────── 100 % completo */
-.Clock {
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+    padding: 24px;
+  }
+}/* ==============================================================
+   🔮 CRYSTALLIZED NOTIFICATION DROPDOWN
+   ================================================================= */
+.notificationDropdown {
+  /* ——— Layout y dimensiones ——— */
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  z-index: 100000;
+  width: 380px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+
+  /* ——— Textura cristalizada ——— */
+  background: rgba(241, 245, 249, 0.7); /* Semi-transparent F1F5F9 */
+  border-radius: 16px;
+  backdrop-filter: blur(8px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(8px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
+
+  /* ——— Sombras cristalizadas ——— */
+  box-shadow:
+    /* Outset: Neomorphic highlight and shadow */
+    -8px -8px 16px rgba(255, 255, 255, 0.9),
+    8px 8px 16px rgba(0, 0, 0, 0.08),
+    /* Inset: Carved effect */
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
+
+  /* ——— Transiciones ——— */
+  transition:
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+
+  /* ——— Scrollbar cristalizado ——— */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 0.7); /* Semi-transparent #d1d5db */
+    border-radius: 12px;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ——— Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7); /* Semi-transparent #27272a */
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.05),
+      8px 8px 16px rgba(0, 0, 0, 0.5),
+      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+      inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(75, 85, 99, 0.7); /* Semi-transparent #4b5563 */
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  /* ——— Responsividad ——— */
+  @media (max-width: 1024px) {
+    width: 320px;
+    max-height: 350px;
+    padding: 10px;
+  }
+
+  @media (max-width: 768px) {
+    width: 280px;
+    max-height: 300px;
+    padding: 8px;
+  }
+}
+
+/* ==============================================================
+   CRYSTALLIZED NOTIFICATION ITEMS
+   ================================================================= */
+.notificationItem {
+  /* ——— Layout y dimensiones ——— */
+  position: relative;
+  width: 100%;
+  height: 80px;
+  margin-bottom: 8px;
+  cursor: pointer;
+
+  /* ——— Textura cristalizada ——— */
+  background: rgba(241, 245, 249, 0.7);
+  border-radius: 16px;
+  backdrop-filter: blur(6px); /* Slightly less blur for items */
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  /* ——— Transiciones ——— */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease,
+    opacity 0.3s ease;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &.read {
+    opacity: 0.75;
+  }
+
+  /* ——— Hover: Levitar ——— */
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.95),
+      6px 6px 12px rgba(0, 0, 0, 0.1),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+      inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+  }
+
+  /* ——— Active: Presionado ——— */
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+      inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+      -2px -2px 6px rgba(255, 255, 255, 0.85),
+      2px 2px 6px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ——— Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7);
+
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -6px -6px 12px rgba(255, 255, 255, 0.06),
+        6px 6px 12px rgba(0, 0, 0, 0.55),
+        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -2px -2px 6px rgba(0, 0, 0, 0.35),
+        inset 2px 2px 6px rgba(255, 255, 255, 0.02),
+        -2px -2px 6px rgba(255, 255, 255, 0.03),
+        2px 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    &.read {
+      opacity: 0.5;
+    }
+  }
+
+  /* ——— Responsividad ——— */
+  @media (max-width: 1024px) {
+    height: 70px;
+  }
+
+  @media (max-width: 768px) {
+    height: 60px;
+  }
+}
+
+.notificationContent {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 80px;
+}
+
+.notificationLeft {
+  display: flex;
+  align-items: center;
+}
+
+.notificationAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #F1F5F9;
+  box-shadow:
+    -2px -2px 4px #ffffff,
+    2px 2px 4px rgba(0, 0, 0, 0.04);
+
+  :global(.dark) & {
+    border: 1px solid #4b5563;
+    background: #27272a;
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.notificationRight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notificationTextWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notificationTextContent {
+  font-size: 13px;
+  color: #333333;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  :global(.dark) & {
+    color: #d1d5db;
+  }
+}
+
+.notificationTime {
+  font-size: 12px;
+  color: #515157;
+
+  :global(.dark) & {
+    color: #9ca3af;
+  }
+}
+
+.notificationButtonWrap {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+}
+
+.notificationPrimaryCta {
+  font-size: 13px;
+  background-color: transparent;
+  font-weight: 600;
+  color: #0f0f0f;
+  border: none;
+  border-radius: 16px;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  :global(.dark) & {
+    color: #60a5fa;
+  }
+}
+
+.notificationSecondaryCta {
+  background-color: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 400;
+  color: #b64c47;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  :global(.dark) & {
+    color: #9ca3af;
+  }
+}
+
+.sunMoon {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  overflow: visible;
+  transform-origin: center;
+
+  :global(.dark) & {
+    filter: invert(100%) brightness(100%);
+  }
+
+  &:hover :global(svg) {
+    transform: scale(1.4) rotate(20deg);
+  }
+}
+
+.typewriterChar {
+  display: inline-block;
+  opacity: 0;
+}.Clock {
   /* ——— Dimensiones generales ——— */
   width: 100%;
   height: 100%;
   padding: 14px;
-  max-height: 65px ;
+  max-height: 65px;
 
-  /* ——— Capa base neumorfista ——— */
-  background: #F1F5F9;                    /* gris azulado muy claro */
-  border-radius: 24px;
+  /* ——— Capa base cristalizada ——— */
+  background: rgba(241, 245, 249, 0.7); /* Semi-transparent F1F5F9 */
+  border-radius: 16px;
+  backdrop-filter: blur(8px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(8px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
 
-  /* sombra doble: luz arriba-izq, sombra abajo-der */
+  /* ——— Sombras cristalizadas (inspiradas en el toggler) ——— */
   box-shadow:
-    -8px -8px 16px rgba(255, 255, 255, 0.9),   /* highlight */
-     8px  8px 16px rgba(0,   0,   0,   0.08);  /* shadow */
+    /* Outset: Neomorphic highlight and shadow */
+    -8px -8px 16px rgba(255, 255, 255, 0.9),
+    8px 8px 16px rgba(0, 0, 0, 0.08),
+    /* Inset: Toggler-like carved effect */
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
 
   /* ——— Layout interno ——— */
   justify-content: center;
@@ -377,51 +570,190 @@
   transition:
     box-shadow 0.3s ease,
     background 0.3s ease,
-    transform 0.2s ease;
+    transform 0.3s ease,
+    border-color 0.3s ease;
 
-  /* efecto “levitar” suave */
+  /* ——— Hover: Levitar con brillo cristalino ——— */
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
     box-shadow:
+      /* Outset: Stronger highlight and shadow */
       -10px -10px 20px rgba(255, 255, 255, 0.95),
-       10px  10px 20px rgba(0,   0,   0,   0.12);
+      10px 10px 20px rgba(0, 0, 0, 0.12),
+      /* Inset: Enhanced carved effect */
+      inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+      inset 6px 6px 12px rgba(209, 217, 230, 0.4);
   }
 
-  /* efecto “presionado” */
+  /* ——— Active: Presionado con efecto hundido ——— */
   &:active {
     transform: translateY(0);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
     box-shadow:
-      -4px -4px  8px rgba(255, 255, 255, 0.85),
-       4px  4px  8px rgba(0,   0,   0,   0.06);
+      /* Outset: Reduced shadows */
+      -4px -4px 8px rgba(255, 255, 255, 0.85),
+      4px 4px 8px rgba(0, 0, 0, 0.06),
+      /* Inset: Stronger carved effect */
+      inset -2px -2px 4px rgba(255, 255, 255, 0.4),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.2);
   }
 
-  /* ——— Modo oscuro (con tu patrón :global) ——— */
+  /* ——— Modo oscuro ——— */
   :global(.dark) & {
-    background: #27272a;                      /* gris carbón-azulado */
+    background: rgba(39, 39, 42, 0.7); /* Semi-transparent #27272a */
+    border-color: rgba(255, 255, 255, 0.1);
     box-shadow:
+      /* Outset: Dark mode neomorphic */
       -8px -8px 16px rgba(255, 255, 255, 0.05),
-       8px  8px 16px rgba(0,   0,   0,   0.50);
+      8px 8px 16px rgba(0, 0, 0, 0.5),
+      /* Inset: Carved effect */
+      inset -4px -4px 8px rgba(255, 255, 255, 0.03),
+      inset 4px 4px 8px rgba(0, 0, 0, 0.4);
 
     &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
       box-shadow:
         -10px -10px 20px rgba(255, 255, 255, 0.07),
-         10px  10px 20px rgba(0,   0,   0,   0.55);
+        10px 10px 20px rgba(0, 0, 0, 0.55),
+        inset -6px -6px 12px rgba(255, 255, 255, 0.04),
+        inset 6px 6px 12px rgba(0, 0, 0, 0.45);
     }
 
     &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
       box-shadow:
-        -4px -4px  8px rgba(255, 255, 255, 0.04),
-         4px  4px  8px rgba(0,   0,   0,   0.45);
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.45),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.02),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.35);
     }
   }
 }
+
 .weatherIcon {
   width: 20px;
   height: 20px;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3)); /* Subtle glow */
+
+  &:hover {
+    transform: scale(1.2);
+    opacity: 0.9;
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+  }
+
+  :global(.dark) & {
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
+
+    &:hover {
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.2));
+    }
+  }
 }
 
-.weatherIcon:hover {
-  transform: scale(1.2);
-  opacity: 0.8;
+
+.teamDropdownWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  position: relative;
+}
+
+.removeTeamButton {
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #EF4444;
+  font-size: 16.8px;
+  font-family: "Inter Tight", sans-serif;
+  cursor: pointer;
+  box-shadow: -4.8px -4.8px 9.6px rgba(255, 255, 255, 0.8), 4.8px 4.8px 9.6px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.85);
+    color: #F87171;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background: rgba(58, 58, 58, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #F87171;
+    box-shadow: -4.8px -4.8px 9.6px rgba(0, 0, 0, 0.6), 4.8px 4.8px 9.6px rgba(255, 255, 255, 0.03);
+
+    &:hover {
+      background: rgba(58, 58, 58, 0.85);
+      color: #FCA5A5;
+    }
+  }
+}
+
+.addTeamButton {
+  margin-top: 12px;
+  padding: 9.6px 19.2px;
+  background: rgba(9, 9, 11, 0.7);
+  color: #FAFAFA;
+  border-radius: 7.2px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+  font-size: 14.4px;
+  font-family: "Inter Tight", sans-serif;
+  font-weight: 500;
+  box-shadow: -4.8px -4.8px 9.6px rgba(255, 255, 255, 0.8), 4.8px 4.8px 9.6px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    background: rgba(9, 9, 11, 0.85);
+    box-shadow: -7.2px -7.2px 14.4px rgba(255, 255, 255, 0.9), 7.2px 7.2px 14.4px rgba(0, 0, 0, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background: rgba(26, 26, 26, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: -4.8px -4.8px 9.6px rgba(0, 0, 0, 0.6), 4.8px 4.8px 9.6px rgba(255, 255, 255, 0.03);
+
+    &:hover {
+      background: rgba(26, 26, 26, 0.85);
+      box-shadow: -7.2px -7.2px 14.4px rgba(0, 0, 0, 0.7), 7.2px 7.2px 14.4px rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+.userButtonPlaceholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(241, 245, 249, 0.7);
+  box-shadow: -4px -4px 8px rgba(255, 255, 255, 0.8), 4px 4px 8px rgba(0, 0, 0, 0.05);
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7);
+    box-shadow: -4px -4px 8px rgba(0, 0, 0, 0.6), 4px 4px 8px rgba(255, 255, 255, 0.03);
+  }
 }

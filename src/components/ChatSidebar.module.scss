@@ -477,22 +477,107 @@
   justify-content: space-between;
   align-items: center;
 }
-/* Panel de temporizador */
+
+/* Panel de temporizador *//* ==============================================================
+   🔮 CRYSTALLIZED TIMER PANEL
+   ================================================================= */
 .timerPanel {
+  /* ——— Dimensiones y layout ——— */
   overflow: hidden;
   height: 0;
   opacity: 0;
-  background: #d3e048;
-  border-radius: 16px ;
   margin-bottom: 8px;
   width: 100%;
   position: relative;
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.004),
-    6px 6px 12px rgba(0, 0, 0, 0.10);
-  transition: all 0.3s ease-in-out;
-}
+  border-radius: 16px;
 
+  /* ——— Textura cristalizada ——— */
+  background: rgba(251, 251, 250, 0.7); /* Semi-transparent green-yellow (#d3e048) */
+  backdrop-filter: blur(8px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(8px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
+
+  /* ——— Sombras cristalizadas ——— */
+  box-shadow:
+    /* Outset: Neomorphic */
+    -6px -6px 12px rgba(255, 255, 255, 0.8),
+    6px 6px 12px rgba(0, 0, 0, 0.1),
+    /* Inset: Carved effect */
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(225, 225, 225, 0.3); /* Tinted with #d3e048 */
+
+  /* ——— Transiciones ——— */
+  transition:
+    height 0.3s ease-in-out,
+    opacity 0.3s ease-in-out,
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease;
+
+  /* ——— Hover: Levitar con brillo ——— */
+  &:hover {
+    transform: translateY(-2px) scale(1.01);
+    background: rgba(240, 239, 239, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -8px -8px 16px rgba(252, 251, 251, 0.9),
+      8px 8px 16px rgba(0, 0, 0, 0.12),
+      inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+      inset 6px 6px 12px rgba(236, 236, 236, 0.4);
+  }
+
+  /* ——— Active: Presionado con efecto hundido ——— */
+  &:active {
+    transform: scale(0.98);
+    background: rgba(246, 246, 245, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+      inset 2px 2px 6px rgba(234, 234, 229, 0.2),
+      -4px -4px 8px rgba(248, 247, 247, 0.85),
+      4px 4px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  /* ——— 🌙 Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(163, 172, 55, 0.7); /* Darker green-yellow */
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -6px -6px 12px rgba(0, 0, 0, 0.5),
+      6px 6px 12px rgba(255, 255, 255, 0.05),
+      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+      inset 4px 4px 8px rgba(163, 172, 55, 0.3); /* Tinted with darker hue */
+
+    &:hover {
+      background: rgba(163, 172, 55, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        -8px -8px 16px rgba(0, 0, 0, 0.6),
+        8px 8px 16px rgba(255, 255, 255, 0.07),
+        inset -6px -6px 12px rgba(0, 0, 0, 0.45),
+        inset 6px 6px 12px rgba(163, 172, 55, 0.4);
+    }
+
+    &:active {
+      background: rgba(163, 172, 55, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      transform: scale(0.98);
+      box-shadow:
+        inset -2px -2px 6px rgba(0, 0, 0, 0.35),
+        inset 2px 2px 6px rgba(163, 172, 55, 0.2),
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  /* ——— Responsividad ——— */
+  @media (max-width: 768px) {
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+}
 .timerPanelContent {
   padding: 20px;
   display: flex;
@@ -537,7 +622,7 @@
 .react-time-picker__inputGroup:focus-within,
 .timerCommentInput:focus {
   outline: none;
-  background-color: #dce876b2; // tono más claro y translúcido
+  background-color: #eeefebb2;
   box-shadow:
     inset -2px -2px 4px rgba(255, 255, 255, 0.05),
     inset 2px 2px 5px rgba(0, 0, 0, 0.1);
@@ -633,7 +718,7 @@
 
 /* Botón neumorfista claro estilo cancelar */
 .timerCancelButton {
-  background: #dde96071;
+  background: #ededeb71;
   color: #1b2734d9;
   border: none;
   border-radius: 14px;
@@ -1417,4 +1502,39 @@
 /* Animación para popups */
 .deletePopup {
   animation: fadeScale 0.3s ease-out;
+}
+
+.teamDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  padding: 8px 0;
+  width: 200px;
+}
+
+.teamDropdownItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: default;
+  &:hover {
+    background: #f5f5f5;
+  }
+}
+
+.teamUserName {
+  flex: 1;
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+.teamRole {
+  font-size: 12px;
+  color: #888;
+  margin-left: 8px;
 }

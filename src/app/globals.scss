@@ -44,7 +44,7 @@ body {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0.5; 
+    opacity: 0.7; 
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
     transition: opacity 0.4s ease-in-out;
@@ -93,4 +93,20 @@ body {
 
 [data-lenis-prevent] {
   overscroll-behavior: contain;
+}
+
+.swiperPagination {
+  :global {
+    .swiper-pagination-bullets {
+      bottom: 0 !important;
+    }
+    .swiper-pagination-bullet {
+      background: #859ba8;
+      opacity: 0.5;
+    }
+    .swiper-pagination-bullet-active {
+      background: #178d00;
+      opacity: 1;
+    }
+  }
 }

@@ -32,12 +32,14 @@ interface ActionMenuProps {
   animateClick: (element: HTMLElement) => void;
   actionMenuRef: React.RefObject<HTMLDivElement>;
   actionButtonRef: (el: HTMLButtonElement | null) => void;
+  isAdmin: boolean;
 }
 
 const ActionMenu: React.FC<ActionMenuProps> = memo(
-  ({ task, userId, isOpen, onOpen, onEdit, onDelete, animateClick, actionMenuRef, actionButtonRef }) => {
+  ({ task, userId, isOpen, onOpen, onEdit, onDelete, animateClick, actionMenuRef, actionButtonRef, isAdmin }) => {
     const isCreator = userId && task.CreatedBy === userId;
-    const tooltipText = 'Solo el quien creó este elemento puede editarlo';
+    const canEditOrDelete = isAdmin || isCreator;
+    const tooltipText = 'Solo el creador o un administrador pueden editar este elemento';
     const tooltipRef = useRef<HTMLSpanElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -45,7 +47,7 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
       const tooltip = tooltipRef.current;
       const button = buttonRef.current;
 
-      if (!tooltip || !button || isCreator) return;
+      if (!tooltip || !button || canEditOrDelete) return;
 
       const handleMouseEnter = () => {
         gsap.fromTo(
@@ -53,6 +55,7 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
           { opacity: 0, y: 5, visibility: 'hidden' },
           { opacity: 1, y: 0, visibility: 'visible', duration: 0.2, ease: 'power2.out' },
         );
+        console.log('[ActionMenu] Tooltip shown for task:', task.id);
       };
 
       const handleMouseLeave = () => {
@@ -63,6 +66,7 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
           duration: 0.2,
           ease: 'power2.in',
         });
+        console.log('[ActionMenu] Tooltip hidden for task:', task.id);
       };
 
       button.addEventListener('mouseenter', handleMouseEnter);
@@ -73,7 +77,16 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
         button.removeEventListener('mouseleave', handleMouseLeave);
         gsap.killTweensOf(tooltip);
       };
-    }, [isCreator]);
+    }, [canEditOrDelete, task.id]);
+
+    console.log('[ActionMenu] Rendering for task:', {
+      taskId: task.id,
+      userId,
+      isAdmin,
+      isCreator,
+      canEditOrDelete,
+      isOpen,
+    });
 
     return (
       <div className={styles.actionContainer}>
@@ -83,29 +96,45 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
               ref={(el) => {
                 buttonRef.current = el;
                 actionButtonRef(el);
+                console.log('[ActionMenu] Action button ref set:', {
+                  taskId: task.id,
+                  hasElement: !!el,
+                });
               }}
-              onClick={isCreator ? onOpen : undefined}
-              className={`${styles.actionButton} ${!isCreator ? styles.disabled : ''}`}
+              onClick={() => {
+                if (canEditOrDelete) {
+                  onOpen();
+                  console.log('[ActionMenu] Action menu toggled for task:', task.id, { isAdmin, isCreator });
+                } else {
+                  console.log('[ActionMenu] Action menu click ignored, insufficient permissions:', {
+                    taskId: task.id,
+                    isAdmin,
+                    isCreator,
+                  });
+                }
+              }}
+              className={`${styles.actionButton} ${!canEditOrDelete ? styles.disabled : ''}`}
               aria-label="Abrir acciones"
-              disabled={!isCreator}
+              disabled={!canEditOrDelete}
             >
-              <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
-              {!isCreator && (
+              <Image src="/elipsis.svg" alt="Actions" width={16} height={16} style={{ width: 'auto', height: 'auto' }} />
+              {!canEditOrDelete && (
                 <span ref={tooltipRef} className={styles.tooltip}>
                   {tooltipText}
                 </span>
               )}
             </button>
-            {isOpen && isCreator && (
+            {isOpen && canEditOrDelete && (
               <div ref={actionMenuRef} className={styles.dropdown}>
                 <div
                   className={styles.dropdownItem}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
                     onEdit();
+                    console.log('[ActionMenu] Edit clicked for task:', task.id, { isAdmin, isCreator });
                   }}
                 >
-                  <Image src="/pencil.svg" alt="Edit" width={18} height={18} />
+                  <Image src="/pencil.svg" alt="Edit" width={18} height={18} style={{ width: 'auto', height: 'auto' }} />
                   <span>Editar Tarea</span>
                 </div>
                 <div
@@ -113,9 +142,10 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                   onClick={(e) => {
                     animateClick(e.currentTarget);
                     onDelete();
+                    console.log('[ActionMenu] Delete clicked for task:', task.id, { isAdmin, isCreator });
                   }}
                 >
-                  <Image src="/trash-2.svg" alt="Delete" width={18} height={18} />
+                  <Image src="/trash-2.svg" alt="Delete" width={18} height={18} style={{ width: 'auto', height: 'auto' }} />
                   <span>Eliminar Tarea</span>
                 </div>
               </div>

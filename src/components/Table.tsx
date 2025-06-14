@@ -97,6 +97,7 @@ const Table = memo(
           width={189}
           height={190}
           className={styles.emptyStateImage}
+          style={{ width: 'auto', height: 'auto' }}
         />
         <div className={styles.emptyStateText}>
           <div className={styles.emptyStateTitle}>¡Todo en orden por ahora!</div>
@@ -140,7 +141,7 @@ const Table = memo(
                 {columns.map((column) => (
                   <div
                     key={column.key}
-                    className={`${styles.cell} ${column.key !== 'action' ? styles.glass : ''} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
+                    className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
                       column.key === 'action' ? styles.actionCell : styles.clickableCell
                     }`}
                     style={{ width: column.width }}
@@ -165,7 +166,7 @@ const Table = memo(
               className={styles.paginationButton}
               aria-label="Ir a la primera página"
             >
-              <Image src="/chevrons-left.svg" alt="Primera página" width={16} height={16} />
+              <Image src="/chevrons-left.svg" alt="Primera página" width={16} height={16} style={{ width: 'auto', height: 'auto' }} />
             </button>
             <button
               onClick={handlePrevPage}
@@ -173,7 +174,7 @@ const Table = memo(
               className={styles.paginationButton}
               aria-label="Ir a la página anterior"
             >
-              <Image src="/chevron-left.svg" alt="Página anterior" width={16} height={16} />
+              <Image src="/chevron-left.svg" alt="Página anterior" width={16} height={16} style={{ width: 'auto', height: 'auto' }} />
             </button>
             <span className={styles.pageInfo}>
               Página {currentPage} de {totalPages}
@@ -184,7 +185,7 @@ const Table = memo(
               className={styles.paginationButton}
               aria-label="Ir a la página siguiente"
             >
-              <Image src="/chevron-right.svg" alt="Página siguiente" width={16} height={16} />
+              <Image src="/chevron-right.svg" alt="Página siguiente" width={16} height={16} style={{ width: 'auto', height: 'auto' }} />
             </button>
             <button
               onClick={handleLastPage}
@@ -192,7 +193,7 @@ const Table = memo(
               className={styles.paginationButton}
               aria-label="Ir a la última página"
             >
-              <Image src="/chevrons-right.svg" alt="Última página" width={16} height={16} />
+              <Image src="/chevrons-right.svg" alt="Última página" width={16} height={16} style={{ width: 'auto', height: 'auto' }} />
             </button>
           </div>
         )}

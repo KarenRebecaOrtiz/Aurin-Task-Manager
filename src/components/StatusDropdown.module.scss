@@ -1,0 +1,503 @@
+/* ==============================================================
+   🔮 CRYSTALLIZED STATUS DROPDOWN WRAPPER
+   ================================================================= */
+   .statusDropdownWrapper {
+    position: relative;
+    display: inline-block;
+  }
+  
+  /* ==============================================================
+     CRYSTALLIZED AVAILABLE FOR BUTTON
+     ================================================================= */
+  .availableForBtn {
+    /* ——— Layout y dimensiones ——— */
+    display: flex;
+    align-items: center;
+    column-gap: 2px;
+    border-radius: 16px;
+    height: 65px;
+    padding: 1rem 1.5rem 1rem 0.5rem;
+    outline: none;
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
+    font-weight: 600;
+    cursor: pointer;
+  
+    /* ——— Textura cristalizada ——— */
+    background: rgba(241, 245, 249, 0.7); /* Semi-transparent F1F5F9 */
+    backdrop-filter: blur(8px); /* Frosted glass effect */
+    -webkit-backdrop-filter: blur(8px); /* Safari support */
+  
+    /* ——— Sombras cristalizadas ——— */
+    box-shadow:
+      /* Outset: Neomorphic */
+      -8px -8px 16px rgba(255, 255, 255, 0.9),
+      8px 8px 16px rgba(0, 0, 0, 0.08),
+      /* Inset: Carved effect */
+      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+      inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
+  
+    /* ——— Transiciones ——— */
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
+  
+    /* ——— Hover: Levitar ——— */
+    &:hover {
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        inset -2px -2px 6px rgba(255, 255, 255, 0.6),
+        inset 2px 2px 6px rgba(209, 217, 230, 0.4),
+        -6px -6px 12px rgba(255, 255, 255, 0.95),
+        6px 6px 12px rgba(0, 0, 0, 0.1);
+    }
+  
+    /* ——— Active: Presionado ——— */
+    &:active {
+      background: rgba(241, 245, 249, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(1px);
+      box-shadow:
+        inset -4px -4px 8px rgba(255, 255, 255, 0.4),
+        inset 4px 4px 8px rgba(209, 217, 230, 0.2),
+        -2px -2px 6px rgba(255, 255, 255, 0.85),
+        2px 2px 6px rgba(0, 0, 0, 0.06);
+    }
+  
+    /* ——— Modo oscuro ——— */
+    :global(.dark) & {
+      background: rgba(39, 39, 42, 0.7); /* Semi-transparent #27272a */
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow:
+        -8px -8px 16px rgba(255, 255, 255, 0.05),
+        8px 8px 16px rgba(0, 0, 0, 0.5),
+        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+  
+      &:hover {
+        background: rgba(39, 39, 42, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow:
+          inset -2px -2px 6px rgba(0, 0, 0, 0.45),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.04),
+          -6px -6px 12px rgba(255, 255, 255, 0.06),
+          6px 6px 12px rgba(0, 0, 0, 0.55);
+      }
+  
+      &:active {
+        background: rgba(39, 39, 42, 0.6);
+        box-shadow:
+          inset -4px -4px 8px rgba(0, 0, 0, 0.35),
+          inset 4px 4px 8px rgba(255, 255, 255, 0.02),
+          -2px -2px 6px rgba(255, 255, 255, 0.04),
+          2px 2px 6px rgba(0, 0, 0, 0.45);
+      }
+    }
+  
+    /* ——— Responsividad ——— */
+    @media (max-width: 1024px) {
+      height: 55px;
+      padding: 0.8rem 1.2rem 0.8rem 0.4rem;
+    }
+  
+    @media (max-width: 768px) {
+      height: 50px;
+      padding: 0.7rem 1rem 0.7rem 0.3rem;
+    }
+  }
+  
+  /* ==============================================================
+     CRYSTALLIZED STATUS DROPDOWN
+     ================================================================= */
+  .statusDropdown {
+    /* ——— Layout y dimensiones ——— */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    border-radius: 16px;
+    padding: 12px 0;
+    z-index: 3200;
+  
+    /* ——— Textura cristalizada ——— */
+    background: rgba(241, 245, 249, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  
+    /* ——— Sombras cristalizadas ——— */
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.9),
+      8px 8px 16px rgba(0, 0, 0, 0.15),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+      inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+  
+    /* ——— Transiciones ——— */
+    transition:
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
+  
+    /* ——— Modo oscuro ——— */
+    :global(.dark) & {
+      background: rgba(39, 39, 42, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow:
+        -8px -8px 16px rgba(255, 255, 255, 0.05),
+        8px 8px 16px rgba(0, 0, 0, 0.5),
+        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+    }
+  
+    /* ——— Responsividad ——— */
+    @media (max-width: 1024px) {
+      padding: 10px 0;
+    }
+  
+    @media (max-width: 768px) {
+      padding: 8px 0;
+    }
+  }
+  
+  /* ==============================================================
+     CRYSTALLIZED STATUS OPTIONS
+     ================================================================= */
+  .statusOption {
+    /* ——— Layout y dimensiones ——— */
+    padding: 12px 16px;
+    font-size: 14px;
+    font-family: 'Inter Tight', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  
+    /* ——— Textura cristalizada ——— */
+    background: rgba(241, 245, 249, 0.7);
+    border-radius: 8px;
+    backdrop-filter: blur(6px); /* Subtler blur */
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  
+
+    /* ——— Transiciones ——— */
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
+  
+    /* ——— Hover: Levitar ——— */
+    &:hover {
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        inset -2px -2px 6px rgba(255, 255, 255, 0.5),
+        inset 2px 2px 6px rgba(209, 217, 230, 0.3),
+        -6px -6px 12px rgba(255, 255, 255, 0.95),
+        6px 6px 12px rgba(0, 0, 0, 0.1);
+    }
+  
+    /* ——— Modo oscuro (base) ——— */
+    :global(.dark) & {
+      background: rgba(39, 39, 42, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #E5E7EB;
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.45),
+        inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+        inset 2px 2px 6px rgba(255, 255, 255, 0.02);
+  
+      &:hover {
+        background: rgba(39, 39, 42, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow:
+          inset -2px -2px 6px rgba(0, 0, 0, 0.4),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.03),
+          -6px -6px 12px rgba(255, 255, 255, 0.06),
+          6px 6px 12px rgba(0, 0, 0, 0.55);
+      }
+    }
+  
+    /* ——— Status-specific styles ——— */
+    &.Disponible {
+      color: #178d00;
+      background: rgba(225, 249, 220, 0.7); /* Semi-transparent #e1f9dc */
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.9),
+        4px 4px 8px rgba(23, 141, 0, 0.15),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(23, 141, 0, 0.1);
+  
+      &:hover {
+        background: rgba(225, 249, 220, 0.85); /* Lighter #e1f9dc */
+        box-shadow:
+          inset -2px -2px 6px rgba(255, 255, 255, 0.5),
+          inset 2px 2px 6px rgba(23, 141, 0, 0.05),
+          -6px -6px 12px rgba(255, 255, 255, 0.95),
+          6px 6px 12px rgba(23, 141, 0, 0.2);
+      }
+  
+      :global(.dark) & {
+        background: rgba(74, 222, 128, 0.7); /* Darker green */
+        box-shadow:
+          -4px -4px 8px rgba(255, 255, 255, 0.04),
+          4px 4px 8px rgba(23, 141, 0, 0.3),
+          inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+          inset 2px 2px 6px rgba(23, 141, 0, 0.15);
+  
+        &:hover {
+          background: rgba(74, 222, 128, 0.85);
+          box-shadow:
+            inset -2px -2px 6px rgba(0, 0, 0, 0.4),
+            inset 2px 2px 6px rgba(23, 141, 0, 0.1),
+            -6px -6px 12px rgba(255, 255, 255, 0.06),
+            6px 6px 12px rgba(23, 141, 0, 0.35);
+        }
+      }
+    }
+  
+    &.Ocupado {
+      color: #d32f2f;
+      background: rgba(255, 235, 238, 0.7); /* Semi-transparent #ffebee */
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.9),
+        4px 4px 8px rgba(211, 47, 47, 0.15),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(211, 47, 47, 0.1);
+  
+      &:hover {
+        background: rgba(255, 235, 238, 0.85); /* Lighter #ffebee */
+        box-shadow:
+          inset -2px -2px 6px rgba(255, 255, 255, 0.5),
+          inset 2px 2px 6px rgba(211, 47, 47, 0.05),
+          -6px -6px 12px rgba(255, 255, 255, 0.95),
+          6px 6px 12px rgba(211, 47, 47, 0.2);
+      }
+  
+      :global(.dark) & {
+        background: rgba(239, 68, 68, 0.7); /* Darker red */
+        box-shadow:
+          -4px -4px 8px rgba(255, 255, 255, 0.04),
+          4px 4px 8px rgba(211, 47, 47, 0.3),
+          inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+          inset 2px 2px 6px rgba(211, 47, 47, 0.15);
+  
+        &:hover {
+          background: rgba(239, 68, 68, 0.85);
+          box-shadow:
+            inset -2px -2px 6px rgba(0, 0, 0, 0.4),
+            inset 2px 2px 6px rgba(211, 47, 47, 0.1),
+            -6px -6px 12px rgba(255, 255, 255, 0.06),
+            6px 6px 12px rgba(211, 47, 47, 0.35);
+        }
+      }
+    }
+  
+    &.Por_terminar {
+      color: #f57c00;
+      background: rgba(255, 243, 224, 0.7); /* Semi-transparent #fff3e0 */
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.9),
+        4px 4px 8px rgba(245, 124, 0, 0.15),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(245, 124, 0, 0.1);
+  
+      &:hover {
+        background: rgba(255, 243, 224, 0.85); /* Lighter #fff3e0 */
+        box-shadow:
+          inset -2px -2px 6px rgba(255, 255, 255, 0.5),
+          inset 2px 2px 6px rgba(245, 124, 0, 0.05),
+          -6px -6px 12px rgba(255, 255, 255, 0.95),
+          6px 6px 12px rgba(245, 124, 0, 0.2);
+      }
+  
+      :global(.dark) & {
+        background: rgba(251, 146, 60, 0.7); /* Darker orange */
+        box-shadow:
+          -4px -4px 8px rgba(255, 255, 255, 0.04),
+          4px 4px 8px rgba(245, 124, 0, 0.3),
+          inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+          inset 2px 2px 6px rgba(245, 124, 0, 0.15);
+  
+        &:hover {
+          background: rgba(251, 146, 60, 0.85);
+          box-shadow:
+            inset -2px -2px 6px rgba(0, 0, 0, 0.4),
+            inset 2px 2px 6px rgba(245, 124, 0, 0.1),
+            -6px -6px 12px rgba(255, 255, 255, 0.06),
+            6px 6px 12px rgba(245, 124, 0, 0.35);
+        }
+      }
+    }
+  
+    &.Fuera {
+      color: #616161;
+      background: rgba(245, 245, 245, 0.7); /* Semi-transparent #f5f5f5 */
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.9),
+        4px 4px 8px rgba(97, 97, 97, 0.15),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(97, 97, 97, 0.1);
+  
+      &:hover {
+        background: rgba(245, 245, 245, 0.85); /* Lighter #f5f5f5 */
+        box-shadow:
+          inset -2px -2px 6px rgba(255, 255, 255, 0.5),
+          inset 2px 2px 6px rgba(97, 97, 97, 0.05),
+          -6px -6px 12px rgba(255, 255, 255, 0.95),
+          6px 6px 12px rgba(97, 97, 97, 0.2);
+      }
+  
+      :global(.dark) & {
+        background: rgba(107, 114, 128, 0.7); /* Darker gray */
+        box-shadow:
+          -4px -4px 8px rgba(255, 255, 255, 0.04),
+          4px 4px 8px rgba(97, 97, 97, 0.3),
+          inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+          inset 2px 2px 6px rgba(97, 97, 97, 0.15);
+  
+        &:hover {
+          background: rgba(107, 114, 128, 0.85);
+          box-shadow:
+            inset -2px -2px 6px rgba(0, 0, 0, 0.4),
+            inset 2px 2px 6px rgba(97, 97, 97, 0.1),
+            -6px -6px 12px rgba(255, 255, 255, 0.06),
+            6px 6px 12px rgba(97, 97, 97, 0.35);
+        }
+      }
+    }
+  }
+  
+  /* ==============================================================
+     CRYSTALLIZED CIRCLE AND ANIMATIONS
+     ================================================================= */
+  .circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: 0 10px;
+    background: transparent;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+    animation: circle-keys var(--animation);
+  
+    :global(.dark) & {
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
+    }
+  }
+  
+  .circle .dot {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: dot-keys var(--animation);
+  }
+  
+  .circle .outline {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    animation: outline-keys var(--animation);
+  }
+  
+  @keyframes circle-keys {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.5);
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes dot-keys {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(0);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes outline-keys {
+    0% {
+      transform: scale(0);
+      outline: solid 20px var(--color);
+      outline-offset: 0;
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      outline: solid 0 transparent;
+      outline-offset: 20px;
+      opacity: 0;
+    }
+  }
+  
+  /* ==============================================================
+     RESPONSIVE ADJUSTMENTS
+     ================================================================= */
+  @media (max-width: 1024px) {
+    .statusOption {
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+  
+    .circle {
+      width: 14px;
+      height: 14px;
+      margin: 0 8px;
+    }
+  
+    .circle .dot {
+      width: 10px;
+      height: 10px;
+    }
+  
+    .circle .outline {
+      width: 14px;
+      height: 14px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .statusOption {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+  
+    .circle {
+      width: 12px;
+      height: 12px;
+      margin: 0 6px;
+    }
+  
+    .circle .dot {
+      width: 8px;
+      height: 8px;
+    }
+  
+    .circle .outline {
+      width: 12px;
+      height: 12px;
+    }
+  }

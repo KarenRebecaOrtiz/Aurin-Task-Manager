@@ -8,6 +8,7 @@ import {
   setDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   onSnapshot,
   query,
   where,
@@ -37,7 +38,7 @@ import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import { v4 as uuidv4 } from 'uuid';
-import ClientClock from '@/components/DigitalClock'; 
+import Dock from '@/components/Dock';
 
 interface Client {
   id: string;
@@ -55,6 +56,7 @@ interface User {
   fullName: string;
   role: string;
   description?: string;
+  status?: string; 
 }
 
 interface Task {
@@ -129,6 +131,7 @@ export default function TasksPage() {
   });
   const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -139,6 +142,40 @@ export default function TasksPage() {
   const memoizedClients = useMemo(() => clients, [clients]);
   const memoizedUsers = useMemo(() => users, [users]);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
+
+  // Fetch admin status
+  useEffect(() => {
+    const fetchAdminStatus = async () => {
+      if (!user?.id) {
+        console.warn('[TasksPage] No userId provided, skipping admin status fetch');
+        setIsAdmin(false);
+        return;
+      }
+      try {
+        console.log('[TasksPage] Fetching admin status for user:', user.id);
+        const userDoc = await getDoc(doc(db, 'users', user.id));
+        if (userDoc.exists()) {
+          const access = userDoc.data().access;
+          setIsAdmin(access === 'admin');
+          console.log('[TasksPage] Admin status fetched:', {
+            userId: user.id,
+            access,
+            isAdmin: access === 'admin',
+          });
+        } else {
+          setIsAdmin(false);
+          console.warn('[TasksPage] User document not found for ID:', user.id);
+        }
+      } catch (error) {
+        console.error('[TasksPage] Error fetching admin status:', {
+          error: error instanceof Error ? error.message : JSON.stringify(error),
+          userId: user.id,
+        });
+        setIsAdmin(false);
+      }
+    };
+    fetchAdminStatus();
+  }, [user?.id]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -151,13 +188,22 @@ export default function TasksPage() {
         lastName?: string;
         publicMetadata: { role?: string; description?: string };
       }[] = await response.json();
-      const usersData: User[] = clerkUsers.map((user) => ({
-        id: user.id,
-        imageUrl: user.imageUrl || '/default-avatar.png',
-        fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre',
-        role: user.publicMetadata.role || 'Sin rol',
-        description: user.publicMetadata.description || 'Sin descripción',
-      }));
+  
+      // Obtener status desde Firestore
+      const usersData: User[] = await Promise.all(
+        clerkUsers.map(async (clerkUser) => {
+          const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
+          const status = userDoc.exists() ? userDoc.data().status || 'Disponible' : 'Disponible';
+          return {
+            id: clerkUser.id,
+            imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+            fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+            role: clerkUser.publicMetadata.role || 'Sin rol',
+            description: clerkUser.publicMetadata.description || 'Sin descripción',
+            status,
+          };
+        })
+      );
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -185,37 +231,51 @@ export default function TasksPage() {
   }, []);
 
   const fetchTasks = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.warn('[TasksPage] No user ID, skipping tasks fetch');
+      return;
+    }
     try {
+      console.log('[TasksPage] Fetching tasks for user:', { userId: user.id, isAdmin });
       const querySnapshot = await getDocs(collection(db, 'tasks'));
-      const tasksData: Task[] = querySnapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          clientId: doc.data().clientId || '',
-          project: doc.data().project || '',
-          name: doc.data().name || '',
-          description: doc.data().description || '',
-          status: doc.data().status || '',
-          priority: doc.data().priority || '',
-          startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-          endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
-          LeadedBy: doc.data().LeadedBy || [],
-          AssignedTo: doc.data().AssignedTo || [],
-          createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-          CreatedBy: doc.data().CreatedBy || '',
-        }))
-        .filter(
+      let tasksData: Task[] = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        clientId: doc.data().clientId || '',
+        project: doc.data().project || '',
+        name: doc.data().name || '',
+        description: doc.data().description || '',
+        status: doc.data().status || '',
+        priority: doc.data().priority || '',
+        startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
+        endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
+        LeadedBy: doc.data().LeadedBy || [],
+        AssignedTo: doc.data().AssignedTo || [],
+        createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+        CreatedBy: doc.data().CreatedBy || '',
+      }));
+
+      // Apply filtering only for non-admins
+      if (!isAdmin) {
+        tasksData = tasksData.filter(
           (task) =>
             task.AssignedTo.includes(user.id) ||
             task.LeadedBy.includes(user.id) ||
             task.CreatedBy === user.id,
         );
+      }
+
+      console.log('[TasksPage] Tasks fetched:', {
+        totalTasks: tasksData.length,
+        taskIds: tasksData.map((t) => t.id),
+        userId: user.id,
+        isAdmin,
+      });
       setTasks(tasksData);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       setTasks([]);
     }
-  }, [user?.id]);
+  }, [user?.id, isAdmin]);
 
   const fetchNotifications = useCallback(() => {
     if (!user?.id) {
@@ -255,23 +315,24 @@ export default function TasksPage() {
     return unsubscribe;
   }, [user?.id]);
 
-  const handleClearNotifications = useCallback(async () => {
-    if (!user?.id) return;
+  const handleDeleteNotification = useCallback(async (notificationId: string) => {
+    if (!user?.id) {
+      console.warn('No user ID, skipping notification deletion');
+      return;
+    }
 
     try {
-      const q = query(
-        collection(db, 'notifications'),
-        where('recipientId', '==', user.id),
-      );
-      const querySnapshot = await getDocs(q);
-      const deletePromises = querySnapshot.docs.map((docSnapshot) =>
-        deleteDoc(doc(db, 'notifications', docSnapshot.id)),
-      );
-      await Promise.all(deletePromises);
-      setNotifications([]);
+      console.log('Deleting notification:', { notificationId, userId: user.id });
+      await deleteDoc(doc(db, 'notifications', notificationId));
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      console.log('Notification deleted successfully:', notificationId);
     } catch (error) {
-      console.error('Error clearing notifications:', error);
-      alert('Error al eliminar las notificaciones');
+      console.error('Error deleting notification:', {
+        error: error instanceof Error ? error.message : JSON.stringify(error),
+        notificationId,
+        userId: user.id,
+      });
+      alert('Error al eliminar la notificación');
     }
   }, [user?.id]);
 
@@ -291,8 +352,12 @@ export default function TasksPage() {
 
       const updatedNotifications = sortedNotifications.slice(-20);
       setNotifications(updatedNotifications);
+      console.log('Notifications limited:', updatedNotifications.length);
     } catch (error) {
-      console.error('Error limiting notifications:', error);
+      console.error('Error limiting notifications:', {
+        error: error instanceof Error ? error.message : JSON.stringify(error),
+        userId: user.id,
+      });
     }
   }, [user?.id]);
 
@@ -479,6 +544,15 @@ export default function TasksPage() {
     ]);
   }, []);
 
+  const handleDeleteClientOpen = useCallback((clientId: string) => {
+    if (!isAdmin) {
+      console.warn('[TasksPage] Non-admin user attempted to delete client:', { clientId, userId: user?.id });
+      alert('Solo los administradores pueden eliminar clientes.');
+      return;
+    }
+    setIsDeleteClientOpen(clientId);
+  }, [isAdmin, user?.id]);
+
   const handleInviteSidebarOpen = useCallback(() => {
     setOpenSidebars((prev) => [
       ...prev,
@@ -597,7 +671,7 @@ export default function TasksPage() {
           users={memoizedUsers}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
-          onClearNotifications={handleClearNotifications}
+          onDeleteNotification={handleDeleteNotification}
           onLimitNotifications={handleLimitNotifications}
         />
       </div>
@@ -632,7 +706,7 @@ export default function TasksPage() {
             clients={memoizedClients}
             onCreateOpen={handleCreateClientOpen}
             onEditOpen={handleEditClientOpen}
-            onDeleteOpen={(clientId) => setIsDeleteClientOpen(clientId)}
+            onDeleteOpen={handleDeleteClientOpen}
             setClients={setClients}
           />
         )}
@@ -671,7 +745,7 @@ export default function TasksPage() {
           />
         )}
       </div>
-      {isDeleteClientOpen && (
+      {isDeleteClientOpen && isAdmin && (
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={deletePopupRef}>
             <h2>Confirmar Eliminación</h2>
@@ -808,7 +882,7 @@ export default function TasksPage() {
       )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
-
+      <Dock/>
     </div>
   );
 }

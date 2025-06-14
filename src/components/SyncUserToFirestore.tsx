@@ -1,8 +1,9 @@
 'use client';
+
 import { useAuth, useUser } from '@clerk/nextjs';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { firebaseConfig } from '@/lib/firebaseConfig';
 import { useEffect, useState } from 'react';
 
@@ -16,24 +17,87 @@ export default function SyncUserToFirestore() {
   const [synced, setSynced] = useState(false);
 
   useEffect(() => {
-    if (!userId || !user || synced) return;
+    if (!userId || !user || synced) {
+      console.log('[SyncUserToFirestore] Skipping sync:', {
+        userId,
+        hasUser: !!user,
+        synced,
+      });
+      return;
+    }
 
     const syncUser = async () => {
       try {
+        console.log('[SyncUserToFirestore] Starting user sync for:', {
+          userId,
+          clerkUserId: user.id,
+          email: user.emailAddresses[0]?.emailAddress,
+          publicMetadata: user.publicMetadata,
+        });
+
         const token = await getToken({ template: 'integration_firebase' });
-        const userCredentials = await signInWithCustomToken(auth, token || '');
-        console.log('User authenticated with Firebase:', userCredentials.user);
+        if (!token) {
+          throw new Error('Failed to get Firebase token');
+        }
+        console.log('[SyncUserToFirestore] Firebase token obtained:', {
+          userId,
+          tokenLength: token.length,
+        });
+
+        const userCredentials = await signInWithCustomToken(auth, token);
+        console.log('[SyncUserToFirestore] User authenticated with Firebase:', {
+          userId: userCredentials.user.uid,
+          email: userCredentials.user.email,
+          displayName: userCredentials.user.displayName,
+        });
 
         const email = user.emailAddresses[0]?.emailAddress || 'no-email';
-        await setDoc(doc(db, 'users', userId), {
+        const displayName = user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Usuario';
+        const access = user.publicMetadata.access || 'user';
+        const docRef = doc(db, 'users', userId);
+
+        // Obtener el documento existente para verificar si 'status' ya está definido
+        const userDoc = await getDoc(docRef);
+        const status = userDoc.exists() && userDoc.data().status ? userDoc.data().status : 'Disponible';
+
+        await setDoc(docRef, {
           userId,
           email,
-          createdAt: new Date().toISOString()
+          displayName,
+          createdAt: new Date().toISOString(),
+          access,
+          status, // Inicializar o mantener el status
         }, { merge: true });
-        console.log('User data stored in Firestore:', { userId, email });
+        console.log('[SyncUserToFirestore] User data stored in Firestore:', {
+          userId,
+          email,
+          displayName,
+          access,
+          status,
+        });
+
+        const updatedUserDoc = await getDoc(docRef);
+        if (updatedUserDoc.exists()) {
+          console.log('[SyncUserToFirestore] Verified user document:', {
+            userId,
+            docData: updatedUserDoc.data(),
+          });
+        } else {
+          console.error('[SyncUserToFirestore] User document not found after sync:', userId);
+        }
+
+        const idToken = await userCredentials.user.getIdToken();
+        console.log('[SyncUserToFirestore] Firebase ID token obtained:', {
+          userId,
+          tokenLength: idToken.length,
+        });
+
         setSynced(true);
       } catch (error) {
-        console.error('Firebase sync error:', error);
+        console.error('[SyncUserToFirestore] Firebase sync error:', {
+          error: error instanceof Error ? error.message : JSON.stringify(error),
+          userId,
+        });
       }
     };
 

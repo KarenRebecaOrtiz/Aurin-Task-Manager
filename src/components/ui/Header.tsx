@@ -1,13 +1,25 @@
 'use client';
 
-import { useUser, UserButton } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { gsap } from 'gsap'; // Importar GSAP
+import { gsap } from 'gsap';
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
+import StatusDropdown from '../StatusDropdown';
+import dynamic from 'next/dynamic';
+
+// Register GSAP ScrollToPlugin
+gsap.registerPlugin(ScrollToPlugin);
+
+// Dynamically import UserButton with SSR disabled
+const DynamicUserButton = dynamic(() => import('@clerk/nextjs').then(mod => mod.UserButton), {
+  ssr: false,
+  loading: () => <div className={styles.userButtonPlaceholder} />,
+});
 
 interface Notification {
   id: string;
@@ -54,8 +66,8 @@ interface HeaderProps {
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
-  onClearNotifications: () => void; // Nueva prop para eliminar todas las notificaciones
-  onLimitNotifications: (notifications: Notification[]) => void; // Nueva prop para limitar a 20
+  onDeleteNotification: (notificationId: string) => void;
+  onLimitNotifications: (notifications: Notification[]) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -65,11 +77,11 @@ const Header: React.FC<HeaderProps> = ({
   users,
   notifications,
   onNotificationClick,
-  onClearNotifications,
+  onDeleteNotification,
   onLimitNotifications,
 }) => {
-  const { user } = useUser();
-  const userName = user?.firstName || 'Usuario';
+  const { user, isLoaded } = useUser();
+  const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
 
   /* ────────────────────────────────────────────
      REFS
@@ -81,6 +93,7 @@ const Header: React.FC<HeaderProps> = ({
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevNotificationsRef = useRef<Notification[]>([]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   /* ────────────────────────────────────────────
      STATE
@@ -90,11 +103,10 @@ const Header: React.FC<HeaderProps> = ({
   const [hasInteracted, setHasInteracted] = useState(false);
   const [hasViewedNotifications, setHasViewedNotifications] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
-  const [isCleared, setIsCleared] = useState(false);
-  const [time, setTime] = useState(new Date());
-  const [location, setLocation] = useState("Loading...");
-  const [temperature, setTemperature] = useState("Loading...");
-  const [weatherIcon, setWeatherIcon] = useState<string | null>(null); // Estado para el icono
+  const [time, setTime] = useState<Date | null>(null);
+  const [location, setLocation] = useState('Cargando...');
+  const [temperature, setTemperature] = useState('Cargando...');
+  const [weatherIcon, setWeatherIcon] = useState<string | null>(null);
 
   /* ────────────────────────────────────────────
      EFFECTS – AUDIO INIT
@@ -118,24 +130,19 @@ const Header: React.FC<HeaderProps> = ({
 
   /* ────────────────────────────────────────────
      EFFECTS – WATCH FOR NEW NOTIFICATIONS
-     (PLAYS SOUND ON ARRIVAL & LIMITS TO 20)
   ──────────────────────────────────────────── */
   useEffect(() => {
     const newUnread = notifications.filter(
-      (n) =>
-        !n.read &&
-        !prevNotificationsRef.current.some((p) => p.id === n.id),
+      (n) => !n.read && !prevNotificationsRef.current.some((p) => p.id === n.id),
     );
 
     if (newUnread.length > 0) {
       setHasViewedNotifications(false);
-      setIsCleared(false);
       if (audioRef.current && (hasInteracted || audioRef.current.autoplay !== false)) {
         audioRef.current.play().catch(() => {});
       }
     }
 
-    // Verificar si hay más de 20 notificaciones y eliminar las más antiguas
     if (notifications.length > 20) {
       onLimitNotifications(notifications);
     }
@@ -168,7 +175,7 @@ const Header: React.FC<HeaderProps> = ({
   ──────────────────────────────────────────── */
   useEffect(() => {
     const el = welcomeRef.current;
-    if (!el) return;
+    if (!el || !isLoaded) return;
     const text = `Te damos la bienvenida de nuevo, ${userName}`;
     el.innerHTML = '';
     let charIndex = 0;
@@ -188,7 +195,7 @@ const Header: React.FC<HeaderProps> = ({
       charIndex += word.length + 1;
     });
     return () => gsap.killTweensOf(el.querySelectorAll(`.${styles.typewriterChar}`));
-  }, [userName]);
+  }, [userName, isLoaded]);
 
   /* ────────────────────────────────────────────
      EFFECTS – SUN/MOON ICON ENTRANCE
@@ -252,54 +259,127 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   /* ────────────────────────────────────────────
-     EFFECTS – CLOCK LOGIC
+     EFFECTS – CLOCK AND LOCATION LOGIC
   ──────────────────────────────────────────── */
   useEffect(() => {
+    // Initialize time on client to avoid SSR mismatch
+    setTime(new Date());
     const timer = setInterval(() => setTime(new Date()), 1000);
     getLocation();
 
     return () => clearInterval(timer);
   }, []);
 
+  /* ────────────────────────────────────────────
+     EFFECTS – GSAP SCROLL HANDLER
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let isScrolling = false;
+    let targetScroll = container.scrollTop;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (isScrolling) return;
+
+      isScrolling = true;
+      targetScroll += e.deltaY * 0.5;
+      targetScroll = Math.max(0, Math.min(targetScroll, container.scrollHeight - container.clientHeight));
+
+      gsap.to(container, {
+        scrollTo: { y: targetScroll, autoKill: false },
+        duration: 0.3,
+        ease: 'power2.out',
+        onComplete: () => {
+          isScrolling = false;
+        },
+      });
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [isNotificationsOpen]);
+
   const getLocation = () => {
-    if (navigator.geolocation) {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
-          fetchWeather(latitude, longitude);
+          await fetchLocationFromGoogleMaps(latitude, longitude);
         },
         (error) => {
-          console.error("Error getting location:", error);
-          setLocation("Unknown");
-        }
+          console.error('Error getting geolocation:', error);
+          setLocation('No se pudo obtener la ubicación');
+          setTemperature('N/A');
+          setWeatherIcon(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     } else {
-      setLocation("Geolocation not supported");
+      setLocation('Geolocalización no soportada');
+      setTemperature('N/A');
+      setWeatherIcon(null);
+    }
+  };
+
+  const fetchLocationFromGoogleMaps = async (lat: number, lon: number) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Google Maps API error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      const data = await response.json();
+      if (data.status === 'OK' && data.results.length > 0) {
+        const result = data.results[0];
+        const city = result.address_components.find((comp: any) =>
+          comp.types.includes('locality'),
+        )?.long_name || 'Ubicación desconocida';
+        setLocation(city);
+        await fetchWeather(lat, lon);
+      } else {
+        console.warn('No results from Google Maps:', data);
+        setLocation('Ubicación desconocida');
+        setTemperature('N/A');
+        setWeatherIcon(null);
+      }
+    } catch (error) {
+      console.error('Error fetching location from Google Maps:', error);
+      setLocation('Error');
+      setTemperature('N/A');
+      setWeatherIcon(null);
     }
   };
 
   const fetchWeather = async (lat: number, lon: number) => {
     try {
       const weatherResponse = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`,
       );
       if (!weatherResponse.ok) {
         const errorText = await weatherResponse.text();
-        console.error("Weather API error:", errorText);
+        console.error('Weather API error:', errorText);
         throw new Error(`HTTP error! status: ${weatherResponse.status}, message: ${errorText}`);
       }
       const weatherData = await weatherResponse.json();
       if (weatherData.main && typeof weatherData.main.temp === 'number') {
-        setLocation(weatherData.name || "Unknown Location");
         setTemperature(`${Math.round(weatherData.main.temp)}°`);
-        // Determinar icono basado en el clima
         const weatherMain = weatherData.weather[0].main.toLowerCase();
         switch (weatherMain) {
           case 'clouds':
             setWeatherIcon('/weather/Cloudy.svg');
             break;
           case 'clear':
-            setWeatherIcon(new Date().getHours() >= 6 && new Date().getHours() < 18 ? '/weather/CoolDay.svg' : '/weather/CoolNight.svg');
+            setWeatherIcon(
+              time && time.getHours() >= 6 && time.getHours() < 18
+                ? '/weather/CoolDay.svg'
+                : '/weather/CoolNight.svg',
+            );
             break;
           case 'rain':
             setWeatherIcon('/weather/Rainy.svg');
@@ -315,30 +395,52 @@ const Header: React.FC<HeaderProps> = ({
             setWeatherIcon('/weather/Windy.svg');
             break;
           default:
-            setWeatherIcon(null); // Sin icono si no coincide
+            setWeatherIcon(null);
         }
       } else {
-        console.warn("Weather data structure invalid:", weatherData);
-        setLocation("Data unavailable");
-        setTemperature("N/A");
+        console.warn('Weather data structure invalid:', weatherData);
+        setTemperature('N/A');
         setWeatherIcon(null);
       }
     } catch (error) {
-      console.error("Error fetching weather:", error);
-      setLocation("Error");
-      setTemperature("N/A");
+      console.error('Error fetching weather:', error);
+      setTemperature('N/A');
       setWeatherIcon(null);
     }
   };
 
-  const date = time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  const formattedTime = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const date = time
+    ? time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    : '';
+  const formattedTime = time
+    ? time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : '';
 
   /* ────────────────────────────────────────────
      HELPERS
   ──────────────────────────────────────────── */
   const truncateText = (txt: string, max: number) =>
     txt.length <= max ? txt : `${txt.slice(0, max - 3)}...`;
+
+  const formatRelativeTime = (timestamp: Timestamp) => {
+    const now = time || new Date();
+    const date = timestamp.toDate();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSeconds < 60) return 'hace unos segundos';
+    if (diffMinutes < 60) return `hace ${diffMinutes} minuto${diffMinutes === 1 ? '' : 's'}`;
+    if (diffHours < 24) return `hace ${diffHours} hora${diffHours === 1 ? '' : 's'}`;
+    if (diffDays < 30) return `hace ${diffDays} día${diffDays === 1 ? '' : 's'}`;
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  };
 
   const getSubtitle = () => {
     switch (selectedContainer) {
@@ -363,12 +465,6 @@ const Header: React.FC<HeaderProps> = ({
     setHasInteracted(true);
   };
 
-  const handleClearNotifications = () => {
-    setIsCleared(true);
-    onClearNotifications(); // Elimina todas las notificaciones en Firestore
-    setIsNotificationsOpen(true);
-  };
-
   const hasUnread = notifications.some((n) => !n.read);
   const iconSrc =
     hasUnread && !hasViewedNotifications ? '/NewNotification.svg' : '/EmptyNotification.svg';
@@ -382,6 +478,7 @@ const Header: React.FC<HeaderProps> = ({
           <div
             ref={(el) => {
               notificationsRef.current = el;
+              scrollContainerRef.current = el;
             }}
             className={styles.notificationDropdown}
             style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
@@ -394,21 +491,7 @@ const Header: React.FC<HeaderProps> = ({
               }, 100);
             }}
           >
-            {/* Botón Limpiar Notificaciones */}
-            {notifications.length > 0 && !isCleared && (
-              <div className={styles.clearNotificationsContainer}>
-                <button
-                  className={styles.clearNotificationsButton}
-                  onClick={handleClearNotifications}
-                  aria-label="Limpiar todas las notificaciones"
-                >
-                  Limpiar Notificaciones
-                </button>
-              </div>
-            )}
-
-            {/* Contenido del dropdown */}
-            {isCleared || notifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <div className={styles.notificationItem}>
                 No hay notificaciones nuevas por ahora...
               </div>
@@ -419,29 +502,51 @@ const Header: React.FC<HeaderProps> = ({
                   <div
                     key={n.id}
                     className={`${styles.notificationItem} ${n.read ? styles.read : ''}`}
-                    onClick={() => {
-                      onNotificationClick(n);
-                      setIsNotificationsOpen(false);
-                    }}
                   >
-                    <Image
-                      src={sender?.imageUrl || '/default-avatar.png'}
-                      alt={sender?.firstName || 'Usuario'}
-                      width={24}
-                      height={24}
-                      className={styles.notificationAvatar}
-                    />
-                    <span>{truncateText(n.message, 50)}</span>
-                    <span className={styles.notificationTimestamp}>
-                      {n.timestamp.toDate().toLocaleString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false,
-                      })}
-                    </span>
+                    <div className={styles.notificationContent}>
+                      <div className={styles.notificationLeft}>
+                        <Image
+                          src={sender?.imageUrl || '/default-avatar.png'}
+                          alt={sender?.firstName || 'Usuario'}
+                          width={40}
+                          height={40}
+                          className={styles.notificationAvatar}
+                        />
+                      </div>
+                      <div className={styles.notificationRight}>
+                        <div className={styles.notificationTextWrap}>
+                          <p
+                            className={styles.notificationTextContent}
+                            onClick={() => {
+                              onNotificationClick(n);
+                              setIsNotificationsOpen(false);
+                            }}
+                          >
+                            {truncateText(n.message, 50)}
+                          </p>
+                          <p className={styles.notificationTime}>
+                            {formatRelativeTime(n.timestamp)}
+                          </p>
+                        </div>
+                        <div className={styles.notificationButtonWrap}>
+                          <button
+                            className={styles.notificationPrimaryCta}
+                            onClick={() => {
+                              onNotificationClick(n);
+                              setIsNotificationsOpen(false);
+                            }}
+                          >
+                            Ver Evento
+                          </button>
+                          <button
+                            className={styles.notificationSecondaryCta}
+                            onClick={() => onDeleteNotification(n.id)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
               })
@@ -455,90 +560,119 @@ const Header: React.FC<HeaderProps> = ({
      RENDER
   ──────────────────────────────────────────── */
   return (
-    <div ref={wrapperRef} data-layer="Wrapper" className={styles.wrapper}>
-      {/* LEFT: Avatar + Welcome */}
+    <div ref={wrapperRef} className={styles.wrapper}>
       <div className={styles.lefContainer}>
-        <UserButton
-          appearance={{
-            elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
-          }}
-        />
-        <div data-layer="Frame 14" className={styles.frame14}>
-          <div data-layer="Title" className={styles.title}>
+        {isLoaded ? (
+          <DynamicUserButton
+            appearance={{
+              elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
+            }}
+          />
+        ) : (
+          <div className={styles.userButtonPlaceholder} />
+        )}
+        <div className={styles.frame14}>
+          <div className={styles.title}>
             <div ref={welcomeRef} className={styles.welcome} />
           </div>
-          <div data-layer="Text" className={styles.text}>
+          <div className={styles.text}>
             <div className={styles.subtitle}>{getSubtitle()}</div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT: Clock and Buttons in vertical stack */}
-      <div data-layer="Frame 2147225819" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px'}}>
-
-        <div style={{ display: 'flex', flexDirection: 'row' , gap: '10px'}}>
-          <div className={styles.notificationContainer}>
-            <button
-              ref={notificationButtonRef}
-              className={styles.notificationButton}
-              onClick={toggleNotifications}
-              onMouseEnter={() => {
-                setIsNotificationsOpen(true);
-                setHasViewedNotifications(true);
-                setHasInteracted(true);
-              }}
-              onMouseLeave={() => {
-                setTimeout(() => {
-                  if (!notificationsRef.current?.matches(':hover')) {
-                    setIsNotificationsOpen(false);
-                  }
-                }, 100);
-              }}
-              aria-label="Abrir notificaciones"
-              aria-expanded={isNotificationsOpen}
-              aria-controls="notification-dropdown"
-            >
-              <Image src={iconSrc} alt="Notifications" width={24} height={24} />
-            </button>
-            <NotificationDropdown />
-          </div>
-          <div ref={iconRef} className={styles.sunMoonWrapper}>
-            <ThemeToggler />
-          </div>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
         <div className={styles.Clock}>
-          <div style={{ fontSize: '10px', fontFamily: 'Inconsolata, monospace' }} className="ClockDate">
+          <div
+            style={{ fontSize: '10px', fontFamily: 'Inconsolata, monospace' }}
+            className="ClockDate"
+          >
             {date}
           </div>
-          <div style={{ fontSize: '10px',fontWeight: '600', fontFamily: 'Inconsolata, monospace' }} className="ClockTime">
+          <div
+            style={{
+              fontSize: '10px',
+              fontWeight: '600',
+              fontFamily: 'Inconsolata, monospace',
+            }}
+            className="ClockTime"
+          >
             {formattedTime}
           </div>
-          <div style={{alignItems:'start', display: 'flex', fontSize: '10px', fontFamily: 'Inconsolata, monospace' }} className="ClockTemperature">
+          <div
+            style={{
+              alignItems: 'flex-start',
+              display: 'flex',
+              fontSize: '10px',
+              fontFamily: 'Inconsolata, monospace',
+            }}
+            className="ClockTemperature"
+          >
             {location} {temperature}
             {weatherIcon && (
               <Image
                 src={weatherIcon}
-                draggable= 'false'
-                alt="Weather Icon"
+                draggable="false"
+                alt="Ícono del clima"
                 width={15}
                 height={15}
                 style={{
                   marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease', 
-                  filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))', // Sombra perrona
+                  transition: 'transform 0.3s ease, filter 0.3s ease',
+                  filter:
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.2)';
-                  e.currentTarget.style.filter = 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                  e.currentTarget.style.filter =
+                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter = 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))'; // Regresa a sombra normal
+                  e.currentTarget.style.filter =
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
                 }}
               />
             )}
           </div>
-        
+        </div>
+
+        <div ref={iconRef} className={styles.sunMoonWrapper}>
+          <ThemeToggler />
+        </div>
+
+        <StatusDropdown />
+
+        <div className={styles.notificationContainer}>
+          <button
+            ref={notificationButtonRef}
+            className={styles.notificationButton}
+            onClick={toggleNotifications}
+            onMouseEnter={() => {
+              setIsNotificationsOpen(true);
+              setHasViewedNotifications(true);
+              setHasInteracted(true);
+            }}
+            onMouseLeave={() => {
+              setTimeout(() => {
+                if (!notificationsRef.current?.matches(':hover')) {
+                  setIsNotificationsOpen(false);
+                }
+              }, 100);
+            }}
+            aria-label="Abrir notificaciones"
+            aria-expanded={isNotificationsOpen}
+            aria-controls="notification-dropdown"
+          >
+            <Image
+              src={iconSrc}
+              alt="Notificaciones"
+              width={24}
+              height={24}
+              style={{ width: 'auto', height: 'auto' }}
+            />
+          </button>
+          <NotificationDropdown />
         </div>
       </div>
     </div>

@@ -19,70 +19,158 @@
     display: flex;
     align-items: center;
 }
-
-.searchInput {
+/* ==============================================================
+   🔮 CRYSTALLIZED SEARCH WRAPPER
+   ================================================================= */
+   .searchWrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  
+    @media (max-width: 819px) {
+      width: 100%; /* Ocupa todo el ancho */
+    }
+  }
+  
+  /* ==============================================================
+     🔮 CRYSTALLIZED SEARCH INPUT
+     ================================================================= */
+  .searchInput {
+    /* ——— Dimensiones y layout ——— */
     width: 100%;
     min-width: 200px;
     height: 48px;
-    padding: 10px 16px;
+    padding: 20px 16px; /* Increased padding for better touch target */
   
-    background: #F7F9FA;
+    /* ——— Textura cristalizada ——— */
+    background: rgba(241, 245, 249, 0.8); /* Semi-transparent F1F5F9 */
     border-radius: 10px;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
+    backdrop-filter: blur(8px); /* Frosted glass effect */
+    -webkit-backdrop-filter: blur(8px); /* Safari support */
   
+    /* ——— Tipografía ——— */
     font-size: 14px;
     font-family: "Inter Tight", sans-serif;
     font-weight: 500;
     color: #0F172A;
   
+    /* ——— Sombras cristalizadas ——— */
     box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.8),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.05),
-      0 4px 6px rgba(0, 0, 0, 0.02);
+      /* Outset: Neomorphic */
+      -4px -4px 8px rgba(255, 255, 255, 0.8),
+      4px 4px 8px rgba(0, 0, 0, 0.05),
+      /* Inset: Carved effect */
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.05);
   
+    /* ——— Transiciones ——— */
     transition:
-      background-color 0.3s ease,
+      background 0.3s ease,
       box-shadow 0.3s ease,
-      border-color 0.2s ease;
+      border-color 0.3s ease,
+      transform 0.3s ease;
   
+    /* ——— Placeholder ——— */
     &::placeholder {
       color: #A0A0A0;
       font-weight: 400;
     }
   
+    /* ——— Hover: Levitar ligeramente ——— */
+    &:hover {
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px) scale(1.01);
+      box-shadow:
+        -6px -6px 10px rgba(255, 255, 255, 0.85),
+        6px 6px 10px rgba(0, 0, 0, 0.08),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+        inset 2px 2px 6px rgba(0, 0, 0, 0.06);
+    }
+  
+    /* ——— Focus: Resplandor azul ——— */
     &:focus {
       outline: none;
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(255, 255, 255, 0.3);
       box-shadow:
         inset -2px -2px 4px rgba(255, 255, 255, 0.9),
         inset 2px 2px 6px rgba(0, 0, 0, 0.08),
-        0 0 0 4px rgba(59, 130, 246, 0.12);
-      background: #ffffff;
-    }
-  }
-  
-  /* 🌙 Modo oscuro neumorfista */
-  :global(body.dark) .searchInput {
-    background: #0D0D0D;
-    color: #D1D1D1;
-    border: none;
-  
-    box-shadow:
-      inset -2px -2px 4px rgba(0, 0, 0, 0.6),
-      inset 2px 2px 6px rgba(255, 255, 255, 0.06),
-      0 4px 6px rgba(255, 255, 255, 0.02);
-  
-    &::placeholder {
-      color: #A1A1AA;
-      font-weight: 400;
+        0 0 0 4px rgba(59, 177, 246, 0.18); /* Slightly more vibrant blue */
     }
   
-    &:focus {
-      outline: none;
+    /* ——— Active: Presionado ——— */
+    &:active {
+      background: rgba(241, 245, 249, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: scale(0.98);
+      box-shadow:
+        inset -4px -4px 6px rgba(255, 255, 255, 0.7),
+        inset 4px 4px 6px rgba(0, 0, 0, 0.15),
+        -2px -2px 4px rgba(255, 255, 255, 0.8),
+        2px 2px 4px rgba(0, 0, 0, 0.03);
+    }
+  
+    /* ——— 🌙 Modo oscuro ——— */
+    :global(.dark) & {
+      background: rgba(39, 39, 42, 0.8); /* Semi-transparent #27272a */
+      color: #E5E7EB;
+      border-color: rgba(255, 255, 255, 0.1);
       box-shadow:
         inset -2px -2px 4px rgba(0, 0, 0, 0.7),
-        inset 2px 2px 6px rgba(255, 255, 255, 0.08),
-        0 0 0 4px rgba(59, 130, 246, 0.12);
-      background: #1A1A1A;
+        inset 2px 2px 6px rgba(255, 255, 255, 0.03),
+        -4px -4px 8px rgba(0, 0, 0, 0.6),
+        4px 4px 6px rgba(255, 255, 255, 0.02);
+  
+      &::placeholder {
+        color: #6B7280;
+      }
+  
+      &:hover {
+        background: rgba(39, 39, 42, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px) scale(1.01);
+        box-shadow:
+          -6px -6px 10px rgba(0, 0, 0, 0.7),
+          6px 6px 10px rgba(255, 255, 255, 0.04),
+          inset -2px -2px 6px rgba(0, 0, 0, 0.8),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.05);
+      }
+  
+      &:focus {
+        background: rgba(39, 39, 42, 0.9);
+        border-color: transparent;
+        box-shadow:
+          inset -4px -4px 4px rgba(0, 0, 0, 0.7),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.08),
+          0 0 0 4px rgba(59, 191, 246, 0.4);
+      }
+  
+      &:active {
+        background: rgba(39, 39, 42, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        transform: scale(0.98);
+        box-shadow:
+          inset -4px -4px 6px rgba(0, 0, 0, 0.75),
+          inset 4px 4px 6px rgba(255, 255, 255, 0.02),
+          -2px -2px 4px rgba(0, 0, 0, 0.6),
+          2px 2px 4px rgba(255, 255, 255, 0.01);
+      }
+    }
+  
+    /* ——— Responsiveness ——— */
+    @media (max-width: 1024px) {
+      height: 44px;
+      padding: 18px 14px;
+      font-size: 13px;
+    }
+  
+    @media (max-width: 768px) {
+      height: 40px;
+      padding: 16px 12px;
+      font-size: 12px;
+      min-width: 150px;
     }
   }
 
@@ -221,7 +309,7 @@
     bottom: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(255, 255, 255, 0.519);
+    background: rgba(255, 255, 255, 0.204);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -404,7 +492,7 @@
 
 .deleteConfirm {
     padding: 20px 16px;
-    background: #E03C3C;
+    background: #060606;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -420,14 +508,14 @@
     gap: 12px;
 }
 .deleteConfirmHeader h3 {
-    color: white;
+    color: rgb(114, 114, 114);
     font-size: 14px;
     font-family: "Inter Tight", sans-serif;
     font-weight: 700;
 }
 
 .deleteConfirm p {
-    color: white;
+    color: rgb(63, 63, 63);
     font-size: 14px;
     font-family: "Inter Tight", sans-serif;
     font-weight: 400;
@@ -436,17 +524,17 @@
 .deleteConfirmInput {
     width: 100%;
     padding: 10px 14px;
-    background: #E03C3C;
+    background: #e3e7eb;
     border-radius: 6px;
-    border: 1px solid #EB5E5E;
-    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #e3e7eb;
+    color: rgb(0, 0, 0);
     font-size: 14px;
     font-family: "Inter Tight", sans-serif;
     font-weight: 400;
     height: 40px;
 }
 .deleteConfirmInput::placeholder {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(22, 22, 22, 0.6);
     opacity: 0.7;
 }
 
@@ -557,128 +645,177 @@
     border-color: #A1A1AA;
     color: #D1D1D1;
 }
-
+/* Neomorphic Popup Styling */
 .deletePopup {
     position: relative;
     justify-content: center;
-    padding: 20px 16px;
+    padding: 24px;
     text-align: center;
-    background: #ffffff;
-    border-radius: 8px;
+    background: #F1F5F9; /* Light neutral background */
+    border-radius: 16px;
     display: flex;
-    color: rgb(18, 18, 18);
+    color: #1F2937; /* Dark gray for text */
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
     max-width: 480px;
     width: 90%;
     max-height: 90vh;
-    box-shadow:
-    0px 2px 4px rgba(0, 0, 0, 0.04),
-    0px 7px 7px rgba(0, 0, 0, 0.03),
-    0px 15px 9px rgba(0, 0, 0, 0.02),
-    0px 27px 11px rgba(0, 0, 0, 0.01),
-    0px 42px 12px rgba(0, 0, 0, 0.00);
+    box-shadow: 
+        8px 8px 16px rgba(0, 0, 0, 0.05), /* Subtle outer shadow */
+        -8px -8px 16px rgba(255, 255, 255, 0.8); /* Neomorphic inner shadow */
     overflow-y: auto;
+    font-family: "Inter Tight", sans-serif;
+    transition: all 0.3s ease;
 }
+
+/* Dark Mode */
+:global(body.dark) .deletePopup {
+    background: #1F2937; /* Dark neutral background */
+    color: #E5E7EB;
+    box-shadow: 
+        8px 8px 16px rgba(0, 0, 0, 0.2),
+        -8px -8px 16px rgba(255, 255, 255, 0.05);
+}
+
+/* Cancel Button */
 :global(body.dark) .deletePopup .cancelButton {
-    border: 1px solid white;
-    color: white;
+    border: 1px solid #6B7280;
+    color: #E5E7EB;
+    background: #374151;
+    border-radius: 12px;
+    padding: 10px 20px;
+    transition: all 0.2s ease;
 }
+
 :global(body.dark) .deletePopup .cancelButton:hover {
-    border-color: #D1D1D1;
-    color: #D1D1D1;
+    border-color: #9CA3AF;
+    color: #F3F4F6;
+    background: #4B5563;
 }
+
+/* Image Handling */
 :global(body.dark) .deletePopup img {
-    filter: invert(1) grayscale(1) brightness(10);
+    filter: brightness(0.9) contrast(1.1);
 }
 
 .profileImage {
     border-radius: 9999px;
     object-fit: cover;
+    border: 2px solid #E5E7EB;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+:global(body.dark) .profileImage {
+    border-color: #4B5563;
+}
+
+/* Action Container */
 .actionContainer {
     position: relative;
     display: inline-block;
 }
 
+/* Action Button */
 .actionButton {
-    background: none;
+    background: #F1F5F9;
     border: none;
     cursor: pointer;
-    padding: 8px;
+    padding: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-}
-.actionButton img {
-    filter: none;
-}
-:global(body.dark) .actionButton img {
-    filter: invert(1) grayscale(1) brightness(1.5);
+    border-radius: 12px;
+    box-shadow: 
+        4px 4px 8px rgba(0, 0, 0, 0.05),
+        -4px -4px 8px rgba(255, 255, 255, 0.8);
+    transition: all 0.2s ease;
 }
 
+.actionButton:hover {
+    box-shadow: 
+        2px 2px 4px rgba(0, 0, 0, 0.05),
+        -2px -2px 4px rgba(255, 255, 255, 0.8);
+}
+
+:global(body.dark) .actionButton {
+    background: #374151;
+    box-shadow: 
+        4px 4px 8px rgba(0, 0, 0, 0.2),
+        -4px -4px 8px rgba(255, 255, 255, 0.05);
+}
+
+:global(body.dark) .actionButton img {
+    filter: brightness(0.9) contrast(1.1);
+}
+
+/* Dropdown */
 .dropdown {
     position: absolute;
     top: 100%;
     right: 0;
-    background: white;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    border: 1px solid #E4E4E7;
+    background: #F1F5F9;
+    border-radius: 16px;
+    border: none;
     display: flex;
     flex-direction: column;
     z-index: 1100;
     min-width: 200px;
-    padding: 8px 0;
-}
-:global(body.dark) .dropdown {
-    background: #2D2D2D;
-    border-color: #555555;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 12px 0;
+    box-shadow: 
+        8px 8px 16px rgba(0, 0, 0, 0.05),
+        -8px -8px 16px rgba(255, 255, 255, 0.8);
 }
 
+:global(body.dark) .dropdown {
+    background: #1F2937;
+    box-shadow: 
+        8px 8px 16px rgba(0, 0, 0, 0.2),
+        -8px -8px 16px rgba(255, 255, 255, 0.05);
+}
+
+/* Dropdown Item */
 .dropdownItem {
-    padding: 10px 16px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
     gap: 12px;
     cursor: pointer;
-    border-bottom: 1px solid #E4E4E7;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
+
+.dropdownItem:hover {
+    background: #E5E7EB;
+}
+
 .dropdownItem:last-child {
     border-bottom: none;
 }
-.dropdownItem:hover {
-    background: #F7F7F7;
-}
+
 .dropdownItem > span {
-    color: #09090B;
+    color: #1F2937;
     font-size: 14px;
     font-family: "Inter Tight", sans-serif;
-    font-weight: 400;
-}
-.dropdownItem img {
-    filter: none;
-}
-:global(body.dark) .dropdownItem {
-    border-color: #555555;
-}
-:global(body.dark) .dropdownItem:hover {
-    background: #3A3A3A;
-}
-:global(body.dark) .dropdownItem > span {
-    color: #D1D1D1;
-}
-:global(body.dark) .dropdownItem img {
-    filter: invert(1) grayscale(1) brightness(1.5);
+    font-weight: 500;
 }
 
-.deleteText {
-    color: #DC2626 !important;
+:global(body.dark) .dropdownItem > span {
+    color: #E5E7EB;
 }
+
+:global(body.dark) .dropdownItem:hover {
+    background: #374151;
+}
+
+:global(body.dark) .dropdownItem img {
+    filter: brightness(0.9) contrast(1.1);
+}
+
+/* Delete Text */
+.deleteText {
+    color: #EF4444 !important;
+    font-weight: 600;
+}
+
 :global(body.dark) .deleteText {
     color: #F87171 !important;
 }

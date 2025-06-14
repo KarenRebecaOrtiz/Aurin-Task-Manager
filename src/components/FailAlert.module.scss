@@ -1,0 +1,96 @@
+.alert_notifications_container {
+  width: 320px;
+  height: auto;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  z-index: 10002 !important;
+  pointer-events: auto;
+  background-color: transparent;
+}
+
+.alert_flex_container {
+  display: flex;
+}
+
+.alert_flex_shrink {
+  flex-shrink: 0;
+}
+
+.error {
+  padding: 1rem;
+  border-radius: 0.375rem;
+  background-color: rgb(254, 226, 226);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgb(239, 68, 68);
+}
+
+.error_svg {
+  color: rgb(239, 68, 68);
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.error_prompt_wrapper {
+  margin-left: 0.75rem;
+}
+
+.error_prompt_heading {
+  font-weight: bold;
+  color: rgb(153, 27, 27);
+}
+
+.error_prompt_content {
+  margin-top: 0.5rem;
+  color: rgb(185, 28, 28);
+
+  small {
+    font-size: 0.75rem;
+    color: rgb(127, 29, 29);
+  }
+}
+
+.error_button_container {
+  display: flex;
+  margin-top: 0.875rem;
+  margin-bottom: -0.375rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+.error_action_button {
+  padding: 0.375rem 0.5rem;
+  background-color: #FEF2F2;
+  color: rgb(153, 27, 27);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: bold;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FEE2E2;
+  }
+}
+
+.error_dismiss_button {
+  padding: 0.375rem 0.5rem;
+  margin-left: 0.75rem;
+  background-color: #FEF2F2;
+  color: #991B1B;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FEE2E2;
+  }
+}

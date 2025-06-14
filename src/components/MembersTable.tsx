@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
-import { createPortal } from 'react-dom';
 import { useUser } from '@clerk/nextjs';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
 
@@ -14,6 +15,7 @@ interface User {
   fullName: string;
   role: string;
   description?: string;
+  status?: string; // Nueva propiedad para el estado
 }
 
 interface Task {
@@ -34,7 +36,7 @@ interface Task {
 
 interface MembersTableProps {
   users: User[];
-  tasks: Task[]; // Nueva prop para las tareas
+  tasks: Task[];
   onInviteSidebarOpen: () => void;
   onProfileSidebarOpen: (userId: string) => void;
   onMessageSidebarOpen: (user: User) => void;
@@ -49,19 +51,49 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const [sortKey, setSortKey] = useState<string>('fullName');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [searchQuery, setSearchQuery] = useState('');
-    const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
-    const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-    const actionMenuRef = useRef<HTMLDivElement>(null);
-    const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-    const portalContainer = useRef<HTMLElement | null>(null);
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [isAdminLoaded, setIsAdminLoaded] = useState<boolean>(false);
 
-    // Inicializar portal
+    const userId = useMemo(() => user?.id || '', [user]);
+
+    // Fetch admin status
     useEffect(() => {
-      portalContainer.current = document.getElementById('portal-root');
-      if (!portalContainer.current) {
-        console.error('Portal root (#portal-root) not found in the DOM');
-      }
-    }, []);
+      const fetchAdminStatus = async () => {
+        if (!userId) {
+          console.warn('[MembersTable] No userId, skipping admin status fetch');
+          setIsAdmin(false);
+          setIsAdminLoaded(true);
+          return;
+        }
+        try {
+          console.log('[MembersTable] Fetching admin status for user:', userId);
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            const access = userDoc.data().access;
+            setIsAdmin(access === 'admin');
+            console.log('[MembersTable] Admin status fetched:', {
+              userId,
+              access,
+              isAdmin: access === 'admin',
+              userDocData: userDoc.data(),
+            });
+          } else {
+            setIsAdmin(false);
+            console.warn('[MembersTable] User document not found for ID:', userId);
+          }
+        } catch (error) {
+          console.error('[MembersTable] Error fetching admin status:', {
+            error: error instanceof Error ? error.message : JSON.stringify(error),
+            userId,
+          });
+          setIsAdmin(false);
+        } finally {
+          setIsAdminLoaded(true);
+          console.log('[MembersTable] Admin status load completed:', { userId, isAdmin });
+        }
+      };
+      fetchAdminStatus();
+    }, [userId]);
 
     // Calcular proyectos activos por usuario
     const activeProjectsCount = useMemo(() => {
@@ -94,43 +126,11 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         memoizedFilteredUsers.filter(
           (u) =>
             u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.role.toLowerCase().includes(searchQuery.toLowerCase()),
+            u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.status?.toLowerCase().includes(searchQuery.toLowerCase()),
         ),
       );
     }, [memoizedFilteredUsers, searchQuery]);
-
-    // Animaciones GSAP
-    useEffect(() => {
-      const currentActionMenuRef = actionMenuRef.current;
-      if (actionMenuOpenId && currentActionMenuRef) {
-        gsap.fromTo(
-          currentActionMenuRef,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-      return () => {
-        if (currentActionMenuRef) {
-          gsap.killTweensOf(currentActionMenuRef);
-        }
-      };
-    }, [actionMenuOpenId]);
-
-    // Manejar clics fuera del menú
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (
-          actionMenuRef.current &&
-          !actionMenuRef.current.contains(event.target as Node) &&
-          !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
-        ) {
-          setActionMenuOpenId(null);
-          console.log('Closed action menu via outside click');
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId]);
 
     // Ordenamiento
     const handleSort = useCallback(
@@ -145,86 +145,6 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       [sortKey],
     );
 
-    // Manejar clic en acciones
-    const handleActionClick = useCallback((userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      const button = e.currentTarget;
-      const rect = button.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY + 5,
-        left: rect.left + window.scrollX,
-      });
-      setActionMenuOpenId((prev) => (prev === userId ? null : userId));
-      console.log('Action menu toggled for user:', userId);
-    }, []);
-
-    // Animación de clic
-    const animateClick = useCallback((element: HTMLElement) => {
-      gsap.to(element, {
-        scale: 0.95,
-        opacity: 0.8,
-        duration: 0.15,
-        ease: 'power1.out',
-        yoyo: true,
-        repeat: 1,
-      });
-    }, []);
-
-    // Renderizar menú de acciones
-    const renderActionMenu = useCallback(
-      (u: User) => (
-        <div className={styles.actionContainer}>
-          <button
-            ref={(el) => {
-              if (el) actionButtonRefs.current.set(u.id, el);
-              else actionButtonRefs.current.delete(u.id);
-            }}
-            onClick={(e) => handleActionClick(u.id, e)}
-            className={styles.actionButton}
-            aria-label="Abrir acciones"
-          >
-            <Image src="/elipsis.svg" alt="Actions" width={16} height={16} />
-          </button>
-          {actionMenuOpenId === u.id && portalContainer.current && (
-            createPortal(
-              <div
-                ref={actionMenuRef}
-                className={styles.dropdown}
-                style={{ position: 'absolute', top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px` }}
-              >
-                <div
-                  className={styles.dropdownItem}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    onProfileSidebarOpen(u.id);
-                    setActionMenuOpenId(null);
-                  }}
-                >
-                  <Image src="/user-round.svg" alt="Profile" width={16} height={16} />
-                  <span>Ver perfil</span>
-                </div>
-                {u.id !== user?.id && (
-                  <div
-                    className={styles.dropdownItem}
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      onMessageSidebarOpen(u);
-                      setActionMenuOpenId(null);
-                    }}
-                  >
-                    <Image src="/message-square.svg" alt="Mensaje" width={16} height={16} />
-                    <span>Enviar mensaje</span>
-                  </div>
-                )}
-              </div>,
-              portalContainer.current,
-            )
-          )}
-        </div>
-      ),
-      [actionMenuOpenId, dropdownPosition, animateClick, onProfileSidebarOpen, onMessageSidebarOpen, user?.id],
-    );
-
     // Definir columnas
     const baseColumns = useMemo(
       () => [
@@ -237,25 +157,25 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         {
           key: 'fullName',
           label: 'Nombre',
-          width: '40%',
+          width: '30%',
           mobileVisible: true,
         },
         {
           key: 'role',
           label: 'Rol',
-          width: '30%',
+          width: '25%',
           mobileVisible: false,
         },
         {
           key: 'activeProjects',
           label: 'Proyectos activos',
-          width: '10%',
+          width: '20%',
           mobileVisible: false,
         },
         {
-          key: 'action',
-          label: 'Acciones',
-          width: '10%',
+          key: 'status',
+          label: 'Estado',
+          width: '15%',
           mobileVisible: true,
         },
       ],
@@ -290,15 +210,17 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               ),
             };
           }
-          if (col.key === 'action') {
+          if (col.key === 'status') {
             return {
               ...col,
-              render: renderActionMenu,
+              render: (user: User) => (
+                <span className={styles.status}>{user.status || 'Disponible'}</span>
+              ),
             };
           }
           return col;
         }),
-      [baseColumns, renderActionMenu, activeProjectsCount],
+      [baseColumns, activeProjectsCount],
     );
 
     return (
@@ -314,12 +236,14 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               aria-label="Buscar miembros"
             />
           </div>
-          <div className={styles.inviteButtonWrapper}>
-            <button onClick={onInviteSidebarOpen} className={styles.inviteButton}>
-              <Image src="/wallet-cards.svg" alt="Invite" width={17} height={17} />
-              Invitar Miembro
-            </button>
-          </div>
+          {isAdmin && isAdminLoaded && (
+            <div className={styles.inviteButtonWrapper}>
+              <button onClick={onInviteSidebarOpen} className={styles.inviteButton}>
+                <Image src="/wallet-cards.svg" alt="Invite" width={17} height={17} />
+                Invitar Miembro
+              </button>
+            </div>
+          )}
         </div>
         <Table
           data={filteredUsers}
@@ -329,7 +253,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           sortDirection={sortDirection}
           onSort={handleSort}
           onRowClick={(u: User, columnKey: string) =>
-            ['imageUrl', 'fullName', 'role', 'activeProjects'].includes(columnKey) &&
+            ['imageUrl', 'fullName', 'role', 'activeProjects', 'status'].includes(columnKey) &&
             u.id !== user?.id &&
             onMessageSidebarOpen(u)
           }

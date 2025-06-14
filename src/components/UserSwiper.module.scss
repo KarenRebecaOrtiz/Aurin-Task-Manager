@@ -1,0 +1,331 @@
+.swiperContainer {
+  width: 100%;
+  padding: 1rem 0;
+  overflow: hidden;
+}
+
+.swiper {
+  width: 100%;
+}
+
+.swiperSlide {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  width: auto !important;
+  height: auto;
+}
+/* ==============================================================
+   🔮 CRYSTALLIZED CARD
+   ================================================================= */
+   .card {
+    /* ——— Dimensiones y layout ——— */
+    width: 120px;
+    height: auto;
+    padding: 1rem 0.5rem;
+    margin: 0 auto;
+    border-radius: 16px;
+  
+    /* ——— Textura cristalizada ——— */
+    background: rgba(241, 245, 249, 0.7); /* Semi-transparent F1F5F9 */
+    backdrop-filter: blur(8px); /* Frosted glass effect */
+    -webkit-backdrop-filter: blur(8px); /* Safari support */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
+  
+    /* ——— Sombras cristalizadas ——— */
+    box-shadow:
+      /* Outset: Neomorphic */
+      -4px -4px 8px rgba(255, 255, 255, 0.8),
+      4px 4px 8px rgba(0, 0, 0, 0.05),
+      /* Inset: Carved effect */
+      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+      inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
+  
+    /* ——— Transiciones ——— */
+    transition:
+      box-shadow 0.3s ease,
+      transform 0.2s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
+  
+    /* ——— Hover: Levitar con brillo ——— */
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow:
+        -6px -6px 12px rgba(255, 255, 255, 0.9),
+        6px 6px 12px rgba(0, 0, 0, 0.08),
+        inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+        inset 6px 6px 12px rgba(209, 217, 230, 0.4);
+    }
+  
+    /* ——— Active: Presionado con efecto hundido ——— */
+    &:active {
+      transform: scale(0.98);
+      background: rgba(241, 245, 249, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow:
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+        -2px -2px 6px rgba(255, 255, 255, 0.85),
+        2px 2px 6px rgba(0, 0, 0, 0.04);
+    }
+  
+    /* ——— 🌙 Modo oscuro ——— */
+    :global(.dark) & {
+      background: rgba(39, 39, 42, 0.7); /* Semi-transparent #27272a */
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow:
+        /* Outset: Dark neomorphic */
+        -4px -4px 8px rgba(255, 255, 255, 0.05),
+        4px 4px 8px rgba(0, 0, 0, 0.5),
+        /* Inset: Carved effect */
+        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+  
+      &:hover {
+        background: rgba(39, 39, 42, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px) scale(1.02);
+        box-shadow:
+          -6px -6px 12px rgba(0, 0, 0, 0.6),
+          6px 6px 12px rgba(255, 255, 255, 0.03),
+          inset -6px -6px 12px rgba(0, 0, 0, 0.45),
+          inset 6px 6px 12px rgba(255, 255, 255, 0.04);
+      }
+  
+      &:active {
+        background: rgba(39, 39, 42, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        transform: scale(0.98);
+        box-shadow:
+          inset -2px -2px 6px rgba(0, 0, 0, 0.35),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.02),
+          -2px -2px 6px rgba(255, 255, 255, 0.04),
+          2px 2px 6px rgba(0, 0, 0, 0.45);
+      }
+    }
+  
+    /* ——— Responsividad ——— */
+    @media (min-width: 480px) {
+      width: 130px;
+      padding: 1.25rem 0.75rem;
+    }
+  
+    @media (min-width: 768px) {
+      width: 140px;
+    }
+  
+    @media (max-width: 768px) {
+      width: 110px;
+      padding: 0.75rem 0.5rem;
+      border-radius: 12px;
+    }
+  }
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.cardAvatar {
+  --size: 10px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  position: relative;
+  transform: scale(0.7);
+  margin-bottom: 0.5rem;
+  padding: 3px; /* Space for border */
+  background: linear-gradient(45deg, #f3f3f3, #ffffff); /* Fallback background */
+
+  @media (min-width: 480px) {
+    --size: 64px;
+  }
+
+  @media (min-width: 768px) {
+    --size: 68px;
+  }
+
+  &.status-Disponible {
+    background: linear-gradient(45deg, #178d00, #2ecc71);
+  }
+
+  &.status-Ocupado {
+    background: linear-gradient(45deg, #d32f2f, #ff6b6b);
+  }
+
+  &.status-Por-terminar {
+    background: linear-gradient(45deg, #f57c00, #ffca28);
+  }
+
+  &.status-Fuera {
+    background: linear-gradient(45deg, #616161, #9e9e9e);
+  }
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #f1f5f9; /* Inner border to match card background */
+}
+
+.cardTitle {
+  color: #333;
+  font-weight: 600;
+  line-height: 1.3rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+
+  @media (min-width: 480px) {
+    font-size: 1em;
+    line-height: 1.4rem;
+  }
+
+  @media (min-width: 768px) {
+    font-size: 1.1em;
+  }
+}
+
+.cardSubtitle {
+  color: #859ba8;
+  font-size: 0.6em;
+  text-align: center;
+
+  @media (min-width: 480px) {
+    font-size: 0.65em;
+  }
+
+  @media (min-width: 768px) {
+    font-size: 0.7em;
+  }
+}
+
+.cardSocial {
+  transform: translateY(150%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  list-style: none;
+  gap: 0.3rem;
+}
+
+.cardSocial__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.cardSocial__item svg {
+  display: block;
+  height: 12px;
+  width: 12px;
+  fill: #515f65;
+  cursor: pointer;
+  transition: fill 0.2s ease, transform 0.2s ease;
+
+  @media (min-width: 480px) {
+    height: 14px;
+    width: 14px;
+  }
+}
+
+.messageButton,
+.profileButton {
+  background-color: #178d00;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.6em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  width: 100%;
+  text-align: center;
+
+  &:hover {
+    background-color: #146b00;
+    transform: scale(1.05);
+  }
+
+  @media (min-width: 480px) {
+    font-size: 0.65em;
+    padding: 0.35rem 0.7rem;
+  }
+
+  @media (min-width: 768px) {
+    font-size: 0.7em;
+  }
+}
+
+.profileButton {
+  background-color: #616161;
+  &:hover {
+    background-color: #4a4a4a;
+  }
+}
+
+.card:hover {
+  box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.8), inset 2px 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.card:hover .cardInfo {
+  transform: translateY(-5%);
+}
+
+.card:hover .cardSocial {
+  transform: translateY(100%);
+  opacity: 1;
+}
+
+.cardSocial__item svg:hover {
+  fill: #232323;
+  transform: scale(1.1);
+}
+
+.cardAvatar:hover {
+  transform: scale(0.9);
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2em;
+  color: #333;
+}
+
+.swiperPagination {
+  :global {
+    .swiper-pagination-bullets {
+      bottom: 0 !important;
+    }
+    .swiper-pagination-bullet {
+      background: #859ba8;
+      opacity: 0.5;
+      width: 6px;
+      height: 6px;
+    }
+    .swiper-pagination-bullet-active {
+      background: #178d00;
+      opacity: 1;
+    }
+  }
+}

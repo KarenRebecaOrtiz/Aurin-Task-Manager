@@ -1,7 +1,8 @@
 'use client';
+
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
@@ -36,8 +37,51 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [searchQuery, setSearchQuery] = useState('');
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [isAdminLoaded, setIsAdminLoaded] = useState<boolean>(false);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+    const userId = useMemo(() => user?.id || '', [user]);
+
+    // Fetch admin status
+    useEffect(() => {
+      const fetchAdminStatus = async () => {
+        if (!userId) {
+          console.warn('[ClientsTable] No userId, skipping admin status fetch');
+          setIsAdmin(false);
+          setIsAdminLoaded(true);
+          return;
+        }
+        try {
+          console.log('[ClientsTable] Fetching admin status for user:', userId);
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            const access = userDoc.data().access;
+            setIsAdmin(access === 'admin');
+            console.log('[ClientsTable] Admin status fetched:', {
+              userId,
+              access,
+              isAdmin: access === 'admin',
+              userDocData: userDoc.data(),
+            });
+          } else {
+            setIsAdmin(false);
+            console.warn('[ClientsTable] User document not found for ID:', userId);
+          }
+        } catch (error) {
+          console.error('[ClientsTable] Error fetching admin status:', {
+            error: error instanceof Error ? error.message : JSON.stringify(error),
+            userId,
+          });
+          setIsAdmin(false);
+        } finally {
+          setIsAdminLoaded(true);
+          console.log('[ClientsTable] Admin status load completed:', { userId, isAdmin });
+        }
+      };
+      fetchAdminStatus();
+    }, [userId]);
 
     const fetchClients = useCallback(async () => {
       try {
@@ -53,12 +97,12 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
             createdAt: doc.data().createdAt || new Date().toISOString(),
           }))
           .filter((client) => client.name && client.createdBy);
-        console.log('Fetched clients:', clientsData.map(c => ({ id: c.id, createdBy: c.createdBy, userId: user?.id })));
+        console.log('Fetched clients:', clientsData.map((c) => ({ id: c.id, name: c.name })));
         setClients(clientsData);
       } catch (error) {
         console.error('Error fetching clients:', error);
       }
-    }, [setClients, user?.id]);
+    }, [setClients]);
 
     useEffect(() => {
       fetchClients();
@@ -122,6 +166,17 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       setActionMenuOpenId((prev) => (prev === clientId ? null : clientId));
     }, []);
 
+    const animateClick = useCallback((element: HTMLElement) => {
+      gsap.to(element, {
+        scale: 0.95,
+        opacity: 0.8,
+        duration: 0.15,
+        ease: 'power1.out',
+        yoyo: true,
+        repeat: 1,
+      });
+    }, []);
+
     const baseColumns = useMemo(
       () => [
         {
@@ -177,11 +232,11 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
             return {
               ...col,
               render: (client: Client) => {
+                if (!isAdmin || !isAdminLoaded) return null; // Ocultar acciones para no administradores
                 console.log('Rendering ActionMenu for client:', {
                   clientId: client.id,
-                  createdBy: client.createdBy,
-                  userId: user?.id,
-                  isCreator: client.createdBy === user?.id,
+                  name: client.name,
+                  isAdmin,
                 });
                 return (
                   <ActionMenu
@@ -200,7 +255,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                       createdAt: client.createdAt,
                       CreatedBy: client.createdBy,
                     }}
-                    userId={user?.id}
+                    userId={userId}
                     isOpen={actionMenuOpenId === client.id}
                     onOpen={() => handleActionClick(client.id)}
                     onEdit={() => {
@@ -211,12 +266,13 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                       onDeleteOpen(client.id);
                       setActionMenuOpenId(null);
                     }}
-                    animateClick={() => {}}
+                    animateClick={animateClick}
                     actionMenuRef={actionMenuRef}
                     actionButtonRef={(el) => {
                       if (el) actionButtonRefs.current.set(client.id, el);
                       else actionButtonRefs.current.delete(client.id);
                     }}
+                    isAdmin={isAdmin} // Añadir prop isAdmin
                   />
                 );
               },
@@ -224,7 +280,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           }
           return col;
         }),
-      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, user?.id],
+      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, userId, isAdmin, isAdminLoaded, animateClick],
     );
 
     return (
@@ -242,23 +298,25 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                   aria-label="Buscar cuentas"
                 />
               </div>
-              <div className={styles.createButtonWrapper}>
-                <button
-                  onClick={onCreateOpen}
-                  className={styles.createButton}
-                  aria-label="Crear nueva cuenta"
-                  data-testid="create-client-button"
-                >
-                  <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
-                  Nueva Cuenta
-                </button>
-              </div>
+              {isAdmin && isAdminLoaded && (
+                <div className={styles.createButtonWrapper}>
+                  <button
+                    onClick={onCreateOpen}
+                    className={styles.createButton}
+                    aria-label="Crear nueva cuenta"
+                    data-testid="create-client-button"
+                  >
+                    <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
+                    Nueva Cuenta
+                  </button>
+                </div>
+              )}
             </div>
             <div className={styles.emptyContent}>
               <Image src="/emptyStateImage.png" alt="No hay clientes" width={289} height={289} />
               <div className={styles.emptyText}>
                 <h2>¡Todo en orden por ahora!</h2>
-                <p>No tienes clientes activos. ¿Por qué no comienzas creando uno nuevo?</p>
+                <p>No tienes clientes activos. {isAdmin ? '¿Por qué no comienzas creando uno nuevo?' : ''}</p>
               </div>
             </div>
           </div>
@@ -274,17 +332,19 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                   className={styles.searchInput}
                 />
               </div>
-              <div className={styles.createButtonWrapper}>
-                <button
-                  onClick={onCreateOpen}
-                  className={styles.createButton}
-                  aria-label="Crear nueva cuenta"
-                  data-testid="create-client-button"
-                >
-                  <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
-                  Nueva Cuenta
-                </button>
-              </div>
+              {isAdmin && isAdminLoaded && (
+                <div className={styles.createButtonWrapper}>
+                  <button
+                    onClick={onCreateOpen}
+                    className={styles.createButton}
+                    aria-label="Crear nueva cuenta"
+                    data-testid="create-client-button"
+                  >
+                    <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
+                    Nueva Cuenta
+                  </button>
+                </div>
+              )}
             </div>
             <Table
               data={filteredClients}
