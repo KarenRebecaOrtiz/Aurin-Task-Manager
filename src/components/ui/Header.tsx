@@ -21,6 +21,47 @@ const DynamicUserButton = dynamic(() => import('@clerk/nextjs').then(mod => mod.
   loading: () => <div className={styles.userButtonPlaceholder} />,
 });
 
+// Coordenadas de la oficina y radio
+const OFFICE_LOCATION = {
+  lat: 18.939038706258508,
+  lng: -99.2468563357126,
+};
+const OFFICE_RADIUS = 500; // Radio en metros
+const OFFICE_HOURS = {
+  start: 9, // 9:00 AM
+  end: 18, // 6:00 PM
+};
+
+// Función para calcular la distancia (Haversine)
+const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371e3; // Radio de la Tierra en metros
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distancia en metros
+};
+
+// Función para verificar si está dentro del horario de oficina (lunes a viernes)
+const isOfficeHours = (date: Date): boolean => {
+  const cdmxTime = new Date(
+    date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }),
+  );
+  const hours = cdmxTime.getHours();
+  const day = cdmxTime.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+  // Solo lunes a viernes (1 a 5)
+  if (day === 0 || day === 6) {
+    return false;
+  }
+  return hours >= OFFICE_HOURS.start && hours < OFFICE_HOURS.end;
+};
+
 interface Notification {
   id: string;
   userId: string;
@@ -107,6 +148,7 @@ const Header: React.FC<HeaderProps> = ({
   const [location, setLocation] = useState('Cargando...');
   const [temperature, setTemperature] = useState('Cargando...');
   const [weatherIcon, setWeatherIcon] = useState<string | null>(null);
+  const [officeStatus, setOfficeStatus] = useState<string>('Cargando...');
 
   /* ────────────────────────────────────────────
      EFFECTS – AUDIO INIT
@@ -264,7 +306,14 @@ const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     // Initialize time on client to avoid SSR mismatch
     setTime(new Date());
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const timer = setInterval(() => {
+      const now = new Date();
+      setTime(now);
+      // Actualizar officeStatus según el horario
+      if (!isOfficeHours(now)) {
+        setOfficeStatus('Fuera de horario');
+      }
+    }, 1000);
     getLocation();
 
     return () => clearInterval(timer);
@@ -307,6 +356,18 @@ const Header: React.FC<HeaderProps> = ({
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+          // Solo calcular distancia si está dentro del horario
+          if (isOfficeHours(new Date())) {
+            const distance = calculateDistance(
+              latitude,
+              longitude,
+              OFFICE_LOCATION.lat,
+              OFFICE_LOCATION.lng,
+            );
+            setOfficeStatus(distance <= OFFICE_RADIUS ? 'En la oficina' : 'Fuera de la oficina');
+          } else {
+            setOfficeStatus('Fuera de horario');
+          }
           await fetchLocationFromGoogleMaps(latitude, longitude);
         },
         (error) => {
@@ -314,6 +375,7 @@ const Header: React.FC<HeaderProps> = ({
           setLocation('No se pudo obtener la ubicación');
           setTemperature('N/A');
           setWeatherIcon(null);
+          setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación no disponible' : 'Fuera de horario');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
@@ -321,6 +383,7 @@ const Header: React.FC<HeaderProps> = ({
       setLocation('Geolocalización no soportada');
       setTemperature('N/A');
       setWeatherIcon(null);
+      setOfficeStatus(isOfficeHours(new Date()) ? 'Geolocalización no soportada' : 'Fuera de horario');
     }
   };
 
@@ -562,15 +625,17 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
       <div className={styles.lefContainer}>
-        {isLoaded ? (
-          <DynamicUserButton
-            appearance={{
-              elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
-            }}
-          />
-        ) : (
-          <div className={styles.userButtonPlaceholder} />
-        )}
+        <div className={styles.AvatarMobile}>
+          {isLoaded ? (
+            <DynamicUserButton
+              appearance={{
+                elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
+              }}
+            />
+          ) : (
+            <div className={styles.userButtonPlaceholder} />
+          )}
+        </div>
         <div className={styles.frame14}>
           <div className={styles.title}>
             <div ref={welcomeRef} className={styles.welcome} />
@@ -635,6 +700,21 @@ const Header: React.FC<HeaderProps> = ({
               />
             )}
           </div>
+          <div
+            style={{
+              fontSize: '10px',
+              fontFamily: 'Inconsolata, monospace',
+              color:
+                officeStatus === 'En la oficina'
+                  ? '#28a745'
+                  : officeStatus === 'Fuera de la oficina'
+                  ? '#dc3545'
+                  : '#ff6f00', // Naranja para "Fuera de horario"
+            }}
+            className="ClockOfficeStatus"
+          >
+            {officeStatus}
+          </div>
         </div>
 
         <div ref={iconRef} className={styles.sunMoonWrapper}>
@@ -673,6 +753,18 @@ const Header: React.FC<HeaderProps> = ({
             />
           </button>
           <NotificationDropdown />
+        </div>
+
+        <div className={styles.AvatarDesktop}>
+          {isLoaded ? (
+            <DynamicUserButton
+              appearance={{
+                elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
+              }}
+            />
+          ) : (
+            <div className={styles.userButtonPlaceholder} />
+          )}
         </div>
       </div>
     </div>

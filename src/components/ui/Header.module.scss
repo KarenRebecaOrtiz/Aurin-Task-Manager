@@ -635,6 +635,13 @@
   }
 }
 
+.ClockOfficeStatus {
+  margin-top: 2px;
+  font-size: 10px;
+  font-family: 'Inconsolata', monospace;
+  line-height: 1.2;
+}
+
 .weatherIcon {
   width: 20px;
   height: 20px;
@@ -755,5 +762,39 @@
   :global(.dark) & {
     background: rgba(39, 39, 42, 0.7);
     box-shadow: -4px -4px 8px rgba(0, 0, 0, 0.6), 4px 4px 8px rgba(255, 255, 255, 0.03);
+  }
+}
+
+.AvatarDesktop, .AvatarMobile {
+  visibility: hidden;
+  opacity: 0;
+  display: none;
+}
+
+/* Mostrar AvatarDesktop en pantallas de 768px o más */
+@media screen and (min-width: 768px) {
+  .AvatarDesktop {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+  }
+  .AvatarMobile {
+    display: none;
+    visibility: hidden;
+    opacity: 0;
+  }
+}
+
+/* Mostrar AvatarMobile en pantallas menores a 768px */
+@media screen and (max-width: 767px) {
+  .AvatarDesktop {
+    display: none;
+    visibility: hidden;
+    opacity: 0;
+  }
+  .AvatarMobile {
+    display: block;
+    visibility: visible;
+    opacity: 1;
   }
 }

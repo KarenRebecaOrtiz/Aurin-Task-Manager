@@ -6,10 +6,10 @@
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
-    background: rgba(215, 215, 215, 0.207);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px); /* Vendor prefix for compatibility */
+    height: 100%;
+    background: rgba(215, 215, 215, 0.047);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px); /* Vendor prefix for compatibility */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -21,6 +21,25 @@
     }
   }
 
+  .overlay_profile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100%;
+    background: rgba(215, 215, 215, 0.047);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px); /* Vendor prefix for compatibility */
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    z-index: 1000;
+    transition: background 0.3s ease;
+  
+    :global(.dark) & {
+      background: rgba(0, 0, 0, 0.7);
+    }
+  }
   .conectaConTuEquipo,
   .registraTuTiempo,
   .actualizaYComenta,
@@ -142,7 +161,82 @@
       max-height: 70vh;
     }
   }
+  .frame2147225915_profile {
+    width: 100%;
+    max-width: 1000px;
+    padding: 24px; /* Ajustado para coincidir con el ejemplo (24px) */
+    background: #F1F5F9; /* Fondo claro del ejemplo */
+    border-radius: 24px; /* Bordes más redondeados, como en el ejemplo */
+    border: none; /* Eliminado el borde para alinearse con el estilo limpio */
+    backdrop-filter: blur(6px); /* Mantenido para el efecto de vidrio */
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px; /* Ajustado para coincidir con el gap del ejemplo */
+    z-index: 10000;
+    height: auto;
+    max-height: 100vh;
+    overflow-y: auto;
+    box-shadow: 
+      -4px -4px 8px rgba(255, 255, 255, 0.8), /* Sombra clara neumórfica */
+      4px 4px 8px rgba(0, 0, 0, 0.1); /* Sombra oscura para profundidad */
+    transition: all 0.3s ease; /* Transición suave para todos los cambios */
+    position: relative;
   
+    &:hover {
+      box-shadow: 
+        -2px -2px 4px rgba(255, 255, 255, 0.9),
+        2px 2px 4px rgba(0, 0, 0, 0.15); /* Sombra más sutil al hover */
+      transform: translateY(-2px); /* Efecto de elevación */
+    }
+  
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+  
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  
+    &::-webkit-scrollbar-thumb {
+      background: rgba(209, 213, 219, 0.7);
+      border-radius: 12px;
+      box-shadow: 
+        -2px -2px 4px rgba(255, 255, 255, 0.5),
+        2px 2px 4px rgba(0, 0, 0, 0.1); /* Sombra neumórfica en la barra */
+    }
+  
+    :global(.dark) & {
+      background: rgba(30, 30, 30, 0.9); /* Fondo oscuro más suave */
+      box-shadow: 
+        -4px -4px 8px rgba(60, 60, 60, 0.8), /* Sombra para modo oscuro */
+        4px 4px 8px rgba(0, 0, 0, 0.4); /* Mayor contraste */
+      border: none; /* Sin borde en modo oscuro */
+  
+      &:hover {
+        box-shadow: 
+          -2px -2px 4px rgba(60, 60, 60, 0.9),
+          2px 2px 4px rgba(0, 0, 0, 0.5);
+        transform: translateY(-2px); /* Mismo efecto de elevación */
+      }
+  
+      &::-webkit-scrollbar-thumb {
+        background: rgba(75, 85, 99, 0.7);
+        box-shadow: 
+          -2px -2px 4px rgba(60, 60, 60, 0.8),
+          2px 2px 4px rgba(0, 0, 0, 0.4); /* Sombra neumórfica en modo oscuro */
+      }
+    }
+  
+    @media (max-width: 768px) {
+      width: 100%;
+      padding: 16px; /* Ajustado para móviles, más compacto */
+      border-radius: 16px; /* Ligeramente menos redondeado en móviles */
+      max-height: 70vh;
+    }
+  }
   /* ==============================================================
      🔮 FRAME CONTAINERS
      ================================================================= */
@@ -279,6 +373,34 @@
     width: 100%;
     overflow-y: auto;
   }
+
+    
+  .inputColumn_profile {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    
+    flex-direction: column;
+    min-width: 200px;
+  }
+
+  .input_name_profile{
+    font-size: 48px;
+    font-weight: 600;
+    display: flex;
+  
+    justify-content: center;
+    text-align: center;
+  }
+
+  .input_role_profile{
+    font-size:22px;
+    font-weight: 400;
+    color: rgba(0, 0, 0, 0.675);
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
   
   .inputColumns {
     display: flex;
@@ -292,6 +414,19 @@
       gap: 16px;
     }
   }
+  .inputColumns_profile {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 24px;
+    width: 100%;
+  
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 16px;
+    }
+  }
+  
   
   .inputColumn {
     flex: 1;
@@ -300,6 +435,8 @@
     gap: 16px;
     min-width: 200px;
   }
+
+ 
   
   .aboutToolsContainer {
     display: flex;
@@ -371,6 +508,42 @@
     }
   }
   
+  .cardProfile {
+    width: 100%;
+    padding: 50px;
+    border-radius: 14.4px;
+  
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+    position: relative;
+    z-index: 3;
+  
+    &:hover {
+    }
+  
+    :global(.dark) & {
+      background: rgba(58, 58, 58, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow:
+        -7.2px -7.2px 14.4px rgba(0, 0, 0, 0.5),
+        7.2px 7.2px 14.4px rgba(255, 255, 255, 0.03),
+        inset -2.4px -2.4px 7.2px rgba(0, 0, 0, 0.4),
+        inset 2.4px 2.4px 7.2px rgba(255, 255, 255, 0.02);
+  
+      &:hover {
+        background: rgba(58, 58, 58, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+    }
+  
+    @media (max-width: 768px) {
+      padding: 16px;
+    }
+  }
+  
   /* ==============================================================
      🔮 AVATAR
      ================================================================= */
@@ -388,7 +561,7 @@
     align-items: center;
   
     &:hover {
-      transform: scale(1.05);
+      transform: scale(1);
     }
   
     :global(.dark) & {
@@ -402,6 +575,35 @@
     }
   }
   
+  .avatarProfile {
+    width: 186px;
+    height: 186px;
+    border-radius: 1000px;
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    overflow: hidden;
+    border: 2.4px solid rgba(255, 255, 255, 0.2);
+    box-shadow: -4.8px -4.8px 9.6px rgba(255, 255, 255, 0.8), 4.8px 4.8px 9.6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  
+    &:hover {
+      transform: scale(1);
+    }
+  
+    :global(.dark) & {
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: -4.8px -4.8px 9.6px rgba(0, 0, 0, 0.6), 4.8px 4.8px 9.6px rgba(255, 255, 255, 0.03);
+    }
+  
+    @media (max-width: 768px) {
+      width: 96px;
+      height: 96px;
+    }
+  }
   .avatarPlaceholder {
     width: 100%;
     height: 100%;
@@ -430,6 +632,48 @@
     gap: 8px;
     width: 100%;
   }
+
+  .inputWrapperSmall {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    padding: 24px;
+    background: #F1F5F9;
+    box-shadow: -8px -8px 16px white, 8px 8px 16px rgba(0, 0, 0, 0.1);
+    border-radius: 24px;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+  }
+  
+  /* Ensure SVGs and text align properly within inputWrapper */
+  .inputWrapperSmall svg {
+    flex-shrink: 0;
+  }
+  
+  /* Style inner flex container for SVG and text */
+  .inputWrapperSmall > div {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  /* Enhance label and input text for professional look */
+  .inputWrapperSmall .label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .inputWrapperSmall .input {
+    font-size: 16px;
+    color: #1A1A1A;
+    margin: 0;
+    text-align: center;
+  }
   
   .label {
     color: #09090b;
@@ -442,12 +686,22 @@
       color: #e5e7eb;
     }
   }
+
+  .label_profile {
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+  }
   
+  .textarea_profile{
+    text-align: center;
+    background-color: transparent;
+  }
+
   .input,
   .textarea,
   .dropdown {
     width: 100%;
-    padding: 12px;
     background: rgba(241, 245, 249, 0.7);
     border-radius: 4.8px;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -597,35 +851,94 @@
   }
   
   .tag {
-    display: flex;
-    align-items: center;
-    background: rgba(9, 9, 11, 0.7);
-    color: #fafafa;
-    padding: 4.8px 9.6px;
-    border-radius: 7.2px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    font-size: 14px;
-    font-family: "Inter Tight", sans-serif;
+    --clr-font-main: hsla(0, 0%, 20%, 1);
+    --radii: 16px; /* Bordes redondeados, como en notificationButton */
+    cursor: pointer;
+    padding: 0.9em 1.2em;
+    font-size: var(--size, 1rem);
     font-weight: 500;
-    gap: 6px;
-    box-shadow: -2.4px -2.4px 4.8px rgba(255, 255, 255, 0.8), 2.4px 2.4px 4.8px rgba(0, 0, 0, 0.05);
-    transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    background: rgba(241, 245, 249, 0.7); /* Fondo cristalizado claro, como #F1F5F9 */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Borde sutil de vidrio */
+    border-radius: var(--radii);
+    color: var(--clr-font-main);
+    backdrop-filter: blur(8px); /* Efecto de vidrio esmerilado */
+    -webkit-backdrop-filter: blur(8px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 
+      /* Sombras externas: Resplandor neumórfico */
+      -6px -6px 12px rgba(255, 255, 255, 0.9),
+      6px 6px 12px rgba(0, 0, 0, 0.08),
+      /* Sombras internas: Efecto tallado */
+      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+      inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
+    transition: 
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
   
     &:hover {
-      transform: translateY(-1px);
-      background: rgba(9, 9, 11, 0.85);
+      transform: translateY(-2px) scale(1.02); /* Levitar con ligero zoom */
+      background: rgba(241, 245, 249, 0.85); /* Más opaco al hover */
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 
+        -4px -4px 10px rgba(255, 255, 255, 0.95),
+        4px 4px 10px rgba(0, 0, 0, 0.12),
+        inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+        inset 6px 6px 12px rgba(209, 217, 230, 0.4);
+    }
+  
+    &:is(:focus, :focus-visible, :active) {
+      transform: translateY(0); /* Efecto presionado */
+      background: rgba(241, 245, 249, 0.6); /* Más transparente */
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+        -2px -2px 6px rgba(255, 255, 255, 0.85),
+        2px 2px 6px rgba(0, 0, 0, 0.06);
+      outline: none;
     }
   
     :global(.dark) & {
-      background: rgba(26, 26, 26, 0.7);
+      background: rgba(30, 30, 30, 0.7); /* Fondo cristalizado oscuro */
       border-color: rgba(255, 255, 255, 0.1);
-      box-shadow: -2.4px -2.4px 4.8px rgba(0, 0, 0, 0.6), 2.4px 2.4px 4.8px rgba(255, 255, 255, 0.03);
+      box-shadow: 
+        /* Sombras externas: Neumórfico oscuro */
+        6px 6px 12px rgba(0, 0, 0, 0.5),
+        -6px -6px 12px rgba(255, 255, 255, 0.05),
+        /* Sombras internas: Efecto tallado */
+        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
   
       &:hover {
-        background: rgba(26, 26, 26, 0.85);
+        transform: translateY(-2px) scale(1.02);
+        background: rgba(30, 30, 30, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 
+          4px 4px 10px rgba(0, 0, 0, 0.6),
+          -4px -4px 10px rgba(255, 255, 255, 0.03),
+          inset -6px -6px 12px rgba(0, 0, 0, 0.45),
+          inset 6px 6px 12px rgba(255, 255, 255, 0.04);
       }
+  
+      &:is(:focus, :focus-visible, :active) {
+        background: rgba(30, 30, 30, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        box-shadow: 
+          inset 2px 2px 6px rgba(0, 0, 0, 0.35),
+          inset -2px -2px 6px rgba(255, 255, 255, 0.02),
+          2px 2px 6px rgba(0, 0, 0, 0.45),
+          -2px -2px 6px rgba(255, 255, 255, 0.04);
+        outline: none;
+      }
+    }
+  
+    @media (prefers-reduced-motion: reduce) {
+      transition: linear;
     }
   }
   
@@ -978,6 +1291,106 @@
     }
   }
   
+
+  .frame1000005615_profile {
+    align-self: stretch;
+    height: 57.72px;
+    min-width: 100%;
+    color: black;
+    margin-top: 48px;
+    background: rgba(241, 245, 249, 0.7); /* Fondo cristalizado claro, como #F1F5F9 */
+    border-radius: 16px; /* Bordes redondeados, como en notificationButton */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Borde sutil de vidrio */
+    backdrop-filter: blur(8px); /* Efecto de vidrio esmerilado */
+    -webkit-backdrop-filter: blur(8px);
+    justify-content: center;
+    align-items: center;
+    gap: 18.72px;
+    display: inline-flex;
+    box-shadow: 
+      /* Sombras externas: Resplandor neumórfico */
+      -6px -6px 12px rgba(255, 255, 255, 0.9),
+      6px 6px 12px rgba(0, 0, 0, 0.08),
+      /* Sombras internas: Efecto tallado */
+      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+      inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
+    transition: 
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
+    cursor: pointer; /* Añadido para indicar interactividad */
+  
+    &:hover {
+      transform: translateY(-2px) scale(1.02); /* Levitar con ligero zoom */
+      background: rgba(241, 245, 249, 0.85); /* Más opaco al hover */
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 
+        -4px -4px 10px rgba(255, 255, 255, 0.95),
+        4px 4px 10px rgba(0, 0, 0, 0.12),
+        inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+        inset 6px 6px 12px rgba(209, 217, 230, 0.4);
+    }
+  
+    &:active {
+      transform: translateY(0); /* Efecto presionado */
+      background: rgba(241, 245, 249, 0.6); /* Más transparente */
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+        -2px -2px 6px rgba(255, 255, 255, 0.85),
+        2px 2px 6px rgba(0, 0, 0, 0.06);
+    }
+  
+    :global(.dark) & {
+      background: rgba(30, 30, 30, 0.7); /* Fondo cristalizado oscuro */
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        /* Sombras externas: Neumórfico oscuro */
+        6px 6px 12px rgba(0, 0, 0, 0.5),
+        -6px -6px 12px rgba(255, 255, 255, 0.05),
+        /* Sombras internas: Efecto tallado */
+        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+  
+      &:hover {
+        transform: translateY(-2px) scale(1.02);
+        background: rgba(30, 30, 30, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 
+          4px 4px 10px rgba(0, 0, 0, 0.6),
+          -4px -4px 10px rgba(255, 255, 255, 0.03),
+          inset -6px -6px 12px rgba(0, 0, 0, 0.45),
+          inset 6px 6px 12px rgba(255, 255, 255, 0.04);
+      }
+  
+      &:active {
+        background: rgba(30, 30, 30, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        box-shadow: 
+          inset 2px 2px 6px rgba(0, 0, 0, 0.35),
+          inset -2px -2px 6px rgba(255, 255, 255, 0.02),
+          2px 2px 6px rgba(0, 0, 0, 0.45),
+          -2px -2px 6px rgba(255, 255, 255, 0.04);
+      }
+    }
+  
+    @media (max-width: 768px) {
+      margin-top: 36px;
+      height: 52.8px;
+      border-radius: 12px; /* Ligeramente menos redondeado en móviles */
+      gap: 12px; /* Gap reducido para pantallas pequeñas */
+    }
+  }
+
+  .continuar_profile{
+    color: black;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 18px;
+  }
+  
   .continuar {
     text-align: center;
     color: #ffffff;
@@ -1053,6 +1466,35 @@
       filter: brightness(0.8);
     }
   }
+
+  .coverPhoto_profile {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 20%;
+    overflow: hidden;
+    z-index: 1;
+    border-radius: 16px 16px 0 0;
+  
+    img {
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+    }
+  
+    &.emptyState {
+      background-image:
+        linear-gradient(220deg, #d3e048 1%, transparent),
+        linear-gradient(220deg, #ecf86e 50%, transparent);
+      background-size: 4em 4em;
+      animation: moveBackground 10s linear infinite;
+    }
+  
+    :global(.dark) & {
+      filter: brightness(0.8);
+    }
+  }
   
   @keyframes moveBackground {
     0% {
@@ -1062,3 +1504,189 @@
       background-position: 4em 4em;
     }
   }
+
+
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.PhoneInputInput {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  color: #1A1A1A;
+  outline: none;
+  width: 100%;
+}
+
+.PhoneInputCountry {
+  display: flex;
+  align-items: center;
+}
+
+.SaveProfileButton {
+  background: #178d00;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.SaveProfileButton:hover {
+  background: #146b00;
+}
+
+
+
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.PhoneInputInput {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  color: #1A1A1A;
+  outline: none;
+  width: 100%;
+}
+
+.PhoneInputCountry {
+  display: flex;
+  align-items: center;
+}
+
+.SaveProfileButton {
+  background: #178d00;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.SaveProfileButton:hover {
+  background: #146b00;
+}
+
+.toolsWrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.addToolButton {
+  background: #178d00;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.addToolButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.removeTagButton {
+  background: none;
+  border: none;
+  color: #d32f2f;
+  font-size: 14px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.removeTagButton:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  background: #e0e7ff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.teamDropdownWrapper {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.addTeamButton {
+  background: #178d00;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.addTeamButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.removeTeamButton {
+  background: none;
+  border: none;
+  color: #d32f2f;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.removeTeamButton:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.dropdown {
+  display: none;
+}
+
+.suggestions {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 1000;
+  width: calc(100% - 48px); /* Adjust for padding */
+  margin-top: 4px;
+}
+
+.suggestionItem {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.suggestionItem:hover {
+  background: #f0f0f0;
+}

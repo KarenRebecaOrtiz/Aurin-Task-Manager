@@ -14,6 +14,7 @@ interface SuccessAlertProps {
 
 const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction, actionLabel }) => {
   const alertRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(new Audio('/Success.mp3')); // Reference to the audio file
 
   useEffect(() => {
     console.log('[SuccessAlert] Mounting with message:', message);
@@ -21,6 +22,12 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
       container: styles.notificationsContainer,
       success: styles.success,
     });
+
+    // Play haptic feedback sound
+    audioRef.current.play().catch((error) => {
+      console.error('[SuccessAlert] Failed to play audio:', error);
+    });
+    console.log('[SuccessAlert] Triggered audio playback for Success.mp3');
 
     if (alertRef.current) {
       console.log('[SuccessAlert] DOM node present, starting GSAP animation');
@@ -58,6 +65,10 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
     return () => {
       console.log('[SuccessAlert] Unmounting, clearing timer');
       clearTimeout(timer);
+      // Pause and reset audio on unmount
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      console.log('[SuccessAlert] Audio paused and reset');
     };
   }, [message, onClose]);
 

@@ -33,6 +33,7 @@ import ClientSidebar from '@/components/ClientSidebar';
 import InviteSidebar from '@/components/InviteSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
 import ProfileSidebar from '@/components/ProfileSidebar';
+import ProfileCard from '@/components/ProfileCard'; 
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
@@ -56,7 +57,7 @@ interface User {
   fullName: string;
   role: string;
   description?: string;
-  status?: string; 
+  status?: string;
 }
 
 interface Task {
@@ -132,6 +133,7 @@ export default function TasksPage() {
   const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -143,7 +145,6 @@ export default function TasksPage() {
   const memoizedUsers = useMemo(() => users, [users]);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
 
-  // Fetch admin status
   useEffect(() => {
     const fetchAdminStatus = async () => {
       if (!user?.id) {
@@ -188,8 +189,7 @@ export default function TasksPage() {
         lastName?: string;
         publicMetadata: { role?: string; description?: string };
       }[] = await response.json();
-  
-      // Obtener status desde Firestore
+
       const usersData: User[] = await Promise.all(
         clerkUsers.map(async (clerkUser) => {
           const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
@@ -254,7 +254,6 @@ export default function TasksPage() {
         CreatedBy: doc.data().CreatedBy || '',
       }));
 
-      // Apply filtering only for non-admins
       if (!isAdmin) {
         tasksData = tasksData.filter(
           (task) =>
@@ -660,6 +659,14 @@ export default function TasksPage() {
     setPendingContainer(null);
   }, []);
 
+  const handleOpenProfile = useCallback((user: { id: string; imageUrl: string }) => {
+    setSelectedProfileUser(user);
+  }, []);
+
+  const handleCloseProfile = useCallback(() => {
+    setSelectedProfileUser(null);
+  }, []);
+
   return (
     <div className={styles.container}>
       <SyncUserToFirestore />
@@ -699,6 +706,7 @@ export default function TasksPage() {
             onAISidebarOpen={handleAISidebarOpen}
             onChatSidebarOpen={handleChatSidebarOpen}
             setTasks={setTasks}
+            onOpenProfile={handleOpenProfile}
           />
         )}
         {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
@@ -880,9 +888,16 @@ export default function TasksPage() {
           />
         ) : null,
       )}
+      {selectedProfileUser && (
+        <ProfileCard
+          userId={selectedProfileUser.id}
+          imageUrl={selectedProfileUser.imageUrl}
+          onClose={handleCloseProfile}
+        />
+      )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
-      <Dock/>
+      <Dock />
     </div>
   );
 }

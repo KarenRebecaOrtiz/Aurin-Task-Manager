@@ -25,6 +25,7 @@
     "react": "^19.0.0",
     "react-datepicker": "^8.4.0",
     "react-dom": "^19.0.0",
+    "react-phone-number-input": "^3.4.12",
     "react-time-picker": "^7.0.0",
     "sass": "^1.89.1",
     "svix": "^1.66.0",

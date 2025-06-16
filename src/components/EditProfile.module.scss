@@ -1,0 +1,1247 @@
+/* Base styles for mobile (320px and up) */
+.EditProfileOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100%;
+    background: rgba(215, 215, 215, 0.047);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    z-index: 1000;
+    transition: background 0.3s ease;
+  
+    :global(.dark) & {
+      background: rgba(0, 0, 0, 0.7);
+    }
+  }
+  
+  .EditProfileFrameMain {
+    padding: 12px;
+    background: rgba(241, 245, 249, 0.7);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+    display: flex;
+    width: 100%;
+    max-width: 90%;
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  
+    :global(.dark) & {
+      background: rgba(39, 39, 42, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow:
+        -4px -4px 8px rgba(0, 0, 0, 0.5),
+        4px 4px 8px rgba(255, 255, 255, 0.05),
+        inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.03);
+    }
+  }
+  
+  .EditProfileFrameInner {
+    width: 100%;
+    padding: 16px;
+    background: #F1F5F9;
+    border-radius: 12px;
+    border: none;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    z-index: 10000;
+    height: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 
+      -2px -2px 4px rgba(255, 255, 255, 0.8),
+      2px 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+  
+    &:hover {
+      box-shadow: 
+        -1px -1px 2px rgba(255, 255, 255, 0.9),
+        1px 1px 2px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+  
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+  
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  
+    &::-webkit-scrollbar-thumb {
+      background: rgba(209, 213, 219, 0.7);
+      border-radius: 8px;
+      box-shadow: 
+        -1px -1px 2px rgba(255, 255, 255, 0.5),
+        1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+  
+    :global(.dark) & {
+      background: rgba(30, 30, 30, 0.9);
+      box-shadow: 
+        -2px -2px 4px rgba(60, 60, 60, 0.8),
+        2px 2px 4px rgba(0, 0, 0, 0.4);
+      border: none;
+  
+      &:hover {
+        box-shadow: 
+          -1px -1px 2px rgba(60, 60, 60, 0.9),
+          1px 1px 2px rgba(0, 0, 0, 0.5);
+        transform: translateY(-1px);
+      }
+  
+      &::-webkit-scrollbar-thumb {
+        background: rgba(75, 85, 99, 0.7);
+        box-shadow: 
+          -1px -1px 2px rgba(60, 60, 60, 0.8),
+          1px 1px 2px rgba(0, 0, 0, 0.4);
+      }
+    }
+  }
+  
+  .EditProfileCloseButton {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #616161;
+    z-index: 1200;
+    padding: 4px;
+  }
+  
+  .EditProfileCoverPhotoButton {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 6px;
+    cursor: pointer;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+  
+    :global(.dark) & {
+      background: rgba(255, 255, 255, 0.2);
+      color: #e5e7eb;
+    }
+  }
+  
+  .EditProfileCoverPhotoDropdown {
+    position: absolute;
+    top: 40px;
+    right: 8px;
+    background: #F1F5F9;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: -8px -8px 16px white, 8px 8px 16px rgba(0, 0, 0, 0.1);
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 180px;
+  
+    :global(.dark) & {
+      background: rgba(30, 30, 30, 0.9);
+      box-shadow: -4px -4px 8px rgba(60, 60, 60, 0.8), 4px 4px 8px rgba(0, 0, 0, 0.4);
+    }
+  }
+  
+  .EditProfileCoverPhotoDropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    color: #09090b;
+  
+    &:hover {
+      background: rgba(241, 245, 249, 0.85);
+    }
+  
+    :global(.dark) & {
+      color: #e5e7eb;
+      &:hover {
+        background: rgba(58, 58, 58, 0.85);
+      }
+    }
+  }
+  
+  .EditProfileFrameContent {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+    display: flex;
+    width: 100%;
+    flex-grow: 1;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .EditProfileContentWrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    overflow-y: auto;
+  }
+  
+  .EditProfile {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+    position: relative;
+    z-index: 3;
+  
+    :global(.dark) & {
+      background: rgba(58, 58, 58, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow:
+        -4px -4px 8px rgba(0, 0, 0, 0.5),
+        4px 4px 8px rgba(255, 255, 255, 0.03),
+        inset -1px -1px 4px rgba(0, 0, 0, 0.4),
+        inset 1px 1px 4px rgba(255, 255, 255, 0.02);
+  
+      &:hover {
+        background: rgba(58, 58, 58, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+  
+  .EditProfileAvatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 1000px;
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: -2px -2px 4px rgba(255, 255, 255, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+    cursor: default;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  
+    :global(.dark) & {
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.6), 2px 2px 4px rgba(255, 255, 255, 0.03);
+    }
+  }
+  
+  .EditProfileAvatarPlaceholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(241, 245, 249, 0.7);
+    color: #71717a;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 500;
+    border-radius: 1000px;
+  
+    :global(.dark) & {
+      background: rgba(58, 58, 58, 0.7);
+      color: #a1a1aa;
+    }
+  }
+  
+  .EditProfileCoverPhoto {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    overflow: hidden;
+    z-index: 1;
+    border-radius: 12px 12px 0 0;
+  
+    img {
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+    }
+  
+    &.EditProfileEmptyState {
+      background-image:
+        linear-gradient(220deg, #d3e048 1%, transparent),
+        linear-gradient(220deg, #ecf86e 50%, transparent);
+      background-size: 2em 2em;
+      animation: moveBackground 10s linear infinite;
+    }
+  
+    :global(.dark) & {
+      filter: brightness(0.8);
+    }
+  }
+  
+  @keyframes moveBackground {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 2em 2em;
+    }
+  }
+  
+  .EditProfileInputColumns {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .EditProfileInputColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .EditProfileInfoGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .EditProfileInputWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+  
+  .EditProfileInputWrapperSmall {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background: #F1F5F9;
+    box-shadow: -4px -4px 8px white, 4px 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    align-items: center;
+    box-sizing: border-box;
+  
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+  }
+  
+  .EditProfileInputWrapperSmall svg {
+    flex-shrink: 0;
+  }
+  
+  .EditProfileInputName {
+    font-size: 24px;
+    font-weight: 600;
+    text-align: center;
+  }
+  
+  .EditProfileInputRole {
+    font-size: 16px;
+    font-weight: 400;
+    color: rgba(0, 0, 0, 0.675);
+    text-align: center;
+  }
+  
+  .EditProfileLabel {
+    color: #09090b;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 600;
+    text-align: left;
+  
+    :global(.dark) & {
+      color: #e5e7eb;
+    }
+  }
+  
+  .EditProfileLabelLarge {
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+  }
+  
+  .EditProfileInput,
+  .EditProfileTextarea {
+    width: 100%;
+    background: rgba(241, 245, 249, 0.7);
+    border-radius: 4.8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    text-align: left;
+    outline: none;
+    color: #09090b;
+    padding: 8px;
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  
+    &:hover {
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+  
+    &:focus {
+      border-color: rgba(59, 130, 246, 0.3);
+      box-shadow:
+        inset -1px -1px 2px rgba(255, 255, 255, 0.9),
+        inset 1px 1px 4px rgba(0, 0, 0, 0.08),
+        0 0 0 2px rgba(59, 130, 246, 0.18);
+    }
+  
+    &::placeholder {
+      color: rgba(0, 0, 0, 0.6);
+      text-align: left;
+    }
+  
+    :global(.dark) & {
+      background: rgba(58, 58, 58, 0.7);
+      color: #e5e7eb;
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: inset -1px -1px 2px rgba(0, 0, 0, 0.6), inset 1px 1px 4px rgba(255, 255, 255, 0.03);
+  
+      &:hover {
+        background: rgba(58, 58, 58, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+  
+      &:focus {
+        border-color: rgba(59, 130, 246, 0.3);
+        box-shadow:
+          inset -1px -1px 2px rgba(0, 0, 0, 0.7),
+          inset 1px 1px 4px rgba(255, 255, 255, 0.08),
+          0 0 0 2px rgba(59, 130, 246, 0.18);
+      }
+  
+      &::placeholder {
+        color: #a1a1aa;
+      }
+    }
+  }
+  
+  .EditProfileTextarea {
+    min-height: 80px;
+    resize: vertical;
+  }
+  
+  .EditProfilePhoneInput {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  
+    .PhoneInputInput {
+      border: none;
+      background: rgba(241, 245, 249, 0.7);
+      border-radius: 4.8px;
+      font-size: 12px;
+      font-family: "Inter Tight", sans-serif;
+      font-weight: 400;
+      text-align: left;
+      outline: none;
+      color: #09090b;
+      padding: 8px;
+      flex: 1;
+  
+      :global(.dark) & {
+        background: rgba(58, 58, 58, 0.7);
+        color: #e5e7eb;
+      }
+    }
+  
+    .PhoneInputCountrySelect {
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      background: #F1F5F9;
+      box-shadow: -4px -4px 8px white;
+      border-radius: 12px;
+      font-size: 12px;
+      font-family: "Inter Tight", sans-serif;
+      color: #09090b;
+      border: none;
+      outline: none;
+  
+      :global(.dark) & {
+        background: rgba(30, 30, 30, 0.9);
+        box-shadow: -2px -2px 4px rgba(60, 60, 60, 0.8);
+        color: #e5e7eb;
+      }
+    }
+  }
+  
+  .EditProfileError {
+    color: #ef4444;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    margin-top: 4px;
+  
+    :global(.dark) & {
+      color: #f87171;
+    }
+  }
+  
+  .EditProfileAboutToolsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .EditProfileAboutSection,
+  .EditProfileToolsSection,
+  .EditProfileTeamsSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .EditProfileToolsWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .EditProfileAddToolButton {
+    padding: 6px;
+    background: #178d00;
+    color: #fafafa;
+    border-radius: 6px;
+    height: 32px;
+    width: 32px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 500;
+    transition: background 0.3s ease, transform 0.3s ease;
+  
+    &:hover {
+      background: #146b00;
+      transform: translateY(-1px);
+    }
+  
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+  
+    :global(.dark) & {
+      background: #1a7c00;
+      &:hover {
+        background: #126300;
+      }
+    }
+  }
+  
+  .EditProfileTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .EditProfileTag {
+    --clr-font-main: hsla(0, 0%, 20%, 1);
+    --radii: 12px;
+    cursor: pointer;
+    padding: 0.6em 0.9em;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(241, 245, 249, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radii);
+    color: var(--clr-font-main);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    box-shadow: 
+      -2px -2px 4px rgba(255, 255, 255, 0.9),
+      2px 2px 4px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+    transition: 
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
+  
+    &:hover {
+      transform: translateY(-1px) scale(1.02);
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 
+        -2px -2px 4px rgba(255, 255, 255, 0.95),
+        2px 2px 4px rgba(0, 0, 0, 0.12),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.6),
+        inset 2px 2px 4px rgba(209, 217, 230, 0.4);
+    }
+  
+    &:is(:focus, :focus-visible, :active) {
+      transform: translateY(0);
+      background: rgba(241, 245, 249, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 
+        inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+        inset 1px 1px 2px rgba(209, 217, 230, 0.2),
+        -1px -1px 2px rgba(255, 255, 255, 0.85),
+        1px 1px 2px rgba(0, 0, 0, 0.06);
+      outline: none;
+    }
+  
+    :global(.dark) & {
+      background: rgba(30, 30, 30, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        2px 2px 4px rgba(0, 0, 0, 0.5),
+        -2px -2px 4px rgba(255, 255, 255, 0.05),
+        inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.03);
+  
+      &:hover {
+        transform: translateY(-1px) scale(1.02);
+        background: rgba(30, 30, 30, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 
+          2px 2px 4px rgba(0, 0, 0, 0.6),
+          -2px -2px 4px rgba(255, 255, 255, 0.03),
+          inset -2px -2px 4px rgba(0, 0, 0, 0.45),
+          inset 2px 2px 4px rgba(255, 255, 255, 0.04);
+      }
+  
+      &:is(:focus, :focus-visible, :active) {
+        background: rgba(30, 30, 30, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        box-shadow: 
+          inset 1px 1px 2px rgba(0, 0, 0, 0.35),
+          inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+          1px 1px 2px rgba(0, 0, 0, 0.45),
+          -1px -1px 2px rgba(255, 255, 255, 0.04);
+        outline: none;
+      }
+    }
+  
+    @media (prefers-reduced-motion: reduce) {
+      transition: linear;
+    }
+  }
+  
+  .EditProfileRemoveTagButton {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 12px;
+    transition: color 0.3s ease;
+  
+    &:hover {
+      color: #dc2626;
+    }
+  
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  
+    :global(.dark) & {
+      color: #f87171;
+      &:hover {
+        color: #ef4444;
+      }
+    }
+  }
+  
+  .EditProfileTeamDropdownWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .EditProfileRemoveTeamButton {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  
+    &:hover {
+      color: #dc2626;
+    }
+  
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  
+    :global(.dark) & {
+      color: #f87171;
+      &:hover {
+        color: #ef4444;
+      }
+    }
+  }
+  
+  .EditProfileAddTeamButton {
+    padding: 6px 12px;
+    background: #178d00;
+    color: #fafafa;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 500;
+    transition: background 0.3s ease, transform 0.3s ease;
+  
+    &:hover {
+      background: #146b00;
+      transform: translateY(-1px);
+    }
+  
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  
+    :global(.dark) & {
+      background: #1a7c00;
+      &:hover {
+        background: #126300;
+      }
+    }
+  }
+  
+  .EditProfileButtonWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .EditProfileButton {
+    width: 100%;
+    height: 48px;
+    background: rgba(241, 245, 249, 0.7);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 
+      -2px -2px 4px rgba(255, 255, 255, 0.9),
+      2px 2px 4px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+    transition: 
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease;
+    cursor: pointer;
+    color: black;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+  
+    &:hover {
+      transform: translateY(-1px) scale(1.02);
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 
+        -2px -2px 4px rgba(255, 255, 255, 0.95),
+        2px 2px 4px rgba(0, 0, 0, 0.12),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.6),
+        inset 2px 2px 4px rgba(209, 217, 230, 0.4);
+    }
+  
+    &:active {
+      transform: translateY(0);
+      background: rgba(241, 245, 249, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 
+        inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+        inset 1px 1px 2px rgba(209, 217, 230, 0.2),
+        -1px -1px 2px rgba(255, 255, 255, 0.85),
+        1px 1px 2px rgba(0, 0, 0, 0.06);
+    }
+  
+    :global(.dark) & {
+      background: rgba(30, 30, 30, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        2px 2px 4px rgba(0, 0, 0, 0.5),
+        -2px -2px 4px rgba(255, 255, 255, 0.05),
+        inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.03);
+  
+      &:hover {
+        transform: translateY(-1px) scale(1.02);
+        background: rgba(30, 30, 30, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 
+          2px 2px 4px rgba(0, 0, 0, 0.6),
+          -2px -2px 4px rgba(255, 255, 255, 0.03),
+          inset -2px -2px 4px rgba(0, 0, 0, 0.45),
+          inset 2px 2px 4px rgba(255, 255, 255, 0.04);
+      }
+  
+      &:active {
+        background: rgba(30, 30, 30, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        box-shadow: 
+          inset 1px 1px 2px rgba(0, 0, 0, 0.35),
+          inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+          1px 1px 2px rgba(0, 0, 0, 0.45),
+          -1px -1px 2px rgba(255, 255, 255, 0.04);
+      }
+    }
+  }
+  
+  .EditProfileSaveButton {
+    width: 100%;
+    height: 48px;
+    background: #178d00;
+    border-radius: 12px;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+  
+    &:hover {
+      background: #146b00;
+      transform: translateY(-1px);
+    }
+  
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+  
+    :global(.dark) & {
+      background: #1a7c00;
+      &:hover {
+        background: #126300;
+      }
+    }
+  }
+  
+  /* Tablet and up (min-width: 768px) */
+  @media (min-width: 768px) {
+    .EditProfileFrameMain {
+      padding: 16px;
+      max-width: 600px;
+      gap: 24px;
+    }
+  
+    .EditProfileFrameInner {
+      padding: 24px;
+      border-radius: 16px;
+      max-height: 80vh;
+    }
+  
+    .EditProfileCloseButton {
+      font-size: 18px;
+      padding: 6px;
+    }
+  
+    .EditProfileCoverPhotoButton {
+      width: 36px;
+      height: 36px;
+      padding: 8px;
+    }
+  
+    .EditProfileCoverPhotoDropdown {
+      padding: 24px;
+      width: 200px;
+    }
+  
+    .EditProfileCoverPhotoDropdownItem {
+      font-size: 14px;
+      padding: 10px 16px;
+    }
+  
+    .EditProfileFrameContent {
+      gap: 24px;
+    }
+  
+    .EditProfileContentWrapper {
+      gap: 16px;
+    }
+  
+    .EditProfile {
+      padding: 24px;
+    }
+  
+    .EditProfileAvatar {
+      width: 140px;
+      height: 140px;
+    }
+  
+    .EditProfileAvatarPlaceholder {
+      font-size: 14px;
+    }
+  
+    .EditProfileCoverPhoto {
+      height: 120px;
+    }
+  
+    .EditProfileInputColumns {
+      gap: 16px;
+    }
+  
+    .EditProfileInputColumn {
+      gap: 12px;
+    }
+  
+    .EditProfileInfoGrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+  
+    .EditProfileInputWrapper {
+      gap: 6px;
+    }
+  
+    .EditProfileInputWrapperSmall {
+      padding: 16px;
+    }
+  
+    .EditProfileInputName {
+      font-size: 32px;
+    }
+  
+    .EditProfileInputRole {
+      font-size: 18px;
+    }
+  
+    .EditProfileLabel {
+      font-size: 14px;
+    }
+  
+    .EditProfileLabelLarge {
+      font-size: 18px;
+    }
+  
+    .EditProfileInput,
+    .EditProfileTextarea {
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+      padding: 10px;
+    }
+  
+    .EditProfilePhoneInput {
+      .PhoneInputInput {
+        font-size: 14px;
+        padding: 10px;
+      }
+  
+      .PhoneInputCountrySelect {
+        padding: 16px;
+        font-size: 14px;
+      }
+    }
+  
+    .EditProfileError {
+      font-size: 14px;
+    }
+  
+    .EditProfileAboutToolsContainer {
+      flex-direction: column;
+      gap: 16px;
+    }
+  
+    .EditProfileTags {
+      gap: 12px;
+    }
+  
+    .EditProfileTag {
+      font-size: 14px;
+      padding: 0.8em 1em;
+    }
+  
+    .EditProfileRemoveTagButton {
+      font-size: 14px;
+    }
+  
+    .EditProfileTeamDropdownWrapper {
+      gap: 12px;
+    }
+  
+    .EditProfileRemoveTeamButton {
+      font-size: 14px;
+    }
+  
+    .EditProfileAddToolButton {
+      height: 36px;
+      width: 36px;
+      font-size: 14px;
+    }
+  
+    .EditProfileAddTeamButton {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+  
+    .EditProfileSuggestions {
+      padding: 24px;
+      width: calc(100% - 48px);
+    }
+  
+    .EditProfileSuggestionItem {
+      font-size: 14px;
+      padding: 10px;
+    }
+  
+    .EditProfileButtonWrapper {
+      flex-direction: row;
+      gap: 12px;
+    }
+  
+    .EditProfileButton {
+      height: 52px;
+      font-size: 16px;
+    }
+  
+    .EditProfileSaveButton {
+      height: 52px;
+      font-size: 16px;
+    }
+  }
+  
+  /* Desktop and up (min-width: 1024px) */
+  @media (min-width: 1024px) {
+    .EditProfileFrameMain {
+      padding: 20px;
+      max-width: 800px;
+      gap: 32px;
+    }
+  
+    .EditProfileFrameInner {
+      padding: 32px;
+      max-width: 1000px;
+    }
+  
+    .EditProfileCloseButton {
+      font-size: 20px;
+      top: 10px;
+      right: 10px;
+    }
+  
+    .EditProfileCoverPhotoButton {
+      width: 40px;
+      height: 40px;
+      padding: 10px;
+    }
+  
+    .EditProfileCoverPhotoDropdown {
+      padding: 24px;
+      width: 220px;
+    }
+  
+    .EditProfileCoverPhotoDropdownItem {
+      font-size: 16px;
+      padding: 12px 20px;
+    }
+  
+    .EditProfileFrameContent {
+      gap: 32px;
+    }
+  
+    .EditProfileContentWrapper {
+      gap: 24px;
+    }
+  
+    .EditProfile {
+      padding: 32px;
+    }
+  
+    .EditProfileAvatar {
+      width: 160px;
+      height: 160px;
+    }
+  
+    .EditProfileCoverPhoto {
+      height: 140px;
+    }
+  
+    .EditProfileInputColumns {
+      gap: 24px;
+    }
+  
+    .EditProfileInfoGrid {
+      gap: 20px;
+    }
+  
+    .EditProfileInputWrapper {
+      gap: 8px;
+    }
+  
+    .EditProfileInputWrapperSmall {
+      padding: 20px;
+    }
+  
+    .EditProfileInputName {
+      font-size: 40px;
+    }
+  
+    .EditProfileInputRole {
+      font-size: 20px;
+    }
+  
+    .EditProfileLabel {
+      font-size: 16px;
+    }
+  
+    .EditProfileLabelLarge {
+      font-size: 20px;
+    }
+  
+    .EditProfileInput,
+    .EditProfileTextarea {
+      font-size: 16px;
+      padding: 12px;
+    }
+  
+    .EditProfilePhoneInput {
+      .PhoneInputInput {
+        font-size: 16px;
+        padding: 12px;
+      }
+  
+      .PhoneInputCountrySelect {
+        padding: 20px;
+        font-size: 16px;
+      }
+    }
+  
+    .EditProfileError {
+      font-size: 16px;
+    }
+  
+    .EditProfileAboutToolsContainer {
+      gap: 24px;
+    }
+  
+    .EditProfileTags {
+      gap: 16px;
+    }
+  
+    .EditProfileTag {
+      font-size: 16px;
+      padding: 0.9em 1.2em;
+    }
+  
+    .EditProfileRemoveTagButton {
+      font-size: 16px;
+    }
+  
+    .EditProfileTeamDropdownWrapper {
+      gap: 16px;
+    }
+  
+    .EditProfileRemoveTeamButton {
+      font-size: 16px;
+    }
+  
+    .EditProfileAddToolButton {
+      height: 40px;
+      width: 40px;
+      font-size: 16px;
+    }
+  
+    .EditProfileAddTeamButton {
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  
+    .EditProfileSuggestions {
+      padding: 24px;
+      width: calc(100% - 48px);
+    }
+  
+    .EditProfileSuggestionItem {
+      font-size: 16px;
+      padding: 12px;
+    }
+  
+    .EditProfileButtonWrapper {
+      gap: 16px;
+    }
+  
+    .EditProfileButton {
+      height: 56px;
+      font-size: 18px;
+    }
+  
+    .EditProfileSaveButton {
+      height: 56px;
+      font-size: 18px;
+    }
+  }

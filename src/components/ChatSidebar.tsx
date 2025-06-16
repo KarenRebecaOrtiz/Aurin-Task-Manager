@@ -43,6 +43,7 @@ interface Message {
   fileName?: string | null;
   fileType?: string | null;
   filePath?: string | null;
+  isPending?: boolean;
 }
 
 interface TypingStatus {
@@ -119,6 +120,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isSending, setIsSending] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -177,13 +179,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
     fetchAdminStatus();
   }, [user?.id]);
-
-  // Set status dropdown always open for admins
-  useEffect(() => {
-    if (isAdmin) {
-      setIsStatusDropdownOpen(true);
-    }
-  }, [isAdmin]);
 
   // Real-time task listener
   useEffect(() => {
@@ -515,7 +510,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           messageIds: newMessages.map((m) => m.id),
           taskId: task.id,
         });
-        setMessages(newMessages);
+        // Mantener mensajes optimistas que están pendientes
+        setMessages((prev) => {
+          const pendingMessages = prev.filter((msg) => msg.isPending);
+          return [...pendingMessages, ...newMessages.filter((msg) => !msg.isPending)];
+        });
         setIsLoading(false);
       },
       (error) => {
@@ -539,7 +538,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (isOpen && user?.id) {
       console.log('[ChatSidebar] Checking unread messages for user:', user.id);
       setHasInteracted(true);
-      const unreadMessages = messages.filter((msg) => !msg.read);
+      const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
       console.log('[ChatSidebar] Unread messages:', {
         count: unreadMessages.length,
         messageIds: unreadMessages.map((m) => m.id),
@@ -577,6 +576,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     const newUnreadMessages = messages.filter(
       (msg) =>
         !msg.read &&
+        !msg.isPending &&
         !prevMessagesRef.current.some(
           (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId,
         ),
@@ -663,7 +663,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (actionMenuOpenId && actionMenuRef.current) {
       gsap.fromTo(
         actionMenuRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 0, y: -5, scale: 0.98 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
       console.log('[ChatSidebar] Action menu animated');
@@ -936,6 +936,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (e.target) e.target.value = '';
   }, []);
 
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
   const handleDrop = useCallback((e: React.DragEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsDragging(false);
@@ -946,11 +951,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     console.log('[ChatSidebar] File dropped:', f?.name);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
   const handleRemoveFile = () => {
     setFile(null);
     setPreviewUrl(null);
@@ -959,18 +959,44 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!user?.id || (!newMessage.trim() && !file)) {
+    if (!user?.id || (!newMessage.trim() && !file) || isSending) {
       console.warn('[ChatSidebar] Invalid message input:', {
         userId: user?.id,
         newMessage,
         hasFile: !!file,
+        isSending,
       });
       return;
     }
 
-    try {
-      console.log('[ChatSidebar] Starting message send for task:', task.id);
+    setIsSending(true);
+    console.log('[ChatSidebar] Starting message send for task:', task.id);
 
+    // Generar un ID temporal para el mensaje optimista
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: user.id,
+      senderName: user.firstName || 'Usuario',
+      text: newMessage.trim() || null,
+      timestamp: Timestamp.fromDate(new Date()),
+      read: false,
+      imageUrl: file && file.type.startsWith('image/') ? previewUrl : null,
+      fileUrl: file && !file.type.startsWith('image/') ? null : null,
+      fileName: file ? file.name : null,
+      fileType: file ? file.type : null,
+      filePath: null,
+      isPending: true,
+    };
+
+    // Añadir mensaje optimista a la lista
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setNewMessage('');
+    setFile(null);
+    setPreviewUrl(null);
+    setHasInteracted(true);
+
+    try {
       const messageData: Partial<Message> = {
         senderId: user.id,
         senderName: user.firstName || 'Usuario',
@@ -1019,7 +1045,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             taskId: task.id,
             fileName: file.name,
           });
+          // Eliminar mensaje optimista en caso de error
+          setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
           alert('Error al subir el archivo');
+          setIsSending(false);
           return;
         }
       }
@@ -1029,8 +1058,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       }
 
       // Guardar mensaje
-      await addDoc(collection(db, `tasks/${task.id}/messages`), messageData);
-      console.log('[ChatSidebar] Message saved for task:', task.id);
+      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), messageData);
+      console.log('[ChatSidebar] Message saved for task:', task.id, 'docId:', docRef.id);
 
       // Crear notificaciones
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
@@ -1058,10 +1087,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         }
       }
 
-      setNewMessage('');
-      setFile(null);
-      setPreviewUrl(null);
-      setHasInteracted(true);
       console.log('[ChatSidebar] Message sent and notifications attempted');
     } catch (error) {
       console.error('[ChatSidebar] Send message error:', {
@@ -1069,7 +1094,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         code: error.code || 'No code',
         taskId: task.id,
       });
+      // Eliminar mensaje optimista en caso de error
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       alert('Error al enviar el mensaje');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -1453,12 +1482,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <div className={styles.details}>
           <div
             className={`${styles.card} ${isCreator || isAdmin ? styles.statusCard : ''}`}
-            onMouseEnter={() => !isAdmin && isCreator && setIsStatusDropdownOpen(true)}
-            onMouseLeave={() => !isAdmin && isCreator && setIsStatusDropdownOpen(false)}
+            onMouseEnter={() => (isCreator || isAdmin) && setIsStatusDropdownOpen(true)}
+            onMouseLeave={() => (isCreator || isAdmin) && setIsStatusDropdownOpen(false)}
           >
             <div className={styles.cardLabel}>Estado de la tarea:</div>
             <div className={styles.cardValue}>{task.status}</div>
-            {(isStatusDropdownOpen || isAdmin) && (isCreator || isAdmin) && (
+            {isStatusDropdownOpen && (isCreator || isAdmin) && (
               <div ref={statusDropdownRef} className={styles.statusDropdown}>
                 {statusOptions.map((status) => (
                   <div key={status} className={styles.statusOption} onClick={() => handleStatusChange(status)}>
@@ -1469,34 +1498,34 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             )}
           </div>
           <div
-              className={styles.card}
-              onMouseEnter={() => isInvolved && setIsTeamDropdownOpen(true)}
-              onMouseLeave={() => isInvolved && setIsTeamDropdownOpen(false)}
-            >
-              <div className={styles.cardLabel}>Equipo:</div>
-              <div className={styles.cardValue}>{teamUsers.length} miembro(s)</div>
-              {isTeamDropdownOpen && isInvolved && (
-                <div ref={teamDropdownRef} className={styles.teamDropdown}>
-                  {teamUsers.length > 0 ? (
-                    teamUsers.map((u) => (
-                      <div key={u.id} className={styles.teamDropdownItem}>
-                        <Image
-                          src={u.imageUrl}
-                          alt={u.firstName || 'Avatar del miembro'}
-                          width={24}
-                          height={24}
-                          className={styles.avatar}
-                        />
-                        <span className={styles.teamUserName}>{u.firstName}</span>
-                        <span className={styles.teamRole}>{u.role}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className={styles.teamDropdownItem}>No hay miembros asignados a esta tarea</div>
-                  )}
-                </div>
-              )}
-            </div>
+            className={styles.card}
+            onMouseEnter={() => isInvolved && setIsTeamDropdownOpen(true)}
+            onMouseLeave={() => isInvolved && setIsTeamDropdownOpen(false)}
+          >
+            <div className={styles.cardLabel}>Equipo:</div>
+            <div className={styles.cardValue}>{teamUsers.length} miembro(s)</div>
+            {isTeamDropdownOpen && isInvolved && (
+              <div ref={teamDropdownRef} className={styles.teamDropdown}>
+                {teamUsers.length > 0 ? (
+                  teamUsers.map((u) => (
+                    <div key={u.id} className={styles.teamDropdownItem}>
+                      <Image
+                        src={u.imageUrl}
+                        alt={u.firstName || 'Avatar del miembro'}
+                        width={24}
+                        height={24}
+                        className={styles.avatar}
+                      />
+                      <span className={styles.teamUserName}>{u.firstName}</span>
+                      <span className={styles.teamRole}>{u.role}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.teamDropdownItem}>No hay miembros asignados a esta tarea</div>
+                )}
+              </div>
+            )}
+          </div>
           <div className={styles.card}>
             <div className={styles.cardLabel}>Fecha:</div>
             <div className={styles.cardValue}>
@@ -1504,34 +1533,34 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             </div>
           </div>
           <div
-              className={styles.cardFullWidth}
-              onMouseEnter={() => isInvolved && setIsHoursDropdownOpen(true)}
-              onMouseLeave={() => isInvolved && setIsHoursDropdownOpen(false)}
-            >
-              <div className={styles.cardLabel}>Tiempo registrado:</div>
-              <div className={styles.cardValue}>{totalHours}</div>
-              {isHoursDropdownOpen && isInvolved && (
-                <div ref={hoursDropdownRef} className={styles.hoursDropdown}>
-                  {hoursByUser.length > 0 ? (
-                    hoursByUser.map((u) => (
-                      <div key={u.id} className={styles.hoursDropdownItem}>
-                        <Image
-                          src={u.imageUrl}
-                          alt={u.firstName || 'Avatar del usuario'}
-                          width={24}
-                          height={24}
-                          className={styles.avatar}
-                        />
-                        <span className={styles.hoursUserName}>{u.firstName}</span>
-                        <span className={styles.hoursValue}>{u.hours}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className={styles.hoursDropdownItem}>Aún no hay tiempo registrado en esta tarea</div>
-                  )}
-                </div>
-              )}
-            </div>
+            className={styles.cardFullWidth}
+            onMouseEnter={() => isInvolved && setIsHoursDropdownOpen(true)}
+            onMouseLeave={() => isInvolved && setIsHoursDropdownOpen(false)}
+          >
+            <div className={styles.cardLabel}>Tiempo registrado:</div>
+            <div className={styles.cardValue}>{totalHours}</div>
+            {isHoursDropdownOpen && isInvolved && (
+              <div ref={hoursDropdownRef} className={styles.hoursDropdown}>
+                {hoursByUser.length > 0 ? (
+                  hoursByUser.map((u) => (
+                    <div key={u.id} className={styles.hoursDropdownItem}>
+                      <Image
+                        src={u.imageUrl}
+                        alt={u.firstName || 'Avatar del usuario'}
+                        width={24}
+                        height={24}
+                        className={styles.avatar}
+                      />
+                      <span className={styles.hoursUserName}>{u.firstName}</span>
+                      <span className={styles.hoursValue}>{u.hours}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.hoursDropdownItem}>Aún no hay tiempo registrado en esta tarea</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div
@@ -1572,7 +1601,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         })
                       : 'Sin fecha'}
                   </div>
-                  {user?.id === message.senderId && (
+                  {user?.id === message.senderId && !message.isPending && (
                     <div className={styles.actionContainer}>
                       <button
                         className={styles.actionButton}
@@ -1635,13 +1664,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   {message.text && <div className={styles.text}>{message.text}</div>}
                   {(message.fileUrl || message.imageUrl) && (
                     <div className={styles.fileActionsRow}>
-                      <button
-                        className={styles.downloadButton}
-                        onClick={() => window.open(message.imageUrl || message.fileUrl, '_blank')}
-                        aria-label="Descargar archivo"
-                      >
-                        <Image src="/download.svg" alt="Descargar" width={16} height={16} />
-                      </button>
+                      {!message.isPending && (
+                        <button
+                          className={styles.downloadButton}
+                          onClick={() => window.open(message.imageUrl || message.fileUrl, '_blank')}
+                          aria-label="Descargar archivo"
+                        >
+                          <Image src="/download.svg" alt="Descargar" width={16} height={16} />
+                        </button>
+                      )}
                       {message.imageUrl ? (
                         <div className={styles.imageWrapper}>
                           <Image
@@ -1650,12 +1681,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                             width={200}
                             height={200}
                             className={styles.image}
-                            onClick={() => setImagePreviewSrc(message.imageUrl!)}
+                            onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
                             onError={(e) => {
                               e.currentTarget.src = '/default-image.png';
                               console.warn('[ChatSidebar] Image load failed:', message.imageUrl);
                             }}
                           />
+                          {message.isPending && (
+                            <div className={styles.imageLoader}>
+                              <div className={styles.spinner} />
+                            </div>
+                          )}
                           {message.fileName && (
                             <div className={styles.fileName}>
                               <Image src="/file.svg" alt="Archivo" width={16} height={16} />
@@ -1787,12 +1823,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               handleTyping();
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !isSending) {
                 e.preventDefault();
                 handleSendMessage(e);
               }
             }}
             className={styles.input}
+            disabled={isSending}
           />
           <div className={styles.actions}>
             <div className={styles.timerContainer}>
@@ -1815,13 +1852,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 className={styles.imageButton}
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Adjuntar archivo"
+                disabled={isSending}
               >
                 <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} className={styles.iconInvert} />
               </button>
               <button
                 className={styles.sendButton}
                 onClick={handleSendMessage}
-                disabled={!newMessage.trim() && !file}
+                disabled={isSending || (!newMessage.trim() && !file)}
                 aria-label="Enviar mensaje"
               >
                 <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
@@ -1835,6 +1873,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           hidden
           onChange={handleFileInputChange}
           aria-label="Seleccionar archivo"
+          disabled={isSending}
         />
       </form>
       {isDeletePopupOpen && (
@@ -1891,4 +1930,4 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
 ChatSidebar.displayName = 'ChatSidebar';
 
-export default ChatSidebar; 
+export default ChatSidebar;

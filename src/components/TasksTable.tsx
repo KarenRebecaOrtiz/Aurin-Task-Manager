@@ -46,10 +46,20 @@ interface TasksTableProps {
   onAISidebarOpen: () => void;
   onChatSidebarOpen: (task: Task) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  onOpenProfile: (user: { id: string; imageUrl: string }) => void;
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(
-  ({ tasks, clients, onNewTaskOpen, onEditTaskOpen, onAISidebarOpen, onChatSidebarOpen, setTasks }) => {
+  ({
+    tasks,
+    clients,
+    onNewTaskOpen,
+    onEditTaskOpen,
+    onAISidebarOpen,
+    onChatSidebarOpen,
+    setTasks,
+    onOpenProfile,
+  }) => {
     const { user } = useUser();
     const router = useRouter();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
@@ -78,7 +88,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return id;
     }, [user]);
 
-    // Fetch admin status
     useEffect(() => {
       const fetchAdminStatus = async () => {
         if (!userId) {
@@ -117,7 +126,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       fetchAdminStatus();
     }, [userId]);
 
-    // Initialize filteredTasks when tasks prop changes
     useEffect(() => {
       setFilteredTasks(tasks);
       console.log('[TasksTable] Initialized filteredTasks:', {
@@ -126,7 +134,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       });
     }, [tasks]);
 
-    // Filter tasks based on search, priority, and client
     const memoizedFilteredTasks = useMemo(() => {
       const filtered = tasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -161,7 +168,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       });
     }, [memoizedFilteredTasks]);
 
-    // GSAP animations
     useEffect(() => {
       const currentActionMenuRef = actionMenuRef.current;
       if (actionMenuOpenId && currentActionMenuRef) {
@@ -220,7 +226,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       }
     }, [isClientDropdownOpen]);
 
-    // Handle click outside
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -262,7 +267,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isDeletePopupOpen]);
 
-    // Sort tasks
     const handleSort = (key: string) => {
       if (key === sortKey) {
         setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -319,7 +323,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return sorted;
     }, [filteredTasks, sortKey, sortDirection, clients]);
 
-    // Animation handler
     const animateClick = (element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
@@ -358,7 +361,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           deleteConfirm,
         });
 
-        // Find task
         const task = tasks.find((t) => t.id === deleteTaskId);
         if (!task) {
           throw new Error('Task not found');
@@ -372,7 +374,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           isCreator: task.CreatedBy === userId,
         });
 
-        // Verify permissions locally
         if (!isAdmin && task.CreatedBy !== userId) {
           throw new Error('Unauthorized to delete task');
         }
@@ -381,7 +382,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           isCreator: task.CreatedBy === userId,
         });
 
-        // Delete messages
         console.log('[TasksTable] Attempting to delete messages for task:', deleteTaskId);
         try {
           const messagesQuery = query(collection(db, `tasks/${deleteTaskId}/messages`));
@@ -401,7 +401,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           });
         }
 
-        // Delete notifications
         console.log('[TasksTable] Attempting to delete notifications for task:', deleteTaskId);
         try {
           const notificationsQuery = query(
@@ -424,7 +423,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           });
         }
 
-        // Notify involved users
         console.log('[TasksTable] Preparing to notify involved users for task:', deleteTaskId);
         try {
           const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
@@ -452,12 +450,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           });
         }
 
-        // Delete task
         console.log('[TasksTable] Attempting to delete task document:', deleteTaskId);
         await deleteDoc(doc(db, 'tasks', deleteTaskId));
         console.log('[TasksTable] Task deleted successfully:', deleteTaskId);
 
-        // Update task list
         setTasks((prev) => {
           const updatedTasks = prev.filter((t) => t.id !== deleteTaskId);
           console.log('[TasksTable] Updated tasks list:', {
@@ -484,7 +480,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       }
     };
 
-    // Filter handlers
     const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       setPriorityFilter(priority);
@@ -499,7 +494,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       console.log('[TasksTable] Client filter selected:', clientId);
     };
 
-    // Table columns
     const baseColumns = [
       {
         key: 'clientId',
@@ -674,9 +668,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     });
 
     return (
-      
       <div className={styles.container}>
-        <UserSwiper />
+        <UserSwiper onOpenProfile={onOpenProfile} />
         <div className={styles.header}>
           <div className={styles.searchWrapper}>
             <input

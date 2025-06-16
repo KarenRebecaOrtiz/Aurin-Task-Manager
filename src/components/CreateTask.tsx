@@ -19,6 +19,8 @@ import styles from '@/components/NewTaskStyles.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import memberStyles from '@/components/MembersTable.module.scss';
 import { Timestamp } from 'firebase/firestore';
+import SuccessAlert from './SuccessAlert'; // Import SuccessAlert
+import FailAlert from './FailAlert'; // Import FailAlert
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -145,6 +147,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const advancedSectionRef = useRef<HTMLDivElement>(null);
   const [searchCollaborator, setSearchCollaborator] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
+  // State for alerts
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showFailAlert, setShowFailAlert] = useState(false);
+  const [failErrorMessage, setFailErrorMessage] = useState('');
 
   // Track unsaved changes
   useEffect(() => {
@@ -159,7 +165,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     onHasUnsavedChanges(isChanged);
   }, [task, onHasUnsavedChanges]);
 
-  // Reset form when closing
+  // Reset form and alerts when closing
   useEffect(() => {
     if (!isOpen) {
       setTask({ ...initialTaskState.current });
@@ -167,6 +173,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       onHasUnsavedChanges(false);
       setIsAdvancedOpen(false);
       setErrors({});
+      setShowSuccessAlert(false);
+      setShowFailAlert(false);
     }
   }, [isOpen, onHasUnsavedChanges]);
 
@@ -529,12 +537,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       animateClick(e.currentTarget);
       e.preventDefault();
       if (!user || !validateTask()) {
-        alert('Por favor, completa todos los campos obligatorios.');
+        setShowFailAlert(true);
+        setFailErrorMessage('Por favor, completa todos los campos obligatorios.');
         return;
       }
 
       if (task.startDate && task.endDate && task.startDate > task.endDate) {
-        alert('La fecha de inicio debe ser anterior a la fecha de finalización.');
+        setShowFailAlert(true);
+        setFailErrorMessage('La fecha de inicio debe ser anterior a la fecha de finalización.');
         return;
       }
 
@@ -565,6 +575,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           });
         }
 
+        // Show success alert
+        setShowSuccessAlert(true);
+        // Reset form
         setTask({
           clientId: '',
           project: '',
@@ -589,10 +602,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         setHasUnsavedChanges(false);
         onHasUnsavedChanges(false);
         setIsSaving(false);
-        router.push('/');
-      } catch (error) {
+        // Navigate after success
+        setTimeout(() => {
+          router.push('/');
+        }, 3000); // Delay navigation to allow alert to be seen
+      } catch (error: any) {
         console.error('Error saving task:', error);
-        alert('Error al guardar la tarea.');
+        setShowFailAlert(true);
+        setFailErrorMessage(error.message || 'Error al guardar la tarea.');
         setIsSaving(false);
       }
     },
@@ -647,101 +664,439 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   );
 
   return (
-    <div className={`${styles.container} ${isOpen ? styles.open : ''} ${isSaving ? styles.saving : ''}`} ref={containerRef}>
-      <div className={styles.header}>
-        <div className={styles.headerTitle}>Crear Tarea</div>
-        <button className={styles.toggleButton} onClick={onToggle}>
-          <Image
-            src={isOpen ? '/x.svg' : '/x.svg'}
-            alt={isOpen ? 'Cerrar' : 'Abrir'}
-            width={16}
-            height={16}
-          />
-        </button>
-      </div>
-      {isOpen && (
-        <div className={styles.content}>
-          {/* Container 0: Account and Project */}
-          <div className={styles.section} ref={(el) => { sectionsRef.current[0] = el; }}>
-            <div className={styles.sectionTitle}>Cuenta Asignada:</div>
-            <div className={styles.sectionSubtitle}>
-              Selecciona la cuenta a la que se asignará esta tarea (por ejemplo, Pinaccle).
-            </div>
-            <div className={styles.slideshow}>
-              <Swiper
-                modules={[Navigation]}
-                slidesPerView={6}
-                spaceBetween={20}
-                navigation={{
-                  prevEl: `.${styles.clientPrev}`,
-                  nextEl: `.${styles.clientNext}`,
-                }}
-                breakpoints={{
-                  1024: { slidesPerView: 4 },
-                  767: { slidesPerView: 2 },
-                  480: { slidesPerView: 1 },
-                }}
-                className={styles.swiper}
-              >
-                {clients.map((client) => (
-                  <SwiperSlide key={client.id}>
-                    <div
-                      className={`${styles.slideCard} ${task.clientId === client.id ? styles.selected : ''}`}
-                      onClick={(e) => handleClientSelect(client.id, e)}
-                    >
-                      <Image
-                        src={client.imageUrl}
-                        alt={client.name}
-                        width={36}
-                        height={36}
-                        className={styles.clientImage}
-                      />
-                      <div className={styles.clientName}>{client.name}</div>
-                    </div>
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-              
-            </div>
-            {errors.clientId && <div className={styles.error}>{errors.clientId}</div>}
-            <div className={styles.addButtonWrapper}>
-              <div className={styles.addButtonText}>
-                ¿No encuentras alguna cuenta? <strong>Agrega una nueva.</strong>
+    <>
+      <div className={`${styles.container} ${isOpen ? styles.open : ''} ${isSaving ? styles.saving : ''}`} ref={containerRef}>
+        <div className={styles.header}>
+          <div className={styles.headerTitle}>Crear Tarea</div>
+          <button className={styles.toggleButton} onClick={onToggle}>
+            <Image
+              src={isOpen ? '/x.svg' : '/x.svg'}
+              alt={isOpen ? 'Cerrar' : 'Abrir'}
+              width={16}
+              height={16}
+            />
+          </button>
+        </div>
+        {isOpen && (
+          <div className={styles.content}>
+            {/* Container 0: Account and Project */}
+            <div className={styles.section} ref={(el) => { sectionsRef.current[0] = el; }}>
+              <div className={styles.sectionTitle}>Cuenta Asignada:</div>
+              <div className={styles.sectionSubtitle}>
+                Selecciona la cuenta a la que se asignará esta tarea (por ejemplo, Pinaccle).
               </div>
-              <button
-                className={styles.addButton}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  onCreateClientOpen();
-                }}
-              >
-                + Agregar Cuenta
-              </button>
-            </div>
-          </div>
-          <div className={styles.section} ref={(el) => { sectionsRef.current[1] = el; }}>
-            <div className={styles.projectSection}>
-              <div className={styles.sectionSubtitle}>Selecciona la carpeta a la que se asignará esta tarea:</div>
-              <div className={styles.dropdownContainer} ref={projectDropdownRef}>
-                <div style={{border:'solid 1px #f2f2f3', padding :'10px', overflow: 'hidden' , borderRadius: '5px', marginTop: '5px'}}
-                  className={styles.dropdownTrigger}
+              <div className={styles.slideshow}>
+                <Swiper
+                  modules={[Navigation]}
+                  slidesPerView={6}
+                  spaceBetween={20}
+                  navigation={{
+                    prevEl: `.${styles.clientPrev}`,
+                    nextEl: `.${styles.clientNext}`,
+                  }}
+                  breakpoints={{
+                    1024: { slidesPerView: 4 },
+                    767: { slidesPerView: 2 },
+                    480: { slidesPerView: 1 },
+                  }}
+                  className={styles.swiper}
+                >
+                  {clients.map((client) => (
+                    <SwiperSlide key={client.id}>
+                      <div
+                        className={`${styles.slideCard} ${task.clientId === client.id ? styles.selected : ''}`}
+                        onClick={(e) => handleClientSelect(client.id, e)}
+                      >
+                        <Image
+                          src={client.imageUrl}
+                          alt={client.name}
+                          width={36}
+                          height={36}
+                          className={styles.clientImage}
+                        />
+                        <div className={styles.clientName}>{client.name}</div>
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+              {errors.clientId && <div className={styles.error}>{errors.clientId}</div>}
+              <div className={styles.addButtonWrapper}>
+                <div className={styles.addButtonText}>
+                  ¿No encuentras alguna cuenta? <strong>Agrega una nueva.</strong>
+                </div>
+                <button
+                  className={styles.addButton}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    setIsProjectDropdownOpen(!isProjectDropdownOpen);
+                    onCreateClientOpen();
                   }}
                 >
-                  <span style={{fontSize: '14px', fontWeight:'500'}}>{task.project || 'Seleccionar un Proyecto'}</span>
-                  <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                  + Agregar Cuenta
+                </button>
+              </div>
+            </div>
+            <div className={styles.section} ref={(el) => { sectionsRef.current[1] = el; }}>
+              <div className={styles.projectSection}>
+                <div className={styles.sectionSubtitle}>Selecciona la carpeta a la que se asignará esta tarea:</div>
+                <div className={styles.dropdownContainer} ref={projectDropdownRef}>
+                  <div style={{border:'solid 1px #f2f2f3', padding :'10px', overflow: 'hidden' , borderRadius: '5px', marginTop: '5px'}}
+                    className={styles.dropdownTrigger}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      setIsProjectDropdownOpen(!isProjectDropdownOpen);
+                    }}
+                  >
+                    <span style={{fontSize: '14px', fontWeight:'500'}}>{task.project || 'Seleccionar un Proyecto'}</span>
+                    <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                  </div>
+                  {isProjectDropdownOpen &&
+                    createPortal(
+                      <div
+                        className={styles.dropdownItems}
+                        style={{
+                          top: projectDropdownPosition?.top,
+                          left: projectDropdownPosition?.left,
+                          position: 'absolute',
+                          zIndex: 150000,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: '5px',
+                          overflow: 'hidden',
+                          boxShadow: `
+                            0px 2px 4px rgba(0, 0, 0, 0.04),
+                            0px 7px 7px rgba(0, 0, 0, 0.03),
+                            0px 15px 9px rgba(0, 0, 0, 0.02),
+                            0px 27px 11px rgba(0, 0, 0, 0.01),
+                            0px 42px 12px rgba(0, 0, 0, 0.00)
+                          `,
+                        }}
+                        ref={projectDropdownPopperRef}
+                      >
+                        {clients
+                          .find((c) => c.id === task.clientId)
+                          ?.projects.map((project, index) => (
+                            <div
+                              key={`${project}-${index}`}
+                              className={styles.dropdownItem}
+                              onClick={(e) => handleProjectSelect(project, e)}
+                              style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                            >
+                              {project}
+                            </div>
+                          ))}
+                      </div>,
+                      document.body
+                    )}
                 </div>
-                {isProjectDropdownOpen &&
+                {errors.project && <div className={styles.error}>{errors.project}</div>}
+                {task.clientId && clients.find((c) => c.id === task.clientId)?.createdBy === user?.id && (
+                  <button
+                    className={styles.addButton}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      const client = clients.find((c) => c.id === task.clientId);
+                      if (client) {
+                        onEditClientOpen(client);
+                      }
+                    }}
+                  >
+                    + Nueva Carpeta
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Container 1: Basic Information */}
+            <div className={styles.section} ref={(el) => { sectionsRef.current[2] = el; }}>
+              <div className={styles.sectionTitle}>1: Información Básica:</div>
+              <div className={styles.level1Grid}>
+                <div className={styles.level1Column}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Nombre de la tarea *{errors.name && <span className={styles.error}>{errors.name}</span>}</label>
+                    <input
+                      type="text"
+                      className={`${styles.input} ${errors.name ? styles.errorInput : ''}`}
+                      value={task.name}
+                      onChange={(e) => setTask((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="Ej: Crear wireframe"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Descripción *{errors.description && <span className={styles.error}>{errors.description}</span>}</label>
+                    <input
+                      type="text"
+                      className={`${styles.input} ${errors.description ? styles.errorInput : ''}`}
+                      value={task.description}
+                      onChange={(e) => setTask((prev) => ({ ...prev, description: e.target.value }))}
+                      placeholder="Ej: Diseñar wireframes para la nueva app móvil"
+                    />
+                  </div>
+                </div>
+                <div className={styles.level1Column}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Objetivos</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={task.objectives}
+                      onChange={(e) => setTask((prev) => ({ ...prev, objectives: e.target.value }))}
+                      placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
+                    />
+                  </div>
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Fecha de Inicio *{errors.startDate && <span className={styles.error}>{errors.startDate}</span>}</label>
+                      <input
+                        type="text"
+                        className={`${styles.input} ${errors.startDate ? styles.errorInput : ''}`}
+                        value={task.startDate ? task.startDate.toLocaleDateString('es-ES') : ''}
+                        onClick={() => setIsStartDateOpen(true)}
+                        placeholder="Selecciona una fecha"
+                        readOnly
+                        ref={startDateInputRef}
+                      />
+                      {isStartDateOpen &&
+                        createPortal(
+                          <div
+                            className={styles.datePickerPopper}
+                            style={{
+                              top: startDatePosition?.top,
+                              left: startDatePosition?.left,
+                              position: 'absolute',
+                              zIndex: 130000,
+                            }}
+                            ref={startDatePopperRef}
+                          >
+                            <DatePicker
+                              selected={task.startDate}
+                              onChange={(date: Date) => {
+                                setTask((prev) => ({ ...prev, startDate: date }));
+                                setErrors((prev) => ({ ...prev, startDate: undefined }));
+                              }}
+                              inline
+                              dateFormat="dd/MM/yyyy"
+                            />
+                          </div>,
+                          document.body
+                        )}
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Fecha de Finalización *{errors.endDate && <span className={styles.error}>{errors.endDate}</span>}</label>
+                      <input
+                        type="text"
+                        className={`${styles.input} ${errors.endDate ? styles.errorInput : ''}`}
+                        value={task.endDate ? task.endDate.toLocaleDateString('es-ES') : ''}
+                        onClick={() => setIsEndDateOpen(true)}
+                        placeholder="Selecciona una fecha"
+                        readOnly
+                        ref={endDateInputRef}
+                      />
+                      {isEndDateOpen &&
+                        createPortal(
+                          <div
+                            className={styles.datePickerPopper}
+                            style={{
+                              top: endDatePosition?.top,
+                              left: endDatePosition?.left,
+                              position: 'absolute',
+                              zIndex: 130000,
+                            }}
+                            ref={endDatePopperRef}
+                          >
+                            <DatePicker
+                              selected={task.endDate}
+                              onChange={(date: Date) => {
+                                setTask((prev) => ({ ...prev, endDate: date }));
+                                setErrors((prev) => ({ ...prev, endDate: undefined }));
+                              }}
+                              inline
+                              dateFormat="dd/MM/yyyy"
+                            />
+                          </div>,
+                          document.body
+                        )}
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.level1Column}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Estado Inicial *{errors.status && <span className={styles.error}>{errors.status}</span>}</label>
+                    <div className={styles.dropdownContainer} ref={statusDropdownRef}>
+                      <div
+                        className={styles.dropdownTrigger}
+                        onClick={(e) => {
+                          animateClick(e.currentTarget);
+                          setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                        }}
+                      >
+                        <span>{task.status}</span>
+                        <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                      </div>
+                      {isStatusDropdownOpen &&
+                        createPortal(
+                          <div
+                            className={styles.dropdownItems}
+                            style={{
+                              top: statusDropdownPosition?.top,
+                              left: statusDropdownPosition?.left,
+                              position: 'absolute',
+                              zIndex: 150000,
+                              width: statusDropdownRef.current?.offsetWidth,
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: '5px',
+                              overflow: 'hidden',
+                              boxShadow: `
+                                0px 2px 4px rgba(0, 0, 0, 0.04),
+                                0px 7px 7px rgba(0, 0, 0, 0.03),
+                                0px 15px 9px rgba(0, 0, 0, 0.02),
+                                0px 27px 11px rgba(0, 0, 0, 0.01),
+                                0px 42px 12px rgba(0, 0, 0, 0.00)
+                              `,
+                            }}
+                            ref={statusDropdownPopperRef}
+                          >
+                            {['Por comenzar', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelada'].map((status) => (
+                              <div
+                                key={status}
+                                className={styles.dropdownItem}
+                                onClick={(e) => handleStatusSelect(status, e)}
+                                style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                              >
+                                {status}
+                              </div>
+                            ))}
+                          </div>,
+                          document.body
+                        )}
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.level1Column}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Prioridad *{errors.priority && <span className={styles.error}>{errors.priority}</span>}</label>
+                    <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
+                      <div
+                        className={styles.dropdownTrigger}
+                        onClick={(e) => {
+                          animateClick(e.currentTarget);
+                          setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                        }}
+                      >
+                        <span>{task.priority}</span>
+                        <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                      </div>
+                      {isPriorityDropdownOpen &&
+                        createPortal(
+                          <div
+                            className={styles.dropdownItems}
+                            style={{
+                              top: priorityDropdownPosition?.top,
+                              left: priorityDropdownPosition?.left,
+                              position: 'absolute',
+                              zIndex: 150000,
+                              width: priorityDropdownRef.current?.offsetWidth,
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: '5px',
+                              overflow: 'hidden',
+                              boxShadow: `
+                                0px 2px 4px rgba(0, 0, 0, 0.04),
+                                0px 7px 7px rgba(0, 0, 0, 0.03),
+                                0px 15px 9px rgba(0, 0, 0, 0.02),
+                                0px 27px 11px rgba(0, 0, 0, 0.01),
+                                0px 42px 12px rgba(0, 0, 0, 0.00)
+                              `,
+                            }}
+                            ref={priorityDropdownPopperRef}
+                          >
+                            {['Baja', 'Media', 'Alta'].map((priority) => (
+                              <div
+                                key={priority}
+                                className={styles.dropdownItem}
+                                onClick={(e) => handlePrioritySelect(priority, e)}
+                                style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                              >
+                                {priority}
+                              </div>
+                            ))}
+                          </div>,
+                          document.body
+                        )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Container 2: Team */}
+            <div className={styles.section} ref={(el) => { sectionsRef.current[3] = el; }}>
+              <div className={styles.sectionTitle}>2: Agregar información de equipo</div>
+              <div className={styles.sectionTitle}>Persona Encargada de la tarea: *{errors.LeadedBy && <span className={styles.error}>{errors.LeadedBy}</span>}</div>
+              <div className={styles.sectionSubtitle}>
+                Selecciona la persona principal responsable de la tarea. Esta persona será el punto de contacto y supervisará el progreso.
+              </div>
+              <div className={styles.slideshow}>
+                <Swiper
+                  modules={[Navigation]}
+                  slidesPerView={6}
+                  spaceBetween={20}
+                  navigation={{
+                    prevEl: `.${styles.pmPrev}`,
+                    nextEl: `.${styles.pmNext}`,
+                  }}
+                  breakpoints={{
+                    1024: { slidesPerView: 4 },
+                    767: { slidesPerView: 2 },
+                    480: { slidesPerView: 1 },
+                  }}
+                  className={styles.swiper}
+                >
+                  {users.map((user) => (
+                    <SwiperSlide key={user.id}>
+                      <div
+                        className={`${styles.slideCard} ${task.LeadedBy.includes(user.id) ? styles.selected : ''}`}
+                        onClick={(e) => handlePmSelect(user.id, e)}
+                      >
+                        <Image
+                          src={user.imageUrl}
+                          alt={user.fullName}
+                          width={36}
+                          height={36}
+                          className={styles.userImage}
+                        />
+                        <div className={styles.userName}>{user.fullName}</div>
+                        <div className={styles.userRole}>{user.role}</div>
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+              <div className={styles.sectionTitle}>Colaboradores: *{errors.AssignedTo && <span className={styles.error}>{errors.AssignedTo}</span>}</div>
+              <div className={styles.sectionSubtitle}>
+                Agrega a los miembros del equipo que trabajarán en la tarea. Puedes incluir varios colaboradores según sea necesario.
+              </div>
+              <div className={styles.formGroup}>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={searchCollaborator}
+                  onChange={(e) => {
+                    setSearchCollaborator(e.target.value);
+                    setIsCollaboratorDropdownOpen(e.target.value.trim() !== '');
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
+                  }}
+                  placeholder="Ej: John Doe"
+                  ref={collaboratorInputRef}
+                />
+                {isCollaboratorDropdownOpen &&
                   createPortal(
                     <div
-                      className={styles.dropdownItems}
+                      className={styles.dropdown}
                       style={{
-                        top: projectDropdownPosition?.top,
-                        left: projectDropdownPosition?.left,
+                        top: collaboratorDropdownPosition?.top,
+                        left: collaboratorDropdownPosition?.left,
                         position: 'absolute',
                         zIndex: 150000,
+                        width: collaboratorInputRef.current?.offsetWidth,
                         backgroundColor: '#FFFFFF',
                         borderRadius: '5px',
                         overflow: 'hidden',
@@ -753,501 +1108,179 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           0px 42px 12px rgba(0, 0, 0, 0.00)
                         `,
                       }}
-                      ref={projectDropdownPopperRef}
+                      ref={collaboratorDropdownPopperRef}
                     >
-                      {clients
-                        .find((c) => c.id === task.clientId)
-                        ?.projects.map((project, index) => (
+                      {filteredCollaborators.length ? (
+                        filteredCollaborators.map((u) => (
                           <div
-                            key={`${project}-${index}`} // Combine project name with index for uniqueness
-                            className={styles.dropdownItem}
-                            onClick={(e) => handleProjectSelect(project, e)}
-                            style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
+                            key={u.id}
+                            className={`${styles.dropdownItem} ${task.LeadedBy.includes(u.id) ? styles.disabled : ''}`}
+                            onClick={(e) => !task.LeadedBy.includes(u.id) && handleCollaboratorSelect(u.id, e)}
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              padding: '12px',
+                              border: '1px solid rgba(243, 243, 243, 0.47)',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                            }}
                           >
-                            {project}
+                            {u.fullName} ({u.role}) {task.AssignedTo.includes(u.id) && '(Seleccionado)'}
                           </div>
-                        ))}
-                    </div>,
-                    document.body
-                  )}
-              </div>
-              {errors.project && <div className={styles.error}>{errors.project}</div>}
-              {task.clientId && clients.find((c) => c.id === task.clientId)?.createdBy === user?.id && (
-                <button
-                  className={styles.addButton}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    const client = clients.find((c) => c.id === task.clientId);
-                    if (client) {
-                      onEditClientOpen(client);
-                    }
-                  }}
-                >
-                  + Nueva Carpeta
-                </button>
-              )}
-            </div>
-          </div>
-          {/* Container 1: Basic Information */}
-          <div className={styles.section} ref={(el) => { sectionsRef.current[2] = el; }}>
-            <div className={styles.sectionTitle}>1: Información Básica:</div>
-            <div className={styles.level1Grid}>
-              <div className={styles.level1Column}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Nombre de la tarea *{errors.name && <span className={styles.error}>{errors.name}</span>}</label>
-                  <input
-                    type="text"
-                    className={`${styles.input} ${errors.name ? styles.errorInput : ''}`}
-                    value={task.name}
-                    onChange={(e) => setTask((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Ej: Crear wireframe"
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Descripción *{errors.description && <span className={styles.error}>{errors.description}</span>}</label>
-                  <input
-                    type="text"
-                    className={`${styles.input} ${errors.description ? styles.errorInput : ''}`}
-                    value={task.description}
-                    onChange={(e) => setTask((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Ej: Diseñar wireframes para la nueva app móvil"
-                  />
-                </div>
-              </div>
-              <div className={styles.level1Column}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Objetivos</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={task.objectives}
-                    onChange={(e) => setTask((prev) => ({ ...prev, objectives: e.target.value }))}
-                    placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Fecha de Inicio *{errors.startDate && <span className={styles.error}>{errors.startDate}</span>}</label>
-                    <input
-                      type="text"
-                      className={`${styles.input} ${errors.startDate ? styles.errorInput : ''}`}
-                      value={task.startDate ? task.startDate.toLocaleDateString('es-ES') : ''}
-                      onClick={() => setIsStartDateOpen(true)}
-                      placeholder="Selecciona una fecha"
-                      readOnly
-                      ref={startDateInputRef}
-                    />
-                    {isStartDateOpen &&
-                      createPortal(
+                        ))
+                      ) : (
                         <div
-                          className={styles.datePickerPopper}
-                          style={{
-                            top: startDatePosition?.top,
-                            left: startDatePosition?.left,
-                            position: 'absolute',
-                            zIndex: 130000,
-                          }}
-                          ref={startDatePopperRef}
-                        >
-                          <DatePicker
-                            selected={task.startDate}
-                            onChange={(date: Date) => {
-                              setTask((prev) => ({ ...prev, startDate: date }));
-                              setErrors((prev) => ({ ...prev, startDate: undefined }));
-                            }}
-                            inline
-                            dateFormat="dd/MM/yyyy"
-                          />
-                        </div>,
-                        document.body
-                      )}
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Fecha de Finalización *{errors.endDate && <span className={styles.error}>{errors.endDate}</span>}</label>
-                    <input
-                      type="text"
-                      className={`${styles.input} ${errors.endDate ? styles.errorInput : ''}`}
-                      value={task.endDate ? task.endDate.toLocaleDateString('es-ES') : ''}
-                      onClick={() => setIsEndDateOpen(true)}
-                      placeholder="Selecciona una fecha"
-                      readOnly
-                      ref={endDateInputRef}
-                    />
-                    {isEndDateOpen &&
-                      createPortal(
-                        <div
-                          className={styles.datePickerPopper}
-                          style={{
-                            top: endDatePosition?.top,
-                            left: endDatePosition?.left,
-                            position: 'absolute',
-                            zIndex: 130000,
-                          }}
-                          ref={endDatePopperRef}
-                        >
-                          <DatePicker
-                            selected={task.endDate}
-                            onChange={(date: Date) => {
-                              setTask((prev) => ({ ...prev, endDate: date }));
-                              setErrors((prev) => ({ ...prev, endDate: undefined }));
-                            }}
-                            inline
-                            dateFormat="dd/MM/yyyy"
-                          />
-                        </div>,
-                        document.body
-                      )}
-                  </div>
-                </div>
-              </div>
-              <div className={styles.level1Column}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Estado Inicial *{errors.status && <span className={styles.error}>{errors.status}</span>}</label>
-                  <div className={styles.dropdownContainer} ref={statusDropdownRef}>
-                    <div
-                      className={styles.dropdownTrigger}
-                      onClick={(e) => {
-                        animateClick(e.currentTarget);
-                        setIsStatusDropdownOpen(!isStatusDropdownOpen);
-                      }}
-                    >
-                      <span>{task.status}</span>
-                      <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                    </div>
-                    {isStatusDropdownOpen &&
-                      createPortal(
-                        <div
-                          className={styles.dropdownItems}
-                          style={{
-                            top: statusDropdownPosition?.top,
-                            left: statusDropdownPosition?.left,
-                            position: 'absolute',
-                            zIndex: 150000,
-                            width: statusDropdownRef.current?.offsetWidth,
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '5px',
-                            overflow: 'hidden',
-                            boxShadow: `
-                              0px 2px 4px rgba(0, 0, 0, 0.04),
-                              0px 7px 7px rgba(0, 0, 0, 0.03),
-                              0px 15px 9px rgba(0, 0, 0, 0.02),
-                              0px 27px 11px rgba(0, 0, 0, 0.01),
-                              0px 42px 12px rgba(0, 0, 0, 0.00)
-                            `,
-                          }}
-                          ref={statusDropdownPopperRef}
-                        >
-                          {['Por comenzar', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelada'].map((status) => (
-                            <div
-                              key={status}
-                              className={styles.dropdownItem}
-                              onClick={(e) => handleStatusSelect(status, e)}
-                              style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
-                            >
-                              {status}
-                            </div>
-                          ))}
-                        </div>,
-                        document.body
-                      )}
-                  </div>
-                </div>
-              </div>
-              <div className={styles.level1Column}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Prioridad *{errors.priority && <span className={styles.error}>{errors.priority}</span>}</label>
-                  <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
-                    <div
-                      className={styles.dropdownTrigger}
-                      onClick={(e) => {
-                        animateClick(e.currentTarget);
-                        setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
-                      }}
-                    >
-                      <span>{task.priority}</span>
-                      <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                    </div>
-                    {isPriorityDropdownOpen &&
-                      createPortal(
-                        <div
-                          className={styles.dropdownItems}
-                          style={{
-                            top: priorityDropdownPosition?.top,
-                            left: priorityDropdownPosition?.left,
-                            position: 'absolute',
-                            zIndex: 150000,
-                            width: priorityDropdownRef.current?.offsetWidth,
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '5px',
-                            overflow: 'hidden',
-                            boxShadow: `
-                              0px 2px 4px rgba(0, 0, 0, 0.04),
-                              0px 7px 7px rgba(0, 0, 0, 0.03),
-                              0px 15px 9px rgba(0, 0, 0, 0.02),
-                              0px 27px 11px rgba(0, 0, 0, 0.01),
-                              0px 42px 12px rgba(0, 0, 0, 0.00)
-                            `,
-                          }}
-                          ref={priorityDropdownPopperRef}
-                        >
-                          {['Baja', 'Media', 'Alta'].map((priority) => (
-                            <div
-                              key={priority}
-                              className={styles.dropdownItem}
-                              onClick={(e) => handlePrioritySelect(priority, e)}
-                              style={{ backgroundColor: '#FFFFFF', padding: '12px', border: '1px solid rgba(243, 243, 243, 0.47)', borderRadius: '2px', cursor: 'pointer' }}
-                            >
-                              {priority}
-                            </div>
-                          ))}
-                        </div>,
-                        document.body
-                      )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Container 2: Team */}
-          <div className={styles.section} ref={(el) => { sectionsRef.current[3] = el; }}>
-            <div className={styles.sectionTitle}>2: Agregar información de equipo</div>
-            <div className={styles.sectionTitle}>Persona Encargada de la tarea: *{errors.LeadedBy && <span className={styles.error}>{errors.LeadedBy}</span>}</div>
-            <div className={styles.sectionSubtitle}>
-              Selecciona la persona principal responsable de la tarea. Esta persona será el punto de contacto y supervisará el progreso.
-            </div>
-            <div className={styles.slideshow}>
-              <Swiper
-                modules={[Navigation]}
-                slidesPerView={6}
-                spaceBetween={20}
-                navigation={{
-                  prevEl: `.${styles.pmPrev}`,
-                  nextEl: `.${styles.pmNext}`,
-                }}
-                breakpoints={{
-                  1024: { slidesPerView: 4 },
-                  767: { slidesPerView: 2 },
-                  480: { slidesPerView: 1 },
-                }}
-                className={styles.swiper}
-              >
-                {users.map((user) => (
-                  <SwiperSlide key={user.id}>
-                    <div
-                      className={`${styles.slideCard} ${task.LeadedBy.includes(user.id) ? styles.selected : ''}`}
-                      onClick={(e) => handlePmSelect(user.id, e)}
-                    >
-                      <Image
-                        src={user.imageUrl}
-                        alt={user.fullName}
-                        width={36}
-                        height={36}
-                        className={styles.userImage}
-                      />
-                      <div className={styles.userName}>{user.fullName}</div>
-                      <div className={styles.userRole}>{user.role}</div>
-                    </div>
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            
-            </div>
-            <div className={styles.sectionTitle}>Colaboradores: *{errors.AssignedTo && <span className={styles.error}>{errors.AssignedTo}</span>}</div>
-            <div className={styles.sectionSubtitle}>
-              Agrega a los miembros del equipo que trabajarán en la tarea. Puedes incluir varios colaboradores según sea necesario.
-            </div>
-            <div className={styles.formGroup}>
-              <input
-                type="text"
-                className={styles.input}
-                value={searchCollaborator}
-                onChange={(e) => {
-                  setSearchCollaborator(e.target.value);
-                  setIsCollaboratorDropdownOpen(e.target.value.trim() !== '');
-                }}
-                onBlur={() => {
-                  // Delay closing to allow clicks on dropdown items
-                  setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
-                }}
-                placeholder="Ej: John Doe"
-                ref={collaboratorInputRef}
-              />
-              {isCollaboratorDropdownOpen &&
-                createPortal(
-                  <div
-                    className={styles.dropdown}
-                    style={{
-                      top: collaboratorDropdownPosition?.top,
-                      left: collaboratorDropdownPosition?.left,
-                      position: 'absolute',
-                      zIndex: 150000,
-                      width: collaboratorInputRef.current?.offsetWidth,
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '5px',
-                      overflow: 'hidden',
-                      boxShadow: `
-                        0px 2px 4px rgba(0, 0, 0, 0.04),
-                        0px 7px 7px rgba(0, 0, 0, 0.03),
-                        0px 15px 9px rgba(0, 0, 0, 0.02),
-                        0px 27px 11px rgba(0, 0, 0, 0.01),
-                        0px 42px 12px rgba(0, 0, 0, 0.00)
-                      `,
-                    }}
-                    ref={collaboratorDropdownPopperRef}
-                  >
-                    {filteredCollaborators.length ? (
-                      filteredCollaborators.map((u) => (
-                        <div
-                          key={u.id}
-                          className={`${styles.dropdownItem} ${task.LeadedBy.includes(u.id) ? styles.disabled : ''}`}
-                          onClick={(e) => !task.LeadedBy.includes(u.id) && handleCollaboratorSelect(u.id, e)}
+                          className={styles.dropdownItem}
                           style={{
                             backgroundColor: '#FFFFFF',
                             padding: '12px',
                             border: '1px solid rgba(243, 243, 243, 0.47)',
                             borderRadius: '2px',
-                            cursor: 'pointer',
                           }}
                         >
-                          {u.fullName} ({u.role}) {task.AssignedTo.includes(u.id) && '(Seleccionado)'}
+                          No hay coincidencias
                         </div>
-                      ))
-                    ) : (
-                      <div
-                        className={styles.dropdownItem}
-                        style={{
-                          backgroundColor: '#FFFFFF',
-                          padding: '12px',
-                          border: '1px solid rgba(243, 243, 243, 0.47)',
-                          borderRadius: '2px',
-                        }}
-                      >
-                        No hay coincidencias
+                      )}
+                    </div>,
+                    document.body
+                  )}
+                <div className={styles.tags}>
+                  {task.AssignedTo.map((userId) => {
+                    const collaborator = users.find((u) => u.id === userId);
+                    return collaborator ? (
+                      <div key={userId} className={styles.tag}>
+                        {collaborator.fullName}
+                        <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
                       </div>
-                    )}
-                  </div>,
-                  document.body
-                )}
-              <div className={styles.tags}>
-                {task.AssignedTo.map((userId) => {
-                  const collaborator = users.find((u) => u.id === userId);
-                  return collaborator ? (
-                    <div key={userId} className={styles.tag}>
-                      {collaborator.fullName}
-                      <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
-                    </div>
-                  ) : null;
-                })}
-              </div>
-              <div className={styles.addButtonWrapper}>
-                <div className={styles.addButtonText}>
-                  ¿No encuentras algún colaborador? <strong>Agrega una nueva.</strong>
+                    ) : null;
+                  })}
                 </div>
-                <button
-                  className={styles.addButton}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    onInviteSidebarOpen();
-                  }}
-                >
-                  + Invitar Colaborador
-                </button>
+                <div className={styles.addButtonWrapper}>
+                  <div className={styles.addButtonText}>
+                    ¿No encuentras algún colaborador? <strong>Agrega una nueva.</strong>
+                  </div>
+                  <button
+                    className={styles.addButton}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      onInviteSidebarOpen();
+                    }}
+                  >
+                    + Invitar Colaborador
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          {/* Container 3: Resources */}
-          <div  className={styles.section} ref={(el) => { sectionsRef.current[4] = el; }}>
-            <div  className={styles.sectionTitle}>3: Recursos</div>
-            <div className={styles.resourceRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Presupuesto Asignado</label>
-                <div className={styles.currencyInput}>
-                  <span className={styles.currencySymbol}>$</span>
+            {/* Container 3: Resources */}
+            <div className={styles.section} ref={(el) => { sectionsRef.current[4] = el; }}>
+              <div className={styles.sectionTitle}>3: Recursos</div>
+              <div className={styles.resourceRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Presupuesto Asignado</label>
+                  <div className={styles.currencyInput}>
+                    <span className={styles.currencySymbol}>$</span>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={task.budget}
+                      onChange={(e) => setTask((prev) => ({ ...prev, budget: e.target.value.replace('$', '') }))}
+                      placeholder="1000.00"
+                    />
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Horas Asignadas</label>
                   <input
                     type="text"
                     className={styles.input}
-                    value={task.budget}
-                    onChange={(e) => setTask((prev) => ({ ...prev, budget: e.target.value.replace('$', '') }))}
-                    placeholder="1000.00"
+                    value={task.hours}
+                    onChange={(e) => setTask((prev) => ({ ...prev, hours: e.target.value }))}
+                    placeholder="120"
                   />
                 </div>
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Horas Asignadas</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={task.hours}
-                  onChange={(e) => setTask((prev) => ({ ...prev, hours: e.target.value }))}
-                  placeholder="120"
+            </div>
+            {/* Container 4: Advanced Configuration */}
+            <div className={styles.section} ref={(el) => { sectionsRef.current[5] = el; }}>
+              <button className={styles.advancedToggle} onClick={toggleAdvancedSection}>
+                4: Configuración Avanzada
+                <Image
+                  src={isAdvancedOpen ? '/chevron-down.svg' : '/chevron-up.svg'}
+                  alt={isAdvancedOpen ? 'Cerrar' : 'Abrir'}
+                  width={16}
+                  height={16}
                 />
+              </button>
+              <div className={styles.advancedContent} ref={advancedSectionRef}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Metodología del Proyecto</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={task.methodology}
+                    onChange={(e) => setTask((prev) => ({ ...prev, methodology: e.target.value }))}
+                    placeholder="Selecciona una metodología"
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Riesgos Potenciales</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={task.risks}
+                    onChange={(e) => setTask((prev) => ({ ...prev, risks: e.target.value }))}
+                    placeholder="Ej: Retrasos en entregas, Falta de recursos"
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Estrategias de Mitigación</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={task.mitigation}
+                    onChange={(e) => setTask((prev) => ({ ...prev, mitigation: e.target.value }))}
+                    placeholder="Ej: Contratar freelancers como respaldo"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          {/* Container 4: Advanced Configuration */}
-          <div className={styles.section} ref={(el) => { sectionsRef.current[5] = el; }}>
-            <button className={styles.advancedToggle} onClick={toggleAdvancedSection}>
-              4: Configuración Avanzada
-              <Image
-                src={isAdvancedOpen ? '/chevron-down.svg' : '/chevron-up.svg'}
-                alt={isAdvancedOpen ? 'Cerrar' : 'Abrir'}
-                width={16}
-                height={16}
-              />
-            </button>
-            <div className={styles.advancedContent} ref={advancedSectionRef}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Metodología del Proyecto</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={task.methodology}
-                  onChange={(e) => setTask((prev) => ({ ...prev, methodology: e.target.value }))}
-                  placeholder="Selecciona una metodología"
-                />
+            {/* Submit Section */}
+            <div className={styles.submitSection} ref={(el) => { sectionsRef.current[6] = el; }}>
+              <div className={styles.submitText}>
+                Has seleccionado {task.AssignedTo.length} personas asignadas a este proyecto.
+                <br />
+                Al presionar “Registrar Tarea” se notificarán a las personas involucradas en la tarea a través de mail. Si
+                cometieras un error, tendrás que comunicarlo y solicitar una corrección.
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Riesgos Potenciales</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={task.risks}
-                  onChange={(e) => setTask((prev) => ({ ...prev, risks: e.target.value }))}
-                  placeholder="Ej: Retrasos en entregas, Falta de recursos"
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Estrategias de Mitigación</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={task.mitigation}
-                  onChange={(e) => setTask((prev) => ({ ...prev, mitigation: e.target.value }))}
-                  placeholder="Ej: Contratar freelancers como respaldo"
-                />
-              </div>
+              <button className={styles.submitButton} onClick={handleTaskSubmit} disabled={isSaving}>
+                Registrar Tarea
+              </button>
             </div>
           </div>
-          {/* Submit Section */}
-          <div className={styles.submitSection} ref={(el) => { sectionsRef.current[6] = el; }}>
-            <div className={styles.submitText}>
-              Has seleccionado {task.AssignedTo.length} personas asignadas a este proyecto.
-              <br />
-              Al presionar “Registrar Tarea” se notificarán a las personas involucradas en la tarea a través de mail. Si
-              cometieras un error, tendrás que comunicarlo y solicitar una corrección.
-            </div>
-            <button className={styles.submitButton} onClick={handleTaskSubmit} disabled={isSaving}>
-              Registrar Tarea
-            </button>
+        )}
+        {isSaving && (
+          <div className={styles.loaderOverlay}>
+            <div className={styles.loader}></div>
           </div>
-        </div>
+        )}
+      </div>
+      {/* Render SuccessAlert */}
+      {showSuccessAlert && (
+        <SuccessAlert
+          message={`La tarea "${task.name}" se ha creado exitosamente.`}
+          onClose={() => setShowSuccessAlert(false)}
+          actionLabel="Ver Tareas"
+          onAction={() => router.push('/')}
+        />
       )}
-      {isSaving && (
-        <div className={styles.loaderOverlay}>
-          <div className={styles.loader}></div>
-        </div>
+      {/* Render FailAlert */}
+      {showFailAlert && (
+        <FailAlert
+          message="No se pudo crear la tarea."
+          error={failErrorMessage}
+          onClose={() => setShowFailAlert(false)}
+        />
       )}
-    </div>
+    </>
   );
 };
 

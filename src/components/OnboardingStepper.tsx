@@ -729,7 +729,7 @@ const OnboardingStepper = () => {
                   </div>
                   <div className={styles.aboutToolsContainer}>
                     <div className={styles.aboutSection}>
-                      <div className={styles.inputWrapper}>
+                      <div className={styles.inputWrapper} >
                         <label className={styles.label}>Sobre mí</label>
                         <textarea
                           value={about}

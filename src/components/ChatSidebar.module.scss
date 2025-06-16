@@ -207,9 +207,9 @@
 
 .messageActions {
   display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: 8px;
+  flex-direction: row; 
+  align-items: center;
+  gap: 6px; 
 }
 
 .sender {
@@ -220,10 +220,15 @@
 }
 
 .timestamp {
-  color: #1b2734;
-  font-size: 14px;
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 400;
+  font-size: 12px;
+  color: #6b7280; 
+}
+
+.timestampWrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
 }
 
 .text {
@@ -251,40 +256,31 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
 }
 
 .actionDropdown {
   position: absolute;
-  top: -20px;
-  right: 0;
-  font-family: "Inter Tight", sans-serif;
-  background: #1f1f20;
-  border-radius: 6px;
-  z-index: 3300; 
-  padding: 8px 0;
-  pointer-events: auto;
-  box-shadow:
-  -5px 1px 11px rgba(0, 0, 0, 0.10),
-  -19px 3px 19px rgba(0, 0, 0, 0.09),
-  -43px 7px 26px rgba(0, 0, 0, 0.05),
-  -76px 12px 31px rgba(0, 0, 0, 0.01),
-  -118px 19px 34px rgba(0, 0, 0, 0.00);
-  display: flex;
-  flex-direction: column;
+  top: 100%; 
+  right: 0; 
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  min-width: 120px;
+  overflow: hidden;
 }
 
 .actionDropdownItem {
-  padding: 12px;
-  color: #D1D1D1;
-  font-size: 12px;
-  font-family: "Inter Tight", sans-serif;
-  font-weight: 600;
+  padding: 8px 12px;
+  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  &:hover {
+    background: #f3f4f6;
+  }
 }
 
 .actionDropdownItem:hover {
@@ -1271,18 +1267,11 @@
 }
 
 .fileName {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: white;
-  font: 400 12px 'Inter Tight';
-  margin-top: 4px;
-  text-decoration: none;
+  display: none;
 }
 
 .downloadButton {
   background: none;
-  filter: invert(100) brightness(100);
   border: none;
   cursor: pointer;
   padding: 4px;
@@ -1352,7 +1341,7 @@
   gap: 6px;
   color: white;
   padding: 5px;
-  background: #1f1f20;
+  background: #f5f5f5;
   border-radius: 4px;
   margin-bottom: 5px;
 }
@@ -1365,6 +1354,7 @@
   background: none;
   border: none;
   cursor: pointer;
+  filter: invert(100);
 }
 
 /* Image preview overlay */
