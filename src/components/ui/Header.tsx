@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
 import { useEffect, useRef, useState } from 'react';
@@ -9,17 +9,11 @@ import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
-import StatusDropdown from '../StatusDropdown';
-import dynamic from 'next/dynamic';
+import AvatarDropdown from '../AvatarDropdown';
+import { useRouter } from 'next/navigation';
 
 // Register GSAP ScrollToPlugin
 gsap.registerPlugin(ScrollToPlugin);
-
-// Dynamically import UserButton with SSR disabled
-const DynamicUserButton = dynamic(() => import('@clerk/nextjs').then(mod => mod.UserButton), {
-  ssr: false,
-  loading: () => <div className={styles.userButtonPlaceholder} />,
-});
 
 // Coordenadas de la oficina y radio
 const OFFICE_LOCATION = {
@@ -75,7 +69,7 @@ interface Notification {
 }
 
 interface HeaderProps {
-  selectedContainer: 'tareas' | 'proyectos' | 'cuentas' | 'miembros';
+  selectedContainer: 'tareas' | 'cuentas' | 'miembros' | 'config';
   onChatSidebarOpen: (task: {
     id: string;
     clientId: string;
@@ -109,6 +103,7 @@ interface HeaderProps {
   onNotificationClick: (notification: Notification) => void;
   onDeleteNotification: (notificationId: string) => void;
   onLimitNotifications: (notifications: Notification[]) => void;
+  onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void; // Nueva prop para cambiar contenedores
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -120,6 +115,7 @@ const Header: React.FC<HeaderProps> = ({
   onNotificationClick,
   onDeleteNotification,
   onLimitNotifications,
+  onChangeContainer,
 }) => {
   const { user, isLoaded } = useUser();
   const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
@@ -314,8 +310,51 @@ const Header: React.FC<HeaderProps> = ({
         setOfficeStatus('Fuera de horario');
       }
     }, 1000);
+  
+    const getLocation = () => {
+      if (typeof window === 'undefined' || !navigator.geolocation) {
+        console.warn('Geolocation is not supported or not available in this environment');
+        setLocation('Geolocalización no soportada');
+        setTemperature('N/A');
+        setWeatherIcon(null);
+        setOfficeStatus(isOfficeHours(new Date()) ? 'Geolocalización no soportada' : 'Fuera de horario');
+        return;
+      }
+  
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          // Solo calcular distancia si está dentro del horario
+          if (isOfficeHours(new Date())) {
+            const distance = calculateDistance(
+              latitude,
+              longitude,
+              OFFICE_LOCATION.lat,
+              OFFICE_LOCATION.lng,
+            );
+            setOfficeStatus(distance <= OFFICE_RADIUS ? 'En la oficina' : 'Fuera de la oficina');
+          } else {
+            setOfficeStatus('Fuera de horario');
+          }
+          await fetchLocationFromGoogleMaps(latitude, longitude);
+        },
+        (error) => {
+          console.error('Error getting geolocation:', {
+            message: error.message,
+            code: error.code,
+            details: error,
+          });
+          setLocation('No se pudo obtener la ubicación');
+          setTemperature('N/A');
+          setWeatherIcon(null);
+          setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación no disponible' : 'Fuera de horario');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+    };
+  
     getLocation();
-
+  
     return () => clearInterval(timer);
   }, []);
 
@@ -509,12 +548,12 @@ const Header: React.FC<HeaderProps> = ({
     switch (selectedContainer) {
       case 'tareas':
         return 'Esta es una lista de tus tareas actuales';
-      case 'proyectos':
-        return 'Aquí puedes gestionar los proyectos asignados a cada cuenta';
       case 'cuentas':
         return 'Aquí puedes ver y gestionar todas las cuentas asociadas a tu organización';
       case 'miembros':
         return 'Aquí puedes consultar y gestionar todos los miembros de tu organización';
+      case 'config':
+        return 'Configura tus preferencias y ajustes personales';
       default:
         return 'Esta es una lista de tus tareas actuales';
     }
@@ -626,15 +665,7 @@ const Header: React.FC<HeaderProps> = ({
     <div ref={wrapperRef} className={styles.wrapper}>
       <div className={styles.lefContainer}>
         <div className={styles.AvatarMobile}>
-          {isLoaded ? (
-            <DynamicUserButton
-              appearance={{
-                elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
-              }}
-            />
-          ) : (
-            <div className={styles.userButtonPlaceholder} />
-          )}
+          <AvatarDropdown onChangeContainer={onChangeContainer} />
         </div>
         <div className={styles.frame14}>
           <div className={styles.title}>
@@ -721,7 +752,6 @@ const Header: React.FC<HeaderProps> = ({
           <ThemeToggler />
         </div>
 
-        <StatusDropdown />
 
         <div className={styles.notificationContainer}>
           <button
@@ -735,7 +765,7 @@ const Header: React.FC<HeaderProps> = ({
             }}
             onMouseLeave={() => {
               setTimeout(() => {
-                if (!notificationsRef.current?.matches(':hover')) {
+                if (!notificationButtonRef.current?.matches(':hover')) {
                   setIsNotificationsOpen(false);
                 }
               }, 100);
@@ -756,15 +786,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className={styles.AvatarDesktop}>
-          {isLoaded ? (
-            <DynamicUserButton
-              appearance={{
-                elements: { userButtonAvatarBox: { width: '60px', height: '60px' } },
-              }}
-            />
-          ) : (
-            <div className={styles.userButtonPlaceholder} />
-          )}
+          <AvatarDropdown onChangeContainer={onChangeContainer} />
         </div>
       </div>
     </div>

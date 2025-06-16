@@ -28,3 +28,35 @@
   height: 2.75rem;
   width: 2.75rem;
 }
+
+// Viñetado superior
+.vignetteTop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.8) 0%, // Blanco semi-opaco en la parte superior
+    rgba(255, 255, 255, 0) 100% // Transparente hacia abajo
+  );
+  pointer-events: none; // Permite clics a través del viñetado
+  z-index: 10; // Asegura que esté por encima del contenido, pero debajo de popups
+}
+
+// Viñetado inferior
+.vignetteBottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.901) 0%, // Blanco semi-opaco en la parte inferior
+    rgba(255, 255, 255, 0.241) 100% // Transparente hacia arriba
+  );
+  pointer-events: none; 
+  z-index: 10; 
+}

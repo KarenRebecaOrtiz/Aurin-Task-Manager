@@ -53,6 +53,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
   ({
     tasks,
     clients,
+    onCreateClientOpen,
+    onInviteMemberOpen,
     onNewTaskOpen,
     onEditTaskOpen,
     onAISidebarOpen,

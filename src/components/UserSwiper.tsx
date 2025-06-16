@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay } from 'swiper/modules';
+import Splide from '@splidejs/splide';
+import { AutoScroll } from '@splidejs/splide-extension-auto-scroll';
+import '@splidejs/splide/css/core'; // Import core styles
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import 'swiper/css';
 import styles from './UserSwiper.module.scss';
 
 interface ClerkUser {
@@ -37,6 +37,8 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
   const { isLoaded } = useUser();
   const [users, setUsers] = useState<ClerkUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const splideRef = useRef<HTMLDivElement>(null);
+  const splideInstance = useRef<Splide | null>(null);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -127,6 +129,46 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
     return () => unsubscribe();
   }, [isLoaded]);
 
+  useEffect(() => {
+    if (splideRef.current && users.length > 0) {
+      // Initialize Splide
+      splideInstance.current = new Splide(splideRef.current, {
+        type: 'loop', // Equivalent to Swiper's loop
+        perPage: 7, // Default for large screens
+        perMove: 1,
+        gap: '2rem', // Space between slides
+        autoWidth: true, // Allow slides to have their own width
+        focus: 'center', // Center the active slide
+        autoplay: true, // Enable autoplay
+        interval: 3000, // Autoplay interval
+        pauseOnHover: true, // Pause on hover
+        pauseOnFocus: true, // Pause on focus
+        drag: true, // Enable drag
+        arrows: false, // Hide arrows (customize if needed)
+        pagination: true, // Show pagination dots
+        breakpoints: {
+          1440: { perPage: 7, gap: '2rem' },
+          1280: { perPage: 6, gap: '1.75rem' },
+          1024: { perPage: 5, gap: '1.5rem' },
+          768: { perPage: 4, gap: '1.25rem' },
+          640: { perPage: 3, gap: '1rem' },
+          480: { perPage: 2, gap: '0.75rem', focus: false },
+          320: { perPage: 1, gap: '0.625rem', focus: 'center' },
+        },
+        classes: {
+          pagination: `splide__pagination ${styles.swiperPagination}`,
+        },
+      }).mount();
+
+      // Clean up Splide instance on unmount
+      return () => {
+        if (splideInstance.current) {
+          splideInstance.current.destroy();
+        }
+      };
+    }
+  }, [users]);
+
   if (!isLoaded || isLoading) {
     return (
       <div className={styles.loading}>
@@ -185,74 +227,68 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
 
   return (
     <div className={styles.swiperContainer}>
-      <Swiper
-        slidesPerView={'auto'}
-        spaceBetween={8}
-        centeredSlides={true}
-        loop={true}
-        autoplay={{
-          delay: 3000,
-          disableOnInteraction: false,
-        }}
-        grabCursor={true}
-        modules={[Autoplay]}
-        breakpoints={{
-          320: { slidesPerView: 'auto', spaceBetween: 10, centeredSlides: true },
-          480: { slidesPerView: 'auto', spaceBetween: 12, centeredSlides: false },
-          640: { slidesPerView: 3, spaceBetween: 16 },
-          768: { slidesPerView: 4, spaceBetween: 20 },
-          1024: { slidesPerView: 5, spaceBetween: 24 },
-          1280: { slidesPerView: 6, spaceBetween: 28 },
-          1440: { slidesPerView: 7, spaceBetween: 32 },
-        }}
-        className={styles.swiper}
+      <section
+        ref={splideRef}
+        className="splide"
+        aria-label="User Profiles Carousel"
       >
-        {users.map((user) => (
-          <SwiperSlide key={user.id} className={styles.swiperSlide}>
-            <div
-              className={styles.card}
-              role="article"
-              aria-label={`Perfil de ${user.firstName || 'Usuario'}`}
-            >
-              <div className={styles.cardInfo}>
+        <div className="splide__track">
+          <ul className="splide__list">
+            {users.map((user) => (
+              <li key={user.id} className={`splide__slide ${styles.swiperSlide}`}>
                 <div
-                  className={`${styles.cardAvatar} ${
-                    styles[`status-${user.status?.replace(' ', '-') || 'Disponible'}`]
-                  }`}
+                  className={styles.card}
+                  role="article"
+                  aria-label={`Perfil de ${user.firstName || 'Usuario'}`}
                 >
-                  <Image
-                    src={user.imageUrl || '/default-avatar.png'}
-                    alt={user.firstName || 'User avatar'}
-                    width={48}
-                    height={48}
-                    className={styles.avatarImage}
-                    onError={(e) => {
-                      e.currentTarget.src = '/default-avatar.png';
-                    }}
-                  />
+                  <div className={styles.cardInfo}>
+                    <div
+                      className={`${styles.cardAvatar} ${
+                        styles[
+                          `status-${
+                            user.status?.replace(' ', '-') || 'Disponible'
+                          }`
+                        ]
+                      }`}
+                    >
+                      <Image
+                        src={user.imageUrl || '/default-avatar.png'}
+                        alt={user.firstName || 'User avatar'}
+                        width={48}
+                        height={48}
+                        className={styles.avatarImage}
+                        onError={(e) => {
+                          e.currentTarget.src = '/default-avatar.png';
+                        }}
+                      />
+                    </div>
+                    <div
+                      className={styles.cardTitle}
+                      style={{ fontSize: '14px', fontWeight: '600' }}
+                    >
+                      {(user.firstName || user.lastName)
+                        ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+                        : 'Sin nombre'}
+                    </div>
+                    <button
+                      className={styles.viewProfileButton}
+                      onClick={() =>
+                        onOpenProfile({
+                          id: user.id,
+                          imageUrl: user.imageUrl || '/default-avatar.png',
+                        })
+                      }
+                      aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
+                    >
+                      Ver Perfil
+                    </button>
+                  </div>
                 </div>
-                <div className={styles.cardTitle} style={{ fontSize: '14px', fontWeight: '600' }}>
-                  {(user.firstName || user.lastName)
-                    ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-                    : 'Sin nombre'}
-                </div>
-                <button
-                  className={styles.viewProfileButton}
-                  onClick={() =>
-                    onOpenProfile({
-                      id: user.id,
-                      imageUrl: user.imageUrl || '/default-avatar.png',
-                    })
-                  }
-                  aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
-                >
-                  Ver Perfil
-                </button>
-              </div>
-            </div>
-          </SwiperSlide>
-        ))}
-      </Swiper>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
     </div>
   );
 };

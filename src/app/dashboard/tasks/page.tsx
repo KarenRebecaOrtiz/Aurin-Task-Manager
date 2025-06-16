@@ -33,13 +33,18 @@ import ClientSidebar from '@/components/ClientSidebar';
 import InviteSidebar from '@/components/InviteSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
 import ProfileSidebar from '@/components/ProfileSidebar';
-import ProfileCard from '@/components/ProfileCard'; 
+import ProfileCard from '@/components/ProfileCard';
+import ConfigPage from '@/components/ConfigPage';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import { v4 as uuidv4 } from 'uuid';
 import Dock from '@/components/Dock';
+
+// Define types
+type SelectorContainer = 'tareas' | 'cuentas' | 'miembros'; // Matches Selector.tsx Container type
+type Container = SelectorContainer | 'config'; // Includes 'config' for TasksPage
 
 interface Client {
   id: string;
@@ -97,7 +102,7 @@ interface Sidebar {
 export default function TasksPage() {
   const { user } = useUser();
   const router = useRouter();
-  const [selectedContainer, setSelectedContainer] = useState<'tareas' | 'cuentas' | 'miembros'>('tareas');
+  const [selectedContainer, setSelectedContainer] = useState<Container>('tareas');
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
   const [isInviteSidebarOpen, setIsInviteSidebarOpen] = useState<boolean>(false);
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
@@ -112,7 +117,7 @@ export default function TasksPage() {
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isConfirmExitOpen, setIsConfirmExitOpen] = useState<boolean>(false);
-  const [pendingContainer, setPendingContainer] = useState<'tareas' | 'cuentas' | 'miembros' | null>(null);
+  const [pendingContainer, setPendingContainer] = useState<Container | null>(null);
   const [clientForm, setClientForm] = useState<{
     id?: string;
     name: string;
@@ -628,7 +633,7 @@ export default function TasksPage() {
   );
 
   const handleContainerChange = useCallback(
-    (newContainer: 'tareas' | 'cuentas' | 'miembros') => {
+    (newContainer: Container) => {
       if ((isCreateTaskOpen || isEditTaskOpen) && hasUnsavedChanges && selectedContainer !== newContainer) {
         setPendingContainer(newContainer);
         setIsConfirmExitOpen(true);
@@ -680,13 +685,14 @@ export default function TasksPage() {
           onNotificationClick={handleNotificationClick}
           onDeleteNotification={handleDeleteNotification}
           onLimitNotifications={handleLimitNotifications}
+          onChangeContainer={handleContainerChange}
         />
       </div>
       <OnboardingStepper />
       <div ref={selectorRef} className={styles.selector}>
         <Selector
-          selectedContainer={selectedContainer}
-          setSelectedContainer={handleContainerChange}
+          selectedContainer={selectedContainer as SelectorContainer} // Cast to SelectorContainer
+          setSelectedContainer={(c: SelectorContainer) => handleContainerChange(c)} // Restrict to SelectorContainer
           options={[
             { value: 'tareas', label: 'Tareas' },
             { value: 'cuentas', label: 'Cuentas' },
@@ -727,6 +733,9 @@ export default function TasksPage() {
             onMessageSidebarOpen={handleMessageSidebarOpen}
             setUsers={setUsers}
           />
+        )}
+        {selectedContainer === 'config' && !isCreateTaskOpen && !isEditTaskOpen && (
+          <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')} />
         )}
         {isCreateTaskOpen && (
           <CreateTask

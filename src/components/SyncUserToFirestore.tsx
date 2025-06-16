@@ -54,6 +54,7 @@ export default function SyncUserToFirestore() {
         const email = user.emailAddresses[0]?.emailAddress || 'no-email';
         const displayName = user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Usuario';
         const access = user.publicMetadata.access || 'user';
+        const profilePhoto = user.imageUrl || '/default-avatar.png'; // Añadir foto de perfil
         const docRef = doc(db, 'users', userId);
 
         // Obtener el documento existente para verificar si 'status' ya está definido
@@ -66,7 +67,8 @@ export default function SyncUserToFirestore() {
           displayName,
           createdAt: new Date().toISOString(),
           access,
-          status, // Inicializar o mantener el status
+          status,
+          profilePhoto, // Guardar foto de perfil inicial
         }, { merge: true });
         console.log('[SyncUserToFirestore] User data stored in Firestore:', {
           userId,
@@ -74,6 +76,7 @@ export default function SyncUserToFirestore() {
           displayName,
           access,
           status,
+          profilePhoto,
         });
 
         const updatedUserDoc = await getDoc(docRef);

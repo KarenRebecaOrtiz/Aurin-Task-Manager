@@ -1,56 +1,92 @@
-import { Storage } from '@google-cloud/storage';
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { initializeApp } from 'firebase/app'; // Solo necesitamos esto
+import { firebaseConfig } from '@/lib/firebaseConfig';
 
-const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './src/config/Aurin Plattform Uploader.json';
+// Inicializar Firebase
+let app;
+try {
+  app = initializeApp(firebaseConfig);
+  console.log('[API] Firebase app initialized successfully');
+} catch (error) {
+  console.error('[API] Failed to initialize Firebase app:', error);
+}
 
-// Initialize Google Cloud Storage
-const storage = new Storage({
-  keyFilename: keyPath,
-});
-const bucket = storage.bucket('aurin-plattform');
+const storage = app ? getStorage(app) : null;
 
 export async function POST(request: NextRequest) {
-  try {
-    // Verify service account key
-    try {
-      await fs.access(keyPath);
-      console.log('Service account key found at:', keyPath);
-    } catch (error) {
-      console.error('Service account key not found:', error);
-      throw new Error(`Service account key not found at ${keyPath}`);
-    }
+  if (!storage) {
+    console.error('[API] Firebase Storage not initialized');
+    return NextResponse.json({ error: 'Firebase Storage not initialized' }, { status: 500 });
+  }
 
-    console.log('Received upload request');
+  try {
+    console.log('[API] Received upload request');
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const userId = formData.get('userId') as string | null;
+    const type = formData.get('type') as 'cover' | 'profile' | null;
 
+    // Validar parámetros
     if (!file) {
-      console.error('No file provided in formData');
+      console.error('[API] No file provided in formData');
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
+    if (!userId) {
+      console.error('[API] No userId provided in formData');
+      return NextResponse.json({ error: 'No userId provided' }, { status: 400 });
+    }
+    if (!type || !['cover', 'profile'].includes(type)) {
+      console.error('[API] Invalid or missing type provided in formData', { type });
+      return NextResponse.json({ error: 'Invalid or missing type (must be "cover" or "profile")' }, { status: 400 });
+    }
 
-    console.log('File received:', file.name, file.type, file.size);
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `clients/${Date.now()}_${sanitizedFileName}`;
-    const bucketFile = bucket.file(filePath);
+    // Verificar autenticación (confiar en credentials: 'include' del cliente)
+    const clerkUserId = request.headers.get('x-clerk-user-id');
+    console.log('[API] Request headers:', request.headers);
+    console.log('[API] Authenticated userId from header:', clerkUserId);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    console.log('Uploading file to GCS:', filePath, buffer.length, 'bytes');
+    if (!clerkUserId || clerkUserId !== userId) {
+      console.error('[API] Authentication mismatch:', { clerkUserId, userId });
+      return NextResponse.json({ error: 'Authentication mismatch' }, { status: 403 });
+    }
 
-    await bucketFile.save(buffer, {
-      metadata: {
-        contentType: file.type,
-      },
+    console.log('[API] File received:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      userId,
+      imageType: type,
     });
 
-    const imageUrl = `https://storage.googleapis.com/aurin-plattform/${filePath}`;
-    console.log('Image uploaded to GCS:', imageUrl);
+    // Obtener la extensión del archivo
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const sanitizedFileName = `${type}.${fileExtension}`;
+    const storagePath = `users/${userId}/${sanitizedFileName}`;
+    const storageRef = ref(storage, storagePath);
+
+    // Convertir archivo a buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
+    console.log('[API] Uploading file to Firebase Storage:', {
+      path: storagePath,
+      size: buffer.length,
+      contentType: file.type,
+    });
+
+    // Subir archivo
+    await uploadBytes(storageRef, buffer, {
+      contentType: file.type || 'image/jpeg',
+      customMetadata: { userId },
+    });
+
+    // Obtener URL de descarga
+    const imageUrl = await getDownloadURL(storageRef);
+    console.log('[API] Image uploaded to Firebase Storage:', { imageUrl });
 
     return NextResponse.json({ imageUrl }, { status: 200 });
   } catch (error: unknown) {
     const errorDetails = error as { code?: string; details?: unknown };
-    console.error('Error uploading image:', {
+    console.error('[API] Error uploading image:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       code: errorDetails.code,

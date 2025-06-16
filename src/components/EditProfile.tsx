@@ -2,6 +2,7 @@
 
 import { useUser } from '@clerk/nextjs';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
@@ -24,6 +25,7 @@ interface UserProfile {
   tools?: string[];
   teams?: string[];
   coverPhoto?: string;
+  profilePhoto?: string;
   status?: string;
 }
 
@@ -33,6 +35,7 @@ interface FormData extends Omit<UserProfile, 'tools' | 'teams' | 'phone'> {
   tools?: string[];
   teams?: string[];
   phone?: string;
+  password?: string;
 }
 
 interface Errors {
@@ -48,6 +51,8 @@ interface Errors {
   toolsString?: string;
   teamsString?: string;
   coverPhoto?: string;
+  profilePhoto?: string;
+  password?: string;
 }
 
 interface EditProfileProps {
@@ -57,27 +62,16 @@ interface EditProfileProps {
 }
 
 const toolOptions = [
-  // Diseño Gráfico
   'Adobe Photoshop', 'Adobe Illustrator', 'CorelDRAW', 'Canva', 'Affinity Designer', 'Adobe InDesign', 'GIMP', 'Sketch', 'Figma', 'Adobe XD', 'Microsoft Paint', 'Adobe Fresco', 'Gravit Designer', 'Inkscape', 'Photopea', 'Procreate', 'Adobe Lightroom', 'Vectornator', 'DrawPad', 'ArtRage',
-  // Diseño UX/UI
   'InVision', 'Marvel', 'Axure RP', 'Balsamiq', 'Proto.io', 'Framer', 'Zeplin', 'Origami Studio', 'Principle', 'Justinmind', 'Uizard', 'Flinto', 'Craft', 'Moqups', 'UXPin',
-  // Desarrollo
   'Visual Studio Code', 'IntelliJ IDEA', 'PyCharm', 'Eclipse', 'Android Studio', 'Xcode', 'WebStorm', 'Sublime Text', 'Atom', 'Notepad++', 'Git', 'Docker', 'Jenkins', 'Postman', 'Sass', 'HTML', 'JavaScript', 'TypeScript', 'React', 'Angular', 'Vue.js', 'Node.js', 'Python', 'Ruby', 'PHP', 'Go', 'Kubernetes', 'Terraform', 'AWS', 'Azure', 'GCP',
-  // Stylish
   'Final Cut Pro', 'DaVinci Resolve', 'iMovie', 'Adobe Audition', 'Logic Pro X', 'FL Studio', 'Ableton Live', 'Audacity', 'Blender', 'Cinema 4D', 'Maya', 'Nuke', 'HitFilm Express', 'CapCut', 'Filmora', 'VSDC Free Video Editor', 'Shotcut', 'Adobe After Effects', 'Adobe Premiere Pro',
-  // Project Management
   'Microsoft Project', 'Basecamp', 'ClickUp', 'Smartsheet', 'Wrike', 'Teamwork', 'Todoist', 'Microsoft Planner', 'Airtable', 'Notion', 'Zoho Projects', 'MeisterTask', 'Redmine', 'ProofHub', 'Bitrix24', 'LiquidPlanner', 'Jira', 'Trello', 'Asana', 'Monday.com',
-  // Dirección
   'Google Sheets', 'Google Docs', 'Microsoft Teams', 'Slack', 'Zoom', 'Trello', 'Miro', 'Confluence',
-  // Arquitectura
   'SketchUp', 'ArchiCAD', 'Rhino', 'Lumion', '3ds Max', 'Vectorworks', 'Chief Architect', 'MicroStation', 'Civil 3D', 'V-Ray', 'Enscape', 'Sweet Home 3D', 'FormIt', 'ARCHICAD', 'Tekla Structures', 'Allplan', 'Revit', 'AutoCAD',
-  // Análisis de Datos
   'SPSS', 'SAS', 'MATLAB', 'Jupyter Notebook', 'Google Data Studio', 'QlikView', 'KNIME', 'RapidMiner', 'Alteryx', 'Stata', 'Apache Spark', 'Pandas', 'NumPy', 'Power Query', 'Tableau', 'Power BI', 'R', 'SQL', 'Excel',
-  // Arte
   'Procreate', 'Corel Painter', 'Clip Studio Paint', 'Krita', 'ZBrush', 'Substance Painter', 'Affinity Photo', 'PaintTool SAI', 'Autodesk SketchBook', 'Medibang Paint', 'Rebelle', 'MyPaint', 'OpenCanvas', 'TwistedBrush',
-  // Marketing
   'Hootsuite', 'Buffer', 'Mailchimp', 'HubSpot', 'Google Analytics', 'SEMRush', 'Ahrefs', 'Canva', 'WordPress',
-  // Otros
   'Unity', 'Unreal Engine', 'Arduino', 'Raspberry Pi', 'Linux', 'Windows', 'macOS'
 ];
 
@@ -88,11 +82,14 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
   const [errors, setErrors] = useState<Errors>({});
   const [coverPhotoPreview, setCoverPhotoPreview] = useState<string | null>(null);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [toolSuggestions, setToolSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const modalRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const profileFileInputRef = useRef<HTMLInputElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const actionButtonRef = useRef<HTMLButtonElement>(null);
   const toolInputRef = useRef<HTMLInputElement>(null);
@@ -120,9 +117,12 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
             toolsString: data.tools?.join(', ') || '',
             teamsString: data.teams?.join(', ') || '',
             tools: data.tools || [],
-            teams: data.teams || [],
+            teams: data.teams || [], // Ensure teams is always an array
+            profilePhoto: data.profilePhoto || imageUrl,
+            password: '',
           });
           setCoverPhotoPreview(data.coverPhoto || '/empty-cover.png');
+          setProfilePhotoPreview(data.profilePhoto || imageUrl || '/default-avatar.png');
           console.log('[EditProfile] User profile fetched:', docSnap.data());
         } else {
           console.log('[EditProfile] No user document found for ID:', userId);
@@ -140,7 +140,7 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
     );
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, imageUrl]);
 
   useEffect(() => {
     const modal = modalRef.current;
@@ -198,6 +198,12 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
     if (coverPhotoFile && coverPhotoFile.size > 10 * 1024 * 1024) {
       newErrors.coverPhoto = 'La foto de portada no debe exceder 10MB';
     }
+    if (profilePhotoFile && profilePhotoFile.size > 5 * 1024 * 1024) {
+      newErrors.profilePhoto = 'La foto de perfil no debe exceder 5MB';
+    }
+    if (formData?.password && formData.password.length < 8) {
+      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
+    }
 
     return newErrors;
   };
@@ -225,28 +231,48 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
     setErrors((prev) => ({ ...prev, phone: undefined }));
   };
 
-  const uploadImage = async (file: File, userId: string, type: 'cover') => {
+  const uploadImage = async (file: File, userId: string, type: 'cover' | 'profile') => {
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', userId);
       formData.append('type', type);
 
+      console.log('[EditProfile] Sending upload request:', {
+        userId,
+        type,
+        fileName: file.name,
+        fileSize: file.size,
+      });
+
       const response = await fetch('/api/upload-image', {
         method: 'POST',
         body: formData,
+        credentials: 'include',
+        headers: {
+          'x-clerk-user-id': userId,
+        },
+      });
+
+      console.log('[EditProfile] API response:', {
+        status: response.status,
+        statusText: response.statusText,
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `Error uploading ${type} image`);
+      if (!response.ok) {
+        console.error('[EditProfile] API error data:', data);
+        throw new Error(data.error || `Error uploading ${type} image`);
+      }
       return data.imageUrl;
     } catch (error) {
-      console.error('[EditProfile] Image upload failed:', error);
+      console.error(`[EditProfile] ${type} image upload failed:`, error);
       throw error;
     }
   };
 
   const handleCoverPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
@@ -263,8 +289,31 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
     }
   };
 
-  const handleCoverPhotoEditClick = () => {
-    fileInputRef.current?.click();
+  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((prev) => ({ ...prev, profilePhoto: 'La foto de perfil no debe exceder 5MB' }));
+        return;
+      }
+      setProfilePhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCoverPhotoEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    coverFileInputRef.current?.click();
+  };
+
+  const handleProfilePhotoEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    profileFileInputRef.current?.click();
   };
 
   const handleRemoveCoverPhoto = () => {
@@ -272,6 +321,12 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
     setCoverPhotoFile(null);
     setFormData((prev) => (prev ? { ...prev, coverPhoto: '/empty-cover.png' } : null));
     setActionMenuOpen(false);
+  };
+
+  const handleRemoveProfilePhoto = () => {
+    setProfilePhotoPreview('/default-avatar.png');
+    setProfilePhotoFile(null);
+    setFormData((prev) => (prev ? { ...prev, profilePhoto: '/default-avatar.png' } : null));
   };
 
   const handleToolInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -327,7 +382,10 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
 
   const addTeam = useCallback(() => {
     if (formData?.teams && formData.teams.length < 3 && formData.teams[formData.teams.length - 1]) {
-      setFormData((prev) => (prev ? { ...prev, teams: [...(prev.teams || []), ''] } : null));
+      setFormData((prev) => {
+        const currentTeams = Array.isArray(prev?.teams) ? prev.teams : [];
+        return prev ? { ...prev, teams: [...currentTeams, ''] } : null;
+      });
     }
   }, [formData?.teams]);
 
@@ -339,7 +397,19 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData || !userId) return;
+    if (!formData || !userId || !currentUser) return;
+
+    // Check if the only change is a file upload and skip if not intentional
+    const hasOtherChanges = Object.keys(formData).some(
+      (key) =>
+        key !== 'profilePhotoFile' &&
+        key !== 'coverPhotoFile' &&
+        formData[key as keyof FormData] !== (profile?.[key as keyof UserProfile] || '')
+    );
+    if (!hasOtherChanges && (profilePhotoFile || coverPhotoFile)) {
+      console.log('[EditProfile] Skipping save: Only file upload detected, not intentional.');
+      return;
+    }
 
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
@@ -349,11 +419,28 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
 
     try {
       setLoading(true);
+
+      // Subir foto de portada si existe
       let coverPhotoUrl = formData.coverPhoto || '/empty-cover.png';
       if (coverPhotoFile) {
         coverPhotoUrl = await uploadImage(coverPhotoFile, userId, 'cover');
       }
 
+      // Subir foto de perfil si existe
+      let profilePhotoUrl = formData.profilePhoto || '/default-avatar.png';
+      if (profilePhotoFile) {
+        profilePhotoUrl = await uploadImage(profilePhotoFile, userId, 'profile');
+        await currentUser.setProfileImage({ file: profilePhotoFile });
+      }
+
+      // Actualizar contraseña en Clerk si se proporcionó
+      if (formData.password) {
+        await currentUser.updatePassword({
+          newPassword: formData.password,
+        });
+      }
+
+      // Actualizar datos en Firestore
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, {
         displayName: formData.displayName || '',
@@ -368,19 +455,31 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
         tools: formData.tools || [],
         teams: formData.teams || [],
         coverPhoto: coverPhotoUrl,
+        profilePhoto: profilePhotoUrl,
         status: formData.status || 'Disponible',
       });
+
       console.log('[EditProfile] Profile updated successfully');
-      gsap.to(modalRef.current, {
-        opacity: 0,
-        scale: 0.8,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: onClose,
-      });
+      if (modalRef.current) {
+        gsap.to(modalRef.current, {
+          opacity: 0,
+          scale: 0.8,
+          duration: 0.3,
+          ease: 'power2.in',
+          onComplete: onClose,
+        });
+      } else {
+        console.error('[EditProfile] modalRef.current is null, cannot animate close');
+        onClose();
+      }
     } catch (err) {
       console.error('[EditProfile] Error updating profile:', err);
-      setErrors((prev) => ({ ...prev, coverPhoto: 'Error al subir la foto de portada' }));
+      setErrors((prev) => ({
+        ...prev,
+        coverPhoto: err.message.includes('cover') ? 'Error al subir la foto de portada' : prev.coverPhoto,
+        profilePhoto: err.message.includes('profile') ? 'Error al subir la foto de perfil' : prev.profilePhoto,
+        password: err.message.includes('password') ? 'Error al actualizar la contraseña' : prev.password,
+      }));
     } finally {
       setLoading(false);
     }
@@ -388,6 +487,23 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
+      if (modalRef.current) {
+        gsap.to(modalRef.current, {
+          opacity: 0,
+          scale: 0.8,
+          duration: 0.3,
+          ease: 'power2.in',
+          onComplete: onClose,
+        });
+      } else {
+        console.error('[EditProfile] modalRef.current is null, cannot animate close');
+        onClose();
+      }
+    }
+  };
+
+  const handleCloseButtonClick = () => {
+    if (modalRef.current) {
       gsap.to(modalRef.current, {
         opacity: 0,
         scale: 0.8,
@@ -395,35 +511,29 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
         ease: 'power2.in',
         onComplete: onClose,
       });
+    } else {
+      console.error('[EditProfile] modalRef.current is null, cannot animate close');
+      onClose();
     }
   };
 
-  const handleCloseButtonClick = () => {
-    gsap.to(modalRef.current, {
-      opacity: 0,
-      scale: 0.8,
-      duration: 0.3,
-      ease: 'power2.in',
-      onComplete: onClose,
-    });
-  };
-
   if (loading) {
-    return (
+    return createPortal(
       <div className={styles.EditProfileOverlay} onClick={handleOverlayClick}>
-        <div className={styles.EditProfileFrameMain}>
+        <div ref={modalRef} className={styles.EditProfileFrameMain}>
           <div className={styles.EditProfileFrameInner}>
             <p>Cargando perfil...</p>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   if (!profile || !formData) {
-    return (
+    return createPortal(
       <div className={styles.EditProfileOverlay} onClick={handleOverlayClick}>
-        <div className={styles.EditProfileFrameMain}>
+        <div ref={modalRef} className={styles.EditProfileFrameMain}>
           <div className={styles.EditProfileFrameInner}>
             <p>Perfil no encontrado.</p>
             <button className={styles.EditProfileButton} onClick={onClose}>
@@ -431,15 +541,16 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   const isOwnProfile = currentUser?.id === userId;
   const userName = formData.displayName || 'Usuario';
-  const avatarUrl = imageUrl || '/default-avatar.png';
+  const avatarUrl = profilePhotoPreview || '/default-avatar.png';
 
-  return (
+  return createPortal(
     <div className={styles.EditProfileOverlay} onClick={handleOverlayClick}>
       <div ref={modalRef} className={styles.EditProfileFrameMain}>
         <button
@@ -449,6 +560,21 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
         >
           ✕
         </button>
+        {/* File inputs moved outside the form */}
+        <input
+          type="file"
+          ref={profileFileInputRef}
+          style={{ display: 'none' }}
+          accept="image/*"
+          onChange={handleProfilePhotoChange}
+        />
+        <input
+          type="file"
+          ref={coverFileInputRef}
+          style={{ display: 'none' }}
+          accept="image/*"
+          onChange={handleCoverPhotoChange}
+        />
         <form onSubmit={handleSubmit}>
           <div className={styles.EditProfileFrameInner}>
             <div className={`${styles.EditProfileCoverPhoto} ${!coverPhotoPreview || coverPhotoPreview === '/empty-cover.png' ? styles.EditProfileEmptyState : ''}`}>
@@ -467,19 +593,22 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                 <>
                   <button
                     ref={actionButtonRef}
-                    onClick={() => setActionMenuOpen(!actionMenuOpen)}
-                    className={styles.EditProfileActionButton}
-                    aria-label="Abrir acciones"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionMenuOpen(!actionMenuOpen);
+                    }}
+                    className={styles.EditProfileCoverPhotoButton}
+                    aria-label="Editar foto de portada"
                   >
-                    Acciones
+                    <Image src="/pencil.svg" alt="Editar" width={16} height={16} />
                   </button>
                   {actionMenuOpen && (
-                    <div ref={actionMenuRef} className={styles.EditProfileDropdown}>
+                    <div ref={actionMenuRef} className={styles.EditProfileCoverPhotoDropdown}>
                       <div
-                        className={styles.EditProfileDropdownItem}
+                        className={styles.EditProfileCoverPhotoDropdownItem}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCoverPhotoEditClick();
+                          handleCoverPhotoEditClick(e);
                           gsap.fromTo(
                             actionMenuRef.current,
                             { opacity: 0, y: -10 },
@@ -488,10 +617,10 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                         }}
                       >
                         <Image src="/pencil.svg" alt="Editar" width={16} height={16} />
-                        <span>Editar Foto de Portada</span>
+                        <span>Editar foto de portada</span>
                       </div>
                       <div
-                        className={styles.EditProfileDropdownItem}
+                        className={styles.EditProfileCoverPhotoDropdownItem}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRemoveCoverPhoto();
@@ -503,17 +632,10 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                         }}
                       >
                         <Image src="/trash-2.svg" alt="Eliminar" width={16} height={16} />
-                        <span>Eliminar Foto de Portada</span>
+                        <span>Eliminar foto de portada</span>
                       </div>
                     </div>
                   )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    accept="image/*"
-                    onChange={handleCoverPhotoChange}
-                  />
                 </>
               )}
               {errors.coverPhoto && <p className={styles.EditProfileError}>{errors.coverPhoto}</p>}
@@ -523,19 +645,94 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                 <div className={styles.EditProfile}>
                   <div className={styles.EditProfileAvatar}>
                     {avatarUrl ? (
-                      <Image
-                        draggable="false"
-                        src={avatarUrl}
-                        alt={userName}
-                        width={120}
-                        height={120}
-                        style={{ borderRadius: '1000px' }}
-                      />
+                      <>
+                        <Image
+                          draggable="false"
+                          src={avatarUrl}
+                          alt={userName}
+                          width={120}
+                          height={120}
+                          style={{ borderRadius: '1000px' }}
+                        />
+                        {isOwnProfile && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProfilePhotoEditClick(e);
+                            }}
+                            className={styles.EditProfileAvatarEditButton}
+                            aria-label="Editar foto de perfil"
+                          >
+                            <Image src="/pencil.svg" alt="Editar" width={16} height={16} />
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <div className={styles.EditProfileAvatarPlaceholder}>
                         <span>Sin foto</span>
+                        {isOwnProfile && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProfilePhotoEditClick(e);
+                            }}
+                            className={styles.EditProfileAvatarEditButton}
+                            aria-label="Editar foto de perfil"
+                          >
+                            <Image src="/pencil.svg" alt="Editar" width={16} height={16} />
+                          </button>
+                        )}
                       </div>
                     )}
+                    {errors.profilePhoto && <p className={styles.EditProfileError}>{errors.profilePhoto}</p>}
+                  </div>
+                  <div className={styles.EditProfileInputColumns}>
+                    <div className={styles.EditProfileInputColumn}>
+                      <div className={styles.EditProfileInputWrapper}>
+                        <p className={styles.EditProfileInputName}>{formData.displayName || 'Sin nombre'}</p>
+                      </div>
+                      <div className={styles.EditProfileInputWrapper}>
+                        <p className={styles.EditProfileInputRole}>{formData.role || 'Sin rol'}</p>
+                        <div className={styles.EditProfileAboutSection}>
+                          <div className={styles.EditProfileInputWrapper}>
+                            <label className={styles.EditProfileLabelLarge}>Sobre mí</label>
+                            <p className={styles.EditProfileTextarea}>{formData.about || 'No especificado'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.EditProfileAboutToolsContainer}>
+                    <div className={styles.EditProfileToolsSection}>
+                      <div className={styles.EditProfileInputWrapper}>
+                        <label className={styles.EditProfileLabel}>Herramientas</label>
+                        <div className={styles.EditProfileTags}>
+                          {formData.tools && formData.tools.length > 0 ? (
+                            formData.tools.map((tool, index) => (
+                              <div key={index} className={styles.EditProfileTag}>
+                                {tool}
+                              </div>
+                            ))
+                          ) : (
+                            <p>No especificado</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className={styles.EditProfileInputWrapper}>
+                        <label className={styles.EditProfileLabel}>Equipos</label>
+                        <div className={styles.EditProfileTags}>
+                          {formData.teams && formData.teams.length > 0 ? (
+                            formData.teams.map((team, index) => (
+                              <div key={index} className={styles.EditProfileTag}>
+                                {team}
+                              </div>
+                            ))
+                          ) : (
+                            <p>No especificado</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div className={styles.EditProfileInputColumns}>
                     <div className={styles.EditProfileInputColumn}>
@@ -577,7 +774,15 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                     <div className={styles.EditProfileInfoGrid}>
                       <div className={styles.EditProfileInputColumn}>
                         <div className={styles.EditProfileInputWrapperSmall}>
-                          <Image src="/mail.svg" alt="Correo" width={16} height={16} />
+                          <Image
+                            src="/mail.svg"
+                            alt="Correo"
+                            width={16}
+                            height={16}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-icon.svg';
+                            }}
+                          />
                           <div>
                             <label className={styles.EditProfileLabel}>Correo</label>
                             <input
@@ -592,7 +797,15 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                           </div>
                         </div>
                         <div className={styles.EditProfileInputWrapperSmall}>
-                          <Image src="/birthday.svg" alt="Cumpleaños" width={16} height={16} />
+                          <Image
+                            src="/birthday.svg"
+                            alt="Cumpleaños"
+                            width={16}
+                            height={16}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-icon.svg';
+                            }}
+                          />
                           <div>
                             <label className={styles.EditProfileLabel}>Cumpleaños</label>
                             <input
@@ -609,7 +822,15 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                       </div>
                       <div className={styles.EditProfileInputColumn}>
                         <div className={styles.EditProfileInputWrapperSmall}>
-                          <Image src="/phone.svg" alt="Teléfono" width={16} height={16} />
+                          <Image
+                            src="/phone.svg"
+                            alt="Teléfono"
+                            width={16}
+                            height={16}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-icon.svg';
+                            }}
+                          />
                           <div>
                             <label className={styles.EditProfileLabel}>Teléfono</label>
                             <PhoneInput
@@ -625,13 +846,21 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                           </div>
                         </div>
                         <div className={styles.EditProfileInputWrapperSmall}>
-                          <Image src="/gender.svg" alt="Género" width={16} height={16} />
+                          <Image
+                            src="/gender.svg"
+                            alt="Género"
+                            width={16}
+                            height={16}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-icon.svg';
+                            }}
+                          />
                           <div>
                             <label className={styles.EditProfileLabel}>Género</label>
                             <input
                               type="text"
                               name="gender"
-                              value={formData.gender || ''}
+                              value={formData?.gender || ''}
                               onChange={handleInputChange}
                               className={styles.EditProfileInput}
                               placeholder="Género"
@@ -641,13 +870,21 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                       </div>
                       <div className={styles.EditProfileInputColumn}>
                         <div className={styles.EditProfileInputWrapperSmall}>
-                          <Image src="/location.svg" alt="Ciudad" width={16} height={16} />
+                          <Image
+                            src="/location.svg"
+                            alt="Ciudad"
+                            width={16}
+                            height={16}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-icon.svg';
+                            }}
+                          />
                           <div>
                             <label className={styles.EditProfileLabel}>Ciudad</label>
                             <input
                               type="text"
                               name="city"
-                              value={formData.city || ''}
+                              value={formData?.city || ''}
                               onChange={handleInputChange}
                               className={styles.EditProfileInput}
                               placeholder="Ciudad"
@@ -655,18 +892,51 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
                           </div>
                         </div>
                         <div className={styles.EditProfileInputWrapperSmall}>
-                          <Image src="/link.svg" alt="Portafolio" width={16} height={16} />
+                          <Image
+                            src="/link.svg"
+                            alt="Portafolio"
+                            width={16}
+                            height={16}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-icon.svg';
+                            }}
+                          />
                           <div>
                             <label className={styles.EditProfileLabel}>Portafolio</label>
                             <input
                               type="text"
                               name="portfolio"
-                              value={formData.portfolio || ''}
+                              value={formData?.portfolio || ''}
                               onChange={handleInputChange}
                               className={styles.EditProfileInput}
                               placeholder="karenortiz.space"
                             />
                             {errors.portfolio && <p className={styles.EditProfileError}>{errors.portfolio}</p>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={styles.EditProfileInputColumn}>
+                        <div className={styles.EditProfileInputWrapperSmall}>
+                          <Image
+                            src="/lock.svg"
+                            alt="Contraseña"
+                            width={16}
+                            height={16}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-icon.svg';
+                            }}
+                          />
+                          <div>
+                            <label className={styles.EditProfileLabel}>Contraseña</label>
+                            <input
+                              type="password"
+                              name="password"
+                              value={formData.password || ''}
+                              onChange={handleInputChange}
+                              className={styles.EditProfileInput}
+                              placeholder="Nueva contraseña"
+                            />
+                            {errors.password && <p className={styles.EditProfileError}>{errors.password}</p>}
                           </div>
                         </div>
                       </div>
@@ -786,7 +1056,8 @@ const EditProfile = ({ userId, imageUrl, onClose }: EditProfileProps) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
