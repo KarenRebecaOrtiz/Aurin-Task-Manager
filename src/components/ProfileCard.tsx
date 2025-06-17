@@ -4,26 +4,36 @@ import { useUser } from '@clerk/nextjs';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import EditProfile from './EditProfile';
+import Table from './Table';
+import SuccessAlert from './SuccessAlert';
+import FailAlert from './FailAlert';
 import styles from './ProfileCard.module.scss';
 
 interface UserProfile {
   id: string;
-  displayName?: string;
+  fullName?: string;
   email?: string;
   role?: string;
-  phone?: string | null;
+  phone?: string;
   city?: string;
-  birthday?: string;
+  birthDate?: string;
   gender?: string;
   portfolio?: string;
-  about?: string;
-  tools?: string[];
+  description?: string;
+  stack?: string[];
   teams?: string[];
+  profilePhoto?: string;
   coverPhoto?: string;
   status?: string;
+}
+
+interface User {
+  id: string;
+  fullName: string;
+  role?: string;
+  profilePhoto?: string;
 }
 
 interface ProfileCardProps {
@@ -40,37 +50,79 @@ const statusColors = {
 };
 
 const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
-  const { user: currentUser } = useUser();
+  const { user: currentUser, isLoaded } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [teamMembers, setTeamMembers] = useState<{ [team: string]: User[] }>({});
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string; error?: string } | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!isLoaded || !userId || !currentUser || userId === currentUser.id) {
+      if (userId === currentUser?.id) {
+        setAlert({ type: 'error', message: 'No puedes ver tu propio perfil aquí' });
+        setLoading(false);
+      }
+      return;
+    }
 
     const userDocRef = doc(db, 'users', userId);
     const unsubscribe = onSnapshot(
       userDocRef,
       (docSnap) => {
         if (docSnap.exists()) {
-          setProfile({ id: userId, ...docSnap.data() } as UserProfile);
-          console.log('[ProfileCard] User profile fetched:', docSnap.data());
+          const data = docSnap.data() as UserProfile;
+          setProfile({ id: userId, ...data });
+          console.log('[ProfileCard] User profile fetched:', data);
         } else {
-          console.log('[ProfileCard] No user document found for ID:', userId);
+          setAlert({ type: 'error', message: 'Perfil no encontrado' });
           setProfile(null);
         }
         setLoading(false);
       },
       (err) => {
         console.error('[ProfileCard] Error fetching user profile:', err);
+        setAlert({ type: 'error', message: 'Error al cargar el perfil', error: err.message });
         setProfile(null);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, isLoaded, currentUser]);
+
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (!profile?.teams?.length) {
+        setTeamMembers({});
+        return;
+      }
+
+      try {
+        const membersByTeam: { [team: string]: User[] } = {};
+        for (const team of profile.teams) {
+          const q = query(collection(db, 'users'), where('teams', 'array-contains', team));
+          const querySnapshot = await getDocs(q);
+          membersByTeam[team] = querySnapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              fullName: doc.data().fullName || 'Sin nombre',
+              role: doc.data().role || 'Sin rol',
+              profilePhoto: doc.data().profilePhoto || '/default-avatar.png',
+            }))
+            .filter((member) => member.id !== userId);
+        }
+        setTeamMembers(membersByTeam);
+      } catch (err) {
+        console.error('[ProfileCard] Error fetching team members:', err);
+        setAlert({ type: 'error', message: 'Error al cargar los miembros del equipo', error: err.message });
+      }
+    };
+
+    if (profile) {
+      fetchTeamMembers();
+    }
+  }, [profile?.teams, userId]);
 
   useEffect(() => {
     const modal = modalRef.current;
@@ -81,7 +133,64 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
         { opacity: 1, scale: 1, duration: 0.5, ease: 'power2.out' }
       );
     }
-  }, [isEditing]);
+
+    const sections = document.querySelectorAll(`.${styles.section}`);
+    sections.forEach((section) => {
+      gsap.fromTo(
+        section,
+        { opacity: 0, y: 50 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+        }
+      );
+    });
+
+    const fields = document.querySelectorAll(`.${styles.fieldGroup}, .${styles.fieldGroupRow}`);
+    fields.forEach((field) => {
+      gsap.fromTo(
+        field,
+        { opacity: 0, x: -50 },
+        {
+          opacity: 1,
+          x: 0,
+          duration: 0.6,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: field,
+            start: 'top 70%',
+            toggleActions: 'play none none none',
+          },
+        }
+      );
+    });
+
+    const tables = document.querySelectorAll(`.${styles.teamTableContainer}`);
+    tables.forEach((table) => {
+      gsap.fromTo(
+        table,
+        { opacity: 0, scale: 0.9 },
+        {
+          opacity: 1,
+          scale: 1,
+          duration: 0.7,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: table,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+        }
+      );
+    });
+  }, [profile]);
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -105,31 +214,21 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
     });
   };
 
-  const handleEditClick = () => {
-    gsap.to(modalRef.current, {
-      opacity: 0,
-      scale: 0.95,
-      duration: 0.2,
-      ease: 'power2.in',
-      onComplete: () => {
-        setIsEditing(true);
-        gsap.fromTo(
-          modalRef.current,
-          { opacity: 0, scale: 0.95 },
-          { opacity: 1, scale: 1, duration: 0.2, ease: 'power2.out' }
-        );
-      },
-    });
+  const handleAlertClose = () => {
+    setAlert(null);
   };
 
-  if (isEditing) {
-    return <EditProfile userId={userId} imageUrl={imageUrl} onClose={onClose} />;
-  }
+  const formatPhoneNumber = (phone: string | undefined) => {
+    if (!phone) return 'No especificado';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 10) return phone;
+    return `(${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7)}`;
+  };
 
-  if (loading) {
+  if (loading || !isLoaded) {
     return (
       <div className={styles.ProfileCardOverlay} onClick={handleOverlayClick}>
-        <div className={styles.ProfileCardFrameMain}>
+        <div className={styles.ProfileCardFrameMain} ref={modalRef}>
           <div className={styles.ProfileCardFrameInner}>
             <p>Cargando perfil...</p>
           </div>
@@ -138,28 +237,67 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
     );
   }
 
-  if (!profile) {
+  if (!profile || userId === currentUser?.id) {
     return (
       <div className={styles.ProfileCardOverlay} onClick={handleOverlayClick}>
-        <div className={styles.ProfileCardFrameMain}>
+        <div className={styles.ProfileCardFrameMain} ref={modalRef}>
+          <button
+            onClick={handleCloseButtonClick}
+            className={styles.ProfileCardCloseButton}
+            aria-label="Cerrar perfil"
+          >
+            ✕
+          </button>
           <div className={styles.ProfileCardFrameInner}>
-            <p>Perfil no encontrado.</p>
+            <p>{alert?.message || 'Perfil no disponible'}</p>
             <button className={styles.ProfileCardButton} onClick={onClose}>
               Cerrar
             </button>
           </div>
         </div>
+        {alert?.type === 'error' && (
+          <FailAlert message={alert.message} error={alert.error || 'Error desconocido'} onClose={handleAlertClose} />
+        )}
       </div>
     );
   }
 
-  const isOwnProfile = currentUser?.id === userId;
-  const userName = profile.displayName || 'Usuario';
-  const avatarUrl = imageUrl || '/default-avatar.png';
+  const avatarUrl = imageUrl || profile.profilePhoto || '/default-avatar.png';
+  const coverPhotoUrl = profile.coverPhoto || '/empty-cover.png';
+
+  const teamTableColumns = [
+    {
+      key: 'profilePhoto',
+      label: 'Foto',
+      width: '100px',
+      mobileVisible: true,
+      render: (member: User) => (
+        <Image
+          src={member.profilePhoto || '/default-avatar.png'}
+          alt={member.fullName}
+          width={40}
+          height={40}
+          className={styles.teamAvatar}
+        />
+      ),
+    },
+    {
+      key: 'fullName',
+      label: 'Nombre',
+      width: 'auto',
+      mobileVisible: true,
+    },
+    {
+      key: 'role',
+      label: 'Rol',
+      width: 'auto',
+      mobileVisible: true,
+    },
+  ];
 
   return (
     <div className={styles.ProfileCardOverlay} onClick={handleOverlayClick}>
-      <div ref={modalRef} className={styles.ProfileCardFrameMain}>
+      <div className={styles.ProfileCardFrameMain} ref={modalRef}>
         <button
           onClick={handleCloseButtonClick}
           className={styles.ProfileCardCloseButton}
@@ -167,159 +305,151 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
         >
           ✕
         </button>
-        <div className={styles.ProfileCardFrameInner}>
-          <div className={`${styles.ProfileCardCoverPhoto} ${!profile.coverPhoto || profile.coverPhoto === '/empty-cover.png' ? styles.ProfileCardEmptyState : ''}`}>
-            <Image
-              src={profile.coverPhoto || '/empty-cover.png'}
-              alt="Foto de portada"
-              fill
-              style={{ objectFit: 'cover' }}
-              priority
-              onError={() => (profile.coverPhoto = '/empty-cover.png')}
-            />
-          </div>
-          <div className={styles.ProfileCardFrameContent}>
-            <div className={styles.ProfileCardContentWrapper}>
-              <div className={styles.ProfileCard}>
-                <div className={styles.ProfileCardAvatar}>
-                  {avatarUrl ? (
-                    <Image
-                      draggable="false"
-                      src={avatarUrl}
-                      alt={userName}
-                      width={120}
-                      height={120}
-                      style={{ borderRadius: '1000px' }}
-                    />
-                  ) : (
-                    <div className={styles.ProfileCardAvatarPlaceholder}>
-                      <span>Sin foto</span>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.ProfileCardInputColumns}>
-                  <div className={styles.ProfileCardInputColumn}>
-                    <div className={styles.ProfileCardInputWrapper}>
-                      <p className={styles.ProfileCardInputName}>{profile.displayName || 'Sin nombre'}</p>
-                    </div>
-                    <div className={styles.ProfileCardInputWrapper}>
-                      <p className={styles.ProfileCardInputRole}>{profile.role || 'Sin rol'}</p>
-                      <div className={styles.ProfileCardAboutSection}>
-                        <div className={styles.ProfileCardInputWrapper}>
-                          <label className={styles.ProfileCardLabelLarge}>Sobre mí</label>
-                          <p className={styles.ProfileCardTextarea}>{profile.about || 'No especificado'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.ProfileCardInfoGrid}>
-                    <div className={styles.ProfileCardInputColumn}>
-                      <div className={styles.ProfileCardInputWrapperSmall}>
-                        <Image src="/mail.svg" alt="Correo" width={16} height={16} />
-                        <div>
-                          <label className={styles.ProfileCardLabel}>Correo</label>
-                          <p className={styles.ProfileCardInput}>{profile.email || 'Sin correo'}</p>
-                        </div>
-                      </div>
-                      <div className={styles.ProfileCardInputWrapperSmall}>
-                        <Image src="/birthday.svg" alt="Cumpleaños" width={16} height={16} />
-                        <div>
-                          <label className={styles.ProfileCardLabel}>Cumpleaños</label>
-                          <p className={styles.ProfileCardInput}>{profile.birthday || 'No especificado'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className={styles.ProfileCardInputColumn}>
-                      <div className={styles.ProfileCardInputWrapperSmall}>
-                        <Image src="/phone.svg" alt="Teléfono" width={16} height={16} />
-                        <div>
-                          <label className={styles.ProfileCardLabel}>Teléfono</label>
-                          <p className={styles.ProfileCardInput}>{profile.phone ? `${profile.phone}` : 'No especificado'}</p>
-                        </div>
-                      </div>
-                      <div className={styles.ProfileCardInputWrapperSmall}>
-                        <Image src="/gender.svg" alt="Género" width={16} height={16} />
-                        <div>
-                          <label className={styles.ProfileCardLabel}>Género</label>
-                          <p className={styles.ProfileCardInput}>{profile.gender || 'No especificado'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className={styles.ProfileCardInputColumn}>
-                      <div className={styles.ProfileCardInputWrapperSmall}>
-                        <Image src="/location.svg" alt="Ciudad" width={16} height={16} />
-                        <div>
-                          <label className={styles.ProfileCardLabel}>Ciudad</label>
-                          <p className={styles.ProfileCardInput}>{profile.city || 'No especificado'}</p>
-                        </div>
-                      </div>
-                      <div className={styles.ProfileCardInputWrapperSmall}>
-                        <Image src="/link.svg" alt="Portafolio" width={16} height={16} />
-                        <div>
-                          <label className={styles.ProfileCardLabel}>Portafolio</label>
-                          <p className={styles.ProfileCardInput}>
-                            {profile.portfolio ? (
-                              <a
-                                href={profile.portfolio.startsWith('http') ? profile.portfolio : `https://${profile.portfolio}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.ProfileCardPortfolioLink}
-                              >
-                                {profile.portfolio}
-                              </a>
-                            ) : (
-                              'Sin portafolio'
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.ProfileCardAboutToolsContainer}>
-                  <div className={styles.ProfileCardToolsSection}>
-                    <div className={styles.ProfileCardInputWrapper}>
-                      <label className={styles.ProfileCardLabel}>Herramientas</label>
-                      <div className={styles.ProfileCardTags}>
-                        {profile.tools && profile.tools.length > 0 ? (
-                          profile.tools.map((tool, index) => (
-                            <div key={index} className={styles.ProfileCardTag}>
-                              {tool}
-                            </div>
-                          ))
-                        ) : (
-                          <p>No especificado</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className={styles.ProfileCardInputWrapper}>
-                      <label className={styles.ProfileCardLabel}>Equipos</label>
-                      <div className={styles.ProfileCardTags}>
-                        {profile.teams && profile.teams.length > 0 ? (
-                          profile.teams.map((team, index) => (
-                            <div key={index} className={styles.ProfileCardTag}>
-                              {team}
-                            </div>
-                          ))
-                        ) : (
-                          <p>No especificado</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {isOwnProfile && (
-                  <div className={styles.ProfileCardButtonWrapper}>
-                    <button onClick={handleEditClick} className={styles.ProfileCardButton}>
-                      Editar Perfil
-                    </button>
-                  </div>
-                )}
+        <div className={styles.frame239189}>
+          <div
+            className={styles.frame239197}
+            style={{ backgroundImage: `url(${coverPhotoUrl})` }}
+            data-empty={!profile.coverPhoto || profile.coverPhoto === '/empty-cover.png'}
+          />
+          <div className={styles.frame2}>
+            <div className={styles.frame1}>
+              <div className={styles.profilePhotoContainer}>
+                <Image
+                  src={avatarUrl}
+                  alt={profile.fullName || 'Usuario'}
+                  width={94}
+                  height={94}
+                  className={styles.ellipse11}
+                  onError={(e) => (e.currentTarget.src = '/default-avatar.png')}
+                />
+              </div>
+              <div className={styles.frame239179}>
+                <div className={styles.mainName}>{profile.fullName || 'Sin nombre'}</div>
+                <div className={styles.exampleMailCom}>{profile.email || 'Sin correo'}</div>
               </div>
             </div>
           </div>
+          <div className={styles.content}>
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Información General</h2>
+              <div className={styles.sectionContent}>
+                <div className={styles.fieldGroup}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>Nombre Completo</div>
+                    <div className={styles.input}>{profile.fullName || 'No especificado'}</div>
+                  </div>
+                  <div className={styles.frame239183}>
+                    <div className={styles.label}>Rol o Cargo</div>
+                    <div className={styles.input}>{profile.role || 'No especificado'}</div>
+                  </div>
+                </div>
+                <div className={styles.fieldGroup}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>Acerca de ti</div>
+                    <div className={styles.input}>{profile.description || 'No especificado'}</div>
+                  </div>
+                </div>
+                <div className={styles.fieldGroupRow}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>Correo Electrónico</div>
+                    <div className={styles.input}>{profile.email || 'No especificado'}</div>
+                  </div>
+                  <div className={styles.frame239183}>
+                    <div className={styles.label}>Fecha de Nacimiento</div>
+                    <div className={styles.input}>{profile.birthDate || 'No especificado'}</div>
+                  </div>
+                </div>
+                <div className={styles.fieldGroupRow}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>Teléfono de Contacto</div>
+                    <div className={styles.input}>{formatPhoneNumber(profile.phone)}</div>
+                  </div>
+                  <div className={styles.frame239183}>
+                    <div className={styles.label}>Ciudad de Residencia</div>
+                    <div className={styles.input}>{profile.city || 'No especificado'}</div>
+                  </div>
+                </div>
+                <div className={styles.fieldGroupRow}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>Género</div>
+                    <div className={styles.input}>{profile.gender || 'No especificado'}</div>
+                  </div>
+                  <div className={styles.frame239183}>
+                    <div className={styles.label}>Portafolio en Línea</div>
+                    <div className={styles.input}>
+                      {profile.portfolio ? (
+                        <a
+                          href={profile.portfolio.startsWith('http') ? profile.portfolio : `https://${profile.portfolio}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.ProfileCardPortfolioLink}
+                        >
+                          {profile.portfolio}
+                        </a>
+                      ) : (
+                        'No especificado'
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Stack</h2>
+              <div className={styles.sectionContent}>
+                <div className={styles.fieldGroup}>
+                  <div className={styles.stackDescription}>
+                    Tecnologías y herramientas utilizadas frecuentemente.
+                  </div>
+                  <div className={styles.ProfileCardTags}>
+                    {profile.stack && profile.stack.length > 0 ? (
+                      profile.stack.map((tool, index) => (
+                        <div key={index} className={styles.ProfileCardTag}>
+                          {tool}
+                        </div>
+                      ))
+                    ) : (
+                      <div className={styles.input}>No especificado</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Equipos</h2>
+              <div className={styles.sectionContent}>
+                <div className={styles.teamsDescription}>
+                  Equipos a los que pertenece el usuario.
+                </div>
+                {profile.teams?.map((team) => (
+                  <div key={team} className={styles.teamTableContainer}>
+                    <div className={styles.teamHeader}>
+                      <h3 className={styles.teamHeading}>{team}</h3>
+                    </div>
+                    <p className={styles.teamSubheading}>
+                      Lista de miembros del equipo (excluyendo al usuario)
+                    </p>
+                    <Table
+                      data={teamMembers[team] || []}
+                      columns={teamTableColumns}
+                      itemsPerPage={5}
+                    />
+                  </div>
+                ))}
+                {!profile.teams?.length && (
+                  <div className={styles.input}>No especificado</div>
+                )}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
+      {alert?.type === 'success' && (
+        <SuccessAlert message={alert.message} onClose={handleAlertClose} />
+      )}
+      {alert?.type === 'error' && (
+        <FailAlert message={alert.message} error={alert.error || 'Error desconocido'} onClose={handleAlertClose} />
+      )}
     </div>
   );
 };

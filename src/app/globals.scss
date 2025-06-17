@@ -2,6 +2,10 @@
 @use './styles/variables';
 @use './styles/reset';
 @use './styles/base';
+* {
+  box-sizing: border-box;
+}
+
 
 :root {
   --background: transparent;

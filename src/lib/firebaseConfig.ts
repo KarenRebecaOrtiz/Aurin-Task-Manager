@@ -3,7 +3,7 @@ export const firebaseConfig = {
   authDomain: 'aurin-plattform.firebaseapp.com',
   databaseURL: 'https://aurin-plattform-default-rtdb.firebaseio.com',
   projectId: 'aurin-plattform',
-  storageBucket: 'aurin-plattform.firebasestorage.app',
+  storageBucket: 'aurin-plattform', 
   messagingSenderId: '125219589195',
-  appId: '1:125219589195:web:a7c13fcee2418d03ed51ce'
+  appId: '1:125219589195:web:a7c13fcee2418d03ed51ce',
 };

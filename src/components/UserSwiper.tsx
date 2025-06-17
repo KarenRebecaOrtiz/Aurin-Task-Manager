@@ -4,9 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import Splide from '@splidejs/splide';
-import { AutoScroll } from '@splidejs/splide-extension-auto-scroll';
-import '@splidejs/splide/css/core'; // Import core styles
-import { collection, onSnapshot } from 'firebase/firestore';
+import '@splidejs/splide/css/core';
+import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './UserSwiper.module.scss';
 
@@ -18,25 +17,32 @@ interface ClerkUser {
   status?: string;
 }
 
+interface User {
+  id: string;
+  imageUrl: string;
+  fullName: string;
+  role: string;
+}
+
 interface UserSwiperProps {
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
+  onMessageSidebarOpen: (user: User) => void;
 }
 
 const statusColors = {
-  Disponible: '#178d00',
-  Ocupado: '#d32f2f',
-  'Por terminar': '#f57c00',
-  Fuera: '#616161',
+  'En la oficina': '#28a745',
+  'Fuera de la oficina': '#dc3545',
+  'Fuera de horario': '#ff6f00',
 };
 
-// Cache configuration
 const CACHE_KEY = 'cached_users';
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const CACHE_DURATION = 24 * 60 * 60 * 1000;
 
-const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
-  const { isLoaded } = useUser();
+const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen }: UserSwiperProps) => {
+  const { user, isLoaded } = useUser();
   const [users, setUsers] = useState<ClerkUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hoveredUserId, setHoveredUserId] = useState<string | null>(null); // Track hovered user for tooltip
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
 
@@ -65,13 +71,14 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        // Check cache first
         const cachedUsers = getCachedUsers();
-        if (cachedUsers) {
-          setUsers(cachedUsers);
+        if (cachedUsers && user?.id) {
+          const filteredCachedUsers = cachedUsers.filter((u) => u.id !== user.id);
+          setUsers(filteredCachedUsers);
           setIsLoading(false);
           console.log('[UserSwiper] Loaded users from cache:', {
-            count: cachedUsers.length,
+            count: filteredCachedUsers.length,
+            userIds: filteredCachedUsers.map((u) => u.id),
           });
         }
 
@@ -82,10 +89,12 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
         }
         const clerkUsers: ClerkUser[] = await response.json();
 
-        const updatedUsers = clerkUsers.map((user) => ({
-          ...user,
-          status: 'Disponible',
-        }));
+        const updatedUsers = clerkUsers
+          .filter((u) => u.id !== user?.id)
+          .map((user) => ({
+            ...user,
+            status: 'En la oficina',
+          }));
         setUsers(updatedUsers);
         setCachedUsers(updatedUsers);
         setIsLoading(false);
@@ -96,14 +105,19 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
           (snapshot) => {
             const statusMap: { [id: string]: string } = {};
             snapshot.forEach((doc) => {
-              statusMap[doc.id] = doc.data().status || 'Disponible';
+              const firestoreStatus = doc.data().status || 'Disponible';
+              statusMap[doc.id] =
+                firestoreStatus === 'Disponible' ? 'En la oficina' :
+                firestoreStatus === 'No disponible' ? 'Fuera de la oficina' :
+                'Fuera de horario';
             });
-
             setUsers((prevUsers) => {
-              const newUsers = prevUsers.map((user) => ({
-                ...user,
-                status: statusMap[user.id] || user.status || 'Disponible',
-              }));
+              const newUsers = prevUsers
+                .filter((u) => u.id !== user?.id)
+                .map((user) => ({
+                  ...user,
+                  status: statusMap[user.id] || user.status || 'En la oficina',
+                }));
               setCachedUsers(newUsers);
               return newUsers;
             });
@@ -114,7 +128,7 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
           }
         );
 
-        console.log('[UserSwiper] Users fetched:', { count: clerkUsers.length });
+        console.log('[UserSwiper] Users fetched:', { count: updatedUsers.length });
       } catch (error) {
         console.error('[UserSwiper] Error fetching users:', error);
         setUsers([]);
@@ -127,40 +141,34 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
     }
 
     return () => unsubscribe();
-  }, [isLoaded]);
+  }, [isLoaded, user?.id]);
 
   useEffect(() => {
     if (splideRef.current && users.length > 0) {
-      // Initialize Splide
       splideInstance.current = new Splide(splideRef.current, {
-        type: 'loop', // Equivalent to Swiper's loop
-        perPage: 7, // Default for large screens
+        type: 'loop',
+        perPage: 2,
         perMove: 1,
-        gap: '2rem', // Space between slides
-        autoWidth: true, // Allow slides to have their own width
-        focus: 'center', // Center the active slide
-        autoplay: true, // Enable autoplay
-        interval: 3000, // Autoplay interval
-        pauseOnHover: true, // Pause on hover
-        pauseOnFocus: true, // Pause on focus
-        drag: true, // Enable drag
-        arrows: false, // Hide arrows (customize if needed)
-        pagination: true, // Show pagination dots
+        gap: '0.5rem',
+        autoWidth: true,
+        focus: 'center',
+        autoplay: true,
+        interval: 3000,
+        pauseOnHover: true,
+        pauseOnFocus: true,
+        drag: true,
+        arrows: false,
+        pagination: false,
+        mediaQuery: 'min',
         breakpoints: {
-          1440: { perPage: 7, gap: '2rem' },
-          1280: { perPage: 6, gap: '1.75rem' },
-          1024: { perPage: 5, gap: '1.5rem' },
-          768: { perPage: 4, gap: '1.25rem' },
-          640: { perPage: 3, gap: '1rem' },
-          480: { perPage: 2, gap: '0.75rem', focus: false },
-          320: { perPage: 1, gap: '0.625rem', focus: 'center' },
-        },
-        classes: {
-          pagination: `splide__pagination ${styles.swiperPagination}`,
+          360: { perPage: 2, gap: '0.5rem' },
+          480: { perPage: 3, gap: '0.75rem' },
+          768: { perPage: 4, gap: '1rem', focus: 0 },
+          992: { perPage: 5, gap: '1.25rem' },
+          1200: { perPage: 6, gap: '1.5rem' },
         },
       }).mount();
 
-      // Clean up Splide instance on unmount
       return () => {
         if (splideInstance.current) {
           splideInstance.current.destroy();
@@ -169,54 +177,59 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
     }
   }, [users]);
 
+  const handleCardClick = async (clerkUser: ClerkUser) => {
+    if (!user?.id || clerkUser.id === user.id) {
+      console.log('[UserSwiper] Cannot open chat with self or invalid user:', clerkUser.id);
+      return;
+    }
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
+      const role = userDoc.exists() ? userDoc.data().role || 'Miembro' : 'Miembro';
+
+      const userForChat: User = {
+        id: clerkUser.id,
+        imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+        fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+        role,
+      };
+
+      onMessageSidebarOpen(userForChat);
+      console.log('[UserSwiper] Opened MessageSidebar for user:', userForChat);
+    } catch (error) {
+      console.error('[UserSwiper] Error fetching user role:', error);
+      const userForChat: User = {
+        id: clerkUser.id,
+        imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+        fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+        role: 'Miembro',
+      };
+      onMessageSidebarOpen(userForChat);
+    }
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, clerkUser: ClerkUser) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleCardClick(clerkUser);
+    }
+  };
+
+  const handleAvatarKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, user: ClerkUser) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpenProfile({
+        id: user.id,
+        imageUrl: user.imageUrl || '/default-avatar.png',
+      });
+    }
+  };
+
   if (!isLoaded || isLoading) {
     return (
       <div className={styles.loading}>
-        <div className="main">
-          <div className="up">
-            <div className="loaders">
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-              <div className="loader"></div>
-            </div>
-            <div className="loadersB">
-              <div className="loaderA">
-                <div className="ball0"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball1"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball2"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball3"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball4"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball5"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball6"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball7"></div>
-              </div>
-              <div className="loaderA">
-                <div className="ball8"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div className={styles.loader}>Cargando...</div>
       </div>
     );
   }
@@ -230,7 +243,7 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
       <section
         ref={splideRef}
         className="splide"
-        aria-label="User Profiles Carousel"
+        aria-label="Carrusel de Perfiles de Usuarios"
       >
         <div className="splide__track">
           <ul className="splide__list">
@@ -238,50 +251,64 @@ const UserSwiper = ({ onOpenProfile }: UserSwiperProps) => {
               <li key={user.id} className={`splide__slide ${styles.swiperSlide}`}>
                 <div
                   className={styles.card}
-                  role="article"
-                  aria-label={`Perfil de ${user.firstName || 'Usuario'}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleCardClick(user)}
+                  onKeyDown={(e) => handleCardKeyDown(e, user)}
+                  aria-label={`Enviar mensaje a ${user.firstName || 'Usuario'}`}
                 >
                   <div className={styles.cardInfo}>
-                    <div
-                      className={`${styles.cardAvatar} ${
-                        styles[
-                          `status-${
-                            user.status?.replace(' ', '-') || 'Disponible'
-                          }`
-                        ]
-                      }`}
-                    >
-                      <Image
-                        src={user.imageUrl || '/default-avatar.png'}
-                        alt={user.firstName || 'User avatar'}
-                        width={48}
-                        height={48}
-                        className={styles.avatarImage}
-                        onError={(e) => {
-                          e.currentTarget.src = '/default-avatar.png';
+                    <div className={styles.avatarWrapper}>
+                      <div className={styles.tooltipContainer}>
+                        <button
+                          className={styles.cardAvatar}
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenProfile({
+                              id: user.id,
+                              imageUrl: user.imageUrl || '/default-avatar.png',
+                            });
+                          }}
+                          onKeyDown={(e) => handleAvatarKeyDown(e, user)}
+                          onMouseEnter={() => setHoveredUserId(user.id)}
+                          onMouseLeave={() => setHoveredUserId(null)}
+                          aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
+                        >
+                          <Image
+                            src={user.imageUrl || '/default-avatar.png'}
+                            alt={user.firstName || 'Avatar de usuario'}
+                            width={40}
+                            height={40}
+                            className={styles.avatarImage}
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-avatar.png';
+                            }}
+                          />
+                        </button>
+                        {hoveredUserId === user.id && (
+                          <div className={styles.tooltip}>
+                            Ver perfil
+                            <div className={styles.tooltipArrow} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className={styles.cardText}>
+                      <div className={styles.cardTitle}>
+                        {(user.firstName || user.lastName)
+                          ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+                          : 'Sin nombre'}
+                      </div>
+                      <div
+                        className={styles.cardStatus}
+                        style={{
+                          color: statusColors[user.status as keyof typeof statusColors] || '#333',
                         }}
-                      />
+                      >
+                        {user.status || 'En la oficina'}
+                      </div>
                     </div>
-                    <div
-                      className={styles.cardTitle}
-                      style={{ fontSize: '14px', fontWeight: '600' }}
-                    >
-                      {(user.firstName || user.lastName)
-                        ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-                        : 'Sin nombre'}
-                    </div>
-                    <button
-                      className={styles.viewProfileButton}
-                      onClick={() =>
-                        onOpenProfile({
-                          id: user.id,
-                          imageUrl: user.imageUrl || '/default-avatar.png',
-                        })
-                      }
-                      aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
-                    >
-                      Ver Perfil
-                    </button>
                   </div>
                 </div>
               </li>

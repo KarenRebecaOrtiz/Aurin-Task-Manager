@@ -29,6 +29,7 @@ import 'react-time-picker/dist/TimePicker.css';
 import { db } from '@/lib/firebase';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
 import styles from './ChatSidebar.module.scss';
+import { deleteTask } from '@/lib/taskUtils';
 
 interface Message {
   id: string;
@@ -109,6 +110,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [task, setTask] = useState(initialTask);
   const [isHoursDropdownOpen, setIsHoursDropdownOpen] = useState(false);
   const [isResponsibleDropdownOpen, setIsResponsibleDropdownOpen] = useState(false);
@@ -711,7 +713,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, scale: 0.95 },
         { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
       );
-      console.log('[ChatSidebar] Delete popup animated');
+      setDeleteConfirm('Eliminar'); // Rellenar automáticamente
+      console.log('[ChatSidebar] Delete popup animated and deleteConfirm set');
     }
   }, [isDeletePopupOpen]);
 
@@ -808,112 +811,29 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   const handleDeleteTask = async () => {
-    if (!isCreator && !isAdmin || !user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
+    if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
       console.warn('[ChatSidebar] Invalid task deletion attempt:', {
-        isCreator,
-        isAdmin,
         userId: user?.id,
         deleteConfirm,
       });
       return;
     }
-
+    setIsDeleting(true);
     try {
-      console.log('[ChatSidebar] Deleting task:', task.id);
-
-      // Eliminar mensajes
-      const messagesQuery = query(collection(db, `tasks/${task.id}/messages`));
-      const messagesSnapshot = await getDocs(messagesQuery);
-      await Promise.all(
-        messagesSnapshot.docs.map(async (msgDoc) => {
-          const msgData = msgDoc.data();
-          if (msgData.filePath) {
-            try {
-              console.log('[ChatSidebar] Attempting to delete GCS file:', msgData.filePath);
-              const response = await fetch('/api/delete-file', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filePath: msgData.filePath }),
-              });
-              const responseData = await response.json();
-              if (!response.ok) {
-                console.error('[ChatSidebar] Failed to delete GCS file:', {
-                  status: response.status,
-                  error: responseData.error,
-                  filePath: msgData.filePath,
-                });
-              } else {
-                console.log('[ChatSidebar] Successfully deleted GCS file:', msgData.filePath);
-              }
-            } catch (err) {
-              console.error('[ChatSidebar] Error deleting GCS file:', {
-                error: err.message || 'Unknown error',
-                code: err.code || 'No code',
-                filePath: msgData.filePath,
-              });
-            }
-          }
-          await deleteDoc(doc(db, `tasks/${task.id}/messages`, msgDoc.id));
-        }),
-      );
-      console.log('[ChatSidebar] Deleted messages for task:', task.id);
-
-      // Eliminar timers
-      const timersQuery = query(collection(db, `tasks/${task.id}/timers`));
-      const timersSnapshot = await getDocs(timersQuery);
-      await Promise.all(
-        timersSnapshot.docs.map((timerDoc) => deleteDoc(doc(db, `tasks/${task.id}/timers`, timerDoc.id))),
-      );
-      console.log('[ChatSidebar] Deleted timers for task:', task.id);
-
-      // Eliminar typing status
-      const typingQuery = query(collection(db, `tasks/${task.id}/typing`));
-      const typingSnapshot = await getDocs(typingQuery);
-      await Promise.all(
-        typingSnapshot.docs.map((typingDoc) => deleteDoc(doc(db, `tasks/${task.id}/typing`, typingDoc.id))),
-      );
-      console.log('[ChatSidebar] Deleted typing status for task:', task.id);
-
-      // Eliminar notificaciones
-      const notificationsQuery = query(collection(db, 'notifications'), where('taskId', '==', task.id));
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      await Promise.all(
-        notificationsSnapshot.docs.map((notifDoc) => deleteDoc(doc(db, 'notifications', notifDoc.id))),
-      );
-      console.log('[ChatSidebar] Deleted notifications for task:', task.id);
-
-      // Notificar a involucrados
-      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-      if (task.CreatedBy) recipients.add(task.CreatedBy);
-      recipients.delete(user.id);
-      for (const recipientId of Array.from(recipients)) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.id,
-          taskId: task.id,
-          message: `${user.firstName || 'Usuario'} eliminó la tarea ${task.name}`,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-        });
-      }
-      console.log('[ChatSidebar] Notifications sent for task deletion:', {
-        recipientCount: recipients.size,
-      });
-
-      // Eliminar tarea
-      await deleteDoc(doc(db, 'tasks', task.id));
-      console.log('[ChatSidebar] Task deleted:', task.id);
-
+      console.log('[ChatSidebar] Attempting to delete task:', task.id);
+      await deleteTask(task.id, user.id, isAdmin, task);
+      console.log('[ChatSidebar] Task deleted successfully');
       setIsDeletePopupOpen(false);
       setDeleteConfirm('');
-      onClose();
+      onClose(); // Cerrar el sidebar tras eliminar
     } catch (error) {
       console.error('[ChatSidebar] Error deleting task:', {
-        error: error.message || 'Unknown error',
-        code: error.code || 'No code',
+        error: error instanceof Error ? error.message : JSON.stringify(error),
         taskId: task.id,
       });
-      alert('Error al eliminar la tarea');
+      alert(`Error al eliminar la tarea: ${error.message || 'Inténtalo de nuevo.'}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -968,11 +888,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       });
       return;
     }
-
+  
     setIsSending(true);
     console.log('[ChatSidebar] Starting message send for task:', task.id);
-
-    // Generar un ID temporal para el mensaje optimista
+  
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     const optimisticMessage: Message = {
       id: tempId,
@@ -981,21 +900,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       text: newMessage.trim() || null,
       timestamp: Timestamp.fromDate(new Date()),
       read: false,
-      imageUrl: file && file.type.startsWith('image/') ? previewUrl : null,
-      fileUrl: file && !file.type.startsWith('image/') ? null : null,
+      imageUrl: null,
+      fileUrl: null,
       fileName: file ? file.name : null,
       fileType: file ? file.type : null,
       filePath: null,
       isPending: true,
     };
-
-    // Añadir mensaje optimista a la lista
+  
     setMessages((prev) => [...prev, optimisticMessage]);
     setNewMessage('');
     setFile(null);
     setPreviewUrl(null);
     setHasInteracted(true);
-
+  
     try {
       const messageData: Partial<Message> = {
         senderId: user.id,
@@ -1009,33 +927,36 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         fileType: null,
         filePath: null,
       };
-
+  
       if (file) {
         try {
           const formData = new FormData();
           formData.append('file', file);
+          formData.append('userId', user.id);
+          formData.append('type', 'message');
           formData.append('conversationId', task.id);
-
+  
           const response = await fetch('/api/upload', {
             method: 'POST',
             body: formData,
+            headers: { 'x-clerk-user-id': user.id },
           });
-
+  
           if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Failed to upload file');
           }
-
+  
           const { url, fileName, fileType, filePath } = await response.json();
           console.log('[ChatSidebar] File uploaded via API:', { url, fileName, fileType, filePath });
-
-          messageData.fileName = fileName;
-          messageData.fileType = fileType;
-          messageData.filePath = filePath;
-
-          if (file.type.startsWith('image/')) {
+  
+          if (fileName) messageData.fileName = fileName;
+          if (fileType) messageData.fileType = fileType;
+          if (filePath) messageData.filePath = filePath;
+  
+          if (file.type.startsWith('image/') && url) {
             messageData.imageUrl = url;
-          } else {
+          } else if (url) {
             messageData.fileUrl = url;
           }
         } catch (error) {
@@ -1045,28 +966,24 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             taskId: task.id,
             fileName: file.name,
           });
-          // Eliminar mensaje optimista en caso de error
           setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
           alert('Error al subir el archivo');
           setIsSending(false);
           return;
         }
       }
-
+  
       if (newMessage.trim()) {
         messageData.text = newMessage.trim();
       }
-
-      // Guardar mensaje
+  
       const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), messageData);
       console.log('[ChatSidebar] Message saved for task:', task.id, 'docId:', docRef.id);
-
-      // Crear notificaciones
+  
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
       recipients.delete(user.id);
-      console.log('[ChatSidebar] Notification recipients:', Array.from(recipients));
-
+  
       for (const recipientId of Array.from(recipients)) {
         try {
           await addDoc(collection(db, 'notifications'), {
@@ -1086,7 +1003,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           });
         }
       }
-
+  
       console.log('[ChatSidebar] Message sent and notifications attempted');
     } catch (error) {
       console.error('[ChatSidebar] Send message error:', {
@@ -1094,7 +1011,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         code: error.code || 'No code',
         taskId: task.id,
       });
-      // Eliminar mensaje optimista en caso de error
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       alert('Error al enviar el mensaje');
     } finally {
@@ -1136,7 +1052,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       console.warn('[ChatSidebar] No userId for message deletion:', { messageId });
       return;
     }
-
+  
     try {
       console.log('[ChatSidebar] Deleting message:', messageId);
       const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
@@ -1146,7 +1062,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         if (messageData.filePath) {
           try {
             console.log('[ChatSidebar] Attempting to delete GCS file:', messageData.filePath);
-            const response = await fetch('/api/delete-file', {
+            const response = await fetch('/api/delete-image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ filePath: messageData.filePath }),
@@ -1163,8 +1079,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             }
           } catch (error) {
             console.error('[ChatSidebar] Error deleting GCS file:', {
-              error: error.message || 'Unknown error',
-              code: error.code || 'No code',
+              error: error instanceof Error ? error.message : 'Unknown error',
+              stack: error instanceof Error ? error.stack : 'No stack trace',
               filePath: messageData.filePath,
             });
           }
@@ -1276,7 +1192,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       console.log('[ChatSidebar] Adding manual time entry:', { timeEntry, date, totalHours, taskId: task.id });
       const timestamp = Timestamp.now();
 
-      // Add time entry message
       await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: user.id,
         senderName: user.firstName || 'Usuario',
@@ -1287,7 +1202,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       });
       console.log('[ChatSidebar] Time entry message added successfully');
 
-      // Add comment message if provided
       if (commentInput.trim()) {
         console.log('[ChatSidebar] Adding comment:', commentInput);
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
@@ -1300,7 +1214,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         console.log('[ChatSidebar] Comment message added successfully');
       }
 
-      // Reset form state
       setTimerInput('00:00');
       setDateInput(new Date());
       setCommentInput('');
@@ -1330,7 +1243,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     return new Date(date).toLocaleDateString('es-ES');
   };
 
-  // Calcular horas totales
   const totalHours = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
     let totalMinutes = 0;
@@ -1347,7 +1259,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     return `${totalHours}h ${remainingMinutes}m`;
   }, [messages]);
 
-  // Calcular horas por usuario para el dropdown
   const hoursByUser = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
     const hoursMap: { [userId: string]: number } = {};
@@ -1378,7 +1289,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       .filter((u) => hoursMap[u.id]);
   }, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
 
-  // Obtener responsables para el dropdown
   const responsibleUsers = useMemo(() => {
     const pmUsers = task.LeadedBy.map((userId) => {
       const u = users.find((u) => u.id === userId) || {
@@ -1396,7 +1306,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     return pmUsers.length > 0 ? pmUsers : null;
   }, [task.LeadedBy, users]);
 
-  // Obtener equipo (AssignedTo + LeadedBy) para el dropdown
   const teamUsers = useMemo(() => {
     const teamUserIds = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
     return Array.from(teamUserIds).map((userId) => {
@@ -1579,145 +1488,38 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         {!isLoading && messages.length === 0 && (
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
-        {messages.map((message) => (
-          <div key={message.id} className={styles.message}>
-            <Image
-              src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-image.png'}
-              alt={message.senderName || 'Avatar del remitente'}
-              width={46}
-              height={46}
-              className={styles.avatar}
-            />
-            <div className={styles.messageContent}>
-              <div className={styles.messageHeader}>
-                <div className={styles.sender}>{message.senderName}</div>
-                <div className={styles.messageActions}>
-                  <div className={styles.timestamp}>
-                    {message.timestamp instanceof Timestamp
-                      ? message.timestamp.toDate().toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false,
-                        })
-                      : 'Sin fecha'}
+          {messages.map((message) => (
+            <div key={message.id} className={styles.message}>
+              <Image
+                src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
+                alt={message.senderName || 'Avatar del remitente'}
+                width={46}
+                height={46}
+                className={styles.avatar}
+                onError={(e) => {
+                  e.currentTarget.src = '/default-avatar.png';
+                  console.warn('[ChatSidebar] Avatar load failed, using fallback:', message.senderId);
+                }}
+              />
+              <div className={styles.messageContent}>
+                {message.imageUrl && (
+                  <div className={styles.imageWrapper}>
+                    <Image
+                      src={message.imageUrl}
+                      alt={message.fileName || 'Imagen'}
+                      width={200}
+                      height={200}
+                      className={styles.image}
+                      onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
+                      onError={(e) => {
+                        console.warn('[ChatSidebar] Image load failed:', message.imageUrl);
+                      }}
+                    />
                   </div>
-                  {user?.id === message.senderId && !message.isPending && (
-                    <div className={styles.actionContainer}>
-                      <button
-                        className={styles.actionButton}
-                        onClick={() => {
-                          setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id);
-                          setHasInteracted(true);
-                        }}
-                      >
-                        <Image src="/elipsis.svg" alt="Acciones" width={16} height={16} />
-                      </button>
-                      {actionMenuOpenId === message.id && (
-                        <div ref={actionMenuRef} className={styles.actionDropdown}>
-                          {message.text && !message.text.startsWith('Añadó una entrada de tiempo de') && (
-                            <div
-                              className={styles.actionDropdownItem}
-                              onClick={() => {
-                                setEditingMessageId(message.id);
-                                setEditingText(message.text || '');
-                                setActionMenuOpenId(null);
-                              }}
-                            >
-                              Editar mensaje
-                            </div>
-                          )}
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => handleDeleteMessage(message.id)}
-                          >
-                            Eliminar mensaje
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-              {editingMessageId === message.id ? (
-                <div className={styles.editContainer}>
-                  <input
-                    type="text"
-                    value={editingText}
-                    onChange={(e) => setEditingText(e.target.value)}
-                    className={styles.editInput}
-                  />
-                  <button className={styles.editSaveButton} onClick={() => handleEditMessage(message.id)}>
-                    Guardar
-                  </button>
-                  <button
-                    className={styles.editCancelButton}
-                    onClick={() => {
-                      setEditingMessageId(null);
-                      setEditingText('');
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {message.text && <div className={styles.text}>{message.text}</div>}
-                  {(message.fileUrl || message.imageUrl) && (
-                    <div className={styles.fileActionsRow}>
-                      {!message.isPending && (
-                        <button
-                          className={styles.downloadButton}
-                          onClick={() => window.open(message.imageUrl || message.fileUrl, '_blank')}
-                          aria-label="Descargar archivo"
-                        >
-                          <Image src="/download.svg" alt="Descargar" width={16} height={16} />
-                        </button>
-                      )}
-                      {message.imageUrl ? (
-                        <div className={styles.imageWrapper}>
-                          <Image
-                            src={message.imageUrl}
-                            alt={message.fileName || 'Imagen'}
-                            width={200}
-                            height={200}
-                            className={styles.image}
-                            onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
-                            onError={(e) => {
-                              e.currentTarget.src = '/default-image.png';
-                              console.warn('[ChatSidebar] Image load failed:', message.imageUrl);
-                            }}
-                          />
-                          {message.isPending && (
-                            <div className={styles.imageLoader}>
-                              <div className={styles.spinner} />
-                            </div>
-                          )}
-                          {message.fileName && (
-                            <div className={styles.fileName}>
-                              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-                              {message.fileName}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <a
-                          href={message.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={styles.file}
-                          download={message.fileName}
-                        >
-                          <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-                          {message.fileName}
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
-          </div>
-        ))}
+          ))}
         {typingUsers.length > 0 && (
           <div className={styles.typingIndicator}>
             <div className={styles.typingDots}>
@@ -1893,14 +1695,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 onChange={(e) => setDeleteConfirm(e.target.value)}
                 placeholder="Escribe 'Eliminar' para confirmar"
                 className={styles.deleteConfirmInput}
+                autoFocus
               />
               <div className={styles.deletePopupActions}>
                 <button
                   className={styles.deleteConfirmButton}
                   onClick={handleDeleteTask}
-                  disabled={deleteConfirm.toLowerCase() !== 'eliminar'}
+                  disabled={deleteConfirm.toLowerCase() !== 'eliminar' || isDeleting}
                 >
-                  Confirmar Eliminación
+                  {isDeleting ? 'Eliminando...' : 'Confirmar Eliminación'}
                 </button>
                 <button
                   className={styles.deleteCancelButton}
@@ -1909,6 +1712,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     setDeleteConfirm('');
                     console.log('[ChatSidebar] Cancelled task deletion');
                   }}
+                  disabled={isDeleting}
                 >
                   Cancelar
                 </button>

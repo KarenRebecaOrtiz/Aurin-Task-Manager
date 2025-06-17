@@ -54,3 +54,5 @@ functions/.eslintrc.js
 *.cache
 *.log
 *.tmp
+# Sentry Config File
+.env.sentry-build-plugin

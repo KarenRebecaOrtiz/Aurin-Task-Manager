@@ -4,10 +4,13 @@ import { useUser } from '@clerk/nextjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
-import Select from 'react-select';
 import { db } from '@/lib/firebase';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
+import ConfigDropdown from './ui/ConfigDropdown';
+import StackInput from './ui/StackInput';
+import Table from './Table';
+import { gsap } from 'gsap';
 import styles from './ConfigPage.module.scss';
 
 interface Config {
@@ -31,6 +34,7 @@ interface Config {
   teams?: string[];
   profilePhoto?: string;
   coverPhoto?: string;
+  status?: string;
 }
 
 interface ConfigForm extends Omit<Config, 'id'> {
@@ -47,6 +51,8 @@ interface User {
   id: string;
   fullName: string;
   teams?: string[];
+  role?: string;
+  profilePhoto?: string;
 }
 
 interface ConfigPageProps {
@@ -55,7 +61,7 @@ interface ConfigPageProps {
 }
 
 const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
-  const { user: currentUser } = useUser();
+  const { user: currentUser, isLoaded } = useUser();
   const [config, setConfig] = useState<Config | null>(null);
   const [formData, setFormData] = useState<ConfigForm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,31 +84,66 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   }>({});
 
   const technologies = [
-    'React', // Frontend
-    'Node.js', // Backend
-    'TypeScript', // Frontend/Backend
-    'JavaScript', // Frontend/Backend
-    'Python', // Backend/Análisis de Datos/Inteligencia Artificial
-    'SQL', // Análisis de Datos/Backend
-    'MongoDB', // Backend
-    'PostgreSQL', // Backend
-    'Figma', // Diseño gráfico/UX/UI
-    'Adobe XD', // Diseño gráfico/UX/UI
-    'Sketch', // Diseño gráfico/UX/UI
-    'Docker', // DevOps/Arquitectura
-    'Kubernetes', // DevOps/Arquitectura
-    'AWS', // DevOps/Arquitectura
-    'Pandas', // Análisis de Datos
-    'NumPy', // Análisis de Datos
-    'TensorFlow', // Inteligencia Artificial
-    'Blender', // Arte
-    'Adobe Photoshop', // Arte/Diseño gráfico
-    'No-Code Builders' // No-Code Builders
+    'React', 'Node.js', 'TypeScript', 'JavaScript', 'Python', 'SQL', 'MongoDB', 'PostgreSQL',
+    'Figma', 'Adobe XD', 'Sketch', 'Docker', 'Kubernetes', 'AWS', 'Pandas', 'NumPy',
+    'TensorFlow', 'Blender', 'Adobe Photoshop', 'No-Code Builders', 'Next.js',
+    // Análisis de Datos
+    'Airflow', 'Alteryx', 'Apache Spark', 'Dask', 'Databricks', 'DataGrip', 'Domo', 'Google BigQuery',
+    'Hadoop', 'Jupyter', 'Kafka', 'Knime', 'Looker', 'Matplotlib', 'Metabase', 'Microsoft Power BI',
+    'Mode Analytics', 'Plotly', 'QlikView', 'R', 'RapidMiner', 'Redash', 'Scikit-learn', 'Seaborn',
+    'Snowflake', 'Splunk', 'Tableau', 'Talend', 'ThoughtSpot', 'Yellowbrick',
+    // Arquitectura
+    'Archicad', 'AutoCAD', 'BIM 360', 'Bluebeam', 'Catia', 'Civil 3D', 'Enscape', 'ETABS', 'Fusion 360',
+    'Grasshopper', 'InfraWorks', 'Lumion', 'MicroStation', 'Navisworks', 'Orca3D', 'Primavera P6',
+    'Revit', 'Rhino', 'Safe', 'SAP2000', 'SketchUp', 'SolidWorks', 'STAAD.Pro', 'Tekla Structures',
+    'Trello', 'Trimble Connect', 'Twinmotion', 'Vectorworks', 'V-Ray', 'ZWCAD',
+    // Arte
+    '3ds Max', 'Affinity Designer', 'After Effects', 'ArtRage', 'Blender', 'Cinema 4D', 'Clip Studio Paint',
+    'Corel Painter', 'Houdini', 'Illustrator', 'InDesign', 'Krita', 'Lightroom', 'Mari', 'Marvelous Designer',
+    'Maya', 'Mudbox', 'Nuke', 'Photoshop', 'Premiere Pro', 'Procreate', 'Rebelle', 'Sculptris', 'Substance Painter',
+    'Toon Boom Harmony', 'Unity', 'Unreal Engine', 'ZBrush', 'Zoner Photo Studio', 'ZWrap',
+    // Backend
+    'Apollo', 'Deno', 'Django', 'Express.js', 'FastAPI', 'Flask', 'Gin', 'Go', 'GraphQL', 'Hibernate',
+    'Java', 'Kotlin', 'Laravel', 'MySQL', 'NestJS', 'Nginx', 'PHP', 'PostgreSQL', 'Prisma', 'RabbitMQ',
+    'Redis', 'Ruby on Rails', 'Spring Boot', 'SQL Server', 'SQLite', 'Strapi', 'Supabase', 'Symfony',
+    'Traefik', 'Vapor',
+    // DevOps
+    'Ansible', 'ArgoCD', 'AWS CloudFormation', 'Bamboo', 'Chef', 'CircleCI', 'Datadog', 'Docker Compose',
+    'ELK Stack', 'Git', 'GitHub Actions', 'GitLab CI', 'Grafana', 'Helm', 'Istio', 'Jenkins', 'Nexus',
+    'New Relic', 'OpenShift', 'Prometheus', 'Puppet', 'SaltStack', 'Sentry', 'SonarQube', 'Spinnaker',
+    'Terraform', 'Travis CI', 'Vault', 'Vagrant', 'Zabbix',
+    // Diseño gráfico
+    'Adobe Animate', 'Affinity Photo', 'Canva', 'CorelDRAW', 'Crello', 'Figma', 'GIMP', 'Gravit Designer',
+    'Illustrator', 'Inkscape', 'Lunacy', 'Photopea', 'PicMonkey', 'Pixelmator', 'Procreate', 'Sketch',
+    'Snappa', 'Spark', 'Stencila', 'Vectr', 'Visme', 'VistaCreate', 'Xara Designer', 'Zeplin', 'Adobe Express',
+    'Easil', 'DesignCap', 'Genially', 'Krita', 'Photoshop',
+    // Frontend
+    'Angular', 'Astro', 'Bootstrap', 'Chakra UI', 'Cypress', 'Ember.js', 'ESLint', 'Gatsby', 'Jest',
+    'Material UI', 'Next.js', 'Nuxt.js', 'Preact', 'React Native', 'Redux', 'Sass', 'Storybook', 'Svelte',
+    'Tailwind CSS', 'Three.js', 'Vite', 'Vue.js', 'Vitest', 'Vuetify', 'WASM', 'WebGL', 'Webpack',
+    'Webflow', 'Yarn', 'Zustand',
+    // Inteligencia Artificial
+    'Caffe', 'FastAI', 'H2O.ai', 'Hugging Face', 'Keras', 'LangChain', 'LightGBM', 'MLflow', 'Neptune.ai',
+    'ONNX', 'OpenAI', 'OpenCV', 'PyCaret', 'PyTorch', 'Rasa', 'SageMaker', 'SciPy', 'SHAP', 'Spacy',
+    'Stable Diffusion', 'TFLite', 'TorchScript', 'Transformers', 'Vertex AI', 'Wandb', 'XGBoost', 'YOLO',
+    'AutoML', 'DeepLearning.AI', 'TensorBoard',
+    // No-Code Builders
+    'Adalo', 'Airtable', 'AppGyver', 'AppSheet', 'Betty Blocks', 'Bubble', 'Caspio', 'ClickUp', 'Glide',
+    'Integromat', 'JotForm', 'Kissflow', 'Mendix', 'Monday.com', 'Nexlify', 'Notion', 'OutSystems',
+    'Power Apps', 'QuickBase', 'Retool', 'Softr', 'Stacker', 'Thunkable', 'Tilda', 'Webflow', 'Wix',
+    'WordPress', 'Zapier', 'Zoho Creator', 'Zudy Vinyl',
+    // UX/UI
+    'Abstract', 'Adobe XD', 'Axure', 'Balsamiq', 'Coolors', 'Dribbble', 'FigJam', 'Figma', 'Flinto',
+    'Framer', 'InVision', 'Justinmind', 'Lottie', 'Maze', 'Miro', 'Mockflow', 'Origami Studio', 'Penpot',
+    'Proto.io', 'Sketch', 'Smaply', 'Storybook', 'Sympli', 'UXPin', 'UsabilityHub', 'UserTesting',
+    'Whimsical', 'Wireframe.cc', 'Zeplin', 'ZeroHeight'
   ].sort();
+  const uniqueTechnologies = [...new Set(technologies)].sort();
+  
 
   const teamsOptions = [
     'Análisis de Datos', 'Arquitectura', 'Arte', 'Backend', 'DevOps', 'Diseño gráfico',
-    'Frontend', 'Inteligencia Artificial', 'No-Code Builders', 'UX/UI'
+    'Frontend', 'Inteligencia Artificial', 'No-Code Builders', 'UX/UI',
   ].sort();
 
   const ladaOptions = [
@@ -110,11 +151,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     { value: '+1', label: '+1 (EE.UU./Canadá)' },
     { value: '+44', label: '+44 (Reino Unido)' },
     { value: '+33', label: '+33 (Francia)' },
-    { value: '+49', label: '+49 (Alemania)' }
+    { value: '+49', label: '+49 (Alemania)' },
   ];
 
   useEffect(() => {
-    if (!userId) return;
+    if (!isLoaded) return;
+    if (!userId || !currentUser) return;
 
     const userDocRef = doc(db, 'users', userId);
     const unsubscribe = onSnapshot(
@@ -132,29 +174,27 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             highContrast: data.highContrast || false,
             grayscale: data.grayscale || false,
             soundEnabled: data.soundEnabled || false,
-            fullName: data.fullName || currentUser?.fullName || '',
+            fullName: data.fullName || currentUser.fullName || '',
             role: data.role || '',
             description: data.description || '',
             birthDate: data.birthDate || '',
-            phone: data.phone?.startsWith('+') ? data.phone.split(' ').slice(1).join('') : '',
+            phone: data.phone?.startsWith('+') ? data.phone.split(' ').slice(1).join('') : data.phone || '',
             phoneLada: data.phone?.startsWith('+') ? data.phone.split(' ')[0] : '+52',
             city: data.city || '',
             gender: data.gender || '',
             portfolio: data.portfolio || '',
             stack: data.stack || [],
             teams: data.teams || [],
-            profilePhoto: data.profilePhoto || currentUser?.imageUrl || '/default-image.png',
-            coverPhoto: data.coverPhoto || '/default-cover.png',
+            profilePhoto: data.profilePhoto || currentUser.imageUrl || '/default-avatar.png',
+            coverPhoto: data.coverPhoto || '/empty-cover.png',
             profilePhotoFile: null,
             coverPhotoFile: null,
             currentPassword: '',
             newPassword: '',
             confirmPassword: '',
+            status: data.status || 'Disponible',
           });
-          console.log('[ConfigPage] User config fetched:', docSnap.data());
         } else {
-          console.log('[ConfigPage] No user document found for ID:', userId);
-          setConfig(null);
           setFormData({
             userId,
             notificationsEnabled: false,
@@ -164,7 +204,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             highContrast: false,
             grayscale: false,
             soundEnabled: false,
-            fullName: currentUser?.fullName || '',
+            fullName: currentUser.fullName || '',
             role: '',
             description: '',
             birthDate: '',
@@ -175,54 +215,27 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             portfolio: '',
             stack: [],
             teams: [],
-            profilePhoto: currentUser?.imageUrl || '/default-image.png',
-            coverPhoto: '/default-cover.png',
+            profilePhoto: currentUser.imageUrl || '/default-avatar.png',
+            coverPhoto: '/empty-cover.png',
             profilePhotoFile: null,
             coverPhotoFile: null,
             currentPassword: '',
             newPassword: '',
             confirmPassword: '',
+            status: 'Disponible',
           });
         }
         setLoading(false);
       },
       (err) => {
         console.error('[ConfigPage] Error fetching user config:', err);
-        setConfig(null);
-        setFormData({
-          userId,
-          notificationsEnabled: false,
-          darkMode: false,
-          emailAlerts: false,
-          taskReminders: false,
-          highContrast: false,
-          grayscale: false,
-          soundEnabled: false,
-          fullName: currentUser?.fullName || '',
-          role: '',
-          description: '',
-          birthDate: '',
-          phone: '',
-          phoneLada: '+52',
-          city: '',
-          gender: '',
-          portfolio: '',
-          stack: [],
-          teams: [],
-          profilePhoto: currentUser?.imageUrl || '/default-image.png',
-          coverPhoto: '/default-cover.png',
-          profilePhotoFile: null,
-          coverPhotoFile: null,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        });
+        setAlert({ type: 'error', message: 'Error al cargar el perfil', error: err.message });
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [userId, currentUser]);
+  }, [userId, currentUser, isLoaded]);
 
   useEffect(() => {
     const fetchTeamMembers = async () => {
@@ -240,6 +253,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             .map((doc) => ({
               id: doc.id,
               fullName: doc.data().fullName || '',
+              role: doc.data().role || 'Sin rol',
+              profilePhoto: doc.data().profilePhoto || '/default-avatar.png',
               teams: doc.data().teams || [],
             }))
             .filter((member) => member.id !== userId);
@@ -247,6 +262,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
         setTeamMembers(membersByTeam);
       } catch (err) {
         console.error('[ConfigPage] Error fetching team members:', err);
+        setAlert({ type: 'error', message: 'Error al cargar los miembros del equipo', error: err.message });
       }
     };
 
@@ -254,26 +270,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   }, [formData?.teams, userId]);
 
   const validateForm = () => {
-    const newErrors: {
-      currentPassword?: string;
-      newPassword?: string;
-      confirmPassword?: string;
-      fullName?: string;
-      role?: string;
-      phone?: string;
-      birthDate?: string;
-      portfolio?: string;
-      profilePhoto?: string;
-      coverPhoto?: string;
-    } = {};
+    const newErrors: typeof errors = {};
 
     if (!formData?.fullName) newErrors.fullName = 'El nombre es obligatorio';
     if (!formData?.role) newErrors.role = 'El rol es obligatorio';
     if (formData?.phone) {
       const phoneDigits = formData.phone.replace(/\D/g, '');
-      if (phoneDigits.length !== 10) {
-        newErrors.phone = 'El teléfono debe tener 10 dígitos';
-      }
+      if (phoneDigits.length !== 10) newErrors.phone = 'El teléfono debe tener 10 dígitos';
     }
     if (formData?.birthDate && !/^\d{2}\/\d{2}\/\d{4}$/.test(formData.birthDate)) {
       newErrors.birthDate = 'La fecha debe tener el formato DD/MM/AAAA';
@@ -288,17 +291,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
       newErrors.coverPhoto = 'La foto de portada no debe exceder 10MB';
     }
     if (formData?.newPassword || formData?.confirmPassword || formData?.currentPassword) {
-      if (!formData.currentPassword) {
-        newErrors.currentPassword = 'La contraseña actual es obligatoria para actualizar la contraseña';
-      }
-      if (!formData.newPassword) {
-        newErrors.newPassword = 'La nueva contraseña es obligatoria';
-      } else if (formData.newPassword.length < 8) {
-        newErrors.newPassword = 'La nueva contraseña debe tener al menos 8 caracteres';
-      }
-      if (formData.newPassword !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Las contraseñas no coinciden';
-      }
+      if (!formData.currentPassword) newErrors.currentPassword = 'La contraseña actual es obligatoria';
+      if (!formData.newPassword) newErrors.newPassword = 'La nueva contraseña es obligatoria';
+      else if (formData.newPassword.length < 8) newErrors.newPassword = 'La nueva contraseña debe tener al menos 8 caracteres';
+      if (formData.newPassword !== formData.confirmPassword) newErrors.confirmPassword = 'Las contraseñas no coinciden';
     }
 
     setErrors(newErrors);
@@ -309,34 +305,33 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
     setFormData((prev) =>
-      prev
-        ? {
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value,
-          }
-        : null
+      prev ? { ...prev, [name]: type === 'checkbox' ? checked : value } : null
     );
     setErrors((prev) => ({ ...prev, [name]: undefined }));
   }, []);
 
-  const handleStackChange = useCallback((selectedOptions: { value: string; label: string }[]) => {
-    const selectedValues = selectedOptions.map((option) => option.value).slice(0, 20);
-    setFormData((prev) => (prev ? { ...prev, stack: selectedValues } : null));
+  const handleStackChange = useCallback((selectedValues: string[]) => {
+    setFormData((prev) => (prev ? { ...prev, stack: selectedValues.slice(0, 20) } : null));
   }, []);
 
-  const handleTeamsChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions).map((option) => option.value).slice(0, 3);
-    setFormData((prev) => (prev ? { ...prev, teams: selectedOptions } : null));
+  const handleTeamsChange = useCallback((selectedTeams: string[]) => {
+    setFormData((prev) => (prev ? { ...prev, teams: selectedTeams.slice(0, 3) } : null));
   }, []);
 
-  const handlePhoneLadaChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData((prev) => (prev ? { ...prev, phoneLada: e.target.value, phone: '' } : null));
+  const handleRemoveTeam = useCallback((team: string) => {
+    setFormData((prev) =>
+      prev ? { ...prev, teams: prev.teams?.filter((t) => t !== team) || [] } : null
+    );
+  }, []);
+
+  const handlePhoneLadaChange = useCallback((value: string) => {
+    setFormData((prev) => (prev ? { ...prev, phoneLada: value, phone: formatPhoneNumber(prev?.phone || '', value) } : null));
     setErrors((prev) => ({ ...prev, phone: undefined }));
   }, []);
 
   const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 10) value = value.slice(0, 10);
+    let value = e.target.value.replace(/[^0-9-]/g, '');
+    if (value.length > 12) value = value.slice(0, 12);
     setFormData((prev) => (prev ? { ...prev, phone: value } : null));
     setErrors((prev) => ({ ...prev, phone: undefined }));
   }, []);
@@ -368,40 +363,102 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     }
   }, []);
 
-  const uploadImage = async (file: File, userId: string, type: 'cover' | 'profile') => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('userId', userId);
-    formData.append('type', type);
-
-    const response = await fetch('/api/upload-image', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-      headers: {
-        'x-clerk-user-id': userId,
-      },
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `Error uploading ${type} image`);
+  const deleteImageFromGCS = async (filePath: string) => {
+    try {
+      console.log('[ConfigPage] Attempting to delete image from GCS:', filePath);
+      const response = await fetch('/api/delete-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 404) {
+          console.warn('[ConfigPage] Delete failed: File not found in GCS:', filePath);
+        } else {
+          throw new Error(errorText || 'Error deleting image from GCS');
+        }
+      } else {
+        console.log('[ConfigPage] Image deleted from GCS:', filePath);
+      }
+    } catch (err) {
+      console.error('[ConfigPage] deleteImageFromGCS: Error', err);
     }
+  };
 
-    const data = await response.json();
-    return data.imageUrl;
+  const uploadProfileImage = async (file: File, userId: string) => {
+    if (!file) throw new Error('No file provided for upload');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', userId);
+      formData.append('type', 'profile');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        headers: { 'x-clerk-user-id': userId },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.details || data.error || 'Error al subir la imagen de perfil');
+      }
+
+      const { url } = await response.json();
+      if (currentUser) {
+        try {
+          await currentUser.setProfileImage({ file });
+          console.log('[ConfigPage] Profile image updated in Clerk');
+        } catch (setError) {
+          console.warn('[ConfigPage] Failed to update Clerk profile image:', setError);
+        }
+      }
+      return url;
+    } catch (err) {
+      console.error('[ConfigPage] uploadProfileImage: Error', err);
+      throw err;
+    }
+  };
+
+  const uploadCoverImage = async (file: File, userId: string) => {
+    if (!file) throw new Error('No file provided for upload');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', userId);
+      formData.append('type', 'cover');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        headers: { 'x-clerk-user-id': userId },
+      });
+
+      if (!response.ok) {
+        const data = await response.text();
+        throw new Error(data || 'Error al subir la imagen de portada');
+      }
+
+      const { url } = await response.json();
+      return url;
+    } catch (err) {
+      console.error('[ConfigPage] uploadCoverImage: Error', err);
+      throw err;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData || !userId || !currentUser) return;
+    if (!formData || !userId || !currentUser) {
+      setAlert({ type: 'error', message: 'Datos inválidos, por favor intenta de nuevo' });
+      return;
+    }
 
     if (!validateForm()) {
-      setAlert({
-        type: 'error',
-        message: 'Por favor corrige los errores en el formulario',
-        error: 'Validation failed',
-      });
+      setAlert({ type: 'error', message: 'Por favor corrige los errores en el formulario' });
       return;
     }
 
@@ -411,18 +468,26 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
       let profilePhotoUrl = formData.profilePhoto;
       let coverPhotoUrl = formData.coverPhoto;
 
-      // Upload profile photo if changed
       if (formData.profilePhotoFile) {
-        profilePhotoUrl = await uploadImage(formData.profilePhotoFile, userId, 'profile');
-        await currentUser.setProfileImage({ file: formData.profilePhotoFile });
+        if (config?.profilePhoto && !config.profilePhoto.includes('clerk.com') && !config.profilePhoto.includes('default-avatar.png')) {
+          const filePath = config.profilePhoto.split('aurin-plattform/')[1];
+          if (filePath) {
+            await deleteImageFromGCS(filePath);
+          }
+        }
+        profilePhotoUrl = await uploadProfileImage(formData.profilePhotoFile, userId);
       }
 
-      // Upload cover photo if changed
       if (formData.coverPhotoFile) {
-        coverPhotoUrl = await uploadImage(formData.coverPhotoFile, userId, 'cover');
+        if (config?.coverPhoto && config.coverPhoto !== '/empty-cover.png') {
+          const filePath = config.coverPhoto.split('aurin-plattform/')[1];
+          if (filePath) {
+            await deleteImageFromGCS(filePath);
+          }
+        }
+        coverPhotoUrl = await uploadCoverImage(formData.coverPhotoFile, userId);
       }
 
-      // Update password in Clerk if provided
       if (formData.newPassword && formData.currentPassword) {
         await currentUser.updatePassword({
           currentPassword: formData.currentPassword,
@@ -430,7 +495,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
         });
       }
 
-      // Update data in Firestore
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, {
         notificationsEnabled: formData.notificationsEnabled,
@@ -452,24 +516,60 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
         teams: formData.teams,
         profilePhoto: profilePhotoUrl,
         coverPhoto: coverPhotoUrl,
+        status: formData.status || 'Disponible',
       });
 
-      setAlert({
-        type: 'success',
-        message: 'Campos guardados exitosamente',
-      });
+      setAlert({ type: 'success', message: 'Perfil actualizado exitosamente' });
       setIsEditing(false);
-      setTimeout(onClose, 1000); // Delay close to show success alert
+      setTimeout(onClose, 1000);
     } catch (err) {
-      console.error('[ConfigPage] Error updating config:', err);
       setAlert({
         type: 'error',
-        message: 'Hubo un error al guardar los datos, por favor intenta más tarde',
-        error: err instanceof Error ? err.message : 'Unknown error',
+        message: 'Error al guardar los datos, por favor intenta de nuevo',
+        error: err instanceof Error ? err.message : 'Error desconocido',
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDiscard = () => {
+    setIsEditing(false);
+    setFormData((prev) => {
+      if (!prev || !config) return prev;
+      return {
+        ...prev,
+        notificationsEnabled: config.notificationsEnabled || false,
+        darkMode: config.darkMode || false,
+        emailAlerts: config.emailAlerts || false,
+        taskReminders: config.taskReminders || false,
+        highContrast: config.highContrast || false,
+        grayscale: config.grayscale || false,
+        soundEnabled: config.soundEnabled || false,
+        fullName: config.fullName || currentUser.fullName || '',
+        role: config.role || '',
+        description: config.description || '',
+        birthDate: config.birthDate || '',
+        phone: config.phone?.startsWith('+') ? config.phone.split(' ').slice(1).join('') : config.phone || '',
+        phoneLada: config.phone?.startsWith('+') ? config.phone.split(' ')[0] : '+52',
+        city: config.city || '',
+        gender: config.gender || '',
+        portfolio: config.portfolio || '',
+        stack: config.stack || [],
+        teams: config.teams || [],
+        profilePhoto: config.profilePhoto || currentUser.imageUrl || '/default-avatar.png',
+        coverPhoto: config.coverPhoto || '/empty-cover.png',
+        profilePhotoFile: null,
+        coverPhotoFile: null,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+        status: config.status || 'Disponible',
+      };
+    });
+    setErrors({});
+    setAlert(null);
+    onClose();
   };
 
   const toggleEdit = () => {
@@ -482,7 +582,75 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     setAlert(null);
   };
 
-  if (loading) {
+  const formatPhoneNumber = (phone: string, lada: string) => {
+    const digits = phone.replace(/\D/g, '');
+    if (!digits) return `${lada} (XX)-XXX-XX-XX`;
+    if (digits.length <= 2) return `${lada} (${digits})`;
+    if (digits.length <= 5) return `${lada} (${digits.slice(0, 2)})-${digits.slice(2)}`;
+    if (digits.length <= 7) return `${lada} (${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5)}`;
+    return `${lada} (${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 10)}`;
+  };
+
+  useEffect(() => {
+    const sections = document.querySelectorAll(`.${styles.section}`);
+    sections.forEach((section) => {
+      gsap.fromTo(
+        section,
+        { opacity: 0, y: 50 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+        }
+      );
+    });
+
+    const fields = document.querySelectorAll(`.${styles.fieldGroup}, .${styles.fieldGroupRow}`);
+    fields.forEach((field) => {
+      gsap.fromTo(
+        field,
+        { opacity: 0, x: -50 },
+        {
+          opacity: 1,
+          x: 0,
+          duration: 0.6,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: field,
+            start: 'top 70%',
+            toggleActions: 'play none none none',
+          },
+        }
+      );
+    });
+
+    const tables = document.querySelectorAll(`.${styles.teamTableContainer}`);
+    tables.forEach((table) => {
+      gsap.fromTo(
+        table,
+        { opacity: 0, scale: 0.9 },
+        {
+          opacity: 1,
+          scale: 1,
+          duration: 0.7,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: table,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+          },
+        }
+      );
+    });
+  }, []);
+
+  if (loading || !isLoaded) {
     return (
       <div className={styles.frame239189}>
         <p>Cargando configuración...</p>
@@ -490,7 +658,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     );
   }
 
-  if (!formData) {
+  if (!formData || !currentUser) {
     return (
       <div className={styles.frame239189}>
         <p>Configuración no disponible.</p>
@@ -501,7 +669,38 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     );
   }
 
-  const isOwnProfile = currentUser?.id === userId;
+  const isOwnProfile = currentUser.id === userId;
+
+  // Define columns for the Table component
+  const teamTableColumns = [
+    {
+      key: 'profilePhoto',
+      label: 'Foto',
+      width: '100px',
+      mobileVisible: true,
+      render: (member: User) => (
+        <Image
+          src={member.profilePhoto || '/default-avatar.png'}
+          alt={member.fullName}
+          width={40}
+          height={40}
+          className={styles.teamAvatar}
+        />
+      ),
+    },
+    {
+      key: 'fullName',
+      label: 'Nombre',
+      width: 'auto',
+      mobileVisible: true,
+    },
+    {
+      key: 'role',
+      label: 'Rol',
+      width: 'auto',
+      mobileVisible: true,
+    },
+  ];
 
   return (
     <>
@@ -528,10 +727,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             <div className={styles.profilePhotoContainer}>
               <Image
                 src={formData.profilePhoto}
-                alt="Profile Photo"
+                alt="Foto de perfil"
                 width={94}
                 height={94}
                 className={styles.ellipse11}
+                onError={(e) => console.error('Image load failed:', e)}
               />
               {isOwnProfile && isEditing && (
                 <button
@@ -551,301 +751,288 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             </div>
             <div className={styles.frame239179}>
               <div className={styles.mainName}>{formData.fullName}</div>
-              <div className={styles.exampleMailCom}>{currentUser?.primaryEmailAddress?.emailAddress}</div>
+              <div className={styles.exampleMailCom}>{currentUser.primaryEmailAddress?.emailAddress}</div>
             </div>
           </div>
           {isOwnProfile && (
             <div className={styles.frame239191}>
-              <button className={styles.editButton} onClick={toggleEdit}>
+              <button className={styles.editButton} onClick={isEditing ? handleSubmit : toggleEdit}>
                 {isEditing ? 'Guardar Cambios' : 'Editar Perfil'}
               </button>
+              {isEditing && (
+                <button className={styles.discardButton} onClick={handleDiscard}>
+                  Descartar Cambios
+                </button>
+              )}
             </div>
           )}
         </div>
-        <div className={styles.frame239194}>
-          <div className={styles.frame239193}>
-            <div className={styles.frame239186}>
-              <form onSubmit={handleSubmit}>
-                <div  className={styles.form}>
-                <div className={styles.informacionGeneral}>Información General:</div>
-                <div className={styles.frame239184}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.nombreCompleto}>Nombre Completo</div>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      placeholder="Escribe tu nombre completo"
-                      className={styles.frame239180}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                    {errors.fullName && <p className={styles.errorText}>{errors.fullName}</p>}
-                  </div>
-                  <div className={styles.frame239183}>
-                    <div className={styles.rolOCargo}>Rol o cargo</div>
-                    <input
-                      type="text"
-                      name="role"
-                      value={formData.role}
-                      onChange={handleInputChange}
-                      placeholder="¿Cuál es tu cargo actual?"
-                      className={styles.frame239181}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                    {errors.role && <p className={styles.errorText}>{errors.role}</p>}
-                  </div>
+        <div className={styles.content}>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Información General</h2>
+            <div className={styles.sectionContent}>
+              <div className={styles.fieldGroup}>
+                <div className={styles.frame239182}>
+                  <div className={styles.label}>Nombre Completo</div>
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    placeholder="Escribe tu nombre completo"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
+                  {errors.fullName && <p className={styles.errorText}>{errors.fullName}</p>}
                 </div>
-                <div className={styles.frame239188}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.acercaDeTi}>Acerca de ti</div>
-                    <input
-                      type="text"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      placeholder="Breve descripción personal"
-                      className={styles.frame239180}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                  </div>
+                <div className={styles.frame239183}>
+                  <div className={styles.label}>Rol o Cargo</div>
+                  <input
+                    type="text"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    placeholder="¿Cuál es tu cargo actual?"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
+                  {errors.role && <p className={styles.errorText}>{errors.role}</p>}
                 </div>
-                <div className={styles.frame239186}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.correoElectronicoNoEsEditable}>Correo electrónico</div>
-                    <input
-                      type="text"
-                      value={currentUser?.primaryEmailAddress?.emailAddress || ''}
-                      placeholder="correo@ejemplo.com"
-                      className={styles.frame239180}
-                      disabled
-                    />
-                  </div>
-                  <div className={styles.frame239183}>
-                    <div className={styles.fechaDeNacimiento}>Fecha de Nacimiento</div>
-                    <input
-                      type="text"
-                      name="birthDate"
-                      value={formData.birthDate}
-                      onChange={handleDateChange}
-                      placeholder="DD/MM/AAAA"
-                      className={styles.frame239181}
-                      disabled={!isOwnProfile || !isEditing}
-                      maxLength={10}
-                    />
-                    {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
-                  </div>
+              </div>
+              <div className={styles.fieldGroup}>
+                <div className={styles.frame239182}>
+                  <div className={styles.label}>Acerca de ti</div>
+                  <input
+                    type="text"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Breve descripción personal"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
                 </div>
-                <div className={styles.frame239187}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.telefonoDeContacto}>Teléfono de contacto</div>
-                    <div className={styles.phoneInputContainer}>
-                      <select
-                        name="phoneLada"
-                        value={formData.phoneLada}
-                        onChange={handlePhoneLadaChange}
-                        className={styles.ladaSelect}
-                        disabled={!isOwnProfile || !isEditing}
+              </div>
+              <div className={styles.fieldGroupRow}>
+                <div className={styles.frame239182}>
+                  <div className={styles.label}>Correo Electrónico</div>
+                  <input
+                    type="text"
+                    value={currentUser.primaryEmailAddress?.emailAddress || ''}
+                    placeholder="correo@ejemplo.com"
+                    className={styles.input}
+                    disabled
+                  />
+                </div>
+                <div className={styles.frame239183}>
+                  <div className={styles.label}>Fecha de Nacimiento</div>
+                  <input
+                    type="text"
+                    name="birthDate"
+                    value={formData.birthDate}
+                    onChange={handleDateChange}
+                    placeholder="DD/MM/AAAA"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                    maxLength={10}
+                  />
+                  {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
+                </div>
+              </div>
+              <div className={styles.fieldGroupRow}>
+                <div className={styles.frame239182}>
+                  <div className={styles.label}>Teléfono de Contacto</div>
+                  <div className={styles.phoneInputContainer}>
+                    <ConfigDropdown
+                      options={ladaOptions}
+                      value={formData.phoneLada}
+                      onChange={handlePhoneLadaChange}
+                      placeholder="Select Lada"
+                      disabled={!isOwnProfile || !isEditing}
+                      className={styles.ladaSelect}
+                    />
+                    <input
+                      type="text"
+                      name="phone"
+                      value={formatPhoneNumber(formData.phone || '', formData.phoneLada || '+52')}
+                      onChange={handlePhoneChange}
+                      placeholder="XX-XXX-XX-XX"
+                      className={styles.input}
+                      disabled={!isOwnProfile || !isEditing}
+                      maxLength={12}
+                    />
+                  </div>
+                  {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
+                </div>
+                <div className={styles.frame239183}>
+                  <div className={styles.label}>Ciudad de Residencia</div>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Ciudad, País"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
+                </div>
+              </div>
+              <div className={styles.fieldGroupRow}>
+                <div className={styles.frame239182}>
+                  <div className={styles.label}>Género</div>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleInputChange}
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  >
+                    <option value="">Selecciona una opción</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="Otro">Otro</option>
+                    <option value="Prefiero no decirlo">Prefiero no decirlo</option>
+                  </select>
+                </div>
+                <div className={styles.frame239183}>
+                  <div className={styles.label}>Portafolio en Línea</div>
+                  <input
+                    type="text"
+                    name="portfolio"
+                    value={formData.portfolio}
+                    onChange={handleInputChange}
+                    placeholder="https://miportafolio.com"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
+                  {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Seguridad</h2>
+            <div className={styles.sectionContent}>
+              <div className={styles.fieldGroup}>
+                <div className={styles.frame239182}>
+                  <div className={styles.label}>Contraseña Actual</div>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    value={formData.currentPassword || ''}
+                    onChange={handleInputChange}
+                    placeholder="Ingresa tu contraseña actual"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
+                  {errors.currentPassword && <p className={styles.errorText}>{errors.currentPassword}</p>}
+                </div>
+                <div className={styles.frame239183}>
+                  <div className={styles.label}>Nueva Contraseña</div>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={formData.newPassword || ''}
+                    onChange={handleInputChange}
+                    placeholder="Ingresa tu nueva contraseña"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
+                  {errors.newPassword && <p className={styles.errorText}>{errors.newPassword}</p>}
+                </div>
+              </div>
+              <div className={styles.fieldGroup}>
+                <div className={styles.frame239182}>
+                  <div className={styles.label}>Confirmar Contraseña</div>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword || ''}
+                    onChange={handleInputChange}
+                    placeholder="Confirma tu nueva contraseña"
+                    className={styles.input}
+                    disabled={!isOwnProfile || !isEditing}
+                  />
+                  {errors.confirmPassword && <p className={styles.errorText}>{errors.confirmPassword}</p>}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Stack</h2>
+            <div className={styles.sectionContent}>
+              <div className={styles.fieldGroup}>
+                <div className={styles.stackDescription}>
+                  Selecciona las tecnologías y herramientas que usas frecuentemente.
+                </div>
+                <StackInput
+                  options={uniqueTechnologies}
+                  value={formData.stack || []}
+                  onChange={handleStackChange}
+                  placeholder="Escribe una tecnología..."
+                  disabled={!isOwnProfile || !isEditing}
+                  className={styles.stackSelect}
+                  maxSelections={20}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Equipos</h2>
+            <div className={styles.sectionContent}>
+              <div className={styles.fieldGroup} style={{flexDirection: 'row', justifyContent:'space-between', width:"100%"}}>
+                <div className={styles.teamsDescription}>
+                  Escribe y selecciona aquí tus equipos (máximo 3)
+                </div>
+                <ConfigDropdown
+                  options={teamsOptions.map((team) => ({ value: team, label: team }))}
+                  value={formData.teams || []}
+                  onChange={handleTeamsChange}
+                  placeholder="Select Teams"
+                  isMulti
+                  disabled={!isOwnProfile || !isEditing}
+                  className={styles.teamsSelect}
+                />
+              </div>
+              {formData.teams?.map((team) => (
+                <div key={team} className={styles.teamTableContainer}>
+                  <div className={styles.teamHeader}>
+                    <h3 className={styles.teamHeading}>{team}</h3>
+                    {isOwnProfile && isEditing && (
+                      <button
+                        className={styles.removeTeamButton}
+                        onClick={() => handleRemoveTeam(team)}
+                        title="Eliminar equipo"
                       >
-                        {ladaOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        name="phone"
-                        value={formatPhoneNumber(formData.phone, formData.phoneLada)}
-                        onChange={handlePhoneChange}
-                        placeholder="(XX)-XXX-XX-XX"
-                        className={styles.frame239180}
-                        disabled={!isOwnProfile || !isEditing}
-                        maxLength={14}
-                      />
-                    </div>
-                    {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
+                        ✕
+                      </button>
+                    )}
                   </div>
-                  <div className={styles.frame239183}>
-                    <div className={styles.ciudadDeResidencia}>Ciudad de residencia</div>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      placeholder="Ciudad, País"
-                      className={styles.frame239181}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                  </div>
+                  <p className={styles.teamSubheading}>
+                    Lista de miembros del equipo (excluyéndote a ti)
+                  </p>
+                  <Table
+                    data={teamMembers[team] || []}
+                    columns={teamTableColumns}
+                    itemsPerPage={5}
+                  />
                 </div>
-                <div className={styles.frame239185}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.genero}>Género</div>
-                    <select
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleInputChange}
-                      className={styles.frame239180}
-                      disabled={!isOwnProfile || !isEditing}
-                    >
-                      <option value="">Selecciona una opción</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Femenino">Femenino</option>
-                      <option value="Otro">Otro</option>
-                      <option value="Prefiero no decirlo">Prefiero no decirlo</option>
-                    </select>
-                  </div>
-                  <div className={styles.frame239183}>
-                    <div className={styles.portafolioEnLinea}>Portafolio en línea</div>
-                    <input
-                      type="text"
-                      name="portfolio"
-                      value={formData.portfolio}
-                      onChange={handleInputChange}
-                      placeholder="https://miportafolio.com"
-                      className={styles.frame239181}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                    {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
-                  </div>
-                </div>
-                <div className={styles.seguridad}>
-                  <div className={styles.informacionGeneral}>Seguridad:</div>
-                  <div className={styles.frame239184}>
-                    <div className={styles.frame239182}>
-                      <div className={styles.contrasenaActual}>Contraseña actual</div>
-                      <input
-                        type="password"
-                        name="currentPassword"
-                        value={formData.currentPassword || ''}
-                        onChange={handleInputChange}
-                        placeholder="Ingresa tu contraseña actual"
-                        className={styles.frame239180}
-                        disabled={!isOwnProfile || !isEditing}
-                      />
-                      {errors.currentPassword && <p className={styles.errorText}>{errors.currentPassword}</p>}
-                    </div>
-                    <div className={styles.frame239183}>
-                      <div className={styles.nuevaContrasena}>Nueva Contraseña</div>
-                      <input
-                        type="password"
-                        name="newPassword"
-                        value={formData.newPassword || ''}
-                        onChange={handleInputChange}
-                        placeholder="Ingresa tu nueva contraseña"
-                        className={styles.frame239181}
-                        disabled={!isOwnProfile || !isEditing}
-                      />
-                      {errors.newPassword && <p className={styles.errorText}>{errors.newPassword}</p>}
-                    </div>
-                  </div>
-                  <div className={styles.frame239184}>
-                    <div className={styles.frame239182}>
-                      <div className={styles.confirmarContrasena}>Confirmar Contraseña</div>
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        value={formData.confirmPassword || ''}
-                        onChange={handleInputChange}
-                        placeholder="Confirma tu nueva contraseña"
-                        className={styles.frame239180}
-                        disabled={!isOwnProfile || !isEditing}
-                      />
-                      {errors.confirmPassword && <p className={styles.errorText}>{errors.confirmPassword}</p>}
-                    </div>
-                    <div className={styles.frame239183}></div>
-                  </div>
-                </div>
-                <div className={styles.frame239195}>
-                  <div className={styles.stack}>Stack</div>
-                  <div className={styles.seleccionaLasTecnologias}>
-                    Selecciona las tecnologías y herramientas que usas frecuentemente.
-                  </div>
-                </div>
-                <div className={styles.frame239189}>
-                  <div className={styles.frame239182}>
-                    <Select
-                      isMulti
-                      name="stack"
-                      options={technologies.map((tech) => ({ value: tech, label: tech }))}
-                      value={formData.stack.map((tech) => ({ value: tech, label: tech }))}
-                      onChange={handleStackChange}
-                      placeholder="Escribe y selecciona aquí tu stack"
-                      className={styles.stackSelect}
-                      isDisabled={!isOwnProfile || !isEditing}
-                      noOptionsMessage={() => 'No se encontraron coincidencias'}
-                      maxMenuHeight={200}
-                      menuPlacement="auto"
-                    />
-                  </div>
-                </div>
-                <div className={styles.frame239196}>
-                  <div className={styles.equiposALosQuePerteneces}>Equipos a los que perteneces</div>
-                  <div className={styles.escribeYSeleccionaEquipos}>Escribe y selecciona aquí tus equipos</div>
-                </div>
-                <div className={styles.frame239190}>
-                  <div className={styles.frame239182}>
-                    <select
-                      name="teams"
-                      multiple
-                      value={formData.teams}
-                      onChange={handleTeamsChange}
-                      className={styles.frame239180}
-                      disabled={!isOwnProfile || !isEditing}
-                    >
-                      {teamsOptions.map((team) => (
-                        <option key={team} value={team}>
-                          {team}
-                        </option>
-                      ))}
-                    </select>
-                    {formData.teams.map((team) => (
-                      <div key={team} className={styles.teamMembers}>
-                        <h4>{team}</h4>
-                        {teamMembers[team]?.length ? (
-                          <ul>
-                            {teamMembers[team].map((member) => (
-                              <li key={member.id}>{member.fullName}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p>No hay otros miembros en este equipo.</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              ))}
             </div>
-              </form>
-            </div>
-          </div>
+          </section>
         </div>
       </div>
       {alert?.type === 'success' && (
-        <SuccessAlert
-          message={alert.message}
-          onClose={handleAlertClose}
-        />
+        <SuccessAlert message={alert.message} onClose={handleAlertClose} />
       )}
       {alert?.type === 'error' && (
-        <FailAlert
-          message={alert.message}
-          error={alert.error || 'Unknown error'}
-          onClose={handleAlertClose}
-        />
+        <FailAlert message={alert.message} error={alert.error || 'Error desconocido'} onClose={handleAlertClose} />
       )}
     </>
   );
-};
-
-const formatPhoneNumber = (phone: string, lada: string) => {
-  if (!phone) return '';
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length <= 2) return `${lada} (${digits})`;
-  if (digits.length <= 5) return `${lada} (${digits.slice(0, 2)})-${digits.slice(2)}`;
-  if (digits.length <= 7) return `${lada} (${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5)}`;
-  return `${lada} (${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 10)}`;
 };
 
 export default ConfigPage;

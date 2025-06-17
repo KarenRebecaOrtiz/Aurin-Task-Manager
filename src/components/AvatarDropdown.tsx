@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Image from 'next/image';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './AvatarDropdown.module.scss';
 import { gsap } from 'gsap';
@@ -28,59 +28,52 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
 
   // Create portal container
   useEffect(() => {
-    console.log('[AvatarDropdown] Creating portal container');
     const container = document.createElement('div');
     container.id = 'avatar-dropdown-portal';
     document.body.appendChild(container);
     setPortalContainer(container);
-    console.log('[AvatarDropdown] Portal container created:', container);
     return () => {
-      console.log('[AvatarDropdown] Removing portal container');
       document.body.removeChild(container);
     };
   }, []);
 
-  // Fetch profile photo and status
+  // Listen to Firestore user document changes with onSnapshot
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (user?.id && isLoaded) {
-        console.log('[AvatarDropdown] Fetching user data for ID:', user.id);
-        const userDocRef = doc(db, 'users', user.id);
-        const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setProfilePhoto(data.profilePhoto || '/default-avatar.png');
-          setStatus(data.status || 'Disponible');
-          console.log('[AvatarDropdown] Data fetched - Photo:', data.profilePhoto, 'Status:', data.status);
-        } else {
-          console.log('[AvatarDropdown] User document not found');
-        }
+    if (!user?.id || !isLoaded) return;
+
+    const userDocRef = doc(db, 'users', user.id);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfilePhoto(data.profilePhoto || '/default-avatar.png');
+        setStatus(data.status || 'Disponible');
+      } else {
+        setProfilePhoto('/default-avatar.png');
+        setStatus('Disponible');
       }
-    };
-    fetchUserData();
+    }, (error) => {
+      console.error('Error listening to Firestore:', error);
+      setProfilePhoto('/default-avatar.png');
+      setStatus('Disponible');
+    });
+
+    return () => unsubscribe();
   }, [user?.id, isLoaded]);
 
   // Update status in Firestore
   const handleStatusChange = async (newStatus: string) => {
-    if (!user?.id) {
-      console.log('[AvatarDropdown] No user ID for status update');
-      return;
-    }
+    if (!user?.id) return;
     try {
-      console.log('[AvatarDropdown] Updating status to:', newStatus);
       await updateDoc(doc(db, 'users', user.id), { status: newStatus });
-      setStatus(newStatus);
       setIsDropdownOpen(false);
-      console.log('[AvatarDropdown] Status updated successfully:', newStatus);
     } catch (error) {
-      console.error('[AvatarDropdown] Error updating status:', error);
+      console.error('Error updating status:', error);
     }
   };
 
   // GSAP animation for dropdown
   useEffect(() => {
     if (isDropdownOpen && dropdownRef.current && portalContainer) {
-      console.log('[AvatarDropdown] Starting open animation - isDropdownOpen:', isDropdownOpen);
       dropdownRef.current.style.display = 'block';
       gsap.fromTo(
         dropdownRef.current,
@@ -91,8 +84,6 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
           scale: 1,
           duration: 0.3,
           ease: 'power2.out',
-          onStart: () => console.log('[AvatarDropdown] GSAP: Open animation started'),
-          onComplete: () => console.log('[AvatarDropdown] GSAP: Open animation completed'),
         },
       );
       gsap.fromTo(
@@ -105,22 +96,17 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
           stagger: 0.05,
           ease: 'power2.out',
           delay: 0.1,
-          onStart: () => console.log('[AvatarDropdown] GSAP: Items animation started'),
-          onComplete: () => console.log('[AvatarDropdown] GSAP: Items animation completed'),
         },
       );
     } else if (!isDropdownOpen && dropdownRef.current) {
-      console.log('[AvatarDropdown] Starting close animation - isDropdownOpen:', isDropdownOpen);
       gsap.to(dropdownRef.current, {
         opacity: 0,
         y: -10,
         scale: 0.95,
         duration: 0.2,
         ease: 'power2.in',
-        onStart: () => console.log('[AvatarDropdown] GSAP: Close animation started'),
         onComplete: () => {
           dropdownRef.current!.style.display = 'none';
-          console.log('[AvatarDropdown] GSAP: Close animation completed');
         },
       });
     }
@@ -135,47 +121,39 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
-        console.log('[AvatarDropdown] Outside click detected, closing dropdown');
         setIsDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      console.log('[AvatarDropdown] Removing outside click listener');
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
   // Hover handlers
   const handleMouseEnterButton = () => {
-    console.log('[AvatarDropdown] MouseEnter button detected, opening dropdown');
     setIsDropdownOpen(true);
   };
 
   const handleMouseLeaveButton = () => {
-    console.log('[AvatarDropdown] MouseLeave button detected');
     // Don’t close immediately, wait for dropdown leave
   };
 
   const handleMouseEnterDropdown = () => {
-    console.log('[AvatarDropdown] MouseEnter dropdown detected, keeping open');
     setIsDropdownOpen(true);
   };
 
   const handleMouseLeaveDropdown = () => {
-    console.log('[AvatarDropdown] MouseLeave dropdown detected, closing');
     setIsDropdownOpen(false);
   };
 
   // Menu item handlers
   const handleConfig = () => {
-    console.log('[AvatarDropdown] Configuration selected');
     onChangeContainer('config');
     setIsDropdownOpen(false);
   };
 
   const handleLogout = () => {
-    console.log('[AvatarDropdown] Logout selected');
     signOut();
     setIsDropdownOpen(false);
   };
@@ -185,23 +163,18 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   // Calculate dropdown position
   const getDropdownPosition = () => {
     if (!buttonRef.current) {
-      console.log('[AvatarDropdown] No buttonRef found for position calculation');
       return { top: 0, right: 0 };
     }
     const rect = buttonRef.current.getBoundingClientRect();
-    const position = {
-      top: rect.bottom + window.scrollY + 8, // 8px margin, like StatusDropdown
+    return {
+      top: rect.bottom + window.scrollY + 8,
       right: window.innerWidth - rect.right,
     };
-    console.log('[AvatarDropdown] Dropdown position calculated:', position);
-    return position;
   };
 
   const dropdownPosition = getDropdownPosition();
 
   const DropdownMenu = () => {
-    // Moved console.log here, outside JSX
-    console.log('[AvatarDropdown] Rendering DropdownMenu, position:', dropdownPosition);
     return (
       <div
         ref={dropdownRef}
@@ -231,26 +204,25 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         ))}
         <div className={styles.separator} />
         <button onClick={handleConfig} className={styles.dropdownItem}>
-                        <Image
-                            src="/settings.svg"
-                            alt="Configuración"
-                            width={16}
-                            height={16}
-                            className={styles.dropdownIcon}
-                        />
-                        Configuración
-                        </button>
-                        <button onClick={handleLogout} className={styles.dropdownItem}>
-                        <Image
-                            src="/log-out.svg" 
-                            alt="Cerrar Sesión"
-                            style={{backgroundColor:'transparent'}}
-                            width={16}
-                            height={16}
-                            className={styles.dropdownIcon}
-                        />
-                        Cerrar Sesión
-                        </button>
+          <Image
+            src="/settings.svg"
+            alt="Configuración"
+            width={16}
+            height={16}
+            className={styles.dropdownIcon}
+          />
+          Configuración
+        </button>
+        <button onClick={handleLogout} className={styles.dropdownItem}>
+          <Image
+            src="/log-out.svg"
+            alt="Cerrar Sesión"
+            width={16}
+            height={16}
+            className={styles.dropdownIcon}
+          />
+          Cerrar Sesión
+        </button>
       </div>
     );
   };

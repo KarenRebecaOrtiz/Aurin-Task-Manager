@@ -17,13 +17,13 @@ import {
   updateDoc,
   deleteDoc,
   FieldValue,
+  getDoc,
 } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
 import styles from './MessageSidebar.module.scss';
 
-/* ---------- Tipado ---------- */
 interface Message {
   id: string;
   senderId: string;
@@ -35,7 +35,13 @@ interface Message {
   fileType?: string | null;
   filePath?: string | null;
   timestamp: FieldValue | Timestamp | null;
+  isPending?: boolean;
+}
+
+interface TypingStatus {
+  userId: string;
   isTyping: boolean;
+  timestamp: Timestamp;
 }
 
 interface UserCard {
@@ -55,7 +61,6 @@ interface MessageSidebarProps {
   conversationId: string;
 }
 
-/* ---------- Debounce Utility ---------- */
 const debounce = (func: (...args: any[]) => void, delay: number) => {
   let timer: NodeJS.Timeout | null = null;
   return (...args: any[]) => {
@@ -67,7 +72,6 @@ const debounce = (func: (...args: any[]) => void, delay: number) => {
   };
 };
 
-/* ---------- Componente ---------- */
 const MessageSidebar: React.FC<MessageSidebarProps> = ({
   isOpen,
   onClose,
@@ -79,13 +83,11 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 }) => {
   const { user } = useUser();
 
-  /* ----- State ----- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
@@ -94,29 +96,28 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [showDownArrow, setShowDownArrow] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const lastScrollTop = useRef(0);
 
-  /* ----- Refs ----- */
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const chatRef = useRef<HTMLUListElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messageRefs = useRef<Map<string, HTMLLIElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-  /* ---------- Animación abrir/cerrar ---------- */
   useEffect(() => {
     if (!sidebarRef.current) return;
     const el = sidebarRef.current;
     if (isOpen) {
-      gsap.fromTo(el, { x: '100%', opacity: 1 }, { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' });
-      console.log('MessageSidebar opened');
+      gsap.fromTo(el, { x: '100%', opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' });
+      console.log('[MessageSidebar] Sidebar opened');
     } else {
       gsap.to(el, { x: '100%', opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: onClose });
-      console.log('MessageSidebar closed');
+      console.log('[MessageSidebar] Sidebar closed');
     }
     return () => {
       if (sidebarRef.current) {
@@ -125,7 +126,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     };
   }, [isOpen, onClose]);
 
-  /* ---------- Click fuera ---------- */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -134,14 +134,14 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         (!actionMenuRef.current || !actionMenuRef.current.contains(e.target as Node))
       ) {
         gsap.to(sidebarRef.current, { x: '100%', opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: onClose });
-        console.log('Closed MessageSidebar via outside click');
+        console.log('[MessageSidebar] Closed via outside click');
       }
       if (
         actionMenuRef.current &&
         !actionMenuRef.current.contains(e.target as Node) &&
         actionMenuOpenId
       ) {
-        console.log('Closing action menu via outside click', { messageId: actionMenuOpenId });
+        console.log('[MessageSidebar] Closing action menu via outside click', { messageId: actionMenuOpenId });
         setActionMenuOpenId(null);
         setActionMenuPosition(null);
       }
@@ -150,10 +150,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose, actionMenuOpenId]);
 
-  /* ---------- Animación Action Menu ---------- */
   useEffect(() => {
     if (actionMenuOpenId && actionMenuRef.current) {
-      console.log('Rendering action menu with GSAP animation:', { messageId: actionMenuOpenId });
+      console.log('[MessageSidebar] Animating action menu:', { messageId: actionMenuOpenId });
       gsap.fromTo(
         actionMenuRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
@@ -167,7 +166,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     };
   }, [actionMenuOpenId]);
 
-  /* ---------- Scroll tracking for down arrow and action menu ---------- */
   useEffect(() => {
     if (!chatRef.current) return;
 
@@ -175,67 +173,51 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     const isAtBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50;
 
     const debouncedHandleScroll = debounce(() => {
-      console.log('Scroll detected in chat, checking states:', { actionMenuOpenId, showDownArrow });
+      console.log('[MessageSidebar] Scroll processed:', { actionMenuOpenId, showDownArrow });
       if (isAtBottom()) {
         setShowDownArrow(false);
-        console.log('User scrolled to bottom, hiding down arrow');
+        console.log('[MessageSidebar] At bottom, hiding down arrow');
       } else if (chat.scrollTop > lastScrollTop.current && !showDownArrow) {
         setShowDownArrow(true);
-        console.log('User scrolled up, showing down arrow');
+        console.log('[MessageSidebar] Scrolled up, showing down arrow');
       }
       if (actionMenuOpenId) {
-        console.log('Closing action menu due to chat scroll', { messageId: actionMenuOpenId });
+        console.log('[MessageSidebar] Closing action menu due to scroll', { messageId: actionMenuOpenId });
         setActionMenuOpenId(null);
         setActionMenuPosition(null);
       }
       lastScrollTop.current = chat.scrollTop;
     }, 100);
 
-    const handleScroll = () => {
-      console.log('Raw scroll event fired');
-      debouncedHandleScroll();
-    };
+    chat.addEventListener('scroll', debouncedHandleScroll);
 
-    chat.addEventListener('scroll', handleScroll);
-
-    // Handle new messages
     if (messages.length > 0) {
       const wasAtBottom = isAtBottom();
-      const prevMessages = messageRefs.current.size;
-      const hasNewMessages = messages.length > prevMessages;
-
-      if (hasNewMessages && !wasAtBottom && messages[messages.length - 1].senderId !== user?.id) {
-        setShowDownArrow(true);
-        console.log('New message received, showing down arrow');
-      } else if (wasAtBottom) {
+      if (wasAtBottom || messages[messages.length - 1].senderId === user?.id) {
         chat.scrollTop = chat.scrollHeight;
         setShowDownArrow(false);
-        console.log('Scrolled to bottom due to being at bottom or sending message');
+        console.log('[MessageSidebar] Scrolled to bottom');
+      } else if (messages[messages.length - 1].senderId !== user?.id) {
+        setShowDownArrow(true);
+        console.log('[MessageSidebar] New message, showing down arrow');
       }
     }
 
     return () => {
-      console.log('Cleaning up scroll listener');
-      chat.removeEventListener('scroll', handleScroll);
+      console.log('[MessageSidebar] Cleaning up scroll listener');
+      chat.removeEventListener('scroll', debouncedHandleScroll);
     };
   }, [messages, user?.id]);
 
-  /* ---------- Listener Firestore ---------- */
   useEffect(() => {
-    if (!isOpen || !senderId || !receiver.id || !user?.id) {
+    if (!isOpen || !senderId || !receiver.id || !user?.id || !conversationId) {
       setIsLoading(false);
       setError('Usuario no autenticado o datos inválidos.');
+      console.warn('[MessageSidebar] Invalid props:', { isOpen, senderId, receiverId: receiver.id, userId: user?.id, conversationId });
       return;
     }
 
-    if (!auth.currentUser) {
-      console.error('No Firebase authenticated user found');
-      setError('No estás autenticado en Firebase.');
-      setIsLoading(false);
-      return;
-    }
-
-    console.log('MessageSidebar props:', { senderId, receiverId: receiver.id, conversationId });
+    console.log('[MessageSidebar] Initializing Firestore listeners:', { senderId, receiverId: receiver.id, conversationId });
 
     const initConversation = async () => {
       try {
@@ -244,14 +226,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           { participants: [senderId, receiver.id], createdAt: serverTimestamp() },
           { merge: true },
         );
-        console.log('Conversation created:', conversationId);
-      } catch (err: any) {
-        console.error('Error initializing conversation:', {
-          message: err.message || 'Unknown error',
-          code: err.code || 'unknown',
-          stack: err.stack || 'No stack trace',
-          conversationId,
-        });
+        console.log('[MessageSidebar] Conversation initialized:', conversationId);
+      } catch (error) {
+        console.error('[MessageSidebar] Error initializing conversation:', error);
         setError('No se pudo iniciar la conversación.');
         setIsLoading(false);
       }
@@ -261,7 +238,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     const messagesRef = collection(db, 'conversations', conversationId, 'messages');
     const messagesQuery = query(messagesRef, orderBy('timestamp', 'asc'));
 
-    const unsubscribe = onSnapshot(
+    const unsubscribeMessages = onSnapshot(
       messagesQuery,
       (snapshot) => {
         const data: Message[] = snapshot.docs.map((d) => {
@@ -277,102 +254,85 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             fileType: m.fileType ?? null,
             filePath: m.filePath ?? null,
             timestamp: m.timestamp || null,
-            isTyping: m.isTyping ?? false,
+            isPending: false,
           };
         });
-        console.log('Received messages:', data.length, 'Ids:', data.map((m) => m.id));
-        setMessages(data);
+        console.log('[MessageSidebar] Messages received:', { count: data.length, ids: data.map((m) => m.id) });
+        setMessages((prev) => {
+          const pendingMessages = prev.filter((msg) => msg.isPending);
+          return [...pendingMessages, ...data.filter((msg) => !msg.isPending)];
+        });
         setError(null);
         setIsLoading(false);
       },
-      (err: any) => {
-        console.error('Firestore listener error:', {
-          message: err.message || 'Unknown error',
-          code: err.code || 'unknown',
-          stack: err.stack || 'No stack trace',
-          conversationId,
-          userId: user?.id,
-          firebaseUserId: auth.currentUser?.uid,
-        });
+      (error) => {
+        console.error('[MessageSidebar] Firestore messages listener error:', error);
         setError('No se pudo cargar la conversación. Intenta enviar un mensaje.');
         setIsLoading(false);
       },
     );
 
+    const typingQuery = query(collection(db, `conversations/${conversationId}/typing`));
+    const unsubscribeTyping = onSnapshot(
+      typingQuery,
+      (snapshot) => {
+        const typing: string[] = [];
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data() as TypingStatus;
+          if (data.isTyping && data.userId !== user?.id) {
+            const timestamp = data.timestamp.toDate().getTime();
+            if (Date.now() - timestamp < 5000) {
+              typing.push(data.userId);
+            }
+          }
+        });
+        setTypingUsers(typing);
+        console.log('[MessageSidebar] Typing users:', typing);
+      },
+      (error) => {
+        console.error('[MessageSidebar] Firestore typing listener error:', error);
+      },
+    );
+
     return () => {
-      console.log('Unsubscribing messages listener for conversation:', conversationId);
-      unsubscribe();
+      console.log('[MessageSidebar] Unsubscribing listeners for conversation:', conversationId);
+      unsubscribeMessages();
+      unsubscribeTyping();
       setIsLoading(false);
     };
   }, [isOpen, senderId, receiver.id, conversationId, user?.id]);
 
-  /* ---------- Typing (Debounced) ---------- */
   const handleTyping = useCallback(
     debounce(async () => {
-      if (!user?.id || !conversationId || !auth.currentUser) {
-        console.error('Cannot handle typing: invalid user or conversation', {
-          userId: user?.id,
-          conversationId,
-          firebaseUserId: auth.currentUser?.uid,
-        });
+      if (!user?.id || !conversationId) {
+        console.warn('[MessageSidebar] Cannot handle typing: invalid user or conversation', { userId: user?.id, conversationId });
         return;
       }
 
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
       try {
-        let typingId = typingMessageId;
-
-        if (!typingId) {
-          const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), {
-            senderId: user.id,
-            receiverId: receiver.id,
-            timestamp: serverTimestamp(),
-            isTyping: true,
-            text: null,
-            imageUrl: null,
-            fileUrl: null,
-            fileName: null,
-            fileType: null,
-            filePath: null,
-          });
-          typingId = msgRef.id;
-          setTypingMessageId(typingId);
-          console.log('Created typing message:', typingId);
-        } else {
-          await updateDoc(doc(db, 'conversations', conversationId, 'messages', typingId), {
-            isTyping: true,
-            timestamp: serverTimestamp(),
-          });
-          console.log('Updated typing message:', typingId);
-        }
-
-        typingTimeoutRef.current = setTimeout(async () => {
-          if (typingId) {
-            await updateDoc(doc(db, 'conversations', conversationId, 'messages', typingId), {
-              isTyping: false,
-              timestamp: serverTimestamp(),
-            });
-            console.log('Stopped typing message:', typingId);
-            setTypingMessageId(null);
-          }
-        }, 3000);
-      } catch (err: any) {
-        console.error('Error updating typing status:', {
-          message: err.message || 'Unknown error',
-          code: err.code || 'unknown',
-          stack: err.stack || 'No stack trace',
-          conversationId,
-          messageId: typingMessageId,
-          userId: user?.id,
-          firebaseUserId: auth.currentUser?.uid,
+        const typingDocRef = doc(db, `conversations/${conversationId}/typing/${user.id}`);
+        await setDoc(typingDocRef, {
+          userId: user.id,
+          isTyping: true,
+          timestamp: Timestamp.now(),
         });
+        console.log('[MessageSidebar] Typing status updated:', user.id);
+
+        setTimeout(async () => {
+          await setDoc(typingDocRef, {
+            userId: user.id,
+            isTyping: false,
+            timestamp: Timestamp.now(),
+          });
+          console.log('[MessageSidebar] Typing status cleared:', user.id);
+        }, 3000);
+      } catch (error) {
+        console.error('[MessageSidebar] Error updating typing status:', error);
       }
     }, 500),
-    [user?.id, conversationId, typingMessageId]
+    [user?.id, conversationId]
   );
 
-  /* ---------- Animación de nuevos mensajes ---------- */
   useEffect(() => {
     if (!messages.length || !chatRef.current) return;
 
@@ -386,7 +346,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           { y: 50, opacity: 0, scale: 0.95 },
           { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out', delay: 0.1 }
         );
-        console.log('Animated new message:', m.id);
+        console.log('[MessageSidebar] Animated new message:', m.id);
       }
     });
 
@@ -397,19 +357,27 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     });
   }, [messages]);
 
-  /* ---------- Selección de archivo ---------- */
   const selectFile = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
-      setError('El archivo supera los 10 MB.');
+      alert('El archivo supera los 10 MB.');
+      console.log('[MessageSidebar] File too large:', f.size);
+      return;
+    }
+    const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'];
+    const fileExtension = f.name.split('.').pop()?.toLowerCase();
+    if (!fileExtension || !validExtensions.includes(fileExtension)) {
+      alert(`Extensión no soportada. Permitidas: ${validExtensions.join(', ')}`);
+      console.log('[MessageSidebar] Invalid file extension:', fileExtension);
       return;
     }
     setFile(f);
     setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
+    console.log('[MessageSidebar] File selected:', { name: f.name, type: f.type, size: f.size });
   };
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f && !f.name.includes('/paperclip.svg') && !f.name.includes('/paperclip.svg')) {
+    if (f && !f.name.includes('/paperclip.svg')) {
       selectFile(f);
     }
     if (e.target) e.target.value = '';
@@ -419,9 +387,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     e.preventDefault();
     setIsDragging(false);
     const f = e.dataTransfer.files?.[0];
-    if (f && !f.name.includes('/paperclip.svg') && !f.name.includes('/paperclip.svg')) {
+    if (f && !f.name.includes('/paperclip.svg')) {
       selectFile(f);
     }
+    console.log('[MessageSidebar] File dropped:', f?.name);
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
@@ -431,13 +400,17 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
   const handleRemoveFile = () => {
     setFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      console.log('[MessageSidebar] Revoked preview URL');
+    }
     setPreviewUrl(null);
+    console.log('[MessageSidebar] Removed selected file');
   };
 
-  /* ---------- Abrir Action Menu ---------- */
   const handleOpenActionMenu = (messageId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    console.log('Opening action menu:', { messageId, currentOpenId: actionMenuOpenId });
+    console.log('[MessageSidebar] Opening action menu:', { messageId, currentOpenId: actionMenuOpenId });
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
     const menuWidth = 150;
@@ -456,207 +429,212 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
     setActionMenuPosition({ top, left });
     setActionMenuOpenId(actionMenuOpenId === messageId ? null : messageId);
-    console.log('Action menu position set:', { top, left, rect, viewportWidth, viewportHeight });
+    console.log('[MessageSidebar] Action menu position set:', { top, left });
   };
 
-  /* ---------- Editar / Borrar mensaje ---------- */
   const handleEditMessage = async (messageId: string) => {
     if (!user?.id || !editingText.trim()) {
+      console.warn('[MessageSidebar] Invalid edit attempt:', {
+        userId: user?.id,
+        messageId,
+        editingText,
+      });
       setError('El mensaje no puede estar vacío.');
       return;
     }
+
     try {
+      console.log('[MessageSidebar] Editing message:', messageId);
       await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), {
         text: editingText.trim(),
         timestamp: serverTimestamp(),
       });
-      console.log('Message edited:', messageId);
       setEditingMessageId(null);
       setEditingText('');
       setActionMenuOpenId(null);
-    } catch (err: any) {
-      console.error('Error editing message:', {
-        message: err.message || 'Unknown error',
-        code: err.code || 'unknown',
-        stack: err.stack || 'No stack trace',
-        conversationId,
-        messageId,
-      });
+      console.log('[MessageSidebar] Message edited:', messageId);
+    } catch (error) {
+      console.error('[MessageSidebar] Error editing message:', error);
       setError('No se pudo editar el mensaje.');
     }
   };
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!user?.id) {
-      console.error('No user authenticated for message deletion', { messageId });
+      console.warn('[MessageSidebar] No userId for message deletion:', { messageId });
       setError('Usuario no autenticado.');
       return;
     }
-  
+
     try {
-      console.log('Starting message deletion:', { messageId, conversationId });
-  
-      const message = messages.find((m) => m.id === messageId);
-      if (!message) {
-        console.warn('Message not found for deletion:', messageId);
-        throw new Error('Mensaje no encontrado.');
-      }
-  
-      // Eliminar archivo en GCS si existe
-      if (message.fileUrl || message.imageUrl) {
-        if (!message.filePath) {
-          console.warn('No filePath provided for file deletion:', {
-            messageId,
-            fileUrl: message.fileUrl,
-            imageUrl: message.imageUrl,
-          });
-        } else {
-          console.log('Attempting to delete GCS file:', message.filePath);
+      console.log('[MessageSidebar] Deleting message:', messageId);
+      const messageRef = doc(db, 'conversations', conversationId, 'messages', messageId);
+      const messageDoc = await getDoc(messageRef);
+      if (messageDoc.exists()) {
+        const messageData = messageDoc.data();
+        if (messageData.filePath) {
           try {
-            const response = await fetch('/api/delete-file', {
+            console.log('[MessageSidebar] Attempting to delete GCS file:', messageData.filePath);
+            const response = await fetch('/api/delete-image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filePath: message.filePath }),
+              body: JSON.stringify({ filePath: messageData.filePath }),
             });
-  
             const responseData = await response.json();
             if (!response.ok) {
-              console.error('Failed to delete GCS file:', {
+              console.error('[MessageSidebar] Failed to delete GCS file:', {
                 status: response.status,
                 error: responseData.error,
-                details: responseData.details,
-                filePath: message.filePath,
+                filePath: messageData.filePath,
               });
-              throw new Error(responseData.error || 'Failed to delete file');
+            } else {
+              console.log('[MessageSidebar] Successfully deleted GCS file:', messageData.filePath);
             }
-  
-            console.log('Successfully deleted GCS file:', message.filePath);
-          } catch (err: any) {
-            console.error('Error deleting GCS file:', {
-              message: err.message || 'Unknown error',
-              code: err.code || 'unknown',
-              stack: err.stack || 'No stack trace',
-              filePath: message.filePath,
-            });
-            // No lanzamos error para continuar con la eliminación del mensaje
+          } catch (error) {
+            console.error('[MessageSidebar] Error deleting GCS file:', error);
           }
         }
-      } else {
-        console.log('No file associated with message, skipping GCS deletion:', messageId);
       }
-  
-      // Eliminar mensaje en Firestore
-      console.log('Deleting message from Firestore:', messageId);
-      await deleteDoc(doc(db, 'conversations', conversationId, 'messages', messageId));
-      console.log('Message deleted from Firestore:', messageId);
-  
-      // Limpiar estados
+      await deleteDoc(messageRef);
       setActionMenuOpenId(null);
       setActionMenuPosition(null);
-      if (messageId === typingMessageId) {
-        console.log('Cleared typing message ID:', typingMessageId);
-        setTypingMessageId(null);
-      }
-    } catch (err: any) {
-      console.error('Error deleting message:', {
-        message: err.message || 'Unknown error',
-        code: err.code || 'unknown',
-        stack: err.stack || 'No stack trace',
-        conversationId,
-        messageId,
-      });
+      console.log('[MessageSidebar] Message deleted:', messageId);
+    } catch (error) {
+      console.error('[MessageSidebar] Error deleting message:', error);
       setError('No se pudo eliminar el mensaje.');
     }
   };
 
-  /* ---------- Enviar mensaje ---------- */
-  const handleSendMessage = useCallback(
-    async (e: React.FormEvent | React.KeyboardEvent) => {
-      e.preventDefault();
-      if (!senderId || (!newMessage.trim() && !file) || !user?.id || !auth.currentUser) {
-        setError('El mensaje o archivo no puede estar vacío.');
-        console.error('Invalid message input:', {
-          senderId,
-          newMessage,
-          file,
-          userId: user?.id,
-          firebaseUserId: auth.currentUser?.uid,
-        });
+  const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    if (!user?.id || (!newMessage.trim() && !file) || isSending || !senderId || !receiver.id || !conversationId) {
+      console.warn('[MessageSidebar] Invalid message input:', {
+        userId: user?.id,
+        newMessage,
+        hasFile: !!file,
+        isSending,
+        senderId,
+        receiverId: receiver.id,
+        conversationId,
+      });
+      setError('El mensaje o archivo no puede estar vacío.');
+      return;
+    }
+
+    setIsSending(true);
+    console.log('[MessageSidebar] Starting message send:', { senderId, receiverId: receiver.id, conversationId });
+
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: user.id,
+      receiverId: receiver.id,
+      text: newMessage.trim() || null,
+      timestamp: Timestamp.fromDate(new Date()),
+      isPending: true,
+      imageUrl: null,
+      fileUrl: null,
+      fileName: file ? file.name : null,
+      fileType: file ? file.type : null,
+      filePath: null,
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setNewMessage('');
+    setFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+
+    try {
+      await setDoc(
+        doc(db, 'conversations', conversationId),
+        {
+          participants: [senderId, receiver.id],
+          createdAt: serverTimestamp(),
+          lastMessage: newMessage.trim() || file?.name || '[Archivo]',
+          lastMessageTimestamp: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      console.log('[MessageSidebar] Conversation updated:', conversationId);
+
+      const messageData: Partial<Message> = {
+        senderId: user.id,
+        receiverId: receiver.id,
+        timestamp: serverTimestamp(),
+        imageUrl: null,
+        fileUrl: null,
+        fileName: null,
+        fileType: null,
+        filePath: null,
+      };
+
+      let hasContent = false;
+
+      if (file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('userId', user.id);
+          formData.append('type', 'message');
+          formData.append('conversationId', conversationId);
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+            headers: { 'x-clerk-user-id': user.id },
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to upload file');
+          }
+
+          const { url, fileName, fileType, filePath } = await response.json();
+          console.log('[MessageSidebar] File uploaded:', { url, fileName, fileType, filePath });
+
+          if (fileName) messageData.fileName = fileName;
+          if (fileType) messageData.fileType = fileType;
+          if (filePath) messageData.filePath = filePath;
+
+          if (file.type.startsWith('image/') && url) {
+            messageData.imageUrl = url;
+            hasContent = true;
+          } else if (url) {
+            messageData.fileUrl = url;
+            hasContent = true;
+          }
+        } catch (error) {
+          console.error('[MessageSidebar] Failed to upload file:', error, {
+            message: error.message || 'Unknown error',
+            fileName: file.name,
+            conversationId,
+          });
+          setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+          alert(`Error al subir el archivo: ${error.message || 'Inténtalo de nuevo'}`);
+          setIsSending(false);
+          return;
+        }
+      }
+
+      if (newMessage.trim()) {
+        messageData.text = newMessage.trim();
+        hasContent = true;
+      }
+
+      if (!hasContent) {
+        console.warn('[MessageSidebar] No content to send:', { conversationId });
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        setIsSending(false);
         return;
       }
-  
+
+      const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), messageData);
+      console.log('[MessageSidebar] Message saved:', msgRef.id);
+
       try {
-        console.log('Starting message send:', { senderId, receiverId: receiver.id, conversationId });
-  
-        await setDoc(
-          doc(db, 'conversations', conversationId),
-          {
-            participants: [senderId, receiver.id],
-            createdAt: serverTimestamp(),
-            lastMessage: newMessage.trim() || file?.name || '[Archivo]',
-          },
-          { merge: true }
-        );
-        console.log('Conversation updated:', conversationId);
-  
-        const messageData: Partial<Message> = {
-          senderId,
-          receiverId: receiver.id,
-          timestamp: serverTimestamp(),
-          isTyping: false,
-          text: newMessage.trim() || null,
-          imageUrl: null,
-          fileUrl: null,
-          fileName: null,
-          fileType: null,
-          filePath: null,
-        };
-  
-        if (file) {
-          try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('conversationId', conversationId);
-  
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              body: formData,
-            });
-  
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Failed to upload file');
-            }
-  
-            const { url, fileName, fileType, filePath } = await response.json();
-            console.log('File uploaded via API:', { url, fileName, fileType, filePath });
-  
-            // Guardar siempre fileName, fileType y filePath
-            messageData.fileName = fileName;
-            messageData.fileType = fileType;
-            messageData.filePath = filePath;
-  
-            // Distinguir entre imágenes y otros archivos
-            if (file.type.startsWith('image/')) {
-              messageData.imageUrl = url;
-            } else {
-              messageData.fileUrl = url;
-            }
-          } catch (err: any) {
-            console.error('Failed to upload file:', {
-              message: err.message || 'Unknown error',
-              code: err.code || 'unknown',
-              stack: err.stack || 'No stack trace',
-              conversationId,
-              fileName: file.name,
-            });
-            throw err;
-          }
-        }
-  
-        const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), messageData);
-        console.log('Message saved:', msgRef.id);
-  
         await addDoc(collection(db, 'notifications'), {
           userId: senderId,
           message: `${user.firstName || 'Usuario'} te ha enviado un mensaje privado`,
@@ -666,53 +644,28 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           conversationId,
           type: 'private_message',
         });
-        console.log('Notification created for recipient:', receiver.id);
-  
-        if (typingMessageId) {
-          await deleteDoc(doc(db, 'conversations', conversationId, 'messages', typingMessageId));
-          setTypingMessageId(null);
-          console.log('Deleted typing message:', typingMessageId);
-        }
-  
-        setNewMessage('');
-        setFile(null);
-        setPreviewUrl(null);
-        setError(null);
-      } catch (err: any) {
-        console.error('Failed to send message:', {
-          message: err.message || 'Unknown error',
-          code: err.code || 'unknown',
-          stack: err.stack || 'No stack trace',
-          conversationId,
-          senderId,
-          receiverId: receiver.id,
-          userId: user?.id,
-          firebaseUserId: auth.currentUser?.uid,
-        });
-        setError('No se pudo enviar el mensaje.');
+        console.log('[MessageSidebar] Notification created for recipient:', receiver.id);
+      } catch (error) {
+        console.error('[MessageSidebar] Failed to create notification:', error);
       }
-    },
-    [senderId, receiver.id, newMessage, conversationId, user?.id, user?.firstName, file, typingMessageId]
-  );
 
-  useEffect(() => {
-    const chatEl = chatRef.current;
-    if (!chatEl) return;
-  
-    const handleScroll = () => {
-      if (actionMenuOpenId !== null) {
-        setActionMenuOpenId(null);
-        console.log('Closed action menu on chat scroll');
-      }
-    };
-  
-    chatEl.addEventListener('scroll', handleScroll);
-    return () => {
-      chatEl.removeEventListener('scroll', handleScroll);
-    };
-  }, [actionMenuOpenId]);
+      setError(null);
+    } catch (error) {
+      console.error('[MessageSidebar] Failed to send message:', error, {
+        message: error.message || 'Unknown error',
+        conversationId,
+        senderId,
+        receiverId: receiver.id,
+        userId: user?.id,
+      });
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      alert(`Error al enviar el mensaje: ${error.message || 'Inténtalo de nuevo'}`);
+      setError('No se pudo enviar el mensaje.');
+    } finally {
+      setIsSending(false);
+    }
+  };
 
-  /* ---------- Render ---------- */
   if (!senderId || !user?.id) {
     return (
       <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
@@ -732,8 +685,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             >
               <Image src="/arrow-left.svg" alt="Cerrar" width={15} height={16} />
             </div>
-            <div className={styles.headerTitle}>Chat</div>
+            <div className={styles.breadcrumb}>Chat</div>
           </div>
+          <div className={styles.title}>Chat Privado</div>
         </div>
         <div className={styles.error}>Debes iniciar sesión para ver esta conversación.</div>
       </div>
@@ -745,7 +699,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       className={`${styles.container} ${isOpen ? styles.open : ''} ${isDragging ? styles.dragging : ''}`}
       ref={sidebarRef}
     >
-      {/* ---------- Header ---------- */}
       <div className={styles.header}>
         <div className={styles.controls}>
           <div
@@ -762,231 +715,219 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           >
             <Image src="/arrow-left.svg" alt="Cerrar" width={15} height={16} />
           </div>
-          <Image
-            src={user.imageUrl || '/default-avatar.png'}
-            alt={receiver.fullName}
-            width={50}
-            height={50}
-            style={{borderRadius: '100px', overflow: 'hidden',marginRight: '10px'}}
-            className={styles.headerAvatar}
-          />
-          <div className={styles.headerInfo}>
-            <div className={styles.headerTitle}>{receiver.fullName}</div>
-            <div className={styles.headerRole}>{receiver.role}</div>
+          <div className={styles.breadcrumb}>Mensajes</div>
+        </div>
+        <div className={styles.title}>{receiver.fullName}</div>
+        <div className={styles.description}>{receiver.role || 'Sin rol'}</div>
+        <div className={styles.details}>
+          <div className={styles.card}>
+            <div className={styles.cardLabel}>Estado:</div>
+            <div className={styles.cardValue}>En línea</div>
+          </div>
+          <div className={styles.card}>
+            <div className={styles.cardLabel}>Mensajes:</div>
+            <div className={styles.cardValue}>{messages.length}</div>
           </div>
         </div>
       </div>
 
-      {/* ---------- Chat ---------- */}
-      <ul
+      <div
         className={styles.chat}
         ref={chatRef}
         onScroll={() => {
-            console.log('Chat scroll event triggered via onScroll');
-            if (actionMenuOpenId !== null) {
-            console.log('Closed action menu via onScroll');
+          console.log('[MessageSidebar] Chat scroll event triggered');
+          if (actionMenuOpenId !== null) {
+            console.log('[MessageSidebar] Closed action menu via scroll');
             setActionMenuOpenId(null);
             setActionMenuPosition(null);
-            }
+          }
         }}
-        >
-        {error && <li className={styles.error}>{error}</li>}
+      >
+        {error && <div className={styles.error}>{error}</div>}
         {isLoading && (
-            <li className={styles.loader}>
+          <div className={styles.loader}>
             <div className={styles.spinner} />
-            </li>
+          </div>
         )}
         {!isLoading && messages.length === 0 && (
-            <li className={styles.noMessages}>No hay mensajes en esta conversación.</li>
+          <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
         {messages.map((m) => {
-            // Hide typing indicator for current user
-            if (m.isTyping && m.senderId === user.id) return null;
+          const isMe = m.senderId === user.id;
+          const senderName = isMe ? (user.firstName || 'Yo') : receiver.fullName;
 
-            const isMe = m.senderId === user.id;
-            const senderName = isMe ? (user.firstName || 'Yo') : receiver.fullName;
-
-            return (
-            <li
-                key={m.id}
-                data-message-id={m.id}
-                className={`${styles.message} ${isMe ? styles.sent : styles.received}`}
+          return (
+            <div
+              key={m.id}
+              data-message-id={m.id}
+              className={styles.message}
             >
-                <div className={styles.messageContent}>
+              <Image
+                src={isMe ? (user.imageUrl || '/default-avatar.png') : (receiver.imageUrl || '/default-avatar.png')}
+                alt={senderName}
+                width={46}
+                height={46}
+                className={styles.avatar}
+                onError={(e) => {
+                  e.currentTarget.src = '/default-avatar.png';
+                  console.warn('[MessageSidebar] Avatar load failed:', isMe ? user.imageUrl : receiver.imageUrl);
+                }}
+              />
+              <div className={styles.messageContent}>
                 <div className={styles.messageHeader}>
-                    <span className={styles.sender}>{senderName}</span>
+                  <span className={styles.sender}>{senderName}</span>
+                  <div className={styles.timestampWrapper}>
                     <span className={styles.timestamp}>
-                    {m.timestamp instanceof Timestamp
+                      {m.timestamp instanceof Timestamp
                         ? m.timestamp.toDate().toLocaleTimeString('es-ES', {
                             hour: '2-digit',
                             minute: '2-digit',
                             hour12: false,
-                        })
+                          })
                         : 'Sin fecha'}
                     </span>
-                    {isMe && !m.isTyping && (
-                    <div className={styles.actionContainer}>
+                    {isMe && !m.isPending && (
+                      <div className={styles.messageActions}>
                         <button
-                        className={styles.actionButton}
-                        onClick={(e) => handleOpenActionMenu(m.id, e)}
-                        aria-label="Opciones"
+                          className={styles.actionButton}
+                          onClick={(e) => handleOpenActionMenu(m.id, e)}
+                          aria-label="Opciones"
                         >
-                        <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
+                          <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
                         </button>
                         {actionMenuOpenId === m.id &&
-                        createPortal(
+                          createPortal(
                             <div
-                            ref={(el) => {
-                                actionMenuRef.current = el;
-                                if (el) {
-                                console.log('Action menu mounted:', {
-                                    messageId: m.id,
-                                    position: actionMenuPosition,
-                                    rect: el.getBoundingClientRect(),
-                                    style: el.style,
-                                });
-                                }
-                            }}
-                            className={styles.actionDropdown}
-                            style={{
+                              ref={actionMenuRef}
+                              className={styles.actionDropdown}
+                              style={{
                                 top: actionMenuPosition ? `${actionMenuPosition.top}px` : '0px',
                                 left: actionMenuPosition ? `${actionMenuPosition.left}px` : '0px',
                                 position: 'absolute',
                                 zIndex: 130000,
                                 opacity: 1,
-                            }}
+                              }}
                             >
-                            <div
+                              <div
                                 className={styles.actionDropdownItem}
                                 onClick={(e) => {
-                                e.stopPropagation();
-                                console.log('Opening edit mode for message:', m.id);
-                                setEditingMessageId(m.id);
-                                setEditingText(m.text || '');
-                                setActionMenuOpenId(null);
-                                setActionMenuPosition(null);
+                                  e.stopPropagation();
+                                  console.log('[MessageSidebar] Opening edit mode for message:', m.id);
+                                  setEditingMessageId(m.id);
+                                  setEditingText(m.text || '');
+                                  setActionMenuOpenId(null);
+                                  setActionMenuPosition(null);
                                 }}
-                            >
+                              >
                                 Editar mensaje
-                            </div>
-                            <div
+                              </div>
+                              <div
                                 className={styles.actionDropdownItem}
                                 onClick={(e) => {
-                                e.stopPropagation();
-                                console.log('Triggering delete for message:', m.id);
-                                handleDeleteMessage(m.id);
-                                setActionMenuOpenId(null);
-                                setActionMenuPosition(null);
+                                  e.stopPropagation();
+                                  console.log('[MessageSidebar] Triggering delete for message:', m.id);
+                                  handleDeleteMessage(m.id);
+                                  setActionMenuOpenId(null);
+                                  setActionMenuPosition(null);
                                 }}
-                            >
+                              >
                                 Eliminar mensaje
-                            </div>
+                              </div>
                             </div>,
                             document.body
-                        )}
-                    </div>
+                          )}
+                      </div>
                     )}
+                  </div>
                 </div>
-
                 {(m.fileUrl || m.imageUrl) && (
+                  <div className={styles.fileActionsRow}>
                     <button
-                    className={styles.downloadButton}
-                    onClick={() => window.open(m.imageUrl || m.fileUrl, '_blank')}
-                    aria-label="Descargar archivo"
+                      className={styles.downloadButton}
+                      onClick={() => window.open(m.imageUrl || m.fileUrl, '_blank')}
+                      aria-label="Descargar archivo"
+                      disabled={m.isPending}
                     >
-                    <Image src="/download.svg" alt="Descargar" width={16} height={16} />
+                      <Image src="/download.svg" alt="Descargar" width={16} height={16} />
                     </button>
+                  </div>
                 )}
-
                 {editingMessageId === m.id ? (
-                    <div className={styles.editContainer}>
+                  <div className={styles.editContainer}>
                     <input
-                        type="text"
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        className={styles.editInput}
-                        aria-label="Editar mensaje"
-                        autoFocus
+                      type="text"
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      className={styles.editInput}
+                      aria-label="Editar mensaje"
+                      autoFocus
                     />
                     <button
-                        className={styles.editSaveButton}
-                        onClick={() => handleEditMessage(m.id)}
-                        disabled={!editingText.trim()}
+                      className={styles.editSaveButton}
+                      onClick={() => handleEditMessage(m.id)}
+                      disabled={!editingText.trim()}
                     >
-                        Guardar
+                      Guardar
                     </button>
                     <button
-                        className={styles.editCancelButton}
-                        onClick={() => {
+                      className={styles.editCancelButton}
+                      onClick={() => {
                         setEditingMessageId(null);
                         setEditingText('');
-                        }}
+                      }}
                     >
-                        Cancelar
+                      Cancelar
                     </button>
-                    </div>
-                ) : m.isTyping ? (
-                    <div className={styles.typingDots}>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    </div>
+                  </div>
                 ) : (
-                    <>
+                  <>
                     {m.text && <div className={styles.text}>{m.text}</div>}
                     {m.imageUrl && (
-                        <div className={styles.imageWrapper}>
-                            <Image
-                            src={m.imageUrl}
-                            alt={m.fileName || 'Imagen'}
-                            width={200}
-                            height={200}
-                            className={styles.image}
-                            onClick={() => setImagePreviewSrc(m.imageUrl!)}
-                            onError={(e) => {
-                                e.currentTarget.src = '/default-image.png';
-                                console.warn('Image load failed:', m.imageUrl);
-                            }}
-                            />
-                            {m.fileName && (
-                            <div className={styles.fileName}>
-                                <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-                                {m.fileName}
-                            </div>
-                            )}
-                        </div>
-                        )}
-                        {m.fileUrl && !m.imageUrl && (
-                        <a
-                            href={m.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.file}
-                            download={m.fileName}
-                        >
-                            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-                            {m.fileName}
-                        </a>
-                        )}
+                      <div className={styles.imageWrapper}>
+                        <Image
+                          src={m.imageUrl}
+                          alt={m.fileName || 'Imagen'}
+                          width={200}
+                          height={200}
+                          className={styles.image}
+                          onClick={() => !m.isPending && setImagePreviewSrc(m.imageUrl!)}
+                          onError={(e) => {
+                            e.currentTarget.src = '/default-image.png';
+                            console.warn('[MessageSidebar] Image load failed:', m.imageUrl);
+                          }}
+                        />
+                      </div>
+                    )}
                     {m.fileUrl && !m.imageUrl && (
-                        <a
+                      <a
                         href={m.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={styles.file}
                         download={m.fileName}
-                        >
+                        onClick={(e) => m.isPending && e.preventDefault()}
+                      >
                         <Image src="/file.svg" alt="Archivo" width={16} height={16} />
                         {m.fileName}
-                        </a>
+                      </a>
                     )}
-                    </>
+                  </>
                 )}
-                </div>
-            </li>
-            );
+              </div>
+            </div>
+          );
         })}
-        </ul>
+        {typingUsers.length > 0 && (
+          <div className={styles.typingIndicator}>
+            <div className={styles.typingDots}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span>{receiver.fullName} está escribiendo...</span>
+          </div>
+        )}
+      </div>
       {showDownArrow && (
         <button
           className={styles.downArrowButton}
@@ -994,7 +935,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             if (chatRef.current) {
               chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
               setShowDownArrow(false);
-              console.log('Clicked down arrow, scrolling to bottom');
+              console.log('[MessageSidebar] Scrolled to bottom via down arrow');
             }
           }}
           aria-label="Ver nuevos mensajes"
@@ -1003,14 +944,16 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         </button>
       )}
 
-      {/* ---------- Input ---------- */}
       <form
         className={`${styles.inputWrapper} ${isDragging ? styles.dragging : ''}`}
         ref={inputWrapperRef}
         onDragOver={handleDragOver}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        onSubmit={handleSendMessage}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!isSending) handleSendMessage(e);
+        }}
       >
         <div className={styles.inputContainer}>
           {previewUrl && (
@@ -1039,39 +982,41 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
               handleTyping();
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !isSending) {
                 e.preventDefault();
                 handleSendMessage(e);
               }
             }}
             className={styles.input}
             aria-label="Escribe un mensaje"
-            disabled={!!error}
+            disabled={isSending || !!error}
           />
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.imageButton}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!!error}
-              aria-label="Adjuntar archivo"
-            >
-              <Image
-                src="/paperclip.svg"
-                alt="Adjuntar"
-                width={16}
-                height={16}
-                className={styles.iconInvert}
-              />
-            </button>
-            <button
-              type="submit"
-              className={styles.sendButton}
-              disabled={(!newMessage.trim() && !file) || !!error}
-              aria-label="Enviar mensaje"
-            >
-              <Image src="/arrow-up.svg" alt="Enviar" width={13} height={13} />
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+              <button
+                type="button"
+                className={styles.imageButton}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending || !!error}
+                aria-label="Adjuntar archivo"
+              >
+                <Image
+                  src="/paperclip.svg"
+                  alt="Adjuntar"
+                  width={16}
+                  height={16}
+                  className={styles.iconInvert}
+                />
+              </button>
+              <button
+                type="submit"
+                className={styles.sendButton}
+                disabled={isSending || (!newMessage.trim() && !file) || !!error}
+                aria-label="Enviar mensaje"
+              >
+                <Image src="/arrow-up.svg" alt="Enviar" width={13} height={13} />
+              </button>
+            </div>
           </div>
         </div>
         <input
@@ -1080,6 +1025,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           hidden
           onChange={handleFileInputChange}
           aria-label="Seleccionar archivo"
+          disabled={isSending}
         />
       </form>
 

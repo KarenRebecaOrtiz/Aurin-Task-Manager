@@ -100,9 +100,9 @@ const Table = memo(
           style={{ width: 'auto', height: 'auto' }}
         />
         <div className={styles.emptyStateText}>
-          <div className={styles.emptyStateTitle}>¡Todo en orden por ahora!</div>
+          <div className={styles.emptyStateTitle}>¡Parece que aún no hay nada aquí!</div>
           <div className={styles.emptyStateSubtitle}>
-            No tienes tareas activas. ¿Por qué no comienzas creando una nueva?
+            Te haremos saber cuando haya nueva actividad, siempre puedes verlo desde tu centro de notificaciones.
           </div>
         </div>
       </div>

@@ -1,19 +1,14 @@
 'use client';
 
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import ThemeToggler from './ThemeToggler';
 import styles from './Header.module.scss';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import AvatarDropdown from '../AvatarDropdown';
-import { useRouter } from 'next/navigation';
-
-// Register GSAP ScrollToPlugin
-gsap.registerPlugin(ScrollToPlugin);
 
 // Coordenadas de la oficina y radio
 const OFFICE_LOCATION = {
@@ -103,7 +98,7 @@ interface HeaderProps {
   onNotificationClick: (notification: Notification) => void;
   onDeleteNotification: (notificationId: string) => void;
   onLimitNotifications: (notifications: Notification[]) => void;
-  onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void; // Nueva prop para cambiar contenedores
+  onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -145,6 +140,7 @@ const Header: React.FC<HeaderProps> = ({
   const [temperature, setTemperature] = useState('Cargando...');
   const [weatherIcon, setWeatherIcon] = useState<string | null>(null);
   const [officeStatus, setOfficeStatus] = useState<string>('Cargando...');
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   /* ────────────────────────────────────────────
      EFFECTS – AUDIO INIT
@@ -310,7 +306,7 @@ const Header: React.FC<HeaderProps> = ({
         setOfficeStatus('Fuera de horario');
       }
     }, 1000);
-  
+
     const getLocation = () => {
       if (typeof window === 'undefined' || !navigator.geolocation) {
         console.warn('Geolocation is not supported or not available in this environment');
@@ -320,7 +316,7 @@ const Header: React.FC<HeaderProps> = ({
         setOfficeStatus(isOfficeHours(new Date()) ? 'Geolocalización no soportada' : 'Fuera de horario');
         return;
       }
-  
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
@@ -352,79 +348,35 @@ const Header: React.FC<HeaderProps> = ({
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     };
-  
+
     getLocation();
-  
+
     return () => clearInterval(timer);
   }, []);
 
   /* ────────────────────────────────────────────
-     EFFECTS – GSAP SCROLL HANDLER
+     EFFECTS – SCROLL POSITION TRACKING
   ──────────────────────────────────────────── */
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    let isScrolling = false;
-    let targetScroll = container.scrollTop;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (isScrolling) return;
-
-      isScrolling = true;
-      targetScroll += e.deltaY * 0.5;
-      targetScroll = Math.max(0, Math.min(targetScroll, container.scrollHeight - container.clientHeight));
-
-      gsap.to(container, {
-        scrollTo: { y: targetScroll, autoKill: false },
-        duration: 0.3,
-        ease: 'power2.out',
-        onComplete: () => {
-          isScrolling = false;
-        },
-      });
+    const handleScroll = () => {
+      setScrollPosition(container.scrollTop);
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, [isNotificationsOpen]);
 
-  const getLocation = () => {
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          // Solo calcular distancia si está dentro del horario
-          if (isOfficeHours(new Date())) {
-            const distance = calculateDistance(
-              latitude,
-              longitude,
-              OFFICE_LOCATION.lat,
-              OFFICE_LOCATION.lng,
-            );
-            setOfficeStatus(distance <= OFFICE_RADIUS ? 'En la oficina' : 'Fuera de la oficina');
-          } else {
-            setOfficeStatus('Fuera de horario');
-          }
-          await fetchLocationFromGoogleMaps(latitude, longitude);
-        },
-        (error) => {
-          console.error('Error getting geolocation:', error);
-          setLocation('No se pudo obtener la ubicación');
-          setTemperature('N/A');
-          setWeatherIcon(null);
-          setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación no disponible' : 'Fuera de horario');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-      );
-    } else {
-      setLocation('Geolocalización no soportada');
-      setTemperature('N/A');
-      setWeatherIcon(null);
-      setOfficeStatus(isOfficeHours(new Date()) ? 'Geolocalización no soportada' : 'Fuera de horario');
+  /* ────────────────────────────────────────────
+     EFFECTS – RESTORE SCROLL POSITION
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (isNotificationsOpen && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollPosition;
     }
-  };
+  }, [isNotificationsOpen]);
 
   const fetchLocationFromGoogleMaps = async (lat: number, lon: number) => {
     try {
@@ -751,7 +703,6 @@ const Header: React.FC<HeaderProps> = ({
         <div ref={iconRef} className={styles.sunMoonWrapper}>
           <ThemeToggler />
         </div>
-
 
         <div className={styles.notificationContainer}>
           <button

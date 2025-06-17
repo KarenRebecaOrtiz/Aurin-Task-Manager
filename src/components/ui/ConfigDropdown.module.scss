@@ -1,0 +1,187 @@
+// src/components/ui/CustomDropdown.module.scss
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap');
+
+.dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  z-index: 3200;
+}
+
+.trigger {
+  width: 200px; // Adjustable based on context
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  background: rgba(241, 245, 249, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.9),
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+  font-size: 14px;
+  font-family: 'Inter Tight', sans-serif;
+  color: #333;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -4px -4px 10px rgba(255, 255, 255, 0.95),
+      4px 4px 10px rgba(0, 0, 0, 0.12),
+      inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+      inset 6px 6px 12px rgba(209, 217, 230, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+      inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+      -2px -2px 6px rgba(255, 255, 255, 0.85),
+      2px 2px 6px rgba(0, 0, 0, 0.06);
+  }
+
+  &.disabled {
+    background: rgba(241, 245, 249, 0.4);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  :global(.dark) & {
+    background: rgba(30, 30, 30, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #d1d5db;
+    box-shadow:
+      6px 6px 12px rgba(0, 0, 0, 0.5),
+      -6px -6px 12px rgba(255, 255, 255, 0.05),
+      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+      inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+
+    &:hover {
+      background: rgba(30, 30, 30, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        4px 4px 10px rgba(0, 0, 0, 0.6),
+        -4px -4px 10px rgba(255, 255, 255, 0.03),
+        inset -6px -6px 12px rgba(0, 0, 0, 0.45),
+        inset 6px 6px 12px rgba(255, 255, 255, 0.04);
+    }
+
+    &:active {
+      background: rgba(30, 30, 30, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 2px 2px 6px rgba(0, 0, 0, 0.35),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.02),
+        2px 2px 6px rgba(0, 0, 0, 0.45),
+        -2px -2px 6px rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    width: 180px;
+    height: 44px;
+  }
+
+  @media (max-width: 768px) {
+    width: 160px;
+    height: 40px;
+  }
+}
+
+.arrow {
+  font-size: 12px;
+}
+
+.dropdownMenu {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  z-index: 3200;
+  padding: 12px 0;
+  background: rgba(241, 245, 249, 0.7);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    -8px -8px 16px rgba(255, 255, 255, 0.9),
+    8px 8px 16px rgba(0, 0, 0, 0.15),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+  transition:
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.05),
+      8px 8px 16px rgba(0, 0, 0, 0.5),
+      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+      inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px 0;
+  }
+}
+
+.dropdownItem {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Inter Tight', sans-serif;
+  color: #333;
+  transition:
+    transform 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    background: rgba(241, 245, 249, 0.85);
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.95),
+      6px 6px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &.selected {
+    background: rgba(241, 245, 249, 0.6);
+    font-weight: 500;
+  }
+
+  :global(.dark) & {
+    color: #d1d5db;
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      box-shadow:
+        -6px -6px 12px rgba(255, 255, 255, 0.06),
+        6px 6px 12px rgba(0, 0, 0, 0.55);
+    }
+
+    &.selected {
+      background: rgba(39, 39, 42, 0.6);
+    }
+  }
+}

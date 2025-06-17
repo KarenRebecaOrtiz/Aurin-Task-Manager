@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, collection, setDoc, getDocs, addDoc } from 'firebase/firestore';
+import { doc, collection, setDoc, getDocs, addDoc, onSnapshot } from 'firebase/firestore';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Image from 'next/image';
@@ -19,8 +19,8 @@ import styles from '@/components/NewTaskStyles.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import memberStyles from '@/components/MembersTable.module.scss';
 import { Timestamp } from 'firebase/firestore';
-import SuccessAlert from './SuccessAlert'; // Import SuccessAlert
-import FailAlert from './FailAlert'; // Import FailAlert
+import SuccessAlert from './SuccessAlert';
+import FailAlert from './FailAlert';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -79,6 +79,7 @@ interface CreateTaskProps {
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
   onInviteSidebarOpen: () => void;
+  onClientAlertChange?: (alert: { type: 'success' | 'fail'; message?: string; error?: string } | null) => void;
 }
 
 const CreateTask: React.FC<CreateTaskProps> = ({
@@ -88,6 +89,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   onCreateClientOpen,
   onEditClientOpen,
   onInviteSidebarOpen,
+  onClientAlertChange,
 }) => {
   const { user } = useUser();
   const router = useRouter();
@@ -147,7 +149,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const advancedSectionRef = useRef<HTMLDivElement>(null);
   const [searchCollaborator, setSearchCollaborator] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof Task, string>>>({});
-  // State for alerts
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState('');
@@ -178,24 +179,28 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     }
   }, [isOpen, onHasUnsavedChanges]);
 
-  // Fetch clients and users
+  // Real-time clients listener
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'clients'));
-        const clientsData: Client[] = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '/default-avatar.png',
-          projects: doc.data().projects || [],
-          createdBy: doc.data().createdBy || '',
-        }));
-        setClients(clientsData);
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-      }
-    };
+    const clientsCollection = collection(db, 'clients');
+    const unsubscribe = onSnapshot(clientsCollection, (snapshot) => {
+      const clientsData: Client[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        name: doc.data().name || '',
+        imageUrl: doc.data().imageUrl || '/default-avatar.png',
+        projects: doc.data().projects || [],
+        createdBy: doc.data().createdBy || '',
+      }));
+      setClients(clientsData);
+      console.log('[CreateTask] Clients updated in real-time:', clientsData.length);
+    }, (error) => {
+      console.error('[CreateTask] Error listening to clients:', error);
+    });
 
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch users (one-time for now)
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
         const response = await fetch('/api/users');
@@ -218,10 +223,30 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         console.error('Error fetching users:', error);
       }
     };
-
-    fetchClients();
     fetchUsers();
   }, []);
+
+  // Handle alerts from ClientSidebar
+  useEffect(() => {
+    if (onClientAlertChange) {
+      const handleAlert = (alert: { type: 'success' | 'fail'; message?: string; error?: string } | null) => {
+        if (alert) {
+          if (alert.type === 'success') {
+            setShowSuccessAlert(true);
+          } else if (alert.type === 'fail') {
+            setShowFailAlert(true);
+            setFailErrorMessage(alert.error || 'Unknown error');
+          }
+        } else {
+          setShowSuccessAlert(false);
+          setShowFailAlert(false);
+          setFailErrorMessage('');
+        }
+      };
+      // Set the callback function instead of calling it directly
+      onClientAlertChange = handleAlert; // Assign the handler function to the prop
+    }
+  }, [onClientAlertChange]);
 
   // GSAP animations for container
   useEffect(() => {
@@ -575,9 +600,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           });
         }
 
-        // Show success alert
         setShowSuccessAlert(true);
-        // Reset form
         setTask({
           clientId: '',
           project: '',
@@ -602,10 +625,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         setHasUnsavedChanges(false);
         onHasUnsavedChanges(false);
         setIsSaving(false);
-        // Navigate after success
         setTimeout(() => {
           router.push('/');
-        }, 3000); // Delay navigation to allow alert to be seen
+        }, 3000);
       } catch (error: any) {
         console.error('Error saving task:', error);
         setShowFailAlert(true);
@@ -740,14 +762,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
               <div className={styles.projectSection}>
                 <div className={styles.sectionSubtitle}>Selecciona la carpeta a la que se asignará esta tarea:</div>
                 <div className={styles.dropdownContainer} ref={projectDropdownRef}>
-                  <div style={{border:'solid 1px #f2f2f3', padding :'10px', overflow: 'hidden' , borderRadius: '5px', marginTop: '5px'}}
+                  <div style={{ border: 'solid 1px #f2f2f3', padding: '10px', overflow: 'hidden', borderRadius: '5px', marginTop: '5px' }}
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
                       setIsProjectDropdownOpen(!isProjectDropdownOpen);
                     }}
                   >
-                    <span style={{fontSize: '14px', fontWeight:'500'}}>{task.project || 'Seleccionar un Proyecto'}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{task.project || 'Seleccionar un Proyecto'}</span>
                     <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
                   </div>
                   {isProjectDropdownOpen &&
@@ -811,7 +833,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
               <div className={styles.level1Grid}>
                 <div className={styles.level1Column}>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Nombre de la tarea *{errors.name && <span className={styles.error}>{errors.name}</span>}</label>
+                    <label className={styles.label}>Nombre de la tarea <span className={styles.error}>{errors.name && errors.name}</span></label>
                     <input
                       type="text"
                       className={`${styles.input} ${errors.name ? styles.errorInput : ''}`}
@@ -821,7 +843,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                     />
                   </div>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Descripción *{errors.description && <span className={styles.error}>{errors.description}</span>}</label>
+                    <label className={styles.label}>Descripción <span className={styles.error}>{errors.description && errors.description}</span></label>
                     <input
                       type="text"
                       className={`${styles.input} ${errors.description ? styles.errorInput : ''}`}
@@ -844,7 +866,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   </div>
                   <div className={styles.formRow}>
                     <div className={styles.formGroup}>
-                      <label className={styles.label}>Fecha de Inicio *{errors.startDate && <span className={styles.error}>{errors.startDate}</span>}</label>
+                      <label className={styles.label}>Fecha de Inicio <span className={styles.error}>{errors.startDate && errors.startDate}</span></label>
                       <input
                         type="text"
                         className={`${styles.input} ${errors.startDate ? styles.errorInput : ''}`}
@@ -880,7 +902,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                         )}
                     </div>
                     <div className={styles.formGroup}>
-                      <label className={styles.label}>Fecha de Finalización *{errors.endDate && <span className={styles.error}>{errors.endDate}</span>}</label>
+                      <label className={styles.label}>Fecha de Finalización <span className={styles.error}>{errors.endDate && errors.endDate}</span></label>
                       <input
                         type="text"
                         className={`${styles.input} ${errors.endDate ? styles.errorInput : ''}`}
@@ -919,7 +941,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                 </div>
                 <div className={styles.level1Column}>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Estado Inicial *{errors.status && <span className={styles.error}>{errors.status}</span>}</label>
+                    <label className={styles.label}>Estado Inicial <span className={styles.error}>{errors.status && errors.status}</span></label>
                     <div className={styles.dropdownContainer} ref={statusDropdownRef}>
                       <div
                         className={styles.dropdownTrigger}
@@ -972,7 +994,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                 </div>
                 <div className={styles.level1Column}>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Prioridad *{errors.priority && <span className={styles.error}>{errors.priority}</span>}</label>
+                    <label className={styles.label}>Prioridad <span className={styles.error}>{errors.priority && errors.priority}</span></label>
                     <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
                       <div
                         className={styles.dropdownTrigger}
@@ -1028,7 +1050,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             {/* Container 2: Team */}
             <div className={styles.section} ref={(el) => { sectionsRef.current[3] = el; }}>
               <div className={styles.sectionTitle}>2: Agregar información de equipo</div>
-              <div className={styles.sectionTitle}>Persona Encargada de la tarea: *{errors.LeadedBy && <span className={styles.error}>{errors.LeadedBy}</span>}</div>
+              <div className={styles.sectionTitle}>Persona Encargada de la tarea: <span className={styles.error}>{errors.LeadedBy && errors.LeadedBy}</span></div>
               <div className={styles.sectionSubtitle}>
                 Selecciona la persona principal responsable de la tarea. Esta persona será el punto de contacto y supervisará el progreso.
               </div>
@@ -1068,7 +1090,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                   ))}
                 </Swiper>
               </div>
-              <div className={styles.sectionTitle}>Colaboradores: *{errors.AssignedTo && <span className={styles.error}>{errors.AssignedTo}</span>}</div>
+              <div className={styles.sectionTitle}>Colaboradores: <span className={styles.error}>{errors.AssignedTo && errors.AssignedTo}</span></div>
               <div className={styles.sectionSubtitle}>
                 Agrega a los miembros del equipo que trabajarán en la tarea. Puedes incluir varios colaboradores según sea necesario.
               </div>

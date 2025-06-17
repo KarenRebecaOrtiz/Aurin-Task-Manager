@@ -35,6 +35,7 @@ import MessageSidebar from '@/components/MessageSidebar';
 import ProfileSidebar from '@/components/ProfileSidebar';
 import ProfileCard from '@/components/ProfileCard';
 import ConfigPage from '@/components/ConfigPage';
+import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
@@ -43,8 +44,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Dock from '@/components/Dock';
 
 // Define types
-type SelectorContainer = 'tareas' | 'cuentas' | 'miembros'; // Matches Selector.tsx Container type
-type Container = SelectorContainer | 'config'; // Includes 'config' for TasksPage
+type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
+type Container = SelectorContainer | 'config';
 
 interface Client {
   id: string;
@@ -589,9 +590,17 @@ export default function TasksPage() {
 
   const handleMessageSidebarOpen = useCallback((userData: User) => {
     if (!user?.id || !userData?.id) {
-      console.error('No authenticated user or invalid user data, cannot open message sidebar');
+      console.error('[TasksPage] No authenticated user or invalid user data, cannot open message sidebar:', {
+        senderId: user?.id,
+        receiverId: userData?.id,
+      });
       return;
     }
+    console.log('[TasksPage] Opening MessageSidebar for user:', {
+      senderId: user.id,
+      receiver: userData,
+      conversationId: [user.id, userData.id].sort().join('_'),
+    });
     setOpenSidebars((prev) => [
       ...prev,
       { id: uuidv4(), type: 'message', data: userData },
@@ -603,6 +612,8 @@ export default function TasksPage() {
       const selectedUser = users.find((u) => u.id === receiverId);
       if (selectedUser) {
         handleMessageSidebarOpen(selectedUser);
+      } else {
+        console.warn('[TasksPage] User not found for receiverId:', receiverId);
       }
     },
     [users, handleMessageSidebarOpen],
@@ -610,12 +621,14 @@ export default function TasksPage() {
 
   const handleCloseSidebar = useCallback((sidebarId: string) => {
     setOpenSidebars((prev) => prev.filter((sidebar) => sidebar.id !== sidebarId));
+    console.log('[TasksPage] Closed sidebar:', sidebarId);
   }, []);
 
   const handleNotificationClick = useCallback(
     async (notification: Notification) => {
       try {
         await updateDoc(doc(db, 'notifications', notification.id), { read: true });
+        console.log('[TasksPage] Notification marked as read:', notification.id);
         if (notification.type === 'private_message' && notification.conversationId && user?.id) {
           const receiverId = notification.userId === user.id ? notification.recipientId : notification.userId;
           handleOpenSidebar(receiverId);
@@ -623,10 +636,12 @@ export default function TasksPage() {
           const task = tasks.find((t) => t.id === notification.taskId);
           if (task) {
             handleChatSidebarOpen(task);
+          } else {
+            console.warn('[TasksPage] Task not found for notification:', notification.taskId);
           }
         }
       } catch (err) {
-        console.error('Error handling notification click:', err);
+        console.error('[TasksPage] Error handling notification click:', err);
       }
     },
     [user?.id, tasks, handleOpenSidebar, handleChatSidebarOpen],
@@ -643,6 +658,7 @@ export default function TasksPage() {
         setIsEditTaskOpen(false);
         setEditTaskId(null);
       }
+      console.log('[TasksPage] Container changed to:', newContainer);
     },
     [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges, selectedContainer],
   );
@@ -656,20 +672,24 @@ export default function TasksPage() {
       setIsConfirmExitOpen(false);
       setPendingContainer(null);
       setHasUnsavedChanges(false);
+      console.log('[TasksPage] Confirmed exit to container:', pendingContainer);
     }
   }, [pendingContainer]);
 
   const handleCancelExit = useCallback(() => {
     setIsConfirmExitOpen(false);
     setPendingContainer(null);
+    console.log('[TasksPage] Cancelled exit');
   }, []);
 
   const handleOpenProfile = useCallback((user: { id: string; imageUrl: string }) => {
     setSelectedProfileUser(user);
+    console.log('[TasksPage] Opening profile for user:', user.id);
   }, []);
 
   const handleCloseProfile = useCallback(() => {
     setSelectedProfileUser(null);
+    console.log('[TasksPage] Closed profile');
   }, []);
 
   return (
@@ -691,77 +711,96 @@ export default function TasksPage() {
       <OnboardingStepper />
       <div ref={selectorRef} className={styles.selector}>
         <Selector
-          selectedContainer={selectedContainer as SelectorContainer} // Cast to SelectorContainer
-          setSelectedContainer={(c: SelectorContainer) => handleContainerChange(c)} // Restrict to SelectorContainer
+          selectedContainer={selectedContainer as SelectorContainer}
+          setSelectedContainer={(c: SelectorContainer) => handleContainerChange(c)}
           options={[
-            { value: 'tareas', label: 'Tareas' },
+            { value: 'tareas', label: 'Inicio' },
             { value: 'cuentas', label: 'Cuentas' },
             { value: 'miembros', label: 'Miembros' },
           ]}
         />
       </div>
-      <div ref={contentRef} className={styles.content}>
-        {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && (
-          <TasksTable
-            tasks={memoizedTasks}
-            clients={memoizedClients}
-            onCreateClientOpen={handleCreateClientOpen}
-            onInviteMemberOpen={handleInviteSidebarOpen}
-            onNewTaskOpen={handleNewTaskOpen}
-            onEditTaskOpen={handleEditTaskOpen}
-            onAISidebarOpen={handleAISidebarOpen}
-            onChatSidebarOpen={handleChatSidebarOpen}
-            setTasks={setTasks}
-            onOpenProfile={handleOpenProfile}
-          />
-        )}
-        {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
-          <ClientsTable
-            clients={memoizedClients}
-            onCreateOpen={handleCreateClientOpen}
-            onEditOpen={handleEditClientOpen}
-            onDeleteOpen={handleDeleteClientOpen}
-            setClients={setClients}
-          />
-        )}
-        {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
-          <MembersTable
-            users={memoizedUsers}
-            tasks={memoizedTasks}
-            onInviteSidebarOpen={handleInviteSidebarOpen}
-            onProfileSidebarOpen={setIsProfileSidebarOpen}
-            onMessageSidebarOpen={handleMessageSidebarOpen}
-            setUsers={setUsers}
-          />
-        )}
-        {selectedContainer === 'config' && !isCreateTaskOpen && !isEditTaskOpen && (
-          <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')} />
-        )}
-        {isCreateTaskOpen && (
-          <CreateTask
-            isOpen={isCreateTaskOpen}
-            onToggle={() => setIsCreateTaskOpen(false)}
-            onHasUnsavedChanges={setHasUnsavedChanges}
-            onCreateClientOpen={handleCreateClientOpen}
-            onEditClientOpen={handleEditClientOpen}
-            onInviteSidebarOpen={handleInviteSidebarOpen}
-          />
-        )}
-        {isEditTaskOpen && editTaskId && (
-          <EditTask
-            isOpen={isEditTaskOpen}
-            onToggle={() => {
-              setIsEditTaskOpen(false);
-              setEditTaskId(null);
-            }}
-            taskId={editTaskId}
-            onHasUnsavedChanges={setHasUnsavedChanges}
-            onCreateClientOpen={handleCreateClientOpen}
-            onEditClientOpen={handleEditClientOpen}
-            onInviteSidebarOpen={handleInviteSidebarOpen}
-          />
-        )}
-      </div>
+      <CursorProvider>
+        <div ref={contentRef} className={styles.content}>
+          {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && (
+            <TasksTable
+              tasks={memoizedTasks}
+              clients={memoizedClients}
+              users={memoizedUsers}
+              onCreateClientOpen={handleCreateClientOpen}
+              onInviteMemberOpen={handleInviteSidebarOpen}
+              onNewTaskOpen={handleNewTaskOpen}
+              onEditTaskOpen={handleEditTaskOpen}
+              onAISidebarOpen={handleAISidebarOpen}
+              onChatSidebarOpen={handleChatSidebarOpen}
+              onMessageSidebarOpen={handleMessageSidebarOpen} // Added prop
+              setTasks={setTasks}
+              onOpenProfile={handleOpenProfile}
+            />
+          )}
+          {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
+            <ClientsTable
+              clients={memoizedClients}
+              onCreateOpen={handleCreateClientOpen}
+              onEditOpen={handleEditClientOpen}
+              onDeleteOpen={handleDeleteClientOpen}
+              setClients={setClients}
+            />
+          )}
+          {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
+            <MembersTable
+              users={memoizedUsers}
+              tasks={memoizedTasks}
+              onInviteSidebarOpen={handleInviteSidebarOpen}
+              onProfileSidebarOpen={setIsProfileSidebarOpen}
+              onMessageSidebarOpen={handleMessageSidebarOpen}
+              setUsers={setUsers}
+            />
+          )}
+          {selectedContainer === 'config' && !isCreateTaskOpen && !isEditTaskOpen && (
+            <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')} />
+          )}
+          {isCreateTaskOpen && (
+            <CreateTask
+              isOpen={isCreateTaskOpen}
+              onToggle={() => setIsCreateTaskOpen(false)}
+              onHasUnsavedChanges={setHasUnsavedChanges}
+              onCreateClientOpen={handleCreateClientOpen}
+              onEditClientOpen={handleEditClientOpen}
+              onInviteSidebarOpen={handleInviteSidebarOpen}
+            />
+          )}
+          {isEditTaskOpen && editTaskId && (
+            <EditTask
+              isOpen={isEditTaskOpen}
+              onToggle={() => {
+                setIsEditTaskOpen(false);
+                setEditTaskId(null);
+              }}
+              taskId={editTaskId}
+              onHasUnsavedChanges={setHasUnsavedChanges}
+              onCreateClientOpen={handleCreateClientOpen}
+              onEditClientOpen={handleEditClientOpen}
+              onInviteSidebarOpen={handleInviteSidebarOpen}
+            />
+          )}
+        </div>
+        <Cursor>
+          <svg
+            className={styles.cursorIcon}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 40 40"
+          >
+            <path
+              fill="currentColor"
+              d="M1.8 4.4 7 36.2c.3 1.8 2.6 2.3 3.6.8l3.9-5.7c1.7-2.5 4.5-4.1 7.5-4.3l6.9-.5c1.8-.1 2.5-2.4 1.1-3.5L5 2.5c-1.4-1.1-3.5 0-3.3 1.9Z"
+            />
+          </svg>
+        </Cursor>
+        <CursorFollow>
+          <div className={styles.cursorFollowContent}>{user?.fullName || 'Usuario'}</div>
+        </CursorFollow>
+      </CursorProvider>
       {isDeleteClientOpen && isAdmin && (
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={deletePopupRef}>

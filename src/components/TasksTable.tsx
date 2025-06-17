@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
+import avatarStyles from './ui/AvatarGroup.module.scss';
 import { getAuth } from 'firebase/auth';
 import UserSwiper from '@/components/UserSwiper';
 
@@ -18,6 +19,13 @@ interface Client {
   id: string;
   name: string;
   imageUrl: string;
+}
+
+interface User {
+  id: string;
+  imageUrl: string;
+  fullName: string;
+  role: string;
 }
 
 interface Task {
@@ -36,15 +44,60 @@ interface Task {
   CreatedBy?: string;
 }
 
+interface AvatarGroupProps {
+  assignedUserIds: string[];
+  users: User[];
+  currentUserId: string;
+}
+
+const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, currentUserId }) => {
+  const avatars = useMemo(() => {
+    if (!Array.isArray(users)) {
+      console.warn('[AvatarGroup] Users prop is not an array:', users);
+      return [];
+    }
+    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id)).slice(0, 5);
+    return matchedUsers.sort((a, b) => {
+      if (a.id === currentUserId) return -1;
+      if (b.id === currentUserId) return 1;
+      return 0;
+    });
+  }, [assignedUserIds, users, currentUserId]);
+
+  return (
+    <div className={avatarStyles.avatarGroup}>
+      {avatars.length > 0 ? (
+        avatars.map((user) => (
+          <div key={user.id} className={avatarStyles.avatar}>
+            <span className={avatarStyles.avatarName}>{user.fullName}</span>
+            <img
+              src={user.imageUrl || '/default-avatar.png'}
+              alt={`${user.fullName}'s avatar`}
+              className={avatarStyles.avatarImage}
+              onError={(e) => {
+                e.currentTarget.src = '/default-avatar.png';
+              }}
+            />
+          </div>
+        ))
+      ) : (
+        <span>No asignados</span>
+      )}
+    </div>
+  );
+};
+
 interface TasksTableProps {
   tasks: Task[];
   clients: Client[];
+  users: User[];
   onCreateClientOpen: () => void;
   onInviteMemberOpen: () => void;
   onNewTaskOpen: () => void;
   onEditTaskOpen: (taskId: string) => void;
   onAISidebarOpen: () => void;
   onChatSidebarOpen: (task: Task) => void;
+  onMessageSidebarOpen: (user: User) => void; // Added for UserSwiper
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
 }
@@ -53,12 +106,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(
   ({
     tasks,
     clients,
+    users,
     onCreateClientOpen,
     onInviteMemberOpen,
     onNewTaskOpen,
     onEditTaskOpen,
     onAISidebarOpen,
     onChatSidebarOpen,
+    onMessageSidebarOpen,
     setTasks,
     onOpenProfile,
   }) => {
@@ -470,12 +525,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         setDeleteTaskId(null);
       } catch (error) {
         console.error('[TasksTable] Error deleting task:', {
-          error: error.message,
+          error: error instanceof Error ? error.message : JSON.stringify(error),
           taskId: deleteTaskId,
           userId,
           isAdmin,
         });
-        alert(`Error al eliminar la tarea: ${error.message || 'Inténtalo de nuevo.'}`);
+        alert(`Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
         setIsDeletePopupOpen(false);
         setDeleteConfirm('');
         setDeleteTaskId(null);
@@ -506,13 +561,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'name',
         label: 'Tarea',
-        width: '50%',
+        width: '30%',
+        mobileVisible: true,
+      },
+      {
+        key: 'assignedTo',
+        label: 'Asignados',
+        width: '20%',
         mobileVisible: true,
       },
       {
         key: 'status',
         label: 'Estado',
-        width: '30%',
+        width: '20%',
         mobileVisible: true,
       },
       {
@@ -553,6 +614,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 }}
               />
             ) : 'Sin cuenta';
+          },
+        };
+      }
+      if (col.key === 'assignedTo') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            console.log('[TasksTable] Rendering assignedTo column:', {
+              taskId: task.id,
+              assignedUserIds: task.AssignedTo,
+              currentUserId: userId,
+            });
+            return <AvatarGroup assignedUserIds={task.AssignedTo} users={users} currentUserId={userId} />;
           },
         };
       }
@@ -671,7 +745,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     return (
       <div className={styles.container}>
-        <UserSwiper onOpenProfile={onOpenProfile} />
+        <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
         <div className={styles.header}>
           <div className={styles.searchWrapper}>
             <input
@@ -802,7 +876,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 <div className={styles.deletePopupActions}>
                   <button
                     className={styles.deleteConfirmButton}
-                    onClick={(e) => {
+                    onClick={() => {
                       console.log('[TasksTable] Confirm delete button clicked:', {
                         taskId: deleteTaskId,
                         deleteConfirm,
