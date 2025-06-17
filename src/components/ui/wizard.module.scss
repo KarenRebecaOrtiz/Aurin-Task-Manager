@@ -1,0 +1,84 @@
+@import "@/app/styles/_variables.scss";
+
+.wizardContainer {
+  font-family: 'Urbanist', sans-serif;
+}
+
+.wizardStep {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.wizardProgress {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.wizardProgressDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: $zinc-300;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.wizardProgressDot.active {
+  background: $primary;
+}
+
+.wizardProgressDot.completed {
+  background: $primary;
+  opacity: 0.7;
+}
+
+.wizardButtons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.wizardButton {
+  @include neu-surface($white, 4, 12px);
+  padding: 12px 24px;
+  border: none;
+  color: $zinc-950;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.wizardButton:hover:not(:disabled) {
+  background: $zinc-100;
+  transform: translateY(-2px);
+}
+
+.wizardButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wizardButton img {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 767px) {
+  .wizardButtons {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .wizardButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

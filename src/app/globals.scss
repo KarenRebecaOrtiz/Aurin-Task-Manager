@@ -6,17 +6,31 @@
   box-sizing: border-box;
 }
 
+/* app/globals.css */
 
 :root {
-  --background: transparent;
-  --text-primary: #0D0D0D;
-  --text-secondary: #71717A;
-  --button-bg: transparent;
-  --button-bg-active: #F7F7F7;
-  --button-bg-hover: #E5E5E5;
-  --header-bg: transparent;
+  --primary: #4CAF50;
+  --background: #FFFFFF;
+  --foreground: #121212;
+  --border: #D1D5DB;
+  --radius: 0.5rem;
 }
 
+[data-theme='dark'] {
+  --background: #1F2937;
+  --foreground: #F9FAFB;
+  --border: #4B5563;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Urbanist', sans-serif;
+}
 .dark {
   --background: #0D0D0D;
   --text-primary: #FFFFFF;

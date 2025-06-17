@@ -21,31 +21,80 @@ const Dock: React.FC = () => {
   const dockRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
   const isVisible = useRef(true);
+  const isTemporarilyHidden = useRef(false); // Track temporary hide on scroll
 
+  // Load visibility from localStorage on mount
   useEffect(() => {
-    // Initial animation: slide in from above
-    gsap.fromTo(
-      dockRef.current,
-      { y: -100, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
-    );
+    try {
+      const savedVisibility = localStorage.getItem('dockIsVisible');
+      if (savedVisibility !== null) {
+        const parsedVisibility = JSON.parse(savedVisibility);
+        isVisible.current = parsedVisibility;
+        if (dockRef.current) {
+          gsap.set(dockRef.current, {
+            y: parsedVisibility ? 0 : 100,
+            opacity: parsedVisibility ? 1 : 0,
+          });
+        }
+      } else {
+        // Initial animation if no saved state
+        gsap.fromTo(
+          dockRef.current,
+          { y: -100, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
+        );
+      }
+    } catch (error) {
+      console.error('Error loading visibility from localStorage:', error);
+    }
+  }, []);
 
-    // Scroll handler
+  // Handle Cmd + K or Ctrl + K to toggle visibility
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault();
+        isVisible.current = !isVisible.current;
+        isTemporarilyHidden.current = false; // Reset temporary hide state
+        gsap.to(dockRef.current, {
+          y: isVisible.current ? 0 : 100,
+          opacity: isVisible.current ? 1 : 0,
+          duration: 0.4,
+          ease: isVisible.current ? 'power2.out' : 'power2.in',
+        });
+        try {
+          localStorage.setItem('dockIsVisible', JSON.stringify(isVisible.current));
+        } catch (error) {
+          console.error('Error saving visibility to localStorage:', error);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // Handle scroll-based visibility only when isVisible is true
+  useEffect(() => {
     const handleScroll = () => {
+      if (!isVisible.current) return; // Ignore scroll if permanently hidden
+
       const currentScrollY = window.scrollY;
 
-      if (currentScrollY > lastScrollY.current && isVisible.current) {
-        // Scroll down: hide dock
+      if (currentScrollY > lastScrollY.current && !isTemporarilyHidden.current) {
+        // Scroll down: temporarily hide dock
         gsap.to(dockRef.current, {
           y: 100,
           opacity: 0,
           duration: 0.4,
           ease: 'power2.in',
           onComplete: () => {
-            isVisible.current = false;
+            isTemporarilyHidden.current = true;
           },
         });
-      } else if (currentScrollY < lastScrollY.current && !isVisible.current) {
+      } else if (currentScrollY < lastScrollY.current && isTemporarilyHidden.current) {
         // Scroll up: show dock
         gsap.to(dockRef.current, {
           y: 0,
@@ -53,7 +102,7 @@ const Dock: React.FC = () => {
           duration: 0.4,
           ease: 'power2.out',
           onComplete: () => {
-            isVisible.current = true;
+            isTemporarilyHidden.current = false;
           },
         });
       }

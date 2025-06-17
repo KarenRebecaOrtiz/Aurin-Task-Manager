@@ -1,4 +1,4 @@
-'use client';
+"use client"
 
 import * as React from 'react';
 import {
@@ -41,9 +41,35 @@ interface CursorProviderProps extends React.HTMLAttributes<HTMLDivElement> {
 const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) => {
   const [cursorPos, setCursorPos] = React.useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = React.useState(false);
-  const [isCursorEnabled, setIsCursorEnabled] = React.useState(true); // State for cursor toggle
+  const [isCursorEnabled, setIsCursorEnabled] = React.useState(true);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cursorRef = React.useRef<HTMLDivElement>(null);
+  const lastScrollY = React.useRef(0);
+  const isTemporarilyHidden = React.useRef(false);
+
+  // Load cursor visibility from localStorage on mount
+  React.useEffect(() => {
+    try {
+      const savedVisibility = localStorage.getItem('cursorIsEnabled');
+      if (savedVisibility !== null) {
+        const parsedVisibility = JSON.parse(savedVisibility);
+        setIsCursorEnabled(parsedVisibility);
+        console.log('[CursorProvider] Loaded cursor visibility from localStorage:', parsedVisibility);
+      }
+    } catch (error) {
+      console.error('[CursorProvider] Error loading cursor visibility from localStorage:', error);
+    }
+  }, []);
+
+  // Save cursor visibility to localStorage whenever it changes
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('cursorIsEnabled', JSON.stringify(isCursorEnabled));
+      console.log('[CursorProvider] Saved cursor visibility to localStorage:', isCursorEnabled);
+    } catch (error) {
+      console.error('[CursorProvider] Error saving cursor visibility to localStorage:', error);
+    }
+  }, [isCursorEnabled]);
 
   // Handle Cmd+Shift+L or Ctrl+Shift+L to toggle cursor
   React.useEffect(() => {
@@ -64,22 +90,51 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
         defaultPrevented: event.defaultPrevented,
       });
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
-        event.preventDefault(); // Prevent browser defaults
+        event.preventDefault();
         console.log('[CursorProvider] Cmd/Ctrl+Shift+L pressed, toggling cursor. Current state:', isCursorEnabled);
         setIsCursorEnabled((prev) => {
           const newState = !prev;
+          isTemporarilyHidden.current = false; // Reset temporary hide state
           console.log('[CursorProvider] New cursor state:', newState);
           return newState;
         });
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown, { capture: true }); // Use capture phase
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => {
       console.log('[CursorProvider] Cleaning up keydown listener');
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
-  }, []); // Empty dependency array to run once
+  }, []);
+
+  // Handle scroll-based visibility when isCursorEnabled is true
+  React.useEffect(() => {
+    if (!isCursorEnabled) return; // Ignore scroll if cursor is permanently disabled
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY > lastScrollY.current && !isTemporarilyHidden.current) {
+        // Scroll down: temporarily hide cursor
+        setIsActive(false);
+        isTemporarilyHidden.current = true;
+        console.log('[CursorProvider] Scroll down, temporarily hiding cursor');
+      } else if (currentScrollY < lastScrollY.current && isTemporarilyHidden.current) {
+        // Scroll up: show cursor
+        setIsActive(true);
+        isTemporarilyHidden.current = false;
+        console.log('[CursorProvider] Scroll up, showing cursor');
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isCursorEnabled]);
 
   React.useEffect(() => {
     if (!containerRef.current) {
@@ -99,19 +154,20 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
     }
 
     const handleMouseMove = (e: MouseEvent) => {
+      if (!isCursorEnabled || isTemporarilyHidden.current) return; // Ignore mouse move if hidden
       const rect = parent.getBoundingClientRect();
       setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       setIsActive(true);
     };
     const handleMouseLeave = () => {
+      if (!isCursorEnabled) return;
       setIsActive(false);
     };
 
     parent.addEventListener('mousemove', handleMouseMove);
     parent.addEventListener('mouseleave', handleMouseLeave);
 
-    // Reset cursor style based on isCursorEnabled
-    parent.style.cursor = isCursorEnabled && isActive ? 'none' : 'default';
+    parent.style.cursor = isCursorEnabled && isActive && !isTemporarilyHidden.current ? 'none' : 'default';
     console.log('[CursorProvider] Cursor style set to:', parent.style.cursor);
 
     return () => {

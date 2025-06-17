@@ -1,93 +1,104 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
-// 1. PALETA Y VARIABLES BÁSICAS
+// 1. COLOR PALETTE
 $white: #FFFFFF;
-$zinc-50: #F9FAFB;
-$zinc-100: #F4F4F5;
-$zinc-200: #E4E4E7;
-$zinc-300: #D4D4D8;
-$zinc-500: #71717A;
-$zinc-800: #27272A;
-$zinc-900: #18181B;
-$zinc-950: #09090B;
-$black: #000000;
-$text-light: #1A1A1A;
-$text-dark: #D1D1D1;
+$black: #0F172A;
+$zinc-50: #F1F5F9;
+$zinc-900: #27272A;
+$text-light: #0F172A;
+$text-dark: #E5E7EB;
 $primary: #164C22;
 $red-500: #EF4444;
+$border-light: rgba(255, 255, 255, 0.2);
+$border-dark: rgba(255, 255, 255, 0.1);
 
-// 2. MIXINS NEUMORFISTAS
-@mixin neu-surface($bg: #F1F5F9, $intensity: 8, $radius: 18px) {
+// 2. CRYSTALLIZED MIXINS
+@mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 10px) {
   background: $bg;
   border-radius: $radius;
+  border: 1px solid $border-light;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   box-shadow:
-    -#{$intensity}px -#{$intensity}px #{2*$intensity}px lighten($bg, 6%),
-     #{$intensity}px  #{$intensity}px #{2*$intensity}px rgba(0, 0, 0, .08);
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
 }
 
-@mixin neu-inset($bg: #F1F5F9, $intensity: 4, $radius: 6px) {
+@mixin crystal-hover {
+  transform: translateY(-2px) scale(1.02);
+  background: rgba(241, 245, 249, 0.85);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.9),
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+@mixin crystal-active {
+  transform: scale(0.98);
+  background: rgba(241, 245, 249, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    inset 2px 2px 6px rgba(0, 0, 0, 0.1),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.3),
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+@mixin crystal-dark($bg: rgba(39, 39, 42, 0.7)) {
   background: $bg;
-  border-radius: $radius;
+  border-color: $border-dark;
   box-shadow:
-    inset -#{$intensity}px -#{$intensity}px #{2*$intensity}px lighten($bg, 4%),
-    inset  #{$intensity}px  #{$intensity}px #{2*$intensity}px rgba(0,0,0,.05);
+    inset -2px -2px 4px rgba(0, 0, 0, 0.7),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.03),
+    -4px -4px 8px rgba(0, 0, 0, 0.6),
+    4px 4px 8px rgba(255, 255, 255, 0.02);
 }
 
-// 3. DARK MODE GLOBAL
-:global(body.dark) {
-  background: $zinc-900;
-  color: $text-dark;
-
-  .container {
-    @include neu-surface($zinc-900, 8);
-  }
-
-  .input,
-  .dropdownTrigger,
-  .currencyInput {
-    @include neu-inset($zinc-900, 4);
-    color: $text-dark;
-    border: none;
-  }
-
-  .slideCard {
-    @include neu-surface($zinc-900, 6, 20px);
-    color: $text-dark;
-
-    &.selected {
-      background: $zinc-800;
-      box-shadow:
-        -6px -6px 12px rgba(255,255,255,.03),
-         6px  6px 12px rgba(0,0,0,.4);
-    }
-  }
-
-  .dropdownItems,
-  .dropdown {
-    background: $zinc-900;
-    border: 1px solid rgba(255,255,255,.05);
-  }
+// 3. SPLIDE STYLES
+.slideshow {
+  padding: 0.5rem 0;
+  overflow-x: hidden;
+  margin: 0 auto;
+  max-width: 100%;
 }
 
-// 4. CONTENEDOR PRINCIPAL
+.splide {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.splide__track {
+  overflow-x: hidden;
+}
+
+.splideSlide {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  width: auto !important;
+  height: auto;
+}
+
+// 4. MAIN CONTAINER
 .container {
-  @include neu-surface();
+  @include crystal-surface();
   width: 100%;
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 40px;
-  font-family: 'Inter Tight', sans-serif;
+  gap: 24px;
   position: relative;
 
-  &.saving {
-    .section { opacity: .5; }
-  }
+  &.saving .section { opacity: 0.5; }
+  &.open { opacity: 1; height: auto; }
 
-  &.open {
-    opacity: 1;
-    height: auto;
-  }
+  :global(body.dark) & { @include crystal-dark(); }
 }
 
 // 5. LOADER OVERLAY
@@ -97,15 +108,15 @@ $red-500: #EF4444;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(255,255,255,.8);
+  background: rgba(255, 255, 255, 0.8);
   z-index: 120000;
 
-  :global(body.dark) & { background: rgba(0,0,0,.6); }
+  :global(body.dark) & { background: rgba(0, 0, 0, 0.6); }
 }
 
 .loader {
-  border: 4px solid $zinc-200;
-  border-top: 4px solid $black;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid $primary;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -113,86 +124,113 @@ $red-500: #EF4444;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 // 6. HEADER
 .header {
-  padding: 20px 40px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  gap: 16px;
+
+  @media (max-width: 819px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .headerTitle {
-  color: $zinc-950;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
+  color: $black;
+
+  :global(body.dark) & { color: $text-dark; }
 }
 
 .toggleButton {
-  background: none;
+  @include crystal-surface();
+  padding: 8px 16px;
   border: none;
   cursor: pointer;
-  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-light;
+
+  &:hover { @include crystal-hover; }
+  &:active { @include crystal-active; }
+
+  :global(body.dark) & {
+    @include crystal-dark();
+    color: $text-dark;
+
+    &:hover { background: rgba(39, 39, 42, 0.85); }
+    &:active { background: rgba(39, 39, 42, 0.6); }
+  }
 }
 
-// 7. CONTENIDO / SECTIONS
+// 7. CONTENT
 .content {
-  padding: 15px 40px;
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 24px;
+  padding: 20px;
 }
 
+// 8. SECTIONS
 .section {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  padding: 24px;
+  gap: 16px;
+
+  :global(body.dark) & { @include crystal-dark(); }
 }
 
 .sectionTitle {
-  color: $primary;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
+  color: $primary;
 }
 
 .sectionSubtitle {
-  color: $zinc-800;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
+  color: $black;
+
+  :global(body.dark) & { color: $text-dark; }
 }
 
-// 8. SLIDESHOW Y TARJETAS
-.slideshow {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
+// 9. SLIDE CARDS
 .slideCard {
-  @include neu-surface($white, 6, 20px);
-  flex: 0 0 150px;
-  padding: 16px 12px;
+  @include crystal-surface();
+  width: 10vw;
+  min-width: 140px;
+  height: auto;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 11px;
+  gap: 8px;
   cursor: pointer;
-  transition: box-shadow .2s ease, transform .2s ease;
+  border-radius: 12px;
 
-  &:hover {
-    transform: translateY(-4px);
+  &:hover { @include crystal-hover; }
+  &:active { @include crystal-active; }
+  &[role="button"]:focus {
+    outline: 2px solid $primary;
+    outline-offset: 2px;
   }
 
   &.selected {
-    background: $black;
+    background: rgba(0, 0, 0, 0.8);
     color: $white;
-    box-shadow:
-      -4px -4px 10px rgba(255,255,255,.06),
-       4px  4px 10px rgba(0,0,0,.45);
+    border-color: $border-dark;
+
+    .clientName,
+    .userName,
+    .userRole { color: $white; }
   }
 
   .clientImage,
@@ -200,159 +238,256 @@ $red-500: #EF4444;
     width: 36px;
     height: 36px;
     border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 2px solid $zinc-50;
   }
 
   .clientName,
   .userName {
-    color: $text-light;
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 500;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .userRole {
-    color: $text-light;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 400;
     text-align: center;
   }
 
   :global(body.dark) & {
+    @include crystal-dark();
     .clientName,
     .userName,
-    .userRole {
-      color: $text-dark;
-    }
+    .userRole { color: $text-dark; }
+    &.selected { background: rgba(255, 255, 255, 0.1); }
+  }
+
+  // Responsive card widths
+  @media (max-width: 480px) {
+    width: 35vw;
+    min-width: 160px;
+    padding: 0.6rem;
+  }
+
+  @media (min-width: 481px) and (max-width: 520px) {
+    width: 32vw;
+    min-width: 170px;
+    padding: 0.7rem;
+  }
+
+  @media (min-width: 521px) and (max-width: 668px) {
+    width: 30vw;
+    min-width: 180px;
+    padding: 0.75rem;
+  }
+
+  @media (min-width: 669px) and (max-width: 769px) {
+    width: 28vw;
+    min-width: 190px;
+    padding: 0.8rem;
+  }
+
+  @media (min-width: 770px) and (max-width: 968px) {
+    width: 28vw;
+    min-width: 200px;
+    padding: 0.9rem;
+  }
+
+  @media (min-width: 969px) and (max-width: 1024px) {
+    width: 22vw;
+    min-width: 210px;
+    padding: 1rem;
+  }
+
+  @media (min-width: 1025px) and (max-width: 1200px) {
+    width: 20vw;
+    min-width: 220px;
+  }
+
+  @media (min-width: 1201px) and (max-width: 1500px) {
+    width: 18vw;
+    min-width: 230px;
+  }
+
+  @media (min-width: 1501px) and (max-width: 1800px) {
+    width: 16vw;
+    min-width: 240px;
+  }
+
+  @media (min-width: 1801px) {
+    width: 14vw;
+    min-width: 250px;
   }
 }
 
-// 9. INPUTS Y DROPDOWNS
+// 10. FORM ELEMENTS
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  position: relative;
+  gap: 8px;
 }
 
 .label {
-  color: $black;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  color: $black;
   display: flex;
-  gap: 5px;
   align-items: center;
+  gap: 4px;
+
+  :global(body.dark) & { color: $text-dark; }
 }
 
 .error {
-  color: $red-500;
   font-size: 12px;
   font-weight: 400;
+  color: $red-500;
 }
 
 .input {
+  @include crystal-surface();
   width: 100%;
-  height: 40px;
-  padding: 8px 12px;
-  @include neu-inset();
-  color: $zinc-950;
-  font-size: 12px;
+  height: 48px;
+  padding: 12px 16px;
+  font-size: 14px;
   font-weight: 500;
-  font-family: 'Inter Tight', sans-serif;
+  color: $text-light;
   border: none;
 
-  &::placeholder {
-    color: $zinc-500;
-  }
+  &::placeholder { color: #A0A0A0; font-weight: 400; }
+  &.errorInput { border: 1px solid $red-500; }
 
-  &.errorInput {
-    border: 1px solid $red-500;
+  &:hover { @include crystal-hover; }
+  &:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 4px rgba(59, 177, 246, 0.18);
   }
+  &:active { @include crystal-active; }
 
   :global(body.dark) & {
+    @include crystal-dark();
     color: $text-dark;
+
+    &:hover { background: rgba(39, 39, 42, 0.85); }
+    &:focus { box-shadow: 0 0 0 4px rgba(59, 191, 246, 0.4); }
+    &:active { background: rgba(39, 39, 42, 0.6); }
   }
+
+  @media (max-width: 1024px) { height: 44px; padding: 10px 14px; font-size: 13px; }
+  @media (max-width: 768px) { height: 40px; padding: 8px 12px; font-size: 12px; }
 }
 
-.dropdownContainer {
-  position: relative;
+// 11. DROPDOWNS
+.dropdownContainer { 
+  position: relative; 
 }
 
 .dropdownTrigger {
-  @include neu-inset();
+  @include crystal-surface();
   width: 100%;
-  height: 40px;
-  padding: 8px 12px;
+  height: 48px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-light;
 
-  span {
-    color: $zinc-950;
-    font-size: 12px;
-    font-weight: 500;
-  }
+  span { color: inherit; }
 
-  :global(body.dark) & span {
+  &:hover { @include crystal-hover; }
+  &:active { @include crystal-active; }
+
+  :global(body.dark) & {
+    @include crystal-dark();
     color: $text-dark;
+
+    &:hover { background: rgba(39, 39, 42, 0.85); }
+    &:active { background: rgba(39, 39, 42, 0.6); }
   }
+
+  @media (max-width: 1024px) { height: 44px; padding: 10px 14px; font-size: 13px; }
+  @media (max-width: 768px) { height: 40px; padding: 8px 12px; font-size: 12px; }
 }
 
 .dropdownItems,
 .dropdown {
+  @include crystal-surface();
   position: absolute;
   top: 100%;
   left: 0;
-  width: 100%;
   max-height: 200px;
   overflow-y: auto;
-  background: $white;
-  border: 1px solid $zinc-200;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  padding: 8px 0;
   z-index: 150000;
 
   .dropdownItem {
-    padding: 12px;
-    cursor: pointer;
-    font-size: 12px;
+    padding: 10px 16px;
+    font-size: 13px;
     font-weight: 500;
-    color: $zinc-950;
-    transition: background .2s ease;
+    color: $text-light;
+    cursor: pointer;
+    margin: 2px 4px;
+    border-radius: 8px;
 
-    &:hover {
-      background: $zinc-100;
-    }
-
-    &.disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
+    &:hover { @include crystal-hover; }
+    &:active { @include crystal-active; }
+    &.disabled { opacity: 0.5; cursor: not-allowed; }
 
     :global(body.dark) & {
       color: $text-dark;
-
-      &:hover {
-        background: $zinc-800;
-      }
+      &:hover { background: rgba(39, 39, 42, 0.85); }
+      &:active { background: rgba(39, 39, 42, 0.6); }
     }
+  }
+
+  :global(body.dark) & { @include crystal-dark(); }
+
+  @media (max-width: 1024px) { padding: 6px 0; }
+  @media (max-width: 768px) { padding: 4px 0; }
+}
+
+// 12. EMPTY STATE
+.emptyState {
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 400;
+  color: $text-light;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  span {
+    display: block;
+  }
+
+  :global(body.dark) & {
+    color: $text-dark;
   }
 }
 
-// 10. CURRENCY INPUT WRAPPER
+// 13. CURRENCY INPUT
 .currencyInput {
-  @include neu-inset();
+  @include crystal-surface();
   display: flex;
   align-items: center;
-  overflow: hidden;
-  height: 40px;
+  height: 48px;
 
   .currencySymbol {
-    padding: 8px 12px;
-    background: $zinc-100;
-    font-size: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
     font-weight: 500;
-    color: $zinc-950;
+    color: $text-light;
+    background: rgba(255, 255, 255, 0.1);
   }
 
   .input {
@@ -362,39 +497,38 @@ $red-500: #EF4444;
     background: transparent;
   }
 
-  :global(body.dark) & .currencySymbol {
-    background: $zinc-800;
-    color: $text-dark;
+  :global(body.dark) & {
+    @include crystal-dark();
+    .currencySymbol { color: $text-dark; background: rgba(255, 255, 255, 0.05); }
   }
+
+  @media (max-width: 1024px) { height: 44px; }
+  @media (max-width: 768px) { height: 40px; }
 }
 
-// 11. FORM GRID
+// 14. FORM GRID
 .level1Grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 16px;
 
-  @media (max-width: 767px) {
-    grid-template-columns: 1fr;
-  }
+  @media (max-width: 767px) { grid-template-columns: 1fr; }
 }
 
 .level1Column {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 16px;
 }
 
 .formRow {
   display: flex;
-  gap: 15px;
+  gap: 16px;
 
-  @media (max-width: 767px) {
-    flex-direction: column;
-  }
+  @media (max-width: 767px) { flex-direction: column; }
 }
 
-// 12. TAGS
+// 15. TAGS
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -402,10 +536,10 @@ $red-500: #EF4444;
   margin-top: 8px;
 
   .tag {
-    background: $zinc-100;
-    padding: 4px 8px;
-    border-radius: 12px;
+    @include crystal-surface();
+    padding: 6px 12px;
     font-size: 12px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -414,17 +548,18 @@ $red-500: #EF4444;
       background: none;
       border: none;
       cursor: pointer;
-      color: $zinc-500;
+      color: $text-light;
     }
 
     :global(body.dark) & {
-      background: $zinc-800;
+      @include crystal-dark();
       color: $text-dark;
+      button { color: $text-dark; }
     }
   }
 }
 
-// 13. BUTTONS
+// 16. BUTTONS
 .addButtonWrapper {
   margin-top: 12px;
   display: flex;
@@ -433,73 +568,136 @@ $red-500: #EF4444;
 }
 
 .addButtonText {
-  color: $zinc-800;
   font-size: 12px;
   font-weight: 400;
+  color: $black;
+
+  :global(body.dark) & { color: $text-dark; }
 }
 
 .addButton {
-  background: none;
+  @include crystal-surface();
+  padding: 8px 16px;
   border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
   color: $primary;
+
+  &:hover { @include crystal-hover; }
+  &:active { @include crystal-active; }
+
+  :global(body.dark) & {
+    @include crystal-dark();
+    color: $text-dark;
+
+    &:hover { background: rgba(39, 39, 42, 0.85); }
+    &:active { background: rgba(39, 39, 42, 0.6); }
+  }
+}
+
+.submitButton {
+  @include crystal-surface(rgba(10, 10, 10, 0.9));
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  text-align: left;
-}
+  color: $white;
 
-// 14. DATE PICKER POPPER
-.datePickerPopper {
-  background: $white;
-  border: 1px solid $zinc-200;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.12);
-  z-index: 130000;
+  &:hover {
+    background: rgba(18, 18, 18, 0.9);
+    @include crystal-hover;
+  }
+  &:active { @include crystal-active; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 
   :global(body.dark) & {
-    background: $zinc-900;
-    border: 1px solid rgba(255,255,255,.05);
+    background: rgba(255, 255, 255, 0.9);
+    color: $black;
+
+    &:hover { background: rgba(229, 229, 229, 0.9); }
+    &:active { background: rgba(255, 255, 255, 0.7); }
   }
 }
 
-// 15. WIZARD SPECIFIC STYLES
-:global(.wizard-container) {
-  @include neu-surface();
+// 17. DATE PICKER
+.datePickerPopper {
+  @include crystal-surface();
+  padding: 8px;
+  z-index: 130000;
+
+  :global(body.dark) & { @include crystal-dark(); }
 }
 
-:global(.wizard-step) {
-  padding: 24px;
+// 18. PERSISTED DATA
+.persistedData {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  span {
+    @include crystal-surface();
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: $text-light;
+
+    :global(body.dark) & {
+      @include crystal-dark();
+      color: $text-dark;
+    }
+  }
+
+  button {
+    background: none;
+    border: none;
+    color: $red-500;
+    font-size: 12px;
+    cursor: pointer;
+
+    :global(body.dark) & { color: $red-500; }
+  }
 }
 
-:global(.card) {
-  @include neu-surface();
+// 19. SUBMIT SECTION
+.submitSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
 }
 
-:global(.card-header) {
-  padding: 20px 40px;
+.submitText {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: $black;
+
+  :global(body.dark) & { color: $text-dark; }
 }
 
-:global(.card-content) {
-  padding: 15px 40px;
+// 20. CUSTOM CALENDAR
+.customCalendar {
+  padding: 1rem;
+  border-radius: 12px;
+  max-width: 100%;
 }
 
-// 16. MEDIA QUERIES
+// 21. MEDIA QUERIES
 @media (max-width: 1024px) {
-  .slideCard {
-    flex: 0 0 120px;
-  }
+  .container { padding: 20px; }
+  .content { padding: 16px; }
+  .header { padding: 16px; }
 }
 
-@media (max-width: 767px) {
-  .slideCard {
-    flex: 0 0 100px;
-  }
-
-  .content {
-    padding: 15px 20px;
-  }
-
-  .header {
-    padding: 20px;
-  }
+@media (max-width: 768px) {
+  .container { padding: 16px; }
+  .content { padding: 12px; }
+  .header { padding: 12px; }
 }

@@ -2,7 +2,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 @import '@/app/styles/utils';
 
-
 .toolbar {
   @include neomorphic-container;
   padding: 8px;
@@ -10,6 +9,7 @@
   align-items: center;
   gap: 4px;
   margin-bottom: 8px;
+  justify-content: space-around;
   border-bottom: 1px solid $border-color;
 
   &.dark {
@@ -17,8 +17,8 @@
   }
 }
 
-.undefined  {
-  filter: invert(100)
+.undefined {
+  filter: invert(100);
 }
 
 .format-button {
@@ -97,6 +97,7 @@
   0%, 100% { height: 8px; }
   50% { height: 16px; }
 }
+
 .container {
   position: fixed;
   top: 0;
@@ -125,11 +126,11 @@
     content: '';
     position: absolute;
     inset: 0;
-    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png'); // ← reemplaza esta ruta
-    background-size: cover; // o 'contain' si prefieres
+    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png');
+    background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-    opacity: 0.2; 
+    opacity: 0.2;
     z-index: 0;
     pointer-events: none;
   }
@@ -143,12 +144,10 @@
     8px 8px 16px rgba(0, 0, 0, 0.4);
 
   &::before {
-    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png'); // ← imagen alternativa para dark mode
+    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png');
     opacity: 0.08;
   }
 }
-
-
 
 .open {
   transform: translateX(0);
@@ -210,6 +209,7 @@
   margin-top: 20px;
   gap: 5px;
 }
+
 .card,
 .cardFullWidth {
   padding: 16px;
@@ -238,12 +238,11 @@
 .cardFullWidth {
   width: 100%;
 }
+
 :global(body.dark) .card,
 :global(body.dark) .cardFullWidth {
   background: #232323;
 }
-
-
 
 .cardLabel {
   color: #182735;
@@ -282,7 +281,7 @@
 .message {
   display: flex;
   gap: 10px;
-  padding: 10px 0px 0px 0px ;
+  padding: 10px 0px 0px 0px;
 }
 
 .messageContent {
@@ -290,7 +289,6 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-
 }
 
 .messageHeader {
@@ -302,9 +300,9 @@
 
 .messageActions {
   display: flex;
-  flex-direction: row; 
+  flex-direction: row;
   align-items: center;
-  gap: 6px; 
+  gap: 6px;
 }
 
 .sender {
@@ -316,7 +314,7 @@
 
 .timestamp {
   font-size: 12px;
-  color: #6b7280; 
+  color: #6b7280;
 }
 
 .timestampWrapper {
@@ -327,7 +325,7 @@
 }
 
 .text {
-  color:#1b2734;
+  color: #1b2734;
   font-size: 14px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
@@ -344,7 +342,6 @@
 /* Contenedor de acciones (ActionMenu) */
 .actionContainer {
   position: relative;
-  
 }
 
 .actionButton {
@@ -358,8 +355,8 @@
 
 .actionDropdown {
   position: absolute;
-  top: 100%; 
-  right: 0; 
+  top: 100%;
+  right: 0;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 4px;
@@ -421,6 +418,7 @@
 .inputWrapper {
   width: 100%;
 }
+
 .inputContainer {
   display: flex;
   flex-direction: column;
@@ -436,7 +434,7 @@
   overflow: hidden;
 }
 
-// 🌑 DARK MODE (ajuste para coherencia futura, aunque ya está dark)
+// 🌑 DARK MODE
 :global(body.dark) .inputContainer {
   background: #1f1f20;
   box-shadow:
@@ -449,7 +447,7 @@
   width: 100%;
   height: 36px;
   padding: 8px 12px;
-  background: #f3f3f3; // leve tono para distinguir input
+  background: #f3f3f3;
   border: none;
   border-radius: 10px;
   color: #1b2734d9;
@@ -470,24 +468,28 @@
   box-shadow:
     inset -1px -1px 3px rgba(255, 255, 255, 0.1),
     inset 2px 2px 4px rgba(0, 0, 0, 0.2),
-    0 0 0 1px #e4e4e4; // highlight tenue en foco
+    0 0 0 1px #e4e4e4;
 }
 
-:global(body.dark) .input{
+:global(body.dark) .input {
   background-color: rgb(36, 36, 36);
   color: white;
 }
+
 :global(body.dark) .playStopButton img,
 :global(body.dark) .arrowLeft,
 :global(body.dark) .actionButton,
 :global(body.dark) .clickable,
-:global(body.dark) .imageButton img,
+:global(body.dark) .imageButton img:not(.toolbarIcon),
 :global(body.dark) .sendButton img,
 :global(body.dark) .timerContainer div span,
 :global(body.dark) .timerContainer div img {
   filter: invert(80) brightness(80);
 }
 
+.toolbarIcon {
+  filter: none !important;
+}
 
 /* Contenedor del temporizador */
 .timerContainer {
@@ -500,7 +502,6 @@
   align-items: center;
   justify-content: center;
   gap: 15px;
-
 }
 
 .timerContainer div span {
@@ -552,46 +553,78 @@
 :global(body.dark) .sendButton:hover {
   background: #2c2c2f;
   box-shadow:
-    inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 266, 0.05),
     inset 2px 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-
 .imageButton {
-  filter: inverto(100);
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  height: 40px;
+  width: 40px;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease-in-out,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(0, 0, 0, 0.050);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: #e2e8f0;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+:global(body.dark) .imageButton {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background-color: #2c2c2f;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.fontWeight {
+  filter: invert(100);
 }
 
 .italicSvg {
-  transform: scale(1.1); /* Slightly larger italic icon */
+  transform: scale(1.1);
 }
 
-.underlineSvg {
-  filter: hue-rotate(90deg); /* Greenish tint for underline icon */
-}
-
-.codeSvg {
-  filter: saturate(150%); /* More vibrant code icon */
-}
-
-.bulletSvg {
-  filter: contrast(120%); /* Higher contrast bullet icon */
-}
-
+.underlineSvg,
+.codeSvg,
+.bulletSvg,
 .numberedSvg {
-  filter: opacity(0.8); /* Slightly transparent numbered icon */
+  /* Filtros eliminados para mantener color negro */
 }
-
 
 // 🔁 Animación de rotación sólo para botón de enviar
 .sendButton:hover {
   transform: rotate(90deg);
 }
+
 .messageText {
-  /* Your text styles, e.g., */
   font-size: 14px;
   color: #333;
 }
-
 
 .actions {
   display: flex;
@@ -599,11 +632,8 @@
   align-items: center;
 }
 
-/* Panel de temporizador *//* ==============================================================
-   🔮 CRYSTALLIZED TIMER PANEL
-   ================================================================= */
+/* Panel de temporizador */
 .timerPanel {
-  /* ——— Dimensiones y layout ——— */
   overflow: hidden;
   height: 0;
   opacity: 0;
@@ -611,23 +641,15 @@
   width: 100%;
   position: relative;
   border-radius: 16px;
-
-  /* ——— Textura cristalizada ——— */
-  background: rgba(251, 251, 250, 0.7); /* Semi-transparent green-yellow (#d3e048) */
-  backdrop-filter: blur(8px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(8px); /* Safari support */
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
-
-  /* ——— Sombras cristalizadas ——— */
+  background: rgba(251, 251, 250, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow:
-    /* Outset: Neomorphic */
     -6px -6px 12px rgba(255, 255, 255, 0.8),
     6px 6px 12px rgba(0, 0, 0, 0.1),
-    /* Inset: Carved effect */
     inset -4px -4px 8px rgba(255, 255, 255, 0.5),
-    inset 4px 4px 8px rgba(225, 225, 225, 0.3); /* Tinted with #d3e048 */
-
-  /* ——— Transiciones ——— */
+    inset 4px 4px 8px rgba(225, 225, 225, 0.3);
   transition:
     height 0.3s ease-in-out,
     opacity 0.3s ease-in-out,
@@ -636,7 +658,6 @@
     border-color 0.3s ease,
     transform 0.3s ease;
 
-  /* ——— Hover: Levitar con brillo ——— */
   &:hover {
     transform: translateY(-2px) scale(1.01);
     background: rgba(240, 239, 239, 0.85);
@@ -648,7 +669,6 @@
       inset 6px 6px 12px rgba(236, 236, 236, 0.4);
   }
 
-  /* ——— Active: Presionado con efecto hundido ——— */
   &:active {
     transform: scale(0.98);
     background: rgba(246, 246, 245, 0.6);
@@ -660,15 +680,14 @@
       4px 4px 8px rgba(0, 0, 0, 0.06);
   }
 
-  /* ——— 🌙 Modo oscuro ——— */
   :global(.dark) & {
-    background: rgba(163, 172, 55, 0.7); /* Darker green-yellow */
+    background: rgba(163, 172, 55, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow:
       -6px -6px 12px rgba(0, 0, 0, 0.5),
       6px 6px 12px rgba(255, 255, 255, 0.05),
       inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-      inset 4px 4px 8px rgba(163, 172, 55, 0.3); /* Tinted with darker hue */
+      inset 4px 4px 8px rgba(163, 172, 55, 0.3);
 
     &:hover {
       background: rgba(163, 172, 55, 0.85);
@@ -693,12 +712,12 @@
     }
   }
 
-  /* ——— Responsividad ——— */
   @media (max-width: 768px) {
     border-radius: 12px;
     margin-bottom: 6px;
   }
 }
+
 .timerPanelContent {
   padding: 20px;
   display: flex;
@@ -750,7 +769,6 @@
   transform: translateY(-1px);
 }
 
-
 /* Estilo interno del time picker */
 .react-time-picker__inputGroup {
   display: flex;
@@ -795,11 +813,12 @@
   justify-content: flex-end;
 }
 
-.timerAddButton{
+.timerAddButton {
   box-shadow:
-  -4px -4px 8px rgba(255, 255, 255, 0.005),
-  4px 4px 8px rgba(0, 0, 0, 0.05);
+    -4px -4px 8px rgba(255, 255, 255, 0.005),
+    4px 4px 8px rgba(0, 0, 0, 0.05);
 }
+
 .timerAddButton,
 .timerCancelButton {
   padding: 10px 20px;
@@ -809,8 +828,8 @@
   font-weight: 500;
   font-family: "Inter Tight", sans-serif;
   transition: all 0.3s ease-in-out;
-
 }
+
 .timerAddButton {
   background: #e2ed69;
   color: #1b2734d9;
@@ -864,7 +883,6 @@
     inset 2px 2px 4px rgba(0, 0, 0, 0.15);
 }
 
-
 /* Popup del calendario */
 .calendarPopper {
   z-index: 3100;
@@ -876,6 +894,7 @@
   color: white;
   font-family: "Inter Tight", sans-serif;
 }
+
 /* Dropdown del menú de tarea */
 .taskMenuDropdown {
   position: absolute;
@@ -980,7 +999,6 @@
   cursor: pointer;
 }
 
-
 :global(body.dark) .statusDropdown {
   background: #1f1f20;
   box-shadow:
@@ -1006,7 +1024,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.15); 
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -1014,7 +1032,6 @@
   align-items: center;
   z-index: 3100;
 }
-
 
 /* Contenedor principal del popup */
 .deletePopup {
@@ -1159,7 +1176,6 @@
     inset 2px 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-
 :global(body.dark) .deletePopup {
   background: #1f1f20;
   box-shadow:
@@ -1202,7 +1218,6 @@
     inset -1px -1px 2px rgba(255, 255, 255, 0.05),
     inset 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
-
 
 /* ===== Dropdown de responsables ===== */
 .responsibleDropdown {
@@ -1324,7 +1339,6 @@
   color: #ffffffcc;
 }
 
-
 /* Animación "Escribiendo" */
 .typingIndicator {
   display: flex;
@@ -1365,8 +1379,6 @@
   50% { transform: translateY(-6px); }
 }
 
-
-
 /* Image and file */
 .image {
   max-width: 200px;
@@ -1401,61 +1413,6 @@
   cursor: pointer;
   padding: 4px;
   margin-left: 8px;
-}
-
-/* Image button */.imageButton {
-  background: #f1f5f9;
-  border: none;
-  border-radius: 50%;
-  height: 40px;
-  width: 40px;
-  padding: 6px;
-  cursor: pointer;
-  transition:
-    background-color 0.3s ease-in-out,
-    box-shadow 0.3s ease,
-    transform 0.2s ease;
-
-  box-shadow:
-    -4px -4px 8px #ffffff,
-    4px 4px 12px rgba(0, 0, 0, 0.050);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover {
-    background-color: #e2e8f0;
-    box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-  }
-}
-:global(body.dark) .imageButton {
-  background: #1f1f20;
-  box-shadow:
-    -4px -4px 8px rgba(255, 255, 255, 0.04),
-    4px 4px 12px rgba(0, 0, 0, 0.4);
-
-  &:hover {
-    background-color: #2c2c2f;
-    box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
-  }
-}
-
-
-.fileActionsRow {
-  display: flex;
-  align-items: row;
-  flex-direction: row;
-  gap: 10px;
-}
-
-.iconInvert {
-  filter: invert(100%) brightness(100%);
 }
 
 /* Image and file preview */
@@ -1512,7 +1469,7 @@
   font-size: 24px;
   cursor: pointer;
   &:hover {
-    color:  white;
+    color: white;
   }
 }
 
@@ -1521,7 +1478,7 @@
   text-align: center;
   color: #212731;
   padding: 10px;
-  font-size: 14pxs;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -1655,114 +1612,114 @@
 }
 
 $primary-color: #e2ed69;
-     $secondary-color: #1b2734;
-     $text-color: #1b2734d9;
-     $text-muted: #71717A;
-     $border-color: #e5e7eb;
-     $shadow-light: #ffffff;
-     $shadow-dark: rgba(0, 0, 0, 0.15);
-     $shadow-dark-mode: rgba(0, 0, 0, 0.4);
-     $bg-light: #f1f5f9;
-     $bg-dark: #1f1f20;
-     $bg-accent: #e2e8f0;
-     $bg-accent-dark: #2c2c2f;
-     $red-accent: #c91111;
+$secondary-color: #1b2734;
+$text-color: #1b2734d9;
+$text-muted: #71717A;
+$border-color: #e5e7eb;
+$shadow-light: #ffffff;
+$shadow-dark: rgba(0, 0, 0, 0.15);
+$shadow-dark-mode: rgba(0, 0, 0, 0.4);
+$bg-light: #f1f5f9;
+$bg-dark: #1f1f20;
+$bg-accent: #e2e8f0;
+$bg-accent-dark: #2c2c2f;
+$red-accent: #c91111;
 
-     @mixin neomorphic-button {
-       background: $bg-light;
-       border: none;
-       border-radius: 100px;
-       box-shadow:
-         -4px -4px 8px $shadow-light,
-         4px 4px 12px rgba(209, 217, 230, 0.8);
-       transition:
-         transform 0.2s ease-in-out,
-         box-shadow 0.3s ease,
-         background-color 0.3s ease-in-out;
+@mixin neomorphic-button {
+  background: $bg-light;
+  border: none;
+  border-radius: 100px;
+  box-shadow:
+    -4px -4px 8px $shadow-light,
+    4px 4px 12px rgba(209, 217, 230, 0.8);
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.3s ease,
+    background-color 0.3s ease-in-out;
 
-       &:hover {
-         box-shadow:
-           inset -2px -2px 4px rgba(255, 255, 255, 0.5),
-           inset 2px 2px 6px rgba(0, 0, 0, 0.1);
-         background: $bg-accent;
-         transform: translateY(-1px);
-       }
+  &:hover {
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    background: $bg-accent;
+    transform: translateY(-1px);
+  }
 
-       &[disabled] {
-         opacity: 0.5;
-         cursor: not-allowed;
-       }
+  &[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-       &.dark {
-         background: $bg-dark;
-         box-shadow:
-           -4px -4px 8px rgba(255, 255, 255, 0.04),
-           4px 4px 12px $shadow-dark-mode;
+  &.dark {
+    background: $bg-dark;
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.04),
+      4px 4px 12px $shadow-dark-mode;
 
-         &:hover {
-           background: $bg-accent-dark;
-           box-shadow:
-             inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-             inset 2px 2px 6px rgba(0, 0, 0, 0.3);
-         }
-       }
-     }
+    &:hover {
+      background: $bg-accent-dark;
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+        inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
 
-     @mixin neomorphic-container {
-       background: $bg-light;
-       border-radius: 16px;
-       box-shadow:
-         -6px -6px 12px $shadow-light,
-         6px 6px 12px $shadow-dark;
-       transition: all 0.3s ease-in-out;
+@mixin neomorphic-container {
+  background: $bg-light;
+  border-radius: 16px;
+  box-shadow:
+    -6px -6px 12px $shadow-light,
+    6px 6px 12px $shadow-dark;
+  transition: all 0.3s ease-in-out;
 
-       &.dark {
-         background: $bg-dark;
-         box-shadow:
-           -6px -6px 12px rgba(255, 255, 255, 0.04),
-           6px 6px 12px $shadow-dark-mode;
-       }
-     }
+  &.dark {
+    background: $bg-dark;
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.04),
+      6px 6px 12px $shadow-dark-mode;
+  }
+}
 
-     @mixin neomorphic-input {
-       background: #f3f3f3;
-       border: none;
-       border-radius: 10px;
-       color: $text-color;
-       font-size: 15px;
-       font-family: 'Inter Tight', sans-serif;
-       font-weight: 400;
-       opacity: 0.85;
-       box-shadow:
-         inset -2px -2px 4px rgba(255, 255, 255, 0.03),
-         inset 2px 2px 6px rgba(0, 0, 0, 0.15);
-       transition: all 0.2s ease-in-out;
+@mixin neomorphic-input {
+  background: #f3f3f3;
+  border: none;
+  border-radius: 10px;
+  color: $text-color;
+  font-size: 15px;
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 400;
+  opacity: 0.85;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
 
-       &:focus {
-         outline: none;
-         background: rgba(255, 255, 255, 0.03);
-         box-shadow:
-           inset -1px -1px 3px rgba(255, 255, 255, 0.1),
-           inset 2px 2px 4px rgba(0, 0, 0, 0.2),
-           0 0 0 1px #e4e4e4;
-       }
+  &:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.1),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+      0 0 0 1px #e4e4e4;
+  }
 
-       &.dark {
-         background: rgb(36, 36, 36);
-         color: #ffffffcc;
-       }
-     }
+  &.dark {
+    background: rgb(36, 36, 36);
+    color: #ffffffcc;
+  }
+}
 
-     @mixin active-state {
-       background: $bg-accent;
-       box-shadow:
-         inset -2px -2px 4px rgba(255, 255, 255, 0.08),
-         inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+@mixin active-state {
+  background: $bg-accent;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
 
-       &.dark {
-         background: $bg-accent-dark;
-         box-shadow:
-           inset -2px -2px 3px rgba(255, 255, 255, 0.03),
-           inset 2px 2px 5px rgba(0, 0, 0, 0.2);
-       }
-     }
+  &.dark {
+    background: $bg-accent-dark;
+    box-shadow:
+      inset -2px -2px 3px rgba(255, 255, 255, 0.03),
+      inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+  }
+}

@@ -12,7 +12,7 @@ import {
   updateDoc,
   doc,
   deleteDoc,
-  getDoc,
+  getDoc, 
   setDoc,
   serverTimestamp,
   Timestamp,
@@ -104,7 +104,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [editingText, setEditingText] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState<boolean>(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
@@ -132,6 +132,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const datePickerWrapperRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingMessagesRef = useRef<Map<string, string>>(new Map()); // Track pending message IDs to prevent duplicates
 
   // Check if sidebarRef is attached
   useEffect(() => {
@@ -164,7 +165,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         }
       } catch (error) {
         console.error('[ChatSidebar] Error fetching admin status:', error);
-        setIsAdmin(false);
       }
     };
     fetchAdminStatus();
@@ -407,7 +407,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         }));
         setMessages((prev) => {
           const pendingMessages = prev.filter((msg) => msg.isPending);
-          return [...pendingMessages, ...newMessages.filter((msg) => !msg.isPending)];
+          // Only add new messages that aren't already pending or duplicates
+          const uniqueMessages = newMessages.filter(
+            (msg) => !pendingMessages.some((p) => p.id === msg.id) && !prev.some((m) => m.id === msg.id),
+          );
+          return [...pendingMessages, ...uniqueMessages];
         });
         setIsLoading(false);
       },
@@ -482,9 +486,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   useEffect(() => {
     if (chatRef.current) {
-      setTimeout(() => {
+      const scrollToBottom = () => {
         chatRef.current!.scrollTop = chatRef.current!.scrollHeight;
-      }, 0);
+      };
+      requestAnimationFrame(scrollToBottom);
     }
   }, [messages, typingUsers]);
 
@@ -638,51 +643,90 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     isAudio = false,
     audioUrl?: string,
     duration?: number,
+    tempId?: string,
   ) => {
     if (!user?.id) return;
-    setIsSending(true);
-    const tempId = `temp-${Date.now()}-${Math.random()}`;
-    const optimisticMessage: Message = {
-      id: tempId,
-      senderId: user.id,
-      senderName: user.firstName || 'Usuario',
-      text: messageData.text || null,
-      timestamp: Timestamp.fromDate(new Date()),
-      read: false,
-      imageUrl: messageData.imageUrl || null,
-      fileUrl: messageData.fileUrl || audioUrl || null,
-      fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
-      fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
-      filePath: messageData.filePath || null,
-      hours: duration ? duration / 3600 : messageData.hours,
-      isPending: true,
-    };
-    setMessages((prev) => [...prev, optimisticMessage]);
-    setHasInteracted(true);
 
-    try {
-      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
-        ...messageData,
-        timestamp: serverTimestamp(),
-      });
-      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-      if (task.CreatedBy) recipients.add(task.CreatedBy);
-      recipients.delete(user.id);
-      for (const recipientId of recipients) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.id,
-          taskId: task.id,
-          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-        });
-      }
-    } catch (error) {
-      console.error('[ChatSidebar] Send message error:', error);
+    // If signaled to remove a failed message
+    if (tempId && messageData.isPending && messageData.id) {
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
-      alert('Error al enviar el mensaje');
-    } finally {
+      pendingMessagesRef.current.delete(tempId);
+      return;
+    }
+
+    setIsSending(true);
+
+    // Generate tempId if not provided
+    const messageTempId = tempId || `temp-${Date.now()}-${Math.random()}`;
+    if (!pendingMessagesRef.current.has(messageTempId)) {
+      pendingMessagesRef.current.set(messageTempId, messageTempId);
+
+      const optimisticMessage: Message = {
+        id: messageTempId,
+        senderId: user.id,
+        senderName: user.firstName || 'Usuario',
+        text: messageData.text || null,
+        timestamp: Timestamp.fromDate(new Date()),
+        read: false,
+        imageUrl: messageData.imageUrl || null,
+        fileUrl: messageData.fileUrl || audioUrl || null,
+        fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
+        fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
+        filePath: messageData.filePath || null,
+        hours: duration ? duration / 3600 : messageData.hours,
+        isPending: true,
+      };
+
+      // Add optimistic message
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setHasInteracted(true);
+
+      try {
+        const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+          ...messageData,
+          senderId: user.id,
+          senderName: user.firstName || 'Usuario',
+          timestamp: serverTimestamp(),
+          read: false,
+        });
+
+        // Update optimistic message with real ID
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageTempId
+              ? {
+                  ...msg,
+                  id: docRef.id,
+                  timestamp: serverTimestamp(),
+                  isPending: false,
+                }
+              : msg,
+          ),
+        );
+        pendingMessagesRef.current.delete(messageTempId);
+
+        const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+        if (task.CreatedBy) recipients.add(task.CreatedBy);
+        recipients.delete(user.id);
+        for (const recipientId of recipients) {
+          await addDoc(collection(db, 'notifications'), {
+            userId: user.id,
+            taskId: task.id,
+            message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
+            timestamp: Timestamp.now(),
+            read: false,
+            recipientId,
+          });
+        }
+      } catch (error) {
+        console.error('[ChatSidebar] Send message error:', error);
+        setMessages((prev) => prev.filter((msg) => msg.id !== messageTempId));
+        pendingMessagesRef.current.delete(messageTempId);
+        alert('Error al enviar el mensaje');
+      } finally {
+        setIsSending(false);
+      }
+    } else {
       setIsSending(false);
     }
   };
@@ -1015,16 +1059,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </ol>
         );
       }
-      return <span style={styles} className={styles.messageText}>{text}</span>;
+      return <span style={styles} >{text}</span>;
     }
     return null;
   };
 
   return (
-    <div
-      className={`${styles.container} ${isOpen ? styles.open : ''}`}
-      ref={sidebarRef}
-    >
+    <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
       <div className={styles.header}>
         <div className={styles.controls}>
           <div

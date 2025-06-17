@@ -15,9 +15,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { Navigation } from 'swiper/modules';
 import { db } from '@/lib/firebase';
-import styles from '@/components/NewTaskStyles.module.scss';
-import clientStyles from '@/components/ClientsTable.module.scss';
-import memberStyles from '@/components/MembersTable.module.scss';
+import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from 'firebase/firestore';
 
 gsap.registerPlugin(ScrollTrigger);

@@ -1,3 +1,4 @@
+// InputChat.tsx
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -31,6 +32,7 @@ interface InputChatProps {
     isAudio?: boolean,
     audioUrl?: string,
     duration?: number,
+    tempId?: string, // Add tempId to track optimistic messages
   ) => Promise<void>;
   onTyping: () => void;
   isSending: boolean;
@@ -82,6 +84,7 @@ export function InputChat({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
+  const isSubmittingRef = useRef(false); // Track submission to prevent duplicates
 
   useEffect(() => {
     console.log('[InputChat] containerRef:', containerRef?.current);
@@ -243,17 +246,22 @@ export function InputChat({
 
   const handleSend = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!userId || (!message.trim() && !file) || isSending) {
-      console.warn('[InputChat] Invalid message input:', {
+    if (isSubmittingRef.current || !userId || (!message.trim() && !file) || isSending) {
+      console.warn('[InputChat] Invalid or duplicate message input:', {
         userId,
         message,
         hasFile: !!file,
         isSending,
+        isSubmitting: isSubmittingRef.current,
       });
       return;
     }
 
+    isSubmittingRef.current = true; // Prevent multiple submissions
+
+    const tempId = `temp-${Date.now()}-${Math.random()}`; // Unique ID for optimistic message
     const messageData: Partial<Message> = {
+      id: tempId,
       senderId: userId,
       senderName: userFirstName || 'Usuario',
       text: message.trim() ? applyFormatting(message.trim()) : null,
@@ -264,56 +272,80 @@ export function InputChat({
       fileName: file ? file.name : null,
       fileType: file ? file.type : null,
       filePath: null,
+      isPending: true,
     };
 
-    if (file) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userId', userId);
-        formData.append('type', 'message');
-        formData.append('conversationId', taskId);
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-          headers: { 'x-clerk-user-id': userId },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to upload file');
-        }
-
-        const { url, fileName, fileType, filePath } = await response.json();
-        console.log('[InputChat] File uploaded via API:', { url, fileName, fileType, filePath });
-
-        if (fileName) messageData.fileName = fileName;
-        if (fileType) messageData.fileType = fileType;
-        if (filePath) messageData.filePath = filePath;
-
-        if (file.type.startsWith('image/') && url) {
-          messageData.imageUrl = url;
-        } else if (url) {
-          messageData.fileUrl = url;
-        }
-      } catch (error) {
-        console.error('[InputChat] Failed to upload file:', error);
-        alert('Error al subir el archivo');
-        return;
-      }
-    }
-
+    // Optimistic update: Send message to parent immediately
     try {
-      await onSendMessage(messageData);
+      await onSendMessage(messageData, false, undefined, undefined, tempId);
+
+      // Reset input fields immediately
       setMessage('');
       setFile(null);
       setPreviewUrl(null);
       setActiveFormats(new Set());
+
+      // Handle file upload if present
+      if (file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('userId', userId);
+          formData.append('type', 'message');
+          formData.append('conversationId', taskId);
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+            headers: { 'x-clerk-user-id': userId },
+          });
+
+          if (!response.ok) {
+            let errorMessage = 'Failed to upload file';
+            try {
+              const text = await response.text();
+              if (text) {
+                const errorData = JSON.parse(text);
+                errorMessage = errorData.error || errorMessage;
+              }
+            } catch (parseError) {
+              console.warn('[InputChat] Non-JSON response:', parseError);
+            }
+            throw new Error(errorMessage);
+          }
+
+          const { url, fileName, fileType, filePath } = await response.json();
+          console.log('[InputChat] File uploaded via API:', { url, fileName, fileType, filePath });
+
+          const updatedMessageData: Partial<Message> = {
+            ...messageData,
+            fileName: fileName || messageData.fileName,
+            fileType: fileType || messageData.fileType,
+            filePath: filePath || messageData.filePath,
+            imageUrl: file.type.startsWith('image/') && url ? url : messageData.imageUrl,
+            fileUrl: url && !file.type.startsWith('image/') ? url : messageData.fileUrl,
+            isPending: false,
+          };
+
+          // Update the message with file details
+          await onSendMessage(updatedMessageData, false, undefined, undefined, tempId);
+        } catch (error) {
+          console.error('[InputChat] Failed to upload file:', error);
+          alert('Error al subir el archivo');
+          // Remove optimistic message on failure
+          await onSendMessage({ id: tempId, isPending: true }, false, undefined, undefined, tempId);
+          isSubmittingRef.current = false;
+          return;
+        }
+      }
     } catch (error) {
       console.error('[InputChat] Failed to send message:', error);
       alert('Error al enviar el mensaje');
+      // Remove optimistic message on failure
+      await onSendMessage({ id: tempId, isPending: true }, false, undefined, undefined, tempId);
     }
+
+    isSubmittingRef.current = false;
   };
 
   const formatTime = (seconds: number) => {
@@ -328,8 +360,8 @@ export function InputChat({
     { id: 'italic', icon: '/input/italic.svg', label: 'Cursiva', shortcut: 'Ctrl+I' },
     { id: 'underline', icon: '/input/underline.svg', label: 'Subrayado', shortcut: 'Ctrl+U' },
     { id: 'code', icon: '/input/square-code.svg', label: 'Código', shortcut: 'Ctrl+`' },
-    { id: 'bullet', icon: '/input/list-bullets.svg', label: 'Lista con viñetas', shortcut: 'Ctrl+Shift+8' },
-    { id: 'numbered', icon: '/input/list-numbers.svg', label: 'Lista numerada', shortcut: 'Ctrl+Shift+7' },
+    { id: 'bullet', icon: '/list-bullets.svg', label: 'Lista con viñetas', shortcut: 'Ctrl+Shift+8' },
+    { id: 'numbered', icon: '/list-ordered.svg', label: 'Lista numerada', shortcut: 'Ctrl+Shift+7' },
   ];
 
   return (
@@ -357,7 +389,8 @@ export function InputChat({
                 alt={label}
                 width={16}
                 height={16}
-                className={`${styles.iconInvert} ${styles[`${id}Svg`]}`}
+                className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`}
+                style={{ filter: 'none', fill: '#000000' }}
               />
             </button>
           ))}
@@ -365,7 +398,7 @@ export function InputChat({
         {previewUrl && (
           <div className={styles.imagePreview}>
             <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
+            <button className={styles.removeImageButton} onClick={handleRemoveFile} disabled={isSending}>
               <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
             </button>
           </div>
@@ -374,7 +407,7 @@ export function InputChat({
           <div className={styles.filePreview}>
             <Image src="/file.svg" alt="Archivo" width={16} height={16} />
             <span>{file.name}</span>
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
+            <button className={styles.removeImageButton} onClick={handleRemoveFile} disabled={isSending}>
               <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
             </button>
           </div>
@@ -417,7 +450,7 @@ export function InputChat({
         </div>
         <div className={styles.actions}>
           <div className={styles.timerContainer}>
-            <button className={styles.playStopButton} onClick={onToggleTimer}>
+            <button className={styles.playStopButton} onClick={onToggleTimer} disabled={isSending}>
               <Image
                 src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
                 alt={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}

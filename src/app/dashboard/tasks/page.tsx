@@ -42,6 +42,7 @@ import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import { v4 as uuidv4 } from 'uuid';
 import Dock from '@/components/Dock';
+import ToDoDynamic from '@/components/ToDoDynamic';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -946,7 +947,9 @@ export default function TasksPage() {
       )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
+      <ToDoDynamic/>
       <Dock />
+
     </div>
   );
 }

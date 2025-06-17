@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { gsap } from 'gsap';
-import styles from './SuccessAlert.module.scss';
+import { useLayoutEffect, useRef, useState, useCallback, useEffect } from "react";
+import { toast as sonnerToast } from "sonner";
+import { gsap } from "gsap";
+import Image from "next/image";
+import styles from "./SuccessAlert.module.scss";
 
 interface SuccessAlertProps {
   message: string;
@@ -13,133 +14,199 @@ interface SuccessAlertProps {
 }
 
 const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction, actionLabel }) => {
-  const alertRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(new Audio('/Success.mp3')); // Reference to the audio file
+  const toastRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [toastId, setToastId] = useState<string | number | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const isPlaying = useRef(false);
+  const hasRenderedToast = useRef(false); // Control para un solo toast
 
-  useEffect(() => {
-    console.log('[SuccessAlert] Mounting with message:', message);
-    console.log('[SuccessAlert] Applied class names:', {
-      container: styles.notificationsContainer,
-      success: styles.success,
-    });
-
-    // Play haptic feedback sound
-    audioRef.current.play().catch((error) => {
-      console.error('[SuccessAlert] Failed to play audio:', error);
-    });
-    console.log('[SuccessAlert] Triggered audio playback for Success.mp3');
-
-    if (alertRef.current) {
-      console.log('[SuccessAlert] DOM node present, starting GSAP animation');
-      gsap.fromTo(
-        alertRef.current,
-        { opacity: 0, x: 50 },
-        {
-          opacity: 1,
-          x: 0,
-          duration: 0.3,
-          ease: 'power2.out',
-          onStart: () => console.log('[SuccessAlert] GSAP animation started'),
-          onComplete: () => console.log('[SuccessAlert] GSAP animation completed'),
-        }
-      );
-
-      const computedStyles = window.getComputedStyle(alertRef.current.parentElement!);
-      console.log('[SuccessAlert] Computed styles for container:', {
-        display: computedStyles.display,
-        position: computedStyles.position,
-        bottom: computedStyles.bottom,
-        right: computedStyles.right,
-        zIndex: computedStyles.zIndex,
-        opacity: computedStyles.opacity,
-      });
-    } else {
-      console.warn('[SuccessAlert] No DOM node found for alertRef');
-    }
-
-    const timer = setTimeout(() => {
-      console.log('[SuccessAlert] Timer triggered, initiating close');
-      handleClose();
-    }, 5000);
-
+  // Debounce cleanup
+  const debounce = useCallback((func: () => void, delay: number) => {
+    let timer: NodeJS.Timeout;
     return () => {
-      console.log('[SuccessAlert] Unmounting, clearing timer');
       clearTimeout(timer);
-      // Pause and reset audio on unmount
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      console.log('[SuccessAlert] Audio paused and reset');
+      timer = setTimeout(func, delay);
     };
-  }, [message, onClose]);
+  }, []);
 
-  const handleClose = () => {
-    console.log('[SuccessAlert] Initiating close');
-    if (alertRef.current) {
-      gsap.to(alertRef.current, {
-        opacity: 0,
-        x: 50,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => {
-          console.log('[SuccessAlert] Close animation completed, triggering onClose');
-          onClose();
-        },
-      });
-    } else {
-      console.log('[SuccessAlert] No DOM node for close animation, triggering onClose');
-      onClose();
+  useLayoutEffect(() => {
+    if (hasRenderedToast.current) {
+      console.log("[SuccessAlert] Toast already rendered, skipping duplicate");
+      return;
     }
-  };
 
-  return createPortal(
-    <div
-      className={styles.notificationsContainer}
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        zIndex: 10002,
-        pointerEvents: 'auto',
-      }}
-    >
-      <div className={styles.success} ref={alertRef}>
-        <div className={styles.flex}>
-          <div className={styles.flexShrink0}>
-            <svg
-              className={styles.succesSvg}
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clipRule="evenodd"
-              />
-            </svg>
+    console.log("[SuccessAlert] Component mounting with message:", message);
+    setIsMounted(true);
+    hasRenderedToast.current = true;
+
+    // Initialize audio
+    if (!audioRef.current) {
+      console.log("[SuccessAlert] Creating new Audio instance for Success.mp3");
+      audioRef.current = new Audio("/Success.mp3");
+    }
+
+    // Play audio
+    const playAudio = async () => {
+      if (!audioRef.current) {
+        console.error("[SuccessAlert] Audio ref is null, cannot play");
+        return;
+      }
+      try {
+        console.log("[SuccessAlert] Attempting to play Success.mp3");
+        isPlaying.current = true;
+        await audioRef.current.play();
+        console.log("[SuccessAlert] Audio playback started successfully");
+      } catch (error) {
+        console.error("[SuccessAlert] Failed to play audio:", error);
+        isPlaying.current = false;
+      }
+    };
+
+    // Show toast
+    console.log("[SuccessAlert] Creating sonner toast");
+    const id = sonnerToast.custom(
+      () => (
+        <div className={`${styles.toast} ${styles.success}`} ref={toastRef}>
+          <div className={styles.icon}>
+            <Image
+              src="/check.svg"
+              alt="Success"
+              width={16}
+              height={16}
+              onError={() => console.error("[SuccessAlert] Failed to load check.svg")}
+            />
           </div>
-          <div className={styles.profilePromptWrap}>
-            <p className={styles.profilePromptHeading}>Perfil Actualizado</p>
-            <div className={styles.profilePromptPrompt}>
-              <p>{message}</p>
-            </div>
-            <div className={styles.profileButtonContainer}>
+          <div className={styles.content}>
+            <div className={styles.title}>Éxito</div>
+            <div className={styles.description}>{message}</div>
+            <div className={styles.buttons}>
               {onAction && actionLabel && (
-                <button type="button" className={styles.profileButtonMain} onClick={onAction}>
+                <button
+                  type="button"
+                  className={styles.buttonMain}
+                  onClick={() => {
+                    console.log("[SuccessAlert] Action button clicked, dismissing toast:", id);
+                    onAction();
+                    sonnerToast.dismiss(id);
+                  }}
+                >
                   {actionLabel}
                 </button>
               )}
-              <button type="button" className={styles.profileButtonSecondary} onClick={handleClose}>
+              <button
+                type="button"
+                className={styles.buttonSecondary}
+                onClick={() => {
+                  console.log("[SuccessAlert] Close button clicked, dismissing toast:", id);
+                  sonnerToast.dismiss(id);
+                }}
+              >
                 Cerrar
               </button>
             </div>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body
-  );
+      ),
+      {
+        duration: 5000,
+        onDismiss: () => {
+          console.log("[SuccessAlert] Toast dismissed, triggering onClose, toastId:", id);
+          onClose();
+          if (audioRef.current && isPlaying.current) {
+            console.log("[SuccessAlert] Pausing audio on dismiss");
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            isPlaying.current = false;
+          }
+        },
+        onAutoClose: () => {
+          console.log("[SuccessAlert] Toast auto-closed after 5s, toastId:", id);
+        },
+        style: { zIndex: 10002, opacity: 1 },
+      }
+    );
+
+    setToastId(id);
+    console.log("[SuccessAlert] Toast created with ID:", id);
+
+    // GSAP animation
+    if (toastRef.current) {
+      console.log("[SuccessAlert] Applying GSAP animation to toastRef");
+      gsap.fromTo(
+        toastRef.current,
+        { opacity: 0, y: -20 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.3,
+          ease: "power2.out",
+          onStart: () => console.log("[SuccessAlert] GSAP animation started"),
+          onComplete: () => console.log("[SuccessAlert] GSAP animation completed"),
+        }
+      );
+    } else {
+      console.warn("[SuccessAlert] toastRef is null, retrying after delay");
+      const timer = setTimeout(() => {
+        if (toastRef.current) {
+          console.log("[SuccessAlert] Retry GSAP animation on toastRef");
+          gsap.fromTo(
+            toastRef.current,
+            { opacity: 0, y: -20 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.3,
+              ease: "power2.out",
+              onStart: () => console.log("[SuccessAlert] Retry GSAP animation started"),
+              onComplete: () => console.log("[SuccessAlert] Retry GSAP animation completed"),
+            }
+          );
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+
+    // Play audio
+    playAudio();
+
+    // Debounced cleanup
+    const cleanup = debounce(() => {
+      console.log("[SuccessAlert] Component unmounting, cleaning up, toastId:", id);
+      setIsMounted(false);
+      sonnerToast.dismiss(id);
+      if (audioRef.current && isPlaying.current && !audioRef.current.paused) {
+        console.log("[SuccessAlert] Pausing audio on cleanup");
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        isPlaying.current = false;
+      }
+      hasRenderedToast.current = false; // Reset for next mount
+    }, 200);
+
+    return cleanup;
+  }, [message, onClose, onAction, actionLabel, debounce]);
+
+  // Debug toast visibility
+  useEffect(() => {
+    if (toastRef.current && isMounted) {
+      const styles = window.getComputedStyle(toastRef.current);
+      console.log("[SuccessAlert] Toast computed styles:", {
+        display: styles.display,
+        opacity: styles.opacity,
+        visibility: styles.visibility,
+        position: styles.position,
+        top: styles.top,
+        zIndex: styles.zIndex,
+        width: styles.width,
+        height: styles.height,
+      });
+    } else {
+      console.log("[SuccessAlert] Toast ref or mount status:", { toastRef: !!toastRef.current, isMounted });
+    }
+  }, [isMounted]);
+
+  return null;
 };
 
 export default SuccessAlert;
