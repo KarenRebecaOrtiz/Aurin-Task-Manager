@@ -1,0 +1,119 @@
+
+$primary-color: #e2ed69;
+$secondary-color: #1b2734;
+$text-color: #1b2734d9;
+$text-muted: #71717A;
+$border-color: #e5e7eb;
+$shadow-light: #ffffff;
+$shadow-dark: rgba(0, 0, 0, 0.15);
+$shadow-dark-mode: rgba(0, 0, 0, 0.4);
+$bg-light: #f1f5f9;
+$bg-dark: #1f1f20;
+$bg-accent: #e2e8f0;
+$bg-accent-dark: #2c2c2f;
+$red-accent: #c91111;
+
+// Mixins for neomorphic styling
+@mixin neomorphic-button {
+  background: $bg-light;
+  border: none;
+  border-radius: 100px;
+  box-shadow:
+    -4px -4px 8px $shadow-light,
+    4px 4px 12px rgba(209, 217, 230, 0.8);
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.3s ease,
+    background-color 0.3s ease-in-out;
+
+  &:hover {
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    background: $bg-accent;
+    transform: translateY(-1px);
+  }
+
+  &[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.dark {
+    background: $bg-dark;
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.04),
+      4px 4px 12px $shadow-dark-mode;
+
+    &:hover {
+      background: $bg-accent-dark;
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+        inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+@mixin neomorphic-container {
+  background: $bg-light;
+  border-radius: 16px;
+  box-shadow:
+    -6px -6px 12px $shadow-light,
+    6px 6px 12px $shadow-dark;
+  transition: all 0.3s ease-in-out;
+
+  &.dark {
+    background: $bg-dark;
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.04),
+      6px 6px 12px $shadow-dark-mode;
+  }
+}
+
+@mixin neomorphic-input {
+  background: #f3f3f3;
+  border: none;
+  border-radius: 10px;
+  color: $text-color;
+  font-size: 15px;
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 400;
+  opacity: 0.85;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+
+  &:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.1),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+      0 0 0 1px #e4e4e4;
+  }
+
+  &.dark {
+    background: rgb(36, 36, 36);
+    color: #ffffffcc;
+  }
+}
+
+@mixin active-state {
+  background: $bg-accent;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.08),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+
+  &.dark {
+    background: $bg-accent-dark;
+    box-shadow:
+      inset -2px -2px 3px rgba(255, 255, 255, 0.03),
+      inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Utility classes
+.conditional-active {
+  @include active-state;
+}

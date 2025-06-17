@@ -1,94 +1,127 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@radix-ui/react-popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from '@/components/ui/command';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import styles from '../styles/ChatSidebar.module.scss';
-import { loadEmojiData, type Emoji, type EmojiCategoryValue, type EmojisByCategory } from './emoji-picker-helper';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import Image from 'next/image';
+import styles from './EmojiSelector.module.scss';
+import emojiData from 'public/emojis-by-category.json';
 
 interface EmojiSelectorProps {
   onEmojiSelect: (emoji: string) => void;
   disabled?: boolean;
+  value?: string;
+  containerRef?: React.RefObject<HTMLElement>;
 }
 
-const emojiCategories = {
-  'Smileys & Emotion': '😀',
-  'People & Body': '🙋',
-  Component: '🧩',
-  'Animals & Nature': '🐶',
-  'Food & Drink': '🍕',
-  'Travel & Places': '🗽',
-  Activities: '⚽',
-  Objects: '💡',
-  Symbols: '♻️',
-  Flags: '🇺🇳',
-} as const;
+interface Emoji {
+  code: string[];
+  emoji: string;
+  name: string;
+}
 
-export function EmojiSelector({ onEmojiSelect, disabled }: EmojiSelectorProps) {
+interface EmojiCategory {
+  [category: string]: Emoji[];
+}
+
+const EMOJI_CATEGORIES: EmojiCategory = emojiData.emojis;
+const EMOJIS_PER_PAGE = 24; // 6 columns × 4 rows
+const CATEGORY_ICONS: Record<string, string> = {
+  'Smileys & Emotion': '😀',
+  'People & Body': '👋',
+  'Animals & Nature': '🐵',
+  'Food & Drink': '🍇',
+  'Travel & Places': '🌍',
+  Activities: '🎃',
+  Objects: '👓',
+  Symbols: '🏧',
+  Flags: '🏁',
+};
+
+export function EmojiSelector({ onEmojiSelect, disabled, value, containerRef }: EmojiSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [emojiData, setEmojiData] = useState<EmojisByCategory>();
-  const [loading, setLoading] = useState(true);
-  const [currentCategory, setCurrentCategory] = useState<string>('😀');
-  const [allEmojis, setAllEmojis] = useState<Emoji[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('Smileys & Emotion');
   const [categoryPages, setCategoryPages] = useState<Record<string, number>>({});
-  const EMOJIS_PER_PAGE = 24;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
+  const [portalPosition, setPortalPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const isInteractingRef = useRef(false);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const data = await loadEmojiData();
-        if (!data) throw new Error('Failed to load emoji data');
-        setEmojiData(data);
+    console.log('[EmojiSelector] containerRef:', containerRef?.current);
+  }, [containerRef]);
 
-        const categories = Object.keys(data.emojis);
-        const initialPages: Record<string, number> = {};
-        categories.forEach((category) => {
-          initialPages[category] = 0;
-        });
-        setCategoryPages(initialPages);
-
-        const flatEmojis: Emoji[] = [];
-        Object.values(data.emojis).forEach((emojisInCategory) => {
-          flatEmojis.push(...emojisInCategory);
-        });
-        setAllEmojis(flatEmojis);
-        setLoading(false);
-      } catch (error) {
-        console.error('[EmojiSelector] Error loading emoji data:', error);
-        setLoading(false);
-      }
-    }
-    loadData();
+  // Initialize category pages
+  useEffect(() => {
+    const categories = Object.keys(EMOJI_CATEGORIES).filter((category) => category !== 'Component');
+    const initialPages: Record<string, number> = {};
+    categories.forEach((category) => {
+      initialPages[category] = 0;
+    });
+    setCategoryPages(initialPages);
   }, []);
 
-  const filteredEmojis = useMemo(() => {
-    if (!searchQuery) return [];
-    return allEmojis.filter(
-      (emoji) =>
-        emoji.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emoji.emoji.includes(searchQuery),
-    );
-  }, [allEmojis, searchQuery]);
+  // Update portal position
+  useEffect(() => {
+    const updatePosition = () => {
+      if (triggerRef.current && containerRef?.current) {
+        const triggerRect = triggerRef.current.getBoundingClientRect();
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const popoverHeight = 320; // Height after removing search input
+        setPortalPosition({
+          top: triggerRect.top - containerRect.top - popoverHeight - 8,
+          left: triggerRect.left - containerRect.left + triggerRect.width / 2 - 160,
+        });
+      } else {
+        console.warn('[EmojiSelector] containerRef or triggerRef not available, using default position');
+        setPortalPosition({ top: 0, left: 0 });
+      }
+    };
 
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
+  }, [containerRef, open]);
+
+  // Handle hover and interaction states
+  const handleMouseEnterTrigger = () => {
+    if (!disabled) {
+      setOpen(true);
+    }
+  };
+
+  const handleMouseEnterPortal = () => {
+    isInteractingRef.current = true;
+  };
+
+  const handleMouseLeave = () => {
+    isInteractingRef.current = false;
+    setTimeout(() => {
+      if (!isInteractingRef.current && !portalRef.current?.contains(document.activeElement)) {
+        setOpen(false);
+      }
+    }, 100);
+  };
+
+  // Get current page emojis for a category
   const getCurrentPageEmojis = (category: string): Emoji[] => {
-    const _category = category as EmojiCategoryValue;
-    if (!emojiData?.emojis[_category]) return [];
+    if (!EMOJI_CATEGORIES[category]) return [];
     const currentPage = categoryPages[category] || 0;
     const startIndex = currentPage * EMOJIS_PER_PAGE;
     const endIndex = startIndex + EMOJIS_PER_PAGE;
-    return emojiData.emojis[_category].slice(startIndex, endIndex);
+    return EMOJI_CATEGORIES[category].slice(startIndex, endIndex);
   };
 
+  // Calculate total pages for a category
   const getTotalPages = (category: string): number => {
-    const _category = category as EmojiCategoryValue;
-    if (!emojiData?.emojis[_category]) return 0;
-    return Math.ceil(emojiData.emojis[_category].length / EMOJIS_PER_PAGE);
+    if (!EMOJI_CATEGORIES[category]) return 0;
+    return Math.ceil(EMOJI_CATEGORIES[category].length / EMOJIS_PER_PAGE);
   };
 
+  // Handle page navigation
   const handleNextPage = (category: string) => {
     const totalPages = getTotalPages(category);
     const currentPage = categoryPages[category] || 0;
@@ -104,136 +137,134 @@ export function EmojiSelector({ onEmojiSelect, disabled }: EmojiSelectorProps) {
     }
   };
 
+  // Portal content
+  const portalContent = open ? (
+    <div
+      className={`${styles.popover} ${open ? styles.popoverOpen : styles.popoverClosed}`}
+      ref={portalRef}
+      style={{
+        top: `${portalPosition.top}px`,
+        left: `${portalPosition.left}px`,
+      }}
+      onMouseEnter={handleMouseEnterPortal}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className={styles.tabsList}>
+        {Object.keys(CATEGORY_ICONS).map((category) => (
+          <button
+            key={category}
+            type="button"
+            className={`${styles.tabTrigger} ${activeCategory === category ? styles.active : ''}`}
+            onClick={() => setActiveCategory(category)}
+            aria-label={`Seleccionar categoría ${category}`}
+          >
+            {CATEGORY_ICONS[category] || '❓'}
+          </button>
+        ))}
+      </div>
+      <div className={styles.emojiContainer}>
+        {Object.keys(CATEGORY_ICONS).map((category) => (
+          <div
+            key={category}
+            className={`${styles.categorySection} ${activeCategory === category ? styles.active : ''}`}
+          >
+            <div className={styles.grid}>
+              {getCurrentPageEmojis(category).map((emoji, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className={`${styles.emojiButton} ${value === emoji.emoji ? styles.selected : ''}`}
+                  onClick={() => {
+                    onEmojiSelect(emoji.emoji);
+                    setOpen(false);
+                  }}
+                  title={emoji.name}
+                  aria-label={`Seleccionar emoji ${emoji.name}`}
+                >
+                  <span className={styles.emoji}>{emoji.emoji}</span>
+                  {value === emoji.emoji && (
+                    <Image
+                      src="/icons/check.svg"
+                      alt="Seleccionado"
+                      width={12}
+                      height={12}
+                      className={styles.checkIcon}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+            {getTotalPages(category) > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  type="button"
+                  onClick={() => handlePrevPage(category)}
+                  disabled={categoryPages[category] === 0}
+                  className={styles.paginationButton}
+                  aria-label="Página anterior"
+                >
+                  <Image
+                    src="/chevron-left.svg"
+                    alt="Anterior"
+                    width={16}
+                    height={16}
+                    className={styles.paginationIcon}
+                  />
+                </button>
+                <span className={styles.pageInfo}>
+                  Página {(categoryPages[category] || 0) + 1} de {getTotalPages(category)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleNextPage(category)}
+                  disabled={categoryPages[category] >= getTotalPages(category) - 1}
+                  className={styles.paginationButton}
+                  aria-label="Página siguiente"
+                >
+                  <Image
+                    src="/chevron-right.svg"
+                    alt="Siguiente"
+                    width={16}
+                    height={16}
+                    className={styles.paginationIcon}
+                  />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <>
+      <div className={styles.container}>
         <button
           type="button"
-          className={styles.imageButton}
+          style={{ border: 'transparent' }}
+          className={styles.button}
           disabled={disabled}
           aria-label="Seleccionar emoji"
+          aria-expanded={open}
+          ref={triggerRef}
+          onMouseEnter={handleMouseEnterTrigger}
+          onMouseLeave={handleMouseLeave}
         >
-          <Smile size={16} className={styles.iconInvert} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        className={`${styles.deletePopup} w-[320px] p-0`}
-        align="end"
-        sideOffset={8}
-      >
-        <Command>
-          <CommandInput
-            placeholder="Buscar emojis..."
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            className={styles.input}
+          <Image
+            src="/smile-plus.svg"
+            alt="Emoji"
+            width={16}
+            height={16}
+            className={styles.iconInvert}
           />
-          <CommandList className="max-h-[350px]">
-            {loading ? (
-              <div className="flex items-center justify-center p-4">Cargando emojis...</div>
-            ) : searchQuery ? (
-              <>
-                {filteredEmojis.length === 0 ? (
-                  <CommandEmpty>No se encontraron emojis.</CommandEmpty>
-                ) : (
-                  <CommandGroup>
-                    <div className="grid grid-cols-6 items-center gap-1 p-2">
-                      {filteredEmojis.slice(0, 24).map((emoji) => (
-                        <div
-                          key={emoji.emoji}
-                          role="button"
-                          title={emoji.name}
-                          onClick={() => {
-                            onEmojiSelect(emoji.emoji);
-                            setOpen(false);
-                          }}
-                          className={cn(
-                            'flex h-12 w-12 cursor-pointer items-center justify-center rounded',
-                            'hover:bg-[#e2e8f0] dark:hover:bg-[#2c2c2f]',
-                            'relative text-2xl',
-                          )}
-                        >
-                          {emoji.emoji}
-                        </div>
-                      ))}
-                    </div>
-                    {filteredEmojis.length > 24 && (
-                      <div className="text-gray-500 dark:text-gray-400 flex items-center justify-center p-2 text-sm">
-                        Mostrando primeros 24 resultados.
-                      </div>
-                    )}
-                  </CommandGroup>
-                )}
-              </>
-            ) : (
-              <Tabs
-                defaultValue={currentCategory}
-                onValueChange={setCurrentCategory}
-                className="w-full"
-              >
-                <TabsList className="flex h-auto w-full justify-between px-1 py-1 bg-[#f1f5f9] dark:bg-[#1f1f20]">
-                  {Object.keys(emojiData?.emojis ?? {}).map((category) => (
-                    <TabsTrigger
-                      key={category}
-                      value={category}
-                      className="flex h-10 w-10 items-center justify-center px-1 py-1 text-2xl data-[state=active]:bg-[#e2e8f0] dark:data-[state=active]:bg-[#2c2c2f]"
-                    >
-                      {category}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {Object.keys(emojiData?.emojis ?? {}).map((category) => (
-                  <TabsContent key={category} value={category} className="m-0">
-                    <CommandGroup>
-                      <div className="grid grid-cols-6 gap-1 p-2">
-                        {getCurrentPageEmojis(category).map((emoji) => (
-                          <div
-                            key={emoji.emoji}
-                            role="button"
-                            title={emoji.name}
-                            onClick={() => {
-                              onEmojiSelect(emoji.emoji);
-                              setOpen(false);
-                            }}
-                            className={cn(
-                              'flex h-12 w-12 cursor-pointer items-center justify-center rounded',
-                              'hover:bg-[#e2e8f0] dark:hover:bg-[#2c2c2f]',
-                              'relative text-2xl',
-                            )}
-                          >
-                            {emoji.emoji}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between border-t p-2">
-                        <button
-                          onClick={() => handlePrevPage(category)}
-                          disabled={categoryPages[category] === 0}
-                          className="hover:bg-[#e2e8f0] dark:hover:bg-[#2c2c2f] rounded-md p-1 disabled:opacity-50"
-                          aria-label="Página anterior"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <span className="text-gray-500 dark:text-gray-400 text-xs">
-                          Página {(categoryPages[category] || 0) + 1} de {getTotalPages(category)}
-                        </span>
-                        <button
-                          onClick={() => handleNextPage(category)}
-                          disabled={(categoryPages[category] || 0) >= getTotalPages(category) - 1}
-                          className="hover:bg-[#e2e8f0] dark:hover:bg-[#2c2c2f] rounded-md p-1 disabled:opacity-50"
-                          aria-label="Página siguiente"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </CommandGroup>
-                  </TabsContent>
-                ))}
-              </Tabs>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        </button>
+      </div>
+      {containerRef?.current ? (
+        createPortal(portalContent, containerRef.current)
+      ) : (
+        createPortal(portalContent, document.body)
+      )}
+    </>
   );
 }

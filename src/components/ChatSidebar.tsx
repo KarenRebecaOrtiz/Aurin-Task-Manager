@@ -12,31 +12,29 @@ import {
   updateDoc,
   doc,
   deleteDoc,
-  getDocs,
-  where,
+  getDoc,
   setDoc,
   serverTimestamp,
   Timestamp,
-  FieldValue,
-  getDoc,
 } from 'firebase/firestore';
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import TimePicker from 'react-time-picker';
+import DatePicker from 'react-datepicker';
 import 'react-time-picker/dist/TimePicker.css';
+import 'react-datepicker/dist/react-datepicker.css';
 import { db } from '@/lib/firebase';
-import ImagePreviewOverlay from './ImagePreviewOverlay';
-import styles from './ChatSidebar.module.scss';
 import { deleteTask } from '@/lib/taskUtils';
+import ImagePreviewOverlay from './ImagePreviewOverlay';
+import { InputChat } from './ui/InputChat';
+import styles from './ChatSidebar.module.scss';
 
 interface Message {
   id: string;
   senderId: string;
   senderName: string;
-  text: string;
-  timestamp: Timestamp | FieldValue;
+  text: string | null;
+  timestamp: Timestamp | any;
   read: boolean;
   hours?: number;
   imageUrl?: string | null;
@@ -93,8 +91,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const { user } = useUser();
   const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [isRefAttached, setIsRefAttached] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
@@ -116,31 +114,34 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isResponsibleDropdownOpen, setIsResponsibleDropdownOpen] = useState(false);
   const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
-  const timerPanelRef = useRef<HTMLDivElement>(null);
-  const timerButtonRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const taskMenuRef = useRef<HTMLDivElement>(null);
   const deletePopupRef = useRef<HTMLDivElement>(null);
   const hoursDropdownRef = useRef<HTMLDivElement>(null);
   const responsibleDropdownRef = useRef<HTMLDivElement>(null);
   const teamDropdownRef = useRef<HTMLDivElement>(null);
+  const timerPanelRef = useRef<HTMLDivElement>(null);
+  const timerButtonRef = useRef<HTMLDivElement>(null);
   const datePickerWrapperRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputWrapperRef = useRef<HTMLFormElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+  // Check if sidebarRef is attached
+  useEffect(() => {
+    if (sidebarRef.current) {
+      console.log('[ChatSidebar] sidebarRef.current attached:', sidebarRef.current);
+      setIsRefAttached(true);
+    } else {
+      console.log('[ChatSidebar] sidebarRef.current not attached');
+    }
+  }, []);
 
   const isCreator = user?.id === task.CreatedBy;
   const isInvolved =
@@ -148,48 +149,32 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
-  // Fetch admin status
   useEffect(() => {
     const fetchAdminStatus = async () => {
       if (!user?.id) {
-        console.warn('[ChatSidebar] No userId provided, skipping admin status fetch');
         setIsAdmin(false);
         return;
       }
       try {
-        console.log('[ChatSidebar] Fetching admin status for user:', user.id);
         const userDoc = await getDoc(doc(db, 'users', user.id));
         if (userDoc.exists()) {
-          const access = userDoc.data().access;
-          setIsAdmin(access === 'admin');
-          console.log('[ChatSidebar] Admin status fetched:', {
-            userId: user.id,
-            access,
-            isAdmin: access === 'admin',
-          });
+          setIsAdmin(userDoc.data().access === 'admin');
         } else {
           setIsAdmin(false);
-          console.warn('[ChatSidebar] User document not found for ID:', user.id);
         }
       } catch (error) {
-        console.error('[ChatSidebar] Error fetching admin status:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          userId: user.id,
-        });
+        console.error('[ChatSidebar] Error fetching admin status:', error);
         setIsAdmin(false);
       }
     };
     fetchAdminStatus();
   }, [user?.id]);
 
-  // Real-time task listener
   useEffect(() => {
     if (!task.id) {
-      console.warn('[ChatSidebar] No taskId provided for task listener');
+      setIsLoading(false);
       return;
     }
-
-    console.log('[ChatSidebar] Setting up task listener for task:', task.id);
     const unsubscribe = onSnapshot(
       doc(db, 'tasks', task.id),
       (doc) => {
@@ -206,37 +191,22 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             startDate: taskData.startDate ? taskData.startDate.toDate().toISOString() : null,
             endDate: taskData.endDate ? taskData.endDate.toDate().toISOString() : null,
             LeadedBy: taskData.LeadedBy || [],
-            AssignedTo: taskData.AssignedTo || [],
+            AssignedTo: doc.data().AssignedTo || [],
             CreatedBy: taskData.CreatedBy || '',
           });
-          console.log('[ChatSidebar] Task updated:', { taskId: doc.id, status: taskData.status });
-        } else {
-          console.warn('[ChatSidebar] Task document not found:', task.id);
         }
       },
       (error) => {
-        console.error('[ChatSidebar] Error listening to task:', {
-          error: error.message || 'Unknown error',
-          code: error.code || 'No code',
-          taskId: task.id,
-        });
+        console.error('[ChatSidebar] Error listening to task:', error);
       },
     );
-
-    return () => {
-      console.log('[ChatSidebar] Unsubscribing task listener for task:', task.id);
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [task.id]);
 
-  // Real-time timer listener
   useEffect(() => {
     if (!task.id || !user?.id) {
-      console.warn('[ChatSidebar] No taskId or userId provided for timer listener');
       return;
     }
-
-    console.log('[ChatSidebar] Setting up timer listener for user:', user.id, 'task:', task.id);
     const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
     const unsubscribe = onSnapshot(
       timerDocRef,
@@ -249,10 +219,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             const now = Date.now();
             const elapsedSeconds = Math.floor((now - start) / 1000) + timerData.accumulatedSeconds;
             setTimerSeconds(elapsedSeconds);
-            console.log('[ChatSidebar] Timer synced:', { elapsedSeconds });
           } else {
             setTimerSeconds(timerData.accumulatedSeconds);
-            console.log('[ChatSidebar] Timer stopped, accumulated:', timerData.accumulatedSeconds);
           }
         } else {
           setDoc(timerDocRef, {
@@ -261,48 +229,21 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             startTime: null,
             accumulatedSeconds: 0,
           }).catch((error) => {
-            console.error('[ChatSidebar] Error initializing timer:', {
-              error: error.message || 'Unknown error',
-              code: error.code || 'No code',
-              userId: user.id,
-              taskId: task.id,
-            });
+            console.error('[ChatSidebar] Error initializing timer:', error);
           });
-          console.log('[ChatSidebar] Initialized timer for user:', user.id);
         }
       },
       (error) => {
-        console.error('[ChatSidebar] Error listening to timer:', {
-          error: error.message || 'Unknown error',
-          code: error.code || 'No code',
-          userId: user.id,
-          taskId: task.id,
-        });
+        console.error('[ChatSidebar] Error listening to timer:', error);
       },
     );
-
-    let interval: NodeJS.Timeout;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-
-    return () => {
-      console.log('[ChatSidebar] Unsubscribing timer listener for user:', user.id);
-      unsubscribe();
-      clearInterval(interval);
-    };
+    return () => unsubscribe();
   }, [task.id, user?.id, isTimerRunning]);
 
-  // Real-time typing status listener
   useEffect(() => {
     if (!task.id) {
-      console.warn('[ChatSidebar] No taskId provided for typing listener');
       return;
     }
-
-    console.log('[ChatSidebar] Setting up typing listener for task:', task.id);
     const typingQuery = query(collection(db, `tasks/${task.id}/typing`));
     const unsubscribe = onSnapshot(
       typingQuery,
@@ -318,67 +259,40 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }
         });
         setTypingUsers(typing);
-        console.log('[ChatSidebar] Typing users:', typing);
       },
       (error) => {
-        console.error('[ChatSidebar] Error listening to typing status:', {
-          error: error.message || 'Unknown error',
-          code: error.code || 'No code',
-          taskId: task.id,
-        });
+        console.error('[ChatSidebar] Error listening to typing status:', error);
       },
     );
-
-    return () => {
-      console.log('[ChatSidebar] Unsubscribing typing listener for task:', task.id);
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [task.id, user?.id]);
 
-  // Actualizar estado de escritura
   const handleTyping = useCallback(() => {
     if (!user?.id || !task.id) {
-      console.warn('[ChatSidebar] No userId or taskId for typing update');
       return;
     }
-
     const typingDocRef = doc(db, `tasks/${task.id}/typing/${user.id}`);
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-
     setDoc(typingDocRef, {
       userId: user.id,
       isTyping: true,
       timestamp: Timestamp.now(),
     }).catch((error) => {
-      console.error('[ChatSidebar] Error updating typing status:', {
-        error: error.message || 'Unknown error',
-        code: error.code || 'No code',
-        userId: user.id,
-        taskId: task.id,
-      });
+      console.error('[ChatSidebar] Error updating typing status:', error);
     });
-
     typingTimeoutRef.current = setTimeout(() => {
       setDoc(typingDocRef, {
         userId: user.id,
         isTyping: false,
         timestamp: Timestamp.now(),
       }).catch((error) => {
-        console.error('[ChatSidebar] Error stopping typing status:', {
-          error: error.message || 'Unknown error',
-          code: error.code || 'No code',
-          userId: user.id,
-          taskId: task.id,
-        });
+        console.error('[ChatSidebar] Error stopping typing status:', error);
       });
     }, 3000);
-
-    console.log('[ChatSidebar] User typing:', user.id);
   }, [user?.id, task.id]);
 
-  // GSAP animation for open/close
   useEffect(() => {
     if (sidebarRef.current) {
       if (isOpen) {
@@ -387,7 +301,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           { x: '100%', opacity: 0 },
           { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
         );
-        console.log('[ChatSidebar] ChatSidebar opened');
       } else {
         gsap.to(sidebarRef.current, {
           x: '100%',
@@ -396,14 +309,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           ease: 'power2.in',
           onComplete: onClose,
         });
-        console.log('[ChatSidebar] ChatSidebar closed');
       }
-    } else {
-      console.warn('[ChatSidebar] sidebarRef not found');
     }
   }, [isOpen, onClose]);
 
-  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node) && isOpen) {
@@ -414,7 +323,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           ease: 'power2.in',
           onComplete: onClose,
         });
-        console.log('[ChatSidebar] Closed ChatSidebar via outside click');
       }
       if (
         actionMenuRef.current &&
@@ -422,7 +330,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         actionMenuOpenId
       ) {
         setActionMenuOpenId(null);
-        console.log('[ChatSidebar] Closed message action menu via outside click');
       }
       if (
         taskMenuRef.current &&
@@ -430,7 +337,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         isTaskMenuOpen
       ) {
         setIsTaskMenuOpen(false);
-        console.log('[ChatSidebar] Closed task menu via outside click');
       }
       if (
         deletePopupRef.current &&
@@ -439,7 +345,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       ) {
         setIsDeletePopupOpen(false);
         setDeleteConfirm('');
-        console.log('[ChatSidebar] Closed delete popup via outside click');
       }
       if (
         hoursDropdownRef.current &&
@@ -447,7 +352,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         isHoursDropdownOpen
       ) {
         setIsHoursDropdownOpen(false);
-        console.log('[ChatSidebar] Closed hours dropdown via outside click');
       }
       if (
         responsibleDropdownRef.current &&
@@ -455,7 +359,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         isResponsibleDropdownOpen
       ) {
         setIsResponsibleDropdownOpen(false);
-        console.log('[ChatSidebar] Closed responsible dropdown via outside click');
       }
       if (
         teamDropdownRef.current &&
@@ -463,7 +366,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         isTeamDropdownOpen
       ) {
         setIsTeamDropdownOpen(false);
-        console.log('[ChatSidebar] Closed team dropdown via outside click');
       }
     };
 
@@ -480,15 +382,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     isTeamDropdownOpen,
   ]);
 
-  // Real-time messages listener
   useEffect(() => {
     if (!task.id) {
-      console.warn('[ChatSidebar] No taskId provided for messages listener');
       setIsLoading(false);
       return;
     }
-
-    console.log('[ChatSidebar] Setting up messages listener for task:', task.id);
     const messagesQuery = query(collection(db, `tasks/${task.id}/messages`), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(
       messagesQuery,
@@ -507,12 +405,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           fileType: doc.data().fileType || null,
           filePath: doc.data().filePath || null,
         }));
-        console.log('[ChatSidebar] Messages fetched:', {
-          messageCount: newMessages.length,
-          messageIds: newMessages.map((m) => m.id),
-          taskId: task.id,
-        });
-        // Mantener mensajes optimistas que están pendientes
         setMessages((prev) => {
           const pendingMessages = prev.filter((msg) => msg.isPending);
           return [...pendingMessages, ...newMessages.filter((msg) => !msg.isPending)];
@@ -520,61 +412,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         setIsLoading(false);
       },
       (error) => {
-        console.error('[ChatSidebar] Error fetching messages:', {
-          error: error.message || 'Unknown error',
-          code: error.code || 'No code',
-          taskId: task.id,
-        });
+        console.error('[ChatSidebar] Error fetching messages:', error);
         setIsLoading(false);
       },
     );
-
-    return () => {
-      console.log('[ChatSidebar] Unsubscribing messages listener for task:', task.id);
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [task.id]);
 
-  // Mark messages as read when sidebar opens
   useEffect(() => {
     if (isOpen && user?.id) {
-      console.log('[ChatSidebar] Checking unread messages for user:', user.id);
       setHasInteracted(true);
       const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
-      console.log('[ChatSidebar] Unread messages:', {
-        count: unreadMessages.length,
-        messageIds: unreadMessages.map((m) => m.id),
-      });
       unreadMessages.forEach(async (msg) => {
         try {
-          console.log('[ChatSidebar] Marking message as read:', msg.id);
           await updateDoc(doc(db, `tasks/${task.id}/messages`, msg.id), {
             read: true,
           });
-          console.log('[ChatSidebar] Message marked as read:', msg.id);
         } catch (error) {
-          console.error('[ChatSidebar] Error marking message as read:', {
-            error: error.message || 'Unknown error',
-            code: error.code || 'No code',
-            messageId: msg.id,
-            taskId: task.id,
-          });
+          console.error('[ChatSidebar] Error marking message as read:', error);
         }
       });
     }
   }, [isOpen, messages, user?.id, task.id]);
 
-  // Notification sound for new unread messages
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio('/NotificationSound.mp3');
-      console.log('[ChatSidebar] Initialized audioRef');
     }
-
-    console.log('[ChatSidebar] Sound useEffect triggered:', {
-      messagesCount: messages.length,
-      hasInteracted,
-    });
     const newUnreadMessages = messages.filter(
       (msg) =>
         !msg.read &&
@@ -583,55 +447,31 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId,
         ),
     );
-
-    console.log('[ChatSidebar] New unread messages detected:', {
-      count: newUnreadMessages.length,
-      messageIds: newUnreadMessages.map((m) => m.id),
-    });
     if (newUnreadMessages.length > 0 && user?.id && hasInteracted) {
       const latestMessage = newUnreadMessages[newUnreadMessages.length - 1];
       if (latestMessage.senderId !== user.id) {
-        console.log('[ChatSidebar] Playing sound for new unread message:', {
-          messageId: latestMessage.id,
-          senderId: latestMessage.senderId,
-        });
         audioRef.current.play().catch((error) => {
-          console.error('[ChatSidebar] Error playing notification sound:', error.message);
+          console.error('[ChatSidebar] Error playing notification sound:', error);
         });
-      } else {
-        console.log('[ChatSidebar] Skipping sound: Message is from current user:', latestMessage.senderId);
       }
-    } else {
-      console.log('[ChatSidebar] No sound played:', {
-        newUnreadMessagesCount: newUnreadMessages.length,
-        userId: user?.id,
-        hasInteracted,
-      });
     }
-
     prevMessagesRef.current = messages;
-
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        console.log('[ChatSidebar] Paused audioRef on cleanup');
       }
     };
   }, [messages, user?.id, hasInteracted]);
 
-  // Scroll handling for closing action menu
   useEffect(() => {
     const handleScroll = () => {
       setActionMenuOpenId(null);
-      console.log('[ChatSidebar] Closed action menu on scroll');
     };
-
     const chatEl = chatRef.current;
     if (chatEl) {
       chatEl.addEventListener('scroll', handleScroll);
     }
     window.addEventListener('scroll', handleScroll);
-
     return () => {
       if (chatEl) {
         chatEl.removeEventListener('scroll', handleScroll);
@@ -640,27 +480,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, []);
 
-  // Scroll to bottom of chat
   useEffect(() => {
     if (chatRef.current) {
       setTimeout(() => {
         chatRef.current!.scrollTop = chatRef.current!.scrollHeight;
-        console.log('[ChatSidebar] Scrolled to bottom of chat');
       }, 0);
     }
   }, [messages, typingUsers]);
 
-  // Clean up preview URL
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        console.log('[ChatSidebar] Revoked preview URL');
-      }
-    };
-  }, [previewUrl]);
-
-  // GSAP animations
   useEffect(() => {
     if (actionMenuOpenId && actionMenuRef.current) {
       gsap.fromTo(
@@ -668,7 +495,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, y: -5, scale: 0.98 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[ChatSidebar] Action menu animated');
     }
   }, [actionMenuOpenId]);
 
@@ -679,7 +505,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[ChatSidebar] Status dropdown animated');
     }
   }, [isStatusDropdownOpen]);
 
@@ -690,21 +515,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[ChatSidebar] Task menu animated');
     }
   }, [isTaskMenuOpen]);
-
-  useEffect(() => {
-    if (timerPanelRef.current) {
-      gsap.to(timerPanelRef.current, {
-        height: isTimerPanelOpen ? 'auto' : 0,
-        opacity: isTimerPanelOpen ? 1 : 0,
-        duration: 0.3,
-        ease: 'power2.out',
-      });
-      console.log('[ChatSidebar] Timer panel animated, open:', isTimerPanelOpen);
-    }
-  }, [isTimerPanelOpen]);
 
   useEffect(() => {
     if (isDeletePopupOpen && deletePopupRef.current) {
@@ -713,8 +525,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, scale: 0.95 },
         { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
       );
-      setDeleteConfirm('Eliminar'); // Rellenar automáticamente
-      console.log('[ChatSidebar] Delete popup animated and deleteConfirm set');
+      setDeleteConfirm('Eliminar');
     }
   }, [isDeletePopupOpen]);
 
@@ -725,7 +536,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[ChatSidebar] Hours dropdown animated');
     }
   }, [isHoursDropdownOpen]);
 
@@ -736,7 +546,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[ChatSidebar] Responsible dropdown animated');
     }
   }, [isResponsibleDropdownOpen]);
 
@@ -747,9 +556,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[ChatSidebar] Team dropdown animated');
     }
   }, [isTeamDropdownOpen]);
+
+  useEffect(() => {
+    if (timerPanelRef.current) {
+      gsap.to(timerPanelRef.current, {
+        height: isTimerPanelOpen ? 'auto' : 0,
+        opacity: isTimerPanelOpen ? 1 : 0,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
+    }
+  }, [isTimerPanelOpen]);
 
   const handleClick = (element: HTMLElement) => {
     gsap.to(element, {
@@ -764,17 +583,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const handleStatusChange = async (status: string) => {
     if (!isCreator && !isAdmin) {
-      console.warn('[ChatSidebar] Status change not allowed:', { isCreator, isAdmin, userId: user?.id });
       return;
     }
-
     try {
-      console.log('[ChatSidebar] Changing task status to:', status);
       await updateDoc(doc(db, 'tasks', task.id), {
         status,
       });
-      console.log('[ChatSidebar] Task status updated:', status);
-
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
       recipients.delete(user?.id || '');
@@ -788,229 +602,84 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           recipientId,
         });
       }
-      console.log('[ChatSidebar] Notifications sent for status change:', {
-        recipientCount: recipients.size,
-      });
     } catch (error) {
-      console.error('[ChatSidebar] Error updating task status:', {
-        error: error.message || 'Unknown error',
-        code: error.code || 'No code',
-        taskId: task.id,
-      });
+      console.error('[ChatSidebar] Error updating task status:', error);
     }
   };
 
   const handleEditTask = () => {
     if (!isCreator && !isAdmin) {
-      console.warn('[ChatSidebar] Edit task not allowed:', { isCreator, isAdmin });
       return;
     }
-    console.log('[ChatSidebar] Navigating to edit task:', task.id);
     router.push(`/dashboard/edit-task?taskId=${task.id}`);
     setIsTaskMenuOpen(false);
   };
 
   const handleDeleteTask = async () => {
     if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
-      console.warn('[ChatSidebar] Invalid task deletion attempt:', {
-        userId: user?.id,
-        deleteConfirm,
-      });
       return;
     }
     setIsDeleting(true);
     try {
-      console.log('[ChatSidebar] Attempting to delete task:', task.id);
       await deleteTask(task.id, user.id, isAdmin, task);
-      console.log('[ChatSidebar] Task deleted successfully');
       setIsDeletePopupOpen(false);
       setDeleteConfirm('');
-      onClose(); // Cerrar el sidebar tras eliminar
+      onClose();
     } catch (error) {
-      console.error('[ChatSidebar] Error deleting task:', {
-        error: error instanceof Error ? error.message : JSON.stringify(error),
-        taskId: task.id,
-      });
-      alert(`Error al eliminar la tarea: ${error.message || 'Inténtalo de nuevo.'}`);
+      console.error('[ChatSidebar] Error deleting task:', error);
+      alert(`Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const selectFile = (f: File) => {
-    if (f.size > MAX_FILE_SIZE) {
-      alert('El archivo supera los 10 MB.');
-      console.log('[ChatSidebar] File too large:', f.size);
-      return;
-    }
-    setFile(f);
-    setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
-    console.log('[ChatSidebar] File selected:', { name: f.name, type: f.type, size: f.size });
-  };
-
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f && !f.name.includes('/paperclip.svg')) {
-      selectFile(f);
-    }
-    if (e.target) e.target.value = '';
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f && !f.name.includes('/paperclip.svg')) {
-      selectFile(f);
-    }
-    console.log('[ChatSidebar] File dropped:', f?.name);
-  }, []);
-
-  const handleRemoveFile = () => {
-    setFile(null);
-    setPreviewUrl(null);
-    console.log('[ChatSidebar] Removed selected file');
-  };
-
-  const handleSendMessage = async (e: React.FormEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    if (!user?.id || (!newMessage.trim() && !file) || isSending) {
-      console.warn('[ChatSidebar] Invalid message input:', {
-        userId: user?.id,
-        newMessage,
-        hasFile: !!file,
-        isSending,
-      });
-      return;
-    }
-  
+  const handleSendMessage = async (
+    messageData: Partial<Message>,
+    isAudio = false,
+    audioUrl?: string,
+    duration?: number,
+  ) => {
+    if (!user?.id) return;
     setIsSending(true);
-    console.log('[ChatSidebar] Starting message send for task:', task.id);
-  
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     const optimisticMessage: Message = {
       id: tempId,
       senderId: user.id,
       senderName: user.firstName || 'Usuario',
-      text: newMessage.trim() || null,
+      text: messageData.text || null,
       timestamp: Timestamp.fromDate(new Date()),
       read: false,
-      imageUrl: null,
-      fileUrl: null,
-      fileName: file ? file.name : null,
-      fileType: file ? file.type : null,
-      filePath: null,
+      imageUrl: messageData.imageUrl || null,
+      fileUrl: messageData.fileUrl || audioUrl || null,
+      fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
+      fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
+      filePath: messageData.filePath || null,
+      hours: duration ? duration / 3600 : messageData.hours,
       isPending: true,
     };
-  
     setMessages((prev) => [...prev, optimisticMessage]);
-    setNewMessage('');
-    setFile(null);
-    setPreviewUrl(null);
     setHasInteracted(true);
-  
+
     try {
-      const messageData: Partial<Message> = {
-        senderId: user.id,
-        senderName: user.firstName || 'Usuario',
-        text: newMessage.trim() || null,
+      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        ...messageData,
         timestamp: serverTimestamp(),
-        read: false,
-        imageUrl: null,
-        fileUrl: null,
-        fileName: null,
-        fileType: null,
-        filePath: null,
-      };
-  
-      if (file) {
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('userId', user.id);
-          formData.append('type', 'message');
-          formData.append('conversationId', task.id);
-  
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-            headers: { 'x-clerk-user-id': user.id },
-          });
-  
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to upload file');
-          }
-  
-          const { url, fileName, fileType, filePath } = await response.json();
-          console.log('[ChatSidebar] File uploaded via API:', { url, fileName, fileType, filePath });
-  
-          if (fileName) messageData.fileName = fileName;
-          if (fileType) messageData.fileType = fileType;
-          if (filePath) messageData.filePath = filePath;
-  
-          if (file.type.startsWith('image/') && url) {
-            messageData.imageUrl = url;
-          } else if (url) {
-            messageData.fileUrl = url;
-          }
-        } catch (error) {
-          console.error('[ChatSidebar] Failed to upload file:', {
-            error: error.message || 'Unknown error',
-            code: error.code || 'No code',
-            taskId: task.id,
-            fileName: file.name,
-          });
-          setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
-          alert('Error al subir el archivo');
-          setIsSending(false);
-          return;
-        }
-      }
-  
-      if (newMessage.trim()) {
-        messageData.text = newMessage.trim();
-      }
-  
-      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), messageData);
-      console.log('[ChatSidebar] Message saved for task:', task.id, 'docId:', docRef.id);
-  
+      });
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
       recipients.delete(user.id);
-  
-      for (const recipientId of Array.from(recipients)) {
-        try {
-          await addDoc(collection(db, 'notifications'), {
-            userId: user.id,
-            taskId: task.id,
-            message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
-            timestamp: Timestamp.now(),
-            read: false,
-            recipientId,
-          });
-          console.log('[ChatSidebar] Notification created for recipient:', recipientId);
-        } catch (error) {
-          console.error('[ChatSidebar] Failed to create notification:', {
-            recipientId,
-            error: error.message || 'Unknown error',
-            code: error.code || 'No code',
-          });
-        }
+      for (const recipientId of recipients) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+        });
       }
-  
-      console.log('[ChatSidebar] Message sent and notifications attempted');
     } catch (error) {
-      console.error('[ChatSidebar] Send message error:', {
-        error: error.message || 'Unknown error',
-        code: error.code || 'No code',
-        taskId: task.id,
-      });
+      console.error('[ChatSidebar] Send message error:', error);
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       alert('Error al enviar el mensaje');
     } finally {
@@ -1020,96 +689,59 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const handleEditMessage = async (messageId: string) => {
     if (!user?.id || !editingText.trim()) {
-      console.warn('[ChatSidebar] Invalid edit attempt:', {
-        userId: user?.id,
-        messageId,
-        editingText,
-      });
       return;
     }
-
     try {
-      console.log('[ChatSidebar] Editing message:', messageId);
       await updateDoc(doc(db, `tasks/${task.id}/messages`, messageId), {
         text: editingText.trim(),
         timestamp: Timestamp.now(),
       });
       setEditingMessageId(null);
       setEditingText('');
-      console.log('[ChatSidebar] Message edited:', messageId);
     } catch (error) {
-      console.error('[ChatSidebar] Error editing message:', {
-        error: error.message || 'Unknown error',
-        code: error.code || 'No code',
-        messageId,
-        taskId: task.id,
-      });
+      console.error('[ChatSidebar] Error editing message:', error);
     }
   };
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!user?.id) {
-      console.warn('[ChatSidebar] No userId for message deletion:', { messageId });
       return;
     }
-  
     try {
-      console.log('[ChatSidebar] Deleting message:', messageId);
       const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
       const messageDoc = await getDoc(messageRef);
       if (messageDoc.exists()) {
         const messageData = messageDoc.data();
         if (messageData.filePath) {
           try {
-            console.log('[ChatSidebar] Attempting to delete GCS file:', messageData.filePath);
             const response = await fetch('/api/delete-image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ filePath: messageData.filePath }),
             });
-            const responseData = await response.json();
             if (!response.ok) {
-              console.error('[ChatSidebar] Failed to delete GCS file:', {
-                status: response.status,
-                error: responseData.error,
-                filePath: messageData.filePath,
-              });
-            } else {
-              console.log('[ChatSidebar] Successfully deleted GCS file:', messageData.filePath);
+              console.error('[ChatSidebar] Failed to delete GCS file:', await response.json());
             }
           } catch (error) {
-            console.error('[ChatSidebar] Error deleting GCS file:', {
-              error: error instanceof Error ? error.message : 'Unknown error',
-              stack: error instanceof Error ? error.stack : 'No stack trace',
-              filePath: messageData.filePath,
-            });
+            console.error('[ChatSidebar] Error deleting GCS file:', error);
           }
         }
       }
       await deleteDoc(messageRef);
       setActionMenuOpenId(null);
-      console.log('[ChatSidebar] Message deleted:', messageId);
     } catch (error) {
-      console.error('[ChatSidebar] Error deleting message:', {
-        error: error.message || 'Unknown error',
-        code: error.code || 'No code',
-        messageId,
-        taskId: task.id,
-      });
+      console.error('[ChatSidebar] Error deleting message:', error);
     }
   };
 
   const toggleTimer = async (e: React.MouseEvent) => {
     if (!user?.id || !task.id) {
-      console.warn('[ChatSidebar] No userId or taskId for timer toggle');
       return;
     }
-
     handleClick(e.currentTarget as HTMLElement);
     const wasRunning = isTimerRunning;
     setIsTimerRunning((prev) => !prev);
     setHasInteracted(true);
-    console.log('[ChatSidebar] Timer toggled, running:', !wasRunning);
 
     const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
     if (wasRunning && timerSeconds > 0) {
@@ -1120,7 +752,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const timestamp = Timestamp.now();
 
       try {
-        console.log('[ChatSidebar] Adding time entry:', { timeEntry, hours });
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
           senderName: user.firstName || 'Usuario',
@@ -1136,13 +767,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           accumulatedSeconds: 0,
         });
         setTimerSeconds(0);
-        console.log('[ChatSidebar] Time entry added and timer reset');
       } catch (error) {
-        console.error('[ChatSidebar] Error adding time entry:', {
-          error: error.message || 'Unknown error',
-          code: error.code || 'No code',
-          taskId: task.id,
-        });
+        console.error('[ChatSidebar] Error adding time entry:', error);
       }
     } else if (!wasRunning) {
       try {
@@ -1152,13 +778,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           startTime: Timestamp.now(),
           accumulatedSeconds: timerSeconds,
         });
-        console.log('[ChatSidebar] Timer started in Firestore');
       } catch (error) {
-        console.error('[ChatSidebar] Error starting timer:', {
-          error: error.message || 'Unknown error',
-          code: error.code || 'No code',
-          taskId: task.id,
-        });
+        console.error('[ChatSidebar] Error starting timer:', error);
       }
     }
   };
@@ -1167,31 +788,24 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     handleClick(e.currentTarget as HTMLElement);
     setIsTimerPanelOpen((prev) => !prev);
     setHasInteracted(true);
-    console.log('[ChatSidebar] Timer panel toggled');
   };
 
   const handleAddTimeEntry = async () => {
     if (!user?.id) {
-      console.error('[ChatSidebar] No user ID available');
       alert('No se puede añadir la entrada de tiempo: usuario no autenticado.');
       return;
     }
-
     const [hours, minutes] = timerInput.split(':').map(Number);
     if (isNaN(hours) || isNaN(minutes)) {
-      console.error('[ChatSidebar] Invalid time input:', timerInput);
       alert('Por favor, introduce un formato de tiempo válido (HH:mm).');
       return;
     }
-
     const totalHours = hours + minutes / 60;
     const timeEntry = `${hours}h ${minutes}m`;
     const date = dateInput.toLocaleDateString('es-ES');
 
     try {
-      console.log('[ChatSidebar] Adding manual time entry:', { timeEntry, date, totalHours, taskId: task.id });
       const timestamp = Timestamp.now();
-
       await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: user.id,
         senderName: user.firstName || 'Usuario',
@@ -1200,10 +814,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         read: false,
         hours: totalHours,
       });
-      console.log('[ChatSidebar] Time entry message added successfully');
-
       if (commentInput.trim()) {
-        console.log('[ChatSidebar] Adding comment:', commentInput);
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
           senderName: user.firstName || 'Usuario',
@@ -1211,23 +822,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           timestamp: Timestamp.fromMillis(timestamp.toMillis() + 1),
           read: false,
         });
-        console.log('[ChatSidebar] Comment message added successfully');
       }
-
       setTimerInput('00:00');
       setDateInput(new Date());
       setCommentInput('');
       setIsTimerPanelOpen(false);
       setIsCalendarOpen(false);
       setHasInteracted(true);
-      console.log('[ChatSidebar] Manual time entry and comment processed successfully');
     } catch (error) {
-      console.error('[ChatSidebar] Error adding time entry:', {
-        error: error.message || 'Unknown error',
-        code: error.code || 'No code',
-        taskId: task.id,
-      });
-      alert(`Error al añadir la entrada de tiempo: ${error.message || 'Inténtalo de nuevo.'}`);
+      console.error('[ChatSidebar] Error adding time entry:', error);
+      alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     }
   };
 
@@ -1246,27 +850,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const totalHours = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
     let totalMinutes = 0;
-
     timeMessages.forEach((msg) => {
       totalMinutes += msg.hours * 60;
     });
-
     const totalHours = Math.floor(totalMinutes / 60);
     const remainingMinutes = Math.round(totalMinutes % 60);
-    console.log('[ChatSidebar] Calculated total hours:', `${totalHours}h ${remainingMinutes}m`, {
-      timeMessagesCount: timeMessages.length,
-    });
     return `${totalHours}h ${remainingMinutes}m`;
   }, [messages]);
 
   const hoursByUser = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
     const hoursMap: { [userId: string]: number } = {};
-
     timeMessages.forEach((msg) => {
       hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours;
     });
-
     const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
     return Array.from(involvedUsers)
       .map((userId) => {
@@ -1330,9 +927,102 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     imageUrl: '/default-image.png',
   };
 
+  const renderMessageContent = (message: Message) => {
+    if (message.imageUrl) {
+      return (
+        <div className={styles.imageWrapper}>
+          <Image
+            src={message.imageUrl}
+            alt={message.fileName || 'Imagen'}
+            width={200}
+            height={200}
+            className={styles.image}
+            onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
+            onError={(e) => console.warn('[ChatSidebar] Image load failed:', message.imageUrl)}
+          />
+        </div>
+      );
+    }
+    if (message.fileUrl && message.fileType?.startsWith('audio/')) {
+      return (
+        <div className={styles.file}>
+          <audio controls src={message.fileUrl} className="max-w-xs">
+            Tu navegador no soporta el elemento de audio.
+          </audio>
+          {message.hours && (
+            <span className={styles.timestamp}>
+              {Math.floor((message.hours * 3600) / 60)}:{((message.hours * 3600) % 60).toString().padStart(2, '0')}
+            </span>
+          )}
+        </div>
+      );
+    }
+    if (message.fileUrl) {
+      return (
+        <div className={styles.file}>
+          <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
+            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+            <span>{message.fileName}</span>
+          </a>
+        </div>
+      );
+    }
+    if (message.text) {
+      let text = message.text;
+      const styles: React.CSSProperties = {};
+      if (text.includes('**')) {
+        text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+        styles.fontWeight = 'bold';
+      }
+      if (text.includes('*')) {
+        text = text.replace(/\*(.*?)\*/g, '$1');
+        styles.fontStyle = 'italic';
+      }
+      if (text.includes('__')) {
+        text = text.replace(/__(.*?)__/g, '$1');
+        styles.textDecoration = 'underline';
+      }
+      if (text.includes('`')) {
+        text = text.replace(/`(.*?)`/g, '$1');
+        styles.fontFamily = 'monospace';
+        styles.backgroundColor = '#f3f4f6';
+        styles.padding = '2px 4px';
+        styles.borderRadius = '4px';
+      }
+      if (text.startsWith('- ')) {
+        const items = text
+          .split('\n')
+          .filter((line) => line.trim())
+          .map((line) => line.replace(/^- /, ''));
+        return (
+          <ul className="list-disc pl-5">
+            {items.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        );
+      }
+      if (text.match(/^\d+\. /)) {
+        const items = text
+          .split('\n')
+          .filter((line) => line.trim())
+          .map((line) => line.replace(/^\d+\. /, ''));
+        return (
+          <ol className="list-decimal pl-5">
+            {items.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ol>
+        );
+      }
+      return <span style={styles} className={styles.messageText}>{text}</span>;
+    }
+    return null;
+  };
+
   return (
     <div
-      className={`${styles.container} ${isOpen ? styles.open : ''} ${isDragging ? styles.dragging : ''}`}
+      className={`${styles.container} ${isOpen ? styles.open : ''}`}
       ref={sidebarRef}
     >
       <div className={styles.header}>
@@ -1362,7 +1052,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 handleClick(e.currentTarget);
                 setIsTaskMenuOpen((prev) => !prev);
                 setHasInteracted(true);
-                console.log('[ChatSidebar] Toggling task menu');
               }
             }}
           >
@@ -1378,7 +1067,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 onClick={() => {
                   setIsDeletePopupOpen(true);
                   setIsTaskMenuOpen(false);
-                  console.log('[ChatSidebar] Opened delete popup');
                 }}
               >
                 Eliminar Tarea
@@ -1472,14 +1160,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </div>
         </div>
       </div>
-      <div
-        className={styles.chat}
-        ref={chatRef}
-        onScroll={() => {
-          setActionMenuOpenId(null);
-          console.log('[ChatSidebar] Closed action menu on chat scroll');
-        }}
-      >
+      <div className={styles.chat} ref={chatRef}>
         {isLoading && (
           <div className={styles.loader}>
             <div className={styles.spinner} />
@@ -1488,38 +1169,97 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         {!isLoading && messages.length === 0 && (
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
-          {messages.map((message) => (
-            <div key={message.id} className={styles.message}>
-              <Image
-                src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
-                alt={message.senderName || 'Avatar del remitente'}
-                width={46}
-                height={46}
-                className={styles.avatar}
-                onError={(e) => {
-                  e.currentTarget.src = '/default-avatar.png';
-                  console.warn('[ChatSidebar] Avatar load failed, using fallback:', message.senderId);
-                }}
-              />
-              <div className={styles.messageContent}>
-                {message.imageUrl && (
-                  <div className={styles.imageWrapper}>
-                    <Image
-                      src={message.imageUrl}
-                      alt={message.fileName || 'Imagen'}
-                      width={200}
-                      height={200}
-                      className={styles.image}
-                      onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
-                      onError={(e) => {
-                        console.warn('[ChatSidebar] Image load failed:', message.imageUrl);
-                      }}
-                    />
-                  </div>
-                )}
+        {messages.map((message) => (
+          <div key={message.id} className={styles.message}>
+            <Image
+              src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
+              alt={message.senderName || 'Avatar del remitente'}
+              width={46}
+              height={46}
+              className={styles.avatar}
+              onError={(e) => {
+                e.currentTarget.src = '/default-avatar.png';
+                console.warn('[ChatSidebar] Avatar load failed:', message.senderId);
+              }}
+            />
+            <div className={styles.messageContent}>
+              <div className={styles.messageHeader}>
+                <div className={styles.sender}>{message.senderName}</div>
+                <div className={styles.timestampWrapper}>
+                  <span className={styles.timestamp}>
+                    {message.timestamp instanceof Timestamp
+                      ? message.timestamp.toDate().toLocaleTimeString('es-ES')
+                      : new Date(message.timestamp).toLocaleTimeString('es-ES')}
+                  </span>
+                  {user?.id === message.senderId && !message.isPending && (
+                    <div className={styles.actionContainer}>
+                      <button
+                        className={styles.actionButton}
+                        onClick={() => setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id)}
+                      >
+                        <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
+                      </button>
+                      {actionMenuOpenId === message.id && (
+                        <div ref={actionMenuRef} className={styles.actionDropdown}>
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => {
+                              setEditingMessageId(message.id);
+                              setEditingText(message.text || '');
+                              setActionMenuOpenId(null);
+                            }}
+                          >
+                            Editar
+                          </div>
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => handleDeleteMessage(message.id)}
+                          >
+                            Eliminar
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+              {editingMessageId === message.id ? (
+                <div className={styles.editContainer}>
+                  <input
+                    type="text"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className={styles.editInput}
+                    autoFocus
+                  />
+                  <button
+                    className={styles.editSaveButton}
+                    onClick={() => handleEditMessage(message.id)}
+                    disabled={!editingText.trim()}
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    className={styles.editCancelButton}
+                    onClick={() => {
+                      setEditingMessageId(null);
+                      setEditingText('');
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                renderMessageContent(message)
+              )}
+              {message.read && (
+                <div className={styles.readBy}>
+                  Visto por {users.find((u) => u.id !== message.senderId)?.firstName || 'alguien'}
+                </div>
+              )}
             </div>
-          ))}
+          </div>
+        ))}
         {typingUsers.length > 0 && (
           <div className={styles.typingIndicator}>
             <div className={styles.typingDots}>
@@ -1531,153 +1271,90 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </div>
         )}
       </div>
-      <form
-        className={`${styles.inputWrapper} ${isDragging ? styles.dragging : ''}`}
-        ref={inputWrapperRef}
-        onDragOver={handleDragOver}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        onSubmit={handleSendMessage}
-      >
-        <div ref={timerPanelRef} className={styles.timerPanel} id="timerPanel">
-          <div className={styles.timerPanelContent}>
-            <div className={styles.timerRow}>
-              <div className={styles.timerCard}>
-                <TimePicker
-                  onChange={(value: string | null) => setTimerInput(value || '00:00')}
-                  value={timerInput}
-                  format="HH:mm"
-                  clockIcon={null}
-                  clearIcon={null}
-                  disableClock
-                  locale="es-ES"
-                  className={styles.timerInput}
-                />
-              </div>
-              <div
-                className={styles.timerCard}
-                ref={datePickerWrapperRef}
-                onMouseEnter={() => setIsCalendarOpen(true)}
-                onMouseLeave={() => setTimeout(() => setIsCalendarOpen(false), 200)}
-              >
-                <DatePicker
-                  selected={dateInput}
-                  onChange={(date: Date | null) => setDateInput(date || new Date())}
-                  dateFormat="dd/MM/yy"
-                  className={styles.timerInput}
-                  popperClassName={styles.calendarPopper}
-                  onCalendarOpen={() => setIsCalendarOpen(true)}
-                  onCalendarClose={() => setIsCalendarOpen(false)}
-                />
-              </div>
-            </div>
+      <div ref={timerPanelRef} className={styles.timerPanel} id="timerPanel">
+        <div className={styles.timerPanelContent}>
+          <div className={styles.timerRow}>
             <div className={styles.timerCard}>
-              <textarea
-                placeholder="Añadir comentario"
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                className={styles.timerCommentInput}
+              <TimePicker
+                onChange={(value: string | null) => setTimerInput(value || '00:00')}
+                value={timerInput}
+                format="HH:mm"
+                clockIcon={null}
+                clearIcon={null}
+                disableClock
+                locale="es-ES"
+                className={styles.timerInput}
               />
             </div>
-            <div className={styles.timerTotal}>
-              Has invertido: {totalHours} en esta tarea.
-            </div>
-            <div className={styles.timerActions}>
-              <button className={styles.timerAddButton} onClick={handleAddTimeEntry}>
-                Añadir entrada
-              </button>
-              <button
-                className={styles.timerCancelButton}
-                onClick={() => {
-                  setIsTimerPanelOpen(false);
-                  setIsCalendarOpen(false);
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className={styles.inputContainer}>
-          {previewUrl && (
-            <div className={styles.imagePreview}>
-              <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-              <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-                <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
-              </button>
-            </div>
-          )}
-          {file && !previewUrl && (
-            <div className={styles.filePreview}>
-              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-              <span>{file.name}</span>
-              <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-                <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
-              </button>
-            </div>
-          )}
-          <input
-            type="text"
-            placeholder="Escribe tu mensaje aquí"
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              handleTyping();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isSending) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-            className={styles.input}
-            disabled={isSending}
-          />
-          <div className={styles.actions}>
-            <div className={styles.timerContainer}>
-              <button className={styles.playStopButton} onClick={toggleTimer}>
-                <Image
-                  src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
-                  alt={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
-                  width={12}
-                  height={12}
-                />
-              </button>
-              <div ref={timerButtonRef} className={styles.timer} onClick={toggleTimerPanel}>
-                <span>{formatTimer(timerSeconds)}</span>
-                <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-              <button
-                type="button"
-                className={styles.imageButton}
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Adjuntar archivo"
-                disabled={isSending}
-              >
-                <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} className={styles.iconInvert} />
-              </button>
-              <button
-                className={styles.sendButton}
-                onClick={handleSendMessage}
-                disabled={isSending || (!newMessage.trim() && !file)}
-                aria-label="Enviar mensaje"
-              >
-                <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
-              </button>
+            <div
+              className={styles.timerCard}
+              ref={datePickerWrapperRef}
+              onMouseEnter={() => setIsCalendarOpen(true)}
+              onMouseLeave={() => setTimeout(() => setIsCalendarOpen(false), 200)}
+            >
+              <DatePicker
+                selected={dateInput}
+                onChange={(date: Date | null) => setDateInput(date || new Date())}
+                dateFormat="dd/MM/yy"
+                className={styles.timerInput}
+                popperClassName={styles.calendarPopper}
+                onCalendarOpen={() => setIsCalendarOpen(true)}
+                onCalendarClose={() => setIsCalendarOpen(false)}
+              />
             </div>
           </div>
+          <div className={styles.timerCard}>
+            <textarea
+              placeholder="Añadir comentario"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              className={styles.timerCommentInput}
+            />
+          </div>
+          <div className={styles.timerTotal}>
+            Has invertido: {Math.floor(timerSeconds / 3600)}h {Math.floor((timerSeconds % 3600) / 60)}m en esta tarea.
+          </div>
+          <div className={styles.timerActions}>
+            <button type="button" className={styles.timerAddButton} onClick={handleAddTimeEntry}>
+              Añadir entrada
+            </button>
+            <button
+              type="button"
+              className={styles.timerCancelButton}
+              onClick={() => {
+                setIsTimerPanelOpen(false);
+                setIsCalendarOpen(false);
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
-        <input
-          type="file"
-          ref={fileInputRef}
-          hidden
-          onChange={handleFileInputChange}
-          aria-label="Seleccionar archivo"
-          disabled={isSending}
+      </div>
+      {isRefAttached && (
+        <InputChat
+          taskId={task.id}
+          userId={user?.id}
+          userFirstName={user?.firstName}
+          onSendMessage={handleSendMessage}
+          onTyping={handleTyping}
+          isSending={isSending}
+          timerSeconds={timerSeconds}
+          isTimerRunning={isTimerRunning}
+          onToggleTimer={toggleTimer}
+          onToggleTimerPanel={toggleTimerPanel}
+          isTimerPanelOpen={isTimerPanelOpen}
+          setIsTimerPanelOpen={setIsTimerPanelOpen}
+          timerInput={timerInput}
+          setTimerInput={setTimerInput}
+          dateInput={dateInput}
+          setDateInput={setDateInput}
+          commentInput={commentInput}
+          setCommentInput={setCommentInput}
+          onAddTimeEntry={handleAddTimeEntry}
+          containerRef={sidebarRef}
         />
-      </form>
+      )}
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>
           <div className={styles.deletePopup} ref={deletePopupRef}>
@@ -1710,7 +1387,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   onClick={() => {
                     setIsDeletePopupOpen(false);
                     setDeleteConfirm('');
-                    console.log('[ChatSidebar] Cancelled task deletion');
                   }}
                   disabled={isDeleting}
                 >

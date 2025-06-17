@@ -150,6 +150,7 @@ export default function TasksPage() {
   const memoizedClients = useMemo(() => clients, [clients]);
   const memoizedUsers = useMemo(() => users, [users]);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
+  const memoizedOpenSidebars = useMemo(() => openSidebars, [openSidebars]);
 
   useEffect(() => {
     const fetchAdminStatus = async () => {
@@ -733,7 +734,7 @@ export default function TasksPage() {
               onEditTaskOpen={handleEditTaskOpen}
               onAISidebarOpen={handleAISidebarOpen}
               onChatSidebarOpen={handleChatSidebarOpen}
-              onMessageSidebarOpen={handleMessageSidebarOpen} // Added prop
+              onMessageSidebarOpen={handleMessageSidebarOpen}
               setTasks={setTasks}
               onOpenProfile={handleOpenProfile}
             />
@@ -875,7 +876,7 @@ export default function TasksPage() {
         />
       )}
       <AISidebar isOpen={isAISidebarOpen} onClose={() => setIsAISidebarOpen(false)} />
-      {openSidebars.map((sidebar) =>
+      {memoizedOpenSidebars.map((sidebar) =>
         sidebar.type === 'message' && user?.id ? (
           <MessageSidebar
             key={sidebar.id}
@@ -887,7 +888,7 @@ export default function TasksPage() {
             onOpenSidebar={handleOpenSidebar}
             conversationId={[user.id, (sidebar.data as User).id].sort().join('_')}
           />
-        ) : sidebar.type === 'chat' ? (
+        ) : sidebar.type === 'chat' && sidebar.data && (sidebar.data as Task).id ? (
           <ChatSidebar
             key={sidebar.id}
             sidebarId={sidebar.id}

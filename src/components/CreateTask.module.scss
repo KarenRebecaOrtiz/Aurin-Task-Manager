@@ -1,23 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
-
 // 1. PALETA Y VARIABLES BÁSICAS
-$white:       #FFFFFF;
-$zinc-50:     #F9FAFB;
-$zinc-100:    #F4F4F5;
-$zinc-200:    #E4E4E7;
-$zinc-300:    #D4D4D8;
-$zinc-500:    #71717A;
-$zinc-800:    #27272A;
-$zinc-900:    #18181B;
-$zinc-950:    #09090B;
-$black:       #000000;
-$text-light:  #1A1A1A;
-$text-dark:   #D1D1D1;
-$primary:     #164C22;          // green‑800
-$red-500:     #EF4444;
+$white: #FFFFFF;
+$zinc-50: #F9FAFB;
+$zinc-100: #F4F4F5;
+$zinc-200: #E4E4E7;
+$zinc-300: #D4D4D8;
+$zinc-500: #71717A;
+$zinc-800: #27272A;
+$zinc-900: #18181B;
+$zinc-950: #09090B;
+$black: #000000;
+$text-light: #1A1A1A;
+$text-dark: #D1D1D1;
+$primary: #164C22;
+$red-500: #EF4444;
 
-// 2. MIXINS NEUMORFISTAS (evita repetir)
+// 2. MIXINS NEUMORFISTAS
 @mixin neu-surface($bg: #F1F5F9, $intensity: 8, $radius: 18px) {
   background: $bg;
   border-radius: $radius;
@@ -34,14 +33,12 @@ $red-500:     #EF4444;
     inset  #{$intensity}px  #{$intensity}px #{2*$intensity}px rgba(0,0,0,.05);
 }
 
-// 3. DARK MODE GLOBAL (inversión de fondos / sombras)
+// 3. DARK MODE GLOBAL
 :global(body.dark) {
   background: $zinc-900;
   color: $text-dark;
-  
-  .container,
-  .header,
-  .section {
+
+  .container {
     @include neu-surface($zinc-900, 8);
   }
 
@@ -86,6 +83,11 @@ $red-500:     #EF4444;
   &.saving {
     .section { opacity: .5; }
   }
+
+  &.open {
+    opacity: 1;
+    height: auto;
+  }
 }
 
 // 5. LOADER OVERLAY
@@ -105,23 +107,36 @@ $red-500:     #EF4444;
   border: 4px solid $zinc-200;
   border-top: 4px solid $black;
   border-radius: 50%;
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
 // 6. HEADER
 .header {
-  @include neu-surface();
   padding: 20px 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.headerTitle { color: $zinc-950; font-size: 24px; font-weight: 700; }
-.toggleButton { background:none; border:none; cursor:pointer; padding:0; }
+.headerTitle {
+  color: $zinc-950;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.toggleButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
 
 // 7. CONTENIDO / SECTIONS
 .content {
@@ -132,34 +147,45 @@ $red-500:     #EF4444;
 }
 
 .section {
-  @include neu-inset();
   display: flex;
   flex-direction: column;
   gap: 15px;
   padding: 24px;
 }
 
-.sectionTitle  { color: $primary; font-size: 18px; font-weight: 700; }
-.sectionSubtitle{ color: $zinc-800; font-size: 11px; font-weight: 400; }
+.sectionTitle {
+  color: $primary;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sectionSubtitle {
+  color: $zinc-800;
+  font-size: 11px;
+  font-weight: 400;
+}
 
 // 8. SLIDESHOW Y TARJETAS
-.slideshow { display:flex; align-items:center; gap:20px; }
-.slideButton {
-  background:none; border:none; cursor:pointer; padding:0; flex-shrink:0;
-  img { width:24px; height:52px; }
-  &:disabled { opacity:.5; cursor:not-allowed; }
+.slideshow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
-.slidesContainer { flex:1; overflow:hidden; padding:20px 0; }
-.slides { display:flex; gap:20px; transition: transform .3s ease; user-select:none; }
+
 .slideCard {
   @include neu-surface($white, 6, 20px);
   flex: 0 0 150px;
   padding: 16px 12px;
-  display:flex; flex-direction:column; align-items:center; gap:11px;
-  cursor:pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
   transition: box-shadow .2s ease, transform .2s ease;
 
-  &:hover { transform: translateY(-4px); }
+  &:hover {
+    transform: translateY(-4px);
+  }
 
   &.selected {
     background: $black;
@@ -169,86 +195,311 @@ $red-500:     #EF4444;
        4px  4px 10px rgba(0,0,0,.45);
   }
 
-  .clientImage, .userImage { width:36px; height:36px; border-radius:50%; }
-  .clientName, .userName { color:$text-light; font-size:12px; font-weight:700; text-align:center; }
-  .userRole { color:$text-light; font-size:12px; font-weight:500; text-align:center; }
+  .clientImage,
+  .userImage {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+
+  .clientName,
+  .userName {
+    color: $text-light;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .userRole {
+    color: $text-light;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+  }
 
   :global(body.dark) & {
-    .clientName, .userName, .userRole { color:$text-dark; }
+    .clientName,
+    .userName,
+    .userRole {
+      color: $text-dark;
+    }
   }
 }
 
 // 9. INPUTS Y DROPDOWNS
-.formGroup { display:flex; flex-direction:column; gap:6px; position:relative; }
-.label { color:$black; font-size:14px; font-weight:700; display:flex; gap:5px; align-items:center; }
-.error { color:$red-500; font-size:12px; font-weight:400; }
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.label {
+  color: $black;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.error {
+  color: $red-500;
+  font-size: 12px;
+  font-weight: 400;
+}
 
 .input {
-  width:100%; height:40px; padding:8px 12px;
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
   @include neu-inset();
-  color:$zinc-950; font-size:12px; font-weight:500; font-family:'Inter Tight',sans-serif;
-  border:none;
-  &::placeholder { color:$zinc-500; }
-  &.errorInput { border:1px solid $red-500; }
-  :global(body.dark) & { color:$text-dark; }
+  color: $zinc-950;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Inter Tight', sans-serif;
+  border: none;
+
+  &::placeholder {
+    color: $zinc-500;
+  }
+
+  &.errorInput {
+    border: 1px solid $red-500;
+  }
+
+  :global(body.dark) & {
+    color: $text-dark;
+  }
 }
 
-.dropdownContainer { position:relative; }
+.dropdownContainer {
+  position: relative;
+}
+
 .dropdownTrigger {
   @include neu-inset();
-  width:100%; height:40px; padding:8px 12px; display:flex; align-items:center; justify-content:space-between;
-  cursor:pointer; span { color:$zinc-950; font-size:12px; font-weight:500; }
-  :global(body.dark) & span { color:$text-dark; }
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+
+  span {
+    color: $zinc-950;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  :global(body.dark) & span {
+    color: $text-dark;
+  }
 }
 
-.dropdownItems, .dropdown {
-  position:absolute; top:100%; left:0; width:100%; max-height:200px; overflow-y:auto;
-  background:$white; border:1px solid $zinc-200; border-radius:12px;
+.dropdownItems,
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: $white;
+  border: 1px solid $zinc-200;
+  border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,.12);
-  z-index:150000;
+  z-index: 150000;
 
   .dropdownItem {
-    padding:12px; cursor:pointer; font-size:12px; font-weight:500; color:$zinc-950;
+    padding: 12px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: $zinc-950;
     transition: background .2s ease;
-    &:hover { background:$zinc-100; }
-    &.disabled { opacity:.5; cursor:not-allowed; }
-    :global(body.dark) & { color:$text-dark; &:hover { background:$zinc-800; } }
+
+    &:hover {
+      background: $zinc-100;
+    }
+
+    &.disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    :global(body.dark) & {
+      color: $text-dark;
+
+      &:hover {
+        background: $zinc-800;
+      }
+    }
   }
 }
 
 // 10. CURRENCY INPUT WRAPPER
 .currencyInput {
   @include neu-inset();
-  display:flex; align-items:center; overflow:hidden; height:40px;
-  .currencySymbol { padding:8px 12px; background:$zinc-100; font-size:12px; font-weight:500; color:$zinc-950; }
-  .input { border:none; border-radius:0; flex:1; background:transparent; }
-  :global(body.dark) & .currencySymbol { background:$zinc-800; color:$text-dark; }
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  height: 40px;
+
+  .currencySymbol {
+    padding: 8px 12px;
+    background: $zinc-100;
+    font-size: 12px;
+    font-weight: 500;
+    color: $zinc-950;
+  }
+
+  .input {
+    border: none;
+    border-radius: 0;
+    flex: 1;
+    background: transparent;
+  }
+
+  :global(body.dark) & .currencySymbol {
+    background: $zinc-800;
+    color: $text-dark;
+  }
 }
 
-// 11. ADVANCED TOGGLE & CONTENT
-.advancedToggle {
-  background:none; border:none; color:$primary; font-size:18px; font-weight:700; display:flex; justify-content:space-between; align-items:center; cursor:pointer;
-}
-.advancedContent { display:flex; flex-direction:column; gap:15px; overflow:hidden; height:0; opacity:0; }
+// 11. FORM GRID
+.level1Grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
 
-// 12. SUBMIT SECTION
-.submitSection { display:flex; flex-direction:column; align-items:center; gap:20px; margin-top:40px; }
-.submitText { text-align:center; color:$black; font-size:14px; font-weight:600; }
-.submitButton {
-  width:100%; padding:16px; border:none; border-radius:18px; font-size:14px; font-weight:700; cursor:pointer; color:$white; background:$black;
-  transition: transform .2s ease, box-shadow .2s ease;
-  box-shadow: -4px -4px 8px #ffffff, 4px 4px 8px rgba(0,0,0,.15);
-  &:hover { transform:translateY(-2px); }
-  &:disabled { opacity:.5; cursor:not-allowed; }
-  :global(body.dark) & { background:$zinc-800; }
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr;
+  }
 }
 
-// 13. MEDIA QUERIES (mantengo tu lógica)
-@media (max-width:1024px) {
-  .slides .slideCard { flex: 0 0 120px; }
+.level1Column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
-@media (max-width:767px) {
-  .slides .slideCard { flex: 0 0 100px; }
-  .content { padding: 15px 20px; }
-  .header { padding: 20px; }
+
+.formRow {
+  display: flex;
+  gap: 15px;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+}
+
+// 12. TAGS
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+
+  .tag {
+    background: $zinc-100;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: $zinc-500;
+    }
+
+    :global(body.dark) & {
+      background: $zinc-800;
+      color: $text-dark;
+    }
+  }
+}
+
+// 13. BUTTONS
+.addButtonWrapper {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addButtonText {
+  color: $zinc-800;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.addButton {
+  background: none;
+  border: none;
+  color: $primary;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+// 14. DATE PICKER POPPER
+.datePickerPopper {
+  background: $white;
+  border: 1px solid $zinc-200;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  z-index: 130000;
+
+  :global(body.dark) & {
+    background: $zinc-900;
+    border: 1px solid rgba(255,255,255,.05);
+  }
+}
+
+// 15. WIZARD SPECIFIC STYLES
+:global(.wizard-container) {
+  @include neu-surface();
+}
+
+:global(.wizard-step) {
+  padding: 24px;
+}
+
+:global(.card) {
+  @include neu-surface();
+}
+
+:global(.card-header) {
+  padding: 20px 40px;
+}
+
+:global(.card-content) {
+  padding: 15px 40px;
+}
+
+// 16. MEDIA QUERIES
+@media (max-width: 1024px) {
+  .slideCard {
+    flex: 0 0 120px;
+  }
+}
+
+@media (max-width: 767px) {
+  .slideCard {
+    flex: 0 0 100px;
+  }
+
+  .content {
+    padding: 15px 20px;
+  }
+
+  .header {
+    padding: 20px;
+  }
 }

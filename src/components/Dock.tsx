@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import styles from './Dock.module.scss';
 
@@ -20,77 +20,47 @@ const shortcuts: Shortcut[] = [
 const Dock: React.FC = () => {
   const dockRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
-  const [isDockVisible, setIsDockVisible] = useState(true); // State for dock visibility
+  const isVisible = useRef(true);
 
   useEffect(() => {
-    // Initial animation: slide in from above if visible
-    if (isDockVisible && dockRef.current) {
-      gsap.fromTo(
-        dockRef.current,
-        { y: -100, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
-      );
-    }
+    // Initial animation: slide in from above
+    gsap.fromTo(
+      dockRef.current,
+      { y: -100, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
+    );
 
-    // Keyboard shortcut handler for Cmd+K or Ctrl+K
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-        event.preventDefault(); // Prevent browser defaults (e.g., search bar)
-        setIsDockVisible((prev) => {
-          const newVisibility = !prev;
-          if (dockRef.current) {
-            if (newVisibility) {
-              // Show dock
-              gsap.to(dockRef.current, {
-                y: 0,
-                opacity: 1,
-                duration: 0.4,
-                ease: 'power2.out',
-              });
-            } else {
-              // Hide dock
-              gsap.to(dockRef.current, {
-                y: 100,
-                opacity: 0,
-                duration: 0.4,
-                ease: 'power2.in',
-              });
-            }
-          }
-          return newVisibility;
-        });
-      }
-    };
-
-    // Scroll handler (only active when dock is visible)
+    // Scroll handler
     const handleScroll = () => {
-      if (!isDockVisible) return; // Skip if dock is permanently hidden
       const currentScrollY = window.scrollY;
-      const isCurrentlyVisible = dockRef.current?.style.opacity !== '0';
 
-      if (currentScrollY > lastScrollY.current && isCurrentlyVisible) {
+      if (currentScrollY > lastScrollY.current && isVisible.current) {
         // Scroll down: hide dock
         gsap.to(dockRef.current, {
           y: 100,
           opacity: 0,
           duration: 0.4,
           ease: 'power2.in',
+          onComplete: () => {
+            isVisible.current = false;
+          },
         });
-      } else if (currentScrollY < lastScrollY.current && !isCurrentlyVisible) {
+      } else if (currentScrollY < lastScrollY.current && !isVisible.current) {
         // Scroll up: show dock
         gsap.to(dockRef.current, {
           y: 0,
           opacity: 1,
           duration: 0.4,
           ease: 'power2.out',
+          onComplete: () => {
+            isVisible.current = true;
+          },
         });
       }
 
       lastScrollY.current = currentScrollY;
     };
 
-    // Add event listeners
-    window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('scroll', handleScroll);
 
     // Hover effects for dock items
@@ -123,19 +93,13 @@ const Dock: React.FC = () => {
 
     // Cleanup
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('scroll', handleScroll);
       dockItems.forEach((item) => {
         item.removeEventListener('mouseenter', () => {});
         item.removeEventListener('mouseleave', () => {});
       });
     };
-  }, [isDockVisible]); // Re-run effect when isDockVisible changes
-
-  // Conditionally render dock based on visibility
-  if (!isDockVisible && dockRef.current?.style.opacity === '0') {
-    return null; // Don't render if hidden
-  }
+  }, []);
 
   return (
     <section ref={dockRef} className={styles.dockContainer}>

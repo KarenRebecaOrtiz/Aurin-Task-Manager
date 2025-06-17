@@ -1,7 +1,102 @@
 /* Importación de fuente Inter Tight */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
+@import '@/app/styles/utils';
 
-/* Contenedor principal del sidebar */
+
+.toolbar {
+  @include neomorphic-container;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid $border-color;
+
+  &.dark {
+    border-bottom-color: darken($border-color, 50%);
+  }
+}
+
+.undefined  {
+  filter: invert(100)
+}
+
+.format-button {
+  @include neomorphic-button;
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.active {
+    @include active-state;
+  }
+}
+
+// Emoji popover
+.emoji-popover {
+  @include neomorphic-container;
+  padding: 8px;
+  max-height: 192px;
+  overflow-y: auto;
+  width: 320px;
+  position: absolute;
+  bottom: 48px;
+  right: 0;
+  z-index: 50;
+}
+
+// Emoji button
+.emoji-button {
+  @include neomorphic-button;
+  height: 32px;
+  width: 32px;
+  font-size: 18px;
+  padding: 0;
+}
+
+// Recording indicator
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: $red-accent;
+  font-size: 12px;
+  font-family: 'monospace';
+
+  &.dark {
+    color: lighten($red-accent, 20%);
+  }
+}
+
+.recording-wave {
+  display: flex;
+  gap: 2px;
+
+  .wave-bar {
+    width: 4px;
+    background: $red-accent;
+    border-radius: 999px;
+    animation: pulse 1s infinite;
+
+    @for $i from 1 through 4 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{$i * 0.1}s;
+      }
+    }
+  }
+
+  &.dark .wave-bar {
+    background: lighten($red-accent, 20%);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { height: 8px; }
+  50% { height: 16px; }
+}
 .container {
   position: fixed;
   top: 0;
@@ -398,13 +493,14 @@
 .timerContainer {
   display: flex;
   flex-direction: row;
-  gap: 5px;
 }
 
 .timerContainer div {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 15px;
+
 }
 
 .timerContainer div span {
@@ -461,16 +557,45 @@
 }
 
 
+.imageButton {
+  filter: inverto(100);
+}
+
+.italicSvg {
+  transform: scale(1.1); /* Slightly larger italic icon */
+}
+
+.underlineSvg {
+  filter: hue-rotate(90deg); /* Greenish tint for underline icon */
+}
+
+.codeSvg {
+  filter: saturate(150%); /* More vibrant code icon */
+}
+
+.bulletSvg {
+  filter: contrast(120%); /* Higher contrast bullet icon */
+}
+
+.numberedSvg {
+  filter: opacity(0.8); /* Slightly transparent numbered icon */
+}
+
 
 // 🔁 Animación de rotación sólo para botón de enviar
 .sendButton:hover {
   transform: rotate(90deg);
 }
+.messageText {
+  /* Your text styles, e.g., */
+  font-size: 14px;
+  color: #333;
+}
 
 
 .actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-evenly;
   align-items: center;
 }
 
@@ -1528,3 +1653,116 @@
   color: #888;
   margin-left: 8px;
 }
+
+$primary-color: #e2ed69;
+     $secondary-color: #1b2734;
+     $text-color: #1b2734d9;
+     $text-muted: #71717A;
+     $border-color: #e5e7eb;
+     $shadow-light: #ffffff;
+     $shadow-dark: rgba(0, 0, 0, 0.15);
+     $shadow-dark-mode: rgba(0, 0, 0, 0.4);
+     $bg-light: #f1f5f9;
+     $bg-dark: #1f1f20;
+     $bg-accent: #e2e8f0;
+     $bg-accent-dark: #2c2c2f;
+     $red-accent: #c91111;
+
+     @mixin neomorphic-button {
+       background: $bg-light;
+       border: none;
+       border-radius: 100px;
+       box-shadow:
+         -4px -4px 8px $shadow-light,
+         4px 4px 12px rgba(209, 217, 230, 0.8);
+       transition:
+         transform 0.2s ease-in-out,
+         box-shadow 0.3s ease,
+         background-color 0.3s ease-in-out;
+
+       &:hover {
+         box-shadow:
+           inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+           inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+         background: $bg-accent;
+         transform: translateY(-1px);
+       }
+
+       &[disabled] {
+         opacity: 0.5;
+         cursor: not-allowed;
+       }
+
+       &.dark {
+         background: $bg-dark;
+         box-shadow:
+           -4px -4px 8px rgba(255, 255, 255, 0.04),
+           4px 4px 12px $shadow-dark-mode;
+
+         &:hover {
+           background: $bg-accent-dark;
+           box-shadow:
+             inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+             inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+         }
+       }
+     }
+
+     @mixin neomorphic-container {
+       background: $bg-light;
+       border-radius: 16px;
+       box-shadow:
+         -6px -6px 12px $shadow-light,
+         6px 6px 12px $shadow-dark;
+       transition: all 0.3s ease-in-out;
+
+       &.dark {
+         background: $bg-dark;
+         box-shadow:
+           -6px -6px 12px rgba(255, 255, 255, 0.04),
+           6px 6px 12px $shadow-dark-mode;
+       }
+     }
+
+     @mixin neomorphic-input {
+       background: #f3f3f3;
+       border: none;
+       border-radius: 10px;
+       color: $text-color;
+       font-size: 15px;
+       font-family: 'Inter Tight', sans-serif;
+       font-weight: 400;
+       opacity: 0.85;
+       box-shadow:
+         inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+         inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+       transition: all 0.2s ease-in-out;
+
+       &:focus {
+         outline: none;
+         background: rgba(255, 255, 255, 0.03);
+         box-shadow:
+           inset -1px -1px 3px rgba(255, 255, 255, 0.1),
+           inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+           0 0 0 1px #e4e4e4;
+       }
+
+       &.dark {
+         background: rgb(36, 36, 36);
+         color: #ffffffcc;
+       }
+     }
+
+     @mixin active-state {
+       background: $bg-accent;
+       box-shadow:
+         inset -2px -2px 4px rgba(255, 255, 255, 0.08),
+         inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+
+       &.dark {
+         background: $bg-accent-dark;
+         box-shadow:
+           inset -2px -2px 3px rgba(255, 255, 255, 0.03),
+           inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+       }
+     }
