@@ -2,20 +2,24 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
-import Image from "next/image";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { gsap } from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Wizard, WizardStep, WizardProgress, WizardButtons } from "@/components/ui/wizard";
+import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import SuccessAlert from "./SuccessAlert";
 import FailAlert from "./FailAlert";
 import styles from "./OnboardingStepper.module.scss";
 
-// Register GSAP ScrollToPlugin
+
 gsap.registerPlugin(ScrollToPlugin);
 
-const OnboardingStepper = () => {
+interface OnboardingStepperProps {
+  onComplete?: () => void; 
+}
+
+const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
   const { user } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -166,7 +170,7 @@ const OnboardingStepper = () => {
     setLoading(true);
     try {
       const userDocRef = doc(db, "users", user.id);
-      await setDoc(userDocRef, { onboardingCompleted: true, currentStep: 4 }, { merge: true });
+      await setDoc(userDocRef, { onboardingCompleted: true, currentStep: 5 }, { merge: true });
       console.log("[OnboardingStepper] Onboarding completed, set onboardingCompleted: true");
       addAlert("success", "¡Onboarding completado! Bienvenido a la plataforma.");
       const stepper = stepperRef.current;
@@ -180,10 +184,18 @@ const OnboardingStepper = () => {
           onComplete: () => {
             console.log("[OnboardingStepper] Stepper closed");
             setIsOpen(false);
+            if (onComplete) {
+              console.log("[OnboardingStepper] Triggering onComplete callback");
+              onComplete(); 
+            }
           },
         });
       } else {
         setIsOpen(false);
+        if (onComplete) {
+          console.log("[OnboardingStepper] Triggering onComplete callback (no stepper)");
+          onComplete(); 
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error al completar el onboarding";
@@ -219,19 +231,21 @@ const OnboardingStepper = () => {
         )
       )}
       <div ref={stepperRef} className={styles.frame2147225831}>
-        <Wizard totalSteps={4}>
+        <Wizard totalSteps={5}>
           <WizardProgress />
           <WizardStep step={0}>
             <div ref={contentRef} className={styles.frame2147225879}>
               <div ref={cardRef} className={styles.card}>
                 <div className={styles.creaYAsignaTareas}>🗂️ Crea y asigna tareas</div>
-                <Image
-                  src="/OnboardingStepper/Step2.png"
-                  alt="Paso 1"
-                  width={216}
-                  height={131}
-                  className={styles.stepImage}
-                />
+                <div className={styles.lottieWrapper}>
+                  <DotLottieReact
+                    src="https://lottie.host/76f2bdb2-5236-44f0-b671-9807f46f002b/FWf3sNMOue.lottie"
+                    loop
+                    autoplay
+                    className={styles.stepImage}
+                    style={{ width: 216, height: 131 }}
+                  />
+                </div>
                 <div className={styles.puedesCrearTareas}>
                   <span>
                     Puedes crear tareas y asignarlas a quienes estén involucrados. Solo los miembros asignados podrán verlas, comentarlas y actualizarlas.
@@ -246,13 +260,15 @@ const OnboardingStepper = () => {
             <div ref={contentRef} className={styles.frame2147225879}>
               <div ref={cardRef} className={styles.card}>
                 <div className={styles.actualizaYComenta}>💬 Actualiza y comenta</div>
-                <Image
-                  src="/OnboardingStepper/Step3.png"
-                  alt="Paso 2"
-                  width={233}
-                  height={302}
-                  className={styles.stepImage}
-                />
+                <div className={styles.lottieWrapper}>
+                  <DotLottieReact
+                    src="https://lottie.host/5f30ab10-7ac1-49bc-b782-5fc339501f24/YKbwc7JaAR.lottie"
+                    loop
+                    autoplay
+                    className={styles.stepImage}
+                    style={{ width: 233, height: 302 }}
+                  />
+                </div>
                 <div className={styles.cadaTareaTiene}>
                   <span>
                     Cada tarea tiene su propio chat para que el equipo pueda conversar directamente allí.
@@ -269,13 +285,15 @@ const OnboardingStepper = () => {
             <div ref={contentRef} className={styles.frame2147225879}>
               <div ref={cardRef} className={styles.card}>
                 <div className={styles.registraTuTiempo}>⏱️ Registra tu tiempo</div>
-                <Image
-                  src="/OnboardingStepper/Step4.png"
-                  alt="Paso 3"
-                  width={285}
-                  height={158}
-                  className={styles.stepImage}
-                />
+                <div className={styles.lottieWrapper}>
+                  <DotLottieReact
+                    src="https://lottie.host/046bcd94-75d7-4bf7-82d0-fa00572def09/fnsqFVkOK2.lottie"
+                    loop
+                    autoplay
+                    className={styles.stepImage}
+                    style={{ width: 285, height: 158 }}
+                  />
+                </div>
                 <div className={styles.quieresSaber}>
                   <span>
                     ¿Quieres saber cuánto tiempo dedicas a una tarea?
@@ -292,20 +310,45 @@ const OnboardingStepper = () => {
             <div ref={contentRef} className={styles.frame2147225879}>
               <div ref={cardRef} className={styles.card}>
                 <div className={styles.conectaConTuEquipo}>🤝 Conecta con tu equipo y clientes</div>
-                <Image
-                  src="/OnboardingStepper/Step5.png"
-                  alt="Paso 4"
-                  width={202}
-                  height={177}
-                  className={styles.stepImage}
-                />
+                <div className={styles.lottieWrapper}>
+                  <DotLottieReact
+                    src="https://lottie.host/96a7bf25-61aa-4ac7-96b1-f1c647b838aa/qGDbAUWBU0.lottie"
+                    loop
+                    autoplay
+                    className={styles.stepImage}
+                    style={{ width: 202, height: 177 }}
+                  />
+                </div>
                 <div className={styles.desdeElPanel}>
                   Desde el panel de miembros podrás ver a todo tu equipo. También puedes crear cuentas de clientes para asociarlas con tareas.
                 </div>
               </div>
             </div>
           </WizardStep>
-          <WizardButtons
+          <WizardStep step={4}>
+            <div ref={contentRef} className={styles.frame2147225879}>
+              <div ref={cardRef} className={styles.card}>
+                <div className={styles.conectaConTuEquipo}>⚙️ Configura tu cuenta</div>
+                <div className={styles.lottieWrapper}>
+                  <DotLottieReact
+                    src="https://lottie.host/7f196621-55e8-41d9-b219-498b61255490/PlWoUWiTNW.lottie"
+                    loop
+                    autoplay
+                    className={styles.stepImage}
+                    style={{ width: 220, height: 160 }}
+                  />
+                </div>
+                <div className={styles.desdeElPanel}>
+                  <span>
+                    Personaliza tu perfil y ajusta las preferencias de notificaciones en la configuración de cuenta.
+                    <br />
+                  </span>
+                  <span className={styles.bold}>¡Haz que la plataforma se adapte a tu estilo de trabajo!</span>
+                </div>
+              </div>
+            </div>
+          </WizardStep>
+          <WizardActions
             onComplete={handleComplete}
             nextStep={() => handleStepChange(step + 1)}
             prevStep={() => handleStepChange(step - 1)}

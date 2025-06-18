@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo, forwardRef, Dispatch, SetStateAction } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
@@ -12,7 +12,7 @@ import {
   updateDoc,
   doc,
   deleteDoc,
-  getDoc, 
+  getDoc,
   setDoc,
   serverTimestamp,
   Timestamp,
@@ -43,12 +43,8 @@ interface Message {
   fileType?: string | null;
   filePath?: string | null;
   isPending?: boolean;
-}
-
-interface TypingStatus {
-  userId: string;
-  isTyping: boolean;
-  timestamp: Timestamp;
+  hasError?: boolean;
+  clientId: string;
 }
 
 interface TimerState {
@@ -80,6 +76,298 @@ interface ChatSidebarProps {
   sidebarId: string;
 }
 
+interface MessageItemProps {
+  message: Message;
+  users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
+  userId: string | undefined;
+  styles: any;
+  setActionMenuOpenId: Dispatch<SetStateAction<string | null>>;
+  actionMenuOpenId: string | null;
+  setEditingMessageId: Dispatch<SetStateAction<string | null>>;
+  setEditingText: Dispatch<SetStateAction<string>>;
+  handleEditMessage: (messageId: string) => Promise<void>;
+  handleDeleteMessage: (messageId: string) => Promise<void>;
+  handleResendMessage: (message: Message) => Promise<void>;
+  setImagePreviewSrc: Dispatch<SetStateAction<string | null>>;
+  editingMessageId: string | null;
+  editingText: string;
+}
+
+const MessageItem = memo(
+  forwardRef<HTMLDivElement, MessageItemProps>(
+    (
+      {
+        message,
+        users,
+        userId,
+        styles,
+        setActionMenuOpenId,
+        actionMenuOpenId,
+        setEditingMessageId,
+        setEditingText,
+        handleEditMessage,
+        handleDeleteMessage,
+        handleResendMessage,
+        setImagePreviewSrc,
+        editingMessageId,
+        editingText,
+      },
+      ref,
+    ) => {
+      const actionMenuRef = useRef<HTMLDivElement>(null);
+      const renderMessageContent = useCallback(() => {
+        if (message.imageUrl) {
+          return (
+            <div className={styles.imageWrapper}>
+              <Image
+                src={message.imageUrl}
+                alt={message.fileName || 'Imagen'}
+                width={200}
+                height={200}
+                className={styles.image}
+                onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
+                onError={(e) => console.warn('Image load failed', message.imageUrl)}
+              />
+            </div>
+          );
+        }
+        if (message.fileUrl && message.fileType?.startsWith('audio/')) {
+          return (
+            <div className={styles.file}>
+              <audio controls src={message.fileUrl} className="max-w-xs">
+                Tu navegador no soporta el elemento de audio.
+              </audio>
+              {message.hours && (
+                <span className={styles.timestamp}>
+                  {Math.floor((message.hours * 3600) / 60)}:{((message.hours * 3600) % 60).toString().padStart(2, '0')}
+                </span>
+              )}
+            </div>
+          );
+        }
+        if (message.fileUrl) {
+          return (
+            <div className={styles.file}>
+              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
+                <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+                <span>{message.fileName}</span>
+              </a>
+            </div>
+          );
+        }
+        if (message.text) {
+          let text = message.text;
+          const textStyles: React.CSSProperties = {};
+          if (text.includes('**')) {
+            text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+            textStyles.fontWeight = 'bold';
+          }
+          if (text.includes('*')) {
+            text = text.replace(/\*(.*?)\*/g, '$1');
+            textStyles.fontStyle = 'italic';
+          }
+          if (text.includes('__')) {
+            text = text.replace(/__(.*?)__/g, '$1');
+            textStyles.textDecoration = 'underline';
+          }
+          if (text.includes('`')) {
+            text = text.replace(/`(.*?)`/g, '$1');
+            textStyles.fontFamily = 'monospace';
+            textStyles.backgroundColor = '#f3f4f6';
+            textStyles.padding = '2px 4px';
+            textStyles.borderRadius = '4px';
+          }
+          if (text.startsWith('- ')) {
+            const items = text
+              .split('\n')
+              .filter((line) => line.trim())
+              .map((line) => line.replace(/^- /, ''));
+            return (
+              <ul className="list-disc pl-5">
+                {items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            );
+          }
+          if (text.match(/^\d+\. /)) {
+            const items = text
+              .split('\n')
+              .filter((line) => line.trim())
+              .map((line) => line.replace(/^\d+\. /, ''));
+            return (
+              <ol className="list-decimal pl-5">
+                {items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ol>
+            );
+          }
+          return <span style={textStyles} className={styles.messageText}>{text}</span>;
+        }
+        return null;
+      }, [message, styles, setImagePreviewSrc]);
+
+      return (
+        <div
+          ref={ref}
+          className={`${styles.message} ${message.isPending ? styles.pending : ''} ${
+            message.hasError && message.senderId === userId ? styles.error : ''
+          }`}
+        >
+          <Image
+            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
+            alt={message.senderName || 'Avatar del remitente'}
+            width={46}
+            height={46}
+            className={styles.avatar}
+            onError={(e) => {
+              e.currentTarget.src = '/default-avatar.png';
+            }}
+          />
+          <div className={styles.messageContent}>
+            <div className={styles.messageHeader}>
+              <div className={styles.sender}>{message.senderName}</div>
+              <div className={styles.timestampWrapper}>
+                <span className={styles.timestamp}>
+                  {message.timestamp instanceof Timestamp
+                    ? message.timestamp.toDate().toLocaleTimeString('es-MX', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Mexico_City',
+                      })
+                    : new Date(message.timestamp).toLocaleTimeString('es-MX', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Mexico_City',
+                      })}
+                </span>
+                {userId === message.senderId && !message.isPending && (
+                  <div className={styles.actionContainer}>
+                    <button
+                      className={styles.actionButton}
+                      onClick={() => setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id)}
+                    >
+                      <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
+                    </button>
+                    {actionMenuOpenId === message.id && (
+                      <div ref={actionMenuRef} className={styles.actionDropdown}>
+                        {!message.hours && !message.hasError && (
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => {
+                              setEditingMessageId(message.id);
+                              setEditingText(message.text || '');
+                              setActionMenuOpenId(null);
+                            }}
+                          >
+                            Editar
+                          </div>
+                        )}
+                        {message.hasError && (
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => {
+                              handleResendMessage(message);
+                              setActionMenuOpenId(null);
+                            }}
+                          >
+                            Reenviar
+                          </div>
+                        )}
+                        <div
+                          className={styles.actionDropdownItem}
+                          onClick={() => {
+                            handleDeleteMessage(message.id);
+                            setActionMenuOpenId(null);
+                          }}
+                        >
+                          Eliminar
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            {editingMessageId === message.id ? (
+  <div className={styles.editContainer}>
+    <textarea
+      value={editingText}
+      onChange={(e) => setEditingText(e.target.value)}
+      className={styles.editInput}
+      autoFocus
+      rows={3}
+      style={{ resize: 'vertical', minHeight: '36px', maxHeight: '200px' }}
+    />
+    <button
+      className={styles.editSaveButton}
+      onClick={() => handleEditMessage(message.id)}
+      disabled={!editingText.trim()}
+    >
+      Guardar
+    </button>
+    <button
+      className={styles.editCancelButton}
+      onClick={() => {
+        setEditingMessageId(null);
+        setEditingText('');
+      }}
+    >
+      Cancelar
+    </button>
+  </div>
+) : (
+  renderMessageContent()
+)}
+          </div>
+        </div>
+      );
+    },
+  ),
+  (prevProps, nextProps) => {
+    return (
+      prevProps.message.id === nextProps.message.id &&
+      prevProps.message.isPending === nextProps.message.isPending &&
+      prevProps.message.hasError === nextProps.message.hasError &&
+      prevProps.message.text === nextProps.message.text &&
+      prevProps.actionMenuOpenId === nextProps.actionMenuOpenId &&
+      prevProps.editingMessageId === nextProps.editingMessageId &&
+      prevProps.editingText === nextProps.editingText
+    );
+  },
+);
+
+// Caché para mensajes con error
+const getCachedMessages = (taskId: string) => {
+  try {
+    const cached = localStorage.getItem(`failedMessages_${taskId}`);
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveCachedMessage = (taskId: string, message: Message) => {
+  try {
+    const cached = getCachedMessages(taskId);
+    cached.push(message);
+    localStorage.setItem(`failedMessages_${taskId}`, JSON.stringify(cached));
+  } catch (error) {
+    console.error('Error saving to localStorage', error);
+  }
+};
+
+const removeCachedMessage = (taskId: string, clientId: string) => {
+  try {
+    const cached = getCachedMessages(taskId);
+    const updated = cached.filter((msg: Message) => msg.clientId !== clientId);
+    localStorage.setItem(`failedMessages_${taskId}`, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error removing from localStorage', error);
+  }
+};
+
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isOpen,
   onClose,
@@ -91,7 +379,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const { user } = useUser();
   const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const [isRefAttached, setIsRefAttached] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -104,7 +391,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [editingText, setEditingText] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState<boolean>(false);
   const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
@@ -113,12 +400,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isHoursDropdownOpen, setIsHoursDropdownOpen] = useState(false);
   const [isResponsibleDropdownOpen, setIsResponsibleDropdownOpen] = useState(false);
   const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -131,24 +418,24 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const timerButtonRef = useRef<HTMLDivElement>(null);
   const datePickerWrapperRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingMessagesRef = useRef<Map<string, string>>(new Map()); // Track pending message IDs to prevent duplicates
-
-  // Check if sidebarRef is attached
-  useEffect(() => {
-    if (sidebarRef.current) {
-      console.log('[ChatSidebar] sidebarRef.current attached:', sidebarRef.current);
-      setIsRefAttached(true);
-    } else {
-      console.log('[ChatSidebar] sidebarRef.current not attached');
-    }
-  }, []);
 
   const isCreator = user?.id === task.CreatedBy;
   const isInvolved =
     user?.id &&
     (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning]);
 
   useEffect(() => {
     const fetchAdminStatus = async () => {
@@ -164,7 +451,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           setIsAdmin(false);
         }
       } catch (error) {
-        console.error('[ChatSidebar] Error fetching admin status:', error);
+        console.error('Error fetching admin status', error);
+        setIsAdmin(false);
       }
     };
     fetchAdminStatus();
@@ -191,13 +479,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             startDate: taskData.startDate ? taskData.startDate.toDate().toISOString() : null,
             endDate: taskData.endDate ? taskData.endDate.toDate().toISOString() : null,
             LeadedBy: taskData.LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
+            AssignedTo: taskData.AssignedTo || [],
             CreatedBy: taskData.CreatedBy || '',
           });
         }
       },
       (error) => {
-        console.error('[ChatSidebar] Error listening to task:', error);
+        console.error('Error listening to task', error);
       },
     );
     return () => unsubscribe();
@@ -229,69 +517,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             startTime: null,
             accumulatedSeconds: 0,
           }).catch((error) => {
-            console.error('[ChatSidebar] Error initializing timer:', error);
+            console.error('Error initializing timer', error);
           });
         }
       },
       (error) => {
-        console.error('[ChatSidebar] Error listening to timer:', error);
-      },
-    );
-    return () => unsubscribe();
-  }, [task.id, user?.id, isTimerRunning]);
-
-  useEffect(() => {
-    if (!task.id) {
-      return;
-    }
-    const typingQuery = query(collection(db, `tasks/${task.id}/typing`));
-    const unsubscribe = onSnapshot(
-      typingQuery,
-      (snapshot) => {
-        const typing: string[] = [];
-        snapshot.docs.forEach((doc) => {
-          const data = doc.data() as TypingStatus;
-          if (data.isTyping && data.userId !== user?.id) {
-            const timestamp = data.timestamp.toDate().getTime();
-            if (Date.now() - timestamp < 5000) {
-              typing.push(data.userId);
-            }
-          }
-        });
-        setTypingUsers(typing);
-      },
-      (error) => {
-        console.error('[ChatSidebar] Error listening to typing status:', error);
+        console.error('Error listening to timer', error);
       },
     );
     return () => unsubscribe();
   }, [task.id, user?.id]);
-
-  const handleTyping = useCallback(() => {
-    if (!user?.id || !task.id) {
-      return;
-    }
-    const typingDocRef = doc(db, `tasks/${task.id}/typing/${user.id}`);
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    setDoc(typingDocRef, {
-      userId: user.id,
-      isTyping: true,
-      timestamp: Timestamp.now(),
-    }).catch((error) => {
-      console.error('[ChatSidebar] Error updating typing status:', error);
-    });
-    typingTimeoutRef.current = setTimeout(() => {
-      setDoc(typingDocRef, {
-        userId: user.id,
-        isTyping: false,
-        timestamp: Timestamp.now(),
-      }).catch((error) => {
-        console.error('[ChatSidebar] Error stopping typing status:', error);
-      });
-    }, 3000);
-  }, [user?.id, task.id]);
 
   useEffect(() => {
     if (sidebarRef.current) {
@@ -387,6 +622,27 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setIsLoading(false);
       return;
     }
+    // Cargar mensajes fallidos desde el caché
+    const cachedMessages = getCachedMessages(task.id);
+    if (cachedMessages.length > 0) {
+      setMessages((prev) => {
+        const messageMap = new Map<string, Message>(prev.map((msg) => [msg.id, msg]));
+        cachedMessages.forEach((msg: Message) => {
+          if (!messageMap.has(msg.id)) {
+            messageMap.set(msg.id, {
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            });
+          }
+        });
+        return Array.from(messageMap.values()).sort((a, b) =>
+          a.timestamp instanceof Timestamp && b.timestamp instanceof Timestamp
+            ? a.timestamp.toMillis() - b.timestamp.toMillis()
+            : 0,
+        );
+      });
+    }
+
     const messagesQuery = query(collection(db, `tasks/${task.id}/messages`), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(
       messagesQuery,
@@ -398,25 +654,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           text: doc.data().text,
           timestamp: doc.data().timestamp,
           read: doc.data().read || false,
-          hours: doc.data().hours || 0,
+          hours: doc.data().hours || undefined,
           imageUrl: doc.data().imageUrl || null,
           fileUrl: doc.data().fileUrl || null,
           fileName: doc.data().fileName || null,
           fileType: doc.data().fileType || null,
           filePath: doc.data().filePath || null,
+          clientId: crypto.randomUUID(),
         }));
         setMessages((prev) => {
-          const pendingMessages = prev.filter((msg) => msg.isPending);
-          // Only add new messages that aren't already pending or duplicates
-          const uniqueMessages = newMessages.filter(
-            (msg) => !pendingMessages.some((p) => p.id === msg.id) && !prev.some((m) => m.id === msg.id),
+          const messageMap = new Map<string, Message>();
+          prev.forEach((msg) => messageMap.set(msg.id, msg));
+          newMessages.forEach((msg) => {
+            if (!messageMap.has(msg.id)) {
+              messageMap.set(msg.id, msg);
+            }
+          });
+          const updatedMessages = Array.from(messageMap.values()).sort((a, b) =>
+            a.timestamp instanceof Timestamp && b.timestamp instanceof Timestamp
+              ? a.timestamp.toMillis() - b.timestamp.toMillis()
+              : 0,
           );
-          return [...pendingMessages, ...uniqueMessages];
+          return updatedMessages;
         });
         setIsLoading(false);
       },
       (error) => {
-        console.error('[ChatSidebar] Error fetching messages:', error);
+        console.error('Error fetching messages', error);
         setIsLoading(false);
       },
     );
@@ -433,7 +697,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             read: true,
           });
         } catch (error) {
-          console.error('[ChatSidebar] Error marking message as read:', error);
+          console.error('Error marking message as read', error);
         }
       });
     }
@@ -455,7 +719,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const latestMessage = newUnreadMessages[newUnreadMessages.length - 1];
       if (latestMessage.senderId !== user.id) {
         audioRef.current.play().catch((error) => {
-          console.error('[ChatSidebar] Error playing notification sound:', error);
+          console.error('Error playing notification sound', error);
         });
       }
     }
@@ -485,13 +749,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   }, []);
 
   useEffect(() => {
-    if (chatRef.current) {
-      const scrollToBottom = () => {
-        chatRef.current!.scrollTop = chatRef.current!.scrollHeight;
-      };
-      requestAnimationFrame(scrollToBottom);
+    if (lastMessageRef.current && messages.length > 0) {
+      lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-  }, [messages, typingUsers]);
+  }, [messages.length]);
 
   useEffect(() => {
     if (actionMenuOpenId && actionMenuRef.current) {
@@ -530,7 +791,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         { opacity: 0, scale: 0.95 },
         { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
       );
-      setDeleteConfirm('Eliminar');
     }
   }, [isDeletePopupOpen]);
 
@@ -566,11 +826,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   useEffect(() => {
     if (timerPanelRef.current) {
-      gsap.to(timerPanelRef.current, {
+      gsap.set(timerPanelRef.current, {
         height: isTimerPanelOpen ? 'auto' : 0,
         opacity: isTimerPanelOpen ? 1 : 0,
-        duration: 0.3,
-        ease: 'power2.out',
       });
     }
   }, [isTimerPanelOpen]);
@@ -608,7 +866,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         });
       }
     } catch (error) {
-      console.error('[ChatSidebar] Error updating task status:', error);
+      console.error('Error updating task status', error);
     }
   };
 
@@ -631,7 +889,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setDeleteConfirm('');
       onClose();
     } catch (error) {
-      console.error('[ChatSidebar] Error deleting task:', error);
+      console.error('Error deleting task', error);
       alert(`Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     } finally {
       setIsDeleting(false);
@@ -643,96 +901,99 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     isAudio = false,
     audioUrl?: string,
     duration?: number,
-    tempId?: string,
   ) => {
-    if (!user?.id) return;
-
-    // If signaled to remove a failed message
-    if (tempId && messageData.isPending && messageData.id) {
-      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
-      pendingMessagesRef.current.delete(tempId);
+    if (!user?.id || isSending) {
       return;
     }
-
     setIsSending(true);
 
-    // Generate tempId if not provided
-    const messageTempId = tempId || `temp-${Date.now()}-${Math.random()}`;
-    if (!pendingMessagesRef.current.has(messageTempId)) {
-      pendingMessagesRef.current.set(messageTempId, messageTempId);
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    const clientId = crypto.randomUUID();
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: user.id,
+      senderName: user.firstName || 'Usuario',
+      text: messageData.text || null,
+      timestamp: Timestamp.fromDate(new Date()),
+      read: false,
+      imageUrl: messageData.imageUrl || null,
+      fileUrl: messageData.fileUrl || audioUrl || null,
+      fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
+      fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
+      filePath: messageData.filePath || null,
+      hours: duration ? duration / 3600 : undefined,
+      isPending: true,
+      hasError: messageData.hasError || false,
+      clientId,
+    };
 
-      const optimisticMessage: Message = {
-        id: messageTempId,
-        senderId: user.id,
-        senderName: user.firstName || 'Usuario',
-        text: messageData.text || null,
-        timestamp: Timestamp.fromDate(new Date()),
-        read: false,
-        imageUrl: messageData.imageUrl || null,
-        fileUrl: messageData.fileUrl || audioUrl || null,
-        fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
-        fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
-        filePath: messageData.filePath || null,
-        hours: duration ? duration / 3600 : messageData.hours,
-        isPending: true,
-      };
-
-      // Add optimistic message
-      setMessages((prev) => [...prev, optimisticMessage]);
-      setHasInteracted(true);
-
-      try {
-        const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
-          ...messageData,
-          senderId: user.id,
-          senderName: user.firstName || 'Usuario',
-          timestamp: serverTimestamp(),
-          read: false,
-        });
-
-        // Update optimistic message with real ID
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === messageTempId
-              ? {
-                  ...msg,
-                  id: docRef.id,
-                  timestamp: serverTimestamp(),
-                  isPending: false,
-                }
-              : msg,
-          ),
-        );
-        pendingMessagesRef.current.delete(messageTempId);
-
-        const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-        if (task.CreatedBy) recipients.add(task.CreatedBy);
-        recipients.delete(user.id);
-        for (const recipientId of recipients) {
-          await addDoc(collection(db, 'notifications'), {
-            userId: user.id,
-            taskId: task.id,
-            message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
-            timestamp: Timestamp.now(),
-            read: false,
-            recipientId,
-          });
-        }
-      } catch (error) {
-        console.error('[ChatSidebar] Send message error:', error);
-        setMessages((prev) => prev.filter((msg) => msg.id !== messageTempId));
-        pendingMessagesRef.current.delete(messageTempId);
-        alert('Error al enviar el mensaje');
-      } finally {
-        setIsSending(false);
+    setMessages((prev) => {
+      const existingIds = new Set(prev.map((msg) => msg.id));
+      if (existingIds.has(tempId)) {
+        return prev;
       }
-    } else {
+      return [...prev, optimisticMessage];
+    });
+    setHasInteracted(true);
+
+    try {
+      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        senderId: messageData.senderId,
+        senderName: messageData.senderName,
+        text: messageData.text,
+        timestamp: serverTimestamp(),
+        read: false,
+        imageUrl: messageData.imageUrl,
+        fileUrl: messageData.fileUrl,
+        fileName: messageData.fileName,
+        fileType: messageData.fileType,
+        filePath: messageData.filePath,
+        ...(duration && { hours: duration / 3600 }),
+      });
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempId
+            ? { ...msg, id: docRef.id, isPending: false, timestamp: Timestamp.now() }
+            : msg,
+        ),
+      );
+      removeCachedMessage(task.id, clientId);
+
+      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+      if (task.CreatedBy) recipients.add(task.CreatedBy);
+      recipients.delete(user.id);
+      for (const recipientId of Array.from(recipients)) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+        });
+      }
+    } catch (error) {
+      console.error('Send message error', error);
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === tempId) {
+            const failedMessage = { ...msg, isPending: false, hasError: true };
+            saveCachedMessage(task.id, failedMessage);
+            return failedMessage;
+          }
+          return msg;
+        }),
+      );
+      alert('Error al enviar el mensaje');
+    } finally {
       setIsSending(false);
     }
   };
 
   const handleEditMessage = async (messageId: string) => {
     if (!user?.id || !editingText.trim()) {
+      alert('El mensaje no puede estar vacío.');
       return;
     }
     try {
@@ -740,18 +1001,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         text: editingText.trim(),
         timestamp: Timestamp.now(),
       });
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, text: editingText.trim(), timestamp: Timestamp.now() }
+            : msg,
+        ),
+      );
       setEditingMessageId(null);
       setEditingText('');
     } catch (error) {
-      console.error('[ChatSidebar] Error editing message:', error);
+      console.error('Error editing message:', error);
+      alert('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
     }
   };
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!user?.id) {
+      console.log('[ChatSidebar:DeleteMessage] No user ID, aborting delete');
       return;
     }
     try {
+      console.log('[ChatSidebar:DeleteMessage] Deleting message', messageId);
       const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
       const messageDoc = await getDoc(messageRef);
       if (messageDoc.exists()) {
@@ -764,17 +1035,105 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               body: JSON.stringify({ filePath: messageData.filePath }),
             });
             if (!response.ok) {
-              console.error('[ChatSidebar] Failed to delete GCS file:', await response.json());
+              console.error('[ChatSidebar:DeleteMessage] Failed to delete GCS file', await response.json());
+            } else {
+              console.log('[ChatSidebar:DeleteMessage] GCS file deleted successfully');
             }
           } catch (error) {
-            console.error('[ChatSidebar] Error deleting GCS file:', error);
+            console.error('[ChatSidebar:DeleteMessage] Error deleting GCS file', error);
           }
         }
       }
       await deleteDoc(messageRef);
       setActionMenuOpenId(null);
+      setMessages((prev) => {
+        const updated = prev.filter((msg) => msg.id !== messageId);
+        const deletedMessage = prev.find((msg) => msg.id === messageId);
+        if (deletedMessage?.hasError) {
+          removeCachedMessage(task.id, deletedMessage.clientId);
+        }
+        return updated;
+      });
+      console.log('[ChatSidebar:DeleteMessage] Message deleted successfully');
     } catch (error) {
-      console.error('[ChatSidebar] Error deleting message:', error);
+      console.error('[ChatSidebar:DeleteMessage] Error deleting message', error);
+    }
+  };
+
+  const handleResendMessage = async (message: Message) => {
+    if (!user?.id || isSending) {
+      return;
+    }
+    setIsSending(true);
+
+    const newTempId = `temp-${Date.now()}-${Math.random()}`;
+    const newClientId = crypto.randomUUID();
+    const resendMessage: Message = {
+      ...message,
+      id: newTempId,
+      clientId: newClientId,
+      timestamp: Timestamp.fromDate(new Date()),
+      isPending: true,
+      hasError: false,
+    };
+
+    setMessages((prev) => {
+      const updated = prev.filter((msg) => msg.clientId !== message.clientId);
+      return [...updated, resendMessage];
+    });
+
+    try {
+      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        senderId: message.senderId,
+        senderName: message.senderName,
+        text: message.text,
+        timestamp: serverTimestamp(),
+        read: false,
+        imageUrl: message.imageUrl,
+        fileUrl: message.fileUrl,
+        fileName: message.fileName,
+        fileType: message.fileType,
+        filePath: message.filePath,
+        ...(message.hours && { hours: message.hours }),
+      });
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === newTempId
+            ? { ...msg, id: docRef.id, isPending: false, timestamp: Timestamp.now() }
+            : msg,
+        ),
+      );
+      removeCachedMessage(task.id, message.clientId);
+
+      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+      if (task.CreatedBy) recipients.add(task.CreatedBy);
+      recipients.delete(user.id);
+      for (const recipientId of Array.from(recipients)) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+        });
+      }
+    } catch (error) {
+      console.error('Resend message error', error);
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === newTempId) {
+            const failedMessage = { ...msg, isPending: false, hasError: true };
+            saveCachedMessage(task.id, failedMessage);
+            return failedMessage;
+          }
+          return msg;
+        }),
+      );
+      alert('Error al reenviar el mensaje');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -812,7 +1171,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         });
         setTimerSeconds(0);
       } catch (error) {
-        console.error('[ChatSidebar] Error adding time entry:', error);
+        console.error('Error adding time entry', error);
       }
     } else if (!wasRunning) {
       try {
@@ -823,15 +1182,25 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           accumulatedSeconds: timerSeconds,
         });
       } catch (error) {
-        console.error('[ChatSidebar] Error starting timer:', error);
+        console.error('Error starting timer', error);
       }
     }
   };
 
   const toggleTimerPanel = (e: React.MouseEvent) => {
-    handleClick(e.currentTarget as HTMLElement);
-    setIsTimerPanelOpen((prev) => !prev);
-    setHasInteracted(true);
+    if (isSending) return;
+    e.stopPropagation();
+    setIsTimerPanelOpen((prev) => {
+      if (timerPanelRef.current) {
+        gsap.to(timerPanelRef.current, {
+          height: !prev ? 'auto' : 0,
+          opacity: !prev ? 1 : 0,
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      }
+      return !prev;
+    });
   };
 
   const handleAddTimeEntry = async () => {
@@ -846,7 +1215,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
     const totalHours = hours + minutes / 60;
     const timeEntry = `${hours}h ${minutes}m`;
-    const date = dateInput.toLocaleDateString('es-ES');
+    const date = dateInput.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' });
 
     try {
       const timestamp = Timestamp.now();
@@ -874,7 +1243,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setIsCalendarOpen(false);
       setHasInteracted(true);
     } catch (error) {
-      console.error('[ChatSidebar] Error adding time entry:', error);
+      console.error('Error adding time entry', error);
       alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     }
   };
@@ -888,14 +1257,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const formatDate = (date: string | null) => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('es-ES');
+    return new Date(date).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' });
   };
 
   const totalHours = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
     let totalMinutes = 0;
     timeMessages.forEach((msg) => {
-      totalMinutes += msg.hours * 60;
+      totalMinutes += msg.hours! * 60;
     });
     const totalHours = Math.floor(totalMinutes / 60);
     const remainingMinutes = Math.round(totalMinutes % 60);
@@ -906,7 +1275,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
     const hoursMap: { [userId: string]: number } = {};
     timeMessages.forEach((msg) => {
-      hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours;
+      hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours!;
     });
     const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
     return Array.from(involvedUsers)
@@ -971,101 +1340,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     imageUrl: '/default-image.png',
   };
 
-  const renderMessageContent = (message: Message) => {
-    if (message.imageUrl) {
-      return (
-        <div className={styles.imageWrapper}>
-          <Image
-            src={message.imageUrl}
-            alt={message.fileName || 'Imagen'}
-            width={200}
-            height={200}
-            className={styles.image}
-            onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
-            onError={(e) => console.warn('[ChatSidebar] Image load failed:', message.imageUrl)}
-          />
-        </div>
-      );
-    }
-    if (message.fileUrl && message.fileType?.startsWith('audio/')) {
-      return (
-        <div className={styles.file}>
-          <audio controls src={message.fileUrl} className="max-w-xs">
-            Tu navegador no soporta el elemento de audio.
-          </audio>
-          {message.hours && (
-            <span className={styles.timestamp}>
-              {Math.floor((message.hours * 3600) / 60)}:{((message.hours * 3600) % 60).toString().padStart(2, '0')}
-            </span>
-          )}
-        </div>
-      );
-    }
-    if (message.fileUrl) {
-      return (
-        <div className={styles.file}>
-          <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
-            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-            <span>{message.fileName}</span>
-          </a>
-        </div>
-      );
-    }
-    if (message.text) {
-      let text = message.text;
-      const styles: React.CSSProperties = {};
-      if (text.includes('**')) {
-        text = text.replace(/\*\*(.*?)\*\*/g, '$1');
-        styles.fontWeight = 'bold';
-      }
-      if (text.includes('*')) {
-        text = text.replace(/\*(.*?)\*/g, '$1');
-        styles.fontStyle = 'italic';
-      }
-      if (text.includes('__')) {
-        text = text.replace(/__(.*?)__/g, '$1');
-        styles.textDecoration = 'underline';
-      }
-      if (text.includes('`')) {
-        text = text.replace(/`(.*?)`/g, '$1');
-        styles.fontFamily = 'monospace';
-        styles.backgroundColor = '#f3f4f6';
-        styles.padding = '2px 4px';
-        styles.borderRadius = '4px';
-      }
-      if (text.startsWith('- ')) {
-        const items = text
-          .split('\n')
-          .filter((line) => line.trim())
-          .map((line) => line.replace(/^- /, ''));
-        return (
-          <ul className="list-disc pl-5">
-            {items.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        );
-      }
-      if (text.match(/^\d+\. /)) {
-        const items = text
-          .split('\n')
-          .filter((line) => line.trim())
-          .map((line) => line.replace(/^\d+\. /, ''));
-        return (
-          <ol className="list-decimal pl-5">
-            {items.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ol>
-        );
-      }
-      return <span style={styles} >{text}</span>;
-    }
-    return null;
-  };
-
   return (
-    <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
+    <div
+      className={`${styles.container} ${isOpen ? styles.open : ''}`}
+      ref={sidebarRef}
+    >
       <div className={styles.header}>
         <div className={styles.controls}>
           <div
@@ -1210,107 +1489,26 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         {!isLoading && messages.length === 0 && (
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
-        {messages.map((message) => (
-          <div key={message.id} className={styles.message}>
-            <Image
-              src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
-              alt={message.senderName || 'Avatar del remitente'}
-              width={46}
-              height={46}
-              className={styles.avatar}
-              onError={(e) => {
-                e.currentTarget.src = '/default-avatar.png';
-                console.warn('[ChatSidebar] Avatar load failed:', message.senderId);
-              }}
-            />
-            <div className={styles.messageContent}>
-              <div className={styles.messageHeader}>
-                <div className={styles.sender}>{message.senderName}</div>
-                <div className={styles.timestampWrapper}>
-                  <span className={styles.timestamp}>
-                    {message.timestamp instanceof Timestamp
-                      ? message.timestamp.toDate().toLocaleTimeString('es-ES')
-                      : new Date(message.timestamp).toLocaleTimeString('es-ES')}
-                  </span>
-                  {user?.id === message.senderId && !message.isPending && (
-                    <div className={styles.actionContainer}>
-                      <button
-                        className={styles.actionButton}
-                        onClick={() => setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id)}
-                      >
-                        <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
-                      </button>
-                      {actionMenuOpenId === message.id && (
-                        <div ref={actionMenuRef} className={styles.actionDropdown}>
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              setEditingMessageId(message.id);
-                              setEditingText(message.text || '');
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Editar
-                          </div>
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => handleDeleteMessage(message.id)}
-                          >
-                            Eliminar
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-              {editingMessageId === message.id ? (
-                <div className={styles.editContainer}>
-                  <input
-                    type="text"
-                    value={editingText}
-                    onChange={(e) => setEditingText(e.target.value)}
-                    className={styles.editInput}
-                    autoFocus
-                  />
-                  <button
-                    className={styles.editSaveButton}
-                    onClick={() => handleEditMessage(message.id)}
-                    disabled={!editingText.trim()}
-                  >
-                    Guardar
-                  </button>
-                  <button
-                    className={styles.editCancelButton}
-                    onClick={() => {
-                      setEditingMessageId(null);
-                      setEditingText('');
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
-                renderMessageContent(message)
-              )}
-              {message.read && (
-                <div className={styles.readBy}>
-                  Visto por {users.find((u) => u.id !== message.senderId)?.firstName || 'alguien'}
-                </div>
-              )}
-            </div>
-          </div>
+        {messages.map((message, index) => (
+          <MessageItem
+            key={message.clientId}
+            message={message}
+            users={users}
+            userId={user?.id}
+            styles={styles}
+            setActionMenuOpenId={setActionMenuOpenId}
+            actionMenuOpenId={actionMenuOpenId}
+            setEditingMessageId={setEditingMessageId}
+            setEditingText={setEditingText}
+            handleEditMessage={handleEditMessage}
+            handleDeleteMessage={handleDeleteMessage}
+            handleResendMessage={handleResendMessage}
+            setImagePreviewSrc={setImagePreviewSrc}
+            editingMessageId={editingMessageId}
+            editingText={editingText}
+            ref={index === messages.length - 1 ? lastMessageRef : null}
+          />
         ))}
-        {typingUsers.length > 0 && (
-          <div className={styles.typingIndicator}>
-            <div className={styles.typingDots}>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-            <span>{users.find((u) => typingUsers.includes(u.id))?.firstName || 'Alguien'} está escribiendo...</span>
-          </div>
-        )}
       </div>
       <div ref={timerPanelRef} className={styles.timerPanel} id="timerPanel">
         <div className={styles.timerPanelContent}>
@@ -1323,7 +1521,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 clockIcon={null}
                 clearIcon={null}
                 disableClock
-                locale="es-ES"
+                locale="es-MX"
                 className={styles.timerInput}
               />
             </div>
@@ -1353,7 +1551,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             />
           </div>
           <div className={styles.timerTotal}>
-            Has invertido: {Math.floor(timerSeconds / 3600)}h {Math.floor((timerSeconds % 3600) / 60)}m en esta tarea.
+            Has invertido: {totalHours} en esta tarea.
           </div>
           <div className={styles.timerActions}>
             <button type="button" className={styles.timerAddButton} onClick={handleAddTimeEntry}>
@@ -1372,30 +1570,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </div>
         </div>
       </div>
-      {isRefAttached && (
-        <InputChat
-          taskId={task.id}
-          userId={user?.id}
-          userFirstName={user?.firstName}
-          onSendMessage={handleSendMessage}
-          onTyping={handleTyping}
-          isSending={isSending}
-          timerSeconds={timerSeconds}
-          isTimerRunning={isTimerRunning}
-          onToggleTimer={toggleTimer}
-          onToggleTimerPanel={toggleTimerPanel}
-          isTimerPanelOpen={isTimerPanelOpen}
-          setIsTimerPanelOpen={setIsTimerPanelOpen}
-          timerInput={timerInput}
-          setTimerInput={setTimerInput}
-          dateInput={dateInput}
-          setDateInput={setDateInput}
-          commentInput={commentInput}
-          setCommentInput={setCommentInput}
-          onAddTimeEntry={handleAddTimeEntry}
-          containerRef={sidebarRef}
-        />
-      )}
+      <InputChat
+        taskId={task.id}
+        userId={user?.id}
+        userFirstName={user?.firstName}
+        onSendMessage={handleSendMessage}
+        isSending={isSending}
+        timerSeconds={timerSeconds}
+        isTimerRunning={isTimerRunning}
+        onToggleTimer={toggleTimer}
+        onToggleTimerPanel={toggleTimerPanel}
+        isTimerPanelOpen={isTimerPanelOpen}
+        setIsTimerPanelOpen={setIsTimerPanelOpen}
+        timerInput={timerInput}
+        setTimerInput={setTimerInput}
+        dateInput={dateInput}
+        setDateInput={setDateInput}
+        commentInput={commentInput}
+        setCommentInput={setCommentInput}
+        onAddTimeEntry={handleAddTimeEntry}
+        containerRef={sidebarRef}
+        timerPanelRef={timerPanelRef}
+      />
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>
           <div className={styles.deletePopup} ref={deletePopupRef}>

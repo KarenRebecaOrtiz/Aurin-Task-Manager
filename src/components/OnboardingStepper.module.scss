@@ -3,8 +3,9 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba($black, 0.5);
+  background: rgba(255, 255, 255, 0.117);
   display: flex;
+  backdrop-filter: blur(2px);
   justify-content: center;
   align-items: center;
   z-index: 10001;
@@ -28,7 +29,6 @@
 }
 
 .card {
-  @include neu-surface($white, 6, 18px);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -60,10 +60,17 @@
   font-weight: 600;
 }
 
+// Define the SVG filter
+.lottieWrapper {
+  filter: url(#grayscale); 
+  display: inline-block; 
+}
+
 .stepImage {
-  max-width: 100%;
-  height: auto;
-  transition: opacity 0.3s ease; /* Smooth image load */
+  display: block;
+  transition: opacity 0.3s ease;
+  margin: 0 auto;
+  object-fit: contain;
 }
 
 .error {

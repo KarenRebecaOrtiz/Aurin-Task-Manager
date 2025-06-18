@@ -1,36 +1,217 @@
 @import "@/app/styles/_variables.scss";
 
+.notifications-container {
+  width: 320px;
+  height: auto;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
 .toast {
+  padding: 1rem;
+  border-radius: 0.375rem;
   @include neu-surface($white, 4, 12px);
-  padding: 16px;
   color: $black;
   font-family: 'Urbanist', sans-serif;
   max-width: 400px;
+  z-index: 10002;
+
+  &.default {
+    background: $white;
+    border: 1px solid $zinc-300;
+  }
+
+  &.error {
+    position: relative;
+    width: 100%;
+    background: rgba(254, 226, 226, 0.7); // Translucent red
+    border-radius: 16px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease,
+      opacity 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      background: rgba(254, 226, 226, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow:
+        -6px -6px 12px rgba(255, 255, 255, 0.95),
+        6px 6px 12px rgba(0, 0, 0, 0.1),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+        inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+    }
+
+    &:active {
+      transform: scale(0.98);
+      background: rgba(254, 226, 226, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow:
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+        -2px -2px 6px rgba(255, 255, 255, 0.85),
+        2px 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    :global(.dark) & {
+      background: rgba(153, 27, 27, 0.7); // Dark mode red
+      border: 1px solid rgba(255, 255, 255, 0.1);
+
+      &:hover {
+        transform: translateY(-2px) scale(1.02);
+        background: rgba(153, 27, 27, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow:
+          -6px -6px 12px rgba(255, 255, 255, 0.06),
+          6px 6px 12px rgba(0, 0, 0, 0.55),
+          inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+          inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+      }
+
+      &:active {
+        background: rgba(153, 27, 27, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        box-shadow:
+          inset -2px -2px 6px rgba(0, 0, 0, 0.35),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.02),
+          -2px -2px 6px rgba(255, 255, 255, 0.03),
+          2px 2px 6px rgba(0, 0, 0, 0.4);
+      }
+    }
+  }
+
+  &.success {
+    position: relative;
+    width: 100%;
+    background: rgba(240, 253, 244, 0.7);
+    border-radius: 16px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      background 0.3s ease,
+      border-color 0.3s ease,
+      opacity 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      background: rgba(240, 253, 244, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow:
+        -6px -6px 12px rgba(255, 255, 255, 0.95),
+        6px 6px 12px rgba(0, 0, 0, 0.1),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+        inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+    }
+
+    &:active {
+      transform: scale(0.98);
+      background: rgba(240, 253, 244, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow:
+        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 6px rgba(209, 217, 230, 0.2),
+        -2px -2px 6px rgba(255, 255, 255, 0.85),
+        2px 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    :global(.dark) & {
+      background: rgba(22, 101, 52, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+
+      &:hover {
+        transform: translateY(-2px) scale(1.02);
+        background: rgba(22, 101, 52, 0.85);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow:
+          -6px -6px 12px rgba(255, 255, 255, 0.06),
+          6px 6px 12px rgba(0, 0, 0, 0.55),
+          inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+          inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+      }
+
+      &:active {
+        background: rgba(22, 101, 52, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        box-shadow:
+          inset -2px -2px 6px rgba(0, 0, 0, 0.35),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.02),
+          -2px -2px 6px rgba(255, 255, 255, 0.03),
+          2px 2px 6px rgba(0, 0, 0, 0.4);
+      }
+    }
+  }
+
+  &.info {
+    background: lighten($blue-500, 30%);
+    border: 1px solid $blue-500;
+  }
+}
+
+.success-svg {
+  color: #4ade80;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.error-svg {
+  color: #ef4444;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.prompt-wrap {
+  margin-left: 0.75rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  z-index: 10002;
+  gap: 0.5rem;
 }
 
-.toast.error {
-  background: lighten($red-500, 30%);
-}
-
-.toast.success {
-  background: #f2fdf5;
-}
-
-.toast.info {
-  background: lighten($blue-500, 30%);
-}
-
-.title {
+.prompt-heading {
+  font-weight: bold;
   font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
+
+  .toast.success & {
+    color: #166534;
+  }
+
+  .toast.error & {
+    color: #991b1b;
+  }
 }
 
-.description {
+.prompt-description {
+  margin-top: 0.5rem;
   font-size: 12px;
-  color: $zinc-500;
+
+  .toast.success & {
+    color: #15803d;
+  }
+
+  .toast.error & {
+    color: #b91c1c;
+
+    small {
+      font-size: 0.75rem;
+      color: #7f1d1d;
+    }
+  }
 }

@@ -245,10 +245,10 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen }: UserSwiperProps) =>
         className="splide"
         aria-label="Carrusel de Perfiles de Usuarios"
       >
-        <div className="splide__track">
+        <div className="splide__track" style={{padding:'40px'}}>
           <ul className="splide__list">
             {users.map((user) => (
-              <li key={user.id} className={`splide__slide ${styles.swiperSlide}`}>
+              <li key={user.id} className={`splide__slide ${styles.swiperSlide}`} >
                 <div
                   className={styles.card}
                   role="button"

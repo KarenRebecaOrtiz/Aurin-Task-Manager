@@ -5,7 +5,11 @@
 * {
   box-sizing: border-box;
 }
-
+body.no-scroll {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
 /* app/globals.css */
 
 :root {

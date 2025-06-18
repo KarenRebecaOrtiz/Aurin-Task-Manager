@@ -13,7 +13,6 @@ interface Message {
   text: string | null;
   timestamp: Timestamp | any;
   read: boolean;
-  hours?: number;
   imageUrl?: string | null;
   fileUrl?: string | null;
   fileName?: string | null;
@@ -23,7 +22,7 @@ interface Message {
   hasError?: boolean;
 }
 
-interface InputChatProps {
+interface InputMessageProps {
   taskId: string;
   userId: string | undefined;
   userFirstName: string | undefined;
@@ -31,50 +30,21 @@ interface InputChatProps {
     message: Partial<Message>,
     isAudio?: boolean,
     audioUrl?: string,
-    duration?: number,
   ) => Promise<void>;
   isSending: boolean;
-  timerSeconds: number;
-  isTimerRunning: boolean;
-  onToggleTimer: (e: React.MouseEvent) => void;
-  onToggleTimerPanel: (e: React.MouseEvent) => void;
-  isTimerPanelOpen: boolean;
-  setIsTimerPanelOpen: (open: boolean) => void;
-  timerInput: string;
-  setTimerInput: (value: string) => void;
-  dateInput: Date;
-  setDateInput: (date: Date) => void;
-  commentInput: string;
-  setCommentInput: (value: string) => void;
-  onAddTimeEntry: () => void;
   containerRef: React.RefObject<HTMLElement>;
-  timerPanelRef?: React.RefObject<HTMLDivElement>;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-export function InputChat({
+export function InputMessage({
   taskId,
   userId,
   userFirstName,
   onSendMessage,
   isSending,
-  timerSeconds,
-  isTimerRunning,
-  onToggleTimer,
-  onToggleTimerPanel,
-  isTimerPanelOpen,
-  setIsTimerPanelOpen,
-  timerInput,
-  setTimerInput,
-  dateInput,
-  setDateInput,
-  commentInput,
-  setCommentInput,
   containerRef,
-  onAddTimeEntry,
-  timerPanelRef,
-}: InputChatProps) {
+}: InputMessageProps) {
   const [message, setMessage] = useState('');
   const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<File | null>(null);
@@ -83,22 +53,6 @@ export function InputChat({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        inputWrapperRef.current &&
-        !inputWrapperRef.current.contains(event.target as Node) &&
-        (!timerPanelRef?.current || !timerPanelRef.current.contains(event.target as Node)) &&
-        isTimerPanelOpen
-      ) {
-        setIsTimerPanelOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isTimerPanelOpen, setIsTimerPanelOpen, timerPanelRef]);
 
   useEffect(() => {
     return () => {
@@ -294,7 +248,7 @@ export function InputChat({
           messageData.fileUrl = url;
         }
       } catch (error) {
-        console.error('[InputChat:HandleSend] File upload failed', error);
+        console.error('[InputMessage:HandleSend] File upload failed', error);
         messageData.hasError = true;
       }
     }
@@ -306,16 +260,9 @@ export function InputChat({
       setPreviewUrl(null);
       setActiveFormats(new Set());
     } catch (error) {
-      console.error('[InputChat:HandleSend] Failed to send message', error);
+      console.error('[InputMessage:HandleSend] Failed to send message', error);
       alert('Error al enviar el mensaje');
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const formatButtons = [
@@ -410,22 +357,8 @@ export function InputChat({
             className={`${styles.input} min-h-[36px] max-h-[200px] resize-none`}
           />
         </div>
-        <div className={styles.actions}>
-          <div className={styles.timerContainer} style={{ width:'100%'}}>
-            <button className={styles.playStopButton} onClick={onToggleTimer}>
-              <Image
-                src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
-                alt={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
-                width={12}
-                height={12}
-              />
-            </button>
-            <div className={styles.timer} onClick={onToggleTimerPanel}>
-              <span>{formatTime(timerSeconds)}</span>
-              <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+        <div className={styles.actions} style={{ justifyContent:'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', gap: '10px'}}>
             <button
               type="button"
               className={styles.imageButton}
@@ -438,7 +371,6 @@ export function InputChat({
                 alt="Adjuntar"
                 width={16}
                 height={16}
-
                 className={styles.iconInvert}
                 style={{ filter: 'invert(100)' }}
               />

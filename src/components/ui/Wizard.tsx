@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
+import { gsap } from "gsap";
 import styles from "./wizard.module.scss";
 
 interface WizardProps {
@@ -14,6 +15,8 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [validators, setValidators] = useState<(() => Promise<boolean>)[]>([]);
+  const [direction, setDirection] = useState<"next" | "prev" | null>(null);
+  const wizardContainerRef = useRef<HTMLDivElement>(null);
 
   const registerValidator = useCallback((step: number, validator: () => Promise<boolean>) => {
     setValidators((prev) => {
@@ -31,12 +34,14 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
     }
     if (currentStep < totalSteps - 1) {
       setCompletedSteps((prev) => [...new Set([...prev, currentStep])]);
+      setDirection("next");
       setCurrentStep(currentStep + 1);
     }
   }, [currentStep, totalSteps, validators]);
 
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
+      setDirection("prev");
       setCurrentStep(currentStep - 1);
     }
   }, [currentStep]);
@@ -49,6 +54,7 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
           const isValid = await validator();
           if (!isValid) return;
         }
+        setDirection(step > currentStep ? "next" : "prev");
         setCurrentStep(step);
       }
     },
@@ -56,20 +62,20 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
   );
 
   useEffect(() => {
-    const wizardContainer = document.querySelector(`.${styles.wizardContainer}`);
-    if (wizardContainer) {
-      wizardContainer.setAttribute("data-current-step", currentStep.toString());
+    if (wizardContainerRef.current) {
+      wizardContainerRef.current.setAttribute("data-current-step", currentStep.toString());
     }
   }, [currentStep]);
 
   return (
-    <div className={styles.wizardContainer} data-current-step={currentStep}>
+    <div className={styles.wizardContainer} ref={wizardContainerRef} data-current-step={currentStep}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
           if (child.type === WizardStep) {
             return React.cloneElement(child as React.ReactElement<any>, {
               currentStep,
               registerValidator,
+              direction,
             });
           } else if (child.type === WizardProgress) {
             return React.cloneElement(child as React.ReactElement<any>, {
@@ -78,7 +84,7 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
               goToStep,
               totalSteps,
             });
-          } else if (child.type === WizardButtons) {
+          } else if (child.type === WizardActions) {
             return React.cloneElement(child as React.ReactElement<any>, {
               currentStep,
               totalSteps,
@@ -100,20 +106,38 @@ interface WizardStepProps {
   validator?: () => Promise<boolean>;
   currentStep?: number;
   registerValidator?: (step: number, validator: () => Promise<boolean>) => void;
+  direction?: "next" | "prev" | null;
 }
 
-const WizardStep: React.FC<WizardStepProps> = ({ step, children, validator, currentStep, registerValidator }) => {
+const WizardStep: React.FC<WizardStepProps> = ({ step, children, validator, currentStep, registerValidator, direction }) => {
+  const stepRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (validator && registerValidator) {
       registerValidator(step, validator);
     }
   }, [step, validator, registerValidator]);
 
+  useEffect(() => {
+    if (stepRef.current && currentStep === step) {
+      const fromX = direction === "next" ? 50 : direction === "prev" ? -50 : 0;
+      gsap.fromTo(
+        stepRef.current,
+        { opacity: 0, x: fromX },
+        { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }
+      );
+    }
+  }, [currentStep, step, direction]);
+
   if (currentStep !== step) {
     return null;
   }
 
-  return <div className={styles.wizardStep}>{children}</div>;
+  return (
+    <div className={styles.wizardStep} ref={stepRef}>
+      {children}
+    </div>
+  );
 };
 
 interface WizardProgressProps {
@@ -141,7 +165,7 @@ const WizardProgress: React.FC<WizardProgressProps> = ({ currentStep = 0, comple
   );
 };
 
-interface WizardButtonsProps {
+interface WizardActionsProps {
   currentStep?: number;
   totalSteps?: number;
   nextStep?: () => void;
@@ -149,7 +173,7 @@ interface WizardButtonsProps {
   onComplete?: () => void;
 }
 
-const WizardButtons: React.FC<WizardButtonsProps> = ({ currentStep = 0, totalSteps = 5, nextStep, prevStep, onComplete }) => {
+const WizardActions: React.FC<WizardActionsProps> = ({ currentStep = 0, totalSteps = 5, nextStep, prevStep, onComplete }) => {
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
 
@@ -164,7 +188,7 @@ const WizardButtons: React.FC<WizardButtonsProps> = ({ currentStep = 0, totalSte
       <div style={{ flex: 1 }} />
       {isLastStep ? (
         <button type="button" className={styles.wizardButton} onClick={onComplete}>
-          <Image src="/check.svg" alt="Completar" width={16} height={16} />
+          <Image src="/check-check.svg" alt="Completar" width={16} height={16} />
           Completar
         </button>
       ) : (
@@ -177,4 +201,4 @@ const WizardButtons: React.FC<WizardButtonsProps> = ({ currentStep = 0, totalSte
   );
 };
 
-export { Wizard, WizardStep, WizardProgress, WizardButtons };
+export { Wizard, WizardStep, WizardProgress, WizardActions };

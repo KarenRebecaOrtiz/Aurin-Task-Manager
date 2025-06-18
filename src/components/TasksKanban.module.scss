@@ -1,0 +1,112 @@
+
+.kanbanContainer {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.kanbanColumn {
+  width: 18rem;
+  flex-shrink: 0;
+  background-color: #f7f7f7;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.kanbanColumnHeader {
+  padding: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  background-color: #fff;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.kanbanColumnTitle {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.kanbanTaskCount {
+  font-size: 0.75rem;
+  background-color: #e5e7eb;
+  color: #6b7280;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.kanbanTaskList {
+  padding: 0.5rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.kanbanTaskCard {
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s;
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.kanbanTaskTitle {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.kanbanClientName {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.kanbanPriority {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+
+  &.priority-Alta {
+    background-color: #fee2e2;
+    color: #dc2626;
+  }
+
+  &.priority-Media {
+    background-color: #fef3c7;
+    color: #d97706;
+  }
+
+  &.priority-Baja {
+    background-color: #d1fae5;
+    color: #059669;
+  }
+}
+
+/* View toggle button */
+.viewToggleButton {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #374151;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+}

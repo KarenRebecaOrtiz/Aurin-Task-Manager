@@ -21,6 +21,13 @@ const OFFICE_HOURS = {
   end: 18, // 6:00 PM
 };
 
+// Fallback location (Cuernavaca as default)
+const FALLBACK_LOCATION = {
+  lat: 18.9261,
+  lng: -99.2308,
+  name: 'Cuernavaca',
+};
+
 // Función para calcular la distancia (Haversine)
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371e3; // Radio de la Tierra en metros
@@ -49,6 +56,16 @@ const isOfficeHours = (date: Date): boolean => {
     return false;
   }
   return hours >= OFFICE_HOURS.start && hours < OFFICE_HOURS.end;
+};
+
+// Función para detectar el navegador
+const getBrowserInfo = () => {
+  const ua = navigator.userAgent;
+  return {
+    isArc: ua.includes('Arc'),
+    isChrome: ua.includes('Chrome') && !ua.includes('Edge'),
+    userAgent: ua,
+  };
 };
 
 interface Notification {
@@ -126,6 +143,7 @@ const Header: React.FC<HeaderProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevNotificationsRef = useRef<Notification[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
 
   /* ────────────────────────────────────────────
      STATE
@@ -293,6 +311,30 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   /* ────────────────────────────────────────────
+     EFFECTS – BLOCK BODY SCROLL WHEN DROPDOWN IS OPEN
+  ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (isNotificationsOpen) {
+      // Guardar la posición actual del scroll
+      scrollPositionRef.current = window.scrollY;
+      // Bloquear el scroll del body
+      document.body.classList.add('no-scroll');
+      document.body.style.top = `-${scrollPositionRef.current}px`;
+    } else {
+      // Restaurar el scroll del body
+      document.body.classList.remove('no-scroll');
+      document.body.style.top = '';
+      window.scrollTo(0, scrollPositionRef.current);
+    }
+
+    // Limpieza al desmontar el componente
+    return () => {
+      document.body.classList.remove('no-scroll');
+      document.body.style.top = '';
+    };
+  }, [isNotificationsOpen]);
+
+  /* ────────────────────────────────────────────
      EFFECTS – CLOCK AND LOCATION LOGIC
   ──────────────────────────────────────────── */
   useEffect(() => {
@@ -307,18 +349,43 @@ const Header: React.FC<HeaderProps> = ({
       }
     }, 1000);
 
-    const getLocation = () => {
+    const browserInfo = getBrowserInfo();
+    console.debug('Browser info:', browserInfo);
+
+    const checkGeolocationPermission = async () => {
+      if (typeof window === 'undefined' || !navigator.permissions) {
+        return 'unknown';
+      }
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        console.debug('Geolocation permission:', permissionStatus.state);
+        return permissionStatus.state;
+      } catch (error) {
+        console.warn('Error checking geolocation permission:', error);
+        return 'unknown';
+      }
+    };
+
+    const attemptGetLocation = (retries: number, retryDelay: number) => {
       if (typeof window === 'undefined' || !navigator.geolocation) {
-        console.warn('Geolocation is not supported or not available in this environment');
-        setLocation('Geolocalización no soportada');
+        console.warn('Geolocation is not supported or not available in this environment', {
+          browser: browserInfo,
+        });
+        setLocation(FALLBACK_LOCATION.name);
         setTemperature('N/A');
         setWeatherIcon(null);
-        setOfficeStatus(isOfficeHours(new Date()) ? 'Geolocalización no soportada' : 'Fuera de horario');
+        setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
+        fetchLocationFromGoogleMaps(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          console.debug('Geolocation success:', {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            browser: browserInfo,
+          });
           const { latitude, longitude } = position.coords;
           // Solo calcular distancia si está dentro del horario
           if (isOfficeHours(new Date())) {
@@ -335,18 +402,57 @@ const Header: React.FC<HeaderProps> = ({
           await fetchLocationFromGoogleMaps(latitude, longitude);
         },
         (error) => {
+          let errorMessage = 'No se pudo obtener la ubicación';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Permiso de geolocalización denegado';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Información de ubicación no disponible';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Tiempo de espera agotado para obtener la ubicación';
+              break;
+            default:
+              errorMessage = 'Error desconocido al obtener la ubicación';
+              break;
+          }
           console.error('Error getting geolocation:', {
-            message: error.message,
+            message: errorMessage,
             code: error.code,
-            details: error,
+            details: error.message || 'No additional details',
+            browser: browserInfo,
+            retryAttempt: 3 - retries + 1,
           });
-          setLocation('No se pudo obtener la ubicación');
-          setTemperature('N/A');
-          setWeatherIcon(null);
-          setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación no disponible' : 'Fuera de horario');
+
+          if (retries > 0) {
+            console.debug(`Retrying geolocation... (${retries} retries left)`);
+            setTimeout(() => attemptGetLocation(retries - 1, retryDelay * 2), retryDelay);
+          } else {
+            setLocation(FALLBACK_LOCATION.name);
+            setTemperature('N/A');
+            setWeatherIcon(null);
+            setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
+            fetchLocationFromGoogleMaps(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
+          }
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
+    };
+
+    const getLocation = async () => {
+      const permission = await checkGeolocationPermission();
+      if (permission === 'denied') {
+        console.warn('Geolocation permission denied by user', { browser: browserInfo });
+        setLocation(FALLBACK_LOCATION.name);
+        setTemperature('N/A');
+        setWeatherIcon(null);
+        setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
+        fetchLocationFromGoogleMaps(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
+        return;
+      }
+
+      attemptGetLocation(2, 2000); // 3 attempts total, starting with 2s delay
     };
 
     getLocation();
@@ -393,18 +499,18 @@ const Header: React.FC<HeaderProps> = ({
         const result = data.results[0];
         const city = result.address_components.find((comp: any) =>
           comp.types.includes('locality'),
-        )?.long_name || 'Ubicación desconocida';
+        )?.long_name || FALLBACK_LOCATION.name;
         setLocation(city);
         await fetchWeather(lat, lon);
       } else {
         console.warn('No results from Google Maps:', data);
-        setLocation('Ubicación desconocida');
+        setLocation(FALLBACK_LOCATION.name);
         setTemperature('N/A');
         setWeatherIcon(null);
       }
     } catch (error) {
       console.error('Error fetching location from Google Maps:', error);
-      setLocation('Error');
+      setLocation(FALLBACK_LOCATION.name);
       setTemperature('N/A');
       setWeatherIcon(null);
     }
@@ -520,8 +626,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const hasUnread = notifications.some((n) => !n.read);
-  const iconSrc =
-    hasUnread && !hasViewedNotifications ? '/NewNotification.svg' : '/EmptyNotification.svg';
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   /* ────────────────────────────────────────────
      DROPDOWN COMPONENT
@@ -725,13 +830,24 @@ const Header: React.FC<HeaderProps> = ({
             aria-expanded={isNotificationsOpen}
             aria-controls="notification-dropdown"
           >
-            <Image
-              src={iconSrc}
-              alt="Notificaciones"
-              width={24}
-              height={24}
-              style={{ width: 'auto', height: 'auto' }}
-            />
+            {hasUnread && !hasViewedNotifications ? (
+              <div className={styles.notification}>
+                <div className={styles.bellContainer}>
+                  <div className={styles.bell}></div>
+                </div>
+                {unreadCount > 0 && (
+                  <span className={styles.notificationCount} aria-live="polite">{unreadCount}</span>
+                )}
+              </div>
+            ) : (
+              <Image
+                src="/EmptyNotification.svg"
+                alt="Notificaciones"
+                width={24}
+                height={24}
+                style={{ width: 'auto', height: 'auto' }}
+              />
+            )}
           </button>
           <NotificationDropdown />
         </div>

@@ -30,19 +30,28 @@ export default function RootLayout({
           <meta name="theme-color" content="#ffffff" />
         </head>
         <body>
+          {/* SVG Filter Definition for Grayscale */}
+          <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
+            <defs>
+            <filter id="grayscale">
+                  <feColorMatrix
+                    type="matrix"
+                    values="0.3333 0.3333 0.3333 0 0
+                            0.3333 0.3333 0.3333 0 0
+                            0.3333 0.3333 0.3333 0 0
+                            0      0      0      1 0"
+                  />
+                  <feComponentTransfer>
+                    <feFuncR type="linear" slope="1.2" intercept="-0.1" />
+                    <feFuncG type="linear" slope="1.2" intercept="-0.1" />
+                    <feFuncB type="linear" slope="1.2" intercept="-0.1" />
+                  </feComponentTransfer>
+                </filter>
+            </defs>
+          </svg>
           {children}
           <Toaster position="top-center" />
           <div id="portal-root" />
-          <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden>
-            <filter id="frosted" primitiveUnits="objectBoundingBox">
-              <feImage href="[BASE64_IMAGE_URL]" x="0" y="0" width="1" height="1" result="map"/>
-              <feGaussianBlur in="SourceGraphic" stdDeviation="0.02" result="blur"/>
-              <feDisplacementMap id="disp" in="blur" in2="map" scale="1" xChannelSelector="R" yChannelSelector="G">
-                <animate attributeName="scale" to="1.4" dur="0.3s" begin="timerPanel.mouseover" fill="freeze"/>
-                <animate attributeName="scale" to="1" dur="0.3s" begin="timerPanel.mouseout" fill="freeze"/>
-              </feDisplacementMap>
-            </filter>
-          </svg>
         </body>
       </html>
     </ClerkProvider>

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
@@ -43,6 +43,7 @@ import clientStyles from '@/components/ClientsTable.module.scss';
 import { v4 as uuidv4 } from 'uuid';
 import Dock from '@/components/Dock';
 import ToDoDynamic from '@/components/ToDoDynamic';
+import Footer from '@/components/ui/Footer';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -694,6 +695,12 @@ export default function TasksPage() {
     console.log('[TasksPage] Closed profile');
   }, []);
 
+  // Handler for onboarding completion
+  const handleOnboardingComplete = useCallback(() => {
+    console.log('[TasksPage] Onboarding completed, navigating to config');
+    handleContainerChange('config');
+  }, [handleContainerChange]);
+
   return (
     <div className={styles.container}>
       <SyncUserToFirestore />
@@ -710,7 +717,7 @@ export default function TasksPage() {
           onChangeContainer={handleContainerChange}
         />
       </div>
-      <OnboardingStepper />
+      <OnboardingStepper onComplete={handleOnboardingComplete} />
       <div ref={selectorRef} className={styles.selector}>
         <Selector
           selectedContainer={selectedContainer as SelectorContainer}
@@ -877,67 +884,79 @@ export default function TasksPage() {
         />
       )}
       <AISidebar isOpen={isAISidebarOpen} onClose={() => setIsAISidebarOpen(false)} />
-      {memoizedOpenSidebars.map((sidebar) =>
-        sidebar.type === 'message' && user?.id ? (
-          <MessageSidebar
-            key={sidebar.id}
-            sidebarId={sidebar.id}
-            isOpen={true}
-            onClose={() => handleCloseSidebar(sidebar.id)}
-            senderId={user.id}
-            receiver={sidebar.data as User}
-            onOpenSidebar={handleOpenSidebar}
-            conversationId={[user.id, (sidebar.data as User).id].sort().join('_')}
-          />
-        ) : sidebar.type === 'chat' && sidebar.data && (sidebar.data as Task).id ? (
-          <ChatSidebar
-            key={sidebar.id}
-            sidebarId={sidebar.id}
-            isOpen={true}
-            onClose={() => handleCloseSidebar(sidebar.id)}
-            task={sidebar.data as Task}
-            clientName={clients.find((c) => c.id === (sidebar.data as Task).clientId)?.name || 'Sin cuenta'}
-            users={memoizedUsers}
-          />
-        ) : sidebar.type === 'client-sidebar' ? (
-          <ClientSidebar
-            key={sidebar.id}
-            isOpen={true}
-            isEdit={sidebar.type === 'client-sidebar' && !!(sidebar.data as { client?: Client })?.client}
-            initialForm={
-              sidebar.type === 'client-sidebar' && (sidebar.data as { client?: Client })?.client
-                ? {
-                    id: (sidebar.data as { client?: Client }).client!.id,
-                    name: (sidebar.data as { client?: Client }).client!.name,
-                    imageFile: null,
-                    imagePreview: (sidebar.data as { client?: Client }).client!.imageUrl,
-                    projects: (sidebar.data as { client?: Client }).client!.projects.length
-                      ? (sidebar.data as { client?: Client }).client!.projects
-                      : [''],
-                    deleteProjectIndex: null,
-                    deleteConfirm: '',
-                  }
-                : {
-                    name: '',
-                    imageFile: null,
-                    imagePreview: '/default-avatar.png',
-                    projects: [''],
-                    deleteProjectIndex: null,
-                    deleteConfirm: '',
-                  }
-            }
-            onFormSubmit={handleClientSubmit}
-            onClose={() => handleCloseSidebar(sidebar.id)}
-            isClientLoading={isClientLoading}
-          />
-        ) : sidebar.type === 'invite-sidebar' ? (
-          <InviteSidebar
-            key={sidebar.id}
-            isOpen={true}
-            onClose={() => handleCloseSidebar(sidebar.id)}
-          />
-        ) : null,
-      )}
+      {memoizedOpenSidebars.map((sidebar) => {
+        if (sidebar.type === 'message' && user?.id && sidebar.data) {
+          return (
+            <MessageSidebar
+              key={sidebar.id}
+              sidebarId={sidebar.id}
+              isOpen={true}
+              onClose={() => handleCloseSidebar(sidebar.id)}
+              senderId={user.id}
+              receiver={sidebar.data as User}
+              onOpenSidebar={handleOpenSidebar}
+              conversationId={[user.id, (sidebar.data as User).id].sort().join('_')}
+            />
+          );
+        }
+        if (sidebar.type === 'chat' && sidebar.data && (sidebar.data as Task).id) {
+          return (
+            <ChatSidebar
+              key={sidebar.id}
+              sidebarId={sidebar.id}
+              isOpen={true}
+              onClose={() => handleCloseSidebar(sidebar.id)}
+              task={sidebar.data as Task}
+              clientName={clients.find((c) => c.id === (sidebar.data as Task).clientId)?.name || 'Sin cuenta'}
+              users={memoizedUsers}
+            />
+          );
+        }
+        if (sidebar.type === 'client-sidebar') {
+          return (
+            <ClientSidebar
+              key={sidebar.id}
+              isOpen={true}
+              isEdit={!!(sidebar.data as { client?: Client })?.client}
+              initialForm={
+                (sidebar.data as { client?: Client })?.client
+                  ? {
+                      id: (sidebar.data as { client?: Client }).client!.id,
+                      name: (sidebar.data as { client?: Client }).client!.name,
+                      imageFile: null,
+                      imagePreview: (sidebar.data as { client?: Client }).client!.imageUrl,
+                      projects: (sidebar.data as { client?: Client }).client!.projects.length
+                        ? (sidebar.data as { client?: Client }).client!.projects
+                        : [''],
+                      deleteProjectIndex: null,
+                      deleteConfirm: '',
+                    }
+                  : {
+                      name: '',
+                      imageFile: null,
+                      imagePreview: '/default-avatar.png',
+                      projects: [''],
+                      deleteProjectIndex: null,
+                      deleteConfirm: '',
+                    }
+              }
+              onFormSubmit={handleClientSubmit}
+              onClose={() => handleCloseSidebar(sidebar.id)}
+              isClientLoading={isClientLoading}
+            />
+          );
+        }
+        if (sidebar.type === 'invite-sidebar') {
+          return (
+            <InviteSidebar
+              key={sidebar.id}
+              isOpen={true}
+              onClose={() => handleCloseSidebar(sidebar.id)}
+            />
+          );
+        }
+        return null;
+      })}
       {selectedProfileUser && (
         <ProfileCard
           userId={selectedProfileUser.id}
@@ -947,9 +966,9 @@ export default function TasksPage() {
       )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
-      <ToDoDynamic/>
+      <ToDoDynamic />
       <Dock />
-
+      <Footer />
     </div>
   );
 }

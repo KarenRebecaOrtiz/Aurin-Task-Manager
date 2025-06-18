@@ -1,0 +1,175 @@
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: rgba(241, 245, 249, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.5), inset 0 -2px 4px rgba(209, 217, 230, 0.3);
+    flex-wrap: wrap;
+  
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  
+    .info {
+      p {
+        color: #475569;
+        font-size: 0.875rem;
+        margin: 0;
+  
+        span {
+          font-weight: 600;
+          color: #1e293b;
+        }
+      }
+    }
+  
+    .feedbackForm {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+  
+      .feedbackInput {
+        width: 300px;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        background: rgba(241, 245, 249, 0.7);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: #1e293b;
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.3s ease;
+  
+        &::placeholder {
+          color: #94a3b8;
+        }
+  
+        &:hover {
+          background: rgba(241, 245, 249, 0.85);
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+  
+        &:focus {
+          border-color: #475569;
+          box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.6), inset 2px 2px 4px rgba(209, 217, 230, 0.4);
+        }
+  
+        @media (max-width: 768px) {
+          width: 160px;
+        }
+      }
+  
+      .sendButton {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        background: rgba(241, 245, 249, 0.7);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: #475569;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+  
+        svg {
+          transform: translateY(1px);
+        }
+  
+        &:hover {
+          transform: translateY(-1px);
+          background: rgba(241, 245, 249, 0.85);
+          border-color: rgba(255, 255, 255, 0.4);
+          box-shadow: -2px -2px 4px rgba(255, 255, 255, 0.95), 2px 2px 4px rgba(0, 0, 0, 0.12);
+        }
+  
+        &:active {
+          transform: translateY(0);
+          background: rgba(241, 245, 249, 0.6);
+          box-shadow: inset -1px -1px 2px rgba(255, 255, 255, 0.4), inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+        }
+  
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+  
+    .message {
+      color: #475569;
+      font-size: 0.75rem;
+      margin: 0;
+      text-align: center;
+      flex-basis: 100%;
+    }
+  
+    :global(.dark) & {
+      background: rgba(30, 30, 30, 0.7);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 -2px 4px rgba(255, 255, 255, 0.03);
+  
+      .info {
+        p {
+          color: #e2e8f0;
+  
+          span {
+            color: #f8fafc;
+          }
+        }
+      }
+  
+      .feedbackForm {
+        .feedbackInput {
+          background: rgba(30, 30, 30, 0.7);
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #e2e8f0;
+  
+          &::placeholder {
+            color: #64748b;
+          }
+  
+          &:hover {
+            background: rgba(30, 30, 30, 0.85);
+            border-color: rgba(255, 255, 255, 0.2);
+          }
+  
+          &:focus {
+            border-color: #e2e8f0;
+            box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.45), inset 2px 2px 4px rgba(255, 255, 255, 0.04);
+          }
+        }
+  
+        .sendButton {
+          background: rgba(30, 30, 30, 0.7);
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #e2e8f0;
+  
+          &:hover {
+            background: rgba(30, 30, 30, 0.85);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.6), 2px 2px 4px rgba(255, 255, 255, 0.03);
+          }
+  
+          &:active {
+            background: rgba(30, 30, 30, 0.6);
+            box-shadow: inset -1px -1px 2px rgba(0, 0, 0, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.02);
+          }
+        }
+      }
+  
+      .message {
+        color: #e2e8f0;
+      }
+    }
+  }

@@ -198,10 +198,6 @@
           2px 2px 6px rgba(0, 0, 0, 0.45),
           -2px -2px 6px rgba(255, 255, 255, 0.04);
       }
-  
-      img {
-        filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
-      }
     }
   
     /* ——— Responsividad ——— */
@@ -453,6 +449,7 @@
     color: #333333;
     line-height: 1.3;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -797,5 +794,182 @@
       display: block;
       visibility: visible;
       opacity: 1;
+    }
+  }
+  
+  /* ==============================================================
+     PUNTITO VERDE PARA EmptyNotification
+     ================================================================= */
+  .loader {
+    width: fit-content;
+    height: fit-content;
+    background-color: rgba(58, 58, 58, 0.7);
+    border-radius: 7px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: background 0.2s ease;
+  
+    :global(.dark) & {
+      background-color: rgba(26, 26, 26, 0.7);
+    }
+  
+    &:hover {
+      background-color: rgba(26, 26, 26, 0.9);
+  
+      svg {
+        color: white;
+      }
+    }
+  
+    svg {
+      color: rgba(255, 255, 255, 0.651);
+      transform: scale(1.2);
+      transition: color 0.2s ease;
+    }
+  }
+  
+  .point {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    width: 6px;
+    height: 6px;
+    background-color: rgb(0, 255, 0);
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    &::before {
+      content: "";
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      background-color: rgb(0, 255, 0);
+      border-radius: 25px;
+      animation: loop 1s infinite;
+    }
+  }
+  
+  @keyframes loop {
+    0% {
+      background-color: rgb(0, 255, 0);
+      width: 1px;
+      height: 1px;
+    }
+    100% {
+      background-color: rgba(0, 255, 0, 0);
+      width: 30px;
+      height: 30px;
+    }
+  }
+  
+  /* ==============================================================
+     CAMPANA ANIMADA PARA NewNotification
+     ================================================================= */
+  .notification {
+    background: transparent;
+    border: none;
+    padding: 15px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    &:hover {
+      background: rgba(170, 170, 170, 0.062);
+  
+      .bellContainer {
+        animation: bellAnimation 650ms ease-out 0s 1 normal both;
+      }
+    }
+  }
+  
+  .bellContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bell {
+    border: 2.17px solid #333333;
+    border-radius: 10px 10px 0 0;
+    width: 15px;
+    height: 17px;
+    background: transparent;
+    display: block;
+    position: relative;
+    top: -3px;
+  
+    &::before,
+    &::after {
+      content: "";
+      background: #333333;
+      display: block;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 2.17px;
+    }
+  
+    &::before {
+      top: 100%;
+      width: 20px;
+    }
+  
+    &::after {
+      top: calc(100% + 4px);
+      width: 7px;
+    }
+  
+    :global(.dark) & {
+      border-color: #ffffff;
+      &::before,
+      &::after {
+        background: #ffffff;
+      }
+    }
+  }
+  
+  .notificationCount {
+    color: white;
+    font-size: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: red;
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  @keyframes bellAnimation {
+    20% {
+      transform: rotate(15deg);
+    }
+    40% {
+      transform: rotate(-15deg);
+      scale: 1.1;
+    }
+    60% {
+      transform: rotate(10deg);
+      scale: 1.1;
+    }
+    80% {
+      transform: rotate(-10deg);
+    }
+    0%,
+    100% {
+      transform: rotate(0deg);
     }
   }

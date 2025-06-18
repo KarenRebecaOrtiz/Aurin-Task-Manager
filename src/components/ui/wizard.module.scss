@@ -19,21 +19,148 @@
 }
 
 .wizardProgressDot {
-  width: 10px;
-  height: 10px;
+  /* Dimensions and layout */
+  width: 14px; /* Slightly larger than original for prominence */
+  height: 14px;
   border-radius: 50%;
-  background: $zinc-300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle glass edge */
   cursor: pointer;
-  transition: background 0.2s ease;
+
+  /* Textura cristalizada */
+  background: rgba(241, 245, 249, 0.7); /* Semi-transparent #F1F5F9 */
+  backdrop-filter: blur(6px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(6px); /* Safari support */
+
+  /* Sombras cristalizadas */
+  box-shadow:
+    /* Outset: Neomorphic highlight and shadow */
+    -2px -2px 4px rgba(255, 255, 255, 0.9),
+    2px 2px 4px rgba(0, 0, 0, 0.08),
+    /* Inset: Carved effect */
+    inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+    inset 2px 2px 4px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
+
+  /* Transiciones */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+
+  /* Hover: Levitar con brillo */
+  &:hover {
+    transform: translateY(-1px) scale(1.05);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.95),
+      2px 2px 4px rgba(0, 0, 0, 0.12),
+      inset -3px -3px 6px rgba(255, 255, 255, 0.6),
+      inset 3px 3px 6px rgba(209, 217, 230, 0.4);
+  }
+
+  /* Active: Presionado con efecto hundido */
+  &:active {
+    transform: translateY(0);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 3px rgba(209, 217, 230, 0.2),
+      -1px -1px 3px rgba(255, 255, 255, 0.85),
+      1px 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Modo oscuro */
+  :global(.dark) & {
+    background: rgba(30, 30, 30, 0.7); /* Semi-transparent #1E1E1E */
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      /* Outset: Dark neomorphic */
+      2px 2px 4px rgba(0, 0, 0, 0.5),
+      -2px -2px 4px rgba(255, 255, 255, 0.05),
+      /* Inset: Carved effect */
+      inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+      inset 2px 2px 4px rgba(255, 255, 255, 0.03);
+
+    &:hover {
+      transform: translateY(-1px) scale(1.05);
+      background: rgba(30, 30, 30, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        2px 2px 4px rgba(0, 0, 0, 0.6),
+        -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset -3px -3px 6px rgba(0, 0, 0, 0.45),
+        inset 3px 3px 6px rgba(255, 255, 255, 0.04);
+    }
+
+    &:active {
+      background: rgba(30, 30, 30, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 1px 1px 3px rgba(0, 0, 0, 0.35),
+        inset -1px -1px 3px rgba(255, 255, 255, 0.02),
+        1px 1px 3px rgba(0, 0, 0, 0.45),
+        -1px -1px 3px rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  /* Responsividad */
+  @media (max-width: 768px) {
+    width: 12px;
+    height: 12px;
+  }
+
+  @media (max-width: 480px) {
+    width: 10px;
+    height: 10px;
+  }
 }
 
 .wizardProgressDot.active {
-  background: $primary;
+  background: #cfde48; /* Assuming $primary is a blue like #3B82F6 */
+  border-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.9),
+    2px 2px 4px rgba(0, 0, 0, 0.1),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+    inset 2px 2px 4px rgba(59, 130, 246, 0.3); /* Match primary color */
+
+  :global(.dark) & {
+    background: rgba(59, 130, 246, 0.8);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      2px 2px 4px rgba(0, 0, 0, 0.5),
+      -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+      inset 2px 2px 4px rgba(59, 130, 246, 0.2);
+  }
 }
 
 .wizardProgressDot.completed {
-  background: $primary;
-  opacity: 0.7;
+  background:#c1c1c1;
+  border-color: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  opacity: 0.8;
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.08),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.4),
+    inset 2px 2px 4px rgba(59, 130, 246, 0.25);
+
+  :global(.dark) & {
+    background: rgba(59, 130, 246, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      2px 2px 4px rgba(0, 0, 0, 0.45),
+      -2px -2px 4px rgba(255, 255, 255, 0.04),
+      inset -2px -2px 4px rgba(0, 0, 0, 0.35),
+      inset 2px 2px 4px rgba(59, 130, 246, 0.15);
+  }
 }
 
 .wizardButtons {

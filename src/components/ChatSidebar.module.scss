@@ -1723,3 +1723,25 @@ $red-accent: #c91111;
       inset 2px 2px 5px rgba(0, 0, 0, 0.2);
   }
 }
+
+.pending {
+  opacity: 0.6;
+  animation: pulse 1.5s infinite;
+}
+
+.error {
+  background-color: rgba(255, 0, 0, 0.1);
+  border-left: 3px solid #ff0000;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}

@@ -52,6 +52,7 @@
   @include neomorphic-container;
   width: 320px;
   max-height: 350px;
+  transform: translateX(-70px)!important;
   overflow-y: auto;
   padding: 8px;
   position: absolute;

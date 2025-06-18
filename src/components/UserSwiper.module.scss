@@ -11,6 +11,7 @@
 
 .splide__track {
   overflow-x: hidden;
+  padding: 40px 0px;
 }
 
 .splide__slide {
@@ -279,6 +280,10 @@
   @media (min-width: 768px) {
     font-size: 1rem;
   }
+}
+
+.splide{
+  visibility: visible!important;
 }
 
 .cardStatus {

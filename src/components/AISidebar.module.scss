@@ -7,23 +7,46 @@
   width: 450px;
   height: 100%;
   padding: 25px;
-  background: #000000ea;
+  background: #f6f6f6;
   backdrop-filter: blur(10px);
-  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.06);
-  border-radius: 12px 0 0 12px;
-  border: 1px solid #242428;
+  border-radius: 24px 0 0 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  z-index: 3000;
+  z-index: 1000;
   transform: translateX(100%);
+  overflow: hidden;
   box-shadow:
-    -5px 1px 11px rgba(0, 0, 0, 0.10),
-    -19px 3px 19px rgba(0, 0, 0, 0.09),
-    -43px 7px 26px rgba(0, 0, 0, 0.05),
-    -76px 12px 31px rgba(0, 0, 0, 0.01),
+    -5px 1px 11px rgba(0, 0, 0, 0.05),
+    -19px 3px 19px rgba(0, 0, 0, 0.009),
+    -43px 7px 26px rgba(0, 0, 0, 0.005),
+    -76px 12px 31px rgba(0, 0, 0, 0.001),
     -118px 19px 34px rgba(0, 0, 0, 0.00);
 
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.2;
+    z-index: 0;
+    pointer-events: none;
+  }
+}
+
+:global(body.dark) .container {
+  background: #1f1f20;
+  box-shadow:
+    -8px -8px 16px rgba(255, 255, 255, 0.05),
+    8px 8px 16px rgba(0, 0, 0, 0.4);
+
+  &::before {
+    background-image: url('https://storage.googleapis.com/aurin-plattform/assets/noiseTexture.png');
+    opacity: 0.08;
+  }
 }
 
 .open {
@@ -38,41 +61,55 @@
 
 .controls {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 5px;
 }
 
-.arrowLeft, .ellipsis {
+.arrowLeft {
   cursor: pointer;
-  filter: invert(100) brightness(100);
+}
+
+.breadcrumb {
+  flex: 1;
+  color: #1f2732;
+  font-size: 14px;
+  font-family: "Inter Tight", sans-serif;
+  font-weight: 500;
 }
 
 .title {
-  color: #FAFAFA;
-  font-size: 16px; // 16px * 1.2
+  color: #182735;
+  font-size: 19.2px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 700;
 }
 
-.subtitle {
-  color: #A1A1AA;
-  font-size: 14px; // 12px * 1.2
+.description {
+  color: #71717A;
+  font-size: 14.4px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
 }
 
 .chat {
-  flex: 1;
-  padding: 40px 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  flex: 1;
   overflow-y: auto;
+  padding: 16px;
+  gap: 16px;
+  max-height: calc(100vh - 200px);
 }
 
 .message {
   display: flex;
   gap: 10px;
+  padding: 10px 0;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.pending {
+  opacity: 0.7;
 }
 
 .avatar {
@@ -80,21 +117,33 @@
 }
 
 .messageContent {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
+.messageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .sender {
-  color: #E5E5E5;
-  font-size: 14.4px; // 12px * 1.2
+  color: #1b2734;
+  font-size: 14px;
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
 }
 
+.timestamp {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .text {
-  color: #FAFAFA;
-  font-size: 14.4px; // 12px * 1.2
+  color: #1b2734;
+  font-size: 14px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
 }
@@ -106,36 +155,145 @@
 .inputContainer {
   display: flex;
   flex-direction: row;
-  background: #1F1F20;
-  padding: 19px;
-  border-radius: 10px;
+  gap: 10px;
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.004),
+    6px 6px 12px rgba(0, 0, 0, 0.10);
+}
+
+:global(body.dark) .inputContainer {
+  background: #1f1f20;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.04),
+    6px 6px 12px rgba(0, 0, 0, 0.4);
 }
 
 .input {
-  width: 100%;
-  background: transparent;
+  flex: 1;
+  height: 36px;
+  padding: 8px 12px;
+  background: #f3f3f3;
   border: none;
-  color: white;
-  font-size: 14px; 
+  border-radius: 10px;
+  color: #1b2734d9;
+  font-size: 15px;
   font-family: "Inter Tight", sans-serif;
   font-weight: 400;
-  opacity: 0.8;
+  opacity: 0.85;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .input:focus {
   outline: none;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset -1px -1px 3px rgba(255, 255, 255, 0.1),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 0 1px #e4e4e4;
+}
+
+:global(body.dark) .input {
+  background-color: rgb(36, 36, 36);
+  color: white;
 }
 
 .sendButton {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    height: 40px;
-    justify-content: center;
-    width: 40px;
-    background: white;
-    border-radius: 100px;
-    border: none;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  border-radius: 100px;
+  border: none;
+  background: #f1f5f9;
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(209, 217, 230, 0.8);
+  cursor: pointer;
+}
+
+.sendButton:hover {
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+  background: #e2e8ee;
+  transform: translateY(-1px);
+}
+
+:global(body.dark) .sendButton {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+:global(body.dark) .sendButton:hover {
+  background: #2c2c2f;
+}
+
+:global(body.dark) .arrowLeft,
+:global(body.dark) .sendButton img {
+  filter: invert(80) brightness(80);
+}
+
+.noMessages {
+  text-align: center;
+  color: #212731;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.error {
+  color: #ff4d4f;
+  text-align: center;
+  padding: 10px;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #b197fc;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+:global(body.dark) .breadcrumb,
+:global(body.dark) .title,
+:global(body.dark) .description,
+:global(body.dark) .sender,
+:global(body.dark) .timestamp,
+:global(body.dark) .text {
+  color: #ffffffcc;
+}
+
+:global(body.dark) .chat {
+  background-color: #1f1f20;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
