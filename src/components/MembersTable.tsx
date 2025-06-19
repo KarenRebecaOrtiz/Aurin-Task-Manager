@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import Image from 'next/image';
-import { gsap } from 'gsap';
 import { useUser } from '@clerk/nextjs';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -38,13 +37,11 @@ interface MembersTableProps {
   users: User[];
   tasks: Task[];
   onInviteSidebarOpen: () => void;
-  onProfileSidebarOpen: (userId: string) => void;
   onMessageSidebarOpen: (user: User) => void;
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
 }
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ users, tasks, onInviteSidebarOpen, onProfileSidebarOpen, onMessageSidebarOpen, setUsers }) => {
+  ({ users, tasks, onInviteSidebarOpen, onMessageSidebarOpen }) => {
     console.log('MembersTable rendered');
     const { user } = useUser();
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -93,7 +90,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         }
       };
       fetchAdminStatus();
-    }, [userId]);
+    }, [userId, isAdmin]);
 
     // Calcular proyectos activos por usuario
     const activeProjectsCount = useMemo(() => {

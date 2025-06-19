@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import * as React from 'react';
 import {
@@ -15,7 +15,6 @@ import styles from './Cursor.module.scss';
 interface CursorContextType {
   cursorPos: { x: number; y: number };
   isActive: boolean;
-  containerRef: React.RefObject<HTMLDivElement | null>;
   cursorRef: React.RefObject<HTMLDivElement | null>;
   isCursorEnabled: boolean;
 }
@@ -42,7 +41,6 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
   const [cursorPos, setCursorPos] = React.useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = React.useState(false);
   const [isCursorEnabled, setIsCursorEnabled] = React.useState(true);
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const cursorRef = React.useRef<HTMLDivElement>(null);
   const lastScrollY = React.useRef(0);
   const isTemporarilyHidden = React.useRef(false);
@@ -106,7 +104,7 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
       console.log('[CursorProvider] Cleaning up keydown listener');
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
-  }, []);
+  }, [isCursorEnabled]);
 
   // Handle scroll-based visibility when isCursorEnabled is true
   React.useEffect(() => {
@@ -136,19 +134,11 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
     };
   }, [isCursorEnabled]);
 
+  // Handle mouse movement and visibility
   React.useEffect(() => {
-    if (!containerRef.current) {
-      console.warn('[CursorProvider] containerRef is null');
-      return;
-    }
+    const parent = document.body; // Fallback to body as the parent element
+    console.log('[CursorProvider] Setting up mouse listeners on body');
 
-    const parent = containerRef.current.parentElement;
-    if (!parent) {
-      console.warn('[CursorProvider] parent element is null');
-      return;
-    }
-
-    console.log('[CursorProvider] Setting up mouse listeners on parent element');
     if (getComputedStyle(parent).position === 'static') {
       parent.style.position = 'relative';
     }
@@ -179,8 +169,8 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
   }, [isCursorEnabled, isActive]);
 
   return (
-    <CursorContext.Provider value={{ cursorPos, isActive, containerRef, cursorRef, isCursorEnabled }}>
-      <div ref={containerRef} data-slot="cursor-provider" {...props}>
+    <CursorContext.Provider value={{ cursorPos, isActive, cursorRef, isCursorEnabled }}>
+      <div data-slot="cursor-provider" {...props}>
         {children}
       </div>
     </CursorContext.Provider>
@@ -194,7 +184,7 @@ interface CursorProps extends HTMLMotionProps<'div'> {
 
 // Cursor component
 const Cursor: React.FC<CursorProps> = ({ children, className, style, ...props }) => {
-  const { cursorPos, isActive, containerRef, cursorRef, isCursorEnabled } = useCursor();
+  const { cursorPos, isActive, cursorRef, isCursorEnabled } = useCursor();
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);

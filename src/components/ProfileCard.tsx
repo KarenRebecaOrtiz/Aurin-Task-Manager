@@ -42,13 +42,6 @@ interface ProfileCardProps {
   onClose: () => void;
 }
 
-const statusColors = {
-  Disponible: '#178d00',
-  Ocupado: '#d32f2f',
-  'Por terminar': '#f57c00',
-  Fuera: '#616161',
-};
-
 const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
   const { user: currentUser, isLoaded } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -122,7 +115,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
     if (profile) {
       fetchTeamMembers();
     }
-  }, [profile?.teams, userId]);
+  }, [profile, userId]);
 
   useEffect(() => {
     const modal = modalRef.current;

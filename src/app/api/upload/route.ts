@@ -29,7 +29,7 @@ function getStoragePath(type: string, userId: string, conversationId?: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const { storage, bucket } = await initializeFirebase();
+  const { bucket } = await initializeFirebase();
   let formData: FormData; // Declare outside try block
 
   try {
@@ -108,15 +108,15 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API/upload] Error processing request:', {
-      message: error.message || 'Unknown error',
-      stack: error.stack,
-      code: error.code,
-      formData: formData ? Object.fromEntries(formData) : 'Not available due to error', // Now in scope
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      code: error instanceof Error && 'code' in error ? error.code : undefined,
+      formData: formData ? Object.fromEntries(formData) : 'Not available due to error',
     });
     return NextResponse.json(
-      { error: 'Failed to upload file', details: error.message || 'Unknown error' },
+      { error: 'Failed to upload file', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

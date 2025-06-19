@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import { User } from "@/types";
 import styles from "./AvatarGroup.module.scss";
 
@@ -26,9 +27,11 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users }) => 
         avatars.map((user) => (
           <div key={user.id} className={styles.avatar}>
             <span className={styles.avatarName}>{user.fullName}</span>
-            <img
+            <Image
               src={user.imageUrl || "/default-avatar.png"}
               alt={`${user.fullName}'s avatar`}
+              width={40}
+              height={40}
               className={styles.avatarImage}
               onError={(e) => {
                 e.currentTarget.src = "/default-avatar.png";

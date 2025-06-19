@@ -16,19 +16,10 @@ interface SuccessAlertProps {
 const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction, actionLabel }) => {
   const toastRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [toastId, setToastId] = useState<string | number | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const isPlaying = useRef(false);
   const hasRenderedToast = useRef(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-
-  const debounce = useCallback((func: () => void, delay: number) => {
-    let timer: NodeJS.Timeout;
-    return () => {
-      clearTimeout(timer);
-      timer = setTimeout(func, delay);
-    };
-  }, []);
 
   const playAudio = useCallback(async () => {
     if (!audioRef.current) {
@@ -43,8 +34,9 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
       await audioRef.current.play();
       console.log("[SuccessAlert] Audio playback started successfully");
       setAudioError(null);
-    } catch (error: any) {
-      console.error("[SuccessAlert] Audio playback error:", error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("[SuccessAlert] Audio playback error:", errorMessage);
       isPlaying.current = false;
       setAudioError("Browser blocked audio autoplay. Click a button to try playing.");
       const tryPlayOnInteraction = () => {
@@ -55,7 +47,7 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
               isPlaying.current = true;
               setAudioError(null);
             })
-            .catch((err) => {
+            .catch((err: Error) => {
               console.error("[SuccessAlert] Fallback audio play failed:", err.message);
               setAudioError("Audio playback failed: " + err.message);
             });
@@ -156,7 +148,6 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
       }
     );
 
-    setToastId(id);
     console.log("[SuccessAlert] Toast created with ID:", id);
 
     return () => {
@@ -171,7 +162,7 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
       }
       hasRenderedToast.current = false;
     };
-  }, [message, onClose, onAction, actionLabel]);
+  }, [message, onClose, onAction, actionLabel, audioError]);
 
   useEffect(() => {
     if (toastRef.current && isMounted) {
@@ -187,11 +178,11 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
           onStart: () => console.log("[SuccessAlert] GSAP animation started"),
           onComplete: () => {
             console.log("[SuccessAlert] GSAP animation completed");
-            playAudio(); // Trigger audio after animation
+            playAudio();
           },
         }
       );
-
+  
       const computedStyles = window.getComputedStyle(toastRef.current);
       console.log("[SuccessAlert] Toast computed styles:", {
         display: computedStyles.display,
@@ -204,8 +195,7 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
         height: computedStyles.height,
       });
     }
-  }, [isMounted, playAudio]);
-
+  }, [isMounted, playAudio]); 
   return null;
 };
 

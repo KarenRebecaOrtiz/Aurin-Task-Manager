@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
@@ -36,7 +36,6 @@ import ProfileSidebar from '@/components/ProfileSidebar';
 import ProfileCard from '@/components/ProfileCard';
 import ConfigPage from '@/components/ConfigPage';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
-import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
@@ -105,10 +104,8 @@ interface Sidebar {
 
 export default function TasksPage() {
   const { user } = useUser();
-  const router = useRouter();
   const [selectedContainer, setSelectedContainer] = useState<Container>('tareas');
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
-  const [isInviteSidebarOpen, setIsInviteSidebarOpen] = useState<boolean>(false);
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
   const [isAISidebarOpen, setIsAISidebarOpen] = useState<boolean>(false);
   const [openSidebars, setOpenSidebars] = useState<Sidebar[]>([]);
@@ -122,33 +119,15 @@ export default function TasksPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isConfirmExitOpen, setIsConfirmExitOpen] = useState<boolean>(false);
   const [pendingContainer, setPendingContainer] = useState<Container | null>(null);
-  const [clientForm, setClientForm] = useState<{
-    id?: string;
-    name: string;
-    imageFile: File | null;
-    imagePreview: string;
-    projects: string[];
-    deleteProjectIndex: number | null;
-    deleteConfirm: string;
-    email?: string;
-  }>({
-    name: '',
-    imageFile: null,
-    imagePreview: '/default-avatar.png',
-    projects: [''],
-    deleteProjectIndex: null,
-    deleteConfirm: '',
-  });
-  const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
   const [showLoader, setShowLoader] = useState<boolean>(true);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
   const deletePopupRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const confirmExitPopupRef = useRef<HTMLDivElement>(null);
 
   const memoizedClients = useMemo(() => clients, [clients]);
@@ -222,7 +201,7 @@ export default function TasksPage() {
             description: clerkUser.publicMetadata.description || 'Sin descripción',
             status,
           };
-        })
+        }),
       );
       setUsers(usersData);
     } catch (error) {
@@ -388,7 +367,7 @@ export default function TasksPage() {
       const unsubscribe = fetchNotifications();
       return () => unsubscribe && unsubscribe();
     }
-  }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id]);
+  }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id, isAdmin]);
 
   useEffect(() => {
     const currentHeaderRef = headerRef.current;
@@ -423,43 +402,6 @@ export default function TasksPage() {
       }
     };
   }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen, showLoader]);
-
-  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setClientForm((prev) => ({ ...prev, imageFile: file }));
-      const reader = new FileReader();
-      reader.onload = () => setClientForm((prev) => ({ ...prev, imagePreview: reader.result as string }));
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const handleProjectChange = useCallback((index: number, value: string) => {
-    setClientForm((prev) => {
-      const newProjects = [...prev.projects];
-      newProjects[index] = value;
-      return { ...prev, projects: newProjects };
-    });
-  }, []);
-
-  const handleAddProject = useCallback(() => {
-    setClientForm((prev) => ({ ...prev, projects: [...prev.projects, ''] }));
-  }, []);
-
-  const handleDeleteProjectClick = useCallback((index: number) => {
-    setClientForm((prev) => ({ ...prev, deleteProjectIndex: index }));
-  }, []);
-
-  const handleDeleteProjectConfirm = useCallback(() => {
-    if (clientForm.deleteConfirm.toLowerCase() === 'eliminar') {
-      setClientForm((prev) => ({
-        ...prev,
-        projects: prev.projects.filter((_, i) => i !== prev.deleteProjectIndex),
-        deleteProjectIndex: null,
-        deleteConfirm: '',
-      }));
-    }
-  }, [clientForm.deleteConfirm]);
 
   const handleClientSubmit = useCallback(
     async (form: {
@@ -516,31 +458,7 @@ export default function TasksPage() {
     [user?.id],
   );
 
-  const handleInviteSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      try {
-        console.log('Invite email:', clientForm.email);
-        alert(`Invitación enviada a ${clientForm.email}`);
-        setOpenSidebars((prev) => prev.filter((sidebar) => sidebar.type !== 'invite-sidebar'));
-      } catch (error) {
-        console.error('Error sending invite:', error);
-        alert('Error al enviar la invitación');
-      }
-    },
-    [clientForm.email],
-  );
-
   const handleCreateClientOpen = useCallback(() => {
-    setClientForm({
-      name: '',
-      imageFile: null,
-      imagePreview: '/default-avatar.png',
-      projects: [''],
-      deleteProjectIndex: null,
-      deleteConfirm: '',
-    });
-    if (fileInputRef.current) fileInputRef.current.value = '';
     setOpenSidebars((prev) => [
       ...prev,
       { id: uuidv4(), type: 'client-sidebar', data: {} },
@@ -548,15 +466,6 @@ export default function TasksPage() {
   }, []);
 
   const handleEditClientOpen = useCallback((client: Client) => {
-    setClientForm({
-      id: client.id,
-      name: client.name,
-      imageFile: null,
-      imagePreview: client.imageUrl,
-      projects: client.projects.length ? client.projects : [''],
-      deleteProjectIndex: null,
-      deleteConfirm: '',
-    });
     setOpenSidebars((prev) => [
       ...prev,
       { id: uuidv4(), type: 'client-sidebar', data: { client } },
@@ -719,8 +628,6 @@ export default function TasksPage() {
       <div ref={headerRef}>
         <Header
           selectedContainer={selectedContainer}
-          onChatSidebarOpen={handleChatSidebarOpen}
-          tasks={memoizedTasks}
           users={memoizedUsers}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
@@ -748,8 +655,6 @@ export default function TasksPage() {
               tasks={memoizedTasks}
               clients={memoizedClients}
               users={memoizedUsers}
-              onCreateClientOpen={handleCreateClientOpen}
-              onInviteMemberOpen={handleInviteSidebarOpen}
               onNewTaskOpen={handleNewTaskOpen}
               onEditTaskOpen={handleEditTaskOpen}
               onAISidebarOpen={handleAISidebarOpen}
@@ -773,9 +678,7 @@ export default function TasksPage() {
               users={memoizedUsers}
               tasks={memoizedTasks}
               onInviteSidebarOpen={handleInviteSidebarOpen}
-              onProfileSidebarOpen={setIsProfileSidebarOpen}
               onMessageSidebarOpen={handleMessageSidebarOpen}
-              setUsers={setUsers}
             />
           )}
           {selectedContainer === 'config' && !isCreateTaskOpen && !isEditTaskOpen && (
@@ -784,7 +687,6 @@ export default function TasksPage() {
           {isCreateTaskOpen && (
             <CreateTask
               isOpen={isCreateTaskOpen}
-              onToggle={() => setIsCreateTaskOpen(false)}
               onHasUnsavedChanges={setHasUnsavedChanges}
               onCreateClientOpen={handleCreateClientOpen}
               onEditClientOpen={handleEditClientOpen}
@@ -826,7 +728,7 @@ export default function TasksPage() {
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={deletePopupRef}>
             <h2>Confirmar Eliminación</h2>
-            <p>Escribe 'Eliminar' para confirmar:</p>
+            <p>Escribe &#39;Eliminar&#39; para confirmar:</p>
             <input
               type="text"
               value={deleteConfirm}
@@ -901,12 +803,10 @@ export default function TasksPage() {
           return (
             <MessageSidebar
               key={sidebar.id}
-              sidebarId={sidebar.id}
               isOpen={true}
               onClose={() => handleCloseSidebar(sidebar.id)}
               senderId={user.id}
               receiver={sidebar.data as User}
-              onOpenSidebar={handleOpenSidebar}
               conversationId={[user.id, (sidebar.data as User).id].sort().join('_')}
             />
           );
@@ -915,7 +815,6 @@ export default function TasksPage() {
           return (
             <ChatSidebar
               key={sidebar.id}
-              sidebarId={sidebar.id}
               isOpen={true}
               onClose={() => handleCloseSidebar(sidebar.id)}
               task={sidebar.data as Task}

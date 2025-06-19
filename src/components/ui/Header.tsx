@@ -28,6 +28,12 @@ const FALLBACK_LOCATION = {
   name: 'Cuernavaca',
 };
 
+// Interfaz para componentes de dirección de Google Maps
+interface AddressComponent {
+  long_name: string;
+  types: string[];
+}
+
 // Función para calcular la distancia (Haversine)
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371e3; // Radio de la Tierra en metros
@@ -82,34 +88,6 @@ interface Notification {
 
 interface HeaderProps {
   selectedContainer: 'tareas' | 'cuentas' | 'miembros' | 'config';
-  onChatSidebarOpen: (task: {
-    id: string;
-    clientId: string;
-    project: string;
-    name: string;
-    description: string;
-    status: string;
-    priority: string;
-    startDate: string | null;
-    endDate: string | null;
-    LeadedBy: string[];
-    AssignedTo: string[];
-    createdAt: string;
-  }) => void;
-  tasks: {
-    id: string;
-    clientId: string;
-    project: string;
-    name: string;
-    description: string;
-    status: string;
-    priority: string;
-    startDate: string | null;
-    endDate: string | null;
-    LeadedBy: string[];
-    AssignedTo: string[];
-    createdAt: string;
-  }[];
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
@@ -120,8 +98,6 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   selectedContainer,
-  onChatSidebarOpen,
-  tasks,
   users,
   notifications,
   onNotificationClick,
@@ -200,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({
     }
 
     prevNotificationsRef.current = notifications;
-  }, [notifications, onLimitNotifications]);
+  }, [notifications, hasInteracted, onLimitNotifications]);
 
   /* ────────────────────────────────────────────
      EFFECTS – DROPDOWN POSITION
@@ -366,28 +342,92 @@ const Header: React.FC<HeaderProps> = ({
       }
     };
 
-    const attemptGetLocation = (retries: number, retryDelay: number) => {
-      if (typeof window === 'undefined' || !navigator.geolocation) {
-        console.warn('Geolocation is not supported or not available in this environment', {
-          browser: browserInfo,
-        });
+    // Memoize these functions to prevent unnecessary re-renders
+    const fetchWeather = async (lat: number, lon: number) => {
+      try {
+        const weatherResponse = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`,
+        );
+        if (!weatherResponse.ok) {
+          throw new Error(`HTTP error! status: ${weatherResponse.status}`);
+        }
+        const weatherData = await weatherResponse.json();
+        if (weatherData.main && typeof weatherData.main.temp === 'number') {
+          setTemperature(`${Math.round(weatherData.main.temp)}°`);
+          const weatherMain = weatherData.weather[0].main.toLowerCase();
+          const currentTime = new Date();
+          const icon = (() => {
+            switch (weatherMain) {
+              case 'clouds': return '/weather/Cloudy.svg';
+              case 'clear':
+                return currentTime.getHours() >= 6 && currentTime.getHours() < 18
+                  ? '/weather/CoolDay.svg'
+                  : '/weather/CoolNight.svg';
+              case 'rain': return '/weather/Rainy.svg';
+              case 'snow': return '/weather/Snowy.svg';
+              case 'thunderstorm': return '/weather/Storm.svg';
+              case 'windy':
+              case 'gust': return '/weather/Windy.svg';
+              default: return null;
+            }
+          })();
+          setWeatherIcon(icon);
+        }
+      } catch (error) {
+        console.error('Error fetching weather:', error);
+        setTemperature('N/A');
+        setWeatherIcon(null);
+      }
+    };
+
+    const fetchLocationAndWeather = async (lat: number, lon: number) => {
+      try {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
+        );
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.status === 'OK' && data.results.length > 0) {
+          const result = data.results[0];
+          const city = result.address_components.find((comp: AddressComponent) =>
+            comp.types.includes('locality'),
+          )?.long_name || FALLBACK_LOCATION.name;
+          setLocation(city);
+          await fetchWeather(lat, lon);
+        }
+      } catch (error) {
+        console.error('Error fetching location:', error);
+        setLocation(FALLBACK_LOCATION.name);
+        setTemperature('N/A');
+        setWeatherIcon(null);
+      }
+    };
+
+    const initializeLocation = async () => {
+      const permission = await checkGeolocationPermission();
+      if (permission === 'denied') {
+        console.warn('Geolocation permission denied');
         setLocation(FALLBACK_LOCATION.name);
         setTemperature('N/A');
         setWeatherIcon(null);
         setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
-        fetchLocationFromGoogleMaps(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
-        return;
+        return fetchLocationAndWeather(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
+      }
+
+      if (!navigator.geolocation) {
+        console.warn('Geolocation not supported');
+        setLocation(FALLBACK_LOCATION.name);
+        setTemperature('N/A');
+        setWeatherIcon(null);
+        setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
+        return fetchLocationAndWeather(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
       }
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          console.debug('Geolocation success:', {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            browser: browserInfo,
-          });
           const { latitude, longitude } = position.coords;
-          // Solo calcular distancia si está dentro del horario
           if (isOfficeHours(new Date())) {
             const distance = calculateDistance(
               latitude,
@@ -396,69 +436,27 @@ const Header: React.FC<HeaderProps> = ({
               OFFICE_LOCATION.lng,
             );
             setOfficeStatus(distance <= OFFICE_RADIUS ? 'En la oficina' : 'Fuera de la oficina');
-          } else {
-            setOfficeStatus('Fuera de horario');
           }
-          await fetchLocationFromGoogleMaps(latitude, longitude);
+          await fetchLocationAndWeather(latitude, longitude);
         },
         (error) => {
-          let errorMessage = 'No se pudo obtener la ubicación';
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = 'Permiso de geolocalización denegado';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = 'Información de ubicación no disponible';
-              break;
-            case error.TIMEOUT:
-              errorMessage = 'Tiempo de espera agotado para obtener la ubicación';
-              break;
-            default:
-              errorMessage = 'Error desconocido al obtener la ubicación';
-              break;
-          }
-          console.error('Error getting geolocation:', {
-            message: errorMessage,
-            code: error.code,
-            details: error.message || 'No additional details',
-            browser: browserInfo,
-            retryAttempt: 3 - retries + 1,
-          });
-
-          if (retries > 0) {
-            console.debug(`Retrying geolocation... (${retries} retries left)`);
-            setTimeout(() => attemptGetLocation(retries - 1, retryDelay * 2), retryDelay);
-          } else {
-            setLocation(FALLBACK_LOCATION.name);
-            setTemperature('N/A');
-            setWeatherIcon(null);
-            setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
-            fetchLocationFromGoogleMaps(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
-          }
+          console.error('Geolocation error:', error);
+          setLocation(FALLBACK_LOCATION.name);
+          setTemperature('N/A');
+          setWeatherIcon(null);
+          setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
+          fetchLocationAndWeather(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     };
 
-    const getLocation = async () => {
-      const permission = await checkGeolocationPermission();
-      if (permission === 'denied') {
-        console.warn('Geolocation permission denied by user', { browser: browserInfo });
-        setLocation(FALLBACK_LOCATION.name);
-        setTemperature('N/A');
-        setWeatherIcon(null);
-        setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
-        fetchLocationFromGoogleMaps(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
-        return;
-      }
+    initializeLocation();
 
-      attemptGetLocation(2, 2000); // 3 attempts total, starting with 2s delay
+    return () => {
+      clearInterval(timer);
     };
-
-    getLocation();
-
-    return () => clearInterval(timer);
-  }, []);
+  }, []); // Empty dependency array since we only want this to run once on mount
 
   /* ────────────────────────────────────────────
      EFFECTS – SCROLL POSITION TRACKING
@@ -473,7 +471,7 @@ const Header: React.FC<HeaderProps> = ({
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [isNotificationsOpen]);
+  }, [isNotificationsOpen, scrollPosition]);
 
   /* ────────────────────────────────────────────
      EFFECTS – RESTORE SCROLL POSITION
@@ -482,92 +480,7 @@ const Header: React.FC<HeaderProps> = ({
     if (isNotificationsOpen && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollPosition;
     }
-  }, [isNotificationsOpen]);
-
-  const fetchLocationFromGoogleMaps = async (lat: number, lon: number) => {
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
-      );
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Google Maps API error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-      const data = await response.json();
-      if (data.status === 'OK' && data.results.length > 0) {
-        const result = data.results[0];
-        const city = result.address_components.find((comp: any) =>
-          comp.types.includes('locality'),
-        )?.long_name || FALLBACK_LOCATION.name;
-        setLocation(city);
-        await fetchWeather(lat, lon);
-      } else {
-        console.warn('No results from Google Maps:', data);
-        setLocation(FALLBACK_LOCATION.name);
-        setTemperature('N/A');
-        setWeatherIcon(null);
-      }
-    } catch (error) {
-      console.error('Error fetching location from Google Maps:', error);
-      setLocation(FALLBACK_LOCATION.name);
-      setTemperature('N/A');
-      setWeatherIcon(null);
-    }
-  };
-
-  const fetchWeather = async (lat: number, lon: number) => {
-    try {
-      const weatherResponse = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`,
-      );
-      if (!weatherResponse.ok) {
-        const errorText = await weatherResponse.text();
-        console.error('Weather API error:', errorText);
-        throw new Error(`HTTP error! status: ${weatherResponse.status}, message: ${errorText}`);
-      }
-      const weatherData = await weatherResponse.json();
-      if (weatherData.main && typeof weatherData.main.temp === 'number') {
-        setTemperature(`${Math.round(weatherData.main.temp)}°`);
-        const weatherMain = weatherData.weather[0].main.toLowerCase();
-        switch (weatherMain) {
-          case 'clouds':
-            setWeatherIcon('/weather/Cloudy.svg');
-            break;
-          case 'clear':
-            setWeatherIcon(
-              time && time.getHours() >= 6 && time.getHours() < 18
-                ? '/weather/CoolDay.svg'
-                : '/weather/CoolNight.svg',
-            );
-            break;
-          case 'rain':
-            setWeatherIcon('/weather/Rainy.svg');
-            break;
-          case 'snow':
-            setWeatherIcon('/weather/Snowy.svg');
-            break;
-          case 'thunderstorm':
-            setWeatherIcon('/weather/Storm.svg');
-            break;
-          case 'windy':
-          case 'gust':
-            setWeatherIcon('/weather/Windy.svg');
-            break;
-          default:
-            setWeatherIcon(null);
-        }
-      } else {
-        console.warn('Weather data structure invalid:', weatherData);
-        setTemperature('N/A');
-        setWeatherIcon(null);
-      }
-    } catch (error) {
-      console.error('Error fetching weather:', error);
-      setTemperature('N/A');
-      setWeatherIcon(null);
-    }
-  };
+  }, [isNotificationsOpen, scrollPosition]);
 
   const date = time
     ? time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })

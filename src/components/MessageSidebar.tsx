@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
@@ -16,7 +16,6 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  FieldValue,
   getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -35,14 +34,8 @@ interface Message {
   fileName?: string | null;
   fileType?: string | null;
   filePath?: string | null;
-  timestamp: FieldValue | Timestamp | null;
+  timestamp: Timestamp | null;
   isPending?: boolean;
-}
-
-interface TypingStatus {
-  userId: string;
-  isTyping: boolean;
-  timestamp: Timestamp;
 }
 
 interface UserCard {
@@ -57,14 +50,13 @@ interface MessageSidebarProps {
   onClose: () => void;
   senderId: string;
   receiver: UserCard;
-  onOpenSidebar: (receiverId: string) => void;
-  sidebarId: string;
   conversationId: string;
 }
 
-const debounce = (func: (...args: any[]) => void, delay: number) => {
+// Uso de tipo genérico para evitar any
+const debounce = <T extends unknown[]>(func: (...args: T) => void, delay: number) => {
   let timer: NodeJS.Timeout | null = null;
-  return (...args: any[]) => {
+  return (...args: T) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       func(...args);
@@ -78,8 +70,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   onClose,
   senderId,
   receiver,
-  onOpenSidebar,
-  sidebarId,
   conversationId,
 }) => {
   const { user } = useUser();
@@ -94,7 +84,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [showDownArrow, setShowDownArrow] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const lastScrollTop = useRef(0);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -103,32 +92,50 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!sidebarRef.current) return;
-    const el = sidebarRef.current;
+    const currentSidebar = sidebarRef.current;
+    if (!currentSidebar) return;
     if (isOpen) {
-      gsap.fromTo(el, { x: '100%', opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' });
+      gsap.fromTo(
+        currentSidebar,
+        { x: '100%', opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+      );
     } else {
-      gsap.to(el, { x: '100%', opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: onClose });
+      gsap.to(currentSidebar, {
+        x: '100%',
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.in',
+        onComplete: onClose,
+      });
     }
     return () => {
-      if (sidebarRef.current) {
-        gsap.killTweensOf(sidebarRef.current);
+      if (currentSidebar) {
+        gsap.killTweensOf(currentSidebar);
       }
     };
   }, [isOpen, onClose]);
 
   useEffect(() => {
+    const currentSidebar = sidebarRef.current;
+    const currentActionMenu = actionMenuRef.current;
     const handleClickOutside = (e: MouseEvent) => {
       if (
-        sidebarRef.current &&
-        !sidebarRef.current.contains(e.target as Node) &&
-        (!actionMenuRef.current || !actionMenuRef.current.contains(e.target as Node))
+        currentSidebar &&
+        !currentSidebar.contains(e.target as Node) &&
+        (!currentActionMenu || !currentActionMenu.contains(e.target as Node))
       ) {
-        gsap.to(sidebarRef.current, { x: '100%', opacity: 0, duration: 0.3, ease: 'power2.in', onComplete: onClose });
+        gsap.to(currentSidebar, {
+          x: '100%',
+          opacity: 0,
+          duration: 0.3,
+          ease: 'power2.in',
+          onComplete: onClose,
+        });
       }
       if (
-        actionMenuRef.current &&
-        !actionMenuRef.current.contains(e.target as Node) &&
+        currentActionMenu &&
+        !currentActionMenu.contains(e.target as Node) &&
         actionMenuOpenId
       ) {
         setActionMenuOpenId(null);
@@ -144,14 +151,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       gsap.fromTo(
         actionMenuRef.current,
         { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
     }
-    return () => {
-      if (actionMenuRef.current) {
-        gsap.killTweensOf(actionMenuRef.current);
-      }
-    };
   }, [actionMenuOpenId]);
 
   useEffect(() => {
@@ -188,7 +190,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     return () => {
       chat.removeEventListener('scroll', debouncedHandleScroll);
     };
-  }, [messages, user?.id]);
+  }, [messages, user?.id, actionMenuOpenId, showDownArrow]);
 
   useEffect(() => {
     if (!isOpen || !senderId || !receiver.id || !user?.id || !conversationId) {
@@ -248,61 +250,11 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       },
     );
 
-    const typingQuery = query(collection(db, `conversations/${conversationId}/typing`));
-    const unsubscribeTyping = onSnapshot(
-      typingQuery,
-      (snapshot) => {
-        const typing: string[] = [];
-        snapshot.docs.forEach((doc) => {
-          const data = doc.data() as TypingStatus;
-          if (data.isTyping && data.userId !== user?.id) {
-            const timestamp = data.timestamp.toDate().getTime();
-            if (Date.now() - timestamp < 5000) {
-              typing.push(data.userId);
-            }
-          }
-        });
-        setTypingUsers(typing);
-      },
-      (error) => {
-        console.error('[MessageSidebar] Firestore typing listener error:', error);
-      },
-    );
-
     return () => {
       unsubscribeMessages();
-      unsubscribeTyping();
       setIsLoading(false);
     };
   }, [isOpen, senderId, receiver.id, conversationId, user?.id]);
-
-  const handleTyping = useCallback(
-    debounce(async () => {
-      if (!user?.id || !conversationId) {
-        return;
-      }
-
-      try {
-        const typingDocRef = doc(db, `conversations/${conversationId}/typing/${user.id}`);
-        await setDoc(typingDocRef, {
-          userId: user.id,
-          isTyping: true,
-          timestamp: Timestamp.now(),
-        });
-
-        setTimeout(async () => {
-          await setDoc(typingDocRef, {
-            userId: user.id,
-            isTyping: false,
-            timestamp: Timestamp.now(),
-          });
-        }, 3000);
-      } catch (error) {
-        console.error('[MessageSidebar] Error updating typing status:', error);
-      }
-    }, 500),
-    [user?.id, conversationId]
-  );
 
   useEffect(() => {
     if (!messages.length || !chatRef.current) return;
@@ -315,7 +267,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         gsap.fromTo(
           li,
           { y: 50, opacity: 0, scale: 0.95 },
-          { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out', delay: 0.1 }
+          { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out', delay: 0.1 },
         );
       }
     });
@@ -326,22 +278,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       }
     });
   }, [messages]);
-
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-
-  const selectFile = (f: File) => {
-    if (f.size > MAX_FILE_SIZE) {
-      alert('El archivo supera los 10 MB.');
-      return;
-    }
-    const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'];
-    const fileExtension = f.name.split('.').pop()?.toLowerCase();
-    if (!fileExtension || !validExtensions.includes(fileExtension)) {
-      alert(`Extensión no soportada. Permitidas: ${validExtensions.join(', ')}`);
-      return;
-    }
-    return f;
-  };
 
   const handleOpenActionMenu = (messageId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -477,13 +413,12 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           lastMessage: messageData.text || messageData.fileName || '[Archivo]',
           lastMessageTimestamp: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       const finalMessageData: Partial<Message> = {
         senderId: user.id,
         receiverId: receiver.id,
-        timestamp: serverTimestamp(),
         text: messageData.text || null,
         imageUrl: messageData.imageUrl || null,
         fileUrl: messageData.fileUrl || audioUrl || null,
@@ -492,7 +427,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         filePath: messageData.filePath || null,
       };
 
-      const msgRef = await addDoc(collection(db, 'conversations', conversationId, 'messages'), finalMessageData);
+      await addDoc(
+        collection(db, 'conversations', conversationId, 'messages'),
+        finalMessageData,
+      );
 
       try {
         await addDoc(collection(db, 'notifications'), {
@@ -660,7 +598,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                                 Eliminar mensaje
                               </div>
                             </div>,
-                            document.body
+                            document.body,
                           )}
                       </div>
                     )}
@@ -751,16 +689,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             </div>
           );
         })}
-        {typingUsers.length > 0 && (
-          <div className={styles.typingIndicator}>
-            <div className={styles.typingDots}>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-            <span>{receiver.fullName} está escribiendo...</span>
-          </div>
-        )}
       </div>
       {showDownArrow && (
         <button

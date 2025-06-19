@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { gsap } from "gsap"
 import Dock from "./Dock"
 import ToDoDynamic from "./ToDoDynamic"
@@ -13,7 +13,7 @@ export default function ToolbarContainer() {
   const lastScrollY = useRef(0)
 
   // Manejar animaciones de visibilidad
-  const animateVisibility = (visible: boolean) => {
+  const animateVisibility = useCallback((visible: boolean) => {
     gsap.to(containerRef.current, {
       y: visible ? 0 : 100,
       opacity: visible ? 1 : 0,
@@ -21,10 +21,10 @@ export default function ToolbarContainer() {
       ease: visible ? "power2.out" : "power2.in",
       onComplete: () => setIsVisible(visible),
     })
-  }
+  }, [])
 
   // Manejar scroll (replicando Dock)
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY
 
     if (currentScrollY > lastScrollY.current && isVisible) {
@@ -34,10 +34,10 @@ export default function ToolbarContainer() {
     }
 
     lastScrollY.current = currentScrollY
-  }
+  }, [isVisible, animateVisibility])
 
   // Manejar teclado
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Cmd/Ctrl + K: Ocultar/Mostrar
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !e.shiftKey) {
       e.preventDefault()
@@ -48,7 +48,7 @@ export default function ToolbarContainer() {
       e.preventDefault()
       setActiveComponent((prev) => (prev === "dock" ? "todo" : "dock"))
     }
-  }
+  }, [isVisible, animateVisibility])
 
   useEffect(() => {
     // Animación inicial (como Dock)
@@ -67,12 +67,12 @@ export default function ToolbarContainer() {
       window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, []) // Dependencias vacías para ejecutarse una vez, como en Dock
+  }, [handleScroll, handleKeyDown])
 
   // Actualizar animaciones cuando cambia isVisible
   useEffect(() => {
     animateVisibility(isVisible)
-  }, [isVisible])
+  }, [isVisible, animateVisibility])
 
   return (
     <div ref={containerRef} className={styles.toolbarContainer}>

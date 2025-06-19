@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import styles from './Calendar.module.scss';
 
 // Utility functions
@@ -76,7 +78,6 @@ const Calendar: React.FC<CalendarProps> = ({
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [rangeStart, setRangeStart] = useState<Date | null>(null);
   const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
-  const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ show: false, content: '', x: 0, y: 0 });
 
   const monthNames = [
@@ -169,7 +170,7 @@ const Calendar: React.FC<CalendarProps> = ({
   const hideTooltip = () => {
     setTooltip({ show: false, content: '', x: 0, y: 0 });
   };
-  
+
   const renderMonthView = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
@@ -178,8 +179,8 @@ const Calendar: React.FC<CalendarProps> = ({
     // Previous month's trailing days
     const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 0);
     const prevMonthDays = prevMonth.getDate();
-  
-    for (let i = firstDay - 1; i >= 0; i--) {
+
+    for (let i = 0; i < firstDay; i++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, prevMonthDays - i);
       days.push(
         <div
@@ -188,7 +189,7 @@ const Calendar: React.FC<CalendarProps> = ({
           onClick={() => handleDateClick(date)}
         >
           {prevMonthDays - i}
-        </div>,
+        </div>
       );
     }
 
@@ -219,30 +220,32 @@ const Calendar: React.FC<CalendarProps> = ({
         <div
           key={day}
           className={cellClasses}
-          onClick={() => !isDisabled && handleDateClick(date)}
+          onClick={() => {
+            if (!isDisabled) {
+              handleDateClick(date);
+            }
+          }}
           onMouseEnter={(e) => {
-            setHoveredDate(date);
             if (hasEvents) {
               showTooltip(e, hasEvents.map((event) => event.title).join(', '));
             }
           }}
-          onMouseLeave={() => {
-            setHoveredDate(null);
-            hideTooltip();
-          }}
+          onMouseLeave={hideTooltip}
           role="button"
           tabIndex={0}
           aria-label={`${formatDate(date)}${hasEvents ? `, Events: ${hasEvents.map((e) => e.title).join(', ')}` : ''}`}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              !isDisabled && handleDateClick(date);
+              if (!isDisabled) {
+                handleDateClick(date);
+              }
             }
           }}
         >
           {day}
           {hasEvents && <div className={styles.eventDot}></div>}
-        </div>,
+        </div>
       );
     }
 
@@ -259,7 +262,7 @@ const Calendar: React.FC<CalendarProps> = ({
           onClick={() => handleDateClick(date)}
         >
           {day}
-        </div>,
+        </div>
       );
     }
 

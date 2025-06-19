@@ -34,7 +34,7 @@ interface Message {
   senderId: string;
   senderName: string;
   text: string | null;
-  timestamp: Timestamp | any;
+  timestamp: Timestamp | Date | null;
   read: boolean;
   hours?: number;
   imageUrl?: string | null;
@@ -73,14 +73,13 @@ interface ChatSidebarProps {
   };
   clientName: string;
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
-  sidebarId: string;
 }
 
 interface MessageItemProps {
   message: Message;
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   userId: string | undefined;
-  styles: any;
+  styles: typeof styles;
   setActionMenuOpenId: Dispatch<SetStateAction<string | null>>;
   actionMenuOpenId: string | null;
   setEditingMessageId: Dispatch<SetStateAction<string | null>>;
@@ -126,7 +125,7 @@ const MessageItem = memo(
                 height={200}
                 className={styles.image}
                 onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
-                onError={(e) => console.warn('Image load failed', message.imageUrl)}
+                onError={() => console.warn('Image load failed', message.imageUrl)}
               />
             </div>
           );
@@ -206,7 +205,7 @@ const MessageItem = memo(
           return <span style={textStyles} className={styles.messageText}>{text}</span>;
         }
         return null;
-      }, [message, styles, setImagePreviewSrc]);
+      }, [message, setImagePreviewSrc, styles]);
 
       return (
         <div
@@ -230,17 +229,16 @@ const MessageItem = memo(
               <div className={styles.sender}>{message.senderName}</div>
               <div className={styles.timestampWrapper}>
                 <span className={styles.timestamp}>
-                  {message.timestamp instanceof Timestamp
-                    ? message.timestamp.toDate().toLocaleTimeString('es-MX', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'America/Mexico_City',
-                      })
-                    : new Date(message.timestamp).toLocaleTimeString('es-MX', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'America/Mexico_City',
-                      })}
+                  {(message.timestamp instanceof Timestamp
+                    ? message.timestamp.toDate()
+                    : message.timestamp instanceof Date
+                    ? message.timestamp
+                    : new Date()
+                  ).toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/Mexico_City',
+                  })}
                 </span>
                 {userId === message.senderId && !message.isPending && (
                   <div className={styles.actionContainer}>
@@ -291,35 +289,35 @@ const MessageItem = memo(
               </div>
             </div>
             {editingMessageId === message.id ? (
-  <div className={styles.editContainer}>
-    <textarea
-      value={editingText}
-      onChange={(e) => setEditingText(e.target.value)}
-      className={styles.editInput}
-      autoFocus
-      rows={3}
-      style={{ resize: 'vertical', minHeight: '36px', maxHeight: '200px' }}
-    />
-    <button
-      className={styles.editSaveButton}
-      onClick={() => handleEditMessage(message.id)}
-      disabled={!editingText.trim()}
-    >
-      Guardar
-    </button>
-    <button
-      className={styles.editCancelButton}
-      onClick={() => {
-        setEditingMessageId(null);
-        setEditingText('');
-      }}
-    >
-      Cancelar
-    </button>
-  </div>
-) : (
-  renderMessageContent()
-)}
+              <div className={styles.editContainer}>
+                <textarea
+                  value={editingText}
+                  onChange={(e) => setEditingText(e.target.value)}
+                  className={styles.editInput}
+                  autoFocus
+                  rows={3}
+                  style={{ resize: 'vertical', minHeight: '36px', maxHeight: '200px' }}
+                />
+                <button
+                  className={styles.editSaveButton}
+                  onClick={() => handleEditMessage(message.id)}
+                  disabled={!editingText.trim()}
+                >
+                  Guardar
+                </button>
+                <button
+                  className={styles.editCancelButton}
+                  onClick={() => {
+                    setEditingMessageId(null);
+                    setEditingText('');
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              renderMessageContent()
+            )}
           </div>
         </div>
       );
@@ -342,8 +340,17 @@ const MessageItem = memo(
 const getCachedMessages = (taskId: string) => {
   try {
     const cached = localStorage.getItem(`failedMessages_${taskId}`);
-    return cached ? JSON.parse(cached) : [];
-  } catch {
+    if (!cached) return [];
+    const parsed = JSON.parse(cached) as Message[];
+    // Filtrar mensajes con timestamp válido
+    return parsed.filter(
+      (msg) =>
+        msg.timestamp &&
+        (msg.timestamp instanceof Timestamp ||
+          (msg.timestamp instanceof Date && !isNaN(msg.timestamp.getTime()))),
+    );
+  } catch (error) {
+    console.error('Error parsing cached messages', error);
     return [];
   }
 };
@@ -374,7 +381,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   task: initialTask,
   clientName,
   users = [],
-  sidebarId,
 }) => {
   const { user } = useUser();
   const router = useRouter();
@@ -389,7 +395,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState<boolean>(false);
   const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
@@ -415,7 +420,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const responsibleDropdownRef = useRef<HTMLDivElement>(null);
   const teamDropdownRef = useRef<HTMLDivElement>(null);
   const timerPanelRef = useRef<HTMLDivElement>(null);
-  const timerButtonRef = useRef<HTMLDivElement>(null);
   const datePickerWrapperRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
 
@@ -622,24 +626,31 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setIsLoading(false);
       return;
     }
-    // Cargar mensajes fallidos desde el caché
     const cachedMessages = getCachedMessages(task.id);
     if (cachedMessages.length > 0) {
       setMessages((prev) => {
         const messageMap = new Map<string, Message>(prev.map((msg) => [msg.id, msg]));
         cachedMessages.forEach((msg: Message) => {
-          if (!messageMap.has(msg.id)) {
+          if (!messageMap.has(msg.id) && msg.timestamp) {
             messageMap.set(msg.id, {
               ...msg,
-              timestamp: new Date(msg.timestamp),
+              timestamp: msg.timestamp instanceof Timestamp ? msg.timestamp : new Date(msg.timestamp),
             });
           }
         });
-        return Array.from(messageMap.values()).sort((a, b) =>
-          a.timestamp instanceof Timestamp && b.timestamp instanceof Timestamp
-            ? a.timestamp.toMillis() - b.timestamp.toMillis()
-            : 0,
-        );
+        return Array.from(messageMap.values()).sort((a, b) => {
+          const aTime = a.timestamp
+            ? a.timestamp instanceof Timestamp
+              ? a.timestamp.toDate().getTime()
+              : a.timestamp.getTime()
+            : 0;
+          const bTime = b.timestamp
+            ? b.timestamp instanceof Timestamp
+              ? b.timestamp.toDate().getTime()
+              : b.timestamp.getTime()
+            : 0;
+          return aTime - bTime;
+        });
       });
     }
 
@@ -647,21 +658,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     const unsubscribe = onSnapshot(
       messagesQuery,
       (snapshot) => {
-        const newMessages: Message[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          senderId: doc.data().senderId,
-          senderName: doc.data().senderName,
-          text: doc.data().text,
-          timestamp: doc.data().timestamp,
-          read: doc.data().read || false,
-          hours: doc.data().hours || undefined,
-          imageUrl: doc.data().imageUrl || null,
-          fileUrl: doc.data().fileUrl || null,
-          fileName: doc.data().fileName || null,
-          fileType: doc.data().fileType || null,
-          filePath: doc.data().filePath || null,
-          clientId: crypto.randomUUID(),
-        }));
+        const newMessages: Message[] = snapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            // Filtrar mensajes con timestamp válido
+            if (!data.timestamp) {
+              console.warn(`Mensaje con ID ${doc.id} tiene timestamp inválido: ${data.timestamp}`);
+              return null;
+            }
+            return {
+              id: doc.id,
+              senderId: data.senderId,
+              senderName: data.senderName,
+              text: data.text,
+              timestamp: data.timestamp,
+              read: data.read || false,
+              hours: data.hours,
+              imageUrl: data.imageUrl || null,
+              fileUrl: data.fileUrl || null,
+              fileName: data.fileName || null,
+              fileType: data.fileType || null,
+              filePath: data.filePath || null,
+              clientId: crypto.randomUUID(),
+              isPending: false,
+              hasError: false,
+            };
+          })
+          .filter((msg) => msg !== null); // Eliminado tipo predicado explícito
         setMessages((prev) => {
           const messageMap = new Map<string, Message>();
           prev.forEach((msg) => messageMap.set(msg.id, msg));
@@ -670,11 +693,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               messageMap.set(msg.id, msg);
             }
           });
-          const updatedMessages = Array.from(messageMap.values()).sort((a, b) =>
-            a.timestamp instanceof Timestamp && b.timestamp instanceof Timestamp
-              ? a.timestamp.toMillis() - b.timestamp.toMillis()
-              : 0,
-          );
+          const updatedMessages = Array.from(messageMap.values()).sort((a, b) => {
+            const aTime = a.timestamp
+              ? a.timestamp instanceof Timestamp
+                ? a.timestamp.toDate().getTime()
+                : a.timestamp.getTime()
+              : 0;
+            const bTime = b.timestamp
+              ? b.timestamp instanceof Timestamp
+                ? b.timestamp.toDate().getTime()
+                : b.timestamp.getTime()
+              : 0;
+            return aTime - bTime;
+          });
           return updatedMessages;
         });
         setIsLoading(false);
@@ -1137,11 +1168,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  const toggleTimer = async (e: React.MouseEvent) => {
+  const toggleTimer = async (_e: React.MouseEvent) => {
     if (!user?.id || !task.id) {
       return;
     }
-    handleClick(e.currentTarget as HTMLElement);
+    handleClick(_e.currentTarget as HTMLElement);
     const wasRunning = isTimerRunning;
     setIsTimerRunning((prev) => !prev);
     setHasInteracted(true);
@@ -1187,9 +1218,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  const toggleTimerPanel = (e: React.MouseEvent) => {
+  const toggleTimerPanel = (_e: React.MouseEvent) => {
     if (isSending) return;
-    e.stopPropagation();
+    _e.stopPropagation();
     setIsTimerPanelOpen((prev) => {
       if (timerPanelRef.current) {
         gsap.to(timerPanelRef.current, {
@@ -1240,19 +1271,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setDateInput(new Date());
       setCommentInput('');
       setIsTimerPanelOpen(false);
-      setIsCalendarOpen(false);
       setHasInteracted(true);
     } catch (error) {
       console.error('Error adding time entry', error);
       alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     }
-  };
-
-  const formatTimer = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const formatDate = (date: string | null) => {
@@ -1299,23 +1322,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       .filter((u) => hoursMap[u.id]);
   }, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
 
-  const responsibleUsers = useMemo(() => {
-    const pmUsers = task.LeadedBy.map((userId) => {
-      const u = users.find((u) => u.id === userId) || {
-        id: userId,
-        fullName: 'Desconocido',
-        firstName: 'Desconocido',
-        imageUrl: '/default-image.png',
-      };
-      return {
-        id: userId,
-        firstName: u.firstName || u.fullName.split(' ')[0],
-        imageUrl: u.imageUrl,
-      };
-    });
-    return pmUsers.length > 0 ? pmUsers : null;
-  }, [task.LeadedBy, users]);
-
   const teamUsers = useMemo(() => {
     const teamUserIds = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
     return Array.from(teamUserIds).map((userId) => {
@@ -1333,12 +1339,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       };
     });
   }, [task.AssignedTo, task.LeadedBy, users]);
-
-  const creator = users.find((u) => u.id === task.CreatedBy) || {
-    fullName: 'Desconocido',
-    firstName: 'Desconocido',
-    imageUrl: '/default-image.png',
-  };
 
   return (
     <div
@@ -1459,7 +1459,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             {isHoursDropdownOpen && isInvolved && (
               <div ref={hoursDropdownRef} className={styles.hoursDropdown}>
                 {hoursByUser.length > 0 ? (
-                  hoursByUser.map((u) => (
+                  teamUsers.map((u) => (
                     <div key={u.id} className={styles.hoursDropdownItem}>
                       <Image
                         src={u.imageUrl}
@@ -1469,7 +1469,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         className={styles.avatar}
                       />
                       <span className={styles.hoursUserName}>{u.firstName}</span>
-                      <span className={styles.hoursValue}>{u.hours}</span>
+                      <span className={styles.hoursValue}>
+                        {hoursByUser.find((h) => h.id === u.id)?.hours || '0:00'}
+                      </span>
                     </div>
                   ))
                 ) : (
@@ -1525,20 +1527,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 className={styles.timerInput}
               />
             </div>
-            <div
-              className={styles.timerCard}
-              ref={datePickerWrapperRef}
-              onMouseEnter={() => setIsCalendarOpen(true)}
-              onMouseLeave={() => setTimeout(() => setIsCalendarOpen(false), 200)}
-            >
+            <div className={styles.timerCard} ref={datePickerWrapperRef}>
               <DatePicker
                 selected={dateInput}
                 onChange={(date: Date | null) => setDateInput(date || new Date())}
                 dateFormat="dd/MM/yy"
                 className={styles.timerInput}
                 popperClassName={styles.calendarPopper}
-                onCalendarOpen={() => setIsCalendarOpen(true)}
-                onCalendarClose={() => setIsCalendarOpen(false)}
               />
             </div>
           </div>
@@ -1562,7 +1557,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               className={styles.timerCancelButton}
               onClick={() => {
                 setIsTimerPanelOpen(false);
-                setIsCalendarOpen(false);
               }}
             >
               Cancelar

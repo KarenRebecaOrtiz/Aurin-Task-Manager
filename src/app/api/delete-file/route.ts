@@ -3,7 +3,7 @@ import { getAuth } from '@clerk/nextjs/server';
 import { initializeFirebase } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
-  const { storage, bucket } = await initializeFirebase();
+  const { bucket } = await initializeFirebase();
 
   try {
     const { userId } = getAuth(request);

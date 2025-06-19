@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { useUser } from "@clerk/nextjs";
+import { useUser, User } from "@clerk/nextjs";
 import {
   collection,
   addDoc,
@@ -20,8 +20,14 @@ import { getGenerativeModel, HarmCategory, HarmBlockThreshold, Part } from "@fir
 import { db, ai, appCheck } from "@/lib/firebase";
 import { gsap } from "gsap";
 import styles from "./AISidebar.module.scss";
-import { EmojiSelector } from "./ui/EmojiSelector";
 import InputAI from "./ui/InputAI";
+
+// Extender la interfaz User de Clerk para incluir id
+declare module "@clerk/nextjs" {
+  interface User {
+    id: string;
+  }
+}
 
 interface AIMessage {
   id: string;
@@ -71,6 +77,21 @@ interface Task {
   messages: AIMessage[];
 }
 
+interface TaskData {
+  clientId: string;
+  project: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  priority: string;
+  LeadedBy: string[];
+  AssignedTo: string[];
+  budget: string | number;
+  hours: string | number;
+}
+
 interface AISidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -89,7 +110,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const lastMessageRef = useRef<HTMLDivElement>(null); // Ref para el último mensaje
+  const lastMessageRef = useRef<HTMLDivElement>(null);
 
   // Montaje inicial para evitar problemas de hidratación
   useEffect(() => {
@@ -118,16 +139,16 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
   // GSAP animation for open/close
   useEffect(() => {
-    if (!sidebarRef.current) return;
-    const el = sidebarRef.current;
+    const currentSidebar = sidebarRef.current;
+    if (!currentSidebar) return;
     if (isOpen) {
       gsap.fromTo(
-        el,
+        currentSidebar,
         { x: "100%", opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.3, ease: "power2.out" }
+        { x: 0, opacity: 1, duration: 0.3, ease: "power2.out" },
       );
     } else {
-      gsap.to(el, {
+      gsap.to(currentSidebar, {
         x: "100%",
         opacity: 0,
         duration: 0.3,
@@ -136,8 +157,8 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
       });
     }
     return () => {
-      if (sidebarRef.current) {
-        gsap.killTweensOf(sidebarRef.current);
+      if (currentSidebar) {
+        gsap.killTweensOf(currentSidebar);
       }
     };
   }, [isOpen, onClose]);
@@ -145,11 +166,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        sidebarRef.current &&
-        !sidebarRef.current.contains(e.target as Node) &&
-        isOpen
-      ) {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node) && isOpen) {
         gsap.to(sidebarRef.current, {
           x: "100%",
           opacity: 0,
@@ -173,7 +190,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     if (isAtBottom || (!isUserScrolling && messages[messages.length - 1].sender === "user")) {
       chat.scrollTo({ top: chat.scrollHeight, behavior: "smooth" });
     }
-  }, [messages.length]);
+  }, [messages]);
 
   // Animate new messages
   useEffect(() => {
@@ -186,7 +203,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         gsap.fromTo(
           div,
           { y: 50, opacity: 0, scale: 0.95 },
-          { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: "power2.out", delay: 0.1 }
+          { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: "power2.out", delay: 0.1 },
         );
       }
     });
@@ -229,14 +246,10 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
             filePath: m.filePath || null,
           };
         });
-        // Filtrar duplicados basados en id
-        const uniqueMessages = data.filter(
-          (msg, index, self) => index === self.findIndex((m) => m.id === msg.id)
-        );
+        const uniqueMessages = data.filter((msg, index, self) => index === self.findIndex((m) => m.id === msg.id));
         setMessages((prev) => {
           const pendingMessages = prev.filter((msg) => msg.isPending);
           const updatedMessages = [...pendingMessages, ...uniqueMessages.filter((msg) => !msg.isPending)];
-          // Garantizar unicidad en el estado final
           const messageMap = new Map<string, AIMessage>();
           updatedMessages.forEach((msg) => messageMap.set(msg.id, msg));
           return Array.from(messageMap.values());
@@ -248,95 +261,126 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         console.error("[AISidebar] Firestore messages listener error:", error, "[Error Code: FS-001]");
         setError("No se pudo cargar la conversación. [Error Code: FS-001]");
         setIsLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
   }, [isOpen, user?.id, isAdmin]);
 
   // Fetch clients from Firestore
-  const getClients = async (options: { forGemini?: boolean } = {}) => {
-    try {
-      const clientsRef = collection(db, "clients");
-      const snapshot = await getDocs(clientsRef);
-      const clients: Client[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name,
-          imageUrl: data.imageUrl,
-          projectCount: data.projectCount,
-          projects: data.projects,
-          createdAt: data.createdAt,
-          createdBy: data.createdBy,
-        };
-      });
-      console.log("[AISidebar] Fetched clients:", clients, "[Debug Code: CLIENT-001]");
-      return options.forGemini && !isAdmin ? [] : clients;
-    } catch (error) {
-      console.error("[AISidebar] Failed to fetch clients:", error, "[Error Code: CLIENT-002]");
-      return [];
-    }
-  };
-
-  // Fetch tasks from Firestore
-  const getTasks = async (userId: string, options: { forGemini?: boolean } = {}) => {
-    try {
-      const tasksRef = collection(db, "tasks");
-      const snapshot = await getDocs(tasksRef);
-      const tasks: Task[] = await Promise.all(
-        snapshot.docs.map(async (doc) => {
+  const getClients = useCallback(
+    async (options: { forGemini?: boolean } = {}) => {
+      try {
+        const clientsRef = collection(db, "clients");
+        const snapshot = await getDocs(clientsRef);
+        const clients: Client[] = snapshot.docs.map((doc) => {
           const data = doc.data();
-          const messagesRef = collection(db, "tasks", doc.id, "messages");
-          const messagesSnapshot = await getDocs(messagesRef);
-          const messages: AIMessage[] = messagesSnapshot.docs.map((msgDoc) => {
-            const msgData = msgDoc.data();
-            return {
-              id: msgDoc.id,
-              userId: msgData.userId,
-              text: msgData.text || "",
-              sender: msgData.sender,
-              timestamp: msgData.timestamp || null,
-              isPending: msgData.isPending || false,
-              hasError: msgData.hasError || false,
-              imageUrl: msgData.imageUrl || null,
-              fileUrl: msgData.fileUrl || null,
-              fileName: msgData.fileName || null,
-              fileType: msgData.fileType || null,
-              filePath: msgData.filePath || null,
-            };
-          });
           return {
             id: doc.id,
-            title: data.title || "Tarea sin título",
+            name: data.name,
+            imageUrl: data.imageUrl,
+            projectCount: data.projectCount,
+            projects: data.projects,
+            createdAt: data.createdAt,
             createdBy: data.createdBy,
-            clientId: data.clientId || "",
-            project: data.project || "",
-            description: data.description || "",
-            startDate: data.startDate || Timestamp.now(),
-            endDate: data.endDate || Timestamp.now(),
-            status: data.status || "Por comenzar",
-            priority: data.priority || "Baja",
-            LeadedBy: data.LeadedBy || [],
-            AssignedTo: data.AssignedTo || [],
-            budget: data.budget || 0,
-            hours: data.hours || 0,
-            objectives: data.objectives || "",
-            methodology: data.methodology || "",
-            risks: data.risks || "",
-            mitigation: data.mitigation || "",
-            stakeholders: data.stakeholders || "",
-            messages,
           };
-        })
-      );
-      console.log("[AISidebar] Fetched tasks:", tasks, "[Debug Code: TASK-001]");
-      return options.forGemini && !isAdmin ? [] : tasks.filter((task) => task.createdBy === userId);
-    } catch (error) {
-      console.error("[AISidebar] Failed to fetch tasks:", error, "[Error Code: TASK-002]");
-      return [];
-    }
-  };
+        });
+        console.log("[AISidebar] Fetched clients:", clients, "[Debug Code: CLIENT-001]");
+        return options.forGemini && !isAdmin ? [] : clients;
+      } catch (error) {
+        console.error("[AISidebar] Failed to fetch clients:", error, "[Error Code: CLIENT-002]");
+        return [];
+      }
+    },
+    [isAdmin],
+  );
+
+  // Fetch tasks from Firestore
+  const getTasks = useCallback(
+    async (userId: string, options: { forGemini?: boolean } = {}) => {
+      try {
+        const tasksRef = collection(db, "tasks");
+        const snapshot = await getDocs(tasksRef);
+        const tasks: Task[] = await Promise.all(
+          snapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const messagesRef = collection(db, "tasks", doc.id, "messages");
+            const messagesSnapshot = await getDocs(messagesRef);
+            const messages: AIMessage[] = messagesSnapshot.docs.map((msgDoc) => {
+              const msgData = msgDoc.data();
+              return {
+                id: msgDoc.id,
+                userId: msgData.userId,
+                text: msgData.text || "",
+                sender: msgData.sender,
+                timestamp: msgData.timestamp || null,
+                isPending: msgData.isPending || false,
+                hasError: msgData.hasError || false,
+                imageUrl: msgData.imageUrl || null,
+                fileUrl: msgData.fileUrl || null,
+                fileName: msgData.fileName || null,
+                fileType: msgData.fileType || null,
+                filePath: msgData.filePath || null,
+              };
+            });
+            return {
+              id: doc.id,
+              title: data.title || "Tarea sin título",
+              createdBy: data.createdBy,
+              clientId: data.clientId || "",
+              project: data.project || "",
+              description: data.description || "",
+              startDate: data.startDate || Timestamp.now(),
+              endDate: data.endDate || Timestamp.now(),
+              status: data.status || "Por comenzar",
+              priority: data.priority || "Baja",
+              LeadedBy: data.LeadedBy || [],
+              AssignedTo: data.AssignedTo || [],
+              budget: data.budget || 0,
+              hours: data.hours || 0,
+              objectives: data.objectives || "",
+              methodology: data.methodology || "",
+              risks: data.risks || "",
+              mitigation: data.mitigation || "",
+              stakeholders: data.stakeholders || "",
+              messages,
+            };
+          }),
+        );
+        console.log("[AISidebar] Fetched tasks:", tasks, "[Debug Code: TASK-001]");
+        return options.forGemini && !isAdmin ? [] : tasks.filter((task) => task.createdBy === userId);
+      } catch (error) {
+        console.error("[AISidebar] Failed to fetch tasks:", error, "[Error Code: TASK-002]");
+        return [];
+      }
+    },
+    [isAdmin],
+  );
+
+  // Create task from Gemini response
+  const createTaskFromGemini = useCallback(
+    async (taskData: TaskData, user: User) => {
+      if (!isAdmin) return;
+      try {
+        const taskDocRef = doc(collection(db, "tasks"));
+        const taskId = taskDocRef.id;
+        await setDoc(taskDocRef, {
+          ...taskData,
+          CreatedBy: user.id,
+          createdAt: serverTimestamp(),
+          id: taskId,
+          budget: parseFloat(taskData.budget.toString()) || 0,
+          hours: parseInt(taskData.hours.toString()) || 0,
+          startDate: taskData.startDate ? Timestamp.fromDate(new Date(taskData.startDate)) : Timestamp.now(),
+          endDate: taskData.endDate ? Timestamp.fromDate(new Date(taskData.endDate)) : Timestamp.now(),
+        });
+      } catch (error) {
+        console.error("[AISidebar] Failed to create task:", error, "[Error Code: TASK-CREATE-001]");
+        throw new Error("Error al crear la tarea [Error Code: TASK-CREATE-001]");
+      }
+    },
+    [isAdmin],
+  );
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -345,14 +389,14 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
       setIsSending(true);
       const conversationId = `ai_${user.id}`;
-      const tempId = `${crypto.randomUUID()}-${tempIdCounter++}`; // ID único con crypto.randomUUID
+      const tempId = `${crypto.randomUUID()}-${tempIdCounter++}`;
 
       const optimisticMessage: AIMessage = {
         id: tempId,
         userId: user.id,
         text: messageData.text || "",
         sender: "user",
-        timestamp: Timestamp.fromDate(new Date()), // Temporal hasta guardar en Firestore
+        timestamp: Timestamp.fromDate(new Date()),
         isPending: true,
         hasError: messageData.hasError || false,
         imageUrl: messageData.imageUrl || null,
@@ -372,7 +416,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
       console.log("[AISidebar] Sending message with tempId:", tempId, "[Debug Code: MSG-001]");
 
       try {
-        // Initialize conversation
         await setDoc(
           doc(db, "ai_conversations", conversationId),
           {
@@ -381,10 +424,9 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
             lastMessage: messageData.text || "Archivo subido",
             lastMessageTimestamp: serverTimestamp(),
           },
-          { merge: true }
+          { merge: true },
         );
 
-        // Save user message
         const messageDocRef = await addDoc(collection(db, "ai_conversations", conversationId, "messages"), {
           userId: user.id,
           text: messageData.text || null,
@@ -403,11 +445,10 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           prev.map((msg) =>
             msg.id === tempId
               ? { ...msg, id: messageDocRef.id, isPending: false, timestamp: Timestamp.now() }
-              : msg
-          )
+              : msg,
+          ),
         );
 
-        // Fetch data for Gemini
         const tasks = await getTasks(user.id, { forGemini: true });
         const clients = await getClients({ forGemini: true });
         let imagePart: Part | undefined;
@@ -426,14 +467,12 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         const prompt = `Eres un asistente útil que puede procesar texto e imágenes. Con base en la siguiente información: ${JSON.stringify({ tasks, clients })}, responde al prompt del usuario: "${messageData.text || "Analiza el archivo adjunto"}". Si se incluye una imagen, analízala y relaciónala con el contexto del prompt. Si el usuario pide crear una tarea, genera un JSON con los campos: clientId, project, name, description, startDate, endDate, status, priority, LeadedBy, AssignedTo, budget, hours. Devuelve la respuesta en texto claro o JSON si aplica.`;
         console.log("[AISidebar] Generated prompt:", prompt, "[Debug Code: PROMPT-001]");
 
-        // Verificar estado de App Check
         if (!appCheck) {
           console.warn("[AISidebar] App Check not initialized. [Debug Code: APPCHECK-001]");
         } else {
           console.log("[AISidebar] App Check token available.", "[Debug Code: APPCHECK-002]");
         }
 
-        // Configuración del modelo
         const generationConfig = {
           maxOutputTokens: 500,
           temperature: 0.7,
@@ -454,7 +493,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
         const systemInstruction = "Eres Gemini, un asistente útil y amigable. Responde de manera clara y concisa. Puedes procesar imágenes y crear tareas si se te solicita.";
 
-        // Call Gemini API
         let textResponse: string;
         try {
           const model = getGenerativeModel(ai, {
@@ -477,18 +515,16 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           throw new Error(`Error al llamar a la API de Gemini: ${(apiError as Error).message || "Desconocido"} [Error Code: API-002]`);
         }
 
-        // Process response for task creation
         try {
           const jsonResponse = JSON.parse(textResponse);
           if (jsonResponse.clientId && jsonResponse.name) {
             await createTaskFromGemini(jsonResponse, user);
             textResponse = "Tarea creada exitosamente. " + (jsonResponse.description || "");
           }
-        } catch (e) {
+        } catch {
           console.log("[AISidebar] Response is not JSON, treating as plain text:", textResponse, "[Debug Code: RESP-002]");
         }
 
-        // Save AI response
         await addDoc(collection(db, "ai_conversations", conversationId, "messages"), {
           userId: user.id,
           text: textResponse,
@@ -508,9 +544,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         const errorMessage = error instanceof Error ? error.message : "Error desconocido";
         console.error("[AISidebar] Failed to send message:", errorMessage, `[Error Code: ${errorMessage.includes("API") ? errorMessage.split("[")[1].split("]")[0] : "GEN-001"}]`);
         setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === tempId ? { ...msg, isPending: false, hasError: true } : msg
-          )
+          prev.map((msg) => (msg.id === tempId ? { ...msg, isPending: false, hasError: true } : msg)),
         );
         setError(`No se pudo enviar el mensaje: ${errorMessage}`);
       } finally {
@@ -518,7 +552,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         console.log("[AISidebar] Message handling completed.", "[Debug Code: MSG-002]");
       }
     },
-    [user?.id, isSending, isAdmin]
+    [user, isSending, isAdmin, getClients, getTasks, createTaskFromGemini],
   );
 
   // Helper function to convert file to base64
@@ -536,28 +570,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
       reader.onerror = () => reject(new Error("Error al leer el archivo [Error Code: BASE64-002]"));
       reader.readAsDataURL(file);
     });
-  };
-
-  // Create task from Gemini response
-  const createTaskFromGemini = async (taskData: any, user: any) => {
-    if (!isAdmin) return;
-    try {
-      const taskDocRef = doc(collection(db, "tasks"));
-      const taskId = taskDocRef.id;
-      await setDoc(taskDocRef, {
-        ...taskData,
-        CreatedBy: user.id,
-        createdAt: serverTimestamp(),
-        id: taskId,
-        budget: parseFloat(taskData.budget) || 0,
-        hours: parseInt(taskData.hours) || 0,
-        startDate: taskData.startDate ? Timestamp.fromDate(new Date(taskData.startDate)) : Timestamp.now(),
-        endDate: taskData.endDate ? Timestamp.fromDate(new Date(taskData.endDate)) : Timestamp.now(),
-      });
-    } catch (error) {
-      console.error("[AISidebar] Failed to create task:", error, "[Error Code: TASK-CREATE-001]");
-      throw new Error("Error al crear la tarea [Error Code: TASK-CREATE-001]");
-    }
   };
 
   // Renderizado condicional
@@ -635,14 +647,16 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         {messages.map((m, index) => {
           const isUser = m.sender === "user";
           const senderName = isUser ? (user.firstName || "Tú") : "Gemini";
-          const avatarSrc = isUser ? (user.imageUrl || "/user-avatar.png") : "https://storage.googleapis.com/aurin-plattform/assets/gemini-icon-logo-png_seeklogo-611605.png";
+          const avatarSrc = isUser
+            ? user.imageUrl || "/user-avatar.png"
+            : "https://storage.googleapis.com/aurin-plattform/assets/gemini-icon-logo-png_seeklogo-611605.png";
 
           return (
             <div
-              key={m.id} // Clave única garantizada por filtrado previo
+              key={m.id}
               data-message-id={m.id}
               className={`${styles.message} ${m.isPending ? styles.pending : ""} ${m.hasError ? styles.error : ""}`}
-              ref={index === messages.length - 1 ? lastMessageRef : null} // Ref al último mensaje
+              ref={index === messages.length - 1 ? lastMessageRef : null}
             >
               <Image
                 src={avatarSrc}
@@ -651,7 +665,9 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
                 height={46}
                 className={styles.avatar}
                 onError={(e) => {
-                  e.currentTarget.src = isUser ? "/user-avatar.png" : "https://storage.googleapis.com/aurin-plattform/assets/gemini-icon-logo-png_seeklogo-611605.png";
+                  e.currentTarget.src = isUser
+                    ? "/user-avatar.png"
+                    : "https://storage.googleapis.com/aurin-plattform/assets/gemini-icon-logo-png_seeklogo-611605.png";
                 }}
               />
               <div className={styles.messageContent}>

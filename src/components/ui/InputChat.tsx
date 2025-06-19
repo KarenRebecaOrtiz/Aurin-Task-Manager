@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { Timestamp, serverTimestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
 
@@ -11,7 +11,7 @@ interface Message {
   senderId: string;
   senderName: string;
   text: string | null;
-  timestamp: Timestamp | any;
+  timestamp: Timestamp | Date | null;
   read: boolean;
   hours?: number;
   imageUrl?: string | null;
@@ -25,6 +25,13 @@ interface Message {
 
 interface InputChatProps {
   taskId: string;
+  timerInput: string; 
+  setTimerInput: (value: string) => void; 
+  dateInput: Date;  // Add this line
+  setDateInput: (date: Date) => void;  // Add this line
+  commentInput: string;  // Add this line
+  setCommentInput: (value: string) => void;  // Add this line
+  onAddTimeEntry: () => Promise<void>;  // Add this line
   userId: string | undefined;
   userFirstName: string | undefined;
   onSendMessage: (
@@ -40,13 +47,6 @@ interface InputChatProps {
   onToggleTimerPanel: (e: React.MouseEvent) => void;
   isTimerPanelOpen: boolean;
   setIsTimerPanelOpen: (open: boolean) => void;
-  timerInput: string;
-  setTimerInput: (value: string) => void;
-  dateInput: Date;
-  setDateInput: (date: Date) => void;
-  commentInput: string;
-  setCommentInput: (value: string) => void;
-  onAddTimeEntry: () => void;
   containerRef: React.RefObject<HTMLElement>;
   timerPanelRef?: React.RefObject<HTMLDivElement>;
 }
@@ -65,14 +65,7 @@ export function InputChat({
   onToggleTimerPanel,
   isTimerPanelOpen,
   setIsTimerPanelOpen,
-  timerInput,
-  setTimerInput,
-  dateInput,
-  setDateInput,
-  commentInput,
-  setCommentInput,
   containerRef,
-  onAddTimeEntry,
   timerPanelRef,
 }: InputChatProps) {
   const [message, setMessage] = useState('');
@@ -108,6 +101,18 @@ export function InputChat({
     };
   }, [previewUrl]);
 
+  const toggleFormat = useCallback((format: string) => {
+    setActiveFormats((prev) => {
+      const newFormats = new Set(prev);
+      if (newFormats.has(format)) {
+        newFormats.delete(format);
+      } else {
+        newFormats.add(format);
+      }
+      return newFormats;
+    });
+  }, []);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -137,22 +142,12 @@ export function InputChat({
           break;
       }
     }
-  }, []);
+  }, [toggleFormat]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
-
-  const toggleFormat = (format: string) => {
-    const newFormats = new Set(activeFormats);
-    if (newFormats.has(format)) {
-      newFormats.delete(format);
-    } else {
-      newFormats.add(format);
-    }
-    setActiveFormats(newFormats);
-  };
 
   const applyFormatting = (text: string) => {
     let formattedText = text;
@@ -253,7 +248,6 @@ export function InputChat({
       senderId: userId,
       senderName: userFirstName || 'Usuario',
       text: message.trim() ? applyFormatting(message.trim()) : null,
-      timestamp: serverTimestamp(),
       read: false,
       imageUrl: null,
       fileUrl: null,
@@ -411,7 +405,7 @@ export function InputChat({
           />
         </div>
         <div className={styles.actions}>
-          <div className={styles.timerContainer} style={{ width:'100%'}}>
+          <div className={styles.timerContainer} style={{ width: '100%' }}>
             <button className={styles.playStopButton} onClick={onToggleTimer}>
               <Image
                 src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
@@ -438,7 +432,6 @@ export function InputChat({
                 alt="Adjuntar"
                 width={16}
                 height={16}
-
                 className={styles.iconInvert}
                 style={{ filter: 'invert(100)' }}
               />

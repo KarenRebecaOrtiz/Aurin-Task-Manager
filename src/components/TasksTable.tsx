@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, deleteDoc, addDoc, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
 import Table from './Table';
@@ -70,9 +69,11 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
         avatars.map((user) => (
           <div key={user.id} className={avatarStyles.avatar}>
             <span className={avatarStyles.avatarName}>{user.fullName}</span>
-            <img
+            <Image
               src={user.imageUrl || '/default-avatar.png'}
               alt={`${user.fullName}'s avatar`}
+              width={40}
+              height={40}
               className={avatarStyles.avatarImage}
               onError={(e) => {
                 e.currentTarget.src = '/default-avatar.png';
@@ -91,13 +92,11 @@ interface TasksTableProps {
   tasks: Task[];
   clients: Client[];
   users: User[];
-  onCreateClientOpen: () => void;
-  onInviteMemberOpen: () => void;
   onNewTaskOpen: () => void;
   onEditTaskOpen: (taskId: string) => void;
   onAISidebarOpen: () => void;
   onChatSidebarOpen: (task: Task) => void;
-  onMessageSidebarOpen: (user: User) => void; // Added for UserSwiper
+  onMessageSidebarOpen: (user: User) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
 }
@@ -107,8 +106,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     tasks,
     clients,
     users,
-    onCreateClientOpen,
-    onInviteMemberOpen,
     onNewTaskOpen,
     onEditTaskOpen,
     onAISidebarOpen,
@@ -118,7 +115,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     onOpenProfile,
   }) => {
     const { user } = useUser();
-    const router = useRouter();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
     const [sortKey, setSortKey] = useState<string>('createdAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -132,7 +128,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState('');
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
-    const [isAdminLoaded, setIsAdminLoaded] = useState<boolean>(false);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
@@ -150,7 +145,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         if (!userId) {
           console.warn('[TasksTable] No userId, skipping admin status fetch');
           setIsAdmin(false);
-          setIsAdminLoaded(true);
           return;
         }
         try {
@@ -176,12 +170,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           });
           setIsAdmin(false);
         } finally {
-          setIsAdminLoaded(true);
           console.log('[TasksTable] Admin status load completed:', { userId, isAdmin });
         }
       };
       fetchAdminStatus();
-    }, [userId]);
+    }, [userId, isAdmin]);
 
     useEffect(() => {
       setFilteredTasks(tasks);

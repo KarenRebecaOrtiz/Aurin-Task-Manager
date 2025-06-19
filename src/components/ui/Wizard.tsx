@@ -11,6 +11,26 @@ interface WizardProps {
   children: React.ReactNode;
 }
 
+interface WizardStepChildProps {
+  currentStep?: number;
+  registerValidator?: (step: number, validator: () => Promise<boolean>) => void;
+  direction?: "next" | "prev" | null;
+}
+
+interface WizardProgressChildProps {
+  currentStep?: number;
+  completedSteps?: number[];
+  goToStep?: (step: number) => void;
+  totalSteps?: number;
+}
+
+interface WizardActionsChildProps {
+  currentStep?: number;
+  totalSteps?: number;
+  nextStep?: () => void;
+  prevStep?: () => void;
+}
+
 const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -72,20 +92,20 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
           if (child.type === WizardStep) {
-            return React.cloneElement(child as React.ReactElement<any>, {
+            return React.cloneElement(child as React.ReactElement<WizardStepChildProps>, {
               currentStep,
               registerValidator,
               direction,
             });
           } else if (child.type === WizardProgress) {
-            return React.cloneElement(child as React.ReactElement<any>, {
+            return React.cloneElement(child as React.ReactElement<WizardProgressChildProps>, {
               currentStep,
               completedSteps,
               goToStep,
               totalSteps,
             });
           } else if (child.type === WizardActions) {
-            return React.cloneElement(child as React.ReactElement<any>, {
+            return React.cloneElement(child as React.ReactElement<WizardActionsChildProps>, {
               currentStep,
               totalSteps,
               nextStep,

@@ -36,12 +36,17 @@ export async function initializeFirebase() {
     }
     console.log('[Firebase Admin] Bucket verified:', bucket.name);
     return { storage, bucket };
-  } catch (error: any) {
-    console.error('[Firebase Admin] Failed to initialize Firebase:', {
+  } catch (error: unknown) {
+    const errorDetails = error instanceof Error ? {
       message: error.message,
       stack: error.stack,
-      code: error.code,
-    });
+      code: 'code' in error ? error.code : 'Unknown code', // Type-safe way to check for code property
+    } : {
+      message: String(error),
+      stack: 'Unknown stack',
+      code: 'Unknown code',
+    };
+    console.error('[Firebase Admin] Failed to initialize Firebase:', errorDetails);
     throw error;
   }
 }

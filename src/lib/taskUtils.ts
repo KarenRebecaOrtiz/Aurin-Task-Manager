@@ -2,7 +2,14 @@ import { db } from './firebase';
 import { collection, getDocs, query, deleteDoc, doc, addDoc, where } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 
-export async function deleteTask(taskId: string, userId: string, isAdmin: boolean, task: any) {
+interface Task {
+  AssignedTo: string[];
+  LeadedBy: string[];
+  CreatedBy?: string;
+  name: string;
+}
+
+export async function deleteTask(taskId: string, userId: string, isAdmin: boolean, task: Task) {
   if (!userId) {
     throw new Error('User not authenticated');
   }

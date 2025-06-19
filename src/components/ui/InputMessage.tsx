@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { Timestamp, serverTimestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
 
@@ -11,7 +11,7 @@ interface Message {
   senderId: string;
   senderName: string;
   text: string | null;
-  timestamp: Timestamp | any;
+  timestamp: Timestamp;
   read: boolean;
   imageUrl?: string | null;
   fileUrl?: string | null;
@@ -62,6 +62,18 @@ export function InputMessage({
     };
   }, [previewUrl]);
 
+  const toggleFormat = useCallback((format: string) => {
+    setActiveFormats(prev => {
+      const newFormats = new Set(prev);
+      if (newFormats.has(format)) {
+        newFormats.delete(format);
+      } else {
+        newFormats.add(format);
+      }
+      return newFormats;
+    });
+  }, []);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -91,22 +103,12 @@ export function InputMessage({
           break;
       }
     }
-  }, []);
+  }, [toggleFormat]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
-
-  const toggleFormat = (format: string) => {
-    const newFormats = new Set(activeFormats);
-    if (newFormats.has(format)) {
-      newFormats.delete(format);
-    } else {
-      newFormats.add(format);
-    }
-    setActiveFormats(newFormats);
-  };
 
   const applyFormatting = (text: string) => {
     let formattedText = text;
@@ -207,7 +209,7 @@ export function InputMessage({
       senderId: userId,
       senderName: userFirstName || 'Usuario',
       text: message.trim() ? applyFormatting(message.trim()) : null,
-      timestamp: serverTimestamp(),
+      timestamp: Timestamp.now(),
       read: false,
       imageUrl: null,
       fileUrl: null,

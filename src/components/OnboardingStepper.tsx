@@ -12,18 +12,16 @@ import SuccessAlert from "./SuccessAlert";
 import FailAlert from "./FailAlert";
 import styles from "./OnboardingStepper.module.scss";
 
-
 gsap.registerPlugin(ScrollToPlugin);
 
 interface OnboardingStepperProps {
-  onComplete?: () => void; 
+  onComplete?: () => void;
 }
 
 const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
   const { user } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<{ id: string; type: "success" | "failure"; message?: string; error?: string }[]>([]);
   const stepperRef = useRef<HTMLDivElement>(null);
@@ -144,7 +142,6 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
       return;
     }
 
-    setLoading(true);
     try {
       const userDocRef = doc(db, "users", user.id);
       await setDoc(userDocRef, { currentStep: newStep }, { merge: true });
@@ -155,8 +152,6 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
       console.error("[OnboardingStepper] Step change error:", message);
       setError(message);
       addAlert("failure", "No se pudo cambiar de paso.", message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -167,7 +162,6 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
       return;
     }
 
-    setLoading(true);
     try {
       const userDocRef = doc(db, "users", user.id);
       await setDoc(userDocRef, { onboardingCompleted: true, currentStep: 5 }, { merge: true });
@@ -186,7 +180,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
             setIsOpen(false);
             if (onComplete) {
               console.log("[OnboardingStepper] Triggering onComplete callback");
-              onComplete(); 
+              onComplete();
             }
           },
         });
@@ -194,7 +188,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         setIsOpen(false);
         if (onComplete) {
           console.log("[OnboardingStepper] Triggering onComplete callback (no stepper)");
-          onComplete(); 
+          onComplete();
         }
       }
     } catch (error) {
@@ -202,8 +196,6 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
       console.error("[OnboardingStepper] Completion error:", message);
       setError(message);
       addAlert("failure", "No se pudo completar el onboarding.", message);
-    } finally {
-      setLoading(false);
     }
   };
 

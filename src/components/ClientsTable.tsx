@@ -81,7 +81,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         }
       };
       fetchAdminStatus();
-    }, [userId]);
+    }, [userId, isAdmin]);
 
     const fetchClients = useCallback(async () => {
       try {

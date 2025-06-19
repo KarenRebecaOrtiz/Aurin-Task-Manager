@@ -20,9 +20,9 @@ import { Timestamp } from 'firebase/firestore';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const debounce = (func: (...args: any[]) => void, delay: number) => {
+const debounce = <T extends unknown[]>(func: (...args: T) => void, delay: number) => {
   let timer: NodeJS.Timeout | null = null;
-  return (...args: any[]) => {
+  return (...args: T) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       func(...args);
@@ -93,7 +93,6 @@ const EditTask: React.FC<EditTaskProps> = ({
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [task, setTask] = useState<Task | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const initialTaskState = useRef<Task | null>(null);
@@ -231,20 +230,17 @@ const EditTask: React.FC<EditTaskProps> = ({
       }
       return task[key as keyof Task] !== initialTaskState.current[key as keyof Task];
     });
-    setHasUnsavedChanges(isChanged);
     onHasUnsavedChanges(isChanged);
   }, [task, onHasUnsavedChanges]);
+  
 
   // Reset form when closing
   useEffect(() => {
     if (!isOpen && task) {
       setTask(initialTaskState.current);
-      setHasUnsavedChanges(false);
-      onHasUnsavedChanges(false);
-      setIsAdvancedOpen(false);
       setErrors({});
     }
-  }, [isOpen, onHasUnsavedChanges]);
+  }, [isOpen, task]);
 
   // GSAP animations for container
   useEffect(() => {
@@ -539,7 +535,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     [],
   );
 
-  const validateTask = () => {
+  const validateTask = useCallback(() => {
     const newErrors: Partial<Record<keyof Task, string>> = {};
     if (!task!.name.trim()) newErrors.name = 'El nombre es obligatorio';
     if (!task!.description.trim()) newErrors.description = 'La descripción es obligatoria';
@@ -553,7 +549,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     if (!task!.AssignedTo.length) newErrors.AssignedTo = 'Selecciona al menos un colaborador';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [task]);
 
   const handleTaskSubmit = useCallback(
     async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -563,12 +559,12 @@ const EditTask: React.FC<EditTaskProps> = ({
         alert('Por favor, completa todos los campos obligatorios.');
         return;
       }
-
+  
       if (task.startDate && task.endDate && task.startDate > task.endDate) {
         alert('La fecha de inicio debe ser anterior a la fecha de finalización.');
         return;
       }
-
+  
       setIsSaving(true);
       try {
         const taskData = {
@@ -578,7 +574,7 @@ const EditTask: React.FC<EditTaskProps> = ({
           createdAt: Timestamp.fromDate(task.createdAt),
         };
         await setDoc(doc(db, 'tasks', task.id), taskData);
-
+  
         const recipients = new Set<string>([...task.LeadedBy, ...task.AssignedTo]);
         recipients.delete(user.id);
         for (const recipientId of Array.from(recipients)) {
@@ -591,8 +587,7 @@ const EditTask: React.FC<EditTaskProps> = ({
             recipientId,
           });
         }
-
-        setHasUnsavedChanges(false);
+  
         onHasUnsavedChanges(false);
         setIsSaving(false);
         onToggle();
@@ -602,7 +597,7 @@ const EditTask: React.FC<EditTaskProps> = ({
         setIsSaving(false);
       }
     },
-    [user, task, onToggle, onHasUnsavedChanges],
+    [user, task, validateTask, onToggle, onHasUnsavedChanges]
   );
 
   const filteredCollaborators = useMemo(() => {

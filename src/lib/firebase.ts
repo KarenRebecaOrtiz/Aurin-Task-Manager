@@ -3,13 +3,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 import { getAI, GoogleAIBackend } from "@firebase/ai";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaV3Provider, AppCheck } from "firebase/app-check";
 import { firebaseConfig } from "./firebaseConfig";
 
 const app = initializeApp(firebaseConfig);
 
 // Inicialización de App Check solo en el cliente con depuración
-let appCheck: any = null;
+let appCheck: AppCheck | null = null;
 if (typeof window !== "undefined") {
   console.log("[Firebase] Initializing App Check in client...");
   appCheck = initializeAppCheck(app, {

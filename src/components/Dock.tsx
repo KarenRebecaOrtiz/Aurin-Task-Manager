@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import styles from './Dock.module.scss';
+import Image from 'next/image';
 
 interface Shortcut {
   name: string;
@@ -157,7 +158,14 @@ const Dock: React.FC = () => {
           {shortcuts.map((shortcut) => (
             <li key={shortcut.name} className={styles.dockItem}>
               <a href={shortcut.link} className={styles.dockItemLink} target="_blank" rel="noopener noreferrer">
-                <img src={shortcut.icon} alt={`${shortcut.name} icon`} className={styles.dockItemImage} />
+                <Image
+                  src={shortcut.icon}
+                  alt={`${shortcut.name} icon`}
+                  width={32} // Adjust based on your design
+                  height={32} // Adjust based on your design
+                  className={styles.dockItemImage}
+                  unoptimized // Use for external images if not optimized by a provider
+                />
               </a>
               <div className={styles.dockItemTooltip}>{shortcut.name}</div>
             </li>

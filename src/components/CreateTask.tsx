@@ -9,7 +9,7 @@ import Image from "next/image";
 import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
-import styles from "./CreateTask.module.scss";
+import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
 import SuccessAlert from "./SuccessAlert";
 import FailAlert from "./FailAlert";
@@ -26,9 +26,9 @@ import { db } from "@/lib/firebase";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const debounce = (func: (...args: any[]) => void, delay: number) => {
+const debounce = <T extends unknown[]>(func: (...args: T) => void, delay: number) => {
   let timer: NodeJS.Timeout | null = null;
-  return (...args: any[]) => {
+  return (...args: T) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       func(...args);
@@ -61,8 +61,8 @@ const formSchema = z.object({
     name: z.string().min(1, { message: "El nombre es obligatorio*" }),
     description: z.string().min(1, { message: "La descripción es obligatoria*" }),
     objectives: z.string().optional(),
-    startDate: z.date({ required_error: "La fecha de inicio es obligatoria*" }),
-    endDate: z.date({ required_error: "La fecha de finalización es obligatoria*" }),
+    startDate: z.date({ required_error: "La fecha de inicio es obligatoria*" }).nullable(),
+    endDate: z.date({ required_error: "La fecha de finalización es obligatoria*" }).nullable(),
     status: z.enum(["Por comenzar", "En Proceso", "Finalizado", "Backlog", "Cancelada"], {
       required_error: "Selecciona un estado*",
     }),
@@ -99,8 +99,8 @@ const defaultValues: FormValues = {
     name: "",
     description: "",
     objectives: "",
-    startDate: null as any,
-    endDate: null as any,
+    startDate: null,
+    endDate: null,
     status: "Por comenzar",
     priority: "Baja",
   },
@@ -138,7 +138,6 @@ const stepFields: (keyof FormValues | string)[][] = [
 
 interface CreateTaskProps {
   isOpen: boolean;
-  onToggle: () => void;
   onHasUnsavedChanges: (hasChanges: boolean) => void;
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
@@ -148,7 +147,6 @@ interface CreateTaskProps {
 
 const CreateTask: React.FC<CreateTaskProps> = ({
   isOpen,
-  onToggle,
   onHasUnsavedChanges,
   onCreateClientOpen,
   onEditClientOpen,
@@ -254,16 +252,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       }
     };
     fetchAdminStatus();
-  }, [user?.id]);
+  }, [user?.id, isAdmin]);
 
   useEffect(() => {
     const subscription = form.watch((value) => {
       saveFormData();
       const isChanged = Object.keys(value).some((key) => {
-        const current = value[key as keyof typeof value];
-        const initial = defaultValues[key as keyof typeof defaultValues];
-        if (Array.isArray(current)) {
-          return current.join() !== (initial as any)?.join();
+        const current = value[key as keyof FormValues];
+        const initial = defaultValues[key as keyof FormValues];
+        if (Array.isArray(current) && Array.isArray(initial)) {
+          return current.join() !== initial.join();
         }
         return current !== initial;
       });
@@ -333,23 +331,19 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
   useEffect(() => {
     if (onClientAlertChange) {
-      const handleAlert = (alert: { type: "success" | "fail"; message?: string; error?: string } | null) => {
-        if (alert) {
-          if (alert.type === "success") {
-            setShowSuccessAlert(true);
-          } else if (alert.type === "fail") {
-            setShowFailAlert(true);
-            setFailErrorMessage(alert.error || "Unknown error");
-          }
-        } else {
-          setShowSuccessAlert(false);
-          setShowFailAlert(false);
-          setFailErrorMessage("");
-        }
-        onClientAlertChange(alert);
-      };
+      if (showSuccessAlert || showFailAlert) {
+        onClientAlertChange({
+          type: showSuccessAlert ? "success" : "fail",
+          message: showSuccessAlert
+            ? `La tarea "${form.getValues("basicInfo.name")}" se ha creado exitosamente.`
+            : "No se pudo crear la tarea.",
+          error: showFailAlert ? failErrorMessage : undefined,
+        });
+      } else {
+        onClientAlertChange(null);
+      }
     }
-  }, [onClientAlertChange]);
+  }, [onClientAlertChange, showSuccessAlert, showFailAlert, failErrorMessage, form]);
 
   // Combined useEffect for dropdowns and container animations
   useEffect(() => {
@@ -908,16 +902,17 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       setTimeout(() => {
         router.push("/dashboard/tasks");
       }, 3000);
-    } catch (error: any) {
-      console.error("Error saving task:", error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Error al guardar la tarea.";
+      console.error("Error saving task:", errorMessage);
       setShowFailAlert(true);
-      setFailErrorMessage(error.message || "Error al guardar la tarea.");
+      setFailErrorMessage(errorMessage);
       setIsSaving(false);
     }
   };
 
-  const validateStep = async (fields: (keyof FormValues)[]) => {
-    const result = await form.trigger(fields as any);
+  const validateStep = async (fields: (keyof FormValues | string)[]) => {
+    const result = await form.trigger(fields as (keyof FormValues)[]);
     if (!result) {
       toast({
         title: "Error de Validación",
@@ -939,7 +934,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   }
 
   interface SlideCardProps {
-    id: string;
     imageUrl: string;
     name: string;
     role?: string;
@@ -947,7 +941,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   }
 
-  const SlideCard: React.FC<SlideCardProps> = ({ id, imageUrl, name, role, isSelected, onClick }) => (
+  const SlideCard: React.FC<SlideCardProps> = ({ imageUrl, name, role, isSelected, onClick }) => (
     <div
       className={`${styles.slideCard} ${isSelected ? styles.selected : ""}`}
       onClick={onClick}
@@ -1053,7 +1047,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 {clients.map((client) => (
                                   <li key={client.id} className={`splide__slide ${styles.splideSlide}`}>
                                     <SlideCard
-                                      id={client.id}
                                       imageUrl={client.imageUrl}
                                       name={client.name}
                                       isSelected={form.watch("clientInfo.clientId") === client.id}
@@ -1242,7 +1235,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               }}
                             >
                               {form.watch("basicInfo.startDate")
-                                ? form.watch("basicInfo.startDate").toLocaleDateString("es-ES")
+                                ? form.watch("basicInfo.startDate")!.toLocaleDateString("es-ES")
                                 : "Selecciona una fecha"}
                             </div>
                             {isStartDateOpen &&
@@ -1265,7 +1258,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 >
                                   <DayPicker
                                     mode="single"
-                                    selected={form.watch("basicInfo.startDate")}
+                                    selected={form.watch("basicInfo.startDate") || undefined}
                                     onSelect={(date) => {
                                       form.setValue("basicInfo.startDate", date || null);
                                       setIsStartDateOpen(false);
@@ -1300,7 +1293,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               }}
                             >
                               {form.watch("basicInfo.endDate")
-                                ? form.watch("basicInfo.endDate").toLocaleDateString("es-ES")
+                                ? form.watch("basicInfo.endDate")!.toLocaleDateString("es-ES")
                                 : "Selecciona una fecha"}
                             </div>
                             {isEndDateOpen &&
@@ -1323,7 +1316,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 >
                                   <DayPicker
                                     mode="single"
-                                    selected={form.watch("basicInfo.endDate")}
+                                    selected={form.watch("basicInfo.endDate") || undefined}
                                     onSelect={(date) => {
                                       form.setValue("basicInfo.endDate", date || null);
                                       setIsEndDateOpen(false);
@@ -1494,7 +1487,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 {users.map((user) => (
                                   <li key={user.id} className={`splide__slide ${styles.splideSlide}`}>
                                     <SlideCard
-                                      id={user.id}
                                       imageUrl={user.imageUrl}
                                       name={user.fullName}
                                       role={user.role}

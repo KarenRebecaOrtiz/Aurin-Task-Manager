@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { useUser as ClerkUserType } from "@clerk/nextjs";
+import { Timestamp } from "firebase/firestore";
 import styles from "../ChatSidebar.module.scss";
 import { EmojiSelector } from "./EmojiSelector";
 
@@ -11,7 +12,7 @@ interface AIMessage {
   userId: string;
   text: string;
   sender: "user" | "ai";
-  timestamp: any | null;
+  timestamp: Timestamp | null;
   isPending?: boolean;
   hasError?: boolean;
   imageUrl?: string | null;
@@ -62,51 +63,17 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
     };
   }, [previewUrl]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      switch (e.key) {
-        case "b":
-          toggleFormat("bold");
-          break;
-        case "i":
-          toggleFormat("italic");
-          break;
-        case "u":
-          toggleFormat("underline");
-          break;
-        case "`":
-          toggleFormat("code");
-          break;
+  const toggleFormat = useCallback((format: string) => {
+    setActiveFormats((prev) => {
+      const newFormats = new Set(prev);
+      if (newFormats.has(format)) {
+        newFormats.delete(format);
+      } else {
+        newFormats.add(format);
       }
-    }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
-      e.preventDefault();
-      switch (e.key) {
-        case "8":
-          toggleFormat("bullet");
-          break;
-        case "7":
-          toggleFormat("numbered");
-          break;
-      }
-    }
+      return newFormats;
+    });
   }, []);
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
-  const toggleFormat = (format: string) => {
-    const newFormats = new Set(activeFormats);
-    if (newFormats.has(format)) {
-      newFormats.delete(format);
-    } else {
-      newFormats.add(format);
-    }
-    setActiveFormats(newFormats);
-  };
 
   const applyFormatting = (text: string) => {
     let formattedText = text;
@@ -290,6 +257,42 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
     { id: "bullet", icon: "/list-bullets.svg", label: "Lista con viñetas", shortcut: "Ctrl+Shift+8" },
     { id: "numbered", icon: "/list-ordered.svg", label: "Lista numerada", shortcut: "Ctrl+Shift+7" },
   ];
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      switch (e.key) {
+        case "b":
+          toggleFormat("bold");
+          break;
+        case "i":
+          toggleFormat("italic");
+          break;
+        case "u":
+          toggleFormat("underline");
+          break;
+        case "`":
+          toggleFormat("code");
+          break;
+      }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+      e.preventDefault();
+      switch (e.key) {
+        case "8":
+          toggleFormat("bullet");
+          break;
+        case "7":
+          toggleFormat("numbered");
+          break;
+      }
+    }
+  }, [toggleFormat]);
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <form
