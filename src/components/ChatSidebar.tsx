@@ -215,13 +215,13 @@ const MessageItem = memo(
           }`}
         >
           <Image
-            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
+            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.pn'}
             alt={message.senderName || 'Avatar del remitente'}
             width={46}
             height={46}
             className={styles.avatar}
             onError={(e) => {
-              e.currentTarget.src = '/default-avatar.png';
+              e.currentTarget.src = '/default-avatar.pn';
             }}
           />
           <div className={styles.messageContent}>
