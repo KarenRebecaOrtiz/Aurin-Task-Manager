@@ -1,5 +1,5 @@
 .swiperContainer {
-  padding: 0.5rem 0;
+  padding:20px 0;
   overflow-x: hidden;
   margin: 0 auto;
 }
@@ -10,8 +10,8 @@
 }
 
 .splide__track {
-  overflow-x: hidden;
   padding: 40px 0px;
+  overflow: visible!important;
 }
 
 .splide__slide {

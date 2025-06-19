@@ -825,7 +825,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 console.log('[TasksTable] AI sidebar opened');
               }}
             >
-              <Image src="/robot.svg" alt="AI" width={18} height={14} /> Pregunta a la IA
+              <Image src="/gemini.svg" alt="AI" width={20} height={20} /> Pregunta a Gemini
             </button>
             <button
               className={styles.createButton}

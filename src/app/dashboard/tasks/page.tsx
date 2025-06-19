@@ -44,6 +44,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Dock from '@/components/Dock';
 import ToDoDynamic from '@/components/ToDoDynamic';
 import Footer from '@/components/ui/Footer';
+import Loader from '@/components/Loader';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -142,6 +143,7 @@ export default function TasksPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
+  const [showLoader, setShowLoader] = useState<boolean>(true);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -186,6 +188,15 @@ export default function TasksPage() {
     };
     fetchAdminStatus();
   }, [user?.id]);
+
+  useEffect(() => {
+    // Hide loader after 3.5 seconds (duration of all animations)
+    const timer = setTimeout(() => {
+      setShowLoader(false);
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -383,7 +394,7 @@ export default function TasksPage() {
     const currentHeaderRef = headerRef.current;
     const currentSelectorRef = selectorRef.current;
     const currentContentRef = contentRef.current;
-    if (currentHeaderRef && currentSelectorRef && currentContentRef) {
+    if (currentHeaderRef && currentSelectorRef && currentContentRef && !showLoader) {
       gsap.fromTo(
         [currentHeaderRef, currentSelectorRef, currentContentRef],
         { opacity: 0, y: 20 },
@@ -395,11 +406,11 @@ export default function TasksPage() {
         gsap.killTweensOf([currentHeaderRef, currentSelectorRef, currentContentRef]);
       }
     };
-  }, []);
+  }, [showLoader]);
 
   useEffect(() => {
     const currentContentRef = contentRef.current;
-    if (currentContentRef) {
+    if (currentContentRef && !showLoader) {
       gsap.fromTo(
         currentContentRef,
         { opacity: 0, x: 10 },
@@ -411,7 +422,7 @@ export default function TasksPage() {
         gsap.killTweensOf(currentContentRef);
       }
     };
-  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen]);
+  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen, showLoader]);
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -703,6 +714,7 @@ export default function TasksPage() {
 
   return (
     <div className={styles.container}>
+      {showLoader && <Loader />}
       <SyncUserToFirestore />
       <div ref={headerRef}>
         <Header

@@ -212,7 +212,7 @@
     background: transparent;
     cursor: pointer;
     font-size: 14px;
-    font-family: "Inter Tight", sans-serif;
+  font-family: "Urbanist", sans-serif;
     color: #333333;
     gap: 8px;
     transition:
@@ -249,7 +249,7 @@
     background: transparent;
     cursor: pointer;
     font-size: 14px;
-    font-family: "Inter Tight", sans-serif;
+  font-family: "Urbanist", sans-serif;
     color: #333333;
     gap: 8px;
     transition:
@@ -275,11 +275,18 @@
       }
     }
   
-    &.Disponible {}
-    &.Ocupado {}
-    &.Por_terminar {}
-    &.Fuera {}
-  }
+    &.Disponible {
+      background-color: #22c55e; 
+    }
+    &.Ocupado {
+      background-color: #ef4444;
+    }
+    &.Por_terminar {
+      background-color: #f59e0b;
+    }
+    &.Fuera {
+      background-color: #6b7280;
+    }
   
   /* Dropdown icon */
   .dropdownIcon {
@@ -301,3 +308,4 @@
       background: rgba(255, 255, 255, 0.1);
     }
   }
+}

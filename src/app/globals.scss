@@ -44,10 +44,12 @@ body {
   --button-bg-hover: #444444;
   --header-bg: #ffffff;
 }
-
+.grecaptcha-badge {
+  display: none !important;
+}
 body {
   margin: 0;
-  font-family: "Inter Tight", sans-serif;
+  font-family: "Urbanist", sans-serif;
   background: var(--background);
   color: var(--text-primary);
   position: relative;
