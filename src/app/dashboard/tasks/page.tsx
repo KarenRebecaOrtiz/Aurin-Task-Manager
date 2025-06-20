@@ -170,8 +170,27 @@ function TasksPageContent() {
 
   const fetchUsers = useCallback(async () => {
     try {
+      console.log('[TasksPage] Fetching users...');
       const response = await fetch('/api/users');
-      if (!response.ok) throw new Error('Failed to fetch users');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('[TasksPage] API error fetching users:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error,
+        });
+        
+        if (response.status === 401) {
+          console.warn('[TasksPage] Unauthorized access to users API');
+          // Handle unauthorized access - user might need to re-authenticate
+          setUsers([]);
+          return;
+        }
+        
+        throw new Error(`Failed to fetch users: ${errorData.error || response.statusText}`);
+      }
+      
       const clerkUsers: {
         id: string;
         imageUrl?: string;
@@ -180,24 +199,59 @@ function TasksPageContent() {
         publicMetadata: { role?: string; description?: string };
       }[] = await response.json();
 
+      console.log('[TasksPage] Successfully fetched Clerk users:', {
+        count: clerkUsers.length,
+        userIds: clerkUsers.map(u => u.id),
+      });
+
       const usersData: User[] = await Promise.all(
         clerkUsers.map(async (clerkUser) => {
-          const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-          const status = userDoc.exists() ? userDoc.data().status || 'Disponible' : 'Disponible';
-          return {
-            id: clerkUser.id,
-            imageUrl: clerkUser.imageUrl || '/default-avatar.png',
-            fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-            role: clerkUser.publicMetadata.role || 'Sin rol',
-            description: clerkUser.publicMetadata.description || 'Sin descripción',
-            status,
-          };
+          try {
+            const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
+            const status = userDoc.exists() ? userDoc.data().status || 'Disponible' : 'Disponible';
+            return {
+              id: clerkUser.id,
+              imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+              fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+              role: clerkUser.publicMetadata.role || 'Sin rol',
+              description: clerkUser.publicMetadata.description || 'Sin descripción',
+              status,
+            };
+          } catch (docError) {
+            console.warn('[TasksPage] Error fetching user document:', {
+              userId: clerkUser.id,
+              error: docError instanceof Error ? docError.message : 'Unknown error',
+            });
+            // Return user data without Firestore status if document fetch fails
+            return {
+              id: clerkUser.id,
+              imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+              fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+              role: clerkUser.publicMetadata.role || 'Sin rol',
+              description: clerkUser.publicMetadata.description || 'Sin descripción',
+              status: 'Disponible',
+            };
+          }
         }),
       );
+      
+      console.log('[TasksPage] Successfully processed users data:', {
+        count: usersData.length,
+        processedUserIds: usersData.map(u => u.id),
+      });
+      
       setUsers(usersData);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('[TasksPage] Error in fetchUsers:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       setUsers([]);
+      
+      // Don't show alert for authentication errors, just log them
+      if (error instanceof Error && !error.message.includes('Unauthorized')) {
+        console.warn('[TasksPage] Non-auth error fetching users, users list will be empty');
+      }
     }
   }, []);
 

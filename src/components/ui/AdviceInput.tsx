@@ -1,13 +1,21 @@
 'use client';
 
+// Declare module to extend CSSProperties with custom properties
+declare module 'react' {
+  interface CSSProperties {
+    [key: `--${string}`]: string | number;
+  }
+}
+
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, setDoc, deleteDoc, collection, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, collection, Timestamp, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './AdviceInput.module.scss';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import gsap from 'gsap';
+import NumberFlow, { NumberFlowGroup } from '@number-flow/react';
 
 interface AdviceInputProps {
   isAdmin: boolean;
@@ -17,12 +25,15 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
   const { user } = useUser();
   const [inputText, setInputText] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [errorMessage, setErrorMessage] = useState('');
   const [activeAdviceId, setActiveAdviceId] = useState<string | null>(null);
+  const [expiryTime, setExpiryTime] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const portalRootRef = useRef<HTMLElement | null>(null);
 
-  // Time intervals for announcements
   const intervals = [
     { label: '12 horas', ms: 12 * 60 * 60 * 1000 },
     { label: '1 día', ms: 24 * 60 * 60 * 1000 },
@@ -32,46 +43,83 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
     { label: '1 mes', ms: 30 * 24 * 60 * 60 * 1000 },
   ];
 
-  // Initialize portal root
   useEffect(() => {
     portalRootRef.current = document.body;
   }, []);
 
-  // Position dropdown and animate with GSAP
   useEffect(() => {
-    if (isDropdownOpen && dropdownRef.current && buttonRef.current) {
-      const buttonRect = buttonRef.current.getBoundingClientRect();
-      const dropdown = dropdownRef.current;
+    if (!user?.id) return;
 
-      // Position dropdown above the button
-      dropdown.style.position = 'fixed';
-      dropdown.style.top = `${buttonRect.top - dropdown.offsetHeight - 5}px`;
-      dropdown.style.left = `${buttonRect.left + (buttonRect.width - dropdown.offsetWidth) / 2}px`;
+    const checkExistingAdvice = async () => {
+      try {
+        const q = query(
+          collection(db, 'advices'),
+          where('creatorId', '==', user.id),
+          where('expiry', '>', Timestamp.now())
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const advice = querySnapshot.docs[0].data() as { message: string; expiry: Timestamp };
+          setActiveAdviceId(querySnapshot.docs[0].id);
+          setInputText(advice.message);
+          setExpiryTime(advice.expiry.toMillis());
+        }
+      } catch (error) {
+        console.error('Error checking existing advice:', error);
+      }
+    };
 
-      // GSAP animation for opening
-      gsap.fromTo(
-        dropdown,
-        { scale: 0.8, opacity: 0, y: 10 },
-        { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
-      );
-    } else if (!isDropdownOpen && dropdownRef.current) {
-      // GSAP animation for closing
-      gsap.to(dropdownRef.current, {
-        scale: 0.8,
-        opacity: 0,
-        y: 10,
-        duration: 0.2,
-        ease: 'power2.in',
-        onComplete: () => {
-          if (dropdownRef.current) {
-            dropdownRef.current.style.display = 'none';
-          }
-        },
+    checkExistingAdvice();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (expiryTime) {
+      const interval = setInterval(() => {
+        const remaining = Math.max(0, expiryTime - Date.now());
+        if (remaining <= 0) {
+          setActiveAdviceId(null);
+          setExpiryTime(null);
+          setInputText('');
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [expiryTime]);
+
+  // EFFECTS – DROPDOWN POSITION (replicando lógica del Header)
+  useEffect(() => {
+    if (isDropdownOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left + (rect.width / 2), // Centrado horizontalmente
       });
     }
   }, [isDropdownOpen]);
 
-  // Handle clicks outside to close dropdown
+  // EFFECTS – DROPDOWN ANIMATION (replicando lógica del Header)
+  useEffect(() => {
+    if (isDropdownOpen) {
+      setIsDropdownVisible(true);
+      if (dropdownRef.current) {
+        gsap.fromTo(
+          dropdownRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        );
+      }
+    } else if (isDropdownVisible && dropdownRef.current) {
+      gsap.to(dropdownRef.current, {
+        opacity: 0,
+        y: -10,
+        scale: 0.95,
+        duration: 0.2,
+        ease: 'power2.in',
+        onComplete: () => setIsDropdownVisible(false),
+      });
+    }
+  }, [isDropdownOpen, isDropdownVisible]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -87,49 +135,157 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle posting an announcement
-  const handlePostAdvice = async (intervalMs: number) => {
-    if (!user?.id || !user?.firstName || !inputText.trim()) return;
+  const handleMouseEnter = () => {
+    // Siempre abrir el dropdown al hacer hover sobre el botón
+    setIsDropdownOpen(true);
+  };
 
-    const adviceId = activeAdviceId || doc(collection(db, 'advices')).id;
-    const expiry = Timestamp.fromMillis(Date.now() + intervalMs);
+  const handleMouseLeave = () => {
+    // Solo cerrar si no estamos haciendo hover sobre el dropdown
+    setTimeout(() => {
+      if (!buttonRef.current?.matches(':hover')) {
+        setIsDropdownOpen(false);
+      }
+    }, 100);
+  };
+
+  const handlePostAdvice = async (intervalMs: number) => {
+    console.log('handlePostAdvice triggered with interval:', intervalMs);
+    
+    // Limpiar errores previos
+    setErrorMessage('');
+    
+    if (!user?.id || !user?.firstName || !inputText.trim()) {
+      setErrorMessage('El anuncio no puede estar vacío.');
+      return;
+    }
 
     try {
+      const q = query(
+        collection(db, 'advices'),
+        where('creatorId', '==', user.id),
+        where('expiry', '>', Timestamp.now())
+      );
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        setErrorMessage('Ya tienes un anuncio activo. Elimina el actual antes de crear uno nuevo.');
+        setIsDropdownOpen(false);
+        return;
+      }
+
+      const adviceId = doc(collection(db, 'advices')).id;
+      const expiry = Date.now() + intervalMs;
+
       await setDoc(doc(db, 'advices', adviceId), {
         message: inputText.trim(),
         creatorId: user.id,
         creatorFirstName: user.firstName,
-        expiry,
+        expiry: Timestamp.fromMillis(expiry),
         createdAt: Timestamp.now(),
       });
+      console.log('Advice posted successfully, ID:', adviceId);
       setActiveAdviceId(adviceId);
+      setExpiryTime(expiry);
       setIsDropdownOpen(false);
+      setErrorMessage(''); // Limpiar error en caso de éxito
     } catch (error) {
       console.error('Error posting advice:', error);
-      alert('Error al publicar el anuncio');
+      setErrorMessage('Error al publicar el anuncio. Verifica el índice en Firestore.');
     }
   };
 
-  // Handle deleting an announcement
   const handleDeleteAdvice = async () => {
-    if (!activeAdviceId) return;
+    if (!activeAdviceId || !user?.id) return;
+
+    // Limpiar errores previos
+    setErrorMessage('');
 
     try {
-      await deleteDoc(doc(db, 'advices', activeAdviceId));
-      setInputText('');
-      setActiveAdviceId(null);
+      const adviceDoc = await getDoc(doc(db, 'advices', activeAdviceId));
+      if (adviceDoc.exists() && adviceDoc.data().creatorId === user.id) {
+        await deleteDoc(doc(db, 'advices', activeAdviceId));
+        setInputText('');
+        setActiveAdviceId(null);
+        setExpiryTime(null);
+        setErrorMessage(''); // Limpiar error en caso de éxito
+      } else {
+        setErrorMessage('Solo el creador puede eliminar este anuncio.');
+      }
     } catch (error) {
       console.error('Error deleting advice:', error);
-      alert('Error al eliminar el anuncio');
+      setErrorMessage('Error al eliminar el anuncio.');
     }
   };
 
   if (!isAdmin) return null;
 
+  const Countdown = ({ seconds }: { seconds: number }) => {
+    const hh = Math.floor(seconds / 3600);
+    const mm = Math.floor((seconds % 3600) / 60);
+    const ss = seconds % 60;
+    return (
+      <NumberFlowGroup>
+        <div
+          style={{ 
+            fontVariantNumeric: 'tabular-nums', 
+            '--number-flow-char-height': '0.85em' as const,
+            display: 'flex',
+            alignItems: 'baseline',
+            fontSize: '14px',
+            fontWeight: '600',
+            fontFamily: 'Urbanist, monospace'
+          }}
+        >
+          <NumberFlow 
+            trend={-1} 
+            value={hh} 
+            format={{ minimumIntegerDigits: 2 }} 
+            willChange={true}
+          />
+          <NumberFlow
+            prefix=":"
+            trend={-1}
+            value={mm}
+            digits={{ 1: { max: 5 } }}
+            format={{ minimumIntegerDigits: 2 }}
+            willChange={true}
+          />
+          <NumberFlow
+            prefix=":"
+            trend={-1}
+            value={ss}
+            digits={{ 1: { max: 5 } }}
+            format={{ minimumIntegerDigits: 2 }}
+            willChange={true}
+          />
+        </div>
+      </NumberFlowGroup>
+    );
+  };
+
   const DropdownPortal = () =>
-    portalRootRef.current && isDropdownOpen
+    portalRootRef.current && isDropdownVisible && !activeAdviceId
       ? createPortal(
-          <div ref={dropdownRef} className={styles.dropdown}>
+          <div
+            ref={dropdownRef}
+            className={styles.dropdown}
+            onMouseEnter={() => {
+              setIsDropdownOpen(true);
+            }}
+            onMouseLeave={() => {
+              setTimeout(() => {
+                if (!buttonRef.current?.matches(':hover')) {
+                  setIsDropdownOpen(false);
+                }
+              }, 100);
+            }}
+            style={{
+              position: 'absolute',
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              transform: 'translateX(-50%)', // Centrar horizontalmente
+            }}
+          >
             {intervals.map((interval) => (
               <button
                 key={interval.label}
@@ -155,23 +311,30 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
         onChange={(e) => setInputText(e.target.value)}
         disabled={!!activeAdviceId}
       />
-      <button
-        ref={buttonRef}
-        className={styles.subscribeBtn}
-        onClick={() => {
-          if (activeAdviceId) {
-            handleDeleteAdvice();
-          } else {
-            setIsDropdownOpen(!isDropdownOpen);
-          }
-        }}
-      >
-        {activeAdviceId ? (
-          <Image src="/trash-can.svg" alt="Eliminar" width={20} height={20} />
-        ) : (
-          <Image src="/plus-icon.svg" alt="Agregar" width={20} height={20} />
-        )}
-      </button>
+      {errorMessage && (
+        <div className={styles.errorMessage}>
+          {errorMessage}
+        </div>
+      )}
+      {activeAdviceId && expiryTime ? (
+        <button
+          className={styles.countdownBtn}
+          onClick={handleDeleteAdvice}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <Countdown seconds={Math.max(0, Math.floor((expiryTime - Date.now()) / 1000))} />
+        </button>
+      ) : (
+        <button
+          ref={buttonRef}
+          className={styles.subscribeBtn}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <Image src="/rocket.svg" alt="Agregar" width={20} height={20} />
+        </button>
+      )}
       <DropdownPortal />
     </div>
   );

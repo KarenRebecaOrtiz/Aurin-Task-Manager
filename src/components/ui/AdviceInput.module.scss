@@ -1,11 +1,10 @@
 .inputWrapper {
     width: fit-content;
-    height: 48px;
     border-radius: 12px;
-    padding: 4px;
-    box-sizing: content-box;
+    justify-content: space-between;
     display: flex;
     align-items: center;
+    width: 100%;
     background: rgba(241, 245, 249, 0.8);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -122,6 +121,78 @@
       }
     }
   }
+.countdownBtn {
+    height: auto;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 10px;
+    background: rgb(243 243 243 / 80%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-family: 'Urbanist', monospace;
+    font-weight: 600;
+    color: #22240b;
+    min-width: 90px;
+    font-variant-numeric: tabular-nums;
+    
+    /* NumberFlow CSS custom properties */
+    --number-flow-mask-height: 0.25em;
+    --number-flow-mask-width: 0.5em;
+    --number-flow-char-height: 1em;
+
+    /* Ensure NumberFlow elements are visible */
+    :global(number-flow) {
+      display: inline-block;
+      font-family: inherit;
+      font-weight: inherit;
+      color: inherit;
+    }
+
+    :global(number-flow::part(segment)) {
+      color: inherit;
+    }
+
+    :global(number-flow::part(digit)) {
+      color: inherit;
+    }
+  
+    &:hover {
+      background: #f5caca;
+      transform: translateY(-1px) scale(1.01);
+      color: #de524d;
+    }
+  
+    &:active {
+      transform: scale(0.95);
+      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  
+    :global(.dark) & {
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+     
+      &:hover {
+        background: #f5caca;
+        transform: translateY(-1px) scale(1.01);
+        color: #de524d;
+      }
+    }
+  
+}
+
+  .countdownDisplay {
+    font-size: 16px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: baseline;
+    font-variant-numeric: tabular-nums;
+    --number-flow-char-height: 0.85em;
+  }
   
   .dropdown {
     background: rgba(241, 245, 249, 0.9);
@@ -171,5 +242,42 @@
       &:hover {
         background: rgba(55, 55, 58, 0.5);
       }
+    }
+  }
+
+  .errorMessage {
+    position: absolute;
+    top: 100%;
+    margin-top: 4px;
+    font-size: 12px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 500;
+    color: #dc2626;
+    background: rgba(254, 242, 242, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 6px;
+    padding: 4px 8px;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+    z-index: 10;
+    animation: fadeInError 0.3s ease-out;
+
+    :global(.dark) & {
+      color: #f87171;
+      background: rgba(69, 10, 10, 0.9);
+      border-color: rgba(239, 68, 68, 0.3);
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    }
+  }
+
+  @keyframes fadeInError {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }

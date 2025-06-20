@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, Timestamp, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './Marquee.module.scss';
 
@@ -16,15 +16,17 @@ const Marquee: React.FC = () => {
   const [advices, setAdvices] = useState<Advice[]>([]);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'Advices'), (snapshot) => {
+    const q = query(collection(db, 'advices'), where('expiry', '>', Timestamp.now()));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const now = Timestamp.now();
       const activeAdvices: Advice[] = [];
       const expiredAdvices: string[] = [];
 
       snapshot.forEach((doc) => {
-        const data = doc.data() as Advice;
-        if (data.expiry.toMillis() > now.toMillis()) {
-          activeAdvices.push({ id: doc.id, ...data });
+        const data = doc.data() as Partial<Advice>; // Allow partial data
+        const expiry = data.expiry as Timestamp | undefined;
+        if (expiry && expiry.toMillis() > now.toMillis()) {
+          activeAdvices.push({ id: doc.id, ...data, expiry } as Advice);
         } else {
           expiredAdvices.push(doc.id);
         }
@@ -33,7 +35,7 @@ const Marquee: React.FC = () => {
       // Delete expired announcements
       expiredAdvices.forEach(async (id) => {
         try {
-          await deleteDoc(doc(db, 'Advices', id));
+          await deleteDoc(doc(db, 'advices', id));
         } catch (error) {
           console.error('Error deleting expired advice:', error);
         }
@@ -52,12 +54,21 @@ const Marquee: React.FC = () => {
 
   return (
     <div className={styles.marquee}>
-      {advices.map((advice, index) => (
-        <span key={advice.id}>
-          {advice.creatorFirstName}: {advice.message}
-          {index < advices.length - 1 && <span className={styles.bullet}> • </span>}
-        </span>
-      ))}
+      <div className={styles.marqueeContent}>
+        {advices.map((advice, index) => (
+          <span key={advice.id} className={styles.adviceItem}>
+            {advice.creatorFirstName}: {advice.message}
+            {index < advices.length - 1 && <span className={styles.bullet}> • </span>}
+          </span>
+        ))}
+        {/* Duplicate content for infinite scroll */}
+        {advices.map((advice, index) => (
+          <span key={`${advice.id}-duplicate`} className={styles.adviceItem}>
+            {advice.creatorFirstName}: {advice.message}
+            {index < advices.length - 1 && <span className={styles.bullet}> • </span>}
+          </span>
+        ))}
+      </div>
     </div>
   );
 };

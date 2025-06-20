@@ -7,7 +7,8 @@
     display: inline-flex;
     z-index: 31000;
     justify-content: space-between;
-    align-items: center;
+    align-items: start;
+    padding-top:30px ;
   
     @media (max-width: 768px) {
       flex-direction: column;
@@ -118,107 +119,6 @@
   .adminButton:hover .fold {
     margin-top: -0.75rem;
     margin-right: -0.75rem;
-  }
-  
-  .pointsWrapper {
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    position: absolute;
-    z-index: 1;
-  }
-  
-  .point {
-    bottom: -10px;
-    position: absolute;
-    animation: floating-points infinite ease-in-out;
-    pointer-events: none;
-    width: 1.5px;
-    height: 1.5px;
-    background-color: #fff;
-    border-radius: 9999px;
-  
-    &:nth-child(1) {
-      left: 10%;
-      opacity: 1;
-      animation-duration: 2.35s;
-      animation-delay: 0.2s;
-    }
-  
-    &:nth-child(2) {
-      left: 30%;
-      opacity: 0.7;
-      animation-duration: 2.5s;
-      animation-delay: 0.5s;
-    }
-  
-    &:nth-child(3) {
-      left: 25%;
-      opacity: 0.8;
-      animation-duration: 2.2s;
-      animation-delay: 0.1s;
-    }
-  
-    &:nth-child(4) {
-      left: 44%;
-      opacity: 0.6;
-      animation-duration: 2.05s;
-    }
-  
-    &:nth-child(5) {
-      left: 50%;
-      opacity: 1;
-      animation-duration: 1.9s;
-    }
-  
-    &:nth-child(6) {
-      left: 75%;
-      opacity: 0.5;
-      animation-duration: 1.5s;
-      animation-delay: 1.5s;
-    }
-  
-    &:nth-child(7) {
-      left: 88%;
-      opacity: 0.9;
-      animation-duration: 2.2s;
-      animation-delay: 0.2s;
-    }
-  
-    &:nth-child(8) {
-      left: 58%;
-      opacity: 0.8;
-      animation-duration: 2.25s;
-      animation-delay: 0.2s;
-    }
-  
-    &:nth-child(9) {
-      left: 98%;
-      opacity: 0.6;
-      animation-duration: 2.6s;
-      animation-delay: 0.1s;
-    }
-  
-    &:nth-child(10) {
-      left: 65%;
-      opacity: 1;
-      animation-duration: 2.5s;
-      animation-delay: 0.2s;
-    }
-  }
-  
-  @keyframes floating-points {
-    0% {
-      transform: translateY(0);
-    }
-    85% {
-      opacity: 0;
-    }
-    100% {
-      transform: translateY(-40px);
-      opacity: 0;
-    }
   }
   
   .inner {
@@ -766,7 +666,7 @@
     /* ——— Dimensiones generales ——— */
     width: 100%;
     height: 100%;
-    padding: 14px;
+    padding: 5px;
   
     /* ——— Capa base cristalizada ——— */
     background: rgba(241, 245, 249, 0.7); /* Semi-transparent F1F5F9 */
