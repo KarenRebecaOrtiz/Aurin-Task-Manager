@@ -19,12 +19,15 @@ import {
 import { Timestamp } from 'firebase/firestore';
 import { gsap } from 'gsap';
 import Header from '@/components/ui/Header';
+import Marquee from '@/components/ui/Marquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import OnboardingStepper from '@/components/OnboardingStepper';
 import Selector from '@/components/Selector';
 import MembersTable from '@/components/MembersTable';
 import ClientsTable from '@/components/ClientsTable';
 import TasksTable from '@/components/TasksTable';
+import TasksKanban from '@/components/TasksKanban';
+import TasksKanbanMobile from '@/components/TasksKanbanMobile';
 import CreateTask from '@/components/CreateTask';
 import EditTask from '@/components/EditTask';
 import AISidebar from '@/components/AISidebar';
@@ -48,6 +51,7 @@ import Loader from '@/components/Loader';
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
 type Container = SelectorContainer | 'config';
+type TaskView = 'table' | 'kanban';
 
 interface Client {
   id: string;
@@ -105,6 +109,7 @@ interface Sidebar {
 export default function TasksPage() {
   const { user } = useUser();
   const [selectedContainer, setSelectedContainer] = useState<Container>('tareas');
+  const [taskView, setTaskView] = useState<TaskView>('table'); // Changed to table as primary view
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
   const [isAISidebarOpen, setIsAISidebarOpen] = useState<boolean>(false);
@@ -124,6 +129,7 @@ export default function TasksPage() {
   const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
   const [showLoader, setShowLoader] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -134,6 +140,22 @@ export default function TasksPage() {
   const memoizedUsers = useMemo(() => users, [users]);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
   const memoizedOpenSidebars = useMemo(() => openSidebars, [openSidebars]);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      console.log('[TasksPage] Screen resize detected:', {
+        width: window.innerWidth,
+        isMobile: mobile,
+        taskView,
+      });
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [taskView]);
 
   useEffect(() => {
     const fetchAdminStatus = async () => {
@@ -229,56 +251,66 @@ export default function TasksPage() {
     }
   }, []);
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(() => {
     if (!user?.id) {
       console.warn('[TasksPage] No user ID, skipping tasks fetch');
-      return;
+      return () => {};
     }
-    try {
-      console.log('[TasksPage] Fetching tasks for user:', { userId: user.id, isAdmin });
-      const querySnapshot = await getDocs(collection(db, 'tasks'));
-      let tasksData: Task[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        clientId: doc.data().clientId || '',
-        project: doc.data().project || '',
-        name: doc.data().name || '',
-        description: doc.data().description || '',
-        status: doc.data().status || '',
-        priority: doc.data().priority || '',
-        startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-        endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
-        LeadedBy: doc.data().LeadedBy || [],
-        AssignedTo: doc.data().AssignedTo || [],
-        createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-        CreatedBy: doc.data().CreatedBy || '',
-      }));
 
-      if (!isAdmin) {
-        tasksData = tasksData.filter(
-          (task) =>
-            task.AssignedTo.includes(user.id) ||
-            task.LeadedBy.includes(user.id) ||
-            task.CreatedBy === user.id,
-        );
-      }
+    console.log('[TasksPage] Setting up tasks listener for user:', { userId: user.id, isAdmin });
+    const tasksQuery = query(collection(db, 'tasks')); // Add where clauses if needed for optimization
+    const unsubscribe = onSnapshot(
+      tasksQuery,
+      (snapshot) => {
+        let tasksData: Task[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          clientId: doc.data().clientId || '',
+          project: doc.data().project || '',
+          name: doc.data().name || '',
+          description: doc.data().description || '',
+          status: doc.data().status || '',
+          priority: doc.data().priority || '',
+          startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
+          endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
+          LeadedBy: doc.data().LeadedBy || [],
+          AssignedTo: doc.data().AssignedTo || [],
+          createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+          CreatedBy: doc.data().CreatedBy || '',
+        }));
 
-      console.log('[TasksPage] Tasks fetched:', {
-        totalTasks: tasksData.length,
-        taskIds: tasksData.map((t) => t.id),
-        userId: user.id,
-        isAdmin,
-      });
-      setTasks(tasksData);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      setTasks([]);
-    }
+        if (!isAdmin) {
+          tasksData = tasksData.filter(
+            (task) =>
+              task.AssignedTo.includes(user.id) ||
+              task.LeadedBy.includes(user.id) ||
+              task.CreatedBy === user.id,
+          );
+        }
+
+        console.log('[TasksPage] Tasks updated:', {
+          totalTasks: tasksData.length,
+          taskIds: tasksData.map((t) => t.id),
+          userId: user.id,
+          isAdmin,
+        });
+        setTasks(tasksData);
+      },
+      (error) => {
+        console.error('[TasksPage] Error listening to tasks:', {
+          error: error instanceof Error ? error.message : JSON.stringify(error),
+          userId: user?.id,
+        });
+        setTasks([]);
+      },
+    );
+
+    return unsubscribe;
   }, [user?.id, isAdmin]);
 
   const fetchNotifications = useCallback(() => {
     if (!user?.id) {
       console.warn('No user ID, skipping notifications fetch');
-      return;
+      return () => {};
     }
 
     console.log('Setting up notifications listener for user:', user.id);
@@ -363,9 +395,13 @@ export default function TasksPage() {
     if (user?.id) {
       fetchUsers();
       fetchClients();
-      fetchTasks();
-      const unsubscribe = fetchNotifications();
-      return () => unsubscribe && unsubscribe();
+      const unsubscribeTasks = fetchTasks();
+      const unsubscribeNotifications = fetchNotifications();
+      return () => {
+        if (unsubscribeTasks) unsubscribeTasks();
+        if (unsubscribeNotifications) unsubscribeNotifications();
+        console.log('[TasksPage] Cleanup: Unsubscribed from tasks and notifications listeners');
+      };
     }
   }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id, isAdmin]);
 
@@ -401,7 +437,7 @@ export default function TasksPage() {
         gsap.killTweensOf(currentContentRef);
       }
     };
-  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen, showLoader]);
+  }, [selectedContainer, taskView, isCreateTaskOpen, isEditTaskOpen, showLoader]);
 
   const handleClientSubmit = useCallback(
     async (form: {
@@ -580,8 +616,9 @@ export default function TasksPage() {
         setIsCreateTaskOpen(false);
         setIsEditTaskOpen(false);
         setEditTaskId(null);
+        // Removed setTaskView('kanban') to preserve current view
+        console.log('[TasksPage] Container changed to:', newContainer);
       }
-      console.log('[TasksPage] Container changed to:', newContainer);
     },
     [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges, selectedContainer],
   );
@@ -595,6 +632,7 @@ export default function TasksPage() {
       setIsConfirmExitOpen(false);
       setPendingContainer(null);
       setHasUnsavedChanges(false);
+      // Removed setTaskView('kanban') to preserve current view
       console.log('[TasksPage] Confirmed exit to container:', pendingContainer);
     }
   }, [pendingContainer]);
@@ -615,14 +653,25 @@ export default function TasksPage() {
     console.log('[TasksPage] Closed profile');
   }, []);
 
-  // Handler for onboarding completion
   const handleOnboardingComplete = useCallback(() => {
     console.log('[TasksPage] Onboarding completed, navigating to config');
     handleContainerChange('config');
   }, [handleContainerChange]);
 
+  const handleViewChange = useCallback((view: TaskView) => {
+    setTaskView(view);
+    console.log('[TasksPage] Task view changed to:', view);
+  }, []);
+
+  const handleCreateTaskToggle = useCallback(() => {
+    setIsCreateTaskOpen((prev) => !prev);
+    setIsEditTaskOpen(false);
+    setEditTaskId(null);
+  }, []);
+
   return (
     <div className={styles.container}>
+      <Marquee />
       {showLoader && <Loader />}
       <SyncUserToFirestore />
       <div ref={headerRef}>
@@ -634,6 +683,7 @@ export default function TasksPage() {
           onDeleteNotification={handleDeleteNotification}
           onLimitNotifications={handleLimitNotifications}
           onChangeContainer={handleContainerChange}
+          isAdmin={isAdmin}
         />
       </div>
       <OnboardingStepper onComplete={handleOnboardingComplete} />
@@ -651,18 +701,56 @@ export default function TasksPage() {
       <CursorProvider>
         <div ref={contentRef} className={styles.content}>
           {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && (
-            <TasksTable
-              tasks={memoizedTasks}
-              clients={memoizedClients}
-              users={memoizedUsers}
-              onNewTaskOpen={handleNewTaskOpen}
-              onEditTaskOpen={handleEditTaskOpen}
-              onAISidebarOpen={handleAISidebarOpen}
-              onChatSidebarOpen={handleChatSidebarOpen}
-              onMessageSidebarOpen={handleMessageSidebarOpen}
-              setTasks={setTasks}
-              onOpenProfile={handleOpenProfile}
-            />
+            <>
+              {taskView === 'table' && (
+                <TasksTable
+                  tasks={memoizedTasks}
+                  clients={memoizedClients}
+                  users={memoizedUsers}
+                  onNewTaskOpen={handleNewTaskOpen}
+                  onEditTaskOpen={handleEditTaskOpen}
+                  onAISidebarOpen={handleAISidebarOpen}
+                  onChatSidebarOpen={handleChatSidebarOpen}
+                  onMessageSidebarOpen={handleMessageSidebarOpen}
+                  setTasks={setTasks}
+                  onOpenProfile={handleOpenProfile}
+                  onViewChange={handleViewChange}
+                />
+              )}
+              {taskView === 'kanban' && (
+                <>
+                  {isMobile ? (
+                    <TasksKanbanMobile
+                      tasks={memoizedTasks}
+                      clients={memoizedClients}
+                      users={memoizedUsers}
+                      onNewTaskOpen={handleNewTaskOpen}
+                      onEditTaskOpen={handleEditTaskOpen}
+                      onAISidebarOpen={handleAISidebarOpen}
+                      onChatSidebarOpen={handleChatSidebarOpen}
+                      onMessageSidebarOpen={handleMessageSidebarOpen}
+                      setTasks={setTasks}
+                      onOpenProfile={handleOpenProfile}
+                      onViewChange={handleViewChange}
+                    />
+                  ) : (
+                    <TasksKanban
+                      tasks={memoizedTasks}
+                      clients={memoizedClients}
+                      users={memoizedUsers}
+                      onNewTaskOpen={handleNewTaskOpen}
+                      onEditTaskOpen={handleEditTaskOpen}
+                      onAISidebarOpen={handleAISidebarOpen}
+                      onChatSidebarOpen={handleChatSidebarOpen}
+                      onMessageSidebarOpen={handleMessageSidebarOpen}
+                      setTasks={setTasks}
+                      onOpenProfile={handleOpenProfile}
+                      onViewChange={handleViewChange}
+                    />
+                  )}
+                </>
+              )}
+            </>
           )}
           {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
             <ClientsTable
@@ -687,6 +775,7 @@ export default function TasksPage() {
           {isCreateTaskOpen && (
             <CreateTask
               isOpen={isCreateTaskOpen}
+              onToggle={handleCreateTaskToggle}
               onHasUnsavedChanges={setHasUnsavedChanges}
               onCreateClientOpen={handleCreateClientOpen}
               onEditClientOpen={handleEditClientOpen}
@@ -728,7 +817,7 @@ export default function TasksPage() {
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={deletePopupRef}>
             <h2>Confirmar Eliminación</h2>
-            <p>Escribe &#39;Eliminar&#39; para confirmar:</p>
+            <p>Escribe &apos;Eliminar&apos; para confirmar:</p>
             <input
               type="text"
               value={deleteConfirm}
@@ -771,7 +860,7 @@ export default function TasksPage() {
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={confirmExitPopupRef}>
             <h2>¿Salir sin guardar?</h2>
-            <p>¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado.</p>
+            <p>¿Est&apos;s seguro de que quieres salir sin guardar los cambios? Perder&apos;s todo el progreso no guardado.</p>
             <div className={clientStyles.popupActions}>
               <button
                 onClick={handleConfirmExit}

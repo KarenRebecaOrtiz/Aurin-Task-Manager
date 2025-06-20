@@ -109,7 +109,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   const [isMounted, setIsMounted] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
-  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const lastMessageRef = useRef<HTMLDivElement>(null);
 
   // Montaje inicial para evitar problemas de hidratación
@@ -192,26 +191,46 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     }
   }, [messages]);
 
-  // Animate new messages
+  // Scroll to bottom when sidebar opens
+  useEffect(() => {
+    if (isOpen && chatRef.current && messages.length > 0) {
+      // Small delay to ensure the sidebar animation has started
+      setTimeout(() => {
+        if (chatRef.current) {
+          chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
+        }
+      }, 100);
+    }
+  }, [isOpen, messages.length]);
+
+  // Enhanced scroll to bottom for new messages with better detection
   useEffect(() => {
     if (!chatRef.current || !messages.length) return;
-    const newMessages = messages.filter((m) => !messageRefs.current.has(m.id));
-    newMessages.forEach((m) => {
-      const div = chatRef.current?.querySelector(`[data-message-id="${m.id}"]`) as HTMLDivElement;
-      if (div) {
-        messageRefs.current.set(m.id, div);
-        gsap.fromTo(
-          div,
-          { y: 50, opacity: 0, scale: 0.95 },
-          { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: "power2.out", delay: 0.1 },
-        );
-      }
-    });
-    messageRefs.current.forEach((_, id) => {
-      if (!messages.find((m) => m.id === id)) {
-        messageRefs.current.delete(id);
-      }
-    });
+    
+    const chat = chatRef.current;
+    const scrollThreshold = 100; // pixels from bottom to consider "at bottom"
+    const isNearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < scrollThreshold;
+    const lastMessage = messages[messages.length - 1];
+    
+    // Always scroll to bottom for:
+    // 1. User's own messages
+    // 2. When user is already near the bottom
+    // 3. First message in conversation
+    if (
+      lastMessage.sender === "user" || 
+      isNearBottom || 
+      messages.length === 1
+    ) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (chatRef.current) {
+          chatRef.current.scrollTo({ 
+            top: chatRef.current.scrollHeight, 
+            behavior: messages.length === 1 ? "auto" : "smooth" 
+          });
+        }
+      });
+    }
   }, [messages]);
 
   // Fetch messages from Firestore

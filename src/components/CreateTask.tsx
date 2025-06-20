@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
@@ -63,7 +63,7 @@ const formSchema = z.object({
     objectives: z.string().optional(),
     startDate: z.date({ required_error: "La fecha de inicio es obligatoria*" }).nullable(),
     endDate: z.date({ required_error: "La fecha de finalización es obligatoria*" }).nullable(),
-    status: z.enum(["Por comenzar", "En Proceso", "Finalizado", "Backlog", "Cancelada"], {
+    status: z.enum(["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"], {
       required_error: "Selecciona un estado*",
     }),
     priority: z.enum(["Baja", "Media", "Alta"], { required_error: "Selecciona una prioridad*" }),
@@ -101,7 +101,7 @@ const defaultValues: FormValues = {
     objectives: "",
     startDate: null,
     endDate: null,
-    status: "Por comenzar",
+    status: "Por Iniciar",
     priority: "Baja",
   },
   teamInfo: {
@@ -138,6 +138,7 @@ const stepFields: (keyof FormValues | string)[][] = [
 
 interface CreateTaskProps {
   isOpen: boolean;
+  onToggle: () => void;
   onHasUnsavedChanges: (hasChanges: boolean) => void;
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
@@ -147,6 +148,7 @@ interface CreateTaskProps {
 
 const CreateTask: React.FC<CreateTaskProps> = ({
   isOpen,
+  onToggle,
   onHasUnsavedChanges,
   onCreateClientOpen,
   onEditClientOpen,
@@ -252,7 +254,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       }
     };
     fetchAdminStatus();
-  }, [user?.id, isAdmin]);
+  }, [user?.id]);
 
   useEffect(() => {
     const subscription = form.watch((value) => {
@@ -600,7 +602,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         },
       }).mount();
 
-      // Update navigation button states
       const updateNavButtons = () => {
         if (clientSplideInstance.current) {
           const { index, length } = clientSplideInstance.current;
@@ -612,7 +613,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       clientSplideInstance.current.on("moved", updateNavButtons);
       updateNavButtons();
 
-      // Debug swipe events
       clientSplideInstance.current.on("drag", () => {
         console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe started`);
         gsap.killTweensOf(clientSplideRef.current?.querySelectorAll(".splide__slide"));
@@ -663,7 +663,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         },
       }).mount();
 
-      // Update navigation button states
       const updateNavButtons = () => {
         if (pmSplideInstance.current) {
           const { index, length } = pmSplideInstance.current;
@@ -675,16 +674,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       pmSplideInstance.current.on("moved", updateNavButtons);
       updateNavButtons();
 
-      // Debug swipe events
-      pmSplideInstance.current.on("drag", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe started`);
-        gsap.killTweensOf(pmSplideRef.current?.querySelectorAll(".splide__slide"));
+      clientSplideInstance.current.on("drag", () => {
+        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe started`);
+        gsap.killTweensOf(clientSplideRef.current?.querySelectorAll(".splide__slide"));
       });
 
-      pmSplideInstance.current.on("dragged", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe ended, position: ${pmSplideInstance.current?.index}`);
+      clientSplideInstance.current.on("dragged", () => {
+        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe ended, position: ${clientSplideInstance.current?.index}`);
       });
-
     }, 0);
 
     return () => {
@@ -963,766 +960,773 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   return (
     <>
       <div className={`${styles.container} ${isOpen ? styles.open : ""} ${isSaving ? styles.saving : ""}`} ref={containerRef}>
-
         {isOpen && (
-          <div className={styles.content}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <Wizard totalSteps={5}>
-                <WizardProgress />
-                <WizardStep step={0} validator={() => validateStep(stepFields[0] as (keyof FormValues)[])}>
-                  <div className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Información del Cliente</h2>
-                    {hasPersistedData && (
-                      <div className={styles.persistedData}>
-                        <span>Progreso guardado restaurado</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            clearPersistedData();
-                            form.reset(defaultValues);
-                            toast({
-                              title: "Progreso eliminado",
-                              description: "Se ha reiniciado el formulario.",
-                              variant: "info",
-                            });
-                          }}
-                        >
-                          Borrar progreso
-                        </button>
-                      </div>
-                    )}
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Cuenta Asignada*</label>
-                      <div className={styles.sectionSubtitle}>
-                        Selecciona la cuenta a la que se asignará esta tarea.
-                      </div>
-                      <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
-                        {clients.length > 1 && (
-                          <>
-                            <button
-                              type="button"
-                              className={styles.navButton}
-                              onClick={handleClientPrev}
-                              disabled={!clientCanPrev}
-                              style={{
-                                position: "absolute",
-                                display:'none',
-                                left: "-40px",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                zIndex: 10,
-                                opacity: clientCanPrev ? 1 : 0.5,
-                              }}
-                            >
-                              Anterior
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.navButton}
-                              onClick={handleClientNext}
-                              disabled={!clientCanNext}
-                              style={{
-                                position: "absolute",
-                                right: "-40px",
-                                display:'none',
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                zIndex: 10,
-                                opacity: clientCanNext ? 1 : 0.5,
-                              }}
-                            >
-                              Siguiente
-                            </button>
-                          </>
-                        )}
-                        <div className={styles.slideshow} style={{ overflow: "visible" }}>
-                          <section
-                            ref={clientSplideRef}
-                            style={{ visibility: clients.length ? "visible" : "hidden" }}
-                            className="splide"
-                            aria-label="Carrusel de Cuentas"
-                          >
-                            <div className="splide__track">
-                              <ul className="splide__list">
-                                {clients.map((client) => (
-                                  <li key={client.id} className={`splide__slide ${styles.splideSlide}`}>
-                                    <SlideCard
-                                      imageUrl={client.imageUrl}
-                                      name={client.name}
-                                      isSelected={form.watch("clientInfo.clientId") === client.id}
-                                      onClick={(e) => handleClientSelect(client.id, e)}
-                                    />
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </section>
-                        </div>
-                      </div>
-                      {form.formState.errors.clientInfo?.clientId && (
-                        <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
-                      )}
-                      {isAdmin && !form.watch("clientInfo.clientId") && (
-                        <div className={styles.addButtonWrapper}>
-                          <div className={styles.addButtonText}>
-                            ¿No encuentras alguna cuenta? <strong>Agrega una nueva.</strong>
-                          </div>
+          <>
+            <div className={styles.header}>
+              <div className={styles.headerTitle}>Crear Tarea</div>
+              <button className={styles.toggleButton} onClick={onToggle}>
+                <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
+              </button>
+            </div>
+            <div className={styles.content}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <Wizard totalSteps={5}>
+                  <WizardProgress />
+                  <WizardStep step={0} validator={() => validateStep(stepFields[0] as (keyof FormValues)[])}>
+                    <div className={styles.section}>
+                      <h2 className={styles.sectionTitle}>Información del Cliente</h2>
+                      {hasPersistedData && (
+                        <div className={styles.persistedData}>
+                          <span>Progreso guardado restaurado</span>
                           <button
                             type="button"
-                            className={styles.addButton}
-                            onClick={(e) => {
-                              animateClick(e.currentTarget);
-                              onCreateClientOpen();
+                            onClick={() => {
+                              clearPersistedData();
+                              form.reset(defaultValues);
+                              toast({
+                                title: "Progreso eliminado",
+                                description: "Se ha reiniciado el formulario.",
+                                variant: "info",
+                              });
                             }}
                           >
-                            + Agregar Cuenta
+                            Borrar progreso
                           </button>
                         </div>
                       )}
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Carpeta*</label>
-                      <div className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</div>
-                      <div className={styles.dropdownContainer} ref={projectDropdownRef}>
-                        <div
-                          className={styles.dropdownTrigger}
-                          onClick={(e) => {
-                            animateClick(e.currentTarget);
-                            setIsProjectDropdownOpen(!isProjectDropdownOpen);
-                          }}
-                        >
-                          <span>{form.watch("clientInfo.project") || "Seleccionar una Carpeta"}</span>
-                          <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Cuenta Asignada*</label>
+                        <div className={styles.sectionSubtitle}>
+                          Selecciona la cuenta a la que se asignará esta tarea.
                         </div>
-                        {isProjectDropdownOpen &&
+                        <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
+                          {clients.length > 1 && (
+                            <>
+                              <button
+                                type="button"
+                                className={styles.navButton}
+                                onClick={handleClientPrev}
+                                disabled={!clientCanPrev}
+                                style={{
+                                  position: "absolute",
+                                  display: 'none',
+                                  left: "-40px",
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  zIndex: 10,
+                                  opacity: clientCanPrev ? 1 : 0.5,
+                                }}
+                              >
+                                Anterior
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.navButton}
+                                onClick={handleClientNext}
+                                disabled={!clientCanNext}
+                                style={{
+                                  position: "absolute",
+                                  right: "-40px",
+                                  display: 'none',
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  zIndex: 10,
+                                  opacity: clientCanNext ? 1 : 0.5,
+                                }}
+                              >
+                                Siguiente
+                              </button>
+                            </>
+                          )}
+                          <div className={styles.slideshow} style={{ overflow: "visible" }}>
+                            <section
+                              ref={clientSplideRef}
+                              style={{ visibility: clients.length ? "visible" : "hidden" }}
+                              className="splide"
+                              aria-label="Carrusel de Cuentas"
+                            >
+                              <div className="splide__track">
+                                <ul className="splide__list">
+                                  {clients.map((client) => (
+                                    <li key={client.id} className={`splide__slide ${styles.splideSlide}`}>
+                                      <SlideCard
+                                        imageUrl={client.imageUrl}
+                                        name={client.name}
+                                        isSelected={form.watch("clientInfo.clientId") === client.id}
+                                        onClick={(e) => handleClientSelect(client.id, e)}
+                                      />
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </section>
+                          </div>
+                        </div>
+                        {form.formState.errors.clientInfo?.clientId && (
+                          <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
+                        )}
+                        {isAdmin && !form.watch("clientInfo.clientId") && (
+                          <div className={styles.addButtonWrapper}>
+                            <div className={styles.addButtonText}>
+                              ¿No encuentras alguna cuenta? <strong>Agrega una nueva.</strong>
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.addButton}
+                              onClick={(e) => {
+                                animateClick(e.currentTarget);
+                                onCreateClientOpen();
+                              }}
+                            >
+                              + Agregar Cuenta
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Carpeta*</label>
+                        <div className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</div>
+                        <div className={styles.dropdownContainer} ref={projectDropdownRef}>
+                          <div
+                            className={styles.dropdownTrigger}
+                            onClick={(e) => {
+                              animateClick(e.currentTarget);
+                              setIsProjectDropdownOpen(!isProjectDropdownOpen);
+                            }}
+                          >
+                            <span>{form.watch("clientInfo.project") || "Seleccionar una Carpeta"}</span>
+                            <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                          </div>
+                          {isProjectDropdownOpen &&
+                            createPortal(
+                              <div
+                                className={styles.dropdownItems}
+                                style={{
+                                  top: projectDropdownPosition?.top,
+                                  left: projectDropdownPosition?.left,
+                                  position: "absolute",
+                                  zIndex: 150000,
+                                }}
+                                ref={projectDropdownPopperRef}
+                              >
+                                {(() => {
+                                  const selectedClient = clients.find(
+                                    (c) => c.id === form.getValues("clientInfo.clientId")
+                                  );
+                                  if (!selectedClient || !selectedClient.projects.length) {
+                                    return (
+                                      <div className={styles.emptyState}>
+                                        <span>
+                                          {isAdmin
+                                            ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
+                                            : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."}
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                  return selectedClient.projects.map((project, index) => (
+                                    <div
+                                      key={`${project}-${index}`}
+                                      className={styles.dropdownItem}
+                                      onClick={(e) => handleProjectSelect(project, e)}
+                                    >
+                                      {project}
+                                    </div>
+                                  ));
+                                })()}
+                              </div>,
+                              document.body,
+                            )}
+                        </div>
+                        {form.formState.errors.clientInfo?.project && (
+                          <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
+                        )}
+                        {isAdmin &&
+                          form.getValues("clientInfo.clientId") &&
+                          clients.find((c) => c.id === form.getValues("clientInfo.clientId"))?.createdBy === user?.id && (
+                            <button
+                              type="button"
+                              className={styles.addButton}
+                              onClick={(e) => {
+                                animateClick(e.currentTarget);
+                                const client = clients.find((c) => c.id === form.getValues("clientInfo.clientId"));
+                                if (client) {
+                                  onEditClientOpen(client);
+                                }
+                              }}
+                            >
+                              + Nueva Carpeta
+                            </button>
+                          )}
+                      </div>
+                    </div>
+                  </WizardStep>
+                  <WizardStep step={1} validator={() => validateStep(stepFields[1] as (keyof FormValues)[])}>
+                    <div className={styles.section}>
+                      <h2 className={styles.sectionTitle}>Información Básica del Proyecto</h2>
+                      <div className={styles.level1Grid}>
+                        <div className={styles.level1Column}>
+                          <div className={styles.formGroup}>
+                            <label className={styles.label}>Nombre de la tarea*</label>
+                            <Controller
+                              name="basicInfo.name"
+                              control={form.control}
+                              render={({ field }) => (
+                                <input
+                                  className={styles.input}
+                                  placeholder="Ej: Crear wireframe"
+                                  {...field}
+                                />
+                              )}
+                            />
+                            {form.formState.errors.basicInfo?.name && (
+                              <span className={styles.error}>{form.formState.errors.basicInfo.name.message}</span>
+                            )}
+                          </div>
+                          <div className={styles.formGroup}>
+                            <label className={styles.label}>Descripción*</label>
+                            <Controller
+                              name="basicInfo.description"
+                              control={form.control}
+                              render={({ field }) => (
+                                <input
+                                  className={styles.input}
+                                  placeholder="Ej: Diseñar wireframes para la nueva app móvil"
+                                  {...field}
+                                />
+                              )}
+                            />
+                            {form.formState.errors.basicInfo?.description && (
+                              <span className={styles.error}>{form.formState.errors.basicInfo.description.message}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className={styles.level1Column}>
+                          <div className={styles.formGroup}>
+                            <label className={styles.label}>Objetivos</label>
+                            <Controller
+                              name="basicInfo.objectives"
+                              control={form.control}
+                              render={({ field }) => (
+                                <input
+                                  className={styles.input}
+                                  placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
+                                  {...field}
+                                />
+                              )}
+                            />
+                            {form.formState.errors.basicInfo?.objectives && (
+                              <span className={styles.error}>{form.formState.errors.basicInfo.objectives.message}</span>
+                            )}
+                          </div>
+                          <div className={styles.formRow}>
+                            <div className={styles.formGroup}>
+                              <label className={styles.label}>Fecha de Inicio*</label>
+                              <div
+                                ref={startDateInputRef}
+                                className={styles.dateInput}
+                                onClick={() => setIsStartDateOpen(!isStartDateOpen)}
+                                style={{
+                                  padding: "12px 16px",
+                                  background: "rgba(255, 255, 255, 0.15)",
+                                  backdropFilter: "blur(10px)",
+                                  borderRadius: "12px",
+                                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                                  boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
+                                  cursor: "pointer",
+                                  fontSize: "14px",
+                                }}
+                              >
+                                {form.watch("basicInfo.startDate")
+                                  ? form.watch("basicInfo.startDate")!.toLocaleDateString("es-ES")
+                                  : "Selecciona una fecha"}
+                              </div>
+                              {isStartDateOpen &&
+                                createPortal(
+                                  <div
+                                    ref={startDatePopperRef}
+                                    className={styles.calendarPortal}
+                                    style={{
+                                      position: "absolute",
+                                      top: startDatePosition?.top,
+                                      left: startDatePosition?.left,
+                                      zIndex: 150000,
+                                      background: "rgba(255, 255, 255, 0.15)",
+                                      backdropFilter: "blur(10px)",
+                                      borderRadius: "12px",
+                                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                                      boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
+                                      padding: "1rem",
+                                    }}
+                                  >
+                                    <DayPicker
+                                      mode="single"
+                                      selected={form.watch("basicInfo.startDate") || undefined}
+                                      onSelect={(date) => {
+                                        form.setValue("basicInfo.startDate", date || null);
+                                        setIsStartDateOpen(false);
+                                      }}
+                                      className={styles.customCalendar}
+                                      style={{
+                                        background: "transparent",
+                                      }}
+                                    />
+                                  </div>,
+                                  document.body,
+                                )}
+                              {form.formState.errors.basicInfo?.startDate && (
+                                <span className={styles.error}>{form.formState.errors.basicInfo.startDate.message}</span>
+                              )}
+                            </div>
+                            <div className={styles.formGroup}>
+                              <label className={styles.label}>Fecha de Finalización*</label>
+                              <div
+                                ref={endDateInputRef}
+                                className={styles.dateInput}
+                                onClick={() => setIsEndDateOpen(!isEndDateOpen)}
+                                style={{
+                                  padding: "12px 16px",
+                                  background: "rgba(255, 255, 255, 0.15)",
+                                  backdropFilter: "blur(10px)",
+                                  borderRadius: "12px",
+                                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                                  boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
+                                  cursor: "pointer",
+                                  fontSize: "14px",
+                                }}
+                              >
+                                {form.watch("basicInfo.endDate")
+                                  ? form.watch("basicInfo.endDate")!.toLocaleDateString("es-ES")
+                                  : "Selecciona una fecha"}
+                              </div>
+                              {isEndDateOpen &&
+                                createPortal(
+                                  <div
+                                    ref={endDatePopperRef}
+                                    className={styles.calendarPortal}
+                                    style={{
+                                      position: "absolute",
+                                      top: endDatePosition?.top,
+                                      left: endDatePosition?.left,
+                                      zIndex: 150000,
+                                      background: "rgba(255, 255, 255, 0.15)",
+                                      backdropFilter: "blur(10px)",
+                                      borderRadius: "12px",
+                                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                                      boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
+                                      padding: "1rem",
+                                    }}
+                                  >
+                                    <DayPicker
+                                      mode="single"
+                                      selected={form.watch("basicInfo.endDate") || undefined}
+                                      onSelect={(date) => {
+                                        form.setValue("basicInfo.endDate", date || null);
+                                        setIsEndDateOpen(false);
+                                      }}
+                                      className={styles.customCalendar}
+                                      style={{
+                                        background: "transparent",
+                                      }}
+                                    />
+                                  </div>,
+                                  document.body,
+                                )}
+                              {form.formState.errors.basicInfo?.endDate && (
+                                <span className={styles.error}>{form.formState.errors.basicInfo.endDate.message}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className={styles.level1Column}>
+                          <div className={styles.formGroup}>
+                            <label className={styles.label}>Estado Inicial*</label>
+                            <div className={styles.dropdownContainer} ref={statusDropdownRef}>
+                              <div
+                                className={styles.dropdownTrigger}
+                                onClick={(e) => {
+                                  animateClick(e.currentTarget);
+                                  setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                                }}
+                              >
+                                <span>{form.watch("basicInfo.status") || "Seleccionar"}</span>
+                                <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                              </div>
+                              {isStatusDropdownOpen &&
+                                createPortal(
+                                  <div
+                                    className={styles.dropdownItems}
+                                    style={{
+                                      top: statusDropdownPosition?.top,
+                                      left: statusDropdownPosition?.left,
+                                      position: "absolute",
+                                      zIndex: 150000,
+                                      width: statusDropdownRef.current?.offsetWidth,
+                                    }}
+                                    ref={statusDropdownPopperRef}
+                                  >
+                                    {["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"].map((status) => (
+                                      <div
+                                        key={status}
+                                        className={styles.dropdownItem}
+                                        onClick={(e) => handleStatusSelect(status, e)}
+                                      >
+                                        {status}
+                                      </div>
+                                    ))}
+                                  </div>,
+                                  document.body,
+                                )}
+                            </div>
+                            {form.formState.errors.basicInfo?.status && (
+                              <span className={styles.error}>{form.formState.errors.basicInfo.status.message}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className={styles.level1Column}>
+                          <div className={styles.formGroup}>
+                            <label className={styles.label}>Prioridad*</label>
+                            <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
+                              <div
+                                className={styles.dropdownTrigger}
+                                onClick={(e) => {
+                                  animateClick(e.currentTarget);
+                                  setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                                }}
+                              >
+                                <span>{form.watch("basicInfo.priority") || "Seleccionar"}</span>
+                                <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+                              </div>
+                              {isPriorityDropdownOpen &&
+                                createPortal(
+                                  <div
+                                    className={styles.dropdownItems}
+                                    style={{
+                                      top: priorityDropdownPosition?.top,
+                                      left: priorityDropdownPosition?.left,
+                                      position: "absolute",
+                                      zIndex: 150000,
+                                      width: priorityDropdownRef.current?.offsetWidth,
+                                    }}
+                                    ref={priorityDropdownPopperRef}
+                                  >
+                                    {["Baja", "Media", "Alta"].map((priority) => (
+                                      <div
+                                        key={priority}
+                                        className={styles.dropdownItem}
+                                        onClick={(e) => handlePrioritySelect(priority, e)}
+                                      >
+                                        {priority}
+                                      </div>
+                                    ))}
+                                  </div>,
+                                  document.body,
+                                )}
+                            </div>
+                            {form.formState.errors.basicInfo?.priority && (
+                              <span className={styles.error}>{form.formState.errors.basicInfo.priority.message}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </WizardStep>
+                  <WizardStep step={2} validator={() => validateStep(stepFields[2] as (keyof FormValues)[])}>
+                    <div className={styles.section}>
+                      <h2 className={styles.sectionTitle}>Información del Equipo</h2>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Líder del Proyecto*</label>
+                        <div className={styles.sectionSubtitle}>
+                          Selecciona la persona principal responsable de la tarea.
+                        </div>
+                        <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
+                          {users.length > 1 && (
+                            <>
+                              <button
+                                type="button"
+                                className={styles.navButton}
+                                onClick={handlePmPrev}
+                                disabled={!pmCanPrev}
+                                style={{
+                                  position: "absolute",
+                                  left: "-40px",
+                                  display: 'none',
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  zIndex: 10,
+                                  opacity: pmCanPrev ? 1 : 0.5,
+                                }}
+                              >
+                                Anterior
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.navButton}
+                                onClick={handlePmNext}
+                                disabled={!pmCanNext}
+                                style={{
+                                  position: "absolute",
+                                  right: "-40px",
+                                  display: 'none',
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  zIndex: 10,
+                                  opacity: pmCanNext ? 1 : 0.5,
+                                }}
+                              >
+                                Siguiente
+                              </button>
+                            </>
+                          )}
+                          <div className={styles.slideshow} style={{ overflow: "visible" }}>
+                            <section
+                              ref={pmSplideRef}
+                              style={{ visibility: users.length ? "visible" : "hidden" }}
+                              className="splide"
+                              aria-label="Carrusel de Líderes"
+                            >
+                              <div className="splide__track">
+                                <ul className="splide__list">
+                                  {users.map((user) => (
+                                    <li key={user.id} className={`splide__slide ${styles.splideSlide}`}>
+                                      <SlideCard
+                                        imageUrl={user.imageUrl}
+                                        name={user.fullName}
+                                        role={user.role}
+                                        isSelected={form.watch("teamInfo.LeadedBy").includes(user.id)}
+                                        onClick={(e) => handlePmSelect(user.id, e)}
+                                      />
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </section>
+                          </div>
+                        </div>
+                        {form.formState.errors.teamInfo?.LeadedBy && (
+                          <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
+                        )}
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Colaboradores*</label>
+                        <div className={styles.sectionSubtitle}>
+                          Agrega a los miembros del equipo que trabajarán en la tarea.
+                        </div>
+                        <input
+                          className={styles.input}
+                          value={searchCollaborator}
+                          onChange={(e) => {
+                            setSearchCollaborator(e.target.value);
+                            setIsCollaboratorDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
+                          }}
+                          placeholder="Ej: John Doe"
+                          ref={collaboratorInputRef}
+                        />
+                        {isCollaboratorDropdownOpen &&
                           createPortal(
                             <div
-                              className={styles.dropdownItems}
+                              className={styles.dropdown}
                               style={{
-                                top: projectDropdownPosition?.top,
-                                left: projectDropdownPosition?.left,
+                                top: collaboratorDropdownPosition?.top,
+                                left: collaboratorDropdownPosition?.left,
                                 position: "absolute",
                                 zIndex: 150000,
+                                width: collaboratorInputRef.current?.offsetWidth,
                               }}
-                              ref={projectDropdownPopperRef}
+                              ref={collaboratorDropdownPopperRef}
                             >
-                              {(() => {
-                                const selectedClient = clients.find(
-                                  (c) => c.id === form.getValues("clientInfo.clientId")
-                                );
-                                if (!selectedClient || !selectedClient.projects.length) {
-                                  return (
-                                    <div className={styles.emptyState}>
-                                      <span>
-                                        {isAdmin
-                                          ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
-                                          : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."}
-                                      </span>
-                                    </div>
-                                  );
-                                }
-                                return selectedClient.projects.map((project, index) => (
+                              {filteredCollaborators.length ? (
+                                filteredCollaborators.map((u) => (
                                   <div
-                                    key={`${project}-${index}`}
-                                    className={styles.dropdownItem}
-                                    onClick={(e) => handleProjectSelect(project, e)}
+                                    key={u.id}
+                                    className={`${styles.dropdownItem} ${
+                                      form.getValues("teamInfo.LeadedBy").includes(u.id) ? styles.disabled : ""
+                                    }`}
+                                    onClick={(e) => {
+                                      if (!form.getValues("teamInfo.LeadedBy").includes(u.id)) {
+                                        handleCollaboratorSelect(u.id, e);
+                                      }
+                                    }}
                                   >
-                                    {project}
+                                    {u.fullName} ({u.role}){" "}
+                                    {form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
                                   </div>
-                                ));
-                              })()}
+                                ))
+                              ) : (
+                                <div className={styles.emptyState}>
+                                  <span>
+                                    {isAdmin
+                                      ? "No hay coincidencias. Invita a nuevos colaboradores."
+                                      : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
+                                  </span>
+                                </div>
+                              )}
                             </div>,
                             document.body,
                           )}
-                      </div>
-                      {form.formState.errors.clientInfo?.project && (
-                        <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
-                      )}
-                      {isAdmin &&
-                        form.getValues("clientInfo.clientId") &&
-                        clients.find((c) => c.id === form.getValues("clientInfo.clientId"))?.createdBy === user?.id && (
-                          <button
-                            type="button"
-                            className={styles.addButton}
-                            onClick={(e) => {
-                              animateClick(e.currentTarget);
-                              const client = clients.find((c) => c.id === form.getValues("clientInfo.clientId"));
-                              if (client) {
-                                onEditClientOpen(client);
-                              }
-                            }}
-                          >
-                            + Nueva Carpeta
-                          </button>
-                        )}
-                    </div>
-                  </div>
-                </WizardStep>
-                <WizardStep step={1} validator={() => validateStep(stepFields[1] as (keyof FormValues)[])}>
-                  <div className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Información Básica del Proyecto</h2>
-                    <div className={styles.level1Grid}>
-                      <div className={styles.level1Column}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Nombre de la tarea*</label>
-                          <Controller
-                            name="basicInfo.name"
-                            control={form.control}
-                            render={({ field }) => (
-                              <input
-                                className={styles.input}
-                                placeholder="Ej: Crear wireframe"
-                                {...field}
-                              />
-                            )}
-                          />
-                          {form.formState.errors.basicInfo?.name && (
-                            <span className={styles.error}>{form.formState.errors.basicInfo.name.message}</span>
-                          )}
-                        </div>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Descripción*</label>
-                          <Controller
-                            name="basicInfo.description"
-                            control={form.control}
-                            render={({ field }) => (
-                              <input
-                                className={styles.input}
-                                placeholder="Ej: Diseñar wireframes para la nueva app móvil"
-                                {...field}
-                              />
-                            )}
-                          />
-                          {form.formState.errors.basicInfo?.description && (
-                            <span className={styles.error}>{form.formState.errors.basicInfo.description.message}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className={styles.level1Column}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Objetivos</label>
-                          <Controller
-                            name="basicInfo.objectives"
-                            control={form.control}
-                            render={({ field }) => (
-                              <input
-                                className={styles.input}
-                                placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
-                                {...field}
-                              />
-                            )}
-                          />
-                          {form.formState.errors.basicInfo?.objectives && (
-                            <span className={styles.error}>{form.formState.errors.basicInfo.objectives.message}</span>
-                          )}
-                        </div>
-                        <div className={styles.formRow}>
-                          <div className={styles.formGroup}>
-                            <label className={styles.label}>Fecha de Inicio*</label>
-                            <div
-                              ref={startDateInputRef}
-                              className={styles.dateInput}
-                              onClick={() => setIsStartDateOpen(!isStartDateOpen)}
-                              style={{
-                                padding: "12px 16px",
-                                background: "rgba(255, 255, 255, 0.15)",
-                                backdropFilter: "blur(10px)",
-                                borderRadius: "12px",
-                                border: "1px solid rgba(255, 255, 255, 0.2)",
-                                boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                cursor: "pointer",
-                                fontSize: "14px",
-                              }}
-                            >
-                              {form.watch("basicInfo.startDate")
-                                ? form.watch("basicInfo.startDate")!.toLocaleDateString("es-ES")
-                                : "Selecciona una fecha"}
-                            </div>
-                            {isStartDateOpen &&
-                              createPortal(
-                                <div
-                                  ref={startDatePopperRef}
-                                  className={styles.calendarPortal}
-                                  style={{
-                                    position: "absolute",
-                                    top: startDatePosition?.top,
-                                    left: startDatePosition?.left,
-                                    zIndex: 150000,
-                                    background: "rgba(255, 255, 255, 0.15)",
-                                    backdropFilter: "blur(10px)",
-                                    borderRadius: "12px",
-                                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                                    boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                    padding: "1rem",
-                                  }}
-                                >
-                                  <DayPicker
-                                    mode="single"
-                                    selected={form.watch("basicInfo.startDate") || undefined}
-                                    onSelect={(date) => {
-                                      form.setValue("basicInfo.startDate", date || null);
-                                      setIsStartDateOpen(false);
-                                    }}
-                                    className={styles.customCalendar}
-                                    style={{
-                                      background: "transparent",
-                                    }}
-                                  />
-                                </div>,
-                                document.body,
-                              )}
-                            {form.formState.errors.basicInfo?.startDate && (
-                              <span className={styles.error}>{form.formState.errors.basicInfo.startDate.message}</span>
-                            )}
-                          </div>
-                          <div className={styles.formGroup}>
-                            <label className={styles.label}>Fecha de Finalización*</label>
-                            <div
-                              ref={endDateInputRef}
-                              className={styles.dateInput}
-                              onClick={() => setIsEndDateOpen(!isEndDateOpen)}
-                              style={{
-                                padding: "12px 16px",
-                                background: "rgba(255, 255, 255, 0.15)",
-                                backdropFilter: "blur(10px)",
-                                borderRadius: "12px",
-                                border: "1px solid rgba(255, 255, 255, 0.2)",
-                                boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                cursor: "pointer",
-                                fontSize: "14px",
-                              }}
-                            >
-                              {form.watch("basicInfo.endDate")
-                                ? form.watch("basicInfo.endDate")!.toLocaleDateString("es-ES")
-                                : "Selecciona una fecha"}
-                            </div>
-                            {isEndDateOpen &&
-                              createPortal(
-                                <div
-                                  ref={endDatePopperRef}
-                                  className={styles.calendarPortal}
-                                  style={{
-                                    position: "absolute",
-                                    top: endDatePosition?.top,
-                                    left: endDatePosition?.left,
-                                    zIndex: 150000,
-                                    background: "rgba(255, 255, 255, 0.15)",
-                                    backdropFilter: "blur(10px)",
-                                    borderRadius: "12px",
-                                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                                    boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                    padding: "1rem",
-                                  }}
-                                >
-                                  <DayPicker
-                                    mode="single"
-                                    selected={form.watch("basicInfo.endDate") || undefined}
-                                    onSelect={(date) => {
-                                      form.setValue("basicInfo.endDate", date || null);
-                                      setIsEndDateOpen(false);
-                                    }}
-                                    className={styles.customCalendar}
-                                    style={{
-                                      background: "transparent",
-                                    }}
-                                  />
-                                </div>,
-                                document.body,
-                              )}
-                            {form.formState.errors.basicInfo?.endDate && (
-                              <span className={styles.error}>{form.formState.errors.basicInfo.endDate.message}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className={styles.level1Column}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Estado Inicial*</label>
-                          <div className={styles.dropdownContainer} ref={statusDropdownRef}>
-                            <div
-                              className={styles.dropdownTrigger}
-                              onClick={(e) => {
-                                animateClick(e.currentTarget);
-                                setIsStatusDropdownOpen(!isStatusDropdownOpen);
-                              }}
-                            >
-                              <span>{form.watch("basicInfo.status") || "Seleccionar"}</span>
-                              <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                            </div>
-                            {isStatusDropdownOpen &&
-                              createPortal(
-                                <div
-                                  className={styles.dropdownItems}
-                                  style={{
-                                    top: statusDropdownPosition?.top,
-                                    left: statusDropdownPosition?.left,
-                                    position: "absolute",
-                                    zIndex: 150000,
-                                    width: statusDropdownRef.current?.offsetWidth,
-                                  }}
-                                  ref={statusDropdownPopperRef}
-                                >
-                                  {["Por comenzar", "En Proceso", "Finalizado", "Backlog", "Cancelada"].map((status) => (
-                                    <div
-                                      key={status}
-                                      className={styles.dropdownItem}
-                                      onClick={(e) => handleStatusSelect(status, e)}
-                                    >
-                                      {status}
-                                    </div>
-                                  ))}
-                                </div>,
-                                document.body,
-                              )}
-                          </div>
-                          {form.formState.errors.basicInfo?.status && (
-                            <span className={styles.error}>{form.formState.errors.basicInfo.status.message}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className={styles.level1Column}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Prioridad*</label>
-                          <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
-                            <div
-                              className={styles.dropdownTrigger}
-                              onClick={(e) => {
-                                animateClick(e.currentTarget);
-                                setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
-                              }}
-                            >
-                              <span>{form.watch("basicInfo.priority") || "Seleccionar"}</span>
-                              <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                            </div>
-                            {isPriorityDropdownOpen &&
-                              createPortal(
-                                <div
-                                  className={styles.dropdownItems}
-                                  style={{
-                                    top: priorityDropdownPosition?.top,
-                                    left: priorityDropdownPosition?.left,
-                                    position: "absolute",
-                                    zIndex: 150000,
-                                    width: priorityDropdownRef.current?.offsetWidth,
-                                  }}
-                                  ref={priorityDropdownPopperRef}
-                                >
-                                  {["Baja", "Media", "Alta"].map((priority) => (
-                                    <div
-                                      key={priority}
-                                      className={styles.dropdownItem}
-                                      onClick={(e) => handlePrioritySelect(priority, e)}
-                                    >
-                                      {priority}
-                                    </div>
-                                  ))}
-                                </div>,
-                                document.body,
-                              )}
-                          </div>
-                          {form.formState.errors.basicInfo?.priority && (
-                            <span className={styles.error}>{form.formState.errors.basicInfo.priority.message}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </WizardStep>
-                <WizardStep step={2} validator={() => validateStep(stepFields[2] as (keyof FormValues)[])}>
-                  <div className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Información del Equipo</h2>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Líder del Proyecto*</label>
-                      <div className={styles.sectionSubtitle}>
-                        Selecciona la persona principal responsable de la tarea.
-                      </div>
-                      <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
-                        {users.length > 1 && (
-                          <>
-                            <button
-                              type="button"
-                              className={styles.navButton}
-                              onClick={handlePmPrev}
-                              disabled={!pmCanPrev}
-                              style={{
-                                position: "absolute",
-                                left: "-40px",
-                                display:'none',
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                zIndex: 10,
-                                opacity: pmCanPrev ? 1 : 0.5,
-                              }}
-                            >
-                              Anterior
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.navButton}
-                              onClick={handlePmNext}
-                              disabled={!pmCanNext}
-                              style={{
-                                position: "absolute",
-                                right: "-40px",
-                                display:'none',
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                zIndex: 10,
-                                opacity: pmCanNext ? 1 : 0.5,
-                              }}
-                            >
-                              Siguiente
-                            </button>
-                          </>
-                        )}
-                        <div className={styles.slideshow} style={{ overflow: "visible" }}>
-                          <section
-                            ref={pmSplideRef}
-                            style={{ visibility: users.length ? "visible" : "hidden" }}
-                            className="splide"
-                            aria-label="Carrusel de Líderes"
-                          >
-                            <div className="splide__track">
-                              <ul className="splide__list">
-                                {users.map((user) => (
-                                  <li key={user.id} className={`splide__slide ${styles.splideSlide}`}>
-                                    <SlideCard
-                                      imageUrl={user.imageUrl}
-                                      name={user.fullName}
-                                      role={user.role}
-                                      isSelected={form.watch("teamInfo.LeadedBy").includes(user.id)}
-                                      onClick={(e) => handlePmSelect(user.id, e)}
-                                    />
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </section>
-                        </div>
-                      </div>
-                      {form.formState.errors.teamInfo?.LeadedBy && (
-                        <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
-                      )}
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Colaboradores*</label>
-                      <div className={styles.sectionSubtitle}>
-                        Agrega a los miembros del equipo que trabajarán en la tarea.
-                      </div>
-                      <input
-                        className={styles.input}
-                        value={searchCollaborator}
-                        onChange={(e) => {
-                          setSearchCollaborator(e.target.value);
-                          setIsCollaboratorDropdownOpen(e.target.value.trim() !== "");
-                        }}
-                        onBlur={() => {
-                          setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
-                        }}
-                        placeholder="Ej: John Doe"
-                        ref={collaboratorInputRef}
-                      />
-                      {isCollaboratorDropdownOpen &&
-                        createPortal(
-                          <div
-                            className={styles.dropdown}
-                            style={{
-                              top: collaboratorDropdownPosition?.top,
-                              left: collaboratorDropdownPosition?.left,
-                              position: "absolute",
-                              zIndex: 150000,
-                              width: collaboratorInputRef.current?.offsetWidth,
-                            }}
-                            ref={collaboratorDropdownPopperRef}
-                          >
-                            {filteredCollaborators.length ? (
-                              filteredCollaborators.map((u) => (
-                                <div
-                                  key={u.id}
-                                  className={`${styles.dropdownItem} ${
-                                    form.getValues("teamInfo.LeadedBy").includes(u.id) ? styles.disabled : ""
-                                  }`}
-                                  onClick={(e) => {
-                                    if (!form.getValues("teamInfo.LeadedBy").includes(u.id)) {
-                                      handleCollaboratorSelect(u.id, e);
-                                    }
-                                  }}
-                                >
-                                  {u.fullName} ({u.role}){" "}
-                                  {form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
-                                </div>
-                              ))
-                            ) : (
-                              <div className={styles.emptyState}>
-                                <span>
-                                  {isAdmin
-                                    ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                    : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
-                                </span>
+                        <div className={styles.tags}>
+                          {form.watch("teamInfo.AssignedTo").map((userId) => {
+                            const collaborator = users.find((u) => u.id === userId);
+                            return collaborator ? (
+                              <div key={userId} className={styles.tag}>
+                                {collaborator.fullName}
+                                <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
                               </div>
-                            )}
-                          </div>,
-                          document.body,
-                        )}
-                      <div className={styles.tags}>
-                        {form.watch("teamInfo.AssignedTo").map((userId) => {
-                          const collaborator = users.find((u) => u.id === userId);
-                          return collaborator ? (
-                            <div key={userId} className={styles.tag}>
-                              {collaborator.fullName}
-                              <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
-                      {form.formState.errors.teamInfo?.AssignedTo && (
-                        <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
-                      )}
-                      {isAdmin && (
-                        <div className={styles.addButtonWrapper}>
-                          <div className={styles.addButtonText}>
-                            ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
-                          </div>
-                          <button
-                            type="button"
-                            className={styles.addButton}
-                            onClick={(e) => {
-                              animateClick(e.currentTarget);
-                              onInviteSidebarOpen();
-                            }}
-                          >
-                            + Invitar Colaborador
-                          </button>
+                            ) : null;
+                          })}
                         </div>
-                      )}
+                        {form.formState.errors.teamInfo?.AssignedTo && (
+                          <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
+                        )}
+                        {isAdmin && (
+                          <div className={styles.addButtonWrapper}>
+                            <div className={styles.addButtonText}>
+                              ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.addButton}
+                              onClick={(e) => {
+                                animateClick(e.currentTarget);
+                                onInviteSidebarOpen();
+                              }}
+                            >
+                              + Invitar Colaborador
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </WizardStep>
-                <WizardStep step={3} validator={() => validateStep(stepFields[3] as (keyof FormValues)[])}>
-                  <div className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Gestión de Recursos</h2>
-                    <div className={styles.resourceRow}>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Presupuesto Asignado*</label>
-                        <div className={styles.currencyInput}>
-                          <span className={styles.currencySymbol}>$</span>
+                  </WizardStep>
+                  <WizardStep step={3} validator={() => validateStep(stepFields[3] as (keyof FormValues)[])}>
+                    <div className={styles.section}>
+                      <h2 className={styles.sectionTitle}>Gestión de Recursos</h2>
+                      <div className={styles.resourceRow}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.label}>Presupuesto Asignado*</label>
+                          <div className={styles.currencyInput}>
+                            <span className={styles.currencySymbol}>$</span>
+                            <Controller
+                              name="resources.budget"
+                              control={form.control}
+                              render={({ field }) => (
+                                <input
+                                  className={styles.input}
+                                  type="number"
+                                  placeholder="1000.00"
+                                  {...field}
+                                  onChange={(e) => field.onChange(e.target.value)}
+                                />
+                              )}
+                            />
+                          </div>
+                          {form.formState.errors.resources?.budget && (
+                            <span className={styles.error}>{form.formState.errors.resources.budget.message}</span>
+                          )}
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label className={styles.label}>Horas asignadas a esta tarea*</label>
                           <Controller
-                            name="resources.budget"
+                            name="resources.hours"
                             control={form.control}
                             render={({ field }) => (
                               <input
                                 className={styles.input}
                                 type="number"
-                                placeholder="1000.00"
+                                placeholder="120"
                                 {...field}
                                 onChange={(e) => field.onChange(e.target.value)}
                               />
                             )}
                           />
+                          {form.formState.errors.resources?.hours && (
+                            <span className={styles.error}>{form.formState.errors.resources.hours.message}</span>
+                          )}
                         </div>
-                        {form.formState.errors.resources?.budget && (
-                          <span className={styles.error}>{form.formState.errors.resources.budget.message}</span>
-                        )}
                       </div>
+                    </div>
+                  </WizardStep>
+                  <WizardStep step={4} validator={() => validateStep(stepFields[4] as (keyof FormValues)[])}>
+                    <div className={styles.section}>
+                      <h2 className={styles.sectionTitle}>Configuración Avanzada</h2>
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Horas asignadas a esta tarea*</label>
+                        <label className={styles.label}>Metodología del Proyecto</label>
                         <Controller
-                          name="resources.hours"
+                          name="advanced.methodology"
                           control={form.control}
                           render={({ field }) => (
                             <input
                               className={styles.input}
-                              type="number"
-                              placeholder="120"
+                              placeholder="Selecciona una metodología"
                               {...field}
-                              onChange={(e) => field.onChange(e.target.value)}
                             />
                           )}
                         />
-                        {form.formState.errors.resources?.hours && (
-                          <span className={styles.error}>{form.formState.errors.resources.hours.message}</span>
+                        {form.formState.errors.advanced?.methodology && (
+                          <span className={styles.error}>{form.formState.errors.advanced.methodology.message}</span>
+                        )}
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Riesgos Potenciales</label>
+                        <Controller
+                          name="advanced.risks"
+                          control={form.control}
+                          render={({ field }) => (
+                            <input
+                              className={styles.input}
+                              placeholder="Ej: Retrasos en entregas, Falta de recursos"
+                              {...field}
+                            />
+                          )}
+                        />
+                        {form.formState.errors.advanced?.risks && (
+                          <span className={styles.error}>{form.formState.errors.advanced.risks.message}</span>
+                        )}
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Estrategias de Mitigación</label>
+                        <Controller
+                          name="advanced.mitigation"
+                          control={form.control}
+                          render={({ field }) => (
+                            <input
+                              className={styles.input}
+                              placeholder="Ej: Contratar freelancers como respaldo"
+                              {...field}
+                            />
+                          )}
+                        />
+                        {form.formState.errors.advanced?.mitigation && (
+                          <span className={styles.error}>{form.formState.errors.advanced.mitigation.message}</span>
+                        )}
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Interesados</label>
+                        <Controller
+                          name="advanced.stakeholders"
+                          control={form.control}
+                          render={({ field }) => (
+                            <input
+                              className={styles.input}
+                              placeholder="Ej: Cliente, equipo interno"
+                              {...field}
+                            />
+                          )}
+                        />
+                        {form.formState.errors.advanced?.stakeholders && (
+                          <span className={styles.error}>{form.formState.errors.advanced.stakeholders.message}</span>
                         )}
                       </div>
                     </div>
-                  </div>
-                </WizardStep>
-                <WizardStep step={4} validator={() => validateStep(stepFields[4] as (keyof FormValues)[])}>
-                  <div className={styles.section}>
-                    <h2 className={styles.sectionTitle}>Configuración Avanzada</h2>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Metodología del Proyecto</label>
-                      <Controller
-                        name="advanced.methodology"
-                        control={form.control}
-                        render={({ field }) => (
-                          <input
-                            className={styles.input}
-                            placeholder="Selecciona una metodología"
-                            {...field}
-                          />
-                        )}
-                      />
-                      {form.formState.errors.advanced?.methodology && (
-                        <span className={styles.error}>{form.formState.errors.advanced.methodology.message}</span>
-                      )}
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Riesgos Potenciales</label>
-                      <Controller
-                        name="advanced.risks"
-                        control={form.control}
-                        render={({ field }) => (
-                          <input
-                            className={styles.input}
-                            placeholder="Ej: Retrasos en entregas, Falta de recursos"
-                            {...field}
-                          />
-                        )}
-                      />
-                      {form.formState.errors.advanced?.risks && (
-                        <span className={styles.error}>{form.formState.errors.advanced.risks.message}</span>
-                      )}
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Estrategias de Mitigación</label>
-                      <Controller
-                        name="advanced.mitigation"
-                        control={form.control}
-                        render={({ field }) => (
-                          <input
-                            className={styles.input}
-                            placeholder="Ej: Contratar freelancers como respaldo"
-                            {...field}
-                          />
-                        )}
-                      />
-                      {form.formState.errors.advanced?.mitigation && (
-                        <span className={styles.error}>{form.formState.errors.advanced.mitigation.message}</span>
-                      )}
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Interesados</label>
-                      <Controller
-                        name="advanced.stakeholders"
-                        control={form.control}
-                        render={({ field }) => (
-                          <input
-                            className={styles.input}
-                            placeholder="Ej: Cliente, equipo interno"
-                            {...field}
-                          />
-                        )}
-                      />
-                      {form.formState.errors.advanced?.stakeholders && (
-                        <span className={styles.error}>{form.formState.errors.advanced.stakeholders.message}</span>
-                      )}
-                    </div>
-                  </div>
-                </WizardStep>
-                <WizardActions onComplete={() => form.handleSubmit(onSubmit)()} />
-              </Wizard>
-            </form>
-          </div>
+                  </WizardStep>
+                  <WizardActions onComplete={() => form.handleSubmit(onSubmit)()} />
+                </Wizard>
+              </form>
+            </div>
+          </>
         )}
         {isSaving && (
           <div className={styles.loaderOverlay}>

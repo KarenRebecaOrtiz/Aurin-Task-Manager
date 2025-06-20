@@ -3,6 +3,7 @@
 /.pnp
 .pnp.js
 
+# Project-specific config files
 src/config/Aurin Plattform Uploader.json
 src/lib/firebase.ts
 src/lib/firebaseConfig.ts
@@ -33,7 +34,7 @@ next-env.d.ts
 *.tsbuildinfo
 
 # Logs
-npm ¡¡npm-debug.log*
+npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
@@ -54,5 +55,8 @@ functions/.eslintrc.js
 *.cache
 *.log
 *.tmp
-# Sentry Config File
+
+# Sentry Config Files
 .env.sentry-build-plugin
+sentry.properties
+.sentryclirc

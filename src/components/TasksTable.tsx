@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, deleteDoc, addDoc, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp} from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
@@ -42,6 +42,8 @@ interface Task {
   createdAt: string;
   CreatedBy?: string;
 }
+
+type TaskView = 'table' | 'kanban';
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
@@ -99,6 +101,7 @@ interface TasksTableProps {
   onMessageSidebarOpen: (user: User) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
+  onViewChange: (view: TaskView) => void;
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(
@@ -113,6 +116,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     onMessageSidebarOpen,
     setTasks,
     onOpenProfile,
+    onViewChange,
   }) => {
     const { user } = useUser();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
@@ -753,7 +757,39 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               aria-label="Buscar tareas"
             />
           </div>
+  
           <div className={styles.filtersWrapper}>
+          <button
+              className={styles.viewButton}
+              onClick={(e) => {
+                animateClick(e.currentTarget);
+                onViewChange('kanban');
+                console.log('[TasksTable] Switching to Kanban view');
+              }}
+            >
+                            <Image
+                src="/kanban.svg"
+                alt="kanban"
+                width={20}
+                height={20}
+                style={{
+                  marginLeft: '5px',
+                  transition: 'transform 0.3s ease, filter 0.3s ease',
+                  filter:
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.filter =
+                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.34)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.filter =
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                }}
+              />
+            </button>
             <div className={styles.filter}>
               <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
                 <div
@@ -818,7 +854,29 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 console.log('[TasksTable] AI sidebar opened');
               }}
             >
-              <Image src="/gemini.svg" alt="AI" width={20} height={20} /> Pregunta a Gemini
+              <Image
+                src="/gemini.svg"
+                alt="AI"
+                width={20}
+                height={20}
+                style={{
+                  marginLeft: '5px',
+                  transition: 'transform 0.3s ease, filter 0.3s ease',
+                  filter:
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.2)';
+                  e.currentTarget.style.filter =
+                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.filter =
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                }}
+              />
+              Pregunta a Gemini
             </button>
             <button
               className={styles.createButton}
@@ -831,6 +889,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
               Crear Tarea
             </button>
+
           </div>
         </div>
         <Table

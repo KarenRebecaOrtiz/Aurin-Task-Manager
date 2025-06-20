@@ -1,7 +1,8 @@
 'use client';
 
 import { useUser } from '@clerk/nextjs';
-import ThemeToggler from './ThemeToggler';
+import ThemeToggler from '@/components/ui/ThemeToggler';
+import AdviceInput from '@/components/ui/AdviceInput';
 import styles from './Header.module.scss';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -94,6 +95,7 @@ interface HeaderProps {
   onDeleteNotification: (notificationId: string) => void;
   onLimitNotifications: (notifications: Notification[]) => void;
   onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
+  isAdmin: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -104,6 +106,7 @@ const Header: React.FC<HeaderProps> = ({
   onDeleteNotification,
   onLimitNotifications,
   onChangeContainer,
+  isAdmin,
 }) => {
   const { user, isLoaded } = useUser();
   const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
@@ -643,6 +646,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <div className={styles.text}>
             <div className={styles.subtitle}>{getSubtitle()}</div>
+            <AdviceInput isAdmin={isAdmin} />
           </div>
         </div>
       </div>
