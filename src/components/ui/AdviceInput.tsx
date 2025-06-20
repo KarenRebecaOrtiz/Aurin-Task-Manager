@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, setDoc, deleteDoc, collection, Timestamp } from 'firebase/firestore'; // Updated import
+import { doc, setDoc, deleteDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './AdviceInput.module.scss';
 import Image from 'next/image';
+import { createPortal } from 'react-dom';
+import gsap from 'gsap';
 
 interface AdviceInputProps {
   isAdmin: boolean;
@@ -18,6 +20,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
   const [activeAdviceId, setActiveAdviceId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const portalRootRef = useRef<HTMLElement | null>(null);
 
   // Time intervals for announcements
   const intervals = [
@@ -28,6 +31,45 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
     { label: '2 semanas', ms: 14 * 24 * 60 * 60 * 1000 },
     { label: '1 mes', ms: 30 * 24 * 60 * 60 * 1000 },
   ];
+
+  // Initialize portal root
+  useEffect(() => {
+    portalRootRef.current = document.body;
+  }, []);
+
+  // Position dropdown and animate with GSAP
+  useEffect(() => {
+    if (isDropdownOpen && dropdownRef.current && buttonRef.current) {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const dropdown = dropdownRef.current;
+
+      // Position dropdown above the button
+      dropdown.style.position = 'fixed';
+      dropdown.style.top = `${buttonRect.top - dropdown.offsetHeight - 5}px`;
+      dropdown.style.left = `${buttonRect.left + (buttonRect.width - dropdown.offsetWidth) / 2}px`;
+
+      // GSAP animation for opening
+      gsap.fromTo(
+        dropdown,
+        { scale: 0.8, opacity: 0, y: 10 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
+      );
+    } else if (!isDropdownOpen && dropdownRef.current) {
+      // GSAP animation for closing
+      gsap.to(dropdownRef.current, {
+        scale: 0.8,
+        opacity: 0,
+        y: 10,
+        duration: 0.2,
+        ease: 'power2.in',
+        onComplete: () => {
+          if (dropdownRef.current) {
+            dropdownRef.current.style.display = 'none';
+          }
+        },
+      });
+    }
+  }, [isDropdownOpen]);
 
   // Handle clicks outside to close dropdown
   useEffect(() => {
@@ -49,11 +91,11 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
   const handlePostAdvice = async (intervalMs: number) => {
     if (!user?.id || !user?.firstName || !inputText.trim()) return;
 
-    const adviceId = activeAdviceId || doc(collection(db, 'advices')).id; // Changed to 'advices'
+    const adviceId = activeAdviceId || doc(collection(db, 'advices')).id;
     const expiry = Timestamp.fromMillis(Date.now() + intervalMs);
 
     try {
-      await setDoc(doc(db, 'advices', adviceId), { // Changed to 'advices'
+      await setDoc(doc(db, 'advices', adviceId), {
         message: inputText.trim(),
         creatorId: user.id,
         creatorFirstName: user.firstName,
@@ -73,7 +115,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
     if (!activeAdviceId) return;
 
     try {
-      await deleteDoc(doc(db, 'advices', activeAdviceId)); // Changed to 'advices'
+      await deleteDoc(doc(db, 'advices', activeAdviceId));
       setInputText('');
       setActiveAdviceId(null);
     } catch (error) {
@@ -84,16 +126,26 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
 
   if (!isAdmin) return null;
 
+  const DropdownPortal = () =>
+    portalRootRef.current && isDropdownOpen
+      ? createPortal(
+          <div ref={dropdownRef} className={styles.dropdown}>
+            {intervals.map((interval) => (
+              <button
+                key={interval.label}
+                className={styles.dropdownItem}
+                onClick={() => handlePostAdvice(interval.ms)}
+              >
+                {interval.label}
+              </button>
+            ))}
+          </div>,
+          portalRootRef.current
+        )
+      : null;
+
   return (
     <div className={styles.inputWrapper}>
-      <svg className={styles.icon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <g data-name="Layer 2">
-          <g data-name="inbox">
-            <rect width="24" height="24" transform="rotate(180 12 12)" opacity="0" />
-            <path d="M20.79 11.34l-3.34-6.68A3 3 0 0 0 14.76 3H9.24a3 3 0 0 0-2.69 1.66l-3.34 6.68a2 2 0 0 0-.21.9V18a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5.76a2 2 0 0 0-.21-.9zM8.34 5.55a1 1 0 0 1 .9-.55h5.52a1 1 0 0 1 .9.55L18.38 11H16a1 1 0 0 0-1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-2a1 1 0 0 0-1-1H5.62z" />
-          </g>
-        </g>
-      </svg>
       <input
         type="text"
         name="text"
@@ -105,7 +157,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
       />
       <button
         ref={buttonRef}
-        className={styles.SubscribeBtn}
+        className={styles.subscribeBtn}
         onClick={() => {
           if (activeAdviceId) {
             handleDeleteAdvice();
@@ -120,19 +172,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
           <Image src="/plus-icon.svg" alt="Agregar" width={20} height={20} />
         )}
       </button>
-      {isDropdownOpen && (
-        <div ref={dropdownRef} className={styles.dropdown}>
-          {intervals.map((interval) => (
-            <button
-              key={interval.label}
-              className={styles.dropdownItem}
-              onClick={() => handlePostAdvice(interval.ms)}
-            >
-              {interval.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <DropdownPortal />
     </div>
   );
 };

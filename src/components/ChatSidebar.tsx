@@ -28,6 +28,8 @@ import { deleteTask } from '@/lib/taskUtils';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
 import { InputChat } from './ui/InputChat';
 import styles from './ChatSidebar.module.scss';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import Loader from '@/components/Loader'; // Import Loader for loading state
 
 interface Message {
   id: string;
@@ -342,7 +344,6 @@ const getCachedMessages = (taskId: string) => {
     const cached = localStorage.getItem(`failedMessages_${taskId}`);
     if (!cached) return [];
     const parsed = JSON.parse(cached) as Message[];
-    // Filtrar mensajes con timestamp válido
     return parsed.filter(
       (msg) =>
         msg.timestamp &&
@@ -385,6 +386,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const { user } = useUser();
   const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -405,8 +407,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isHoursDropdownOpen, setIsHoursDropdownOpen] = useState(false);
   const [isResponsibleDropdownOpen, setIsResponsibleDropdownOpen] = useState(false);
   const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -429,6 +429,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
+  // Removed local isAdmin fetch useEffect
+
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerRunning) {
@@ -442,29 +444,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   }, [isTimerRunning]);
 
   useEffect(() => {
-    const fetchAdminStatus = async () => {
-      if (!user?.id) {
-        setIsAdmin(false);
-        return;
-      }
-      try {
-        const userDoc = await getDoc(doc(db, 'users', user.id));
-        if (userDoc.exists()) {
-          setIsAdmin(userDoc.data().access === 'admin');
-        } else {
-          setIsAdmin(false);
-        }
-      } catch (error) {
-        console.error('Error fetching admin status', error);
-        setIsAdmin(false);
-      }
-    };
-    fetchAdminStatus();
-  }, [user?.id]);
-
-  useEffect(() => {
     if (!task.id) {
-      setIsLoading(false);
       return;
     }
     const unsubscribe = onSnapshot(
@@ -623,7 +603,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   useEffect(() => {
     if (!task.id) {
-      setIsLoading(false);
       return;
     }
     const cachedMessages = getCachedMessages(task.id);
@@ -661,7 +640,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         const newMessages: Message[] = snapshot.docs
           .map((doc) => {
             const data = doc.data();
-            // Filtrar mensajes con timestamp válido
             if (!data.timestamp) {
               console.warn(`Mensaje con ID ${doc.id} tiene timestamp inválido: ${data.timestamp}`);
               return null;
@@ -684,7 +662,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               hasError: false,
             };
           })
-          .filter((msg) => msg !== null); // Eliminado tipo predicado explícito
+          .filter((msg) => msg !== null);
         setMessages((prev) => {
           const messageMap = new Map<string, Message>();
           prev.forEach((msg) => messageMap.set(msg.id, msg));
@@ -708,11 +686,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           });
           return updatedMessages;
         });
-        setIsLoading(false);
       },
       (error) => {
         console.error('Error fetching messages', error);
-        setIsLoading(false);
       },
     );
     return () => unsubscribe();
@@ -1339,6 +1315,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       };
     });
   }, [task.AssignedTo, task.LeadedBy, users]);
+
+  // Handle loading state
+  if (isLoading) {
+    return <Loader />;
+  }
 
   return (
     <div

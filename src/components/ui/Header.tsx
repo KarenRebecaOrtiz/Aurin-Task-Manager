@@ -10,6 +10,7 @@ import { gsap } from 'gsap';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import AvatarDropdown from '../AvatarDropdown';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Coordenadas de la oficina y radio
 const OFFICE_LOCATION = {
@@ -95,7 +96,6 @@ interface HeaderProps {
   onDeleteNotification: (notificationId: string) => void;
   onLimitNotifications: (notifications: Notification[]) => void;
   onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
-  isAdmin: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -106,9 +106,9 @@ const Header: React.FC<HeaderProps> = ({
   onDeleteNotification,
   onLimitNotifications,
   onChangeContainer,
-  isAdmin,
 }) => {
   const { user, isLoaded } = useUser();
+  const { isAdmin } = useAuth();
   const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
 
   /* ────────────────────────────────────────────
@@ -209,24 +209,58 @@ const Header: React.FC<HeaderProps> = ({
     if (!el || !isLoaded) return;
     const text = `Te damos la bienvenida de nuevo, ${userName}`;
     el.innerHTML = '';
-    let charIndex = 0;
+    const textWrapper = document.createElement('span');
+    textWrapper.className = styles.typewriterWrapper;
+    el.appendChild(textWrapper);
     text.split(' ').forEach((word, idx, arr) => {
       const span = document.createElement('span');
       span.className = styles.typewriterChar;
       span.style.opacity = '0';
       span.textContent = word;
-      el.appendChild(span);
-      if (idx < arr.length - 1) el.appendChild(document.createTextNode(' '));
+      textWrapper.appendChild(span);
+      if (idx < arr.length - 1) textWrapper.appendChild(document.createTextNode(' '));
       gsap.to(span, {
         opacity: 1,
         duration: 0.2,
-        delay: charIndex * 0.1,
+        delay: idx * 0.1,
         ease: 'power1.in',
       });
-      charIndex += word.length + 1;
     });
+
+    if (isAdmin) {
+      const buttonWrapper = document.createElement('span');
+      buttonWrapper.className = styles.adminButtonWrapper;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = styles.adminButton;
+      button.innerHTML = `
+        <span class="${styles.fold}"></span>
+        <div class="${styles.pointsWrapper}">
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+          <i class="${styles.point}"></i>
+        </div>
+        <span class="${styles.inner}">
+          <img
+            src="/verified.svg"
+            alt="Verified Icon"
+            class="${styles.icon}"
+          />
+        </span>
+      `;
+      buttonWrapper.appendChild(button);
+      el.appendChild(buttonWrapper);
+    }
+
     return () => gsap.killTweensOf(el.querySelectorAll(`.${styles.typewriterChar}`));
-  }, [userName, isLoaded]);
+  }, [userName, isLoaded, isAdmin]);
 
   /* ────────────────────────────────────────────
      EFFECTS – SUN/MOON ICON ENTRANCE
@@ -294,19 +328,15 @@ const Header: React.FC<HeaderProps> = ({
   ──────────────────────────────────────────── */
   useEffect(() => {
     if (isNotificationsOpen) {
-      // Guardar la posición actual del scroll
       scrollPositionRef.current = window.scrollY;
-      // Bloquear el scroll del body
       document.body.classList.add('no-scroll');
       document.body.style.top = `-${scrollPositionRef.current}px`;
     } else {
-      // Restaurar el scroll del body
       document.body.classList.remove('no-scroll');
       document.body.style.top = '';
       window.scrollTo(0, scrollPositionRef.current);
     }
 
-    // Limpieza al desmontar el componente
     return () => {
       document.body.classList.remove('no-scroll');
       document.body.style.top = '';
@@ -317,12 +347,10 @@ const Header: React.FC<HeaderProps> = ({
      EFFECTS – CLOCK AND LOCATION LOGIC
   ──────────────────────────────────────────── */
   useEffect(() => {
-    // Initialize time on client to avoid SSR mismatch
     setTime(new Date());
     const timer = setInterval(() => {
       const now = new Date();
       setTime(now);
-      // Actualizar officeStatus según el horario
       if (!isOfficeHours(now)) {
         setOfficeStatus('Fuera de horario');
       }
@@ -345,7 +373,6 @@ const Header: React.FC<HeaderProps> = ({
       }
     };
 
-    // Memoize these functions to prevent unnecessary re-renders
     const fetchWeather = async (lat: number, lon: number) => {
       try {
         const weatherResponse = await fetch(
@@ -459,7 +486,7 @@ const Header: React.FC<HeaderProps> = ({
     return () => {
       clearInterval(timer);
     };
-  }, []); // Empty dependency array since we only want this to run once on mount
+  }, []);
 
   /* ────────────────────────────────────────────
      EFFECTS – SCROLL POSITION TRACKING
@@ -714,7 +741,7 @@ const Header: React.FC<HeaderProps> = ({
                   ? '#28a745'
                   : officeStatus === 'Fuera de la oficina'
                   ? '#dc3545'
-                  : '#ff6f00', // Naranja para "Fuera de horario"
+                  : '#ff6f00',
             }}
             className="ClockOfficeStatus"
           >

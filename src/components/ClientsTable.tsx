@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './ClientsTable.module.scss';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface Client {
   id: string;
@@ -32,56 +33,16 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
   ({ clients, onCreateOpen, onEditOpen, onDeleteOpen, setClients }) => {
     console.log('ClientsTable rendered');
     const { user } = useUser();
+    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
     const [filteredClients, setFilteredClients] = useState<Client[]>([]);
     const [sortKey, setSortKey] = useState<string>('name');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [searchQuery, setSearchQuery] = useState('');
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
-    const [isAdmin, setIsAdmin] = useState<boolean>(false);
-    const [isAdminLoaded, setIsAdminLoaded] = useState<boolean>(false);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
     const userId = useMemo(() => user?.id || '', [user]);
-
-    // Fetch admin status
-    useEffect(() => {
-      const fetchAdminStatus = async () => {
-        if (!userId) {
-          console.warn('[ClientsTable] No userId, skipping admin status fetch');
-          setIsAdmin(false);
-          setIsAdminLoaded(true);
-          return;
-        }
-        try {
-          console.log('[ClientsTable] Fetching admin status for user:', userId);
-          const userDoc = await getDoc(doc(db, 'users', userId));
-          if (userDoc.exists()) {
-            const access = userDoc.data().access;
-            setIsAdmin(access === 'admin');
-            console.log('[ClientsTable] Admin status fetched:', {
-              userId,
-              access,
-              isAdmin: access === 'admin',
-              userDocData: userDoc.data(),
-            });
-          } else {
-            setIsAdmin(false);
-            console.warn('[ClientsTable] User document not found for ID:', userId);
-          }
-        } catch (error) {
-          console.error('[ClientsTable] Error fetching admin status:', {
-            error: error instanceof Error ? error.message : JSON.stringify(error),
-            userId,
-          });
-          setIsAdmin(false);
-        } finally {
-          setIsAdminLoaded(true);
-          console.log('[ClientsTable] Admin status load completed:', { userId, isAdmin });
-        }
-      };
-      fetchAdminStatus();
-    }, [userId, isAdmin]);
 
     const fetchClients = useCallback(async () => {
       try {
@@ -232,7 +193,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
             return {
               ...col,
               render: (client: Client) => {
-                if (!isAdmin || !isAdminLoaded) return null; // Ocultar acciones para no administradores
+                if (!isAdmin || isLoading) return null; // Use isAdmin and isLoading from useAuth
                 console.log('Rendering ActionMenu for client:', {
                   clientId: client.id,
                   name: client.name,
@@ -272,7 +233,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                       if (el) actionButtonRefs.current.set(client.id, el);
                       else actionButtonRefs.current.delete(client.id);
                     }}
-                    isAdmin={isAdmin} // Añadir prop isAdmin
+                    // Removed isAdmin prop
                   />
                 );
               },
@@ -280,8 +241,13 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           }
           return col;
         }),
-      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, userId, isAdmin, isAdminLoaded, animateClick],
+      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, userId, isAdmin, isLoading, animateClick],
     );
+
+    // Handle loading state
+    if (isLoading) {
+      return <div>Loading...</div>; // You can replace this with your Loader component
+    }
 
     return (
       <div className={styles.container}>
@@ -298,7 +264,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                   aria-label="Buscar cuentas"
                 />
               </div>
-              {isAdmin && isAdminLoaded && (
+              {isAdmin && !isLoading && (
                 <div className={styles.createButtonWrapper}>
                   <button
                     onClick={onCreateOpen}
@@ -332,7 +298,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                   className={styles.searchInput}
                 />
               </div>
-              {isAdmin && isAdminLoaded && (
+              {isAdmin && !isLoading && (
                 <div className={styles.createButtonWrapper}>
                   <button
                     onClick={onCreateOpen}

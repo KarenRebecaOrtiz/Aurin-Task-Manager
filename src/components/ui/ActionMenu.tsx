@@ -5,6 +5,7 @@ import { memo } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import styles from './ActionMenu.module.scss';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Task {
   id: string;
@@ -32,11 +33,11 @@ interface ActionMenuProps {
   animateClick: (element: HTMLElement) => void;
   actionMenuRef: React.RefObject<HTMLDivElement>;
   actionButtonRef: (el: HTMLButtonElement | null) => void;
-  isAdmin: boolean;
 }
 
 const ActionMenu: React.FC<ActionMenuProps> = memo(
-  ({ task, userId, isOpen, onOpen, onEdit, onDelete, animateClick, actionMenuRef, actionButtonRef, isAdmin }) => {
+  ({ task, userId, isOpen, onOpen, onEdit, onDelete, animateClick, actionMenuRef, actionButtonRef }) => {
+    const { isAdmin } = useAuth();
     const isCreator = userId && task.CreatedBy === userId;
     const canEditOrDelete = isAdmin || isCreator;
     const tooltipText = 'Solo el creador o un administrador pueden editar este elemento';

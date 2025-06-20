@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { doc, collection, setDoc, addDoc, onSnapshot, getDoc } from "firebase/firestore";
+import { doc, collection, setDoc, addDoc, onSnapshot } from "firebase/firestore";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import Splide from "@splidejs/splide";
 import "@splidejs/splide/css/core";
 import { db } from "@/lib/firebase";
+import { useAuth } from '@/contexts/AuthContext'; 
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -157,6 +158,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 }) => {
   const { user } = useUser();
   const router = useRouter();
+  const { isAdmin, isLoading } = useAuth(); // Use AuthContext for isAdmin and isLoading
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -176,8 +178,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdminLoaded, setIsAdminLoaded] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
@@ -207,7 +207,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     mode: "onChange",
   });
 
-  const { isLoading, hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
+  const { isLoading: hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
     form,
     "create-task-wizard",
     true,
@@ -218,43 +218,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    const fetchAdminStatus = async () => {
-      if (!user?.id) {
-        console.warn('[CreateTask] No userId, skipping admin status fetch');
-        setIsAdmin(false);
-        setIsAdminLoaded(true);
-        return;
-      }
-      try {
-        console.log('[CreateTask] Fetching admin status for user:', user.id);
-        const userDoc = await getDoc(doc(db, 'users', user.id));
-        if (userDoc.exists()) {
-          const access = userDoc.data().access;
-          setIsAdmin(access === 'admin');
-          console.log('[CreateTask] Admin status fetched:', {
-            userId: user.id,
-            access,
-            isAdmin: access === 'admin',
-            userDocData: userDoc.data(),
-          });
-        } else {
-          setIsAdmin(false);
-          console.warn('[CreateTask] User document not found for ID:', user.id);
-        }
-      } catch (error) {
-        console.error('[CreateTask] Error fetching admin status:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          userId: user.id,
-        });
-        setIsAdmin(false);
-      } finally {
-        setIsAdminLoaded(true);
-        console.log('[CreateTask] Admin status load completed:', { userId: user.id, isAdmin });
-      }
-    };
-    fetchAdminStatus();
-  }, [user?.id]);
+  // Removed local isAdmin fetch useEffect
 
   useEffect(() => {
     const subscription = form.watch((value) => {
@@ -621,7 +585,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       clientSplideInstance.current.on("dragged", () => {
         console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe ended, position: ${clientSplideInstance.current?.index}`);
       });
-
     }, 0);
 
     return () => {
@@ -674,13 +637,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       pmSplideInstance.current.on("moved", updateNavButtons);
       updateNavButtons();
 
-      clientSplideInstance.current.on("drag", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe started`);
-        gsap.killTweensOf(clientSplideRef.current?.querySelectorAll(".splide__slide"));
+      pmSplideInstance.current.on("drag", () => {
+        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe started`);
+        gsap.killTweensOf(pmSplideRef.current?.querySelectorAll(".splide__slide"));
       });
 
-      clientSplideInstance.current.on("dragged", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe ended, position: ${clientSplideInstance.current?.index}`);
+      pmSplideInstance.current.on("dragged", () => {
+        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe ended, position: ${pmSplideInstance.current?.index}`);
       });
     }, 0);
 
@@ -920,7 +883,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     return result;
   };
 
-  if (isLoading || !isAdminLoaded || !isMounted) {
+  if (isLoading || !isMounted) {
     return (
       <div className={`${styles.container} ${styles.open}`}>
         <div className={styles.loaderOverlay}>

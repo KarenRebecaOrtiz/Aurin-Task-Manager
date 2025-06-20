@@ -2,15 +2,16 @@
 
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, deleteDoc, addDoc, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
+import { collection, deleteDoc, addDoc, query, doc, getDocs, where, Timestamp } from 'firebase/firestore'; // Verified import
 import Image from 'next/image';
 import { gsap } from 'gsap';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase'; 
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksKanbanMobile.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
+import { useAuth } from '@/contexts/AuthContext'; 
+import Loader from '@/components/Loader'; 
 
 interface Client {
   id: string;
@@ -117,6 +118,7 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
     onViewChange,
   }) => {
     const { user } = useUser();
+    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
     const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
@@ -127,7 +129,6 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
     const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
     const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState('');
-    const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [currentColumnIndex, setCurrentColumnIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const columnsContainerRef = useRef<HTMLDivElement>(null);
@@ -157,6 +158,8 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
       console.log('[TasksKanbanMobile] User ID:', { userId: id });
       return id;
     }, [user]);
+
+    // Removed local isAdmin fetch useEffect
 
     // GSAP Animation for appearance and disappearance
     useEffect(() => {
@@ -239,39 +242,6 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
     }, [currentColumnIndex, statusColumns]);
 
     useEffect(() => {
-      const fetchAdminStatus = async () => {
-        if (!userId) {
-          console.warn('[TasksKanbanMobile] No userId, skipping admin status fetch');
-          setIsAdmin(false);
-          return;
-        }
-        try {
-          console.log('[TasksKanbanMobile] Fetching admin status for user:', userId);
-          const userDoc = await getDoc(doc(db, 'users', userId));
-          if (userDoc.exists()) {
-            const access = userDoc.data().access;
-            setIsAdmin(access === 'admin');
-            console.log('[TasksKanbanMobile] Admin status fetched:', {
-              userId,
-              access,
-              isAdmin: access === 'admin',
-            });
-          } else {
-            setIsAdmin(false);
-            console.warn('[TasksKanbanMobile] User document not found for ID:', userId);
-          }
-        } catch (error) {
-          console.error('[TasksKanbanMobile] Error fetching admin status:', {
-            error: error instanceof Error ? error.message : JSON.stringify(error),
-            userId,
-          });
-          setIsAdmin(false);
-        }
-      };
-      fetchAdminStatus();
-    }, [userId]);
-
-    useEffect(() => {
       setFilteredTasks(tasks);
       console.log('[TasksKanbanMobile] Initialized filteredTasks:', {
         totalTasks: tasks.length,
@@ -281,7 +251,10 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
     }, [tasks, userId]);
 
     const memoizedFilteredTasks = useMemo(() => {
-      return tasks.filter((task) => {
+      const visibleTasks = isAdmin
+        ? tasks // Admins see all tasks
+        : tasks.filter((task) => task.AssignedTo.includes(userId) || task.CreatedBy === userId); // Non-admins see only assigned or created tasks
+      return visibleTasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
@@ -299,7 +272,7 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
         });
         return passesFilters;
       });
-    }, [tasks, searchQuery, priorityFilter, clientFilter, userId]);
+    }, [tasks, searchQuery, priorityFilter, clientFilter, userId, isAdmin]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
@@ -507,6 +480,11 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
       return groups;
     }, [filteredTasks, userId, statusColumns]);
 
+    // Handle loading state
+    if (isLoading) {
+      return <Loader />;
+    }
+
     return (
       <div className={styles.containerMobile} ref={containerRef}>
         <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
@@ -697,7 +675,6 @@ const TasksKanbanMobile: React.FC<TasksKanbanMobileProps> = memo(
                               actionButtonRefs.current.delete(task.id);
                             }
                           }}
-                          isAdmin={isAdmin}
                         />
                       )}
                     </div>

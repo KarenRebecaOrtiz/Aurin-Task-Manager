@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
@@ -377,7 +377,7 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
             className={`${styles.input} min-h-[36px] max-h-[200px] resize-none`}
           />
         </div>
-        <div className={styles.actions}style={{ display: "flex", justifyContent: "flex-end", gap:'15px'}}>
+        <div className={styles.actions} style={{ display: "flex", justifyContent: "flex-end", gap: '15px' }}>
           <button
             type="button"
             className={styles.imageButton}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, deleteDoc, addDoc, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
-import { Timestamp} from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
@@ -13,6 +13,8 @@ import styles from './TasksTable.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
 import { getAuth } from 'firebase/auth';
 import UserSwiper from '@/components/UserSwiper';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import Loader from '@/components/Loader'; // Import Loader for loading state
 
 interface Client {
   id: string;
@@ -119,6 +121,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     onViewChange,
   }) => {
     const { user } = useUser();
+    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
     const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
     const [sortKey, setSortKey] = useState<string>('createdAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -131,7 +134,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
     const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState('');
-    const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
@@ -144,41 +146,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return id;
     }, [user]);
 
-    useEffect(() => {
-      const fetchAdminStatus = async () => {
-        if (!userId) {
-          console.warn('[TasksTable] No userId, skipping admin status fetch');
-          setIsAdmin(false);
-          return;
-        }
-        try {
-          console.log('[TasksTable] Fetching admin status for user:', userId);
-          const userDoc = await getDoc(doc(db, 'users', userId));
-          if (userDoc.exists()) {
-            const access = userDoc.data().access;
-            setIsAdmin(access === 'admin');
-            console.log('[TasksTable] Admin status fetched:', {
-              userId,
-              access,
-              isAdmin: access === 'admin',
-              userDocData: userDoc.data(),
-            });
-          } else {
-            setIsAdmin(false);
-            console.warn('[TasksTable] User document not found for ID:', userId);
-          }
-        } catch (error) {
-          console.error('[TasksTable] Error fetching admin status:', {
-            error: error instanceof Error ? error.message : JSON.stringify(error),
-            userId,
-          });
-          setIsAdmin(false);
-        } finally {
-          console.log('[TasksTable] Admin status load completed:', { userId, isAdmin });
-        }
-      };
-      fetchAdminStatus();
-    }, [userId, isAdmin]);
+    // Removed local isAdmin fetch useEffect
 
     useEffect(() => {
       setFilteredTasks(tasks);
@@ -729,7 +697,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                       console.log('[TasksTable] Action button ref removed for task:', task.id);
                     }
                   }}
-                  isAdmin={isAdmin}
+                  // Removed isAdmin prop
                 />
               );
             }
@@ -739,6 +707,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       }
       return col;
     });
+
+    // Handle loading state
+    if (isLoading) {
+      return <Loader />;
+    }
 
     return (
       <div className={styles.container}>
@@ -757,9 +730,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               aria-label="Buscar tareas"
             />
           </div>
-  
+
           <div className={styles.filtersWrapper}>
-          <button
+            <button
               className={styles.viewButton}
               onClick={(e) => {
                 animateClick(e.currentTarget);
@@ -767,7 +740,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 console.log('[TasksTable] Switching to Kanban view');
               }}
             >
-                            <Image
+              <Image
                 src="/kanban.svg"
                 alt="kanban"
                 width={20}
@@ -889,7 +862,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
               Crear Tarea
             </button>
-
           </div>
         </div>
         <Table

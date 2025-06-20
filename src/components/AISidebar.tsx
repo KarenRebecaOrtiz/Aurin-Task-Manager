@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
@@ -11,16 +11,17 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
-  doc,
   setDoc,
-  getDoc,
   getDocs,
+  doc,
 } from "firebase/firestore";
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold, Part } from "@firebase/ai";
 import { db, ai, appCheck } from "@/lib/firebase";
 import { gsap } from "gsap";
 import styles from "./AISidebar.module.scss";
 import InputAI from "./ui/InputAI";
+import Loader from '@/components/Loader';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Extender la interfaz User de Clerk para incluir id
 declare module "@clerk/nextjs" {
@@ -101,42 +102,19 @@ let tempIdCounter = 0; // Contador para evitar colisiones en tempIds
 
 const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useUser();
+  const { isAdmin, isLoading } = useAuth();
   const [messages, setMessages] = useState<AIMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
 
-  // Montaje inicial para evitar problemas de hidratación
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Verificar si el usuario es admin
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user?.id && isMounted) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.id));
-          if (userDoc.exists()) {
-            setIsAdmin(userDoc.data().access === "admin");
-          } else {
-            setIsAdmin(false);
-          }
-        } catch (error) {
-          console.error("[AISidebar] Error fetching admin status:", error, "[Error Code: ADMIN-001]");
-          setIsAdmin(false);
-        }
-      }
-    };
-    checkAdminStatus();
-  }, [user?.id, isMounted]);
-
-  // GSAP animation for open/close
   useEffect(() => {
     const currentSidebar = sidebarRef.current;
     if (!currentSidebar) return;
@@ -162,7 +140,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
 
-  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node) && isOpen) {
@@ -179,7 +156,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
 
-  // Scroll to bottom when new messages are added
   useEffect(() => {
     if (!chatRef.current || !messages.length) return;
     const chat = chatRef.current;
@@ -191,10 +167,8 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     }
   }, [messages]);
 
-  // Scroll to bottom when sidebar opens
   useEffect(() => {
     if (isOpen && chatRef.current && messages.length > 0) {
-      // Small delay to ensure the sidebar animation has started
       setTimeout(() => {
         if (chatRef.current) {
           chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
@@ -203,25 +177,19 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen, messages.length]);
 
-  // Enhanced scroll to bottom for new messages with better detection
   useEffect(() => {
     if (!chatRef.current || !messages.length) return;
     
     const chat = chatRef.current;
-    const scrollThreshold = 100; // pixels from bottom to consider "at bottom"
+    const scrollThreshold = 100;
     const isNearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < scrollThreshold;
     const lastMessage = messages[messages.length - 1];
     
-    // Always scroll to bottom for:
-    // 1. User's own messages
-    // 2. When user is already near the bottom
-    // 3. First message in conversation
     if (
       lastMessage.sender === "user" || 
       isNearBottom || 
       messages.length === 1
     ) {
-      // Use requestAnimationFrame to ensure DOM has updated
       requestAnimationFrame(() => {
         if (chatRef.current) {
           chatRef.current.scrollTo({ 
@@ -233,10 +201,8 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     }
   }, [messages]);
 
-  // Fetch messages from Firestore
   useEffect(() => {
     if (!isOpen || !user?.id || !isAdmin) {
-      setIsLoading(false);
       setError(!isAdmin ? "Solo administradores pueden usar este chat." : "Usuario no autenticado.");
       return;
     }
@@ -274,19 +240,16 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           return Array.from(messageMap.values());
         });
         setError(null);
-        setIsLoading(false);
       },
       (error) => {
         console.error("[AISidebar] Firestore messages listener error:", error, "[Error Code: FS-001]");
         setError("No se pudo cargar la conversación. [Error Code: FS-001]");
-        setIsLoading(false);
       },
     );
 
     return () => unsubscribe();
   }, [isOpen, user?.id, isAdmin]);
 
-  // Fetch clients from Firestore
   const getClients = useCallback(
     async (options: { forGemini?: boolean } = {}) => {
       try {
@@ -314,7 +277,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     [isAdmin],
   );
 
-  // Fetch tasks from Firestore
   const getTasks = useCallback(
     async (userId: string, options: { forGemini?: boolean } = {}) => {
       try {
@@ -376,7 +338,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     [isAdmin],
   );
 
-  // Create task from Gemini response
   const createTaskFromGemini = useCallback(
     async (taskData: TaskData, user: User) => {
       if (!isAdmin) return;
@@ -401,7 +362,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     [isAdmin],
   );
 
-  // Handle sending messages
   const handleSendMessage = useCallback(
     async (messageData: Partial<AIMessage>, file?: File) => {
       if (!user?.id || isSending || !isAdmin) return;
@@ -529,9 +489,9 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
           textResponse = result.response.text();
           console.log("[AISidebar] Received response from Gemini API:", textResponse, "[Debug Code: RESP-001]");
-        } catch (apiError) {
-          console.error("[AISidebar] Gemini API error:", apiError, "[Error Code: API-002]");
-          throw new Error(`Error al llamar a la API de Gemini: ${(apiError as Error).message || "Desconocido"} [Error Code: API-002]`);
+        } catch (error) {
+          console.error("[AISidebar] Gemini API error:", error, "[Error Code: API-002]");
+          throw new Error(`Error al llamar a la API de Gemini: ${error instanceof Error ? error.message : "Desconocido"} [Error Code: API-002]`);
         }
 
         try {
@@ -574,7 +534,6 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     [user, isSending, isAdmin, getClients, getTasks, createTaskFromGemini],
   );
 
-  // Helper function to convert file to base64
   const fileToGenerativePart = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -591,9 +550,12 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     });
   };
 
-  // Renderizado condicional
   if (!isMounted) {
     return null;
+  }
+
+  if (isLoading) {
+    return <Loader />;
   }
 
   if (!user) {
@@ -655,11 +617,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
       <div className={styles.chat} ref={chatRef}>
         {error && <div className={styles.error}>{error}</div>}
-        {isLoading && (
-          <div className={styles.loader}>
-            <div className={styles.spinner} />
-          </div>
-        )}
+        {isLoading && <Loader />}
         {!isLoading && messages.length === 0 && (
           <div className={styles.noMessages}>No hay mensajes. ¡Empieza a chatear!</div>
         )}

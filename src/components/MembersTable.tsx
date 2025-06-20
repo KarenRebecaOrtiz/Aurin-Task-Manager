@@ -3,10 +3,9 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface User {
   id: string;
@@ -14,7 +13,7 @@ interface User {
   fullName: string;
   role: string;
   description?: string;
-  status?: string; // Nueva propiedad para el estado
+  status?: string;
 }
 
 interface Task {
@@ -44,53 +43,11 @@ const MembersTable: React.FC<MembersTableProps> = memo(
   ({ users, tasks, onInviteSidebarOpen, onMessageSidebarOpen }) => {
     console.log('MembersTable rendered');
     const { user } = useUser();
+    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [sortKey, setSortKey] = useState<string>('fullName');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [searchQuery, setSearchQuery] = useState('');
-    const [isAdmin, setIsAdmin] = useState<boolean>(false);
-    const [isAdminLoaded, setIsAdminLoaded] = useState<boolean>(false);
-
-    const userId = useMemo(() => user?.id || '', [user]);
-
-    // Fetch admin status
-    useEffect(() => {
-      const fetchAdminStatus = async () => {
-        if (!userId) {
-          console.warn('[MembersTable] No userId, skipping admin status fetch');
-          setIsAdmin(false);
-          setIsAdminLoaded(true);
-          return;
-        }
-        try {
-          console.log('[MembersTable] Fetching admin status for user:', userId);
-          const userDoc = await getDoc(doc(db, 'users', userId));
-          if (userDoc.exists()) {
-            const access = userDoc.data().access;
-            setIsAdmin(access === 'admin');
-            console.log('[MembersTable] Admin status fetched:', {
-              userId,
-              access,
-              isAdmin: access === 'admin',
-              userDocData: userDoc.data(),
-            });
-          } else {
-            setIsAdmin(false);
-            console.warn('[MembersTable] User document not found for ID:', userId);
-          }
-        } catch (error) {
-          console.error('[MembersTable] Error fetching admin status:', {
-            error: error instanceof Error ? error.message : JSON.stringify(error),
-            userId,
-          });
-          setIsAdmin(false);
-        } finally {
-          setIsAdminLoaded(true);
-          console.log('[MembersTable] Admin status load completed:', { userId, isAdmin });
-        }
-      };
-      fetchAdminStatus();
-    }, [userId, isAdmin]);
 
     // Calcular proyectos activos por usuario
     const activeProjectsCount = useMemo(() => {
@@ -211,7 +168,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             return {
               ...col,
               render: (user: User) => (
-                <span className={styles.status}>{user.status || 'Disponible'}</span>
+                <span className={styles.status}>{user.status || 'Sin estado'}</span>
               ),
             };
           }
@@ -219,6 +176,11 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         }),
       [baseColumns, activeProjectsCount],
     );
+
+    // Handle loading state
+    if (isLoading) {
+      return <div>Loading...</div>; // You can replace with your Loader component
+    }
 
     return (
       <div className={styles.container}>
@@ -230,10 +192,10 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={styles.searchInput}
-              aria-label="Buscar miembros"
+              aria-label="Buscar Miembros"
             />
           </div>
-          {isAdmin && isAdminLoaded && (
+          {isAdmin && !isLoading && (
             <div className={styles.inviteButtonWrapper}>
               <button onClick={onInviteSidebarOpen} className={styles.inviteButton}>
                 <Image src="/wallet-cards.svg" alt="Invite" width={17} height={17} />

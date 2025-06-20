@@ -47,6 +47,7 @@ import Dock from '@/components/Dock';
 import ToDoDynamic from '@/components/ToDoDynamic';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'; // Added useAuth import
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -106,10 +107,12 @@ interface Sidebar {
   data?: User | Task | { client?: Client };
 }
 
-export default function TasksPage() {
+// Separate component to handle auth context
+function TasksPageContent() {
   const { user } = useUser();
+  const { isAdmin, isLoading, error } = useAuth(); // Use AuthContext
   const [selectedContainer, setSelectedContainer] = useState<Container>('tareas');
-  const [taskView, setTaskView] = useState<TaskView>('table'); // Changed to table as primary view
+  const [taskView, setTaskView] = useState<TaskView>('table');
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
   const [isAISidebarOpen, setIsAISidebarOpen] = useState<boolean>(false);
@@ -125,7 +128,6 @@ export default function TasksPage() {
   const [isConfirmExitOpen, setIsConfirmExitOpen] = useState<boolean>(false);
   const [pendingContainer, setPendingContainer] = useState<Container | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string>('');
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
   const [showLoader, setShowLoader] = useState<boolean>(true);
@@ -156,39 +158,6 @@ export default function TasksPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [taskView]);
-
-  useEffect(() => {
-    const fetchAdminStatus = async () => {
-      if (!user?.id) {
-        console.warn('[TasksPage] No userId provided, skipping admin status fetch');
-        setIsAdmin(false);
-        return;
-      }
-      try {
-        console.log('[TasksPage] Fetching admin status for user:', user.id);
-        const userDoc = await getDoc(doc(db, 'users', user.id));
-        if (userDoc.exists()) {
-          const access = userDoc.data().access;
-          setIsAdmin(access === 'admin');
-          console.log('[TasksPage] Admin status fetched:', {
-            userId: user.id,
-            access,
-            isAdmin: access === 'admin',
-          });
-        } else {
-          setIsAdmin(false);
-          console.warn('[TasksPage] User document not found for ID:', user.id);
-        }
-      } catch (error) {
-        console.error('[TasksPage] Error fetching admin status:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          userId: user.id,
-        });
-        setIsAdmin(false);
-      }
-    };
-    fetchAdminStatus();
-  }, [user?.id]);
 
   useEffect(() => {
     // Hide loader after 3.5 seconds (duration of all animations)
@@ -258,7 +227,7 @@ export default function TasksPage() {
     }
 
     console.log('[TasksPage] Setting up tasks listener for user:', { userId: user.id, isAdmin });
-    const tasksQuery = query(collection(db, 'tasks')); // Add where clauses if needed for optimization
+    const tasksQuery = query(collection(db, 'tasks'));
     const unsubscribe = onSnapshot(
       tasksQuery,
       (snapshot) => {
@@ -403,7 +372,7 @@ export default function TasksPage() {
         console.log('[TasksPage] Cleanup: Unsubscribed from tasks and notifications listeners');
       };
     }
-  }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id, isAdmin]);
+  }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id]);
 
   useEffect(() => {
     const currentHeaderRef = headerRef.current;
@@ -616,7 +585,6 @@ export default function TasksPage() {
         setIsCreateTaskOpen(false);
         setIsEditTaskOpen(false);
         setEditTaskId(null);
-        // Removed setTaskView('kanban') to preserve current view
         console.log('[TasksPage] Container changed to:', newContainer);
       }
     },
@@ -632,7 +600,6 @@ export default function TasksPage() {
       setIsConfirmExitOpen(false);
       setPendingContainer(null);
       setHasUnsavedChanges(false);
-      // Removed setTaskView('kanban') to preserve current view
       console.log('[TasksPage] Confirmed exit to container:', pendingContainer);
     }
   }, [pendingContainer]);
@@ -669,6 +636,15 @@ export default function TasksPage() {
     setEditTaskId(null);
   }, []);
 
+  // Handle loading and error states
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
   return (
     <div className={styles.container}>
       <Marquee />
@@ -683,7 +659,6 @@ export default function TasksPage() {
           onDeleteNotification={handleDeleteNotification}
           onLimitNotifications={handleLimitNotifications}
           onChangeContainer={handleContainerChange}
-          isAdmin={isAdmin}
         />
       </div>
       <OnboardingStepper onComplete={handleOnboardingComplete} />
@@ -860,7 +835,7 @@ export default function TasksPage() {
         <div className={clientStyles.popupOverlay}>
           <div className={clientStyles.deletePopup} ref={confirmExitPopupRef}>
             <h2>¿Salir sin guardar?</h2>
-            <p>¿Est&apos;s seguro de que quieres salir sin guardar los cambios? Perder&apos;s todo el progreso no guardado.</p>
+            <p>¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado.</p>
             <div className={clientStyles.popupActions}>
               <button
                 onClick={handleConfirmExit}
@@ -970,5 +945,13 @@ export default function TasksPage() {
       <Dock />
       <Footer />
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <AuthProvider>
+      <TasksPageContent />
+    </AuthProvider>
   );
 }

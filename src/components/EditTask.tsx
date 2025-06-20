@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import Splide from "@splidejs/splide";
 import "@splidejs/splide/css/core";
 import { db } from "@/lib/firebase";
+import { useAuth } from '@/contexts/AuthContext'; 
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -159,6 +160,7 @@ const EditTask: React.FC<EditTaskProps> = ({
 }) => {
   const { user } = useUser();
   const router = useRouter();
+  const { isAdmin, isLoading } = useAuth(); // Use AuthContext for isAdmin and isLoading
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -178,8 +180,6 @@ const EditTask: React.FC<EditTaskProps> = ({
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdminLoaded, setIsAdminLoaded] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
@@ -209,7 +209,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     mode: "onChange",
   });
 
-  const { isLoading, hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
+  const { isLoading: hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
     form,
     `edit-task-wizard-${taskId}`,
     true,
@@ -220,43 +220,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     setIsMounted(true);
   }, []);
 
-  // Fetch admin status
-  useEffect(() => {
-    const fetchAdminStatus = async () => {
-      if (!user?.id) {
-        console.warn('[EditTask] No userId, skipping admin status fetch');
-        setIsAdmin(false);
-        setIsAdminLoaded(true);
-        return;
-      }
-      try {
-        console.log('[EditTask] Fetching admin status for user:', user.id);
-        const userDoc = await getDoc(doc(db, 'users', user.id));
-        if (userDoc.exists()) {
-          const access = userDoc.data().access;
-          setIsAdmin(access === 'admin');
-          console.log('[EditTask] Admin status fetched:', {
-            userId: user.id,
-            access,
-            isAdmin: access === 'admin',
-          });
-        } else {
-          setIsAdmin(false);
-          console.warn('[EditTask] User document not found for ID:', user.id);
-        }
-      } catch (error) {
-        console.error('[EditTask] Error fetching admin status:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          userId: user.id,
-        });
-        setIsAdmin(false);
-      } finally {
-        setIsAdminLoaded(true);
-        console.log('[EditTask] Admin status load completed:', { userId: user.id, isAdmin });
-      }
-    };
-    fetchAdminStatus();
-  }, [user?.id]);
+  // Removed local isAdmin fetch useEffect
 
   // Fetch task, clients, and users
   useEffect(() => {
@@ -977,7 +941,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     return result;
   };
 
-  if (isLoading || !isAdminLoaded || !isMounted) {
+  if (isLoading || !isMounted) {
     return (
       <div className={`${styles.container} ${styles.open}`}>
         <div className={styles.loaderOverlay}>

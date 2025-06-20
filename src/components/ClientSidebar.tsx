@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useUser } from '@clerk/nextjs'; // Import useUser
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './ClientSidebar.module.scss';
 import { memo } from 'react';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import Loader from '@/components/Loader'; // Import Loader for loading state
 
 interface ClientSidebarProps {
   isOpen: boolean;
@@ -30,14 +33,16 @@ interface ClientSidebarProps {
   onClose: () => void;
   isClientLoading: boolean;
   onLoadingChange?: (loading: boolean) => void;
-  onAlertChange?: (alert: { type: 'success' | 'fail'; message?: string; error?: string } | null) => void; // Add this line
+  onAlertChange?: (alert: { type: 'success' | 'fail'; message?: string; error?: string } | null) => void;
 }
 
 const ClientSidebar: React.FC<ClientSidebarProps> = memo(
-  ({ isOpen, isEdit, initialForm, onFormSubmit, onClose, isClientLoading, onLoadingChange }) => {
+  ({ isOpen, isEdit, initialForm, onFormSubmit, onClose, isClientLoading, onLoadingChange, onAlertChange }) => {
     const sidebarRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isLoading, setIsLoading] = useState(true); // Local loading state
+    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
+    const { user } = useUser(); // Destructure user from useUser
+    const [localIsLoading, setLocalIsLoading] = useState(true); // Renamed to avoid confusion with useAuth isLoading
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [failMessage, setFailMessage] = useState<{ message: string; error: string } | null>(null);
 
@@ -55,7 +60,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
       const currentSidebar = sidebarRef.current;
       if (currentSidebar) {
         if (isOpen) {
-          setIsLoading(true);
+          setLocalIsLoading(true); // Use localIsLoading setter
           gsap.fromTo(
             currentSidebar,
             { x: '100%', opacity: 0 },
@@ -64,7 +69,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
               opacity: 1,
               duration: 0.3,
               ease: 'power2.out',
-              onComplete: () => !isClientLoading && setIsLoading(false),
+              onComplete: () => !isClientLoading && setLocalIsLoading(false), // Use localIsLoading setter
             },
           );
         } else {
@@ -133,16 +138,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
         reader.readAsDataURL(file);
       }
     }, []);
-    
-    // Update the input in the JSX
-    <input
-      type="file"
-      accept="image/jpeg,image/jpg,image/png,image/gif" // Restrict file types
-      ref={fileInputRef}
-      style={{ display: 'none' }}
-      onChange={handleImageChange}
-      disabled={isClientLoading}
-    />
+
     const handleProjectChange = useCallback((index: number, value: string) => {
       setForm((prev) => {
         const updated = [...prev.projects];
@@ -177,15 +173,19 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
     const handleSubmit = useCallback(
       async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isAdmin) {
+          alert('Solo los administradores pueden guardar clientes.');
+          return;
+        }
         if (!form.name.trim()) {
           alert('Por favor, escribe el nombre del cliente.');
           return;
         }
-    
+
         if (onLoadingChange) {
           onLoadingChange(true);
         }
-    
+
         try {
           let imageUrl = form.imagePreview;
           if (form.imageFile) {
@@ -214,28 +214,28 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                 }
               }
             }
-    
+
             const formData = new FormData();
             formData.append('file', form.imageFile);
-            formData.append('userId', 'currentUserId'); // Replace with useUser().id
+            formData.append('userId', user?.id || 'currentUserId');
             formData.append('type', 'profile');
-    
+
             const response = await fetch('/api/upload', {
               method: 'POST',
               body: formData,
-              headers: { 'x-clerk-user-id': 'currentUserId' }, // Replace with useUser().id
+              headers: { 'x-clerk-user-id': user?.id || 'currentUserId' },
             });
-    
+
             if (!response.ok) {
               const errorData = await response.json();
               throw new Error(errorData.error || 'Failed to upload image');
             }
-    
+
             const { url } = await response.json();
             imageUrl = url;
             console.log('[ClientSidebar] Image uploaded via API:', { url });
           }
-    
+
           await onFormSubmit({
             id: form.id,
             name: form.name,
@@ -243,14 +243,16 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
             imagePreview: imageUrl,
             projects: form.projects.filter((p) => p.trim()),
           });
-    
+
           setSuccessMessage('Cliente guardado exitosamente.');
+          if (onAlertChange) onAlertChange({ type: 'success', message: 'Cliente guardado exitosamente.' });
         } catch (error) {
           console.error('[ClientSidebar] Error saving client:', error);
           setFailMessage({
             message: 'Error al guardar el cliente.',
             error: error.message || 'Unknown error',
           });
+          if (onAlertChange) onAlertChange({ type: 'fail', message: 'Error al guardar el cliente.', error: error.message || 'Unknown error' });
         } finally {
           if (onLoadingChange) {
             onLoadingChange(false);
@@ -258,19 +260,23 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
           setForm((prev) => ({ ...prev, imageFile: null }));
         }
       },
-      [form, onFormSubmit, onLoadingChange],
+      [form, onFormSubmit, onLoadingChange, isAdmin, user?.id, onAlertChange],
     );
+
+    if (isLoading) {
+      return <Loader />;
+    }
 
     if (!isOpen) return null;
 
     return (
       <div ref={sidebarRef} className={`${styles.container} ${styles.open}`}>
-        {(isLoading || isClientLoading) && (
+        {(localIsLoading || isClientLoading) && (
           <div className={styles.loader}>
             <div className={styles.spinner}></div>
           </div>
         )}
-        {!isLoading && !isClientLoading && (
+        {!localIsLoading && !isClientLoading && (
           <div className={styles.content}>
             <div className={styles.header} style={{ alignItems: 'start' }}>
               <button
@@ -318,7 +324,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                   />
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/gif"
                     ref={fileInputRef}
                     style={{ display: 'none' }}
                     onChange={handleImageChange}
@@ -435,7 +441,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                 <button
                   type="submit"
                   className={styles.submitButton}
-                  disabled={isClientLoading}
+                  disabled={isClientLoading || !isAdmin}
                   style={{ width: '100%' }}
                 >
                   Guardar cliente
