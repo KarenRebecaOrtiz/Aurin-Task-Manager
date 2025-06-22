@@ -819,3 +819,8 @@
 :global(body.dark) .deleteText {
     color: #F87171 !important;
 }
+@media (max-width: 768px) {
+    .hideOnMobile {
+      display: none !important;
+    }
+  }

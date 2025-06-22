@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback, memo, forwardRef, Dispatch, SetStateAction } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo, forwardRef, Dispatch } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import {
   collection,
   addDoc,
@@ -26,10 +25,13 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { db } from '@/lib/firebase';
 import { deleteTask } from '@/lib/taskUtils';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
-import { InputChat } from './ui/InputChat';
+import InputChat from './ui/InputChat';
 import styles from './ChatSidebar.module.scss';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import Loader from '@/components/Loader'; // Import Loader for loading state
+
+import { useAuth } from '@/contexts/AuthContext';
+import Loader from '@/components/Loader';
+import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
+import { ai } from '@/lib/firebase';
 
 interface Message {
   id: string;
@@ -82,14 +84,14 @@ interface MessageItemProps {
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   userId: string | undefined;
   styles: typeof styles;
-  setActionMenuOpenId: Dispatch<SetStateAction<string | null>>;
+  setActionMenuOpenId: Dispatch<React.SetStateAction<string | null>>;
   actionMenuOpenId: string | null;
-  setEditingMessageId: Dispatch<SetStateAction<string | null>>;
-  setEditingText: Dispatch<SetStateAction<string>>;
+  setEditingMessageId: Dispatch<React.SetStateAction<string | null>>;
+  setEditingText: Dispatch<React.SetStateAction<string>>;
   handleEditMessage: (messageId: string) => Promise<void>;
   handleDeleteMessage: (messageId: string) => Promise<void>;
   handleResendMessage: (message: Message) => Promise<void>;
-  setImagePreviewSrc: Dispatch<SetStateAction<string | null>>;
+  setImagePreviewSrc: Dispatch<React.SetStateAction<string | null>>;
   editingMessageId: string | null;
   editingText: string;
 }
@@ -125,10 +127,30 @@ const MessageItem = memo(
                 alt={message.fileName || 'Imagen'}
                 width={200}
                 height={200}
-                className={styles.image}
+                className={`${styles.image} ${message.isPending ? styles.pendingImage : ''}`}
                 onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
                 onError={() => console.warn('Image load failed', message.imageUrl)}
               />
+              {message.isPending && (
+                <div className={styles.imageLoader}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="animate-spin">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      className="opacity-25"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      className="opacity-75"
+                    />
+                  </svg>
+                </div>
+              )}
             </div>
           );
         }
@@ -359,8 +381,11 @@ const getCachedMessages = (taskId: string) => {
 const saveCachedMessage = (taskId: string, message: Message) => {
   try {
     const cached = getCachedMessages(taskId);
-    cached.push(message);
-    localStorage.setItem(`failedMessages_${taskId}`, JSON.stringify(cached));
+    // Evitar duplicados por clientId
+    if (!cached.some((msg) => msg.clientId === message.clientId)) {
+      cached.push(message);
+      localStorage.setItem(`failedMessages_${taskId}`, JSON.stringify(cached));
+    }
   } catch (error) {
     console.error('Error saving to localStorage', error);
   }
@@ -384,9 +409,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   users = [],
 }) => {
   const { user } = useUser();
-  const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
+  const { isAdmin, isLoading } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -398,29 +422,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState<boolean>(false);
   const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [task, setTask] = useState(initialTask);
-  const [isHoursDropdownOpen, setIsHoursDropdownOpen] = useState(false);
-  const [isResponsibleDropdownOpen, setIsResponsibleDropdownOpen] = useState(false);
-  const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
+  const [activeCardDropdown, setActiveCardDropdown] = useState<'status' | 'team' | 'hours' | null>(null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isSummarizeDropdownOpen, setIsSummarizeDropdownOpen] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const taskMenuRef = useRef<HTMLDivElement>(null);
   const deletePopupRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const hoursDropdownRef = useRef<HTMLDivElement>(null);
-  const responsibleDropdownRef = useRef<HTMLDivElement>(null);
   const teamDropdownRef = useRef<HTMLDivElement>(null);
   const timerPanelRef = useRef<HTMLDivElement>(null);
   const datePickerWrapperRef = useRef<HTMLDivElement>(null);
+  const summarizeDropdownRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
 
   const isCreator = user?.id === task.CreatedBy;
@@ -428,8 +451,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     user?.id &&
     (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
-
-  // Removed local isAdmin fetch useEffect
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -566,25 +587,32 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         setDeleteConfirm('');
       }
       if (
-        hoursDropdownRef.current &&
-        !hoursDropdownRef.current.contains(event.target as Node) &&
-        isHoursDropdownOpen
+        activeCardDropdown === 'status' &&
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
       ) {
-        setIsHoursDropdownOpen(false);
+        setActiveCardDropdown(null);
       }
       if (
-        responsibleDropdownRef.current &&
-        !responsibleDropdownRef.current.contains(event.target as Node) &&
-        isResponsibleDropdownOpen
-      ) {
-        setIsResponsibleDropdownOpen(false);
-      }
-      if (
+        activeCardDropdown === 'team' &&
         teamDropdownRef.current &&
-        !teamDropdownRef.current.contains(event.target as Node) &&
-        isTeamDropdownOpen
+        !teamDropdownRef.current.contains(event.target as Node)
       ) {
-        setIsTeamDropdownOpen(false);
+        setActiveCardDropdown(null);
+      }
+      if (
+        activeCardDropdown === 'hours' &&
+        hoursDropdownRef.current &&
+        !hoursDropdownRef.current.contains(event.target as Node)
+      ) {
+        setActiveCardDropdown(null);
+      }
+      if (
+        summarizeDropdownRef.current &&
+        !summarizeDropdownRef.current.contains(event.target as Node) &&
+        isSummarizeDropdownOpen
+      ) {
+        setIsSummarizeDropdownOpen(false);
       }
     };
 
@@ -596,9 +624,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     actionMenuOpenId,
     isTaskMenuOpen,
     isDeletePopupOpen,
-    isHoursDropdownOpen,
-    isResponsibleDropdownOpen,
-    isTeamDropdownOpen,
+    activeCardDropdown,
+    isSummarizeDropdownOpen,
   ]);
 
   useEffect(() => {
@@ -739,6 +766,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   }, [messages, user?.id, hasInteracted]);
 
   useEffect(() => {
+    if (lastMessageRef.current && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      // Solo hacer scroll si el último mensaje es nuevo (enviado o recibido)
+      if (lastMessage.isPending || !prevMessagesRef.current.some((prev) => prev.id === lastMessage.id)) {
+        lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
+  }, [messages]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setActionMenuOpenId(null);
     };
@@ -756,12 +793,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   }, []);
 
   useEffect(() => {
-    if (lastMessageRef.current && messages.length > 0) {
-      lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  }, [messages.length]);
-
-  useEffect(() => {
     if (actionMenuOpenId && actionMenuRef.current) {
       gsap.fromTo(
         actionMenuRef.current,
@@ -770,16 +801,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       );
     }
   }, [actionMenuOpenId]);
-
-  useEffect(() => {
-    if (isStatusDropdownOpen && statusDropdownRef.current) {
-      gsap.fromTo(
-        statusDropdownRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-    }
-  }, [isStatusDropdownOpen]);
 
   useEffect(() => {
     if (isTaskMenuOpen && taskMenuRef.current) {
@@ -800,36 +821,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       );
     }
   }, [isDeletePopupOpen]);
-
-  useEffect(() => {
-    if (isHoursDropdownOpen && hoursDropdownRef.current) {
-      gsap.fromTo(
-        hoursDropdownRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-    }
-  }, [isHoursDropdownOpen]);
-
-  useEffect(() => {
-    if (isResponsibleDropdownOpen && responsibleDropdownRef.current) {
-      gsap.fromTo(
-        responsibleDropdownRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-    }
-  }, [isResponsibleDropdownOpen]);
-
-  useEffect(() => {
-    if (isTeamDropdownOpen && teamDropdownRef.current) {
-      gsap.fromTo(
-        teamDropdownRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-    }
-  }, [isTeamDropdownOpen]);
 
   useEffect(() => {
     if (timerPanelRef.current) {
@@ -877,13 +868,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  const handleEditTask = () => {
-    if (!isCreator && !isAdmin) {
-      return;
-    }
-    router.push(`/dashboard/edit-task?taskId=${task.id}`);
-    setIsTaskMenuOpen(false);
-  };
 
   const handleDeleteTask = async () => {
     if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
@@ -913,15 +897,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       return;
     }
     setIsSending(true);
-
-    const tempId = `temp-${Date.now()}-${Math.random()}`;
-    const clientId = crypto.randomUUID();
+  
+    const clientId = messageData.clientId || crypto.randomUUID();
+    const tempId = messageData.id || `temp-${clientId}`;
     const optimisticMessage: Message = {
       id: tempId,
       senderId: user.id,
       senderName: user.firstName || 'Usuario',
       text: messageData.text || null,
-      timestamp: Timestamp.fromDate(new Date()),
+      timestamp: new Date(),
       read: false,
       imageUrl: messageData.imageUrl || null,
       fileUrl: messageData.fileUrl || audioUrl || null,
@@ -929,70 +913,65 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
       filePath: messageData.filePath || null,
       hours: duration ? duration / 3600 : undefined,
-      isPending: true,
+      isPending: messageData.isPending !== undefined ? messageData.isPending : true,
       hasError: messageData.hasError || false,
       clientId,
     };
-
+  
+    // Update or add the message
     setMessages((prev) => {
-      const existingIds = new Set(prev.map((msg) => msg.id));
-      if (existingIds.has(tempId)) {
-        return prev;
+      const existingIndex = prev.findIndex((msg) => msg.clientId === clientId);
+      if (existingIndex !== -1) {
+        // Update existing message
+        const updatedMessages = [...prev];
+        updatedMessages[existingIndex] = { ...optimisticMessage };
+        return updatedMessages;
       }
+      // Add new message
       return [...prev, optimisticMessage];
     });
+  
     setHasInteracted(true);
-
+  
+    // Skip Firestore update if the message is just an optimistic update (still pending)
+    if (messageData.isPending) {
+      setIsSending(false);
+      return;
+    }
+  
     try {
       const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
-        senderId: messageData.senderId,
-        senderName: messageData.senderName,
-        text: messageData.text,
+        senderId: user.id,
+        senderName: user.firstName || 'Usuario',
+        text: messageData.text || null,
         timestamp: serverTimestamp(),
         read: false,
-        imageUrl: messageData.imageUrl,
-        fileUrl: messageData.fileUrl,
-        fileName: messageData.fileName,
-        fileType: messageData.fileType,
-        filePath: messageData.filePath,
+        imageUrl: messageData.imageUrl || null,
+        fileUrl: messageData.fileUrl || audioUrl || null,
+        fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
+        fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
+        filePath: messageData.filePath || null,
         ...(duration && { hours: duration / 3600 }),
       });
-
+  
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === tempId
+          msg.clientId === clientId
             ? { ...msg, id: docRef.id, isPending: false, timestamp: Timestamp.now() }
             : msg,
         ),
       );
       removeCachedMessage(task.id, clientId);
-
-      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-      if (task.CreatedBy) recipients.add(task.CreatedBy);
-      recipients.delete(user.id);
-      for (const recipientId of Array.from(recipients)) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.id,
-          taskId: task.id,
-          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-        });
-      }
     } catch (error) {
       console.error('Send message error', error);
       setMessages((prev) =>
-        prev.map((msg) => {
-          if (msg.id === tempId) {
-            const failedMessage = { ...msg, isPending: false, hasError: true };
-            saveCachedMessage(task.id, failedMessage);
-            return failedMessage;
-          }
-          return msg;
-        }),
+        prev.map((msg) =>
+          msg.clientId === clientId
+            ? { ...msg, isPending: false, hasError: true }
+            : msg,
+        ),
       );
-      alert('Error al enviar el mensaje');
+      saveCachedMessage(task.id, { ...optimisticMessage, isPending: false, hasError: true });
     } finally {
       setIsSending(false);
     }
@@ -1112,20 +1091,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         ),
       );
       removeCachedMessage(task.id, message.clientId);
-
-      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-      if (task.CreatedBy) recipients.add(task.CreatedBy);
-      recipients.delete(user.id);
-      for (const recipientId of Array.from(recipients)) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.id,
-          taskId: task.id,
-          message: `${user.firstName || 'Usuario'} envió un mensaje en la tarea ${task.name}`,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-        });
-      }
     } catch (error) {
       console.error('Resend message error', error);
       setMessages((prev) =>
@@ -1185,7 +1150,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         await setDoc(timerDocRef, {
           userId: user.id,
           isRunning: true,
-          startTime: Timestamp.now(),
           accumulatedSeconds: timerSeconds,
         });
       } catch (error) {
@@ -1316,7 +1280,212 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     });
   }, [task.AssignedTo, task.LeadedBy, users]);
 
-  // Handle loading state
+  const handleGenerateSummary = async (interval: string) => {
+    if (!user?.id || !messages.length || isGeneratingSummary) return;
+
+    setIsGeneratingSummary(true);
+    setIsSummarizeDropdownOpen(false);
+    
+    try {
+      if (!ai) {
+        throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
+      }
+
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (interval) {
+        case '1day':
+          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case '3days':
+          startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+          break;
+        case '1week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '1month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '6months':
+          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
+          break;
+        case '1year':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(0);
+      }
+
+      const filteredMessages = messages.filter(msg => {
+        if (!msg.timestamp) return false;
+        const msgDate = msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp);
+        return msgDate >= startDate;
+      });
+
+      if (filteredMessages.length === 0) {
+        alert('No hay mensajes en el intervalo de tiempo seleccionado.');
+        return;
+      }
+
+      const chatContext = filteredMessages
+        .map(msg => {
+          const date = msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp);
+          const timeStr = date.toLocaleDateString('es-MX') + ' ' + date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+          
+          if (msg.hours) {
+            return `[${timeStr}] ${msg.senderName}: Registró ${Math.floor(msg.hours)}h ${Math.round((msg.hours % 1) * 60)}m de tiempo en la tarea`;
+          } else if (msg.text) {
+            return `[${timeStr}] ${msg.senderName}: ${msg.text}`;
+          } else if (msg.imageUrl) {
+            return `[${timeStr}] ${msg.senderName}: Compartió una imagen (${msg.fileName || 'imagen'})`;
+          } else if (msg.fileUrl) {
+            return `[${timeStr}] ${msg.senderName}: Compartió un archivo (${msg.fileName || 'archivo'})`;
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n');
+
+      const intervalLabels = {
+        '1day': 'último día',
+        '3days': 'últimos 3 días', 
+        '1week': 'última semana',
+        '1month': 'último mes',
+        '6months': 'últimos 6 meses',
+        '1year': 'último año'
+      };
+
+      const prompt = `Como experto analista de proyectos, genera un resumen ejecutivo y detallado de la actividad en esta tarea durante ${intervalLabels[interval as keyof typeof intervalLabels]}. 
+
+Analiza el siguiente historial de conversación y actividades:
+
+${chatContext}
+
+Proporciona un resumen que incluya:
+
+1. **📋 Resumen Ejecutivo**: Descripción general de la actividad y progreso
+2. **💬 Actividad de Comunicación**: Número de mensajes, participantes más activos
+3. **⏱️ Tiempo Registrado**: Total de horas trabajadas y por quién
+4. **📎 Archivos Compartidos**: Lista de documentos e imágenes compartidas
+5. **🎯 Puntos Clave**: Decisiones importantes, problemas identificados, próximos pasos
+6. **📈 Estado del Proyecto**: Evaluación del progreso y momentum
+
+Usa markdown para el formato y sé conciso pero informativo. Si hay poca actividad, menciona esto de manera constructiva.`;
+
+      const generationConfig = {
+        maxOutputTokens: 1000,
+        temperature: 0.3,
+        topK: 20,
+        topP: 0.8,
+      };
+
+      const safetySettings = [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+      ];
+
+      const systemInstruction = `Eres un analista experto en gestión de proyectos. Creas resúmenes claros, estructurados y actionables de la actividad en tareas. Usa markdown para formatear tu respuesta y proporciona insights valiosos sobre el progreso y la colaboración del equipo.`;
+
+      console.log(`[ChatSidebar:GenerateSummary] Iniciando resumen para ${interval}...`);
+      
+      const model = getGenerativeModel(ai, {
+        model: 'gemini-1.5-flash',
+        generationConfig,
+        safetySettings,
+        systemInstruction,
+      });
+
+      const result = await model.generateContent(prompt);
+      
+      if (!result || !result.response) {
+        throw new Error('🚫 No se recibió respuesta del servidor de Gemini.');
+      }
+
+      let summaryText: string;
+      try {
+        summaryText = await result.response.text();
+      } catch (textError) {
+        console.error('[ChatSidebar:GenerateSummary] Error al extraer texto:', textError);
+        throw new Error('⚠️ Error al procesar la respuesta de Gemini.');
+      }
+
+      if (!summaryText || summaryText.trim().length === 0) {
+        throw new Error('📝 Gemini devolvió un resumen vacío.');
+      }
+
+      const summaryMessage: Partial<Message> = {
+        senderId: 'ai-summary',
+        senderName: '🤖 Resumen IA',
+        text: `📊 Resumen de actividad - ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`,
+        read: true,
+      };
+
+      await handleSendMessage(summaryMessage);
+      
+    } catch (error) {
+      console.error('[ChatSidebar:GenerateSummary] Error:', error);
+      
+      let errorMessage = '❌ Error al generar el resumen.';
+      if (error instanceof Error) {
+        if (error.message.includes('PERMISSION_DENIED')) {
+          errorMessage = '🔒 No tienes permisos para usar la funcionalidad de resúmenes.';
+        } else if (error.message.includes('QUOTA_EXCEEDED')) {
+          errorMessage = '📊 Límite de resúmenes excedido por hoy.';
+        } else {
+          errorMessage = `❌ ${error.message}`;
+        }
+      }
+      
+      alert(errorMessage);
+      
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const hasDataForInterval = useCallback((interval: string) => {
+    if (!messages.length) return false;
+    
+    const now = new Date();
+    let startDate: Date;
+    
+    switch (interval) {
+      case '1day':
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case '3days':
+        startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+        break;
+      case '1week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '1month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '6months':
+        startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
+        break;
+      case '1year':
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 1000);
+        break;
+      default:
+        return true;
+    }
+    
+    return messages.some(msg => {
+      if (!msg.timestamp) return false;
+      const msgDate = msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp);
+      return msgDate >= startDate;
+    });
+  }, [messages]);
+
   if (isLoading) {
     return <Loader />;
   }
@@ -1346,49 +1515,105 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <div className={styles.breadcrumb}>
             {clientName} {'>'} {task.project}
           </div>
-          <div
-            className={`${styles.elipsis} ${isCreator || isAdmin ? styles.clickable : styles.disabled}`}
-            onClick={(e) => {
-              if (isCreator || isAdmin) {
-                handleClick(e.currentTarget);
-                setIsTaskMenuOpen((prev) => !prev);
-                setHasInteracted(true);
-              }
-            }}
-          >
-            <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
+
+          <div className={styles.dropdownContainer} ref={summarizeDropdownRef}>
+            <button
+              type="button"
+              className={`${styles.imageButton} ${styles.tooltip} ${styles.summarizeButton} ${isGeneratingSummary ? 'processing' : ''}`}
+              onClick={() => setIsSummarizeDropdownOpen((prev) => !prev)}
+              disabled={isGeneratingSummary || messages.length === 0}
+              aria-label="Generar resumen de actividad"
+              title="Generar resumen de actividad 📊"
+              aria-expanded={isSummarizeDropdownOpen}
+            >
+              <Image
+                src="/Robot.svg"
+                alt="Summarize"
+                width={16}
+                height={16}
+              />
+            </button>
+            {isSummarizeDropdownOpen && (
+              <div className={styles.dropdownMenu} role="menu">
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => handleGenerateSummary('1day')}
+                  disabled={isGeneratingSummary || !hasDataForInterval('1day')}
+                  role="menuitem"
+                >
+                  📅 1 día
+                </button>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => handleGenerateSummary('3days')}
+                  disabled={isGeneratingSummary || !hasDataForInterval('3days')}
+                  role="menuitem"
+                >
+                  📅 3 días
+                </button>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => handleGenerateSummary('1week')}
+                  disabled={isGeneratingSummary || !hasDataForInterval('1week')}
+                  role="menuitem"
+                >
+                  📅 1 semana
+                </button>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => handleGenerateSummary('1month')}
+                  disabled={isGeneratingSummary || !hasDataForInterval('1month')}
+                  role="menuitem"
+                >
+                  📅 1 mes
+                </button>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => handleGenerateSummary('6months')}
+                  disabled={isGeneratingSummary || !hasDataForInterval('6months')}
+                  role="menuitem"
+                >
+                  📅 6 meses
+                </button>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => handleGenerateSummary('1year')}
+                  disabled={isGeneratingSummary || !hasDataForInterval('1year')}
+                  role="menuitem"
+                >
+                  📅 1 año
+                </button>
+              </div>
+            )}
           </div>
-          {isTaskMenuOpen && (isCreator || isAdmin) && (
-            <div ref={taskMenuRef} className={styles.taskMenu}>
-              <div className={styles.taskMenuItem} onClick={handleEditTask}>
-                Editar Tarea
-              </div>
-              <div
-                className={styles.taskMenuItem}
-                onClick={() => {
-                  setIsDeletePopupOpen(true);
-                  setIsTaskMenuOpen(false);
-                }}
-              >
-                Eliminar Tarea
-              </div>
-            </div>
-          )}
         </div>
         <div className={styles.title}>{task.name}</div>
         <div className={styles.description}>{task.description || 'Sin descripción'}</div>
         <div className={styles.details}>
           <div
             className={`${styles.card} ${isCreator || isAdmin ? styles.statusCard : ''}`}
-            onMouseEnter={() => (isCreator || isAdmin) && setIsStatusDropdownOpen(true)}
-            onMouseLeave={() => (isCreator || isAdmin) && setIsStatusDropdownOpen(false)}
+            onClick={() => {
+              if (isCreator || isAdmin) {
+                setActiveCardDropdown(activeCardDropdown === 'status' ? null : 'status');
+              }
+            }}
           >
             <div className={styles.cardLabel}>Estado de la tarea:</div>
             <div className={styles.cardValue}>{task.status}</div>
-            {isStatusDropdownOpen && (isCreator || isAdmin) && (
-              <div ref={statusDropdownRef} className={styles.statusDropdown}>
+            {activeCardDropdown === 'status' && (isCreator || isAdmin) && (
+              <div ref={statusDropdownRef} className={styles.cardDropdown}>
                 {statusOptions.map((status) => (
-                  <div key={status} className={styles.statusOption} onClick={() => handleStatusChange(status)}>
+                  <div key={status} className={styles.cardDropdownItem} onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusChange(status);
+                    setActiveCardDropdown(null);
+                  }}>
                     {status}
                   </div>
                 ))}
@@ -1397,16 +1622,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </div>
           <div
             className={styles.card}
-            onMouseEnter={() => isInvolved && setIsTeamDropdownOpen(true)}
-            onMouseLeave={() => isInvolved && setIsTeamDropdownOpen(false)}
+            onClick={() => {
+              if (isInvolved) {
+                setActiveCardDropdown(activeCardDropdown === 'team' ? null : 'team');
+              }
+            }}
           >
             <div className={styles.cardLabel}>Equipo:</div>
             <div className={styles.cardValue}>{teamUsers.length} miembro(s)</div>
-            {isTeamDropdownOpen && isInvolved && (
-              <div ref={teamDropdownRef} className={styles.teamDropdown}>
+            {activeCardDropdown === 'team' && isInvolved && (
+              <div ref={teamDropdownRef} className={styles.cardDropdown}>
                 {teamUsers.length > 0 ? (
                   teamUsers.map((u) => (
-                    <div key={u.id} className={styles.teamDropdownItem}>
+                    <div key={u.id} className={styles.cardDropdownItem}>
                       <Image
                         src={u.imageUrl}
                         alt={u.firstName || 'Avatar del miembro'}
@@ -1419,7 +1647,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     </div>
                   ))
                 ) : (
-                  <div className={styles.teamDropdownItem}>No hay miembros asignados a esta tarea</div>
+                  <div className={styles.cardDropdownItem}>No hay miembros asignados a esta tarea</div>
                 )}
               </div>
             )}
@@ -1432,16 +1660,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </div>
           <div
             className={styles.cardFullWidth}
-            onMouseEnter={() => isInvolved && setIsHoursDropdownOpen(true)}
-            onMouseLeave={() => isInvolved && setIsHoursDropdownOpen(false)}
+            onClick={() => {
+              if (isInvolved) {
+                setActiveCardDropdown(activeCardDropdown === 'hours' ? null : 'hours');
+              }
+            }}
           >
             <div className={styles.cardLabel}>Tiempo registrado:</div>
             <div className={styles.cardValue}>{totalHours}</div>
-            {isHoursDropdownOpen && isInvolved && (
-              <div ref={hoursDropdownRef} className={styles.hoursDropdown}>
+            {activeCardDropdown === 'hours' && isInvolved && (
+              <div ref={hoursDropdownRef} className={styles.cardDropdown}>
                 {hoursByUser.length > 0 ? (
                   teamUsers.map((u) => (
-                    <div key={u.id} className={styles.hoursDropdownItem}>
+                    <div key={u.id} className={styles.cardDropdownItem}>
                       <Image
                         src={u.imageUrl}
                         alt={u.firstName || 'Avatar del usuario'}
@@ -1456,7 +1687,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     </div>
                   ))
                 ) : (
-                  <div className={styles.hoursDropdownItem}>Aún no hay tiempo registrado en esta tarea</div>
+                  <div className={styles.cardDropdownItem}>Aún no hay tiempo registrado en esta tarea</div>
                 )}
               </div>
             )}
@@ -1546,27 +1777,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </div>
       </div>
       <InputChat
-        taskId={task.id}
-        userId={user?.id}
-        userFirstName={user?.firstName}
-        onSendMessage={handleSendMessage}
-        isSending={isSending}
-        timerSeconds={timerSeconds}
-        isTimerRunning={isTimerRunning}
-        onToggleTimer={toggleTimer}
-        onToggleTimerPanel={toggleTimerPanel}
-        isTimerPanelOpen={isTimerPanelOpen}
-        setIsTimerPanelOpen={setIsTimerPanelOpen}
-        timerInput={timerInput}
-        setTimerInput={setTimerInput}
-        dateInput={dateInput}
-        setDateInput={setDateInput}
-        commentInput={commentInput}
-        setCommentInput={setCommentInput}
-        onAddTimeEntry={handleAddTimeEntry}
-        containerRef={sidebarRef}
-        timerPanelRef={timerPanelRef}
-      />
+  taskId={task.id}
+  userId={user?.id}
+  userFirstName={user?.firstName}
+  onSendMessage={handleSendMessage}
+  isSending={isSending}
+  setIsSending={setIsSending}
+  timerSeconds={timerSeconds}
+  isTimerRunning={isTimerRunning}
+  onToggleTimer={toggleTimer}
+  onToggleTimerPanel={toggleTimerPanel}
+  isTimerPanelOpen={isTimerPanelOpen}
+  setIsTimerPanelOpen={setIsTimerPanelOpen}
+  timerInput={timerInput}
+  setTimerInput={setTimerInput}
+  dateInput={dateInput}
+  setDateInput={setDateInput}
+  commentInput={commentInput}
+  setCommentInput={setCommentInput}
+  onAddTimeEntry={handleAddTimeEntry}
+  containerRef={sidebarRef}
+  timerPanelRef={timerPanelRef}
+/>
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>
           <div className={styles.deletePopup} ref={deletePopupRef}>

@@ -11,7 +11,7 @@
     inset -4px -4px 8px rgba(255, 255, 255, 0.9),
     inset 4px 4px 8px rgba(0, 0, 0, 0.05);
   font-family: 'Inter Tight', sans-serif;
-  display: flex;
+  display: block;
   flex-direction: column;
   gap: 16px;
   min-height: calc(100vh - 200px);
@@ -174,20 +174,17 @@
   .filtersWrapper {
     justify-content: center;
     width: 100%;
-    align-items: center;
+    align-items: start;
     display: flex;
   }
   .viewButton,
   .filter,
+  .createButton,
   .filterButton {
-    width: 18vw;
-    height: 50px!important;
+    width: 30%;
 
   }
 
-  .createButton{
-    width: 100%;
-  }
 
 }
 
@@ -1055,3 +1052,12 @@
 .dark .deleteCancelButton:hover {
   background: #4b5563;
 }
+
+/* Hide elements on mobile devices */
+@media (max-width: 768px) {
+
+  .hideOnMobile {
+    display: none !important;
+  }
+}
+

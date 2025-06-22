@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, deleteDoc, addDoc, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
+import { collection, deleteDoc, addDoc, query, doc, getDocs, where } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -516,6 +516,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       console.log('[TasksTable] Client filter selected:', clientId);
     };
 
+    
     const baseColumns = [
       {
         key: 'clientId',
@@ -526,20 +527,20 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'name',
         label: 'Tarea',
-        width: '30%',
+        width: '70%', // Increased for mobile
         mobileVisible: true,
       },
       {
         key: 'assignedTo',
         label: 'Asignados',
         width: '20%',
-        mobileVisible: true,
+        mobileVisible: false,
       },
       {
         key: 'status',
         label: 'Estado',
-        width: '20%',
-        mobileVisible: true,
+        width: '30%', 
+        mobileVisible: false,
       },
       {
         key: 'priority',
@@ -550,7 +551,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'action',
         label: 'Acciones',
-        width: '10%',
+        width: '20%',
         mobileVisible: false,
       },
     ];
@@ -715,7 +716,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     return (
       <div className={styles.container}>
-        <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
+        <UserSwiper
+          onOpenProfile={onOpenProfile}
+          onMessageSidebarOpen={onMessageSidebarOpen}
+          className={styles.hideOnMobile} // Add hideOnMobile class
+        />
         <div className={styles.header}>
           <div className={styles.searchWrapper}>
             <input
@@ -731,138 +736,122 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             />
           </div>
 
-          <div className={styles.filtersWrapper}>
-            <button
-              className={styles.viewButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onViewChange('kanban');
-                console.log('[TasksTable] Switching to Kanban view');
-              }}
+<div className={styles.filtersWrapper}>
+  <button
+    className={`${styles.viewButton} ${styles.hideOnMobile}`} // Add hideOnMobile class
+    onClick={(e) => {
+      animateClick(e.currentTarget);
+      onViewChange('kanban');
+      console.log('[TasksTable] Switching to Kanban view');
+    }}
+  >
+    <Image
+      src="/kanban.svg"
+      alt="kanban"
+      width={20}
+      height={20}
+      style={{
+        marginLeft: '5px',
+        transition: 'transform 0.3s ease, filter 0.3s ease',
+        filter:
+          'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'scale(1.05)';
+        e.currentTarget.style.filter =
+          'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.34)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.filter =
+          'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+      }}
+    />
+  </button>
+  <div className={styles.filter}>
+    <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
+      <div
+        className={styles.dropdownTrigger}
+        onClick={(e) => {
+          animateClick(e.currentTarget);
+          setIsPriorityDropdownOpen((prev) => !prev);
+          console.log('[TasksTable] Priority dropdown toggled');
+        }}
+      >
+        <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
+        <span>{priorityFilter || 'Prioridad'}</span>
+      </div>
+      {isPriorityDropdownOpen && (
+        <div className={styles.dropdownItems}>
+          {['Alta', 'Media', 'Baja', ''].map((priority) => (
+            <div
+              key={priority || 'all'}
+              className={styles.dropdownItem}
+              onClick={(e) => handlePrioritySelect(priority, e)}
             >
-              <Image
-                src="/kanban.svg"
-                alt="kanban"
-                width={20}
-                height={20}
-                style={{
-                  marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.34)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                }}
-              />
-            </button>
-            <div className={styles.filter}>
-              <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
-                <div
-                  className={styles.dropdownTrigger}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setIsPriorityDropdownOpen((prev) => !prev);
-                    console.log('[TasksTable] Priority dropdown toggled');
-                  }}
-                >
-                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
-                  <span>{priorityFilter || 'Prioridad'}</span>
-                </div>
-                {isPriorityDropdownOpen && (
-                  <div className={styles.dropdownItems}>
-                    {['Alta', 'Media', 'Baja', ''].map((priority) => (
-                      <div
-                        key={priority || 'all'}
-                        className={styles.dropdownItem}
-                        onClick={(e) => handlePrioritySelect(priority, e)}
-                      >
-                        {priority || 'Todos'}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {priority || 'Todos'}
             </div>
-            <div className={styles.filter}>
-              <div className={styles.dropdownContainer} ref={clientDropdownRef}>
-                <div
-                  className={styles.dropdownTrigger}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setIsClientDropdownOpen((prev) => !prev);
-                    console.log('[TasksTable] Client dropdown toggled');
-                  }}
-                >
-                  <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
-                  <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
-                </div>
-                {isClientDropdownOpen && (
-                  <div className={styles.dropdownItems}>
-                    {[{ id: '', name: 'Todos' }, ...clients].map((client) => (
-                      <div
-                        key={client.id || 'all'}
-                        className={styles.dropdownItem}
-                        onClick={(e) => handleClientSelect(client.id, e)}
-                      >
-                        {client.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+  <div className={styles.filter}>
+    <div className={styles.dropdownContainer} ref={clientDropdownRef}>
+      <div
+        className={styles.dropdownTrigger}
+        onClick={(e) => {
+          animateClick(e.currentTarget);
+          setIsClientDropdownOpen((prev) => !prev);
+          console.log('[TasksTable] Client dropdown toggled');
+        }}
+      >
+        <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
+        <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
+      </div>
+      {isClientDropdownOpen && (
+        <div className={styles.dropdownItems}>
+          {[{ id: '', name: 'Todos' }, ...clients].map((client) => (
+            <div
+              key={client.id || 'all'}
+              className={styles.dropdownItem}
+              onClick={(e) => handleClientSelect(client.id, e)}
+            >
+              {client.name}
             </div>
-            <button
-              className={styles.filterButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onAISidebarOpen();
-                console.log('[TasksTable] AI sidebar opened');
-              }}
-            >
-              <Image
-                src="/gemini.svg"
-                alt="AI"
-                width={20}
-                height={20}
-                style={{
-                  marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.2)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                }}
-              />
-              Pregunta a Gemini
-            </button>
-            <button
-              className={styles.createButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onNewTaskOpen();
-                console.log('[TasksTable] New task creation triggered');
-              }}
-            >
-              <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
-              Crear Tarea
-            </button>
-          </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+  <button
+    className={`${styles.filterButton} ${styles.hideOnMobile}`} // Add hideOnMobile class
+    onClick={(e) => {
+      animateClick(e.currentTarget);
+      onAISidebarOpen();
+      console.log('[TasksTable] AI sidebar opened');
+    }}
+  >
+    <Image
+      src="/gemini.svg"
+      alt="AI"
+      width={20}
+      height={20}
+      
+    />
+  </button>
+  <button
+    className={styles.createButton}
+    onClick={(e) => {
+      animateClick(e.currentTarget);
+      onNewTaskOpen();
+      console.log('[TasksTable] New task creation triggered');
+    }}
+  >
+    <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
+    Crear Tarea
+  </button>
+</div>
         </div>
         <Table
           data={sortedTasks}

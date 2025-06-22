@@ -1097,3 +1097,14 @@
       transform: rotate(0deg);
     }
   }
+
+
+
+  /* Hide elements on mobile devices */
+@media (max-width: 768px) {
+
+  .subtitle,
+  .adminButton {
+    display: none !important;
+  }
+}

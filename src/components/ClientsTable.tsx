@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
@@ -265,7 +265,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                 />
               </div>
               {isAdmin && !isLoading && (
-                <div className={styles.createButtonWrapper}>
+                <div className={`${styles.createButtonWrapper} ${styles.hideOnMobile}`}>
                   <button
                     onClick={onCreateOpen}
                     className={styles.createButton}
@@ -299,7 +299,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                 />
               </div>
               {isAdmin && !isLoading && (
-                <div className={styles.createButtonWrapper}>
+                <div className={`${styles.createButtonWrapper} ${styles.hideOnMobile}`}>
                   <button
                     onClick={onCreateOpen}
                     className={styles.createButton}

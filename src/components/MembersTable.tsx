@@ -40,10 +40,10 @@ interface MembersTableProps {
 }
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ users, tasks, onInviteSidebarOpen, onMessageSidebarOpen }) => {
+  ({ users, tasks, onMessageSidebarOpen }) => {
     console.log('MembersTable rendered');
     const { user } = useUser();
-    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
+    const { isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [sortKey, setSortKey] = useState<string>('fullName');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -106,12 +106,12 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           key: 'imageUrl',
           label: '',
           width: '10%',
-          mobileVisible: false,
+          mobileVisible: true,
         },
         {
           key: 'fullName',
           label: 'Nombre',
-          width: '30%',
+          width: '60%',
           mobileVisible: true,
         },
         {
@@ -195,14 +195,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               aria-label="Buscar Miembros"
             />
           </div>
-          {isAdmin && !isLoading && (
-            <div className={styles.inviteButtonWrapper}>
-              <button onClick={onInviteSidebarOpen} className={styles.inviteButton}>
-                <Image src="/wallet-cards.svg" alt="Invite" width={17} height={17} />
-                Invitar Miembro
-              </button>
-            </div>
-          )}
+          
         </div>
         <Table
           data={filteredUsers}

@@ -28,16 +28,27 @@ interface InputAIProps {
   containerRef: React.RefObject<HTMLDivElement>;
   isAdmin: boolean;
   user: ReturnType<typeof ClerkUserType>["user"] | null;
+  onError?: (error: string) => void; // Callback para manejo centralizado de errores
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB, igual que InputChat
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const UPLOAD_PROGRESS_THRESHOLD = 5 * 1024 * 1024; // 5 MB para mostrar progreso
 
-const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRef, isAdmin, user }) => {
+const InputAI: React.FC<InputAIProps> = ({ 
+  onSendMessage, 
+  isSending, 
+  containerRef, 
+  isAdmin, 
+  user, 
+  onError 
+}) => {
   const [message, setMessage] = useState("");
   const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
@@ -128,18 +139,29 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
     return styles;
   };
 
+  const handleError = useCallback((errorMessage: string) => {
+    console.error("[InputAI] Error:", errorMessage);
+    if (onError) {
+      onError(errorMessage);
+    } else {
+      // Fallback a alert si no se proporciona callback
+      alert(errorMessage);
+    }
+  }, [onError]);
+
   const selectFile = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
-      alert("El archivo supera los 10 MB.");
+      handleError("El archivo supera los 10 MB. Por favor selecciona un archivo más pequeño.");
       return;
     }
-    // Validar extensiones permitidas por /api/upload
+    
     const fileExtension = f.name.split(".").pop()?.toLowerCase();
     const validExtensions = ["jpg", "jpeg", "png", "gif", "pdf", "doc", "docx"];
     if (!fileExtension || !validExtensions.includes(fileExtension)) {
-      alert(`Extensión no permitida. Permitidas: ${validExtensions.join(", ")}`);
+      handleError(`Extensión de archivo no permitida. Extensiones válidas: ${validExtensions.join(", ")}`);
       return;
     }
+    
     setFile(f);
     setPreviewUrl(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
   };
@@ -177,6 +199,11 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
       return;
     }
 
+    if (!isAdmin) {
+      handleError("Solo administradores pueden enviar mensajes en este chat.");
+      return;
+    }
+
     const messageData: Partial<AIMessage> = {
       userId: user.id,
       sender: "user",
@@ -193,13 +220,16 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
 
     if (file) {
       try {
+        setIsUploading(true);
+        setUploadProgress(0);
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("userId", user.id);
         formData.append("type", "message");
         formData.append("conversationId", `ai_${user.id}`);
 
-        console.log("[InputAI] Sending upload request:", {
+        console.log("[InputAI] Iniciando subida de archivo:", {
           userId: user.id,
           conversationId: `ai_${user.id}`,
           fileName: file.name,
@@ -207,20 +237,33 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
           fileSize: file.size,
         });
 
+        // Simular progreso para archivos grandes
+        let progressInterval: NodeJS.Timeout | null = null;
+        if (file.size > UPLOAD_PROGRESS_THRESHOLD) {
+          progressInterval = setInterval(() => {
+            setUploadProgress(prev => Math.min(prev + 10, 90));
+          }, 200);
+        }
+
         const response = await fetch("/api/upload", {
           method: "POST",
           body: formData,
           headers: { "x-clerk-user-id": user.id },
         });
 
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          setUploadProgress(100);
+        }
+
         if (!response.ok) {
           const errorData = await response.json();
-          console.error("[InputAI] Upload failed with status:", response.status, errorData, "[Error Code: UPLOAD-001]");
-          throw new Error(errorData.error || "Failed to upload file");
+          console.error("[InputAI] Upload failed:", response.status, errorData, "[Error Code: UPLOAD-001]");
+          throw new Error(errorData.error || `Error al subir archivo (${response.status})`);
         }
 
         const { url, fileName, fileType, filePath } = await response.json();
-        console.log("[InputAI] Upload successful:", { url, fileName, fileType, filePath });
+        console.log("[InputAI] Archivo subido exitosamente:", { url, fileName, fileType, filePath });
 
         if (fileName) messageData.fileName = fileName;
         if (fileType) messageData.fileType = fileType;
@@ -232,8 +275,13 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
           messageData.fileUrl = url;
         }
       } catch (error) {
-        console.error("[InputAI] File upload failed:", error, "[Error Code: UPLOAD-002]");
+        console.error("[InputAI] Error en subida de archivo:", error, "[Error Code: UPLOAD-002]");
         messageData.hasError = true;
+        const errorMessage = error instanceof Error ? error.message : "Error desconocido al subir archivo";
+        handleError(`Error al subir archivo: ${errorMessage}`);
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
       }
     }
 
@@ -244,8 +292,9 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
       setPreviewUrl(null);
       setActiveFormats(new Set());
     } catch (error) {
-      console.error("[InputAI] Failed to send message:", error, "[Error Code: SEND-001]");
-      alert("Error al enviar el mensaje.");
+      console.error("[InputAI] Error al enviar mensaje:", error, "[Error Code: SEND-001]");
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      handleError(`Error al enviar mensaje: ${errorMessage}`);
     }
   };
 
@@ -302,46 +351,101 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
       onSubmit={handleSend}
+      role="form"
+      aria-label="Enviar mensaje al asistente AI"
     >
       <div className={styles.inputContainer}>
-        <div className={styles.toolbar}>
+        <div className={styles.toolbar} role="toolbar" aria-label="Herramientas de formato">
           {formatButtons.map(({ id, icon, label, shortcut }) => (
             <button
               key={id}
               type="button"
               className={`${styles.imageButton} ${activeFormats.has(id) ? styles.activeFormat : ""}`}
               onClick={() => toggleFormat(id)}
-              disabled={isSending}
+              disabled={isSending || isUploading}
               title={`${label} (${shortcut})`}
+              aria-label={label}
+              aria-pressed={activeFormats.has(id)}
+              role="button"
             >
               <Image
                 src={icon}
-                alt={label}
+                alt=""
                 width={16}
                 height={16}
                 className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`}
                 style={{ filter: "none", fill: "#000000" }}
+                aria-hidden="true"
               />
             </button>
           ))}
         </div>
+
+        {/* Indicador de progreso de subida */}
+        {isUploading && (
+          <div className={styles.uploadProgress}>
+            <div className={styles.progressBar}>
+              <div 
+                className={styles.progressFill} 
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <span className={styles.progressText}>
+              {uploadProgress < 100 ? `Subiendo... ${uploadProgress}%` : "Procesando..."}
+            </span>
+          </div>
+        )}
+
+        {/* Previsualización de archivo */}
         {previewUrl && (
-          <div className={styles.imagePreview}>
-            <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-              <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: "invert(100)" }} />
+          <div className={styles.imagePreview} role="img" aria-label="Previsualización de imagen">
+            <Image 
+              src={previewUrl} 
+              alt="Previsualización de imagen adjunta" 
+              width={50} 
+              height={50} 
+              className={styles.previewImage} 
+            />
+            <button 
+              className={styles.removeImageButton} 
+              onClick={handleRemoveFile}
+              aria-label="Eliminar imagen adjunta"
+              type="button"
+            >
+              <Image 
+                src="/x.svg" 
+                alt="" 
+                width={16} 
+                height={16} 
+                style={{ filter: "invert(100)" }}
+                aria-hidden="true"
+              />
             </button>
           </div>
         )}
+        
         {file && !previewUrl && (
-          <div className={styles.filePreview}>
-            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+          <div className={styles.filePreview} role="group" aria-label="Archivo adjunto">
+            <Image src="/file.svg" alt="" width={16} height={16} aria-hidden="true" />
             <span>{file.name}</span>
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-              <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: "invert(100)" }} />
+            <button 
+              className={styles.removeImageButton} 
+              onClick={handleRemoveFile}
+              aria-label="Eliminar archivo adjunto"
+              type="button"
+            >
+              <Image 
+                src="/x.svg" 
+                alt="" 
+                width={16} 
+                height={16} 
+                style={{ filter: "invert(100)" }}
+                aria-hidden="true"
+              />
             </button>
           </div>
         )}
+
         <div className="relative">
           <textarea
             ref={textareaRef}
@@ -363,61 +467,79 @@ const InputAI: React.FC<InputAIProps> = ({ onSendMessage, isSending, containerRe
               setMessage(cleanValue);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !isSending) {
+              if (e.key === "Enter" && !e.shiftKey && !isSending && !isUploading) {
                 e.preventDefault();
                 handleSend(e);
               }
             }}
-            placeholder="Escribe tu mensaje aquí"
-            disabled={isSending || !isAdmin}
+            placeholder={isAdmin ? "Escribe tu mensaje aquí..." : "Solo administradores pueden usar este chat"}
+            disabled={isSending || !isAdmin || isUploading}
             style={{
               ...getTextStyle(),
               fontFamily: '"Inter Tight", sans-serif',
             }}
             className={`${styles.input} min-h-[36px] max-h-[200px] resize-none`}
+            aria-label="Mensaje para el asistente AI"
+            aria-describedby="input-help"
           />
+          <div id="input-help" className="sr-only">
+            Presiona Enter para enviar, Shift+Enter para nueva línea
+          </div>
         </div>
+
         <div className={styles.actions} style={{ display: "flex", justifyContent: "flex-end", gap: '15px' }}>
           <button
             type="button"
             className={styles.imageButton}
             onClick={() => fileInputRef.current?.click()}
-            disabled={isSending}
+            disabled={isSending || isUploading}
             aria-label="Adjuntar archivo"
+            title="Adjuntar archivo (máx. 10MB)"
           >
             <Image
               src="/paperclip.svg"
-              alt="Adjuntar"
+              alt=""
               width={16}
               height={16}
               className={styles.iconInvert}
               style={{ filter: "invert(100)" }}
+              aria-hidden="true"
             />
           </button>
+          
           <EmojiSelector
             onEmojiSelect={(emoji) => setMessage((prev) => prev + emoji)}
-            disabled={isSending}
+            disabled={isSending || isUploading}
             value={message.match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ""}
             containerRef={containerRef}
           />
+          
           <button
             type="submit"
             className={styles.sendButton}
-            disabled={isSending || (!message.trim() && !file) || !isAdmin}
+            disabled={isSending || (!message.trim() && !file) || !isAdmin || isUploading}
             aria-label="Enviar mensaje"
+            title={!isAdmin ? "Solo administradores pueden enviar mensajes" : "Enviar mensaje"}
           >
-            <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
+            <Image 
+              src="/arrow-up.svg" 
+              alt="" 
+              width={13} 
+              height={13} 
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>
+      
       <input
         type="file"
         ref={fileInputRef}
         hidden
         onChange={handleFileInputChange}
-        aria-label="Seleccionar archivo"
-        disabled={isSending}
-        accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx" // Alineado con /api/upload
+        aria-label="Seleccionar archivo para adjuntar"
+        disabled={isSending || isUploading}
+        accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx"
       />
     </form>
   );

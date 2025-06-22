@@ -9,22 +9,35 @@
   font-weight: 600;
   font-size: 1rem;
   padding: 10px 20px;
-  text-align: center;
   z-index: 1000;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   white-space: nowrap;
   overflow: hidden;
-}
 
-.bullet {
-  margin: 0 10px;
-}
-
-@media (max-width: 768px) {
-  .marquee {
+  @media (max-width: 768px) {
     font-size: 0.9rem;
     padding: 8px 15px;
   }
 }
 
+.marqueeInner {
+  -webkit-font-smoothing: antialiased;
+  width: fit-content;
+  display: flex;
+  flex: auto;
+  flex-direction: row;
+}
 
+.marqueePart {
+  flex-shrink: 0;
+  padding: 0 4px;
+  font-smooth: always;
+}
+
+.adviceItem {
+  margin-right: 10px;
+}
+
+.bullet {
+  margin: 0 10px;
+}

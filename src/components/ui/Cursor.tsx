@@ -45,8 +45,25 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
   const lastScrollY = React.useRef(0);
   const isTemporarilyHidden = React.useRef(false);
 
+  // Detectar si es un dispositivo móvil
+  const isMobileDevice = React.useCallback(() => {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isMobileUA = /mobile|android|iphone|ipad|tablet/i.test(userAgent);
+    return isTouchDevice || isSmallScreen || isMobileUA;
+  }, []);
+
+  // Inicializar isCursorEnabled según el tipo de dispositivo
+  React.useEffect(() => {
+    const mobile = isMobileDevice();
+    console.log('[CursorProvider] Es dispositivo móvil:', mobile);
+    setIsCursorEnabled(!mobile); // Deshabilitar cursor en móviles
+  }, [isMobileDevice]);
+
   // Load cursor visibility from localStorage on mount
   React.useEffect(() => {
+    if (isMobileDevice()) return; // Ignorar localStorage en móviles
     try {
       const savedVisibility = localStorage.getItem('cursorIsEnabled');
       if (savedVisibility !== null) {
@@ -57,17 +74,18 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
     } catch (error) {
       console.error('[CursorProvider] Error loading cursor visibility from localStorage:', error);
     }
-  }, []);
+  }, [isMobileDevice]);
 
   // Save cursor visibility to localStorage whenever it changes
   React.useEffect(() => {
+    if (isMobileDevice()) return; // Ignorar localStorage en móviles
     try {
       localStorage.setItem('cursorIsEnabled', JSON.stringify(isCursorEnabled));
       console.log('[CursorProvider] Saved cursor visibility to localStorage:', isCursorEnabled);
     } catch (error) {
       console.error('[CursorProvider] Error saving cursor visibility to localStorage:', error);
     }
-  }, [isCursorEnabled]);
+  }, [isCursorEnabled, isMobileDevice]);
 
   // Handle Cmd+Shift+L or Ctrl+Shift+L to toggle cursor
   React.useEffect(() => {

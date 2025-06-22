@@ -38,7 +38,7 @@
   }
   
   .input {
-    max-width: 170px;
+    width: 100%;
     height: 100%;
     border: none;
     outline: none;
@@ -61,7 +61,7 @@
   
     &:focus {
       background: transparent;
-      box-shadow: 0 0 0 4px rgba(59, 177, 246, 0.18);
+      box-shadow: 0 0 0 4px rgba(59, 178, 246, 0);
     }
   
     :global(.dark) & {
@@ -73,7 +73,7 @@
         -webkit-text-fill-color: #E5E7EB;
       }
       &:focus {
-        box-shadow: 0 0 0 4px rgba(59, 191, 246, 0.4);
+        box-shadow: 0 0 0 4px rgba(59, 190, 246, 0);
       }
     }
   }

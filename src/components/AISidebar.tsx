@@ -14,6 +14,7 @@ import {
   setDoc,
   getDocs,
   doc,
+
 } from "firebase/firestore";
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold, Part } from "@firebase/ai";
 import { db, ai, appCheck } from "@/lib/firebase";
@@ -98,8 +99,6 @@ interface AISidebarProps {
   onClose: () => void;
 }
 
-let tempIdCounter = 0; // Contador para evitar colisiones en tempIds
-
 const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useUser();
   const { isAdmin, isLoading } = useAuth();
@@ -107,6 +106,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -114,6 +114,31 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Optimización: Consolidar todos los useEffect de scroll en uno solo
+  useEffect(() => {
+    if (!chatRef.current || !messages.length || !isOpen) return;
+
+    const chat = chatRef.current;
+    const scrollThreshold = 50;
+    const isNearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < scrollThreshold;
+    const lastMessage = messages[messages.length - 1];
+
+    // Scroll automático si:
+    // 1. El último mensaje es del usuario
+    // 2. El usuario está cerca del final del chat
+    // 3. Es el primer mensaje
+    if (lastMessage.sender === "user" || isNearBottom || messages.length === 1) {
+      requestAnimationFrame(() => {
+        if (chatRef.current) {
+          chatRef.current.scrollTo({
+            top: chatRef.current.scrollHeight,
+            behavior: messages.length === 1 ? "auto" : "smooth",
+          });
+        }
+      });
+    }
+  }, [messages, isOpen]);
 
   useEffect(() => {
     const currentSidebar = sidebarRef.current;
@@ -142,7 +167,8 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node) && isOpen) {
+      // Prevenir cierre si se está enviando un mensaje
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node) && isOpen && !isSending) {
         gsap.to(sidebarRef.current, {
           x: "100%",
           opacity: 0,
@@ -154,59 +180,20 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isSending]);
 
   useEffect(() => {
-    if (!chatRef.current || !messages.length) return;
-    const chat = chatRef.current;
-    const isAtBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50;
-    const isUserScrolling = chat.scrollTop < chat.scrollHeight - chat.clientHeight - 50;
-
-    if (isAtBottom || (!isUserScrolling && messages[messages.length - 1].sender === "user")) {
-      chat.scrollTo({ top: chat.scrollHeight, behavior: "smooth" });
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (isOpen && chatRef.current && messages.length > 0) {
-      setTimeout(() => {
-        if (chatRef.current) {
-          chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
-        }
-      }, 100);
-    }
-  }, [isOpen, messages.length]);
-
-  useEffect(() => {
-    if (!chatRef.current || !messages.length) return;
-    
-    const chat = chatRef.current;
-    const scrollThreshold = 100;
-    const isNearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < scrollThreshold;
-    const lastMessage = messages[messages.length - 1];
-    
-    if (
-      lastMessage.sender === "user" || 
-      isNearBottom || 
-      messages.length === 1
-    ) {
-      requestAnimationFrame(() => {
-        if (chatRef.current) {
-          chatRef.current.scrollTo({ 
-            top: chatRef.current.scrollHeight, 
-            behavior: messages.length === 1 ? "auto" : "smooth" 
-          });
-        }
-      });
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (!isOpen || !user?.id || !isAdmin) {
-      setError(!isAdmin ? "Solo administradores pueden usar este chat." : "Usuario no autenticado.");
+    if (!isOpen || !user?.id) {
+      setError(!user?.id ? "Usuario no autenticado." : null);
       return;
     }
 
+    if (!isAdmin) {
+      setError("Solo administradores pueden usar este chat. Contacta a tu administrador para obtener acceso.");
+      return;
+    }
+
+    setIsConnecting(true);
     const conversationId = `ai_${user.id}`;
     const messagesRef = collection(db, "ai_conversations", conversationId, "messages");
     const messagesQuery = query(messagesRef, orderBy("timestamp", "asc"));
@@ -240,10 +227,12 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           return Array.from(messageMap.values());
         });
         setError(null);
+        setIsConnecting(false);
       },
       (error) => {
         console.error("[AISidebar] Firestore messages listener error:", error, "[Error Code: FS-001]");
-        setError("No se pudo cargar la conversación. [Error Code: FS-001]");
+        setError("No se pudo cargar la conversación. Por favor, recarga la página. [Error Code: FS-001]");
+        setIsConnecting(false);
       },
     );
 
@@ -342,6 +331,18 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
     async (taskData: TaskData, user: User) => {
       if (!isAdmin) return;
       try {
+        // Validación mejorada de datos numéricos
+        const budget = parseFloat(taskData.budget.toString());
+        const hours = parseInt(taskData.hours.toString());
+        
+        if (isNaN(budget) || budget < 0) {
+          throw new Error("Presupuesto inválido. Debe ser un número positivo. [Error Code: TASK-CREATE-002]");
+        }
+        
+        if (isNaN(hours) || hours < 0) {
+          throw new Error("Horas inválidas. Debe ser un número entero positivo. [Error Code: TASK-CREATE-003]");
+        }
+
         const taskDocRef = doc(collection(db, "tasks"));
         const taskId = taskDocRef.id;
         await setDoc(taskDocRef, {
@@ -349,14 +350,14 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           CreatedBy: user.id,
           createdAt: serverTimestamp(),
           id: taskId,
-          budget: parseFloat(taskData.budget.toString()) || 0,
-          hours: parseInt(taskData.hours.toString()) || 0,
+          budget,
+          hours,
           startDate: taskData.startDate ? Timestamp.fromDate(new Date(taskData.startDate)) : Timestamp.now(),
           endDate: taskData.endDate ? Timestamp.fromDate(new Date(taskData.endDate)) : Timestamp.now(),
         });
       } catch (error) {
         console.error("[AISidebar] Failed to create task:", error, "[Error Code: TASK-CREATE-001]");
-        throw new Error("Error al crear la tarea [Error Code: TASK-CREATE-001]");
+        throw error instanceof Error ? error : new Error("Error al crear la tarea [Error Code: TASK-CREATE-001]");
       }
     },
     [isAdmin],
@@ -367,8 +368,11 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
       if (!user?.id || isSending || !isAdmin) return;
 
       setIsSending(true);
+      setError(null);
       const conversationId = `ai_${user.id}`;
-      const tempId = `${crypto.randomUUID()}-${tempIdCounter++}`;
+      
+      // Mejora en la generación de tempId usando solo UUID y timestamp
+      const tempId = `${crypto.randomUUID()}-${Date.now()}`;
 
       const optimisticMessage: AIMessage = {
         id: tempId,
@@ -395,6 +399,11 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
       console.log("[AISidebar] Sending message with tempId:", tempId, "[Debug Code: MSG-001]");
 
       try {
+        // Validación crítica de AppCheck
+        if (!appCheck) {
+          throw new Error("App Check no está inicializado. La funcionalidad no está disponible por seguridad. [Error Code: APPCHECK-003]");
+        }
+
         await setDoc(
           doc(db, "ai_conversations", conversationId),
           {
@@ -443,21 +452,16 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           }
         }
 
+        // Configuración más flexible de Gemini
+        const geminiConfig = {
+          maxOutputTokens: parseInt(process.env.NEXT_PUBLIC_GEMINI_MAX_TOKENS || "500"),
+          temperature: parseFloat(process.env.NEXT_PUBLIC_GEMINI_TEMPERATURE || "0.7"),
+          topK: parseInt(process.env.NEXT_PUBLIC_GEMINI_TOP_K || "40"),
+          topP: parseFloat(process.env.NEXT_PUBLIC_GEMINI_TOP_P || "0.9"),
+        };
+
         const prompt = `Eres un asistente útil que puede procesar texto e imágenes. Con base en la siguiente información: ${JSON.stringify({ tasks, clients })}, responde al prompt del usuario: "${messageData.text || "Analiza el archivo adjunto"}". Si se incluye una imagen, analízala y relaciónala con el contexto del prompt. Si el usuario pide crear una tarea, genera un JSON con los campos: clientId, project, name, description, startDate, endDate, status, priority, LeadedBy, AssignedTo, budget, hours. Devuelve la respuesta en texto claro o JSON si aplica.`;
         console.log("[AISidebar] Generated prompt:", prompt, "[Debug Code: PROMPT-001]");
-
-        if (!appCheck) {
-          console.warn("[AISidebar] App Check not initialized. [Debug Code: APPCHECK-001]");
-        } else {
-          console.log("[AISidebar] App Check token available.", "[Debug Code: APPCHECK-002]");
-        }
-
-        const generationConfig = {
-          maxOutputTokens: 500,
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.9,
-        };
 
         const safetySettings = [
           {
@@ -476,7 +480,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         try {
           const model = getGenerativeModel(ai, {
             model: "gemini-2.5-flash",
-            generationConfig,
+            generationConfig: geminiConfig,
             safetySettings,
             systemInstruction,
           });
@@ -521,7 +525,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         setError(null);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-        console.error("[AISidebar] Failed to send message:", errorMessage, `[Error Code: ${errorMessage.includes("API") ? errorMessage.split("[")[1].split("]")[0] : "GEN-001"}]`);
+        console.error("[AISidebar] Failed to send message:", errorMessage, `[Error Code: ${errorMessage.includes("API") ? errorMessage.split("[")[1]?.split("]")[0] || "API-003" : "GEN-001"}]`);
         setMessages((prev) =>
           prev.map((msg) => (msg.id === tempId ? { ...msg, isPending: false, hasError: true } : msg)),
         );
@@ -617,9 +621,33 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
       <div className={styles.chat} ref={chatRef}>
         {error && <div className={styles.error}>{error}</div>}
-        {isLoading && <Loader />}
-        {!isLoading && messages.length === 0 && (
-          <div className={styles.noMessages}>No hay mensajes. ¡Empieza a chatear!</div>
+        {isConnecting && (
+          <div className={styles.connecting}>
+            <Loader />
+            <span>Conectando con el asistente...</span>
+          </div>
+        )}
+        {!isLoading && !isConnecting && messages.length === 0 && (
+          <div className={styles.noMessages}>
+            <div className={styles.welcomeMessage}>
+              <Image 
+                src="https://storage.googleapis.com/aurin-plattform/assets/gemini-icon-logo-png_seeklogo-611605.png" 
+                alt="Gemini" 
+                width={48} 
+                height={48} 
+                className={styles.geminiIcon}
+              />
+              <h3>¡Hola! Soy tu asistente de proyectos</h3>
+              <p>Puedo ayudarte a:</p>
+              <ul>
+                <li>Consultar información de tus tareas y clientes</li>
+                <li>Crear nuevas tareas automáticamente</li>
+                <li>Analizar imágenes y documentos</li>
+                <li>Responder preguntas sobre deadlines y presupuestos</li>
+              </ul>
+              <p>¡Empieza escribiendo un mensaje!</p>
+            </div>
+          </div>
         )}
         {messages.map((m, index) => {
           const isUser = m.sender === "user";
@@ -661,6 +689,12 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
                   </span>
                 </div>
                 <div className={styles.text}>
+                  {m.hasError && (
+                    <div className={styles.errorBadge}>
+                      <Image src="/circle-x.svg" alt="Error" width={16} height={16} />
+                      Error al enviar mensaje
+                    </div>
+                  )}
                   {m.text &&
                     m.text.split("\n").map((line, i) => (
                       <span key={i}>
@@ -692,6 +726,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         containerRef={sidebarRef}
         isAdmin={isAdmin}
         user={user}
+        onError={setError}
       />
     </div>
   );

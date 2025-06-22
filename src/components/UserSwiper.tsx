@@ -27,6 +27,7 @@ interface User {
 interface UserSwiperProps {
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
   onMessageSidebarOpen: (user: User) => void;
+  className?: string;
 }
 
 const statusColors = {
@@ -38,11 +39,11 @@ const statusColors = {
 const CACHE_KEY = 'cached_users';
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
 
-const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen }: UserSwiperProps) => {
+const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwiperProps) => {
   const { user, isLoaded } = useUser();
   const [users, setUsers] = useState<ClerkUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hoveredUserId, setHoveredUserId] = useState<string | null>(null); // Track hovered user for tooltip
+  const [hoveredUserId, setHoveredUserId] = useState<string | null>(null);
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
 
@@ -239,7 +240,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen }: UserSwiperProps) =>
   }
 
   return (
-    <div className={styles.swiperContainer}>
+    <div className={`${styles.swiperContainer} ${className || ''}`}>
       <section
         ref={splideRef}
         className="splide"
@@ -248,7 +249,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen }: UserSwiperProps) =>
         <div className="splide__track" style={{padding:'40px', overflow:'visible!important'}}>
           <ul className="splide__list">
             {users.map((user) => (
-              <li key={user.id} className={`splide__slide ${styles.swiperSlide}`} >
+              <li key={user.id} className={`splide__slide ${styles.swiperSlide}`}>
                 <div
                   className={styles.card}
                   role="button"
