@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import styles from './Dock.module.scss';
 import Image from 'next/image';
+import ToDoDynamic from '@/components/ToDoDynamic';
+
 
 interface Shortcut {
   name: string;
@@ -161,16 +163,23 @@ const Dock: React.FC = () => {
                 <Image
                   src={shortcut.icon}
                   alt={`${shortcut.name} icon`}
-                  width={32} // Adjust based on your design
-                  height={32} // Adjust based on your design
+                  width={32}
+                  height={32}
                   className={styles.dockItemImage}
-                  unoptimized // Use for external images if not optimized by a provider
+                  unoptimized
                 />
               </a>
               <div className={styles.dockItemTooltip}>{shortcut.name}</div>
             </li>
+
           ))}
         </ul>
+        <ul>
+          <li>
+          <ToDoDynamic/>
+          </li>
+        </ul>
+
       </nav>
     </section>
   );

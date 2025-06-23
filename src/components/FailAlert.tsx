@@ -99,12 +99,20 @@ const FailAlert: React.FC<FailAlertProps> = ({ message, error, onClose, onAction
                 </svg>
               </div>
               <div className={styles.promptWrap}>
-                <p className={styles.promptHeading}>Error al Actualizar</p>
+                <p className={styles.promptHeading}>⚠️ Operación Fallida</p>
                 <div className={styles.promptDescription}>
                   <p>
-                    {message} <small>({error})</small>
+                    {message} {error && <small>Detalles técnicos: {error}</small>}
                   </p>
-                  {audioError && <p className={styles.audioError}>{audioError}</p>}
+                  <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.8 }}>
+                    💡 <strong>Qué puedes hacer:</strong>
+                  </p>
+                  <ul style={{ marginTop: '4px', fontSize: '12px', opacity: 0.8, paddingLeft: '16px' }}>
+                    <li>Verifica tu conexión a internet</li>
+                    <li>Intenta nuevamente en unos momentos</li>
+                    <li>Si el problema persiste, contacta al soporte técnico</li>
+                  </ul>
+                  {audioError && <p className={styles.audioError}>🔊 {audioError}</p>}
                 </div>
                 <div className={styles.buttonContainer}>
                   {onAction && actionLabel && (
@@ -128,7 +136,7 @@ const FailAlert: React.FC<FailAlertProps> = ({ message, error, onClose, onAction
                       sonnerToast.dismiss(id);
                     }}
                   >
-                    Cerrar
+                    Entendido
                   </button>
                 </div>
               </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, deleteDoc, addDoc, query, doc, getDoc, getDocs, where, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, addDoc, query, doc, getDocs, where, updateDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -73,7 +73,7 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
           <div key={user.id} className={avatarStyles.avatar}>
             <span className={avatarStyles.avatarName}>{user.fullName}</span>
             <Image
-              src={user.imageUrl || '/default-avatar.png'}
+              src={user.imageUrl}
               alt={`${user.fullName}'s avatar`}
               width={24}
               height={24}
@@ -112,7 +112,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     users,
     onNewTaskOpen,
     onEditTaskOpen,
-    onAISidebarOpen,
     onChatSidebarOpen,
     onMessageSidebarOpen,
     setTasks,
@@ -520,7 +519,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     return (
       <div className={styles.container} ref={containerRef}>
         <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
-        <div className={styles.header}>
+        <div className={styles.header} style={{margin: '20px 0px'}}>
           <div className={styles.searchWrapper}>
             <input
               type="text"
@@ -546,23 +545,24 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
               <Image
                 src="/table.svg"
                 alt="table"
+                draggable="false"
                 width={20}
                 height={20}
                 style={{
                   marginLeft: '5px',
                   transition: 'transform 0.3s ease, filter 0.3s ease',
                   filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.05)';
                   e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.41)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.81)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'scale(1)';
                   e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
                 }}
               />
             </button>
@@ -620,7 +620,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                 )}
               </div>
             </div>
-            <button
+            {/* <button
               className={styles.filterButton}
               onClick={(e) => {
                 animateClick(e.currentTarget);
@@ -650,7 +650,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                 }}
               />
               Pregunta a Gemini
-            </button>
+            </button> */}
             <button
               className={styles.createButton}
               onClick={(e) => {

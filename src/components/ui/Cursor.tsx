@@ -11,7 +11,6 @@ import {
 } from 'framer-motion';
 import styles from './Cursor.module.scss';
 
-// Type definitions for CursorContext
 interface CursorContextType {
   cursorPos: { x: number; y: number };
   isActive: boolean;
@@ -19,10 +18,8 @@ interface CursorContextType {
   isCursorEnabled: boolean;
 }
 
-// Create context for cursor state
 const CursorContext = React.createContext<CursorContextType | undefined>(undefined);
 
-// Hook to access cursor context
 const useCursor = (): CursorContextType => {
   const context = React.useContext(CursorContext);
   if (!context) {
@@ -42,28 +39,9 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
   const [isActive, setIsActive] = React.useState(false);
   const [isCursorEnabled, setIsCursorEnabled] = React.useState(true);
   const cursorRef = React.useRef<HTMLDivElement>(null);
-  const lastScrollY = React.useRef(0);
-  const isTemporarilyHidden = React.useRef(false);
-
-  // Detectar si es un dispositivo móvil
-  const isMobileDevice = React.useCallback(() => {
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isMobileUA = /mobile|android|iphone|ipad|tablet/i.test(userAgent);
-    return isTouchDevice || isSmallScreen || isMobileUA;
-  }, []);
-
-  // Inicializar isCursorEnabled según el tipo de dispositivo
-  React.useEffect(() => {
-    const mobile = isMobileDevice();
-    console.log('[CursorProvider] Es dispositivo móvil:', mobile);
-    setIsCursorEnabled(!mobile); // Deshabilitar cursor en móviles
-  }, [isMobileDevice]);
 
   // Load cursor visibility from localStorage on mount
   React.useEffect(() => {
-    if (isMobileDevice()) return; // Ignorar localStorage en móviles
     try {
       const savedVisibility = localStorage.getItem('cursorIsEnabled');
       if (savedVisibility !== null) {
@@ -74,18 +52,17 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
     } catch (error) {
       console.error('[CursorProvider] Error loading cursor visibility from localStorage:', error);
     }
-  }, [isMobileDevice]);
+  }, []);
 
   // Save cursor visibility to localStorage whenever it changes
   React.useEffect(() => {
-    if (isMobileDevice()) return; // Ignorar localStorage en móviles
     try {
       localStorage.setItem('cursorIsEnabled', JSON.stringify(isCursorEnabled));
       console.log('[CursorProvider] Saved cursor visibility to localStorage:', isCursorEnabled);
     } catch (error) {
       console.error('[CursorProvider] Error saving cursor visibility to localStorage:', error);
     }
-  }, [isCursorEnabled, isMobileDevice]);
+  }, [isCursorEnabled]);
 
   // Handle Cmd+Shift+L or Ctrl+Shift+L to toggle cursor
   React.useEffect(() => {
@@ -110,7 +87,6 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
         console.log('[CursorProvider] Cmd/Ctrl+Shift+L pressed, toggling cursor. Current state:', isCursorEnabled);
         setIsCursorEnabled((prev) => {
           const newState = !prev;
-          isTemporarilyHidden.current = false; // Reset temporary hide state
           console.log('[CursorProvider] New cursor state:', newState);
           return newState;
         });
@@ -124,37 +100,9 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
     };
   }, [isCursorEnabled]);
 
-  // Handle scroll-based visibility when isCursorEnabled is true
-  React.useEffect(() => {
-    if (!isCursorEnabled) return; // Ignore scroll if cursor is permanently disabled
-
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-
-      if (currentScrollY > lastScrollY.current && !isTemporarilyHidden.current) {
-        // Scroll down: temporarily hide cursor
-        setIsActive(false);
-        isTemporarilyHidden.current = true;
-        console.log('[CursorProvider] Scroll down, temporarily hiding cursor');
-      } else if (currentScrollY < lastScrollY.current && isTemporarilyHidden.current) {
-        // Scroll up: show cursor
-        setIsActive(true);
-        isTemporarilyHidden.current = false;
-        console.log('[CursorProvider] Scroll up, showing cursor');
-      }
-
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [isCursorEnabled]);
-
   // Handle mouse movement and visibility
   React.useEffect(() => {
-    const parent = document.body; // Fallback to body as the parent element
+    const parent = document.body;
     console.log('[CursorProvider] Setting up mouse listeners on body');
 
     if (getComputedStyle(parent).position === 'static') {
@@ -162,7 +110,7 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
     }
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isCursorEnabled || isTemporarilyHidden.current) return; // Ignore mouse move if hidden
+      if (!isCursorEnabled) return;
       const rect = parent.getBoundingClientRect();
       setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       setIsActive(true);
@@ -175,7 +123,7 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
     parent.addEventListener('mousemove', handleMouseMove);
     parent.addEventListener('mouseleave', handleMouseLeave);
 
-    parent.style.cursor = isCursorEnabled && isActive && !isTemporarilyHidden.current ? 'none' : 'default';
+    parent.style.cursor = isCursorEnabled && isActive ? 'none' : 'default';
     console.log('[CursorProvider] Cursor style set to:', parent.style.cursor);
 
     return () => {

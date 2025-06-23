@@ -868,8 +868,8 @@ const EditTask: React.FC<EditTaskProps> = ({
   const onSubmit = async (values: FormValues) => {
     if (!user) {
       toast({
-        title: "Error",
-        description: "Usuario no autenticado.",
+        title: "🔐 Acceso Requerido",
+        description: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente para continuar.",
         variant: "error",
       });
       return;
@@ -877,8 +877,8 @@ const EditTask: React.FC<EditTaskProps> = ({
 
     if (values.basicInfo.startDate && values.basicInfo.endDate && values.basicInfo.startDate > values.basicInfo.endDate) {
       toast({
-        title: "Error",
-        description: "La fecha de inicio debe ser anterior a la fecha de finalización.",
+        title: "📅 Error en las Fechas",
+        description: "La fecha de inicio debe ser anterior a la fecha de finalización. Por favor, verifica las fechas seleccionadas.",
         variant: "error",
       });
       return;
@@ -897,6 +897,7 @@ const EditTask: React.FC<EditTaskProps> = ({
         CreatedBy: user.id,
         createdAt: Timestamp.fromDate(new Date()),
       };
+
       await setDoc(doc(db, "tasks", taskId), taskData);
 
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...values.teamInfo.AssignedTo]);
@@ -921,8 +922,41 @@ const EditTask: React.FC<EditTaskProps> = ({
         router.push("/dashboard/tasks");
       }, 3000);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Error al actualizar la tarea.";
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido al actualizar la tarea.";
       console.error("Error updating task:", errorMessage);
+      
+      // Mensajes de error más específicos y útiles
+      let userFriendlyTitle = "❌ Error al Actualizar Tarea";
+      let userFriendlyDescription = "No pudimos actualizar tu tarea en este momento. ";
+      
+      if (errorMessage.includes("permission")) {
+        userFriendlyTitle = "🔒 Sin Permisos";
+        userFriendlyDescription = "No tienes permisos para actualizar esta tarea. Solo el creador o un administrador pueden editarla.";
+      } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+        userFriendlyTitle = "🌐 Problema de Conexión";
+        userFriendlyDescription = "Hay un problema con tu conexión a internet. Verifica tu conexión e intenta nuevamente.";
+      } else if (errorMessage.includes("not-found") || errorMessage.includes("does not exist")) {
+        userFriendlyTitle = "📋 Tarea No Encontrada";
+        userFriendlyDescription = "La tarea que intentas editar ya no existe o fue eliminada por otro usuario.";
+      } else if (errorMessage.includes("validation") || errorMessage.includes("required")) {
+        userFriendlyTitle = "📝 Datos Incompletos";
+        userFriendlyDescription = "Algunos campos obligatorios están incompletos o contienen errores. Revisa el formulario y completa toda la información requerida.";
+      } else if (errorMessage.includes("timeout")) {
+        userFriendlyTitle = "⏱️ Tiempo de Espera Agotado";
+        userFriendlyDescription = "La operación tardó demasiado en completarse. Tu conexión puede ser lenta, intenta nuevamente.";
+      } else if (errorMessage.includes("conflict") || errorMessage.includes("version")) {
+        userFriendlyTitle = "⚡ Conflicto de Versión";
+        userFriendlyDescription = "Otro usuario modificó esta tarea mientras la editabas. Recarga la página para ver los cambios más recientes.";
+      } else {
+        userFriendlyDescription += "Por favor, verifica todos los campos y intenta nuevamente. Si el problema persiste, contacta al soporte técnico.";
+      }
+      
+      toast({
+        title: userFriendlyTitle,
+        description: userFriendlyDescription,
+        variant: "error",
+      });
+      
       setShowFailAlert(true);
       setFailErrorMessage(errorMessage);
       setIsSaving(false);

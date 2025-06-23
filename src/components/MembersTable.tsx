@@ -150,7 +150,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
                   height={38}
                   className={styles.profileImage}
                   onError={(e) => {
-                    e.currentTarget.src = '/default-avatar.png';
+                    e.currentTarget.src = '';
                   }}
                 />
               ),

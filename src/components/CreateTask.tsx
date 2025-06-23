@@ -20,8 +20,6 @@ import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/
 import { toast } from "@/components/ui/use-toast";
 import { useFormPersistence } from "@/components/ui/use-form-persistence";
 import { useRouter } from "next/navigation";
-import Splide from "@splidejs/splide";
-import "@splidejs/splide/css/core";
 import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext'; 
 
@@ -143,8 +141,8 @@ interface CreateTaskProps {
   onHasUnsavedChanges: (hasChanges: boolean) => void;
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
-  onInviteSidebarOpen: () => void;
   onClientAlertChange?: (alert: { type: "success" | "fail"; message?: string; error?: string } | null) => void;
+  onTaskCreated?: () => void; // Nueva prop para manejar cuando se crea exitosamente la tarea
 }
 
 const CreateTask: React.FC<CreateTaskProps> = ({
@@ -153,8 +151,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   onHasUnsavedChanges,
   onCreateClientOpen,
   onEditClientOpen,
-  onInviteSidebarOpen,
   onClientAlertChange,
+  onTaskCreated,
 }) => {
   const { user } = useUser();
   const router = useRouter();
@@ -166,15 +164,21 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
   const [isCollaboratorDropdownOpen, setIsCollaboratorDropdownOpen] = useState(false);
+  const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false);
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
   const [projectDropdownPosition, setProjectDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [collaboratorDropdownPosition, setCollaboratorDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [leaderDropdownPosition, setLeaderDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [clientDropdownPosition, setClientDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [startDatePosition, setStartDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [endDatePosition, setEndDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [searchCollaborator, setSearchCollaborator] = useState("");
+  const [searchLeader, setSearchLeader] = useState("");
+  const [searchClient, setSearchClient] = useState("");
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState("");
@@ -184,6 +188,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const collaboratorInputRef = useRef<HTMLInputElement>(null);
+  const leaderInputRef = useRef<HTMLInputElement>(null);
+  const clientInputRef = useRef<HTMLInputElement>(null);
   const startDateInputRef = useRef<HTMLDivElement>(null);
   const endDateInputRef = useRef<HTMLDivElement>(null);
   const startDatePopperRef = useRef<HTMLDivElement>(null);
@@ -192,14 +198,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const statusDropdownPopperRef = useRef<HTMLDivElement>(null);
   const priorityDropdownPopperRef = useRef<HTMLDivElement>(null);
   const collaboratorDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const clientSplideRef = useRef<HTMLDivElement>(null);
-  const pmSplideRef = useRef<HTMLDivElement>(null);
-  const clientSplideInstance = useRef<Splide | null>(null);
-  const pmSplideInstance = useRef<Splide | null>(null);
-  const [clientCanPrev, setClientCanPrev] = useState(false);
-  const [clientCanNext, setClientCanNext] = useState(true);
-  const [pmCanPrev, setPmCanPrev] = useState(false);
-  const [pmCanNext, setPmCanNext] = useState(true);
+  const leaderDropdownPopperRef = useRef<HTMLDivElement>(null);
+  const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -358,6 +358,20 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           left: rect.left + window.scrollX,
         });
       }
+      if (isLeaderDropdownOpen && leaderInputRef.current) {
+        const rect = leaderInputRef.current.getBoundingClientRect();
+        setLeaderDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+      if (isClientDropdownOpen && clientInputRef.current) {
+        const rect = clientInputRef.current.getBoundingClientRect();
+        setClientDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
     };
 
     const animatePoppers = () => {
@@ -385,6 +399,20 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
         gsap.fromTo(
           collaboratorDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isLeaderDropdownOpen && leaderDropdownPopperRef.current) {
+        gsap.fromTo(
+          leaderDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isClientDropdownOpen && clientDropdownPopperRef.current) {
+        gsap.fromTo(
+          clientDropdownPopperRef.current,
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
         );
@@ -436,6 +464,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
     isCollaboratorDropdownOpen,
+    isLeaderDropdownOpen,
+    isClientDropdownOpen,
   ]);
 
   useEffect(() => {
@@ -494,6 +524,24 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       ) {
         setIsCollaboratorDropdownOpen(false);
       }
+      if (
+        clientInputRef.current &&
+        !clientInputRef.current.contains(event.target as Node) &&
+        clientDropdownPopperRef.current &&
+        !clientDropdownPopperRef.current.contains(event.target as Node) &&
+        isClientDropdownOpen
+      ) {
+        setIsClientDropdownOpen(false);
+      }
+      if (
+        leaderInputRef.current &&
+        !leaderInputRef.current.contains(event.target as Node) &&
+        leaderDropdownPopperRef.current &&
+        !leaderDropdownPopperRef.current.contains(event.target as Node) &&
+        isLeaderDropdownOpen
+      ) {
+        setIsLeaderDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -504,6 +552,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     isStartDateOpen,
     isEndDateOpen,
     isCollaboratorDropdownOpen,
+    isClientDropdownOpen,
+    isLeaderDropdownOpen,
   ]);
 
   // Handle scroll with touch compatibility
@@ -515,7 +565,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         isProjectDropdownOpen ||
         isStatusDropdownOpen ||
         isPriorityDropdownOpen ||
-        isCollaboratorDropdownOpen
+        isCollaboratorDropdownOpen ||
+        isLeaderDropdownOpen ||
+        isClientDropdownOpen
       ) {
         setIsStartDateOpen(false);
         setIsEndDateOpen(false);
@@ -523,6 +575,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         setIsStatusDropdownOpen(false);
         setIsPriorityDropdownOpen(false);
         setIsCollaboratorDropdownOpen(false);
+        setIsLeaderDropdownOpen(false);
+        setIsClientDropdownOpen(false);
       }
     }, 200);
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -534,127 +588,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
     isCollaboratorDropdownOpen,
+    isLeaderDropdownOpen,
+    isClientDropdownOpen,
   ]);
-
-  // Initialize client Splide
-  useEffect(() => {
-    if (!isMounted || !clientSplideRef.current || clients.length === 0) return;
-
-    const timer = setTimeout(() => {
-      if (clientSplideInstance.current) {
-        clientSplideInstance.current.destroy();
-        clientSplideInstance.current = null;
-      }
-
-      const perPage = Math.min(clients.length, 6);
-      clientSplideInstance.current = new Splide(clientSplideRef.current, {
-        type: "loop",
-        perPage,
-        perMove: 1,
-        gap: "1rem",
-        autoWidth: false,
-        focus: "center",
-        autoplay: false,
-        drag: true,
-        dragMinThreshold: { mouse: 10, touch: 10 },
-        arrows: false,
-        pagination: false,
-        breakpoints: {
-          1024: { perPage: Math.min(clients.length, 4), gap: "0.75rem" },
-          767: { perPage: Math.min(clients.length, 2), gap: "0.5rem" },
-          480: { perPage: 1, gap: "0.5rem" },
-        },
-      }).mount();
-
-      const updateNavButtons = () => {
-        if (clientSplideInstance.current) {
-          const { index, length } = clientSplideInstance.current;
-          setClientCanPrev(index > 0);
-          setClientCanNext(index < length - perPage);
-        }
-      };
-
-      clientSplideInstance.current.on("moved", updateNavButtons);
-      updateNavButtons();
-
-      clientSplideInstance.current.on("drag", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe started`);
-        gsap.killTweensOf(clientSplideRef.current?.querySelectorAll(".splide__slide"));
-      });
-
-      clientSplideInstance.current.on("dragged", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe ended, position: ${clientSplideInstance.current?.index}`);
-      });
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      if (clientSplideInstance.current) {
-        clientSplideInstance.current.destroy();
-        clientSplideInstance.current = null;
-      }
-    };
-  }, [clients, isMounted]);
-
-  // Initialize PM Splide
-  useEffect(() => {
-    if (!isMounted || !pmSplideRef.current || users.length === 0) return;
-
-    const timer = setTimeout(() => {
-      if (pmSplideInstance.current) {
-        pmSplideInstance.current.destroy();
-        pmSplideInstance.current = null;
-      }
-
-      const perPage = Math.min(users.length, 6);
-      pmSplideInstance.current = new Splide(pmSplideRef.current, {
-        type: "loop",
-        perPage,
-        perMove: 1,
-        gap: "1rem",
-        autoWidth: false,
-        focus: "center",
-        autoplay: false,
-        drag: true,
-        dragMinThreshold: { mouse: 10, touch: 10 },
-        arrows: false,
-        pagination: false,
-        breakpoints: {
-          1024: { perPage: Math.min(users.length, 4), gap: "0.75rem" },
-          767: { perPage: Math.min(users.length, 2), gap: "0.5rem" },
-          480: { perPage: 1, gap: "0.5rem" },
-        },
-      }).mount();
-
-      const updateNavButtons = () => {
-        if (pmSplideInstance.current) {
-          const { index, length } = pmSplideInstance.current;
-          setPmCanPrev(index > 0);
-          setPmCanNext(index < length - perPage);
-        }
-      };
-
-      pmSplideInstance.current.on("moved", updateNavButtons);
-      updateNavButtons();
-
-      pmSplideInstance.current.on("drag", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe started`);
-        gsap.killTweensOf(pmSplideRef.current?.querySelectorAll(".splide__slide"));
-      });
-
-      pmSplideInstance.current.on("dragged", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe ended, position: ${pmSplideInstance.current?.index}`);
-      });
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      if (pmSplideInstance.current) {
-        pmSplideInstance.current.destroy();
-        pmSplideInstance.current = null;
-      }
-    };
-  }, [users, isMounted]);
 
   const animateClick = useCallback((element: HTMLElement) => {
     gsap.to(element, {
@@ -667,17 +603,23 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     });
   }, []);
 
-  const handleClientSelect = useCallback(
+  const handleClientSelectDropdown = useCallback(
     (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      const currentClientId = form.watch("clientInfo.clientId");
-      if (currentClientId === clientId) {
-        form.setValue("clientInfo.clientId", "");
-      } else {
-        form.setValue("clientInfo.clientId", clientId);
-        form.setValue("clientInfo.project", "");
-      }
+      form.setValue("clientInfo.clientId", clientId);
+      setSearchClient("");
+      setIsClientDropdownOpen(false);
+    },
+    [form, animateClick],
+  );
+
+  const handleClientRemove = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue("clientInfo.clientId", "");
+      form.setValue("clientInfo.project", "");
     },
     [form, animateClick],
   );
@@ -686,12 +628,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     (project: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      const currentProject = form.watch("clientInfo.project");
-      if (currentProject === project) {
-        form.setValue("clientInfo.project", "");
-      } else {
-        form.setValue("clientInfo.project", project);
-      }
+      form.setValue("clientInfo.project", project);
       setIsProjectDropdownOpen(false);
     },
     [form, animateClick],
@@ -701,7 +638,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     (status: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      form.setValue("basicInfo.status", status as FormValues["basicInfo"]["status"]);
+      form.setValue("basicInfo.status", status as "Por Iniciar" | "Diseño" | "Desarrollo" | "En Proceso" | "Finalizado" | "Backlog" | "Cancelado");
       setIsStatusDropdownOpen(false);
     },
     [form, animateClick],
@@ -711,26 +648,24 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      form.setValue("basicInfo.priority", priority as FormValues["basicInfo"]["priority"]);
+      form.setValue("basicInfo.priority", priority as "Baja" | "Media" | "Alta");
       setIsPriorityDropdownOpen(false);
     },
     [form, animateClick],
   );
 
-  const handlePmSelect = useCallback(
+  const handleLeaderSelect = useCallback(
     (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      const currentLeadedBy = form.getValues("teamInfo.LeadedBy");
-      const isSelected = currentLeadedBy.includes(userId);
-      const newLeadedBy = isSelected
-        ? currentLeadedBy.filter((id) => id !== userId)
-        : [...currentLeadedBy, userId];
-      form.setValue("teamInfo.LeadedBy", newLeadedBy);
-      form.setValue(
-        "teamInfo.AssignedTo",
-        form.getValues("teamInfo.AssignedTo").filter((id) => id !== userId),
-      );
+      const currentLeaders = form.getValues("teamInfo.LeadedBy");
+      const isSelected = currentLeaders.includes(userId);
+      const newLeaders = isSelected
+        ? currentLeaders.filter((id) => id !== userId)
+        : [...currentLeaders, userId];
+      form.setValue("teamInfo.LeadedBy", newLeaders);
+      setSearchLeader("");
+      setIsLeaderDropdownOpen(false);
     },
     [form, animateClick],
   );
@@ -747,7 +682,20 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           : [...currentAssignedTo, userId];
         form.setValue("teamInfo.AssignedTo", newAssignedTo);
         setSearchCollaborator("");
+        setIsCollaboratorDropdownOpen(false);
       }
+    },
+    [form, animateClick],
+  );
+
+  const handleLeaderRemove = useCallback(
+    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue(
+        "teamInfo.LeadedBy",
+        form.getValues("teamInfo.LeadedBy").filter((id) => id !== userId),
+      );
     },
     [form, animateClick],
   );
@@ -764,38 +712,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     [form, animateClick],
   );
 
-  const handleClientPrev = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (clientSplideInstance.current) {
-      clientSplideInstance.current.go("<");
-      console.log(`[${new Date().toISOString()}] [Splide:clients] Navigated to previous slide`);
-    }
-  }, []);
-
-  const handleClientNext = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (clientSplideInstance.current) {
-      clientSplideInstance.current.go(">");
-      console.log(`[${new Date().toISOString()}] [Splide:clients] Navigated to next slide`);
-    }
-  }, []);
-
-  const handlePmPrev = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (pmSplideInstance.current) {
-      pmSplideInstance.current.go("<");
-      console.log(`[${new Date().toISOString()}] [Splide:leaders] Navigated to previous slide`);
-    }
-  }, []);
-
-  const handlePmNext = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (pmSplideInstance.current) {
-      pmSplideInstance.current.go(">");
-      console.log(`[${new Date().toISOString()}] [Splide:leaders] Navigated to next slide`);
-    }
-  }, []);
-
   const filteredCollaborators = useMemo(() => {
     return users.filter(
       (u) =>
@@ -805,11 +721,27 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     );
   }, [users, searchCollaborator, form]);
 
+  const filteredLeaders = useMemo(() => {
+    return users.filter(
+      (u) =>
+        u.fullName.toLowerCase().includes(searchLeader.toLowerCase()) ||
+        u.role.toLowerCase().includes(searchLeader.toLowerCase()),
+    );
+  }, [users, searchLeader]);
+
+  const filteredClients = useMemo(() => {
+    return clients.filter(
+      (c) =>
+        c.name.toLowerCase().includes(searchClient.toLowerCase()) ||
+        c.projects.some((project) => project.toLowerCase().includes(searchClient.toLowerCase())),
+    );
+  }, [clients, searchClient]);
+
   const onSubmit = async (values: FormValues) => {
     if (!user) {
       toast({
-        title: "Error",
-        description: "Usuario no autenticado.",
+        title: "🔐 Acceso Requerido",
+        description: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente para continuar.",
         variant: "error",
       });
       return;
@@ -817,8 +749,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
     if (values.basicInfo.startDate && values.basicInfo.endDate && values.basicInfo.startDate > values.basicInfo.endDate) {
       toast({
-        title: "Error",
-        description: "La fecha de inicio debe ser anterior a la fecha de finalización.",
+        title: "📅 Error en las Fechas",
+        description: "La fecha de inicio debe ser anterior a la fecha de finalización. Por favor, verifica las fechas seleccionadas.",
         variant: "error",
       });
       return;
@@ -859,12 +791,46 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       form.reset(defaultValues);
       clearPersistedData();
       setIsSaving(false);
-      setTimeout(() => {
-        router.push("/dashboard/tasks");
-      }, 3000);
+      
+      // Llamar a onTaskCreated para cerrar el modal y mostrar TasksTable
+      if (onTaskCreated) {
+        setTimeout(() => {
+          onTaskCreated();
+        }, 2000); // Esperar 2 segundos para que el usuario vea el mensaje de éxito
+      }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Error al guardar la tarea.";
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear la tarea.";
       console.error("Error saving task:", errorMessage);
+      
+      // Mensajes de error más específicos y útiles
+      let userFriendlyTitle = "❌ Error al Crear Tarea";
+      let userFriendlyDescription = "No pudimos crear tu tarea en este momento. ";
+      
+      if (errorMessage.includes("permission")) {
+        userFriendlyTitle = "🔒 Sin Permisos";
+        userFriendlyDescription = "No tienes permisos para crear esta tarea. Contacta a tu administrador para obtener los permisos necesarios.";
+      } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+        userFriendlyTitle = "🌐 Problema de Conexión";
+        userFriendlyDescription = "Hay un problema con tu conexión a internet. Verifica tu conexión e intenta nuevamente.";
+      } else if (errorMessage.includes("quota") || errorMessage.includes("limit")) {
+        userFriendlyTitle = "📊 Límite Alcanzado";
+        userFriendlyDescription = "Se ha alcanzado el límite de tareas permitidas. Contacta a tu administrador para aumentar el límite.";
+      } else if (errorMessage.includes("validation") || errorMessage.includes("required")) {
+        userFriendlyTitle = "📝 Datos Incompletos";
+        userFriendlyDescription = "Algunos campos obligatorios están incompletos o contienen errores. Revisa el formulario y completa toda la información requerida.";
+      } else if (errorMessage.includes("timeout")) {
+        userFriendlyTitle = "⏱️ Tiempo de Espera Agotado";
+        userFriendlyDescription = "La operación tardó demasiado en completarse. Tu conexión puede ser lenta, intenta nuevamente.";
+      } else {
+        userFriendlyDescription += "Por favor, verifica todos los campos y intenta nuevamente. Si el problema persiste, contacta al soporte técnico.";
+      }
+      
+      toast({
+        title: userFriendlyTitle,
+        description: userFriendlyDescription,
+        variant: "error",
+      });
+      
       setShowFailAlert(true);
       setFailErrorMessage(errorMessage);
       setIsSaving(false);
@@ -875,8 +841,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     const result = await form.trigger(fields as (keyof FormValues)[]);
     if (!result) {
       toast({
-        title: "Error de Validación",
-        description: "Por favor, revisa los campos y corrige los errores.",
+        title: "⚠️ Campos Requeridos",
+        description: "Hay algunos campos obligatorios que necesitan ser completados. Revisa los campos marcados en rojo y completa la información faltante.",
         variant: "error",
       });
     }
@@ -893,32 +859,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     );
   }
 
-  interface SlideCardProps {
-    imageUrl: string;
-    name: string;
-    role?: string;
-    isSelected: boolean;
-    onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  }
 
-  const SlideCard: React.FC<SlideCardProps> = ({ imageUrl, name, role, isSelected, onClick }) => (
-    <div
-      className={`${styles.slideCard} ${isSelected ? styles.selected : ""}`}
-      onClick={onClick}
-      style={{ touchAction: "pan-y", pointerEvents: "auto" }}
-    >
-      <Image
-        src={imageUrl}
-        alt={name}
-        width={36}
-        height={36}
-        className={role ? styles.userImage : styles.clientImage}
-        priority
-      />
-      <div className={styles.clientName}>{name}</div>
-      {role && <div className={styles.userRole}>{role}</div>}
-    </div>
-  );
 
   return (
     <>
@@ -927,6 +868,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           <>
             <div className={styles.header}>
               <div className={styles.headerTitle}>Crear Tarea</div>
+              <div className={styles.headerProgress}>
+                <Wizard totalSteps={5}>
+                  <WizardProgress />
+                </Wizard>
+              </div>
               <button className={styles.toggleButton} onClick={onToggle}>
                 <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
               </button>
@@ -934,7 +880,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             <div className={styles.content}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
                 <Wizard totalSteps={5}>
-                  <WizardProgress />
                   <WizardStep step={0} validator={() => validateStep(stepFields[0] as (keyof FormValues)[])}>
                     <div className={styles.section}>
                       <h2 className={styles.sectionTitle}>Información del Cliente</h2>
@@ -962,68 +907,67 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
                         </div>
-                        <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
-                          {clients.length > 1 && (
-                            <>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handleClientPrev}
-                                disabled={!clientCanPrev}
-                                style={{
-                                  position: "absolute",
-                                  display: 'none',
-                                  left: "-40px",
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: clientCanPrev ? 1 : 0.5,
-                                }}
-                              >
-                                Anterior
-                              </button>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handleClientNext}
-                                disabled={!clientCanNext}
-                                style={{
-                                  position: "absolute",
-                                  right: "-40px",
-                                  display: 'none',
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: clientCanNext ? 1 : 0.5,
-                                }}
-                              >
-                                Siguiente
-                              </button>
-                            </>
-                          )}
-                          <div className={styles.slideshow} style={{ overflow: "visible" }}>
-                            <section
-                              ref={clientSplideRef}
-                              style={{ visibility: clients.length ? "visible" : "hidden" }}
-                              className="splide"
-                              aria-label="Carrusel de Cuentas"
+                        <input
+                          className={styles.input}
+                          value={searchClient}
+                          onChange={(e) => {
+                            setSearchClient(e.target.value);
+                            setIsClientDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => setIsClientDropdownOpen(false), 200);
+                          }}
+                          placeholder="Ej: Nombre de la cuenta"
+                          ref={clientInputRef}
+                        />
+                        {isClientDropdownOpen &&
+                          createPortal(
+                            <div
+                              className={styles.dropdown}
+                              style={{
+                                top: clientDropdownPosition?.top,
+                                left: clientDropdownPosition?.left,
+                                position: "absolute",
+                                zIndex: 150000,
+                                width: clientInputRef.current?.offsetWidth,
+                              }}
+                              ref={clientDropdownPopperRef}
                             >
-                              <div className="splide__track">
-                                <ul className="splide__list">
-                                  {clients.map((client) => (
-                                    <li key={client.id} className={`splide__slide ${styles.splideSlide}`}>
-                                      <SlideCard
-                                        imageUrl={client.imageUrl}
-                                        name={client.name}
-                                        isSelected={form.watch("clientInfo.clientId") === client.id}
-                                        onClick={(e) => handleClientSelect(client.id, e)}
-                                      />
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </section>
-                          </div>
+                              {filteredClients.length ? (
+                                filteredClients.map((client) => (
+                                  <div
+                                    key={client.id}
+                                    className={styles.dropdownItem}
+                                    onClick={(e) => handleClientSelectDropdown(client.id, e)}
+                                  >
+                                    {client.name}
+                                    {form.watch("clientInfo.clientId") === client.id && " (Seleccionado)"}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className={styles.emptyState}>
+                                  <span>
+                                    {isAdmin
+                                      ? "No hay coincidencias. Crea una nueva cuenta."
+                                      : "No hay coincidencias. Pide a un administrador que cree una cuenta."}
+                                  </span>
+                                </div>
+                              )}
+                            </div>,
+                            document.body,
+                          )}
+                        <div className={styles.tags}>
+                          {form.watch("clientInfo.clientId") && (
+                            (() => {
+                              const selectedClient = clients.find((c) => c.id === form.watch("clientInfo.clientId"));
+                              return selectedClient ? (
+                                <div key={selectedClient.id} className={styles.tag}>
+                                  {selectedClient.name}
+                                  <button onClick={(e) => handleClientRemove(e)}>X</button>
+                                </div>
+                              ) : null;
+                            })()
+                          )}
                         </div>
                         {form.formState.errors.clientInfo?.clientId && (
                           <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
@@ -1402,69 +1346,65 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la persona principal responsable de la tarea.
                         </div>
-                        <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
-                          {users.length > 1 && (
-                            <>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handlePmPrev}
-                                disabled={!pmCanPrev}
-                                style={{
-                                  position: "absolute",
-                                  left: "-40px",
-                                  display: 'none',
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: pmCanPrev ? 1 : 0.5,
-                                }}
-                              >
-                                Anterior
-                              </button>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handlePmNext}
-                                disabled={!pmCanNext}
-                                style={{
-                                  position: "absolute",
-                                  right: "-40px",
-                                  display: 'none',
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: pmCanNext ? 1 : 0.5,
-                                }}
-                              >
-                                Siguiente
-                              </button>
-                            </>
-                          )}
-                          <div className={styles.slideshow} style={{ overflow: "visible" }}>
-                            <section
-                              ref={pmSplideRef}
-                              style={{ visibility: users.length ? "visible" : "hidden" }}
-                              className="splide"
-                              aria-label="Carrusel de Líderes"
+                        <input
+                          className={styles.input}
+                          value={searchLeader}
+                          onChange={(e) => {
+                            setSearchLeader(e.target.value);
+                            setIsLeaderDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => setIsLeaderDropdownOpen(false), 200);
+                          }}
+                          placeholder="Ej: John Doe"
+                          ref={leaderInputRef}
+                        />
+                        {isLeaderDropdownOpen &&
+                          createPortal(
+                            <div
+                              className={styles.dropdown}
+                              style={{
+                                top: leaderDropdownPosition?.top,
+                                left: leaderDropdownPosition?.left,
+                                position: "absolute",
+                                zIndex: 150000,
+                                width: leaderInputRef.current?.offsetWidth,
+                              }}
+                              ref={leaderDropdownPopperRef}
                             >
-                              <div className="splide__track">
-                                <ul className="splide__list">
-                                  {users.map((user) => (
-                                    <li key={user.id} className={`splide__slide ${styles.splideSlide}`}>
-                                      <SlideCard
-                                        imageUrl={user.imageUrl}
-                                        name={user.fullName}
-                                        role={user.role}
-                                        isSelected={form.watch("teamInfo.LeadedBy").includes(user.id)}
-                                        onClick={(e) => handlePmSelect(user.id, e)}
-                                      />
-                                    </li>
-                                  ))}
-                                </ul>
+                              {filteredLeaders.length ? (
+                                filteredLeaders.map((u) => (
+                                  <div
+                                    key={u.id}
+                                    className={styles.dropdownItem}
+                                    onClick={(e) => handleLeaderSelect(u.id, e)}
+                                  >
+                                    {u.fullName} ({u.role})
+                                    {Array.isArray(form.watch("teamInfo.LeadedBy")) && form.watch("teamInfo.LeadedBy").includes(u.id) && " (Seleccionado)"}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className={styles.emptyState}>
+                                  <span>
+                                    {isAdmin
+                                      ? "No hay coincidencias. Invita a nuevos colaboradores."
+                                      : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
+                                  </span>
+                                </div>
+                              )}
+                            </div>,
+                            document.body,
+                          )}
+                        <div className={styles.tags}>
+                          {Array.isArray(form.watch("teamInfo.LeadedBy")) && form.watch("teamInfo.LeadedBy").map((userId) => {
+                            const collaborator = users.find((u) => u.id === userId);
+                            return collaborator ? (
+                              <div key={userId} className={styles.tag}>
+                                {collaborator.fullName}
+                                <button onClick={(e) => handleLeaderRemove(userId, e)}>X</button>
                               </div>
-                            </section>
-                          </div>
+                            ) : null;
+                          })}
                         </div>
                         {form.formState.errors.teamInfo?.LeadedBy && (
                           <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
@@ -1515,7 +1455,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                     }}
                                   >
                                     {u.fullName} ({u.role}){" "}
-                                    {form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
+                                    {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
                                   </div>
                                 ))
                               ) : (
@@ -1531,7 +1471,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                             document.body,
                           )}
                         <div className={styles.tags}>
-                          {form.watch("teamInfo.AssignedTo").map((userId) => {
+                          {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").map((userId) => {
                             const collaborator = users.find((u) => u.id === userId);
                             return collaborator ? (
                               <div key={userId} className={styles.tag}>
@@ -1543,23 +1483,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                         </div>
                         {form.formState.errors.teamInfo?.AssignedTo && (
                           <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
-                        )}
-                        {isAdmin && (
-                          <div className={styles.addButtonWrapper}>
-                            <div className={styles.addButtonText}>
-                              ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
-                            </div>
-                            <button
-                              type="button"
-                              className={styles.addButton}
-                              onClick={(e) => {
-                                animateClick(e.currentTarget);
-                                onInviteSidebarOpen();
-                              }}
-                            >
-                              + Invitar Colaborador
-                            </button>
-                          </div>
                         )}
                       </div>
                     </div>

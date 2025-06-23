@@ -32,6 +32,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  margin-bottom: 30px;
   flex-wrap: wrap;
 }
 
@@ -613,37 +614,6 @@
     font-size: 11px;
   }
 }
-
-.kanbanBoard {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 16px;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
-}
-
-.kanbanBoard::-webkit-scrollbar {
-  height: 8px;
-}
-
-.kanbanBoard::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.kanbanBoard::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-
-.dark .kanbanBoard {
-  scrollbar-color: #4b5563 transparent;
-}
-
-.dark .kanbanBoard::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
 .kanbanColumn {
   flex: 0 0 280px;
     /* ——— Textura cristalizada ——— */
@@ -1092,8 +1062,6 @@
   background: #4b5563;
 }
 
-
-
 .kanbanBoard {
   display: flex;
   gap: 16px;
@@ -1124,6 +1092,15 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .kanbanBoard {
+    display: flex;
+    flex-direction: column;
+    overflow-x: visible;
+    gap: 16px; 
+  }
+}
+
 .kanbanColumn {
   flex: 0 0 280px;
   background: var(--column-bg, #ffffff);
@@ -1136,6 +1113,12 @@
   @media (prefers-color-scheme: dark) {
     background: var(--column-bg, #1f2a44);
     border-color: var(--border, #4b5563);
+  }
+}
+
+@media (max-width: 1024px) {
+  .kanbanColumn {
+    max-width: 100%;
   }
 }
 

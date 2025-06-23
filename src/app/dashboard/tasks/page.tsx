@@ -27,7 +27,6 @@ import MembersTable from '@/components/MembersTable';
 import ClientsTable from '@/components/ClientsTable';
 import TasksTable from '@/components/TasksTable';
 import TasksKanban from '@/components/TasksKanban';
-import TasksKanbanMobile from '@/components/TasksKanbanMobile';
 import CreateTask from '@/components/CreateTask';
 import EditTask from '@/components/EditTask';
 import AISidebar from '@/components/AISidebar';
@@ -44,7 +43,6 @@ import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import { v4 as uuidv4 } from 'uuid';
 import Dock from '@/components/Dock';
-import ToDoDynamic from '@/components/ToDoDynamic';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'; // Added useAuth import
@@ -131,7 +129,6 @@ function TasksPageContent() {
   const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
   const [showLoader, setShowLoader] = useState<boolean>(true);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -142,22 +139,6 @@ function TasksPageContent() {
   const memoizedUsers = useMemo(() => users, [users]);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
   const memoizedOpenSidebars = useMemo(() => openSidebars, [openSidebars]);
-
-  // Detect mobile screen size
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-      console.log('[TasksPage] Screen resize detected:', {
-        width: window.innerWidth,
-        isMobile: mobile,
-        taskView,
-      });
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [taskView]);
 
   useEffect(() => {
     // Hide loader after 3.5 seconds (duration of all animations)
@@ -211,7 +192,7 @@ function TasksPageContent() {
             const status = userDoc.exists() ? userDoc.data().status || 'Disponible' : 'Disponible';
             return {
               id: clerkUser.id,
-              imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+              imageUrl: clerkUser.imageUrl,
               fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
               role: clerkUser.publicMetadata.role || 'Sin rol',
               description: clerkUser.publicMetadata.description || 'Sin descripción',
@@ -225,7 +206,7 @@ function TasksPageContent() {
             // Return user data without Firestore status if document fetch fails
             return {
               id: clerkUser.id,
-              imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+              imageUrl: clerkUser.imageUrl,
               fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
               role: clerkUser.publicMetadata.role || 'Sin rol',
               description: clerkUser.publicMetadata.description || 'Sin descripción',
@@ -738,7 +719,6 @@ function TasksPageContent() {
                   users={memoizedUsers}
                   onNewTaskOpen={handleNewTaskOpen}
                   onEditTaskOpen={handleEditTaskOpen}
-                  onAISidebarOpen={handleAISidebarOpen}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
                   setTasks={setTasks}
@@ -747,37 +727,19 @@ function TasksPageContent() {
                 />
               )}
               {taskView === 'kanban' && (
-                <>
-                  {isMobile ? (
-                    <TasksKanbanMobile
-                      tasks={memoizedTasks}
-                      clients={memoizedClients}
-                      users={memoizedUsers}
-                      onNewTaskOpen={handleNewTaskOpen}
-                      onEditTaskOpen={handleEditTaskOpen}
-                      onAISidebarOpen={handleAISidebarOpen}
-                      onChatSidebarOpen={handleChatSidebarOpen}
-                      onMessageSidebarOpen={handleMessageSidebarOpen}
-                      setTasks={setTasks}
-                      onOpenProfile={handleOpenProfile}
-                      onViewChange={handleViewChange}
-                    />
-                  ) : (
-                    <TasksKanban
-                      tasks={memoizedTasks}
-                      clients={memoizedClients}
-                      users={memoizedUsers}
-                      onNewTaskOpen={handleNewTaskOpen}
-                      onEditTaskOpen={handleEditTaskOpen}
-                      onAISidebarOpen={handleAISidebarOpen}
-                      onChatSidebarOpen={handleChatSidebarOpen}
-                      onMessageSidebarOpen={handleMessageSidebarOpen}
-                      setTasks={setTasks}
-                      onOpenProfile={handleOpenProfile}
-                      onViewChange={handleViewChange}
-                    />
-                  )}
-                </>
+                <TasksKanban
+                  tasks={memoizedTasks}
+                  clients={memoizedClients}
+                  users={memoizedUsers}
+                  onNewTaskOpen={handleNewTaskOpen}
+                  onEditTaskOpen={handleEditTaskOpen}
+                  onAISidebarOpen={handleAISidebarOpen}
+                  onChatSidebarOpen={handleChatSidebarOpen}
+                  onMessageSidebarOpen={handleMessageSidebarOpen}
+                  setTasks={setTasks}
+                  onOpenProfile={handleOpenProfile}
+                  onViewChange={handleViewChange}
+                />
               )}
             </>
           )}
@@ -808,7 +770,7 @@ function TasksPageContent() {
               onHasUnsavedChanges={setHasUnsavedChanges}
               onCreateClientOpen={handleCreateClientOpen}
               onEditClientOpen={handleEditClientOpen}
-              onInviteSidebarOpen={handleInviteSidebarOpen}
+              onTaskCreated={() => setIsCreateTaskOpen(false)}
             />
           )}
           {isEditTaskOpen && editTaskId && (
@@ -995,7 +957,6 @@ function TasksPageContent() {
       )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
-      <ToDoDynamic />
       <Dock />
       <Footer />
     </div>

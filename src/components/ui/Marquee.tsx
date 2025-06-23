@@ -59,7 +59,7 @@ const Marquee: React.FC = () => {
     const tween = gsap.to(`.${styles.marqueePart}`, {
       xPercent: 200, // Mueve de derecha a izquierda
       repeat: -1,
-      duration: 10,
+      duration: 20, // Increased from 10 to 20 seconds to make it slower
       ease: 'linear',
     }).totalProgress(0.5);
 

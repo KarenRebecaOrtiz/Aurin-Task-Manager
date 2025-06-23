@@ -250,6 +250,7 @@ export function EmojiSelector({ onEmojiSelect, disabled, value, containerRef }: 
           ref={triggerRef}
           onMouseEnter={handleMouseEnterTrigger}
           onMouseLeave={handleMouseLeave}
+          title="Seleccionar emoji"
         >
           <Image
             src="/smile-plus.svg"

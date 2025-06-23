@@ -645,7 +645,12 @@ export default function InputChat({
         {previewUrl && (
           <div className={styles.imagePreview}>
             <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-            <button className={styles.removeImageButton} onClick={handleRemoveFile} type="button">
+            <button 
+              className={styles.removeImageButton} 
+              onClick={handleRemoveFile} 
+              type="button"
+              title="Eliminar imagen"
+            >
               <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
             </button>
           </div>
@@ -654,7 +659,12 @@ export default function InputChat({
           <div className={styles.filePreview}>
             <Image src="/file.svg" alt="Archivo" width={16} height={16} />
             <span>{file.name}</span>
-            <button className={styles.removeImageButton} onClick={handleRemoveFile} type="button">
+            <button 
+              className={styles.removeImageButton} 
+              onClick={handleRemoveFile} 
+              type="button"
+              title="Eliminar archivo"
+            >
               <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
             </button>
           </div>
@@ -712,6 +722,7 @@ export default function InputChat({
               disabled={isProcessing}
               type="button"
               aria-label={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
+              title={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
             >
               <Image
                 src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
@@ -720,7 +731,11 @@ export default function InputChat({
                 height={12}
               />
             </button>
-            <div className={styles.timer} onClick={onToggleTimerPanel}>
+            <div 
+              className={styles.timer} 
+              onClick={onToggleTimerPanel}
+              title="Abrir/cerrar panel de temporizador"
+            >
               <span>{formatTime(timerSeconds)}</span>
               <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
             </div>
@@ -751,6 +766,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('correct')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Corregir ortografía y gramática"
                   >
                     ✏️ Corregir
                   </button>
@@ -760,6 +776,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('rewrite')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Reescribir el texto con diferentes palabras"
                   >
                     🔄 Re-escribir
                   </button>
@@ -769,6 +786,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('friendly')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Transformar a un tono más amigable y cercano"
                   >
                     😊 Hacer amigable
                   </button>
@@ -778,6 +796,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('professional')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Convertir a un tono más profesional y formal"
                   >
                     💼 Hacer profesional
                   </button>
@@ -787,6 +806,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('concise')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Hacer el texto más conciso y directo"
                   >
                     ⚡ Hacer conciso
                   </button>
@@ -796,6 +816,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('summarize')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Resumir los puntos más importantes"
                   >
                     📝 Resumir
                   </button>
@@ -805,6 +826,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('keypoints')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Extraer los puntos clave como lista"
                   >
                     🎯 Puntos clave
                   </button>
@@ -814,6 +836,7 @@ export default function InputChat({
                     onClick={() => handleReformulate('list')}
                     disabled={isProcessing}
                     role="menuitem"
+                    title="Convertir en lista organizada"
                   >
                     📋 Convertir en lista
                   </button>
@@ -850,6 +873,7 @@ export default function InputChat({
               className={styles.sendButton}
               disabled={isSending || isProcessing || (!message.trim() && !file)}
               aria-label="Enviar mensaje"
+              
             >
               <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
             </button>

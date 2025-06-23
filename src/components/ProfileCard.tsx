@@ -388,11 +388,11 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
               </div>
             </section>
             <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Stack</h2>
+              <h2 className={styles.sectionTitle}>Stack Tecnológico</h2>
               <div className={styles.sectionContent}>
                 <div className={styles.fieldGroup}>
                   <div className={styles.stackDescription}>
-                    Tecnologías y herramientas utilizadas frecuentemente.
+                    Tecnologías y herramientas que domina el usuario.
                   </div>
                   <div className={styles.ProfileCardTags}>
                     {profile.stack && profile.stack.length > 0 ? (
@@ -402,35 +402,45 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                         </div>
                       ))
                     ) : (
-                      <div className={styles.input}>No especificado</div>
+                      <div className={styles.noDataMessage}>No hay tecnologías especificadas</div>
                     )}
                   </div>
                 </div>
               </div>
             </section>
             <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Equipos</h2>
+              <h2 className={styles.sectionTitle}>Equipos de Trabajo</h2>
               <div className={styles.sectionContent}>
                 <div className={styles.teamsDescription}>
-                  Equipos a los que pertenece el usuario.
+                  Equipos a los que pertenece el usuario y sus miembros.
                 </div>
-                {profile.teams?.map((team) => (
-                  <div key={team} className={styles.teamTableContainer}>
-                    <div className={styles.teamHeader}>
-                      <h3 className={styles.teamHeading}>{team}</h3>
+                {profile.teams && profile.teams.length > 0 ? (
+                  profile.teams.map((team) => (
+                    <div key={team} className={styles.teamTableContainer}>
+                      <div className={styles.teamHeader}>
+                        <h3 className={styles.teamHeading}>{team}</h3>
+                        <div className={styles.teamMemberCount}>
+                          {teamMembers[team]?.length || 0} miembro{(teamMembers[team]?.length || 0) !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <p className={styles.teamSubheading}>
+                        Otros miembros del equipo {team}
+                      </p>
+                      {teamMembers[team] && teamMembers[team].length > 0 ? (
+                        <Table
+                          data={teamMembers[team]}
+                          columns={teamTableColumns}
+                          itemsPerPage={5}
+                        />
+                      ) : (
+                        <div className={styles.noTeamMembers}>
+                          No hay otros miembros visibles en este equipo
+                        </div>
+                      )}
                     </div>
-                    <p className={styles.teamSubheading}>
-                      Lista de miembros del equipo (excluyendo al usuario)
-                    </p>
-                    <Table
-                      data={teamMembers[team] || []}
-                      columns={teamTableColumns}
-                      itemsPerPage={5}
-                    />
-                  </div>
-                ))}
-                {!profile.teams?.length && (
-                  <div className={styles.input}>No especificado</div>
+                  ))
+                ) : (
+                  <div className={styles.noDataMessage}>No pertenece a ningún equipo</div>
                 )}
               </div>
             </section>

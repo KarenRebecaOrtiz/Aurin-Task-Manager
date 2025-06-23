@@ -74,7 +74,7 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
           <div key={user.id} className={avatarStyles.avatar}>
             <span className={avatarStyles.avatarName}>{user.fullName}</span>
             <Image
-              src={user.imageUrl || '/default-avatar.png'}
+              src={user.imageUrl}
               alt={`${user.fullName}'s avatar`}
               width={40}
               height={40}
@@ -98,7 +98,6 @@ interface TasksTableProps {
   users: User[];
   onNewTaskOpen: () => void;
   onEditTaskOpen: (taskId: string) => void;
-  onAISidebarOpen: () => void;
   onChatSidebarOpen: (task: Task) => void;
   onMessageSidebarOpen: (user: User) => void;
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
@@ -113,7 +112,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     users,
     onNewTaskOpen,
     onEditTaskOpen,
-    onAISidebarOpen,
     onChatSidebarOpen,
     onMessageSidebarOpen,
     setTasks,
@@ -527,7 +525,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'name',
         label: 'Tarea',
-        width: '70%', // Increased for mobile
+        width: '70%', 
         mobileVisible: true,
       },
       {
@@ -721,7 +719,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           onMessageSidebarOpen={onMessageSidebarOpen}
           className={styles.hideOnMobile} // Add hideOnMobile class
         />
-        <div className={styles.header}>
+        <div className={styles.header} style={{margin:'30px 0px'}}>
           <div className={styles.searchWrapper}>
             <input
               type="text"
@@ -747,6 +745,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
   >
     <Image
       src="/kanban.svg"
+      draggable="false"
       alt="kanban"
       width={20}
       height={20}
@@ -754,17 +753,17 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         marginLeft: '5px',
         transition: 'transform 0.3s ease, filter 0.3s ease',
         filter:
-          'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+          'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'scale(1.05)';
         e.currentTarget.style.filter =
-          'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.34)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+          'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'scale(1)';
         e.currentTarget.style.filter =
-          'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+          'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
       }}
     />
   </button>
@@ -824,7 +823,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       )}
     </div>
   </div>
-  <button
+
+  {/* <button
     className={`${styles.filterButton} ${styles.hideOnMobile}`} // Add hideOnMobile class
     onClick={(e) => {
       animateClick(e.currentTarget);
@@ -839,7 +839,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       height={20}
       
     />
-  </button>
+  </button> */}
+
+  
   <button
     className={styles.createButton}
     onClick={(e) => {

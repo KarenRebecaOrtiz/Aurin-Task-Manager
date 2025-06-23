@@ -1686,3 +1686,528 @@ filter: none;
       inset 2px 2px 6px rgba(0, 0, 0, 0.15);
   }
 }
+
+/* Tooltip styles */
+.tooltip {
+  position: relative;
+  
+  &::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 5px;
+    pointer-events: none;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 1px;
+    pointer-events: none;
+  }
+  
+  &:hover::before,
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  &[title]:hover::before {
+    content: attr(title);
+  }
+}
+
+/* Tooltips específicos para botones de diferentes tamaños */
+.format-button {
+  // ...existing code...
+  
+  &::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 5px;
+    pointer-events: none;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 1px;
+    pointer-events: none;
+  }
+  
+  &:hover::before,
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.playStopButton,
+.sendButton,
+.imageButton {
+  // ...existing code...
+  
+  &::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 5px;
+    pointer-events: none;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 1px;
+    pointer-events: none;
+  }
+  
+  &:hover::before,
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Tooltip para el timer */
+.timer {
+  position: relative;
+  cursor: pointer;
+  
+  &::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 5px;
+    pointer-events: none;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 1px;
+    pointer-events: none;
+  }
+  
+  &:hover::before,
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Tooltip para botones de remoción */
+.removeImageButton {
+  // ...existing code...
+  
+  &::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 5px;
+    pointer-events: none;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 1px;
+    pointer-events: none;
+  }
+  
+  &:hover::before,
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Tooltips para elementos del dropup */
+.dropupItem {
+  // ...existing code...
+  
+  &::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1001;
+    margin-bottom: 5px;
+    pointer-events: none;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1001;
+    margin-bottom: 1px;
+    pointer-events: none;
+  }
+  
+  &:hover::before,
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Media query para pantallas móviles - Sidebar desde abajo */
+@media (max-width: 768px) {
+  .container {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 85vh;
+    max-height: 85vh;
+    border-radius: 24px 24px 0 0;
+    transform: translateY(100%);
+    padding: 20px 15px 15px 15px;
+    box-shadow:
+      0 -8px 16px rgba(0, 0, 0, 0.1),
+      0 -4px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .open {
+    transform: translateY(0);
+  }
+
+  /* Ajustar header para móvil */
+  .header {
+    gap: 8px;
+    padding-bottom: 10px;
+  }
+
+  .controls {
+    gap: 8px;
+  }
+
+  .title {
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .description {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .breadcrumb {
+    font-size: 12px;
+  }
+
+  /* Reorganizar detalles en móvil */
+  .details {
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 15px;
+  }
+
+  .card,
+  .cardFullWidth {
+    width: 100%;
+    min-width: 100%;
+    padding: 12px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+  }
+
+  .cardLabel {
+    font-size: 11px;
+    text-align: left;
+  }
+
+  .cardValue {
+    font-size: 11px;
+    text-align: right;
+  }
+
+  /* Ajustar área de chat para móvil */
+  .chat {
+    padding: 12px;
+    gap: 12px;
+    max-height: calc(85vh - 350px);
+    flex: 1;
+  }
+
+  .message {
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sender {
+    font-size: 12px;
+  }
+
+  .timestamp {
+    font-size: 11px;
+  }
+
+  .messageText {
+    font-size: 13px;
+  }
+
+  /* Ajustar input para móvil */
+  .inputContainer {
+    padding: 15px;
+    gap: 8px;
+  }
+
+  .input {
+    font-size: 14px;
+    padding: 10px 12px;
+    height: 40px;
+  }
+
+  /* Ajustar botones para móvil */
+  .playStopButton,
+  .sendButton,
+  .imageButton {
+    height: 36px;
+    width: 36px;
+  }
+
+  /* Timer panel ajustes */
+  .timerPanelContent {
+    padding: 15px;
+    gap: 8px;
+  }
+
+  .timerCard {
+    padding: 12px;
+  }
+
+  .timerInput,
+  .timerCommentInput {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+
+  /* Dropdowns ajustes para móvil */
+  .dropdownMenu {
+    min-width: 150px;
+    padding: 12px;
+  }
+
+  .dropdownItem {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .cardDropdown {
+    min-width: 180px;
+    padding: 12px;
+  }
+
+  .cardDropdownItem {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  /* Ajustar popups para móvil */
+  .deletePopupOverlay {
+    padding: 20px;
+  }
+
+  .deletePopup {
+    max-width: 90%;
+    margin: 0 auto;
+  }
+
+  /* Hacer que la imagen de fondo se adapte mejor */
+  .container::before {
+    opacity: 0.1;
+  }
+}
+
+/* Media query específica para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .container {
+    height: 90vh;
+    padding: 15px 12px 12px 12px;
+  }
+
+  .chat {
+    max-height: calc(90vh - 320px);
+    padding: 10px;
+  }
+
+  .title {
+    font-size: 14px;
+  }
+
+  .description {
+    font-size: 11px;
+  }
+
+  .inputContainer {
+    padding: 12px;
+  }
+
+  .card,
+  .cardFullWidth {
+    padding: 10px;
+  }
+}

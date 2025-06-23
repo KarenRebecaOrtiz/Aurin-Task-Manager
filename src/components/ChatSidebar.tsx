@@ -452,6 +452,49 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
+  // Función para detectar si es móvil
+  const isMobile = () => window.innerWidth < 768;
+
+  // Función para bloquear/desbloquear scroll del body
+  const toggleBodyScroll = (disable: boolean) => {
+    if (typeof document !== 'undefined') {
+      if (disable) {
+        // Guardar la posición actual del scroll
+        const scrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        document.body.style.overflow = 'hidden';
+        // Guardar la posición en un atributo para restaurarla después
+        document.body.setAttribute('data-scroll-y', scrollY.toString());
+      } else {
+        // Restaurar el scroll del body
+        const scrollY = document.body.getAttribute('data-scroll-y');
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        document.body.removeAttribute('data-scroll-y');
+        // Restaurar la posición del scroll
+        if (scrollY) {
+          window.scrollTo(0, parseInt(scrollY));
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Bloquear/desbloquear scroll cuando el sidebar se abre/cierra
+    toggleBodyScroll(isOpen);
+    
+    // Cleanup: asegurar que el scroll se restaure al desmontar el componente
+    return () => {
+      if (isOpen) {
+        toggleBodyScroll(false);
+      }
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerRunning) {
@@ -535,15 +578,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   useEffect(() => {
     if (sidebarRef.current) {
+      const mobile = isMobile();
       if (isOpen) {
         gsap.fromTo(
           sidebarRef.current,
-          { x: '100%', opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+          mobile ? { y: '100%', opacity: 0 } : { x: '100%', opacity: 0 },
+          mobile ? { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' } : { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
         );
       } else {
         gsap.to(sidebarRef.current, {
-          x: '100%',
+          ...(mobile ? { y: '100%' } : { x: '100%' }),
           opacity: 0,
           duration: 0.3,
           ease: 'power2.in',
@@ -554,10 +598,21 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   }, [isOpen, onClose]);
 
   useEffect(() => {
+    if (isOpen && messages.length > 0 && lastMessageRef.current) {
+      const timer = setTimeout(() => {
+        lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 350); // Slightly longer than the sidebar animation (300ms)
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, messages.length]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node) && isOpen) {
+        const mobile = isMobile();
         gsap.to(sidebarRef.current, {
-          x: '100%',
+          ...(mobile ? { y: '100%' } : { x: '100%' }),
           opacity: 0,
           duration: 0.3,
           ease: 'power2.in',
@@ -1305,7 +1360,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           break;
         case '1month':
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 1000);
           break;
         case '6months':
           startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
@@ -1467,7 +1522,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case '1month':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 1000);
         break;
       case '6months':
         startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
@@ -1501,8 +1556,9 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             className={styles.arrowLeft}
             onClick={(e) => {
               handleClick(e.currentTarget);
+              const mobile = isMobile();
               gsap.to(sidebarRef.current, {
-                x: '100%',
+                ...(mobile ? { y: '100%' } : { x: '100%' }),
                 opacity: 0,
                 duration: 0.3,
                 ease: 'power2.in',
