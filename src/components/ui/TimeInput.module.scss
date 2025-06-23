@@ -1,0 +1,163 @@
+// TimeInput.module.scss
+// Replicating Tailwind styles for the NumberFlow time input component
+
+.timeInputContainer {
+  display: flex;
+  border: none!important;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem; // gap-2
+
+  .label {
+    font-size: 0.75rem; // text-xs
+    font-weight: 500; // font-medium
+    color: #6b7280; // text-gray-600
+    text-transform: uppercase;
+    letter-spacing: 0.05em; // tracking-wide
+  }
+
+  .inputGroup {
+    display: flex;
+    align-items: stretch;
+    border: none!important;
+
+    border-radius: 0.375rem; // rounded-md
+    font-size: 1.875rem; // text-3xl
+    font-weight: 600; // font-semibold
+    box-shadow: 0 0 0 1px #e4e4e7; // ring ring-zinc-200
+    transition: box-shadow 0.15s ease-in-out; // transition-[box-shadow]
+
+    &:focus-within {
+      box-shadow: 0 0 0 2px #d5df63; // focus-within:ring-2 focus-within:ring-blue-500
+    }
+
+    // Dark mode support
+    @media (prefers-color-scheme: dark) {
+      box-shadow: 0 0 0 1px #3f3f46; // dark:ring-zinc-800
+
+      &:focus-within {
+        box-shadow: 0 0 0 2px #d5df63;
+      }
+    }
+
+    .decrementButton,
+    .incrementButton {
+      display: flex;
+      align-items: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #d5df63; // text-blue-500
+      transition: color 0.15s ease-in-out;
+
+      &:hover:not(:disabled) {
+        color: #2563eb; // hover:text-blue-600
+      }
+
+      &:disabled {
+        color: #9ca3af; // disabled:text-gray-400
+        cursor: not-allowed;
+      }
+
+      .icon {
+        width: 1rem; // size-4
+        height: 1rem; // size-4
+      }
+    }
+
+    .decrementButton {
+      padding-left: 0.5em; // pl-[.5em]
+      padding-right: 0.325em; // pr-[.325em]
+    }
+
+    .incrementButton {
+      padding-left: 0.325em; // pl-[.325em]
+      padding-right: 0.5em; // pr-[.5em]
+    }
+
+    .numberContainer {
+      position: relative;
+      display: grid;
+      align-items: center;
+      justify-items: center;
+      text-align: center;
+      grid-template-areas: 'overlap';
+
+      * {
+        grid-area: overlap;
+      }
+
+      .hiddenInput {
+        width: 1.5em; // w-[1.5em]
+        background-color: transparent;
+        padding: 0.5rem 0; // py-2
+        text-align: center;
+        border: none!important;
+        font-family: inherit;
+        color: transparent;
+        outline: none;
+        font-kerning: none;
+
+        // Hide number input spinners
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          appearance: none;
+          margin: 0;
+        }
+
+        &[type=number] {
+          -moz-appearance: textfield;
+          appearance: textfield;
+        }
+
+        &.showCaret {
+          caret-color: #d5df63; // caret-blue-500
+        }
+
+        &.hideCaret {
+          caret-color: transparent;
+        }
+      }
+
+      .numberFlow {
+        pointer-events: none;
+        color: #111827; // text-gray-900
+
+        // Dark mode support
+        @media (prefers-color-scheme: dark) {
+          color: #f9fafb; // dark:text-gray-100
+        }
+      }
+    }
+  }
+}
+
+// Animation for spin utility (used in loading states)
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+// Utility class to hide spin buttons (equivalent to spin-hide)
+.spinHide {
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
+  &[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}

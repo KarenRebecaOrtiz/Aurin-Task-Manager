@@ -64,7 +64,7 @@ export default function SyncUserToFirestore() {
         const email = user.emailAddresses[0]?.emailAddress || 'no-email';
         const displayName = user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Usuario';
         const access = isAdmin || user.publicMetadata.access === 'admin' ? 'admin' : 'user';
-        const profilePhoto = user.imageUrl || '/default-avatar.png';
+        const profilePhoto = user.imageUrl || '';
         const docRef = doc(db, 'users', userId);
 
         const userDoc = await getDoc(docRef);

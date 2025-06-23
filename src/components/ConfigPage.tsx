@@ -185,7 +185,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             portfolio: data.portfolio || '',
             stack: data.stack || [],
             teams: data.teams || [],
-            profilePhoto: data.profilePhoto || currentUser.imageUrl || '/default-avatar.png',
+            profilePhoto: data.profilePhoto || currentUser.imageUrl || '',
             coverPhoto: data.coverPhoto || '/empty-cover.png',
             profilePhotoFile: null,
             coverPhotoFile: null,
@@ -215,7 +215,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             portfolio: '',
             stack: [],
             teams: [],
-            profilePhoto: currentUser.imageUrl || '/default-avatar.png',
+            profilePhoto: currentUser.imageUrl || '',
             coverPhoto: '/empty-cover.png',
             profilePhotoFile: null,
             coverPhotoFile: null,
@@ -254,7 +254,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
               id: doc.id,
               fullName: doc.data().fullName || '',
               role: doc.data().role || 'Sin rol',
-              profilePhoto: doc.data().profilePhoto || '/default-avatar.png',
+              profilePhoto: doc.data().profilePhoto || '',
               teams: doc.data().teams || [],
             }))
             .filter((member) => member.id !== userId);
@@ -557,7 +557,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
         portfolio: config.portfolio || '',
         stack: config.stack || [],
         teams: config.teams || [],
-        profilePhoto: config.profilePhoto || currentUser.imageUrl || '/default-avatar.png',
+        profilePhoto: config.profilePhoto || currentUser.imageUrl || '',
         coverPhoto: config.coverPhoto || '/empty-cover.png',
         profilePhotoFile: null,
         coverPhotoFile: null,
@@ -680,7 +680,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
       mobileVisible: true,
       render: (member: User) => (
         <Image
-          src={member.profilePhoto || '/default-avatar.png'}
+          src={member.profilePhoto || ''}
           alt={member.fullName}
           width={40}
           height={40}

@@ -190,7 +190,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
 
       const userForChat: User = {
         id: clerkUser.id,
-        imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+        imageUrl: clerkUser.imageUrl || '',
         fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
         role,
       };
@@ -201,7 +201,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
       console.error('[UserSwiper] Error fetching user role:', error);
       const userForChat: User = {
         id: clerkUser.id,
-        imageUrl: clerkUser.imageUrl || '/default-avatar.png',
+        imageUrl: clerkUser.imageUrl || '',
         fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
         role: 'Miembro',
       };
@@ -222,7 +222,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
       e.stopPropagation();
       onOpenProfile({
         id: user.id,
-        imageUrl: user.imageUrl || '/default-avatar.png',
+        imageUrl: user.imageUrl || '',
       });
     }
   };
@@ -268,7 +268,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                             e.stopPropagation();
                             onOpenProfile({
                               id: user.id,
-                              imageUrl: user.imageUrl || '/default-avatar.png',
+                              imageUrl: user.imageUrl || '',
                             });
                           }}
                           onKeyDown={(e) => handleAvatarKeyDown(e, user)}
@@ -277,13 +277,13 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                           aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
                         >
                           <Image
-                            src={user.imageUrl || '/default-avatar.png'}
+                            src={user.imageUrl || ''}
                             alt={user.firstName || 'Avatar de usuario'}
                             width={40}
                             height={40}
                             className={styles.avatarImage}
                             onError={(e) => {
-                              e.currentTarget.src = '/default-avatar.png';
+                              e.currentTarget.src = '';
                             }}
                           />
                         </button>

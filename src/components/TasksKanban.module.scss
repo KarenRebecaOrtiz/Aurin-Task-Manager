@@ -659,7 +659,6 @@
         inset -2px -2px 4px rgba(255, 255, 255, 0.5),
         inset 2px 2px 4px rgba(0, 0, 0, 0.1);
     }
-  
 }
 
 .dark .kanbanColumn {
@@ -1092,6 +1091,14 @@
   }
 }
 
+@media (max-width: 1220px) {
+  .kanbanBoard {
+    display: block;
+    overflow-x: visible;
+    gap: 16px;
+  }
+}
+
 @media (max-width: 1024px) {
   .kanbanBoard {
     display: flex;
@@ -1103,21 +1110,23 @@
 
 .kanbanColumn {
   flex: 0 0 280px;
-  background: var(--column-bg, #ffffff);
+    background: var(--column-bg, #ffffff);
   border: 1px solid var(--border, #e2e8f0);
-  border-radius: 8px;
+    border-radius: 8px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 
   @media (prefers-color-scheme: dark) {
-    background: var(--column-bg, #1f2a44);
+      background: var(--column-bg, #1f2a44);
     border-color: var(--border, #4b5563);
   }
 }
 
 @media (max-width: 1024px) {
   .kanbanColumn {
+    flex: none;
+    width: 100%;
     max-width: 100%;
   }
 }
@@ -1426,5 +1435,11 @@
     &:hover {
       background: var(--hover-bg, #4b5563);
     }
+  }
+}
+
+.swiperContainer {
+  @media (max-width: 767px) {
+    display: none;
   }
 }

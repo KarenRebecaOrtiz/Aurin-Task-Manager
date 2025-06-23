@@ -28,13 +28,13 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users }) => 
           <div key={user.id} className={styles.avatar}>
             <span className={styles.avatarName}>{user.fullName}</span>
             <Image
-              src={user.imageUrl || "/default-avatar.png"}
+              src={user.imageUrl || ""}
               alt={`${user.fullName}'s avatar`}
               width={40}
               height={40}
               className={styles.avatarImage}
               onError={(e) => {
-                e.currentTarget.src = "/default-avatar.png";
+                e.currentTarget.src = "";
               }}
             />
           </div>

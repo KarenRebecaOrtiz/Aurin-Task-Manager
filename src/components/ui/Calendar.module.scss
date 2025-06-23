@@ -28,6 +28,7 @@ $dark-today-border: #60a5fa;
 
 
 .calendar {
+  transform: scale(0.8);
   background: var(--bg);
   box-shadow: 
     20px 20px 40px var(--shadow-dark),

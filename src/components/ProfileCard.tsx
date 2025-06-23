@@ -101,7 +101,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
               id: doc.id,
               fullName: doc.data().fullName || 'Sin nombre',
               role: doc.data().role || 'Sin rol',
-              profilePhoto: doc.data().profilePhoto || '/default-avatar.png',
+              profilePhoto: doc.data().profilePhoto || '',
             }))
             .filter((member) => member.id !== userId);
         }
@@ -255,7 +255,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
     );
   }
 
-  const avatarUrl = imageUrl || profile.profilePhoto || '/default-avatar.png';
+  const avatarUrl = imageUrl || profile.profilePhoto || '';
   const coverPhotoUrl = profile.coverPhoto || '/empty-cover.png';
 
   const teamTableColumns = [
@@ -266,7 +266,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
       mobileVisible: true,
       render: (member: User) => (
         <Image
-          src={member.profilePhoto || '/default-avatar.png'}
+          src={member.profilePhoto || ''}
           alt={member.fullName}
           width={40}
           height={40}
@@ -313,7 +313,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                   width={94}
                   height={94}
                   className={styles.ellipse11}
-                  onError={(e) => (e.currentTarget.src = '/default-avatar.png')}
+                  onError={(e) => (e.currentTarget.src = '')}
                 />
               </div>
               <div className={styles.frame239179}>

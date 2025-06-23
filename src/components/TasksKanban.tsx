@@ -79,7 +79,7 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
               height={24}
               className={avatarStyles.avatarImage}
               onError={(e) => {
-                e.currentTarget.src = '/default-avatar.png';
+                e.currentTarget.src = '';
               }}
             />
           </div>
@@ -518,7 +518,9 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
     return (
       <div className={styles.container} ref={containerRef}>
-        <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
+        <div className={styles.swiperContainer}>
+          <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
+        </div>
         <div className={styles.header} style={{margin: '20px 0px'}}>
           <div className={styles.searchWrapper}>
             <input

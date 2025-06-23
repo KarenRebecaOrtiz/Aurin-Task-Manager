@@ -8,6 +8,9 @@ import { ai } from '@/lib/firebase';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
 import TimerPanel from './TimerPanel';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
 
 interface Message {
   id: string;
@@ -24,7 +27,7 @@ interface Message {
   filePath?: string | null;
   isPending?: boolean;
   hasError?: boolean;
-  clientId: string; // Add this property
+  clientId: string;
 }
 
 interface InputChatProps {
@@ -45,7 +48,7 @@ interface InputChatProps {
     duration?: number,
   ) => Promise<void>;
   isSending: boolean;
-  setIsSending: React.Dispatch<React.SetStateAction<boolean>>; // Add this
+  setIsSending: React.Dispatch<React.SetStateAction<boolean>>;
   timerSeconds: number;
   isTimerRunning: boolean;
   onToggleTimer: (e: React.MouseEvent) => void;
@@ -83,158 +86,123 @@ export default function InputChat({
   onAddTimeEntry,
   totalHours,
 }: InputChatProps) {
-  const [message, setMessage] = useState('');
-  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isDropupOpen, setIsDropupOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasReformulated, setHasReformulated] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const dropupRef = useRef<HTMLDivElement>(null);
 
-  // Auto-resize para el textarea
-  const adjustTextareaHeight = useCallback(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      const scrollHeight = textareaRef.current.scrollHeight;
-      const maxHeight = 200;
-      const minHeight = 36;
-      textareaRef.current.style.height = `${Math.max(Math.min(scrollHeight, maxHeight), minHeight)}px`;
-      textareaRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+  // Initialize Tiptap editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        bulletList: { keepMarks: true, keepAttributes: true },
+        orderedList: { keepMarks: true, keepAttributes: true },
+      }),
+      Underline,
+    ],
+    content: '',
+    onUpdate: () => {
+      adjustEditorHeight();
+    },
+    editable: !isSending && !isProcessing,
+    editorProps: {
+      attributes: {
+        class: `${styles.input} ProseMirror`,
+        'aria-label': 'Escribir mensaje',
+      },
+    },
+  });
+
+  // Auto-resize editor height
+  const editorRef = useRef<HTMLDivElement>(null);
+  const adjustEditorHeight = useCallback(() => {
+    if (editorRef.current) {
+      const editorElement = editorRef.current.querySelector('.ProseMirror');
+      if (editorElement instanceof HTMLElement) {
+        editorElement.style.height = 'auto';
+        const scrollHeight = editorElement.scrollHeight;
+        const maxHeight = 200;
+        const minHeight = 36;
+        editorElement.style.height = `${Math.max(Math.min(scrollHeight, maxHeight), minHeight)}px`;
+        editorElement.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+      }
     }
   }, []);
 
-  // Función para animación de typewriter mejorada
-  const typeWriter = useCallback((text: string, callback: (newText: string) => void) => {
-    let index = 0;
-    let currentText = '';
-    const speed = 15; // Más rápido para mejor UX
-    
-    // Limpiar el textarea primero
-    callback('');
-    
-    const type = () => {
-      if (index < text.length) {
-        currentText += text.charAt(index);
-        callback(currentText);
-        index++;
-        setTimeout(type, speed);
-      } else {
-        // Trigger auto-resize al final
-        setTimeout(() => {
-          if (textareaRef.current) {
-            adjustTextareaHeight();
-          }
-        }, 100);
-      }
-    };
-    
-    // Pequeño delay antes de empezar para dar sensación de "pensando"
-    setTimeout(type, 300);
-  }, [adjustTextareaHeight]);
+  // Typewriter effect for reformulation
+  const typeWriter = useCallback(
+    (text: string, callback: () => void) => {
+      if (!editor) return;
+      editor.commands.clearContent();
+      let index = 0;
+      const speed = 15;
 
+      const type = () => {
+        if (index < text.length) {
+          editor.commands.insertContent(text.charAt(index));
+          index++;
+          setTimeout(type, speed);
+        } else {
+          setTimeout(() => {
+            adjustEditorHeight();
+            callback();
+          }, 100);
+        }
+      };
+
+      setTimeout(type, 300);
+    },
+    [editor, adjustEditorHeight],
+  );
+
+  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
-      console.log('[InputChat:HandleClickOutside] Click detected', {
-        target: target,
-        isTimerPanelOpen,
-        isDropupOpen,
-        targetElement: target instanceof Element ? target.tagName : 'Unknown',
-        targetClasses: target instanceof Element ? target.className : 'No classes'
-      });
-      
-      // Close timer panel only if click is outside both input wrapper AND timer panel
+
       if (isTimerPanelOpen) {
         const isInsideInputWrapper = inputWrapperRef.current?.contains(target);
         const isInsideTimerPanel = timerPanelRef?.current?.contains(target);
         const isInsideTimePicker = document.querySelector('.react-time-picker')?.contains(target);
-        const isInsideDatePicker = document.querySelector('.react-datepicker')?.contains(target) || 
-                                   document.querySelector('.react-datepicker-popper')?.contains(target);
-        
-        console.log('[InputChat:HandleClickOutside] Timer panel detection', {
-          isInsideInputWrapper,
-          isInsideTimerPanel,
-          isInsideTimePicker,
-          isInsideDatePicker,
-          inputWrapperExists: !!inputWrapperRef.current,
-          timerPanelExists: !!timerPanelRef?.current,
-          timePickerExists: !!document.querySelector('.react-time-picker'),
-          datePickerExists: !!document.querySelector('.react-datepicker')
-        });
-        
-        // Only close if click is outside all timer-related elements
+        const isInsideDatePicker =
+          document.querySelector('.react-datepicker')?.contains(target) ||
+          document.querySelector('.react-datepicker-popper')?.contains(target);
+
         if (!isInsideInputWrapper && !isInsideTimerPanel && !isInsideTimePicker && !isInsideDatePicker) {
-          console.log('[InputChat:HandleClickOutside] 🔴 CLOSING TimerPanel - Click outside all timer elements');
           setIsTimerPanelOpen(false);
-        } else {
-          console.log('[InputChat:HandleClickOutside] ✅ NOT CLOSING TimerPanel - Click inside timer elements');
         }
       }
-      
-      // Handle dropup menu (Gemini AI reformulate)
-      if (isDropupOpen) {
-        const isInsideDropup = dropupRef.current?.contains(target);
-        console.log('[InputChat:HandleClickOutside] Dropup detection', {
-          isInsideDropup,
-          dropupExists: !!dropupRef.current
-        });
-        
-        if (!isInsideDropup) {
-          console.log('[InputChat:HandleClickOutside] 🔴 CLOSING Dropup - Click outside dropup');
-          setIsDropupOpen(false);
-        } else {
-          console.log('[InputChat:HandleClickOutside] ✅ NOT CLOSING Dropup - Click inside dropup');
-        }
+
+      if (isDropupOpen && !dropupRef.current?.contains(target)) {
+        setIsDropupOpen(false);
       }
     };
-
-    console.log('[InputChat:UseEffect] Setting up click outside listener', {
-      isTimerPanelOpen,
-      isDropupOpen
-    });
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      console.log('[InputChat:UseEffect] Removing click outside listener');
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isTimerPanelOpen, setIsTimerPanelOpen, timerPanelRef, isDropupOpen]);
 
-  // Handle timer panel toggle with logging
-  const handleToggleTimerPanel = useCallback((e: React.MouseEvent) => {
-    console.log('[InputChat:HandleToggleTimerPanel] 🎯 Timer panel toggle clicked', {
-      currentState: isTimerPanelOpen,
-      willBecome: !isTimerPanelOpen,
-      isSending,
-      event: e.type
-    });
-    
-    if (isSending) {
-      console.log('[InputChat:HandleToggleTimerPanel] ❌ Blocked - isSending is true');
-      return;
-    }
-    
-    e.stopPropagation();
-    console.log('[InputChat:HandleToggleTimerPanel] ✅ Executing toggle', {
-      from: isTimerPanelOpen,
-      to: !isTimerPanelOpen
-    });
-    
-    onToggleTimerPanel(e);
-  }, [isTimerPanelOpen, isSending, onToggleTimerPanel]);
+  // Handle timer panel toggle
+  const handleToggleTimerPanel = useCallback(
+    (e: React.MouseEvent) => {
+      if (isSending) return;
+      e.stopPropagation();
+      onToggleTimerPanel(e);
+    },
+    [isSending, onToggleTimerPanel],
+  );
 
-  // Handle timer panel close with logging
+  // Handle timer panel close
   const handleCloseTimerPanel = useCallback(() => {
-    console.log('[InputChat:HandleCloseTimerPanel] 🔴 Timer panel close requested');
     setIsTimerPanelOpen(false);
   }, [setIsTimerPanelOpen]);
 
+  // Cleanup preview URL
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -243,82 +211,75 @@ export default function InputChat({
     };
   }, [previewUrl]);
 
-  // Reset hasReformulated cuando se borra el mensaje
+  // Reset reformulation state
   useEffect(() => {
-    if (!message.trim()) {
+    if (editor && editor.isEmpty) {
       setHasReformulated(false);
     }
-  }, [message]);
+  }, [editor]);
 
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [message, adjustTextareaHeight]);
-
-  const toggleFormat = useCallback((format: string) => {
-    setActiveFormats((prev) => {
-      const newFormats = new Set(prev);
-      if (newFormats.has(format)) {
-        newFormats.delete(format);
-      } else {
-        newFormats.add(format);
+  // Toggle formatting
+  const toggleFormat = useCallback(
+    (format: string) => {
+      if (!editor) return;
+      switch (format) {
+        case 'bold':
+          editor.chain().focus().toggleBold().run();
+          break;
+        case 'italic':
+          editor.chain().focus().toggleItalic().run();
+          break;
+        case 'underline':
+          editor.chain().focus().toggleUnderline().run();
+          break;
+        case 'code':
+          editor.chain().focus().toggleCode().run();
+          break;
+        case 'bullet':
+          editor.chain().focus().toggleBulletList().run();
+          break;
+        case 'numbered':
+          editor.chain().focus().toggleOrderedList().run();
+          break;
       }
-      return newFormats;
-    });
-  }, []);
+    },
+    [editor],
+  );
 
+  // Handle keydown for shortcuts
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (!editor) return;
       if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
         switch (e.key.toLowerCase()) {
           case 'b':
+            e.preventDefault();
             toggleFormat('bold');
             break;
           case 'i':
+            e.preventDefault();
             toggleFormat('italic');
             break;
           case 'u':
+            e.preventDefault();
             toggleFormat('underline');
             break;
           case '`':
+            e.preventDefault();
             toggleFormat('code');
             break;
           case 'a':
-            if (textareaRef.current) {
-              textareaRef.current.select();
-            }
+            e.preventDefault();
+            editor.commands.selectAll();
             break;
           case 'c':
-            if (textareaRef.current) {
-              const selectedText = textareaRef.current.value.substring(
-                textareaRef.current.selectionStart,
-                textareaRef.current.selectionEnd,
-              );
-              if (selectedText) {
-                navigator.clipboard.writeText(selectedText);
-              }
-            }
+            // Copy - let browser handle it naturally
             break;
           case 'v':
-            navigator.clipboard.readText().then((text) => {
-              setMessage((prev) => prev + text);
-              setTimeout(adjustTextareaHeight, 0);
-            });
+            // Paste - let browser handle it naturally
             break;
           case 'x':
-            if (textareaRef.current) {
-              const selectedText = textareaRef.current.value.substring(
-                textareaRef.current.selectionStart,
-                textareaRef.current.selectionEnd,
-              );
-              if (selectedText) {
-                navigator.clipboard.writeText(selectedText);
-                const start = textareaRef.current.selectionStart;
-                const end = textareaRef.current.selectionEnd;
-                setMessage((prev) => prev.slice(0, start) + prev.slice(end));
-                setTimeout(adjustTextareaHeight, 0);
-              }
-            }
+            // Cut - let browser handle it naturally
             break;
         }
       }
@@ -334,7 +295,7 @@ export default function InputChat({
         }
       }
     },
-    [toggleFormat, adjustTextareaHeight],
+    [toggleFormat, editor],
   );
 
   useEffect(() => {
@@ -342,59 +303,7 @@ export default function InputChat({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const applyFormatting = (text: string) => {
-    let formattedText = text;
-    if (activeFormats.has('bullet')) {
-      formattedText = formattedText
-        .split('\n')
-        .map((line) => (line.trim() ? `- ${line}` : line))
-        .join('\n');
-    }
-    if (activeFormats.has('numbered')) {
-      formattedText = formattedText
-        .split('\n')
-        .map((line, index) => (line.trim() ? `${index + 1}. ${line}` : line))
-        .join('\n');
-    }
-    if (activeFormats.has('bold')) formattedText = `**${formattedText}**`;
-    if (activeFormats.has('italic')) formattedText = `*${formattedText}*`;
-    if (activeFormats.has('underline')) formattedText = `__${formattedText}__`;
-    if (activeFormats.has('code')) formattedText = `\`${formattedText}\``;
-    return formattedText;
-  };
-
-  const getDisplayText = () => {
-    if (!message) return '';
-    let displayText = message;
-    if (activeFormats.has('bullet')) {
-      displayText = displayText
-        .split('\n')
-        .map((line) => (line.trim() ? `• ${line}` : line))
-        .join('\n');
-    }
-    if (activeFormats.has('numbered')) {
-      displayText = displayText
-        .split('\n')
-        .map((line, index) => (line.trim() ? `${index + 1}. ${line}` : line))
-        .join('\n');
-    }
-    return displayText;
-  };
-
-  const getTextStyle = () => {
-    const styles: React.CSSProperties = {};
-    if (activeFormats.has('bold')) styles.fontWeight = 'bold';
-    if (activeFormats.has('italic')) styles.fontStyle = 'italic';
-    if (activeFormats.has('underline')) styles.textDecoration = 'underline';
-    if (activeFormats.has('code')) {
-      styles.fontFamily = 'monospace';
-      styles.backgroundColor = '#f3f4f6';
-      styles.padding = '2px 4px';
-      styles.borderRadius = '4px';
-    }
-    return styles;
-  };
-
+  // File handling
   const selectFile = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
       alert('El archivo supera los 10 MB.');
@@ -409,7 +318,6 @@ export default function InputChat({
     setFile(f);
     setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
   };
-
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -430,35 +338,29 @@ export default function InputChat({
     setPreviewUrl(null);
   };
 
-  const handleReformulate = async (mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list') => {
-    if (!userId || !message.trim() || isProcessing) return;
+  // Reformulate with Gemini AI
+  const handleReformulate = async (
+    mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list',
+  ) => {
+    if (!userId || !editor || editor.isEmpty || isProcessing) return;
 
     setIsProcessing(true);
     setIsDropupOpen(false);
-    
+
     try {
-      // Verificar que AI esté disponible
       if (!ai) {
-        throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento. Verifica tu conexión a internet y que Firebase esté configurado correctamente.');
+        throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
       }
 
-      // Prompts específicos para cada función
       const prompts = {
-        correct: `Actúa como un corrector ortográfico y gramatical experto. Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el siguiente texto, manteniendo exactamente el mismo tono y significado original. Solo devuelve el texto corregido sin explicaciones: "${message}"`,
-        
-        rewrite: `Reescribe completamente el siguiente texto manteniendo exactamente el mismo significado, pero usando diferentes palabras, estructuras y expresiones. Hazlo fluido y natural, como si fuera escrito por otra persona. Solo devuelve el texto reescrito: "${message}"`,
-        
-        friendly: `Transforma el siguiente texto para que tenga un tono más amigable, cálido y cercano. Usa un lenguaje más informal, empático y positivo, manteniendo el mensaje principal. Solo devuelve el texto transformado: "${message}"`,
-        
-        professional: `Convierte el siguiente texto en una versión más profesional y formal. Usa un lenguaje empresarial apropiado, estructurado y respetuoso, manteniendo la información principal. Solo devuelve el texto profesional: "${message}"`,
-        
-        concise: `Haz el siguiente texto más conciso y directo, eliminando palabras innecesarias y redundancias. Mantén toda la información importante pero de forma más breve y clara. Solo devuelve el texto conciso: "${message}"`,
-        
-        summarize: `Resume el siguiente texto en sus puntos más importantes, manteniendo solo la información esencial. Hazlo significativamente más corto pero completo. Solo devuelve el resumen: "${message}"`,
-        
-        keypoints: `Extrae los puntos clave más importantes del siguiente texto y preséntalos como una lista clara y organizada. Mantén solo lo esencial. Solo devuelve los puntos clave: "${message}"`,
-        
-        list: `Convierte el siguiente texto en una lista organizada con viñetas o numeración, estructurando la información de manera clara y fácil de leer. Solo devuelve la lista: "${message}"`
+        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el siguiente texto, manteniendo el tono y significado original. Solo devuelve el texto corregido: "${editor.getText()}"`,
+        rewrite: `Reescribe completamente el siguiente texto manteniendo el mismo significado, pero usando diferentes palabras y estructuras. Solo devuelve el texto reescrito: "${editor.getText()}"`,
+        friendly: `Transforma el siguiente texto a un tono más amigable, cálido y cercano. Solo devuelve el texto transformado: "${editor.getText()}"`,
+        professional: `Convierte el siguiente texto en una versión más profesional y formal. Solo devuelve el texto profesional: "${editor.getText()}"`,
+        concise: `Haz el siguiente texto más conciso y directo, eliminando redundancias. Solo devuelve el texto conciso: "${editor.getText()}"`,
+        summarize: `Resume el siguiente texto en sus puntos más importantes, manteniendo solo lo esencial. Solo devuelve el resumen: "${editor.getText()}"`,
+        keypoints: `Extrae los puntos clave del siguiente texto y preséntalos como lista. Solo devuelve los puntos clave: "${editor.getText()}"`,
+        list: `Convierte el siguiente texto en una lista organizada con viñetas o numeración. Solo devuelve la lista: "${editor.getText()}"`,
       };
 
       const generationConfig = {
@@ -469,20 +371,12 @@ export default function InputChat({
       };
 
       const safetySettings = [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
       ];
 
-      const systemInstruction = `Eres un asistente de escritura experto. Siempre respondes únicamente con el texto procesado, sin explicaciones, introducciones, comentarios adicionales o texto extra. Tu respuesta debe contener solamente el texto solicitado, nada más.`;
+      const systemInstruction = `Eres un asistente de escritura experto. Responde únicamente con el texto procesado, sin explicaciones ni comentarios adicionales.`;
 
-      console.log(`[InputChat:Reformulate] Iniciando ${mode} con Gemini...`, '[Debug Code: REFORM-001]');
-      
       const model = getGenerativeModel(ai, {
         model: 'gemini-1.5-flash',
         generationConfig,
@@ -490,94 +384,46 @@ export default function InputChat({
         systemInstruction,
       });
 
-      console.log('[InputChat:Reformulate] Enviando texto a Gemini:', message, '[Debug Code: REFORM-002]');
-      
       const promptText = prompts[mode];
       const result = await model.generateContent(promptText);
-      
-      console.log('[InputChat:Reformulate] Respuesta cruda de Gemini:', result, '[Debug Code: REFORM-003]');
+      const reformulatedText = await result.response.text();
 
-      if (!result || !result.response) {
-        throw new Error('🚫 No se recibió respuesta del servidor de Gemini. El servicio podría estar temporalmente no disponible.');
+      if (!reformulatedText.trim()) {
+        throw new Error('📝 Gemini devolvió una respuesta vacía.');
       }
 
-      let reformulatedText: string;
-      try {
-        reformulatedText = await result.response.text();
-      } catch (textError) {
-        console.error('[InputChat:Reformulate] Error al extraer texto:', textError);
-        throw new Error('⚠️ Error al procesar la respuesta de Gemini. La respuesta del servidor no pudo ser interpretada correctamente.');
-      }
-
-      if (!reformulatedText || reformulatedText.trim().length === 0) {
-        throw new Error('📝 Gemini devolvió una respuesta vacía. Intenta con un texto diferente o inténtalo de nuevo en unos momentos.');
-      }
-
-      console.log('[InputChat:Reformulate] Texto reformulado recibido:', reformulatedText, '[Debug Code: REFORM-004]');
-      
-      // ✨ MAGIA TYPEWRITER ✨
-      typeWriter(reformulatedText.trim(), (typedText) => {
-        setMessage(typedText);
+      typeWriter(reformulatedText.trim(), () => {
+        editor.commands.focus();
       });
-      
       setHasReformulated(true);
-      
-      // Enfocar el textarea después de la reformulación
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-      }
-      
     } catch (error) {
-      console.error('[InputChat:Reformulate] Error completo:', error, '[Error Code: API-004]');
-      
-      let errorMessage = '❌ Error inesperado al procesar el texto con Gemini AI.';
-      let errorDetails = '';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('PERMISSION_DENIED')) {
-          errorMessage = '🔒 Acceso denegado a Gemini AI';
-          errorDetails = 'No tienes los permisos necesarios para usar esta funcionalidad. Contacta al administrador del sistema.';
-        } else if (error.message.includes('QUOTA_EXCEEDED')) {
-          errorMessage = '📊 Límite de uso excedido';
-          errorDetails = 'Se ha alcanzado el límite de consultas a Gemini AI por hoy. Inténtalo de nuevo mañana o contacta al administrador.';
-        } else if (error.message.includes('INVALID_ARGUMENT')) {
-          errorMessage = '📏 Texto no válido';
-          errorDetails = 'El texto es demasiado largo o contiene caracteres especiales no permitidos. Intenta con un texto más corto.';
-        } else if (error.message.includes('not available') || error.message.includes('🤖')) {
-          errorMessage = '🌐 Servicio no disponible';
-          errorDetails = 'Gemini AI está temporalmente no disponible. Verifica tu conexión a internet e inténtalo de nuevo.';
-        } else {
-          errorDetails = error.message;
-        }
-      }
-      
-      // Mostrar error como alerta
-      alert(`${errorMessage}\n\n${errorDetails}`);
-      
+      console.error('[InputChat:Reformulate] Error:', error);
+      alert('❌ Error al procesar el texto con Gemini AI.');
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // Send message
   const handleSend = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!userId || (!message.trim() && !file) || isSending || isProcessing) {
+    if (!userId || (!editor || editor.isEmpty) && !file || isSending || isProcessing) {
       return;
     }
-  
+
     setHasReformulated(false);
     setIsDropupOpen(false);
-    setIsSending(true); // Prevent multiple sends
-  
+    setIsSending(true);
+
     const clientId = crypto.randomUUID();
     const tempId = `temp-${clientId}`;
-    
+
     try {
       let finalMessageData: Partial<Message> = {
         id: tempId,
         senderId: userId,
         senderName: userFirstName || 'Usuario',
-        text: message.trim() ? applyFormatting(message.trim()) : null,
+        text: editor.getHTML(),
         read: false,
         imageUrl: null,
         fileUrl: null,
@@ -590,23 +436,19 @@ export default function InputChat({
       };
 
       if (file) {
-        // First show optimistic message with preview for files
         const optimisticMessage: Partial<Message> = {
           ...finalMessageData,
           imageUrl: file.type.startsWith('image/') ? previewUrl : null,
           isPending: true,
         };
-        
+
         await onSendMessage(optimisticMessage);
 
-        // Upload file
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
         formData.append('type', 'message');
         formData.append('conversationId', taskId);
-
-        console.log('[InputChat:HandleSend] Enviando archivo:', { fileName: file.name, fileType: file.type }, '[Debug Code: UPLOAD-001]');
 
         const response = await fetch('/api/upload', {
           method: 'POST',
@@ -615,15 +457,11 @@ export default function InputChat({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          console.error('[InputChat:HandleSend] Upload failed with status:', response.status, errorData, '[Error Code: UPLOAD-002]');
-          throw new Error(errorData.error || 'Failed to upload file');
+          throw new Error('Failed to upload file');
         }
 
         const { url, fileName, fileType, filePath } = await response.json();
-        console.log('[InputChat:HandleSend] Subida exitosa:', { url, fileName, fileType }, '[Debug Code: UPLOAD-003]');
 
-        // Update final message data with real URLs
         finalMessageData = {
           ...finalMessageData,
           imageUrl: file.type.startsWith('image/') && url ? url : null,
@@ -634,43 +472,36 @@ export default function InputChat({
           isPending: false,
         };
 
-        // Send final message with real URLs (this will update the pending message)
         await onSendMessage(finalMessageData);
       } else {
-        // For text-only messages, send directly without optimistic update
         await onSendMessage(finalMessageData);
       }
 
-      // Clean up after successful send
-      setMessage('');
+      editor?.commands.clearContent();
       setFile(null);
       setPreviewUrl(null);
-      setActiveFormats(new Set());
       setHasReformulated(false);
-      adjustTextareaHeight();
-      
+      adjustEditorHeight();
     } catch (error) {
-      console.error('[InputChat:HandleSend] Send failed:', error, '[Error Code: SEND-001]');
-      
-      // Mark message as failed if it was optimistic
+      console.error('[InputChat:HandleSend] Error:', error);
       if (file) {
-        await onSendMessage({ 
+        await onSendMessage({
           id: tempId,
           senderId: userId,
           senderName: userFirstName || 'Usuario',
-          text: message.trim() ? applyFormatting(message.trim()) : null,
-          isPending: false, 
+          text: editor?.getHTML() || null,
+          isPending: false,
           hasError: true,
           clientId,
         });
       }
-      
       alert('Error al enviar el mensaje.');
     } finally {
       setIsSending(false);
     }
   };
 
+  // Format time
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -689,7 +520,6 @@ export default function InputChat({
 
   return (
     <div className={styles.inputWrapper}>
-      {/* Timer Panel - Now modular */}
       <TimerPanel
         isOpen={isTimerPanelOpen}
         timerInput={timerInput}
@@ -703,7 +533,6 @@ export default function InputChat({
         onCancel={handleCloseTimerPanel}
         ref={timerPanelRef}
       />
-
       <form
         className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
         ref={inputWrapperRef}
@@ -718,7 +547,7 @@ export default function InputChat({
               key={id}
               type="button"
               className={`${styles['format-button']} ${styles.tooltip}`}
-              data-active={activeFormats.has(id) ? 'true' : 'false'}
+              data-active={editor?.isActive(id) ? 'true' : 'false'}
               onClick={() => toggleFormat(id)}
               disabled={isSending || isProcessing}
               title={`${label} (${shortcut})`}
@@ -758,9 +587,9 @@ export default function InputChat({
         {previewUrl && (
           <div className={styles.imagePreview}>
             <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-            <button 
-              className={styles.removeImageButton} 
-              onClick={handleRemoveFile} 
+            <button
+              className={styles.removeImageButton}
+              onClick={handleRemoveFile}
               type="button"
               title="Eliminar imagen"
             >
@@ -772,9 +601,9 @@ export default function InputChat({
           <div className={styles.filePreview}>
             <Image src="/file.svg" alt="Archivo" width={16} height={16} />
             <span>{file.name}</span>
-            <button 
-              className={styles.removeImageButton} 
-              onClick={handleRemoveFile} 
+            <button
+              className={styles.removeImageButton}
+              onClick={handleRemoveFile}
               type="button"
               title="Eliminar archivo"
             >
@@ -783,48 +612,24 @@ export default function InputChat({
           </div>
         )}
         <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={getDisplayText()}
-            onChange={(e) => {
-              let cleanValue = e.target.value;
-              if (activeFormats.has('bullet')) {
-                cleanValue = cleanValue
-                  .split('\n')
-                  .map((line) => line.replace(/^• /, ''))
-                  .join('\n');
-              }
-              if (activeFormats.has('numbered')) {
-                cleanValue = cleanValue
-                  .split('\n')
-                  .map((line) => line.replace(/^\d+\. /, ''))
-                  .join('\n');
-              }
-              setMessage(cleanValue);
-              setTimeout(adjustTextareaHeight, 0);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
-                e.preventDefault();
-                handleSend(e);
-              } else if (e.key === 'Enter') {
-                setTimeout(adjustTextareaHeight, 0);
-              }
-            }}
-            onInput={adjustTextareaHeight}
-            placeholder="Escribe tu mensaje aquí..."
-            disabled={isSending || isProcessing}
+          <EditorContent
+            ref={editorRef}
+            editor={editor}
             style={{
-              ...getTextStyle(),
               fontFamily: '"Inter Tight", sans-serif',
               minHeight: '36px',
               maxHeight: '200px',
               resize: 'none',
               overflow: 'hidden',
             }}
-            className={`${styles.input} resize-none`}
-            rows={1}
-            aria-label="Escribir mensaje"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
+                e.preventDefault();
+                handleSend(e);
+              } else if (e.key === 'Enter') {
+                setTimeout(adjustEditorHeight, 0);
+              }
+            }}
           />
         </div>
         <div className={styles.actions}>
@@ -844,8 +649,8 @@ export default function InputChat({
                 height={12}
               />
             </button>
-            <div 
-              className={styles.timer} 
+            <div
+              className={styles.timer}
               onClick={handleToggleTimerPanel}
               title="Abrir/cerrar panel de temporizador"
             >
@@ -857,19 +662,16 @@ export default function InputChat({
             <div className={styles.dropupContainer} ref={dropupRef}>
               <button
                 type="button"
-                className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`}
+                className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${
+                  hasReformulated ? styles.reformulated : ''
+                } ${isProcessing ? 'processing' : ''}`}
                 onClick={() => setIsDropupOpen((prev) => !prev)}
-                disabled={isSending || isProcessing || !message.trim()}
+                disabled={isSending || isProcessing || !editor || editor.isEmpty}
                 aria-label="Reformular texto con Gemini AI"
                 title="Reformular texto con Gemini AI ✨"
                 aria-expanded={isDropupOpen}
               >
-                <Image
-                  src="/gemini.svg"
-                  alt="Gemini AI"
-                  width={16}
-                  height={16}
-                />
+                <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} />
               </button>
               {isDropupOpen && (
                 <div className={styles.dropupMenu} role="menu">
@@ -974,17 +776,17 @@ export default function InputChat({
             </button>
             <EmojiSelector
               onEmojiSelect={(emoji) => {
-                setMessage((prev) => prev + emoji);
-                setTimeout(adjustTextareaHeight, 0);
+                editor?.commands.insertContent(emoji);
+                setTimeout(adjustEditorHeight, 0);
               }}
               disabled={isSending || isProcessing}
-              value={message.match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''}
+              value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''}
               containerRef={containerRef}
             />
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={isSending || isProcessing || (!message.trim() && !file)}
+              disabled={isSending || isProcessing || (!editor || editor.isEmpty) && !file}
               aria-label="Enviar mensaje"
             >
               <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
@@ -992,6 +794,16 @@ export default function InputChat({
           </div>
         </div>
       </form>
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) selectFile(f);
+        }}
+        accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx"
+      />
     </div>
   );
 }

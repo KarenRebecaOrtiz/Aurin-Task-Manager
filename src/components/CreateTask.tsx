@@ -256,7 +256,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         const clientsData: Client[] = snapshot.docs.map((doc) => ({
           id: doc.id,
           name: doc.data().name || "",
-          imageUrl: doc.data().imageUrl || "/default-avatar.png",
+          imageUrl: doc.data().imageUrl || "",
           projects: doc.data().projects || [],
           createdBy: doc.data().createdBy || "",
         }));
@@ -283,7 +283,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         }[] = await response.json();
         const usersData: User[] = clerkUsers.map((user) => ({
           id: user.id,
-          imageUrl: user.imageUrl || "/default-avatar.png",
+          imageUrl: user.imageUrl || "",
           fullName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Sin nombre",
           role: user.publicMetadata.role || "Sin rol",
         }));

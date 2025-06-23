@@ -242,7 +242,7 @@ function TasksPageContent() {
       const clientsData: Client[] = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         name: doc.data().name || '',
-        imageUrl: doc.data().imageUrl || '/default-avatar.png',
+        imageUrl: doc.data().imageUrl || '',
         projectCount: doc.data().projectCount || 0,
         projects: doc.data().projects || [],
         createdBy: doc.data().createdBy || '',
@@ -474,7 +474,7 @@ function TasksPageContent() {
         const clientData: Client = {
           id: form.id || doc(collection(db, 'clients')).id,
           name: form.name.trim(),
-          imageUrl: imageUrl || '/default-avatar.png',
+          imageUrl: imageUrl || '',
           projectCount: form.projects.length,
           projects: form.projects,
           createdBy: user.id,
@@ -925,7 +925,7 @@ function TasksPageContent() {
                   : {
                       name: '',
                       imageFile: null,
-                      imagePreview: '/default-avatar.png',
+                      imagePreview: '',
                       projects: [''],
                       deleteProjectIndex: null,
                       deleteConfirm: '',

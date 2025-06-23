@@ -655,6 +655,15 @@
   background: #4b5563;
 }
 
+// Responsive styles for mobile
+@media (max-width: 1200px) {
+  .kanbanBoard {
+    display: block;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+}
+
 .kanbanColumn {
   flex: 0 0 280px;
   background: #ffffff;

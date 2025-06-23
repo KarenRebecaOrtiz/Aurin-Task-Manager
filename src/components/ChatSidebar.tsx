@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo, forwardRef, Dispatch } from 'react';
 import Image from 'next/image';
+import sanitizeHtml from 'sanitize-html';
 import {
   collection,
   addDoc,
@@ -174,54 +175,70 @@ const MessageItem = memo(
           );
         }
         if (message.text) {
-          let text = message.text;
-          const textStyles: React.CSSProperties = {};
-          if (text.includes('**')) {
-            text = text.replace(/\*\*(.*?)\*\*/g, '$1');
-            textStyles.fontWeight = 'bold';
-          }
-          if (text.includes('*')) {
-            text = text.replace(/\*(.*?)\*/g, '$1');
-            textStyles.fontStyle = 'italic';
-          }
-          if (text.includes('__')) {
-            text = text.replace(/__(.*?)__/g, '$1');
-            textStyles.textDecoration = 'underline';
-          }
-          if (text.includes('`')) {
-            text = text.replace(/`(.*?)`/g, '$1');
-            textStyles.fontFamily = 'monospace';
-            textStyles.backgroundColor = '#f3f4f6';
-            textStyles.padding = '2px 4px';
-            textStyles.borderRadius = '4px';
-          }
-          if (text.startsWith('- ')) {
-            const items = text
-              .split('\n')
-              .filter((line) => line.trim())
-              .map((line) => line.replace(/^- /, ''));
-            return (
-              <ul className="list-disc pl-5">
-                {items.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            );
-          }
-          if (text.match(/^\d+\. /)) {
-            const items = text
-              .split('\n')
-              .filter((line) => line.trim())
-              .map((line) => line.replace(/^\d+\. /, ''));
-            return (
-              <ol className="list-decimal pl-5">
-                {items.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ol>
-            );
-          }
-          return <span style={textStyles} className={styles.messageText}>{text}</span>;
+          // Configure sanitize-html to allow Tiptap's common HTML tags and attributes
+          const sanitizeOptions = {
+            allowedTags: [
+              'p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'code', 'span', 'div'
+            ],
+            allowedAttributes: {
+              '*': ['style', 'class']
+            },
+            transformTags: {
+              // Apply consistent styling for Tiptap tags
+              'strong': (tagName: string, attribs: Record<string, string>) => ({
+                tagName,
+                attribs: {
+                  ...attribs,
+                  style: `font-weight: bold; ${attribs.style || ''}`
+                }
+              }),
+              'em': (tagName: string, attribs: Record<string, string>) => ({
+                tagName,
+                attribs: {
+                  ...attribs,
+                  style: `font-style: italic; ${attribs.style || ''}`
+                }
+              }),
+              'u': (tagName: string, attribs: Record<string, string>) => ({
+                tagName,
+                attribs: {
+                  ...attribs,
+                  style: `text-decoration: underline; ${attribs.style || ''}`
+                }
+              }),
+              'code': (tagName: string, attribs: Record<string, string>) => ({
+                tagName,
+                attribs: {
+                  ...attribs,
+                  style: `font-family: monospace; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; ${attribs.style || ''}`
+                }
+              }),
+              'ul': (tagName: string, attribs: Record<string, string>) => ({
+                tagName,
+                attribs: {
+                  ...attribs,
+                  class: `list-disc pl-5 ${attribs.class || ''}`
+                }
+              }),
+              'ol': (tagName: string, attribs: Record<string, string>) => ({
+                tagName,
+                attribs: {
+                  ...attribs,
+                  class: `list-decimal pl-5 ${attribs.class || ''}`
+                }
+              })
+            }
+          };
+
+          // Sanitize the HTML content
+          const sanitizedHtml = sanitizeHtml(message.text, sanitizeOptions);
+
+          return (
+            <div 
+              className={styles.messageText}
+              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+            />
+          );
         }
         return null;
       }, [message, setImagePreviewSrc, styles]);
@@ -234,13 +251,13 @@ const MessageItem = memo(
           }`}
         >
           <Image
-            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
+            src={users.find((u) => u.id === message.senderId)?.imageUrl || ''}
             alt={message.senderName || 'Avatar del remitente'}
             width={46}
             height={46}
             className={styles.avatar}
             onError={(e) => {
-              e.currentTarget.src = '/default-avatar.png';
+              e.currentTarget.src = '';
             }}
           />
           <div className={styles.messageContent}>

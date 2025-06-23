@@ -1,8 +1,26 @@
 'use client';
 
-import { useEffect, useRef, forwardRef } from 'react';
+import { useEffect, useRef, forwardRef, useState, useCallback, useMemo } from 'react';
 import { gsap } from 'gsap';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/style.css';
+import { z } from 'zod';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { TimeInput } from '@/components/ui/TimeInput';
+import { Wizard, WizardStep, WizardProgress, WizardActions } from '@/components/ui/wizard';
 import styles from '../ChatSidebar.module.scss';
+import Image from 'next/image';
+
+// Zod schema for form validation
+const timerFormSchema = z.object({
+  time: z.string().min(1, { message: "La hora es requerida*" })
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Formato de hora inválido (HH:MM)*" }),
+  date: z.date({ required_error: "La fecha es requerida*" }),
+  comment: z.string().optional(),
+});
+
+type TimerFormValues = z.infer<typeof timerFormSchema>;
 
 interface TimerPanelProps {
   isOpen: boolean;
@@ -30,89 +48,192 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
   onCancel,
 }, ref) => {
   const timerPanelRef = useRef<HTMLDivElement>(null);
+  
+  // State management
+  const [isMounted, setIsMounted] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showFailAlert, setShowFailAlert] = useState(false);
+  const [failErrorMessage, setFailErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasFormBeenInitialized, setHasFormBeenInitialized] = useState(false);
 
+  // Default values for form - memoized to prevent re-creation
+  const defaultValues: TimerFormValues = useMemo(() => ({
+    time: timerInput || "",
+    date: dateInput || new Date(),
+    comment: commentInput || "",
+  }), [timerInput, dateInput, commentInput]);
+
+  // Form setup
+  const form = useForm<TimerFormValues>({
+    resolver: zodResolver(timerFormSchema),
+    defaultValues,
+    mode: 'onChange',
+  });
+
+  // Prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Initialize form with current values only once when opened
+  useEffect(() => {
+    if (isOpen && !hasFormBeenInitialized) {
+      console.log('[TimerPanel:Initialize] Setting initial form values');
+      form.setValue('time', timerInput || "");
+      form.setValue('date', dateInput || new Date());
+      form.setValue('comment', commentInput || "");
+      setHasFormBeenInitialized(true);
+    } else if (!isOpen) {
+      setHasFormBeenInitialized(false);
+    }
+  }, [isOpen, hasFormBeenInitialized, form, timerInput, dateInput, commentInput]);
+
+  // Main panel animation effect
   useEffect(() => {
     console.log('[TimerPanel:UseEffect] State changed', {
       isOpen,
       panelExists: !!timerPanelRef.current,
-      refExists: !!ref
+      isMounted
     });
+
+    if (!isMounted) return;
 
     if (timerPanelRef.current) {
       if (isOpen) {
         console.log('[TimerPanel:UseEffect] 🟢 OPENING TimerPanel');
+        gsap.fromTo(timerPanelRef.current,
+          { height: 0, opacity: 0 },
+          { height: 'auto', opacity: 1, duration: 0.3, ease: 'power2.out' }
+        );
       } else {
         console.log('[TimerPanel:UseEffect] 🔴 CLOSING TimerPanel');
+        gsap.to(timerPanelRef.current, {
+          height: 0,
+          opacity: 0,
+          duration: 0.3,
+          ease: 'power2.out',
+          onComplete: () => {
+            setShowSuccessAlert(false);
+            setShowFailAlert(false);
+          }
+        });
       }
-
-      gsap.to(timerPanelRef.current, {
-        height: isOpen ? 'auto' : 0,
-        opacity: isOpen ? 1 : 0,
-        duration: 0.3,
-        ease: 'power2.out',
-        onComplete: () => {
-          console.log('[TimerPanel:UseEffect] ✅ Animation completed', {
-            isOpen,
-            finalHeight: timerPanelRef.current?.offsetHeight,
-            finalOpacity: timerPanelRef.current ? getComputedStyle(timerPanelRef.current).opacity : 'unknown'
-          });
-        }
-      });
     }
-  }, [isOpen, ref]);
+  }, [isOpen, isMounted]);
 
-  const handleTimerInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[TimerPanel:HandleTimerInputChange] Timer input changed', {
-      oldValue: timerInput,
-      newValue: e.target.value,
-      isOpen
+  // Sync form values with parent state - debounced to prevent excessive updates
+  useEffect(() => {
+    if (!hasFormBeenInitialized) return;
+
+    const timeoutId = setTimeout(() => {
+      const currentValues = form.getValues();
+      
+      if (currentValues.time !== timerInput) {
+        console.log('[TimerPanel:Sync] Updating parent time:', currentValues.time);
+        setTimerInput(currentValues.time);
+      }
+      
+      if (currentValues.date && currentValues.date !== dateInput) {
+        console.log('[TimerPanel:Sync] Updating parent date:', currentValues.date);
+        setDateInput(currentValues.date);
+      }
+      
+      if (currentValues.comment !== commentInput) {
+        console.log('[TimerPanel:Sync] Updating parent comment');
+        setCommentInput(currentValues.comment || '');
+      }
+    }, 300); // Debounce for 300ms
+
+    const subscription = form.watch(() => {
+      // This triggers the debounced update above
     });
-    setTimerInput(e.target.value);
-  };
 
-  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[TimerPanel:HandleDateInputChange] Date input changed', {
-      oldValue: dateInput,
-      newValue: e.target.value,
-      isOpen
-    });
-    setDateInput(new Date(e.target.value));
-  };
+    return () => {
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
+  }, [hasFormBeenInitialized, form, timerInput, dateInput, commentInput, setTimerInput, setDateInput, setCommentInput]);
 
-  const handleCommentInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    console.log('[TimerPanel:HandleCommentInputChange] Comment input changed', {
-      oldValue: commentInput,
-      newValue: e.target.value,
-      isOpen
-    });
-    setCommentInput(e.target.value);
-  };
+  // Memoized handlers to prevent re-renders
+  const handleTimeInputChange = useCallback((value: string) => {
+    console.log('[TimerPanel:HandleTimeInputChange] Time input changed:', value);
+    form.setValue('time', value, { shouldValidate: true });
+  }, [form]);
 
-  const handleAddTimeEntryClick = async () => {
-    console.log('[TimerPanel:HandleAddTimeEntryClick] 🎯 Add time entry clicked', {
-      timerInput,
-      dateInput,
-      commentInput: commentInput.slice(0, 50) + (commentInput.length > 50 ? '...' : ''),
+  const handleDateSelect = useCallback((date: Date | undefined) => {
+    console.log('[TimerPanel:HandleDateSelect] Date selected:', date);
+    if (date) {
+      form.setValue('date', date, { shouldValidate: true });
+    }
+  }, [form]);
+
+  const handleCommentChange = useCallback((value: string) => {
+    console.log('[TimerPanel:HandleCommentChange] Comment changed');
+    form.setValue('comment', value, { shouldValidate: true });
+  }, [form]);
+
+  const handleCancelClick = useCallback(() => {
+    console.log('[TimerPanel:HandleCancelClick] 🔴 Cancel clicked');
+    setShowSuccessAlert(false);
+    setShowFailAlert(false);
+    setHasFormBeenInitialized(false);
+    onCancel();
+  }, [onCancel]);
+
+  // Step validation
+  const validateStep = useCallback(async (step: number): Promise<boolean> => {
+    let fieldsToValidate: (keyof TimerFormValues)[] = [];
+    
+    switch (step) {
+      case 0:
+        fieldsToValidate = ['time'];
+        break;
+      case 1:
+        fieldsToValidate = ['date'];
+        break;
+      case 2:
+        fieldsToValidate = ['comment'];
+        break;
+      default:
+        return true;
+    }
+
+    const result = await form.trigger(fieldsToValidate);
+    if (!result) {
+      console.log('[TimerPanel:ValidateStep] Validation failed for step', step, fieldsToValidate);
+    }
+    return result;
+  }, [form]);
+
+  // Final submission
+  const handleSubmit = useCallback(async () => {
+    const values = form.getValues();
+    console.log('[TimerPanel:HandleSubmit] 🎯 Submitting time entry', {
+      time: values.time,
+      date: values.date,
+      comment: values.comment?.slice(0, 50) + (values.comment && values.comment.length > 50 ? '...' : ''),
       totalHours
     });
+
+    setIsSubmitting(true);
     
     try {
       await onAddTimeEntry();
-      console.log('[TimerPanel:HandleAddTimeEntryClick] ✅ Time entry added successfully');
+      console.log('[TimerPanel:HandleSubmit] ✅ Time entry added successfully');
+      setShowSuccessAlert(true);
     } catch (error) {
-      console.error('[TimerPanel:HandleAddTimeEntryClick] ❌ Error adding time entry:', error);
+      console.error('[TimerPanel:HandleSubmit] ❌ Error adding time entry:', error);
+      setFailErrorMessage(error instanceof Error ? error.message : 'Error desconocido');
+      setShowFailAlert(true);
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [form, onAddTimeEntry, totalHours]);
 
-  const handleCancelClick = () => {
-    console.log('[TimerPanel:HandleCancelClick] 🔴 Cancel clicked');
-    onCancel();
-  };
-
-  // Format date for input[type="date"]
-  const formatDateForInput = (date: Date) => {
-    return date.toISOString().split('T')[0];
-  };
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <div 
@@ -128,65 +249,345 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
       id="timerPanel"
     >
       <div className={styles.timerPanelContent}>
-        <div className={styles.timerRow}>
-          <div className={styles.timerCard}>
-            <label htmlFor="timer-time-input" style={{ fontSize: '12px', marginBottom: '8px', display: 'block' }}>
-              Tiempo:
-            </label>
-            <input
-              id="timer-time-input"
-              type="time"
-              value={timerInput}
-              onChange={handleTimerInputChange}
-              className={styles.timerInput}
-            />
+        <Wizard totalSteps={4}>
+          {/* Header with progress */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '20px',
+            padding: '16px 0',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <h3 style={{ 
+              fontSize: '16px', 
+              fontWeight: '600', 
+              color: '#182735',
+              margin: 0 
+            }}>
+              Añadir Tiempo
+            </h3>
+            <button
+              type="button"
+              onClick={handleCancelClick}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
+            </button>
           </div>
-          <div className={styles.timerCard}>
-            <label htmlFor="timer-date-input" style={{ fontSize: '12px', marginBottom: '8px', display: 'block' }}>
-              Fecha:
-            </label>
-            <input
-              id="timer-date-input"
-              type="date"
-              value={formatDateForInput(dateInput)}
-              onChange={handleDateInputChange}
-              className={styles.timerInput}
-            />
-          </div>
-        </div>
-        <div className={styles.timerCard}>
-          <label htmlFor="timer-comment-input" style={{ fontSize: '12px', marginBottom: '8px', display: 'block' }}>
-            Comentario:
-          </label>
-          <textarea
-            id="timer-comment-input"
-            placeholder="Añadir comentario"
-            value={commentInput}
-            onChange={handleCommentInputChange}
-            className={styles.timerCommentInput}
-            rows={3}
-          />
-        </div>
-        <div className={styles.timerTotal}>
-          Has invertido: {totalHours} en esta tarea.
-        </div>
-        <div className={styles.timerActions}>
-          <button
-            type="button"
-            onClick={handleAddTimeEntryClick}
-            className={styles.timerAddButton}
-          >
-            Añadir Tiempo
-          </button>
-          <button
-            type="button"
-            onClick={handleCancelClick}
-            className={styles.timerCancelButton}
-          >
-            Cancelar
-          </button>
-        </div>
+
+          <WizardProgress />
+
+          {/* Step 1: Time Input */}
+          <WizardStep step={0} validator={() => validateStep(0)}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
+                ⏰ Tiempo Invertido
+              </h4>
+              <p style={{ fontSize: '16px', color: '#71717A', margin: 0 }}>
+                Ingresa el tiempo que dedicaste a esta tarea
+              </p>
+            </div>
+            <div className={styles.timerCard}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '16px',
+                padding: '20px 0'
+              }}>
+                <Controller
+                  name="time"
+                  control={form.control}
+                  render={({ field }) => {
+                    const [hours, minutes] = field.value.split(':').map(Number);
+                    const currentHours = isNaN(hours) ? 0 : hours;
+                    const currentMinutes = isNaN(minutes) ? 0 : minutes;
+
+                    return (
+                      <>
+                        <TimeInput
+                          value={currentHours}
+                          min={0}
+                          max={23}
+                          label="HORAS"
+                          type="hours"
+                          onChange={(newHours) => {
+                            const newTime = `${String(newHours).padStart(2, '0')}:${String(currentMinutes).padStart(2, '0')}`;
+                            field.onChange(newTime);
+                            handleTimeInputChange(newTime);
+                          }}
+                        />
+                        <div style={{ 
+                          fontSize: '24px', 
+                          fontWeight: '600', 
+                          color: '#182735',
+                          margin: '0 4px'
+                        }}>
+                          :
+                        </div>
+                        <TimeInput
+                          value={currentMinutes}
+                          min={0}
+                          max={59}
+                          label="MINUTOS"
+                          type="minutes"
+                          onChange={(newMinutes) => {
+                            const newTime = `${String(currentHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
+                            field.onChange(newTime);
+                            handleTimeInputChange(newTime);
+                          }}
+                        />
+                      </>
+                    );
+                  }}
+                />
+              </div>
+              {form.formState.errors.time && (
+                <div style={{ 
+                  textAlign: 'center',
+                  marginTop: '16px'
+                }}>
+                  <span style={{ 
+                    color: '#ef4444', 
+                    fontSize: '16px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    padding: '4px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {form.formState.errors.time.message}
+                  </span>
+                </div>
+              )}
+            </div>
+          </WizardStep>
+
+          {/* Step 2: Date Selection */}
+          <WizardStep step={1} validator={() => validateStep(1)}>
+            <div style={{ textAlign: 'center' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
+                📅 Fecha de Trabajo
+              </h4>
+              <p style={{ fontSize: '12px', color: '#71717A', margin: 0 }}>
+                Selecciona la fecha en la que realizaste el trabajo
+              </p>
+            </div>
+            <div className={styles.timerCard}>
+              <div style={{
+                transform:'scale(0.8)',
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '16px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+              }}>
+                <DayPicker
+                  mode="single"
+                  selected={form.watch('date') || undefined}
+                  onSelect={handleDateSelect}
+                  style={{ 
+                    background: 'transparent',
+                    margin: 0
+                  }}
+                  styles={{
+                    root: { 
+                      fontSize: '14px',
+                      fontFamily: 'inherit'
+                    },
+                    month_caption: {
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: '#182735',
+                      marginBottom: '12px'
+                    },
+                    weekdays: {
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: '#71717A'
+                    },
+                    day: {
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#182735',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    },
+                    day_button: {
+                      borderRadius: '8px',
+                      transition: 'all 0.2s ease'
+                    },
+                    selected: {
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      fontWeight: '600'
+                    },
+                    today: {
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      color: '#3b82f6',
+                      fontWeight: '600'
+                    }
+                  }}
+                  modifiersStyles={{
+                    selected: {
+                      backgroundColor: '#3b82f6',
+                      color: 'white'
+                    },
+                    today: {
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      color: '#3b82f6'
+                    }
+                  }}
+                />
+              </div>
+              {form.formState.errors.date && (
+                <div style={{ 
+                  textAlign: 'center',
+                  marginTop: '12px'
+                }}>
+                  <span style={{ 
+                    color: '#ef4444', 
+                    fontSize: '12px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    padding: '4px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {form.formState.errors.date.message}
+                  </span>
+                </div>
+              )}
+            </div>
+          </WizardStep>
+
+          {/* Step 3: Comment Input */}
+          <WizardStep step={2} validator={() => validateStep(2)}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
+                💭 Comentario
+              </h4>
+              <p style={{ fontSize: '16px', color: '#71717A', margin: 0 }}>
+                Añade detalles sobre el trabajo realizado (opcional)
+              </p>
+            </div>
+            <div className={styles.timerCard}>
+              <label htmlFor="timer-comment-input" style={{ fontSize: '16px', marginBottom: '8px', display: 'block' }}>
+                Comentario:
+              </label>
+              <Controller
+                name="comment"
+                control={form.control}
+                render={({ field }) => (
+                  <textarea
+                    id="timer-comment-input"
+                    placeholder="Añadir comentario sobre el trabajo realizado..."
+                    value={field.value || ''}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      handleCommentChange(e.target.value);
+                    }}
+                    className={styles.timerCommentInput}
+                    rows={3}
+                    style={{ width: '100%', resize: 'vertical', minHeight: '80px' }}
+                  />
+                )}
+              />
+              <div className={styles.timerTotal} style={{ marginTop: '16px', textAlign: 'center' }}>
+                Has invertido: <strong>{totalHours}</strong> en esta tarea.
+              </div>
+            </div>
+          </WizardStep>
+
+          {/* Step 4: Feedback */}
+          <WizardStep step={3}>
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              {isSubmitting ? (
+                <div>
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    border: '4px solid rgba(0,0,0,0.1)', 
+                    borderTop: '4px solid #164C22', 
+                    borderRadius: '50%', 
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 16px'
+                  }} />
+                  <p style={{ fontSize: '18px', color: '#182735' }}>
+                    Guardando tiempo...
+                  </p>
+                </div>
+              ) : showSuccessAlert ? (
+                <div>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#10B981', marginBottom: '8px' }}>
+                    ¡Tiempo Registrado!
+                  </h4>
+                  <p style={{ fontSize: '16px', color: '#71717A', marginBottom: '20px' }}>
+                    Tu tiempo ha sido añadida exitosamente a la tarea.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCancelClick}
+                    className={styles.timerAddButton}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : showFailAlert ? (
+                <div>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#ef4444', marginBottom: '8px' }}>
+                    Error al Registrar
+                  </h4>
+                  <p style={{ fontSize: '16px', color: '#71717A', marginBottom: '8px' }}>
+                    No se pudo registrar el tiempo.
+                  </p>
+                  {failErrorMessage && (
+                    <p style={{ fontSize: '11px', color: '#ef4444', marginBottom: '20px' }}>
+                      {failErrorMessage}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={handleCancelClick}
+                      className={styles.timerCancelButton}
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontSize: '18px', color: '#182735' }}>
+                    Esperando resultado...
+                  </p>
+                </div>
+              )}
+            </div>
+          </WizardStep>
+
+          <WizardActions onComplete={handleSubmit} />
+        </Wizard>
       </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 });

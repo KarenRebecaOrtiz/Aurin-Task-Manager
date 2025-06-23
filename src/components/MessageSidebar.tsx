@@ -566,13 +566,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
               className={`${styles.message} ${m.isPending ? styles.pending : ''}`}
             >
               <Image
-                src={isMe ? (user.imageUrl || '/default-avatar.png') : (receiver.imageUrl || '/default-avatar.png')}
+                src={isMe ? (user.imageUrl || '') : (receiver.imageUrl || '')}
                 alt={senderName}
                 width={46}
                 height={46}
                 className={styles.avatar}
                 onError={(e) => {
-                  e.currentTarget.src = '/default-avatar.png';
+                  e.currentTarget.src = '';
                 }}
               />
               <div className={styles.messageContent}>

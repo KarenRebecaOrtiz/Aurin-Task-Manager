@@ -149,7 +149,7 @@ const InputAI: React.FC<InputAIProps> = ({
     }
   }, [onError]);
 
-  const selectFile = (f: File) => {
+  const selectFile = useCallback((f: File) => {
     if (f.size > MAX_FILE_SIZE) {
       handleError("El archivo supera los 10 MB. Por favor selecciona un archivo más pequeño.");
       return;
@@ -164,7 +164,7 @@ const InputAI: React.FC<InputAIProps> = ({
     
     setFile(f);
     setPreviewUrl(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
-  };
+  }, [handleError]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -172,7 +172,7 @@ const InputAI: React.FC<InputAIProps> = ({
       selectFile(f);
     }
     if (e.target) e.target.value = "";
-  }, []);
+  }, [selectFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -186,7 +186,7 @@ const InputAI: React.FC<InputAIProps> = ({
     if (f && !f.name.includes("/paperclip.svg")) {
       selectFile(f);
     }
-  }, []);
+  }, [selectFile]);
 
   const handleRemoveFile = () => {
     setFile(null);

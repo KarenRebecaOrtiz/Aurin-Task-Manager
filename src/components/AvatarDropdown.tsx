@@ -45,15 +45,15 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setProfilePhoto(data.profilePhoto || '/default-avatar.png');
+        setProfilePhoto(data.profilePhoto || '');
         setStatus(data.status || 'Disponible');
       } else {
-        setProfilePhoto('/default-avatar.png');
+        setProfilePhoto('');
         setStatus('Disponible');
       }
     }, (error) => {
       console.error('Error listening to Firestore:', error);
-      setProfilePhoto('/default-avatar.png');
+      setProfilePhoto('');
       setStatus('Disponible');
     });
 

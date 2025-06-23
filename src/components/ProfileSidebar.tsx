@@ -92,7 +92,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose, userId
           height={100}
           className={styles.avatar}
           onError={(e) => {
-            e.currentTarget.src = '/default-avatar.png';
+            e.currentTarget.src = '';
           }}
         />
         <div className={styles.info}>

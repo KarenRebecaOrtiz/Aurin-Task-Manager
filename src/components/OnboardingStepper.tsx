@@ -11,6 +11,7 @@ import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/
 import SuccessAlert from "./SuccessAlert";
 import FailAlert from "./FailAlert";
 import styles from "./OnboardingStepper.module.scss";
+import Image from "next/image";
 
 gsap.registerPlugin(ScrollToPlugin);
 
@@ -18,16 +19,65 @@ interface OnboardingStepperProps {
   onComplete?: () => void;
 }
 
+// Error Boundary Component for Lottie animations
+const LottieErrorBoundary = ({ 
+  children, 
+  fallback, 
+  onError 
+}: { 
+  children: React.ReactNode; 
+  fallback: React.ReactNode; 
+  onError: () => void;
+}) => {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (event.message?.includes('ImageData') || event.message?.includes('canvas')) {
+        console.error('[LottieErrorBoundary] Canvas/ImageData error caught:', event.message);
+        setHasError(true);
+        onError();
+        event.preventDefault();
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason?.message?.includes('ImageData') || event.reason?.message?.includes('canvas')) {
+        console.error('[LottieErrorBoundary] Promise rejection caught:', event.reason);
+        setHasError(true);
+        onError();
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, [onError]);
+
+  if (hasError) {
+    return <>{fallback}</>;
+  }
+
+  return <>{children}</>;
+};
+
 const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
   const { user } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<{ id: string; type: "success" | "failure"; message?: string; error?: string }[]>([]);
+  const [lottieErrors, setLottieErrors] = useState<Set<number>>(new Set());
+  const [loadingStates, setLoadingStates] = useState<Set<number>>(new Set());
   const stepperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const prevStepRef = useRef<number>(1); // Track previous step for animation direction
+  const prevStepRef = useRef<number>(1);
   const renderCountRef = useRef<number>(0);
 
   useEffect(() => {
@@ -199,6 +249,229 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
     }
   };
 
+  // Handle Lottie errors with more robust error detection
+  const handleLottieError = (stepIndex: number, errorType = 'general') => {
+    console.error(`[OnboardingStepper] Lottie error for step ${stepIndex}, type: ${errorType}`);
+    setLottieErrors(prev => new Set(prev).add(stepIndex));
+    setLoadingStates(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(stepIndex);
+      return newSet;
+    });
+  };
+
+  // Handle Lottie loading states
+  const handleLottieLoad = (stepIndex: number) => {
+    console.log(`[OnboardingStepper] Lottie loaded successfully for step ${stepIndex}`);
+    setLoadingStates(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(stepIndex);
+      return newSet;
+    });
+  };
+
+  const handleLottieLoadStart = (stepIndex: number) => {
+    console.log(`[OnboardingStepper] Lottie loading started for step ${stepIndex}`);
+    setLoadingStates(prev => new Set(prev).add(stepIndex));
+  };
+
+  // Lottie animation data
+  const stepData = [
+    {
+      title: "🗂️ Crea y asigna tareas",
+      lottieUrl: "https://lottie.host/76f2bdb2-5236-44f0-b671-9807f46f002b/FWf3sNMOue.lottie",
+      fallbackImage: "/OnboardingStepper/Step2.png",
+      size: { width: 216, height: 131 },
+      content: (
+        <>
+          <span>
+            Puedes crear tareas y asignarlas a quienes estén involucrados. Solo los miembros asignados podrán verlas, comentarlas y actualizarlas.
+            <br />
+          </span>
+          <span className={styles.bold}>¡Así mantenemos cada proyecto claro y enfocado!</span>
+        </>
+      )
+    },
+    {
+      title: "💬 Actualiza y comenta",
+      lottieUrl: "https://lottie.host/5f30ab10-7ac1-49bc-b782-5fc339501f24/YKbwc7JaAR.lottie",
+      fallbackImage: "/OnboardingStepper/Step3.png",
+      size: { width: 233, height: 302 },
+      content: (
+        <>
+          <span>
+            Cada tarea tiene su propio chat para que el equipo pueda conversar directamente allí.
+            <br />
+          </span>
+          <span className={styles.bold}>
+            También puedes actualizar el estado de la tarea fácilmente desde los botones superiores.
+          </span>
+        </>
+      )
+    },
+    {
+      title: "⏱️ Registra tu tiempo",
+      lottieUrl: "https://lottie.host/046bcd94-75d7-4bf7-82d0-fa00572def09/fnsqFVkOK2.lottie",
+      fallbackImage: "/OnboardingStepper/Step4.png",
+      size: { width: 285, height: 158 },
+      content: (
+        <>
+          <span>
+            ¿Quieres saber cuánto tiempo dedicas a una tarea?
+            <br />
+            Inicia un contador individual y lleva el control preciso de tu trabajo dentro del sistema.
+            <br />
+          </span>
+          <span className={styles.bold}>Puedes detener el contador presionando el mismo botón, de nuevo.</span>
+        </>
+      )
+    },
+    {
+      title: "🤝 Conecta con tu equipo y clientes",
+      lottieUrl: "https://lottie.host/96a7bf25-61aa-4ac7-96b1-f1c647b838aa/qGDbAUWBU0.lottie",
+      fallbackImage: "/OnboardingStepper/Step5.png",
+      size: { width: 202, height: 177 },
+      content: "Desde el panel de miembros podrás ver a todo tu equipo. También puedes crear cuentas de clientes para asociarlas con tareas."
+    },
+    {
+      title: "⚙️ Configura tu cuenta",
+      lottieUrl: "https://lottie.host/7f196621-55e8-41d9-b219-498b61255490/PlWoUWiTNW.lottie",
+      fallbackImage: "/OnboardingStepper/Step5.png",
+      size: { width: 220, height: 160 },
+      content: (
+        <>
+          <span>
+            Personaliza tu perfil y ajusta las preferencias de notificaciones en la configuración de cuenta.
+            <br />
+          </span>
+          <span className={styles.bold}>¡Haz que la plataforma se adapte a tu estilo de trabajo!</span>
+        </>
+      )
+    }
+  ];
+
+  // Safe Lottie Component with enhanced error handling
+  const SafeLottieComponent = ({ stepIndex, data }: { 
+    stepIndex: number; 
+    data: {
+      title: string;
+      lottieUrl: string;
+      fallbackImage: string;
+      size: { width: number; height: number };
+      content: React.ReactNode;
+    }
+  }) => {
+    const [localError, setLocalError] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+      // Set a timeout to fallback to image if Lottie takes too long to load
+      const timeout = setTimeout(() => {
+        if (!isLoaded && !localError) {
+          console.warn(`[SafeLottieComponent] Step ${stepIndex} Lottie timeout, falling back to image`);
+          setLocalError(true);
+          handleLottieError(stepIndex, 'timeout');
+        }
+      }, 5000); // 5 second timeout
+
+      return () => clearTimeout(timeout);
+    }, [stepIndex, isLoaded, localError]);
+
+    const handleError = () => {
+      console.error(`[SafeLottieComponent] Step ${stepIndex} Lottie error`);
+      setLocalError(true);
+      handleLottieError(stepIndex, 'render');
+    };
+
+    const handleLoad = () => {
+      console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie loaded`);
+      setIsLoaded(true);
+      handleLottieLoad(stepIndex);
+    };
+
+    const handleLoadStart = () => {
+      console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie load started`);
+      handleLottieLoadStart(stepIndex);
+    };
+
+    if (localError || lottieErrors.has(stepIndex)) {
+      return (
+        <Image
+          src={data.fallbackImage}
+          alt={`Step ${stepIndex + 1} illustration`}
+          width={data.size.width}
+          height={data.size.height}
+          className={styles.stepImage}
+          priority
+        />
+      );
+    }
+
+    return (
+      <LottieErrorBoundary
+        fallback={
+          <Image
+            src={data.fallbackImage}
+            alt={`Step ${stepIndex + 1} illustration`}
+            width={data.size.width}
+            height={data.size.height}
+            className={styles.stepImage}
+            priority
+          />
+        }
+        onError={() => handleError()}
+      >
+        <div style={{ position: 'relative' }}>
+          {loadingStates.has(stepIndex) && (
+            <div 
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 1
+              }}
+            >
+              <div>Cargando...</div>
+            </div>
+          )}
+          <DotLottieReact
+            src={data.lottieUrl}
+            loop
+            autoplay
+            className={styles.stepImage}
+            style={{
+              ...data.size,
+              opacity: isLoaded ? 1 : 0.5
+            }}
+            onLoad={handleLoad}
+            onLoadStart={handleLoadStart}
+            onError={handleError}
+          />
+        </div>
+      </LottieErrorBoundary>
+    );
+  };
+
+  // Render step content with enhanced error handling
+  const renderStepContent = (stepIndex: number) => {
+    const data = stepData[stepIndex];
+
+    return (
+      <div ref={contentRef} className={styles.frame2147225879}>
+        <div ref={cardRef} className={styles.card}>
+          <div className={styles.creaYAsignaTareas}>{data.title}</div>
+          <div className={styles.lottieWrapper}>
+            <SafeLottieComponent stepIndex={stepIndex} data={data} />
+          </div>
+          <div className={styles.puedesCrearTareas}>
+            {data.content}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (!isOpen || !user) {
     console.log("[OnboardingStepper] Not rendering stepper, isOpen:", isOpen, "user:", !!user);
     return null;
@@ -226,119 +499,19 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         <Wizard totalSteps={5}>
           <WizardProgress />
           <WizardStep step={0}>
-            <div ref={contentRef} className={styles.frame2147225879}>
-              <div ref={cardRef} className={styles.card}>
-                <div className={styles.creaYAsignaTareas}>🗂️ Crea y asigna tareas</div>
-                <div className={styles.lottieWrapper}>
-                  <DotLottieReact
-                    src="https://lottie.host/76f2bdb2-5236-44f0-b671-9807f46f002b/FWf3sNMOue.lottie"
-                    loop
-                    autoplay
-                    className={styles.stepImage}
-                    style={{ width: 216, height: 131 }}
-                  />
-                </div>
-                <div className={styles.puedesCrearTareas}>
-                  <span>
-                    Puedes crear tareas y asignarlas a quienes estén involucrados. Solo los miembros asignados podrán verlas, comentarlas y actualizarlas.
-                    <br />
-                  </span>
-                  <span className={styles.bold}>¡Así mantenemos cada proyecto claro y enfocado!</span>
-                </div>
-              </div>
-            </div>
+            {renderStepContent(0)}
           </WizardStep>
           <WizardStep step={1}>
-            <div ref={contentRef} className={styles.frame2147225879}>
-              <div ref={cardRef} className={styles.card}>
-                <div className={styles.actualizaYComenta}>💬 Actualiza y comenta</div>
-                <div className={styles.lottieWrapper}>
-                  <DotLottieReact
-                    src="https://lottie.host/5f30ab10-7ac1-49bc-b782-5fc339501f24/YKbwc7JaAR.lottie"
-                    loop
-                    autoplay
-                    className={styles.stepImage}
-                    style={{ width: 233, height: 302 }}
-                  />
-                </div>
-                <div className={styles.cadaTareaTiene}>
-                  <span>
-                    Cada tarea tiene su propio chat para que el equipo pueda conversar directamente allí.
-                    <br />
-                  </span>
-                  <span className={styles.bold}>
-                    También puedes actualizar el estado de la tarea fácilmente desde los botones superiores.
-                  </span>
-                </div>
-              </div>
-            </div>
+            {renderStepContent(1)}
           </WizardStep>
           <WizardStep step={2}>
-            <div ref={contentRef} className={styles.frame2147225879}>
-              <div ref={cardRef} className={styles.card}>
-                <div className={styles.registraTuTiempo}>⏱️ Registra tu tiempo</div>
-                <div className={styles.lottieWrapper}>
-                  <DotLottieReact
-                    src="https://lottie.host/046bcd94-75d7-4bf7-82d0-fa00572def09/fnsqFVkOK2.lottie"
-                    loop
-                    autoplay
-                    className={styles.stepImage}
-                    style={{ width: 285, height: 158 }}
-                  />
-                </div>
-                <div className={styles.quieresSaber}>
-                  <span>
-                    ¿Quieres saber cuánto tiempo dedicas a una tarea?
-                    <br />
-                    Inicia un contador individual y lleva el control preciso de tu trabajo dentro del sistema.
-                    <br />
-                  </span>
-                  <span className={styles.bold}>Puedes detener el contador presionando el mismo botón, de nuevo.</span>
-                </div>
-              </div>
-            </div>
+            {renderStepContent(2)}
           </WizardStep>
           <WizardStep step={3}>
-            <div ref={contentRef} className={styles.frame2147225879}>
-              <div ref={cardRef} className={styles.card}>
-                <div className={styles.conectaConTuEquipo}>🤝 Conecta con tu equipo y clientes</div>
-                <div className={styles.lottieWrapper}>
-                  <DotLottieReact
-                    src="https://lottie.host/96a7bf25-61aa-4ac7-96b1-f1c647b838aa/qGDbAUWBU0.lottie"
-                    loop
-                    autoplay
-                    className={styles.stepImage}
-                    style={{ width: 202, height: 177 }}
-                  />
-                </div>
-                <div className={styles.desdeElPanel}>
-                  Desde el panel de miembros podrás ver a todo tu equipo. También puedes crear cuentas de clientes para asociarlas con tareas.
-                </div>
-              </div>
-            </div>
+            {renderStepContent(3)}
           </WizardStep>
           <WizardStep step={4}>
-            <div ref={contentRef} className={styles.frame2147225879}>
-              <div ref={cardRef} className={styles.card}>
-                <div className={styles.conectaConTuEquipo}>⚙️ Configura tu cuenta</div>
-                <div className={styles.lottieWrapper}>
-                  <DotLottieReact
-                    src="https://lottie.host/7f196621-55e8-41d9-b219-498b61255490/PlWoUWiTNW.lottie"
-                    loop
-                    autoplay
-                    className={styles.stepImage}
-                    style={{ width: 220, height: 160 }}
-                  />
-                </div>
-                <div className={styles.desdeElPanel}>
-                  <span>
-                    Personaliza tu perfil y ajusta las preferencias de notificaciones en la configuración de cuenta.
-                    <br />
-                  </span>
-                  <span className={styles.bold}>¡Haz que la plataforma se adapte a tu estilo de trabajo!</span>
-                </div>
-              </div>
-            </div>
+            {renderStepContent(4)}
           </WizardStep>
           <WizardActions
             onComplete={handleComplete}

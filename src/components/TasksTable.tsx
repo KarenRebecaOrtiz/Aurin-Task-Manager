@@ -80,7 +80,7 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
               height={40}
               className={avatarStyles.avatarImage}
               onError={(e) => {
-                e.currentTarget.src = '/default-avatar.png';
+                e.currentTarget.src = '';
               }}
             />
           </div>
