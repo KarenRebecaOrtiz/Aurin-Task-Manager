@@ -46,6 +46,7 @@ import Dock from '@/components/Dock';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'; // Added useAuth import
+import ToDoDynamic from '@/components/ToDoDynamic';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -958,6 +959,7 @@ function TasksPageContent() {
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
       <Dock />
+      <ToDoDynamic/>
       <Footer />
     </div>
   );

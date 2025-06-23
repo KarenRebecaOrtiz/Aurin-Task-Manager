@@ -3,8 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
+import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
+import { ai } from '@/lib/firebase';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
 
 interface Message {
   id: string;
@@ -20,6 +25,7 @@ interface Message {
   filePath?: string | null;
   isPending?: boolean;
   hasError?: boolean;
+  clientId: string;
 }
 
 interface InputMessageProps {
@@ -45,15 +51,94 @@ export function InputMessage({
   isSending,
   containerRef,
 }: InputMessageProps) {
-  const [message, setMessage] = useState('');
-  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isDropupOpen, setIsDropupOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [hasReformulated, setHasReformulated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
+  const dropupRef = useRef<HTMLDivElement>(null);
 
+  // Initialize Tiptap editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        bulletList: { keepMarks: true, keepAttributes: true },
+        orderedList: { keepMarks: true, keepAttributes: true },
+      }),
+      Underline,
+    ],
+    content: '',
+    onUpdate: () => {
+      adjustEditorHeight();
+    },
+    editable: !isSending && !isProcessing,
+    editorProps: {
+      attributes: {
+        class: `${styles.input} ProseMirror`,
+        'aria-label': 'Escribir mensaje',
+      },
+    },
+  });
+
+  // Auto-resize editor height
+  const editorRef = useRef<HTMLDivElement>(null);
+  const adjustEditorHeight = useCallback(() => {
+    if (editorRef.current) {
+      const editorElement = editorRef.current.querySelector('.ProseMirror');
+      if (editorElement instanceof HTMLElement) {
+        editorElement.style.height = 'auto';
+        const scrollHeight = editorElement.scrollHeight;
+        const maxHeight = 200;
+        const minHeight = 36;
+        editorElement.style.height = `${Math.max(Math.min(scrollHeight, maxHeight), minHeight)}px`;
+        editorElement.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+      }
+    }
+  }, []);
+
+  // Typewriter effect for reformulation
+  const typeWriter = useCallback(
+    (text: string, callback: () => void) => {
+      if (!editor) return;
+      editor.commands.clearContent();
+      let index = 0;
+      const speed = 15;
+
+      const type = () => {
+        if (index < text.length) {
+          editor.commands.insertContent(text.charAt(index));
+          index++;
+          setTimeout(type, speed);
+        } else {
+          setTimeout(() => {
+            adjustEditorHeight();
+            callback();
+          }, 100);
+        }
+      };
+
+      setTimeout(type, 300);
+    },
+    [editor, adjustEditorHeight],
+  );
+
+  // Handle click outside for dropup
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (isDropupOpen && !dropupRef.current?.contains(target)) {
+        setIsDropupOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropupOpen]);
+
+  // Cleanup preview URL
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -62,123 +147,104 @@ export function InputMessage({
     };
   }, [previewUrl]);
 
-  const toggleFormat = useCallback((format: string) => {
-    setActiveFormats(prev => {
-      const newFormats = new Set(prev);
-      if (newFormats.has(format)) {
-        newFormats.delete(format);
-      } else {
-        newFormats.add(format);
-      }
-      return newFormats;
-    });
-  }, []);
+  // Reset reformulation state
+  useEffect(() => {
+    if (editor && editor.isEmpty) {
+      setHasReformulated(false);
+    }
+  }, [editor]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      switch (e.key) {
-        case 'b':
-          toggleFormat('bold');
+  // Toggle formatting
+  const toggleFormat = useCallback(
+    (format: string) => {
+      if (!editor) return;
+      switch (format) {
+        case 'bold':
+          editor.chain().focus().toggleBold().run();
           break;
-        case 'i':
-          toggleFormat('italic');
+        case 'italic':
+          editor.chain().focus().toggleItalic().run();
           break;
-        case 'u':
-          toggleFormat('underline');
+        case 'underline':
+          editor.chain().focus().toggleUnderline().run();
           break;
-        case '`':
-          toggleFormat('code');
+        case 'code':
+          editor.chain().focus().toggleCode().run();
           break;
-      }
-    }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
-      e.preventDefault();
-      switch (e.key) {
-        case '8':
-          toggleFormat('bullet');
+        case 'bullet':
+          editor.chain().focus().toggleBulletList().run();
           break;
-        case '7':
-          toggleFormat('numbered');
+        case 'numbered':
+          editor.chain().focus().toggleOrderedList().run();
           break;
       }
-    }
-  }, [toggleFormat]);
+    },
+    [editor],
+  );
+
+  // Handle keydown for shortcuts
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!editor) return;
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'b':
+            e.preventDefault();
+            toggleFormat('bold');
+            break;
+          case 'i':
+            e.preventDefault();
+            toggleFormat('italic');
+            break;
+          case 'u':
+            e.preventDefault();
+            toggleFormat('underline');
+            break;
+          case '`':
+            e.preventDefault();
+            toggleFormat('code');
+            break;
+          case 'a':
+            e.preventDefault();
+            editor.commands.selectAll();
+            break;
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        switch (e.key) {
+          case '8':
+            toggleFormat('bullet');
+            break;
+          case '7':
+            toggleFormat('numbered');
+            break;
+        }
+      }
+    },
+    [toggleFormat, editor],
+  );
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const applyFormatting = (text: string) => {
-    let formattedText = text;
-    if (activeFormats.has('bold')) formattedText = `**${formattedText}**`;
-    if (activeFormats.has('italic')) formattedText = `*${formattedText}*`;
-    if (activeFormats.has('underline')) formattedText = `__${formattedText}__`;
-    if (activeFormats.has('code')) formattedText = `\`${formattedText}\``;
-    if (activeFormats.has('bullet')) {
-      formattedText = formattedText
-        .split('\n')
-        .map((line) => (line ? `- ${line}` : line))
-        .join('\n');
-    }
-    if (activeFormats.has('numbered')) {
-      formattedText = formattedText
-        .split('\n')
-        .map((line, index) => (line ? `${index + 1}. ${line}` : line))
-        .join('\n');
-    }
-    return formattedText;
-  };
-
-  const getDisplayText = () => {
-    if (!message) return '';
-    let displayText = message;
-    if (activeFormats.has('bullet')) {
-      displayText = displayText
-        .split('\n')
-        .map((line) => (line ? `• ${line}` : line))
-        .join('\n');
-    }
-    if (activeFormats.has('numbered')) {
-      displayText = displayText
-        .split('\n')
-        .map((line, index) => (line ? `${index + 1}. ${line}` : line))
-        .join('\n');
-    }
-    return displayText;
-  };
-
-  const getTextStyle = () => {
-    const styles: React.CSSProperties = {};
-    if (activeFormats.has('bold')) styles.fontWeight = 'bold';
-    if (activeFormats.has('italic')) styles.fontStyle = 'italic';
-    if (activeFormats.has('underline')) styles.textDecoration = 'underline';
-    if (activeFormats.has('code')) {
-      styles.fontFamily = 'monospace';
-      styles.backgroundColor = '#f3f4f6';
-      styles.padding = '2px 4px';
-      styles.borderRadius = '4px';
-    }
-    return styles;
-  };
-
+  // File handling
   const selectFile = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
       alert('El archivo supera los 10 MB.');
       return;
     }
+    const fileExtension = f.name.split('.').pop()?.toLowerCase();
+    const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'];
+    if (!fileExtension || !validExtensions.includes(fileExtension)) {
+      alert(`Extensión no permitida. Permitidas: ${validExtensions.join(', ')}`);
+      return;
+    }
     setFile(f);
     setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
   };
-
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f && !f.name.includes('/paperclip.svg')) {
-      selectFile(f);
-    }
-    if (e.target) e.target.value = '';
-  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -199,28 +265,112 @@ export function InputMessage({
     setPreviewUrl(null);
   };
 
+  // Reformulate with Gemini AI
+  const handleReformulate = async (
+    mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list',
+  ) => {
+    if (!userId || !editor || editor.isEmpty || isProcessing) return;
+
+    setIsProcessing(true);
+    setIsDropupOpen(false);
+
+    try {
+      if (!ai) {
+        throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
+      }
+
+      const prompts = {
+        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el siguiente texto, manteniendo el tono y significado original. Solo devuelve el texto corregido: "${editor.getText()}"`,
+        rewrite: `Reescribe completamente el siguiente texto manteniendo el mismo significado, pero usando diferentes palabras y estructuras. Solo devuelve el texto reescrito: "${editor.getText()}"`,
+        friendly: `Transforma el siguiente texto a un tono más amigable, cálido y cercano. Solo devuelve el texto transformado: "${editor.getText()}"`,
+        professional: `Convierte el siguiente texto en una versión más profesional y formal. Solo devuelve el texto profesional: "${editor.getText()}"`,
+        concise: `Haz el siguiente texto más conciso y directo, eliminando redundancias. Solo devuelve el texto conciso: "${editor.getText()}"`,
+        summarize: `Resume el siguiente texto en sus puntos más importantes, manteniendo solo lo esencial. Solo devuelve el resumen: "${editor.getText()}"`,
+        keypoints: `Extrae los puntos clave del siguiente texto y preséntalos como lista. Solo devuelve los puntos clave: "${editor.getText()}"`,
+        list: `Convierte el siguiente texto en una lista organizada con viñetas o numeración. Solo devuelve la lista: "${editor.getText()}"`,
+      };
+
+      const generationConfig = {
+        maxOutputTokens: 800,
+        temperature: mode === 'rewrite' ? 0.8 : 0.6,
+        topK: 40,
+        topP: 0.9,
+      };
+
+      const safetySettings = [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      ];
+
+      const systemInstruction = `Eres un asistente de escritura experto. Responde únicamente con el texto procesado, sin explicaciones ni comentarios adicionales.`;
+
+      const model = getGenerativeModel(ai, {
+        model: 'gemini-1.5-flash',
+        generationConfig,
+        safetySettings,
+        systemInstruction,
+      });
+
+      const promptText = prompts[mode];
+      const result = await model.generateContent(promptText);
+      const reformulatedText = await result.response.text();
+
+      if (!reformulatedText.trim()) {
+        throw new Error('📝 Gemini devolvió una respuesta vacía.');
+      }
+
+      typeWriter(reformulatedText.trim(), () => {
+        editor.commands.focus();
+      });
+      setHasReformulated(true);
+    } catch (error) {
+      console.error('[InputMessage:Reformulate] Error:', error);
+      alert('❌ Error al procesar el texto con Gemini AI.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Send message
   const handleSend = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!userId || (!message.trim() && !file) || isSending) {
+    if (!userId || (!editor || editor.isEmpty) && !file || isSending || isProcessing) {
       return;
     }
 
-    const messageData: Partial<Message> = {
-      senderId: userId,
-      senderName: userFirstName || 'Usuario',
-      text: message.trim() ? applyFormatting(message.trim()) : null,
-      timestamp: Timestamp.now(),
-      read: false,
-      imageUrl: null,
-      fileUrl: null,
-      fileName: file ? file.name : null,
-      fileType: file ? file.type : null,
-      filePath: null,
-      isPending: true,
-    };
+    setHasReformulated(false);
+    setIsDropupOpen(false);
 
-    if (file) {
-      try {
+    const clientId = crypto.randomUUID();
+    const tempId = `temp-${clientId}`;
+
+    try {
+      let finalMessageData: Partial<Message> = {
+        id: tempId,
+        senderId: userId,
+        senderName: userFirstName || 'Usuario',
+        text: editor.getHTML(),
+        timestamp: Timestamp.now(),
+        read: false,
+        imageUrl: null,
+        fileUrl: null,
+        fileName: file ? file.name : null,
+        fileType: file ? file.type : null,
+        filePath: null,
+        isPending: false,
+        hasError: false,
+        clientId,
+      };
+
+      if (file) {
+        const optimisticMessage: Partial<Message> = {
+          ...finalMessageData,
+          imageUrl: file.type.startsWith('image/') ? previewUrl : null,
+          isPending: true,
+        };
+
+        await onSendMessage(optimisticMessage);
+
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
@@ -234,36 +384,46 @@ export function InputMessage({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to upload file');
+          throw new Error('Failed to upload file');
         }
 
         const { url, fileName, fileType, filePath } = await response.json();
 
-        if (fileName) messageData.fileName = fileName;
-        if (fileType) messageData.fileType = fileType;
-        if (filePath) messageData.filePath = filePath;
+        finalMessageData = {
+          ...finalMessageData,
+          imageUrl: file.type.startsWith('image/') && url ? url : null,
+          fileUrl: url && !file.type.startsWith('image/') ? url : null,
+          fileName,
+          fileType,
+          filePath,
+          isPending: false,
+        };
 
-        if (file.type.startsWith('image/') && url) {
-          messageData.imageUrl = url;
-        } else if (url) {
-          messageData.fileUrl = url;
-        }
-      } catch (error) {
-        console.error('[InputMessage:HandleSend] File upload failed', error);
-        messageData.hasError = true;
+        await onSendMessage(finalMessageData);
+      } else {
+        await onSendMessage(finalMessageData);
       }
-    }
 
-    try {
-      await onSendMessage(messageData);
-      setMessage('');
+      editor?.commands.clearContent();
       setFile(null);
       setPreviewUrl(null);
-      setActiveFormats(new Set());
+      setHasReformulated(false);
+      adjustEditorHeight();
     } catch (error) {
-      console.error('[InputMessage:HandleSend] Failed to send message', error);
-      alert('Error al enviar el mensaje');
+      console.error('[InputMessage:HandleSend] Error:', error);
+      if (file) {
+        await onSendMessage({
+          id: tempId,
+          senderId: userId,
+          senderName: userFirstName || 'Usuario',
+          text: editor?.getHTML() || null,
+          timestamp: Timestamp.now(),
+          isPending: false,
+          hasError: true,
+          clientId,
+        });
+      }
+      alert('Error al enviar el mensaje.');
     }
   };
 
@@ -277,24 +437,26 @@ export function InputMessage({
   ];
 
   return (
-    <form
-      className={`${styles.inputWrapper} ${isDragging ? styles.dragging : ''}`}
-      ref={inputWrapperRef}
-      onDragOver={handleDragOver}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={handleDrop}
-      onSubmit={handleSend}
-    >
-      <div className={styles.inputContainer}>
+    <div className={styles.inputWrapper}>
+      <form
+        className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
+        ref={inputWrapperRef}
+        onDragOver={handleDragOver}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onSubmit={handleSend}
+      >
         <div className={styles.toolbar}>
           {formatButtons.map(({ id, icon, label, shortcut }) => (
             <button
               key={id}
               type="button"
-              className={`${styles.imageButton} ${activeFormats.has(id) ? styles.activeFormat : ''}`}
+              className={`${styles['format-button']} ${styles.tooltip}`}
+              data-active={editor?.isActive(id) ? 'true' : 'false'}
               onClick={() => toggleFormat(id)}
-              disabled={isSending}
+              disabled={isSending || isProcessing}
               title={`${label} (${shortcut})`}
+              aria-label={label}
             >
               <Image
                 src={icon}
@@ -307,11 +469,36 @@ export function InputMessage({
             </button>
           ))}
         </div>
+        {isProcessing && (
+          <div className={styles.processingSpinner}>
+            <svg width="16" height="16" viewBox="0 0 24 24" className="animate-spin">
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+                className="opacity-25"
+              />
+              <path
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                className="opacity-75"
+              />
+            </svg>
+          </div>
+        )}
         {previewUrl && (
           <div className={styles.imagePreview}>
             <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-              <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+            <button
+              className={styles.removeImageButton}
+              onClick={handleRemoveFile}
+              type="button"
+              title="Eliminar imagen"
+            >
+              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
             </button>
           </div>
         )}
@@ -319,89 +506,184 @@ export function InputMessage({
           <div className={styles.filePreview}>
             <Image src="/file.svg" alt="Archivo" width={16} height={16} />
             <span>{file.name}</span>
-            <button className={styles.removeImageButton} onClick={handleRemoveFile}>
-              <Image src="/elipsis.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+            <button
+              className={styles.removeImageButton}
+              onClick={handleRemoveFile}
+              type="button"
+              title="Eliminar archivo"
+            >
+              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
             </button>
           </div>
         )}
         <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={getDisplayText()}
-            onChange={(e) => {
-              let cleanValue = e.target.value;
-              if (activeFormats.has('bullet')) {
-                cleanValue = cleanValue
-                  .split('\n')
-                  .map((line) => line.replace(/^• /, ''))
-                  .join('\n');
-              }
-              if (activeFormats.has('numbered')) {
-                cleanValue = cleanValue
-                  .split('\n')
-                  .map((line) => line.replace(/^\d+\. /, ''))
-                  .join('\n');
-              }
-              setMessage(cleanValue);
+          <EditorContent
+            ref={editorRef}
+            editor={editor}
+            style={{
+              fontFamily: '"Inter Tight", sans-serif',
+              minHeight: '36px',
+              maxHeight: '200px',
+              resize: 'none',
+              overflow: 'hidden',
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isSending) {
+              if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
                 e.preventDefault();
                 handleSend(e);
+              } else if (e.key === 'Enter') {
+                setTimeout(adjustEditorHeight, 0);
               }
             }}
-            placeholder="Escribe tu mensaje aquí"
-            disabled={isSending}
-            style={{
-              ...getTextStyle(),
-              fontFamily: '"Inter Tight", sans-serif',
-            }}
-            className={`${styles.input} min-h-[36px] max-h-[200px] resize-none`}
           />
         </div>
-        <div className={styles.actions} style={{ justifyContent:'flex-end' }}>
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '10px'}}>
+        <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+            <div className={styles.dropupContainer} ref={dropupRef}>
+              <button
+                type="button"
+                className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${
+                  hasReformulated ? styles.reformulated : ''
+                } ${isProcessing ? 'processing' : ''}`}
+                onClick={() => setIsDropupOpen((prev) => !prev)}
+                disabled={isSending || isProcessing || !editor || editor.isEmpty}
+                aria-label="Reformular texto con Gemini AI"
+                title="Reformular texto con Gemini AI ✨"
+                aria-expanded={isDropupOpen}
+              >
+                <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} />
+              </button>
+              {isDropupOpen && (
+                <div className={styles.dropupMenu} role="menu">
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('correct')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Corregir ortografía y gramática"
+                  >
+                    ✏️ Corregir
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('rewrite')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Reescribir el texto con diferentes palabras"
+                  >
+                    🔄 Re-escribir
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('friendly')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Transformar a un tono más amigable y cercano"
+                  >
+                    😊 Hacer amigable
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('professional')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Convertir a un tono más profesional y formal"
+                  >
+                    💼 Hacer profesional
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('concise')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Hacer el texto más conciso y directo"
+                  >
+                    ⚡ Hacer conciso
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('summarize')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Resumir los puntos más importantes"
+                  >
+                    📝 Resumir
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('keypoints')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Extraer los puntos clave como lista"
+                  >
+                    🎯 Puntos clave
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropupItem}
+                    onClick={() => handleReformulate('list')}
+                    disabled={isProcessing}
+                    role="menuitem"
+                    title="Convertir en lista organizada"
+                  >
+                    📋 Convertir en lista
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               type="button"
-              className={styles.imageButton}
+              className={`${styles.imageButton} ${styles.tooltip}`}
               onClick={() => fileInputRef.current?.click()}
-              disabled={isSending}
+              disabled={isSending || isProcessing}
               aria-label="Adjuntar archivo"
+              title="Adjuntar archivo"
             >
               <Image
                 src="/paperclip.svg"
                 alt="Adjuntar"
                 width={16}
                 height={16}
-                className={styles.iconInvert}
                 style={{ filter: 'invert(100)' }}
               />
             </button>
             <EmojiSelector
-              onEmojiSelect={(emoji) => setMessage((prev) => prev + emoji)}
-              disabled={isSending}
-              value={message.match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''}
+              onEmojiSelect={(emoji) => {
+                editor?.commands.insertContent(emoji);
+                setTimeout(adjustEditorHeight, 0);
+              }}
+              disabled={isSending || isProcessing}
+              value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''}
               containerRef={containerRef}
             />
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={isSending || (!message.trim() && !file)}
+              disabled={isSending || isProcessing || (!editor || editor.isEmpty) && !file}
               aria-label="Enviar mensaje"
             >
               <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
             </button>
           </div>
         </div>
-      </div>
+      </form>
       <input
         type="file"
         ref={fileInputRef}
-        hidden
-        onChange={handleFileInputChange}
-        aria-label="Seleccionar archivo"
-        disabled={isSending}
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) selectFile(f);
+        }}
+        accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx"
       />
-    </form>
+    </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
 import {
   collection,
@@ -21,7 +22,7 @@ import {
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
-import InputChat from './ui/InputChat'; // Reemplazar InputMessage por InputChat
+import { InputMessage } from './ui/InputMessage'; // Changed from default import to named import
 import styles from './MessageSidebar.module.scss';
 
 interface Message {
@@ -682,13 +683,70 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                 ) : (
                   <>
                     {m.text && (
-                      <div className={styles.text}>
-                        {m.text.split('\n').map((line, i) => (
-                          <span key={i}>
-                            {line}
-                            <br />
-                          </span>
-                        ))}
+                      <div className={styles.messageText}>
+                        {(() => {
+                          // Configure sanitize-html to allow Tiptap's common HTML tags and attributes
+                          const sanitizeOptions = {
+                            allowedTags: [
+                              'p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'code', 'span', 'div'
+                            ],
+                            allowedAttributes: {
+                              '*': ['style', 'class']
+                            },
+                            transformTags: {
+                              // Apply consistent styling for Tiptap tags
+                              'strong': (tagName: string, attribs: Record<string, string>) => ({
+                                tagName,
+                                attribs: {
+                                  ...attribs,
+                                  style: `font-weight: bold; ${attribs.style || ''}`
+                                }
+                              }),
+                              'em': (tagName: string, attribs: Record<string, string>) => ({
+                                tagName,
+                                attribs: {
+                                  ...attribs,
+                                  style: `font-style: italic; ${attribs.style || ''}`
+                                }
+                              }),
+                              'u': (tagName: string, attribs: Record<string, string>) => ({
+                                tagName,
+                                attribs: {
+                                  ...attribs,
+                                  style: `text-decoration: underline; ${attribs.style || ''}`
+                                }
+                              }),
+                              'code': (tagName: string, attribs: Record<string, string>) => ({
+                                tagName,
+                                attribs: {
+                                  ...attribs,
+                                  style: `font-family: monospace; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; ${attribs.style || ''}`
+                                }
+                              }),
+                              'ul': (tagName: string, attribs: Record<string, string>) => ({
+                                tagName,
+                                attribs: {
+                                  ...attribs,
+                                  class: `list-disc pl-5 ${attribs.class || ''}`
+                                }
+                              }),
+                              'ol': (tagName: string, attribs: Record<string, string>) => ({
+                                tagName,
+                                attribs: {
+                                  ...attribs,
+                                  class: `list-decimal pl-5 ${attribs.class || ''}`
+                                }
+                              })
+                            }
+                          };
+
+                          // Sanitize the HTML content
+                          const sanitizedHtml = sanitizeHtml(m.text, sanitizeOptions);
+
+                          return (
+                            <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+                          );
+                        })()}
                       </div>
                     )}
                     {m.imageUrl && (
@@ -740,28 +798,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           <Image src="/chevron-down.svg" alt="Nuevos mensajes" width={24} height={24} />
         </button>
       )}
-      <InputChat
+      <InputMessage
         taskId={conversationId}
         userId={user?.id}
         userFirstName={user?.firstName}
         onSendMessage={handleSendMessage}
         isSending={isSending}
-        setIsSending={setIsSending}
-        timerSeconds={0}
-        isTimerRunning={false}
-        onToggleTimer={() => {}}
-        onToggleTimerPanel={() => {}}
-        isTimerPanelOpen={false}
-        setIsTimerPanelOpen={() => {}}
         containerRef={sidebarRef}
-        timerInput="00:00"
-        setTimerInput={() => {}}
-        dateInput={new Date()}
-        setDateInput={() => {}}
-        commentInput=""
-        setCommentInput={() => {}}
-        onAddTimeEntry={async () => {}}
-        totalHours="0h 0m"
       />
       {imagePreviewSrc && (
         <ImagePreviewOverlay
