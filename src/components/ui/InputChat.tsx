@@ -7,6 +7,7 @@ import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/
 import { ai } from '@/lib/firebase';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
+import TimerPanel from './TimerPanel';
 
 interface Message {
   id: string;
@@ -53,6 +54,7 @@ interface InputChatProps {
   setIsTimerPanelOpen: (open: boolean) => void;
   containerRef: React.RefObject<HTMLElement>;
   timerPanelRef?: React.RefObject<HTMLDivElement>;
+  totalHours: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -63,7 +65,7 @@ export default function InputChat({
   userFirstName,
   onSendMessage,
   isSending,
-  setIsSending, // Add this prop
+  setIsSending,
   timerSeconds,
   isTimerRunning,
   onToggleTimer,
@@ -72,6 +74,14 @@ export default function InputChat({
   setIsTimerPanelOpen,
   containerRef,
   timerPanelRef,
+  timerInput,
+  setTimerInput,
+  dateInput,
+  setDateInput,
+  commentInput,
+  setCommentInput,
+  onAddTimeEntry,
+  totalHours,
 }: InputChatProps) {
   const [message, setMessage] = useState('');
   const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
@@ -129,26 +139,101 @@ export default function InputChat({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        inputWrapperRef.current &&
-        !inputWrapperRef.current.contains(event.target as Node) &&
-        (!timerPanelRef?.current || !timerPanelRef.current.contains(event.target as Node)) &&
-        isTimerPanelOpen
-      ) {
-        setIsTimerPanelOpen(false);
+      const target = event.target as Node;
+      
+      console.log('[InputChat:HandleClickOutside] Click detected', {
+        target: target,
+        isTimerPanelOpen,
+        isDropupOpen,
+        targetElement: target instanceof Element ? target.tagName : 'Unknown',
+        targetClasses: target instanceof Element ? target.className : 'No classes'
+      });
+      
+      // Close timer panel only if click is outside both input wrapper AND timer panel
+      if (isTimerPanelOpen) {
+        const isInsideInputWrapper = inputWrapperRef.current?.contains(target);
+        const isInsideTimerPanel = timerPanelRef?.current?.contains(target);
+        const isInsideTimePicker = document.querySelector('.react-time-picker')?.contains(target);
+        const isInsideDatePicker = document.querySelector('.react-datepicker')?.contains(target) || 
+                                   document.querySelector('.react-datepicker-popper')?.contains(target);
+        
+        console.log('[InputChat:HandleClickOutside] Timer panel detection', {
+          isInsideInputWrapper,
+          isInsideTimerPanel,
+          isInsideTimePicker,
+          isInsideDatePicker,
+          inputWrapperExists: !!inputWrapperRef.current,
+          timerPanelExists: !!timerPanelRef?.current,
+          timePickerExists: !!document.querySelector('.react-time-picker'),
+          datePickerExists: !!document.querySelector('.react-datepicker')
+        });
+        
+        // Only close if click is outside all timer-related elements
+        if (!isInsideInputWrapper && !isInsideTimerPanel && !isInsideTimePicker && !isInsideDatePicker) {
+          console.log('[InputChat:HandleClickOutside] 🔴 CLOSING TimerPanel - Click outside all timer elements');
+          setIsTimerPanelOpen(false);
+        } else {
+          console.log('[InputChat:HandleClickOutside] ✅ NOT CLOSING TimerPanel - Click inside timer elements');
+        }
       }
-      if (
-        dropupRef.current &&
-        !dropupRef.current.contains(event.target as Node) &&
-        isDropupOpen
-      ) {
-        setIsDropupOpen(false);
+      
+      // Handle dropup menu (Gemini AI reformulate)
+      if (isDropupOpen) {
+        const isInsideDropup = dropupRef.current?.contains(target);
+        console.log('[InputChat:HandleClickOutside] Dropup detection', {
+          isInsideDropup,
+          dropupExists: !!dropupRef.current
+        });
+        
+        if (!isInsideDropup) {
+          console.log('[InputChat:HandleClickOutside] 🔴 CLOSING Dropup - Click outside dropup');
+          setIsDropupOpen(false);
+        } else {
+          console.log('[InputChat:HandleClickOutside] ✅ NOT CLOSING Dropup - Click inside dropup');
+        }
       }
     };
 
+    console.log('[InputChat:UseEffect] Setting up click outside listener', {
+      isTimerPanelOpen,
+      isDropupOpen
+    });
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      console.log('[InputChat:UseEffect] Removing click outside listener');
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isTimerPanelOpen, setIsTimerPanelOpen, timerPanelRef, isDropupOpen]);
+
+  // Handle timer panel toggle with logging
+  const handleToggleTimerPanel = useCallback((e: React.MouseEvent) => {
+    console.log('[InputChat:HandleToggleTimerPanel] 🎯 Timer panel toggle clicked', {
+      currentState: isTimerPanelOpen,
+      willBecome: !isTimerPanelOpen,
+      isSending,
+      event: e.type
+    });
+    
+    if (isSending) {
+      console.log('[InputChat:HandleToggleTimerPanel] ❌ Blocked - isSending is true');
+      return;
+    }
+    
+    e.stopPropagation();
+    console.log('[InputChat:HandleToggleTimerPanel] ✅ Executing toggle', {
+      from: isTimerPanelOpen,
+      to: !isTimerPanelOpen
+    });
+    
+    onToggleTimerPanel(e);
+  }, [isTimerPanelOpen, isSending, onToggleTimerPanel]);
+
+  // Handle timer panel close with logging
+  const handleCloseTimerPanel = useCallback(() => {
+    console.log('[InputChat:HandleCloseTimerPanel] 🔴 Timer panel close requested');
+    setIsTimerPanelOpen(false);
+  }, [setIsTimerPanelOpen]);
 
   useEffect(() => {
     return () => {
@@ -325,16 +410,6 @@ export default function InputChat({
     setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
   };
 
-  const handleFileInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0];
-      if (f && !f.name.includes('/paperclip.svg')) {
-        selectFile(f);
-      }
-      if (e.target) e.target.value = '';
-    },
-    [],
-  );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -496,53 +571,61 @@ export default function InputChat({
   
     const clientId = crypto.randomUUID();
     const tempId = `temp-${clientId}`;
-    const messageData: Partial<Message> = {
-      id: tempId,
-      senderId: userId,
-      senderName: userFirstName || 'Usuario',
-      text: message.trim() ? applyFormatting(message.trim()) : null,
-      read: false,
-      imageUrl: file && file.type.startsWith('image/') ? previewUrl : null, // Use local preview URL
-      fileUrl: null,
-      fileName: file ? file.name : null,
-      fileType: file ? file.type : null,
-      filePath: null,
-      isPending: true,
-      hasError: false,
-      clientId,
-    };
-  
-    // Optimistically send the message with the preview
-    await onSendMessage(messageData);
-  
-    if (file) {
-      try {
+    
+    try {
+      let finalMessageData: Partial<Message> = {
+        id: tempId,
+        senderId: userId,
+        senderName: userFirstName || 'Usuario',
+        text: message.trim() ? applyFormatting(message.trim()) : null,
+        read: false,
+        imageUrl: null,
+        fileUrl: null,
+        fileName: file ? file.name : null,
+        fileType: file ? file.type : null,
+        filePath: null,
+        isPending: false,
+        hasError: false,
+        clientId,
+      };
+
+      if (file) {
+        // First show optimistic message with preview for files
+        const optimisticMessage: Partial<Message> = {
+          ...finalMessageData,
+          imageUrl: file.type.startsWith('image/') ? previewUrl : null,
+          isPending: true,
+        };
+        
+        await onSendMessage(optimisticMessage);
+
+        // Upload file
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
         formData.append('type', 'message');
         formData.append('conversationId', taskId);
-  
+
         console.log('[InputChat:HandleSend] Enviando archivo:', { fileName: file.name, fileType: file.type }, '[Debug Code: UPLOAD-001]');
-  
+
         const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
           headers: { 'x-clerk-user-id': userId },
         });
-  
+
         if (!response.ok) {
           const errorData = await response.json();
           console.error('[InputChat:HandleSend] Upload failed with status:', response.status, errorData, '[Error Code: UPLOAD-002]');
           throw new Error(errorData.error || 'Failed to upload file');
         }
-  
+
         const { url, fileName, fileType, filePath } = await response.json();
         console.log('[InputChat:HandleSend] Subida exitosa:', { url, fileName, fileType }, '[Debug Code: UPLOAD-003]');
-  
-        // Update the message with the real URL and details
-        const updatedMessage: Partial<Message> = {
-          ...messageData,
+
+        // Update final message data with real URLs
+        finalMessageData = {
+          ...finalMessageData,
           imageUrl: file.type.startsWith('image/') && url ? url : null,
           fileUrl: url && !file.type.startsWith('image/') ? url : null,
           fileName,
@@ -550,27 +633,42 @@ export default function InputChat({
           filePath,
           isPending: false,
         };
-  
-        await onSendMessage(updatedMessage); // Update the message
-      } catch (error) {
-        console.error('[InputChat:HandleSend] File upload failed:', error, '[Error Code: UPLOAD-004]');
-        // Mark the message as failed
-        await onSendMessage({ ...messageData, isPending: false, hasError: true });
-        alert('Error al subir el archivo.');
+
+        // Send final message with real URLs (this will update the pending message)
+        await onSendMessage(finalMessageData);
+      } else {
+        // For text-only messages, send directly without optimistic update
+        await onSendMessage(finalMessageData);
       }
-    } else {
-      // For text-only messages, mark as not pending
-      await onSendMessage({ ...messageData, isPending: false });
+
+      // Clean up after successful send
+      setMessage('');
+      setFile(null);
+      setPreviewUrl(null);
+      setActiveFormats(new Set());
+      setHasReformulated(false);
+      adjustTextareaHeight();
+      
+    } catch (error) {
+      console.error('[InputChat:HandleSend] Send failed:', error, '[Error Code: SEND-001]');
+      
+      // Mark message as failed if it was optimistic
+      if (file) {
+        await onSendMessage({ 
+          id: tempId,
+          senderId: userId,
+          senderName: userFirstName || 'Usuario',
+          text: message.trim() ? applyFormatting(message.trim()) : null,
+          isPending: false, 
+          hasError: true,
+          clientId,
+        });
+      }
+      
+      alert('Error al enviar el mensaje.');
+    } finally {
+      setIsSending(false);
     }
-  
-    // Clean up
-    setMessage('');
-    setFile(null);
-    setPreviewUrl(null);
-    setActiveFormats(new Set());
-    setHasReformulated(false);
-    adjustTextareaHeight();
-    setIsSending(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -590,15 +688,30 @@ export default function InputChat({
   ];
 
   return (
-    <form
-      className={`${styles.inputWrapper} ${isDragging ? styles.dragging : ''}`}
-      ref={inputWrapperRef}
-      onDragOver={handleDragOver}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={handleDrop}
-      onSubmit={handleSend}
-    >
-      <div className={styles.inputContainer}>
+    <div className={styles.inputWrapper}>
+      {/* Timer Panel - Now modular */}
+      <TimerPanel
+        isOpen={isTimerPanelOpen}
+        timerInput={timerInput}
+        setTimerInput={setTimerInput}
+        dateInput={dateInput}
+        setDateInput={setDateInput}
+        commentInput={commentInput}
+        setCommentInput={setCommentInput}
+        totalHours={totalHours}
+        onAddTimeEntry={onAddTimeEntry}
+        onCancel={handleCloseTimerPanel}
+        ref={timerPanelRef}
+      />
+
+      <form
+        className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
+        ref={inputWrapperRef}
+        onDragOver={handleDragOver}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onSubmit={handleSend}
+      >
         <div className={styles.toolbar}>
           {formatButtons.map(({ id, icon, label, shortcut }) => (
             <button
@@ -733,7 +846,7 @@ export default function InputChat({
             </button>
             <div 
               className={styles.timer} 
-              onClick={onToggleTimerPanel}
+              onClick={handleToggleTimerPanel}
               title="Abrir/cerrar panel de temporizador"
             >
               <span>{formatTime(timerSeconds)}</span>
@@ -873,22 +986,12 @@ export default function InputChat({
               className={styles.sendButton}
               disabled={isSending || isProcessing || (!message.trim() && !file)}
               aria-label="Enviar mensaje"
-              
             >
               <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
             </button>
           </div>
         </div>
-      </div>
-      <input
-        type="file"
-        ref={fileInputRef}
-        hidden
-        onChange={handleFileInputChange}
-        aria-label="Seleccionar archivo"
-        disabled={isSending || isProcessing}
-        accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx"
-      />
-    </form>
+      </form>
+    </div>
   );
 }

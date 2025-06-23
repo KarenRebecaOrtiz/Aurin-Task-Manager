@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs'; // Import useUser
+import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './ClientSidebar.module.scss';
 import { memo } from 'react';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import Loader from '@/components/Loader'; // Import Loader for loading state
+import { useAuth } from '@/contexts/AuthContext';
+import Loader from '@/components/Loader';
 
 interface ClientSidebarProps {
   isOpen: boolean;
@@ -40,9 +40,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
   ({ isOpen, isEdit, initialForm, onFormSubmit, onClose, isClientLoading, onLoadingChange, onAlertChange }) => {
     const sidebarRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
-    const { user } = useUser(); // Destructure user from useUser
-    const [localIsLoading, setLocalIsLoading] = useState(true); // Renamed to avoid confusion with useAuth isLoading
+    const { isAdmin, isLoading } = useAuth();
+    const { user } = useUser();
+    const [localIsLoading, setLocalIsLoading] = useState(true);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [failMessage, setFailMessage] = useState<{ message: string; error: string } | null>(null);
 
@@ -56,25 +56,51 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
       deleteConfirm: initialForm?.deleteConfirm || '',
     });
 
+    // Body scroll lock effect
+    useEffect(() => {
+      if (isOpen) {
+        // Save current scroll position
+        const scrollY = window.scrollY;
+        
+        // Lock body scroll
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        document.body.style.overflow = 'hidden';
+        
+        return () => {
+          // Restore body scroll
+          document.body.style.position = '';
+          document.body.style.top = '';
+          document.body.style.width = '';
+          document.body.style.overflow = '';
+          
+          // Restore scroll position
+          window.scrollTo(0, scrollY);
+        };
+      }
+    }, [isOpen]);
+
     useEffect(() => {
       const currentSidebar = sidebarRef.current;
       if (currentSidebar) {
+        const isMobile = window.innerWidth < 768;
         if (isOpen) {
-          setLocalIsLoading(true); // Use localIsLoading setter
+          setLocalIsLoading(true);
           gsap.fromTo(
             currentSidebar,
-            { x: '100%', opacity: 0 },
+            isMobile ? { y: '100%', opacity: 0 } : { x: '100%', opacity: 0 },
             {
-              x: 0,
+              ...(isMobile ? { y: 0 } : { x: 0 }),
               opacity: 1,
               duration: 0.3,
               ease: 'power2.out',
-              onComplete: () => !isClientLoading && setLocalIsLoading(false), // Use localIsLoading setter
+              onComplete: () => !isClientLoading && setLocalIsLoading(false),
             },
           );
         } else {
           gsap.to(currentSidebar, {
-            x: '100%',
+            ...(isMobile ? { y: '100%' } : { x: '100%' }),
             opacity: 0,
             duration: 0.3,
             ease: 'power2.in',
@@ -98,8 +124,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
           isOpen &&
           !isClientLoading
         ) {
+          const isMobile = window.innerWidth < 768;
           gsap.to(currentSidebar, {
-            x: '100%',
+            ...(isMobile ? { y: '100%' } : { x: '100%' }),
             opacity: 0,
             duration: 0.3,
             ease: 'power2.in',
@@ -281,15 +308,16 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
             <div className={styles.header} style={{ alignItems: 'start' }}>
               <button
                 className={styles.closeButton}
-                onClick={() =>
+                onClick={() => {
+                  const isMobile = window.innerWidth < 768;
                   gsap.to(sidebarRef.current, {
-                    x: '100%',
+                    ...(isMobile ? { y: '100%' } : { x: '100%' }),
                     opacity: 0,
                     duration: 0.3,
                     ease: 'power2.in',
                     onComplete: onClose,
-                  })
-                }
+                  });
+                }}
                 disabled={isClientLoading}
                 aria-label="Cerrar"
               >

@@ -4,12 +4,12 @@ import { useUser } from '@clerk/nextjs';
 import ThemeToggler from '@/components/ui/ThemeToggler';
 import AdviceInput from '@/components/ui/AdviceInput';
 import styles from './Header.module.scss';
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import AvatarDropdown from '../AvatarDropdown';
+import NotificationDropdown from './NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Coordenadas de la oficina y radio
@@ -117,12 +117,9 @@ const Header: React.FC<HeaderProps> = ({
   const welcomeRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
-  const notificationsRef = useRef<HTMLDivElement | null>(null);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevNotificationsRef = useRef<Notification[]>([]);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const scrollPositionRef = useRef<number>(0);
 
   /* ────────────────────────────────────────────
      STATE
@@ -137,7 +134,6 @@ const Header: React.FC<HeaderProps> = ({
   const [temperature, setTemperature] = useState('Cargando...');
   const [weatherIcon, setWeatherIcon] = useState<string | null>(null);
   const [officeStatus, setOfficeStatus] = useState<string>('Cargando...');
-  const [scrollPosition, setScrollPosition] = useState(0);
 
   /* ────────────────────────────────────────────
      EFFECTS – AUDIO INIT
@@ -199,6 +195,8 @@ const Header: React.FC<HeaderProps> = ({
   ──────────────────────────────────────────── */
   useEffect(() => {
     if (isNotificationsOpen) setHasViewedNotifications(true);
+    // Sincronizar isNotificationsVisible con isNotificationsOpen
+    setIsNotificationsVisible(isNotificationsOpen);
   }, [isNotificationsOpen]);
 
   /* ────────────────────────────────────────────
@@ -276,65 +274,50 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   /* ────────────────────────────────────────────
-     EFFECTS – DROPDOWN ANIMATION
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    if (isNotificationsOpen) {
-      setIsNotificationsVisible(true);
-      gsap.fromTo(
-        notificationsRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-    } else if (isNotificationsVisible && notificationsRef.current) {
-      gsap.to(notificationsRef.current, {
-        opacity: 0,
-        y: -10,
-        scale: 0.95,
-        duration: 0.2,
-        ease: 'power2.in',
-        onComplete: () => setIsNotificationsVisible(false),
-      });
-    }
-  }, [isNotificationsOpen, isNotificationsVisible]);
-
-  /* ────────────────────────────────────────────
      EFFECTS – CLOSE DROPDOWN ON OUTSIDE CLICK / ESC
   ──────────────────────────────────────────── */
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        notificationsRef.current &&
-        !notificationsRef.current.contains(e.target as Node) &&
-        notificationButtonRef.current &&
-        !notificationButtonRef.current.contains(e.target as Node)
-      ) {
-        setIsNotificationsOpen(false);
-      }
-    };
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsNotificationsOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      
+      // Si el dropdown no está abierto, no hacer nada
+      if (!isNotificationsOpen) return;
+      
+      // Si el click fue en el botón de notificaciones, no cerrar (ya se maneja en toggleNotifications)
+      if (notificationButtonRef.current?.contains(target)) return;
+      
+      // Si el click fue dentro del dropdown, no cerrar
+      if (target.closest('[data-notification-dropdown]')) return;
+      
+      // Si llegamos aquí, el click fue fuera del dropdown y del botón, entonces cerrar
+      setIsNotificationsOpen(false);
     };
-  }, []);
+
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isNotificationsOpen]);
 
   /* ────────────────────────────────────────────
      EFFECTS – BLOCK BODY SCROLL WHEN DROPDOWN IS OPEN
   ──────────────────────────────────────────── */
   useEffect(() => {
     if (isNotificationsOpen) {
-      scrollPositionRef.current = window.scrollY;
+      const scrollPosition = window.scrollY;
       document.body.classList.add('no-scroll');
-      document.body.style.top = `-${scrollPositionRef.current}px`;
+      document.body.style.top = `-${scrollPosition}px`;
     } else {
       document.body.classList.remove('no-scroll');
       document.body.style.top = '';
-      window.scrollTo(0, scrollPositionRef.current);
+      window.scrollTo(0, parseInt(document.body.style.top || '0'));
     }
 
     return () => {
@@ -488,30 +471,6 @@ const Header: React.FC<HeaderProps> = ({
     };
   }, []);
 
-  /* ────────────────────────────────────────────
-     EFFECTS – SCROLL POSITION TRACKING
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      setScrollPosition(container.scrollTop);
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [isNotificationsOpen, scrollPosition]);
-
-  /* ────────────────────────────────────────────
-     EFFECTS – RESTORE SCROLL POSITION
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    if (isNotificationsOpen && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollPosition;
-    }
-  }, [isNotificationsOpen, scrollPosition]);
-
   const date = time
     ? time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     : '';
@@ -522,29 +481,6 @@ const Header: React.FC<HeaderProps> = ({
   /* ────────────────────────────────────────────
      HELPERS
   ──────────────────────────────────────────── */
-  const truncateText = (txt: string, max: number) =>
-    txt.length <= max ? txt : `${txt.slice(0, max - 3)}...`;
-
-  const formatRelativeTime = (timestamp: Timestamp) => {
-    const now = time || new Date();
-    const date = timestamp.toDate();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffSeconds < 60) return 'hace unos segundos';
-    if (diffMinutes < 60) return `hace ${diffMinutes} minuto${diffMinutes === 1 ? '' : 's'}`;
-    if (diffHours < 24) return `hace ${diffHours} hora${diffHours === 1 ? '' : 's'}`;
-    if (diffDays < 30) return `hace ${diffDays} día${diffDays === 1 ? '' : 's'}`;
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    });
-  };
-
   const getSubtitle = () => {
     switch (selectedContainer) {
       case 'tareas':
@@ -563,100 +499,28 @@ const Header: React.FC<HeaderProps> = ({
   /* ────────────────────────────────────────────
      NOTIFICATION BUTTON HANDLERS
   ──────────────────────────────────────────── */
-  const toggleNotifications = () => {
+  const toggleNotifications = useCallback(() => {
     setIsNotificationsOpen((prev) => !prev);
     setHasInteracted(true);
-  };
+    if (!isNotificationsOpen) {
+      setHasViewedNotifications(true);
+    }
+  }, [isNotificationsOpen]);
+
+  const handleNotificationClick = useCallback((notification: Notification) => {
+    onNotificationClick(notification);
+  }, [onNotificationClick]);
+
+  const handleDeleteNotification = useCallback((notificationId: string) => {
+    onDeleteNotification(notificationId);
+  }, [onDeleteNotification]);
+
+  const handleCloseNotifications = useCallback(() => {
+    setIsNotificationsOpen(false);
+  }, []);
 
   const hasUnread = notifications.some((n) => !n.read);
   const unreadCount = notifications.filter((n) => !n.read).length;
-
-  /* ────────────────────────────────────────────
-     DROPDOWN COMPONENT
-  ──────────────────────────────────────────── */
-  const NotificationDropdown = () =>
-    isNotificationsVisible
-      ? createPortal(
-          <div
-            ref={(el) => {
-              notificationsRef.current = el;
-              scrollContainerRef.current = el;
-            }}
-            className={styles.notificationDropdown}
-            style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
-            onMouseEnter={() => setIsNotificationsOpen(true)}
-            onMouseLeave={() => {
-              setTimeout(() => {
-                if (!notificationButtonRef.current?.matches(':hover')) {
-                  setIsNotificationsOpen(false);
-                }
-              }, 100);
-            }}
-          >
-            {notifications.length === 0 ? (
-              <div className={styles.notificationItem}>
-                No hay notificaciones nuevas por ahora...
-              </div>
-            ) : (
-              notifications.slice(0, 20).map((n) => {
-                const sender = users.find((u) => u.id === n.userId);
-                return (
-                  <div
-                    key={n.id}
-                    className={`${styles.notificationItem} ${n.read ? styles.read : ''}`}
-                  >
-                    <div className={styles.notificationContent}>
-                      <div className={styles.notificationLeft}>
-                        <Image
-                          src={sender?.imageUrl || '/default-avatar.png'}
-                          alt={sender?.firstName || 'Usuario'}
-                          width={40}
-                          height={40}
-                          className={styles.notificationAvatar}
-                        />
-                      </div>
-                      <div className={styles.notificationRight}>
-                        <div className={styles.notificationTextWrap}>
-                          <p
-                            className={styles.notificationTextContent}
-                            onClick={() => {
-                              onNotificationClick(n);
-                              setIsNotificationsOpen(false);
-                            }}
-                          >
-                            {truncateText(n.message, 50)}
-                          </p>
-                          <p className={styles.notificationTime}>
-                            {formatRelativeTime(n.timestamp)}
-                          </p>
-                        </div>
-                        <div className={styles.notificationButtonWrap}>
-                          <button
-                            className={styles.notificationPrimaryCta}
-                            onClick={() => {
-                              onNotificationClick(n);
-                              setIsNotificationsOpen(false);
-                            }}
-                          >
-                            Ver Evento
-                          </button>
-                          <button
-                            className={styles.notificationSecondaryCta}
-                            onClick={() => onDeleteNotification(n.id)}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>,
-          document.body,
-        )
-      : null;
 
   /* ────────────────────────────────────────────
      RENDER
@@ -758,18 +622,6 @@ const Header: React.FC<HeaderProps> = ({
             ref={notificationButtonRef}
             className={styles.notificationButton}
             onClick={toggleNotifications}
-            onMouseEnter={() => {
-              setIsNotificationsOpen(true);
-              setHasViewedNotifications(true);
-              setHasInteracted(true);
-            }}
-            onMouseLeave={() => {
-              setTimeout(() => {
-                if (!notificationButtonRef.current?.matches(':hover')) {
-                  setIsNotificationsOpen(false);
-                }
-              }, 100);
-            }}
             aria-label="Abrir notificaciones"
             aria-expanded={isNotificationsOpen}
             aria-controls="notification-dropdown"
@@ -793,7 +645,17 @@ const Header: React.FC<HeaderProps> = ({
               />
             )}
           </button>
-          <NotificationDropdown />
+          <NotificationDropdown
+            isVisible={isNotificationsVisible}
+            isOpen={isNotificationsOpen}
+            notifications={notifications}
+            users={users}
+            dropdownPosition={dropdownPosition}
+            time={time}
+            onNotificationClick={handleNotificationClick}
+            onDeleteNotification={handleDeleteNotification}
+            onClose={handleCloseNotifications}
+          />
         </div>
 
         <div className={styles.AvatarDesktop}>

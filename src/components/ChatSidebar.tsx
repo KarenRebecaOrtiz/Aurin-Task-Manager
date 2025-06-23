@@ -18,16 +18,11 @@ import {
 } from 'firebase/firestore';
 import { useUser } from '@clerk/nextjs';
 import { gsap } from 'gsap';
-import TimePicker from 'react-time-picker';
-import DatePicker from 'react-datepicker';
-import 'react-time-picker/dist/TimePicker.css';
-import 'react-datepicker/dist/react-datepicker.css';
 import { db } from '@/lib/firebase';
 import { deleteTask } from '@/lib/taskUtils';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
 import InputChat from './ui/InputChat';
 import styles from './ChatSidebar.module.scss';
-
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
@@ -239,13 +234,13 @@ const MessageItem = memo(
           }`}
         >
           <Image
-            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.pn'}
+            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/default-avatar.png'}
             alt={message.senderName || 'Avatar del remitente'}
             width={46}
             height={46}
             className={styles.avatar}
             onError={(e) => {
-              e.currentTarget.src = '/default-avatar.pn';
+              e.currentTarget.src = '/default-avatar.png';
             }}
           />
           <div className={styles.messageContent}>
@@ -442,7 +437,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const hoursDropdownRef = useRef<HTMLDivElement>(null);
   const teamDropdownRef = useRef<HTMLDivElement>(null);
   const timerPanelRef = useRef<HTMLDivElement>(null);
-  const datePickerWrapperRef = useRef<HTMLDivElement>(null);
   const summarizeDropdownRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
 
@@ -877,15 +871,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   }, [isDeletePopupOpen]);
 
-  useEffect(() => {
-    if (timerPanelRef.current) {
-      gsap.set(timerPanelRef.current, {
-        height: isTimerPanelOpen ? 'auto' : 0,
-        opacity: isTimerPanelOpen ? 1 : 0,
-      });
-    }
-  }, [isTimerPanelOpen]);
-
   const handleClick = (element: HTMLElement) => {
     gsap.to(element, {
       scale: 0.95,
@@ -922,7 +907,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       console.error('Error updating task status', error);
     }
   };
-
 
   const handleDeleteTask = async () => {
     if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
@@ -1216,17 +1200,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const toggleTimerPanel = (_e: React.MouseEvent) => {
     if (isSending) return;
     _e.stopPropagation();
-    setIsTimerPanelOpen((prev) => {
-      if (timerPanelRef.current) {
-        gsap.to(timerPanelRef.current, {
-          height: !prev ? 'auto' : 0,
-          opacity: !prev ? 1 : 0,
-          duration: 0.3,
-          ease: 'power2.out',
-        });
-      }
-      return !prev;
-    });
+    setIsTimerPanelOpen((prev) => !prev);
   };
 
   const handleAddTimeEntry = async () => {
@@ -1360,7 +1334,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           break;
         case '1month':
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
         case '6months':
           startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
@@ -1522,7 +1496,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case '1month':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 1000);
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       case '6months':
         startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
@@ -1780,81 +1754,30 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           />
         ))}
       </div>
-      <div ref={timerPanelRef} className={styles.timerPanel} id="timerPanel">
-        <div className={styles.timerPanelContent}>
-          <div className={styles.timerRow}>
-            <div className={styles.timerCard}>
-              <TimePicker
-                onChange={(value: string | null) => setTimerInput(value || '00:00')}
-                value={timerInput}
-                format="HH:mm"
-                clockIcon={null}
-                clearIcon={null}
-                disableClock
-                locale="es-MX"
-                className={styles.timerInput}
-              />
-            </div>
-            <div className={styles.timerCard} ref={datePickerWrapperRef}>
-              <DatePicker
-                selected={dateInput}
-                onChange={(date: Date | null) => setDateInput(date || new Date())}
-                dateFormat="dd/MM/yy"
-                className={styles.timerInput}
-                popperClassName={styles.calendarPopper}
-              />
-            </div>
-          </div>
-          <div className={styles.timerCard}>
-            <textarea
-              placeholder="Añadir comentario"
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
-              className={styles.timerCommentInput}
-            />
-          </div>
-          <div className={styles.timerTotal}>
-            Has invertido: {totalHours} en esta tarea.
-          </div>
-          <div className={styles.timerActions}>
-            <button type="button" className={styles.timerAddButton} onClick={handleAddTimeEntry}>
-              Añadir entrada
-            </button>
-            <button
-              type="button"
-              className={styles.timerCancelButton}
-              onClick={() => {
-                setIsTimerPanelOpen(false);
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
       <InputChat
-  taskId={task.id}
-  userId={user?.id}
-  userFirstName={user?.firstName}
-  onSendMessage={handleSendMessage}
-  isSending={isSending}
-  setIsSending={setIsSending}
-  timerSeconds={timerSeconds}
-  isTimerRunning={isTimerRunning}
-  onToggleTimer={toggleTimer}
-  onToggleTimerPanel={toggleTimerPanel}
-  isTimerPanelOpen={isTimerPanelOpen}
-  setIsTimerPanelOpen={setIsTimerPanelOpen}
-  timerInput={timerInput}
-  setTimerInput={setTimerInput}
-  dateInput={dateInput}
-  setDateInput={setDateInput}
-  commentInput={commentInput}
-  setCommentInput={setCommentInput}
-  onAddTimeEntry={handleAddTimeEntry}
-  containerRef={sidebarRef}
-  timerPanelRef={timerPanelRef}
-/>
+        taskId={task.id}
+        userId={user?.id}
+        userFirstName={user?.firstName}
+        onSendMessage={handleSendMessage}
+        isSending={isSending}
+        setIsSending={setIsSending}
+        timerSeconds={timerSeconds}
+        isTimerRunning={isTimerRunning}
+        onToggleTimer={toggleTimer}
+        onToggleTimerPanel={toggleTimerPanel}
+        isTimerPanelOpen={isTimerPanelOpen}
+        setIsTimerPanelOpen={setIsTimerPanelOpen}
+        containerRef={sidebarRef}
+        timerPanelRef={timerPanelRef}
+        timerInput={timerInput}
+        setTimerInput={setTimerInput}
+        dateInput={dateInput}
+        setDateInput={setDateInput}
+        commentInput={commentInput}
+        setCommentInput={setCommentInput}
+        onAddTimeEntry={handleAddTimeEntry}
+        totalHours={totalHours}
+      />
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>
           <div className={styles.deletePopup} ref={deletePopupRef}>

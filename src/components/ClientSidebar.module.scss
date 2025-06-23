@@ -310,3 +310,102 @@
 :global(body.dark) .label {
   color: #f9fafb;
 }
+
+/* ─── Mobile Responsive Styles (max-width: 768px) ─────── */
+@media (max-width: 768px) {
+  .container {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 80vh;
+    border-radius: 24px 24px 0 0;
+    transform: translateY(100%);
+    padding: 0;
+  }
+
+  .open {
+    transform: translateY(0);
+  }
+
+  .content {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .header {
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .form {
+    gap: 16px;
+  }
+
+  .field {
+    gap: 6px;
+  }
+
+  .label {
+    font-size: 13px;
+  }
+
+  .fieldDescription {
+    font-size: 12px;
+  }
+
+  .avatar {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 12px;
+  }
+
+  .projectField {
+    gap: 8px;
+  }
+
+  .projectInputWrapper {
+    gap: 6px;
+  }
+
+  .addProjectButton,
+  .deleteConfirmButton,
+  .cancelDeleteConfirmButton,
+  .submitButton,
+  .cancelButton {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .actions {
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .input,
+  .deleteConfirmInput {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .deleteConfirm {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .deleteConfirmHeader h3,
+  .deleteConfirm p {
+    font-size: 13px;
+  }
+}

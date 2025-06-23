@@ -21,7 +21,7 @@ import {
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
-import { InputMessage } from './ui/InputMessage';
+import InputChat from './ui/InputChat'; // Reemplazar InputMessage por InputChat
 import styles from './MessageSidebar.module.scss';
 
 interface Message {
@@ -91,18 +91,51 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const messageRefs = useRef<Map<string, HTMLLIElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
+  // Body scroll lock effect
+  useEffect(() => {
+    if (isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+
+      // Lock body scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        // Restore body scroll
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const currentSidebar = sidebarRef.current;
     if (!currentSidebar) return;
+
+    const isMobile = window.innerWidth < 768;
+
     if (isOpen) {
       gsap.fromTo(
         currentSidebar,
-        { x: '100%', opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+        isMobile ? { y: '100%', opacity: 0 } : { x: '100%', opacity: 0 },
+        {
+          ...(isMobile ? { y: 0 } : { x: 0 }),
+          opacity: 1,
+          duration: 0.3,
+          ease: 'power2.out',
+        },
       );
     } else {
       gsap.to(currentSidebar, {
-        x: '100%',
+        ...(isMobile ? { y: '100%' } : { x: '100%' }),
         opacity: 0,
         duration: 0.3,
         ease: 'power2.in',
@@ -125,8 +158,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         !currentSidebar.contains(e.target as Node) &&
         (!currentActionMenu || !currentActionMenu.contains(e.target as Node))
       ) {
+        const isMobile = window.innerWidth < 768;
         gsap.to(currentSidebar, {
-          x: '100%',
+          ...(isMobile ? { y: '100%' } : { x: '100%' }),
           opacity: 0,
           duration: 0.3,
           ease: 'power2.in',
@@ -464,15 +498,16 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           <div className={styles.controls}>
             <div
               className={styles.arrowLeft}
-              onClick={() =>
+              onClick={() => {
+                const isMobile = window.innerWidth < 768;
                 gsap.to(sidebarRef.current, {
-                  x: '100%',
+                  ...(isMobile ? { y: '100%' } : { x: '100%' }),
                   opacity: 0,
                   duration: 0.3,
                   ease: 'power2.in',
                   onComplete: onClose,
-                })
-              }
+                });
+              }}
             >
               <Image src="/arrow-left.svg" alt="Cerrar" width={15} height={16} />
             </div>
@@ -491,15 +526,16 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         <div className={styles.controls}>
           <div
             className={styles.arrowLeft}
-            onClick={() =>
+            onClick={() => {
+              const isMobile = window.innerWidth < 768;
               gsap.to(sidebarRef.current, {
-                x: '100%',
+                ...(isMobile ? { y: '100%' } : { x: '100%' }),
                 opacity: 0,
                 duration: 0.3,
                 ease: 'power2.in',
                 onComplete: onClose,
-              })
-            }
+              });
+            }}
           >
             <Image src="/arrow-left.svg" alt="Cerrar" width={15} height={16} />
           </div>
@@ -704,13 +740,28 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           <Image src="/chevron-down.svg" alt="Nuevos mensajes" width={24} height={24} />
         </button>
       )}
-      <InputMessage
+      <InputChat
         taskId={conversationId}
         userId={user?.id}
         userFirstName={user?.firstName}
         onSendMessage={handleSendMessage}
         isSending={isSending}
+        setIsSending={setIsSending}
+        timerSeconds={0}
+        isTimerRunning={false}
+        onToggleTimer={() => {}}
+        onToggleTimerPanel={() => {}}
+        isTimerPanelOpen={false}
+        setIsTimerPanelOpen={() => {}}
         containerRef={sidebarRef}
+        timerInput="00:00"
+        setTimerInput={() => {}}
+        dateInput={new Date()}
+        setDateInput={() => {}}
+        commentInput=""
+        setCommentInput={() => {}}
+        onAddTimeEntry={async () => {}}
+        totalHours="0h 0m"
       />
       {imagePreviewSrc && (
         <ImagePreviewOverlay

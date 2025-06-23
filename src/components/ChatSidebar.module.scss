@@ -2013,8 +2013,8 @@ filter: none;
     left: 0;
     right: 0;
     width: 100%;
-    height: 85vh;
-    max-height: 85vh;
+    height: 95vh;
+    max-height: 95vh;
     border-radius: 24px 24px 0 0;
     transform: translateY(100%);
     padding: 20px 15px 15px 15px;
@@ -2185,6 +2185,7 @@ filter: none;
 /* Media query específica para pantallas muy pequeñas */
 @media (max-width: 480px) {
   .container {
+    overflow: visible;
     height: 90vh;
     padding: 15px 12px 12px 12px;
   }
