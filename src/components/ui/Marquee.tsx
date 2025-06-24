@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, deleteDoc, doc, Timestamp, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './Marquee.module.scss';
 import gsap from 'gsap';
@@ -20,7 +20,7 @@ const Marquee: React.FC = () => {
   // Firebase data fetching
   useEffect(() => {
     const q = query(collection(db, 'advices'), where('expiry', '>', Timestamp.now()));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const now = Timestamp.now();
       const activeAdvices: Advice[] = [];
       const expiredAdvices: string[] = [];
@@ -35,13 +35,19 @@ const Marquee: React.FC = () => {
         }
       });
 
-      expiredAdvices.forEach(async (id) => {
+      // Eliminar anuncios expirados usando batch para operación atómica
+      if (expiredAdvices.length > 0) {
         try {
-          await deleteDoc(doc(db, 'advices', id));
+          const batch = writeBatch(db);
+          expiredAdvices.forEach((id) => {
+            batch.delete(doc(db, 'advices', id));
+          });
+          await batch.commit();
+          console.log(`Deleted ${expiredAdvices.length} expired advices:`, expiredAdvices);
         } catch (error) {
-          console.error('Error deleting expired advice:', error);
+          console.error('Error deleting expired advices:', error);
         }
-      });
+      }
 
       setAdvices(activeAdvices);
     }, (error) => {

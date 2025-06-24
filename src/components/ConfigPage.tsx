@@ -107,11 +107,19 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     'Java', 'Kotlin', 'Laravel', 'MySQL', 'NestJS', 'Nginx', 'PHP', 'PostgreSQL', 'Prisma', 'RabbitMQ',
     'Redis', 'Ruby on Rails', 'Spring Boot', 'SQL Server', 'SQLite', 'Strapi', 'Supabase', 'Symfony',
     'Traefik', 'Vapor',
+    // Cloud Computing
+    'AWS', 'Google Cloud Platform', 'Microsoft Azure', 'Firebase', 'Firestore', 'Cloud Functions', 'Cloud Run',
+    'Cloud Storage', 'BigQuery', 'Pub/Sub', 'Cloud Build', 'Cloud SQL', 'Cloud Spanner', 'Cloud Bigtable',
+    'Compute Engine', 'App Engine', 'Kubernetes Engine', 'Cloud CDN', 'Cloud DNS', 'Cloud IAM',
+    'AWS Lambda', 'AWS S3', 'AWS EC2', 'AWS RDS', 'AWS DynamoDB', 'AWS CloudFormation', 'AWS ECS',
+    'AWS EKS', 'AWS CloudWatch', 'AWS SNS', 'AWS SQS', 'Azure Functions', 'Azure Blob Storage',
+    'Azure SQL Database', 'Azure Cosmos DB', 'Azure Service Bus', 'Azure Event Grid', 'Heroku',
+    'Vercel', 'Netlify', 'DigitalOcean', 'Linode', 'Vultr', 'Oracle Cloud', 'IBM Cloud', 'Alibaba Cloud',
     // DevOps
     'Ansible', 'ArgoCD', 'AWS CloudFormation', 'Bamboo', 'Chef', 'CircleCI', 'Datadog', 'Docker Compose',
-    'ELK Stack', 'Git', 'GitHub Actions', 'GitLab CI', 'Grafana', 'Helm', 'Istio', 'Jenkins', 'Nexus',
-    'New Relic', 'OpenShift', 'Prometheus', 'Puppet', 'SaltStack', 'Sentry', 'SonarQube', 'Spinnaker',
-    'Terraform', 'Travis CI', 'Vault', 'Vagrant', 'Zabbix',
+    'ELK Stack', 'Git', 'GitHub', 'GitHub Actions', 'GitLab', 'GitLab CI', 'Grafana', 'Helm', 'Istio', 
+    'Jenkins', 'Nexus', 'New Relic', 'OpenShift', 'Prometheus', 'Puppet', 'SaltStack', 'Sentry', 
+    'SonarQube', 'Spinnaker', 'Terraform', 'Travis CI', 'Vault', 'Vagrant', 'Zabbix', 'n8n',
     // Diseño gráfico
     'Adobe Animate', 'Affinity Photo', 'Canva', 'CorelDRAW', 'Crello', 'Figma', 'GIMP', 'Gravit Designer',
     'Illustrator', 'Inkscape', 'Lunacy', 'Photopea', 'PicMonkey', 'Pixelmator', 'Procreate', 'Sketch',
@@ -121,7 +129,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     'Angular', 'Astro', 'Bootstrap', 'Chakra UI', 'Cypress', 'Ember.js', 'ESLint', 'Gatsby', 'Jest',
     'Material UI', 'Next.js', 'Nuxt.js', 'Preact', 'React Native', 'Redux', 'Sass', 'Storybook', 'Svelte',
     'Tailwind CSS', 'Three.js', 'Vite', 'Vue.js', 'Vitest', 'Vuetify', 'WASM', 'WebGL', 'Webpack',
-    'Webflow', 'Yarn', 'Zustand',
+    'Webflow', 'Yarn', 'Zustand', 'Framer Motion', 'Framer', 'GSAP', 'Lottie', 'React Spring',
+    'Anime.js', 'Rive', 'Motion One', 'React Transition Group', 'React Hook Form', 'Formik', 'Yup',
+    'Zod', 'React Query', 'SWR', 'Apollo Client', 'Relay', 'Recoil', 'Jotai', 'Valtio', 'Styled Components',
+    'Emotion', 'Stitches', 'Vanilla Extract', 'Headless UI', 'Radix UI', 'Arco Design', 'Ant Design',
+    'Mantine', 'NextUI', 'React Router', 'Reach Router', 'Wouter', 'React Testing Library', 'Enzyme',
+    'Playwright', 'Puppeteer', 'Storybook', 'Chromatic', 'Bit', 'Nx', 'Lerna', 'Rush', 'Turbo',
+    'Microbundle', 'Rollup', 'Parcel', 'esbuild', 'SWC', 'Babel', 'TypeScript', 'Flow', 'PropTypes',
     // Inteligencia Artificial
     'Caffe', 'FastAI', 'H2O.ai', 'Hugging Face', 'Keras', 'LangChain', 'LightGBM', 'MLflow', 'Neptune.ai',
     'ONNX', 'OpenAI', 'OpenCV', 'PyCaret', 'PyTorch', 'Rasa', 'SageMaker', 'SciPy', 'SHAP', 'Spacy',
@@ -132,6 +146,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     'Integromat', 'JotForm', 'Kissflow', 'Mendix', 'Monday.com', 'Nexlify', 'Notion', 'OutSystems',
     'Power Apps', 'QuickBase', 'Retool', 'Softr', 'Stacker', 'Thunkable', 'Tilda', 'Webflow', 'Wix',
     'WordPress', 'Zapier', 'Zoho Creator', 'Zudy Vinyl',
+    // Project Management
+    'Jira', 'Confluence', 'Asana', 'Monday.com', 'Trello', 'ClickUp', 'Notion', 'Airtable', 'Basecamp',
+    'Wrike', 'Smartsheet', 'Microsoft Project', 'Gantt Charts', 'Kanban', 'Scrum', 'Agile', 'Waterfall',
+    'Linear', 'Height', 'Todoist', 'Any.do', 'Teamwork', 'Workfront', 'Zoho Projects', 'ProofHub',
+    'Paymo', 'TeamGantt', 'GanttProject', 'OpenProject', 'Redmine', 'Taiga', 'Azure DevOps', 'Shortcut',
+    'Clubhouse', 'Pivotal Tracker', 'Backlog', 'Favro', 'MeisterTask', 'Freedcamp', 'Hive', 'nTask',
     // UX/UI
     'Abstract', 'Adobe XD', 'Axure', 'Balsamiq', 'Coolors', 'Dribbble', 'FigJam', 'Figma', 'Flinto',
     'Framer', 'InVision', 'Justinmind', 'Lottie', 'Maze', 'Miro', 'Mockflow', 'Origami Studio', 'Penpot',
@@ -142,8 +162,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   
 
   const teamsOptions = [
-    'Análisis de Datos', 'Arquitectura', 'Arte', 'Backend', 'DevOps', 'Diseño gráfico',
-    'Frontend', 'Inteligencia Artificial', 'No-Code Builders', 'UX/UI',
+    'Análisis de Datos', 'Arquitectura', 'Arte', 'Backend', 'Cloud Computing', 'DevOps', 'Diseño gráfico',
+    'Frontend', 'Inteligencia Artificial', 'No-Code Builders', 'Project Management', 'UX/UI',
   ].sort();
 
   const ladaOptions = [
@@ -311,7 +331,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   }, []);
 
   const handleStackChange = useCallback((selectedValues: string[]) => {
-    setFormData((prev) => (prev ? { ...prev, stack: selectedValues.slice(0, 20) } : null));
+    setFormData((prev) => (prev ? { ...prev, stack: selectedValues.slice(0, 40) } : null));
   }, []);
 
   const handleTeamsChange = useCallback((selectedTeams: string[]) => {
@@ -325,14 +345,19 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   }, []);
 
   const handlePhoneLadaChange = useCallback((value: string) => {
-    setFormData((prev) => (prev ? { ...prev, phoneLada: value, phone: formatPhoneNumber(prev?.phone || '', value) } : null));
+    setFormData((prev) => (prev ? { ...prev, phoneLada: value } : null));
     setErrors((prev) => ({ ...prev, phone: undefined }));
   }, []);
 
   const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/[^0-9-]/g, '');
-    if (value.length > 12) value = value.slice(0, 12);
-    setFormData((prev) => (prev ? { ...prev, phone: value } : null));
+    // Extraer solo los dígitos del valor actual
+    const rawValue = e.target.value.replace(/\D/g, '');
+    
+    // Limitar a 10 dígitos máximo
+    const limitedValue = rawValue.slice(0, 10);
+    
+    // Guardar solo los dígitos en el estado
+    setFormData((prev) => (prev ? { ...prev, phone: limitedValue } : null));
     setErrors((prev) => ({ ...prev, phone: undefined }));
   }, []);
 
@@ -582,13 +607,22 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     setAlert(null);
   };
 
-  const formatPhoneNumber = (phone: string, lada: string) => {
+  const formatPhoneNumber = (phone: string) => {
+    // Si phone está vacío, mostrar placeholder
+    if (!phone) return '';
+    
     const digits = phone.replace(/\D/g, '');
-    if (!digits) return `${lada} (XX)-XXX-XX-XX`;
-    if (digits.length <= 2) return `${lada} (${digits})`;
-    if (digits.length <= 5) return `${lada} (${digits.slice(0, 2)})-${digits.slice(2)}`;
-    if (digits.length <= 7) return `${lada} (${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5)}`;
-    return `${lada} (${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 10)}`;
+    
+    // Formatear según la cantidad de dígitos
+    if (digits.length <= 2) {
+      return `(${digits}`;
+    } else if (digits.length <= 5) {
+      return `(${digits.slice(0, 2)})-${digits.slice(2)}`;
+    } else if (digits.length <= 7) {
+      return `(${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5)}`;
+    } else {
+      return `(${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 10)}`;
+    }
   };
 
   useEffect(() => {
@@ -711,7 +745,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
               className={styles.editCoverButton}
               onClick={() => coverPhotoInputRef.current?.click()}
             >
-              Editar Portada
+              <Image
+                src="/pencil.svg"
+                alt="Editar"
+                width={16}
+                height={16}
+              />
             </button>
           )}
           <input
@@ -738,7 +777,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                   className={styles.editProfilePhotoButton}
                   onClick={() => profilePhotoInputRef.current?.click()}
                 >
-                  Editar
+                  <Image
+                    src="/pencil.svg"
+                    alt="Editar"
+                    width={16}
+                    height={16}
+                  />
                 </button>
               )}
               <input
@@ -854,12 +898,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     <input
                       type="text"
                       name="phone"
-                      value={formatPhoneNumber(formData.phone || '', formData.phoneLada || '+52')}
+                      value={formatPhoneNumber(formData.phone || '')}
                       onChange={handlePhoneChange}
                       placeholder="XX-XXX-XX-XX"
                       className={styles.input}
                       disabled={!isOwnProfile || !isEditing}
-                      maxLength={12}
+                      maxLength={15}
                     />
                   </div>
                   {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
@@ -974,7 +1018,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                   placeholder="Escribe una tecnología..."
                   disabled={!isOwnProfile || !isEditing}
                   className={styles.stackSelect}
-                  maxSelections={20}
+                  maxSelections={40}
                 />
               </div>
             </div>

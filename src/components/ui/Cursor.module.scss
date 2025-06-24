@@ -49,3 +49,11 @@
     overflow: hidden; 
     text-overflow: ellipsis; 
   }
+
+// Hide cursor on mobile devices (viewports smaller than 768px)
+@media (max-width: 767px) {
+  .cursor,
+  .cursorFollow {
+    display: none !important;
+  }
+}  

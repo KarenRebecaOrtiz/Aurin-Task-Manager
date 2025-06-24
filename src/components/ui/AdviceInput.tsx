@@ -9,7 +9,7 @@ declare module 'react' {
 
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, setDoc, deleteDoc, collection, Timestamp, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, Timestamp, query, where, getDocs, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './AdviceInput.module.scss';
 import Image from 'next/image';
@@ -30,6 +30,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [activeAdviceId, setActiveAdviceId] = useState<string | null>(null);
   const [expiryTime, setExpiryTime] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const portalRootRef = useRef<HTMLElement | null>(null);
@@ -72,19 +73,8 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
     checkExistingAdvice();
   }, [user?.id]);
 
-  useEffect(() => {
-    if (expiryTime) {
-      const interval = setInterval(() => {
-        const remaining = Math.max(0, expiryTime - Date.now());
-        if (remaining <= 0) {
-          setActiveAdviceId(null);
-          setExpiryTime(null);
-          setInputText('');
-        }
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [expiryTime]);
+  // Eliminamos el useEffect de expiración automática para evitar conflictos
+  // La expiración será manejada exclusivamente por el componente Marquee
 
   // EFFECTS – DROPDOWN POSITION (replicando lógica del Header)
   useEffect(() => {
@@ -152,7 +142,6 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
   const handlePostAdvice = async (intervalMs: number) => {
     console.log('handlePostAdvice triggered with interval:', intervalMs);
     
-    // Limpiar errores previos
     setErrorMessage('');
     
     if (!user?.id || !user?.firstName || !inputText.trim()) {
@@ -187,33 +176,58 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
       setActiveAdviceId(adviceId);
       setExpiryTime(expiry);
       setIsDropdownOpen(false);
-      setErrorMessage(''); // Limpiar error en caso de éxito
-    } catch (error) {
+      setErrorMessage('');
+    } catch (error: unknown) {
       console.error('Error posting advice:', error);
-      setErrorMessage('Error al publicar el anuncio. Verifica el índice en Firestore.');
+      const errorMessage = error instanceof Error ? error.message : 'Verifica el índice en Firestore.';
+      setErrorMessage(`Error al publicar el anuncio: ${errorMessage}`);
     }
   };
 
   const handleDeleteAdvice = async () => {
-    if (!activeAdviceId || !user?.id) return;
+    if (!activeAdviceId || !user?.id) {
+      setErrorMessage('No hay anuncio activo o usuario no autenticado.');
+      return;
+    }
 
-    // Limpiar errores previos
+    if (isDeleting) {
+      console.log('Delete operation already in progress');
+      return;
+    }
+
+    setIsDeleting(true);
     setErrorMessage('');
 
     try {
-      const adviceDoc = await getDoc(doc(db, 'advices', activeAdviceId));
-      if (adviceDoc.exists() && adviceDoc.data().creatorId === user.id) {
-        await deleteDoc(doc(db, 'advices', activeAdviceId));
-        setInputText('');
-        setActiveAdviceId(null);
-        setExpiryTime(null);
-        setErrorMessage(''); // Limpiar error en caso de éxito
-      } else {
-        setErrorMessage('Solo el creador puede eliminar este anuncio.');
-      }
-    } catch (error) {
+      // Usar transacción para operación atómica
+      await runTransaction(db, async (transaction) => {
+        const adviceRef = doc(db, 'advices', activeAdviceId);
+        const adviceDoc = await transaction.get(adviceRef);
+        
+        if (!adviceDoc.exists()) {
+          throw new Error('El anuncio no existe o ya fue eliminado.');
+        }
+
+        const adviceData = adviceDoc.data();
+        if (adviceData.creatorId !== user.id) {
+          throw new Error('Solo el creador puede eliminar este anuncio.');
+        }
+
+        transaction.delete(adviceRef);
+      });
+
+      console.log(`Advice ${activeAdviceId} deleted successfully by user ${user.id}`);
+      // Solo limpiar estado después de eliminación exitosa
+      setInputText('');
+      setActiveAdviceId(null);
+      setExpiryTime(null);
+      setErrorMessage('');
+    } catch (error: unknown) {
       console.error('Error deleting advice:', error);
-      setErrorMessage('Error al eliminar el anuncio.');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      setErrorMessage(`Error al eliminar el anuncio: ${errorMessage}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -309,7 +323,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
         placeholder="Escribe un anuncio..."
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
-        disabled={!!activeAdviceId}
+        disabled={!!activeAdviceId || isDeleting}
       />
       {errorMessage && (
         <div className={styles.errorMessage}>
@@ -322,8 +336,14 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
           onClick={handleDeleteAdvice}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          disabled={isDeleting}
+          title={isDeleting ? 'Eliminando...' : 'Hacer clic para eliminar anuncio'}
         >
-          <Countdown seconds={Math.max(0, Math.floor((expiryTime - Date.now()) / 1000))} />
+          {isDeleting ? (
+            <div style={{ fontSize: '12px', opacity: 0.7 }}>Eliminando...</div>
+          ) : (
+            <Countdown seconds={Math.max(0, Math.floor((expiryTime - Date.now()) / 1000))} />
+          )}
         </button>
       ) : (
         <button
@@ -331,6 +351,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
           className={styles.subscribeBtn}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          disabled={isDeleting}
         >
           <Image src="/rocket.svg" alt="Agregar" width={20} height={20} />
         </button>

@@ -993,24 +993,32 @@ const EditTask: React.FC<EditTaskProps> = ({
     onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   }
 
-  const SlideCard: React.FC<SlideCardProps> = ({ imageUrl, name, role, isSelected, onClick }) => (
-    <div
-      className={`${styles.slideCard} ${isSelected ? styles.selected : ""}`}
-      onClick={onClick}
-      style={{ touchAction: "pan-y", pointerEvents: "auto" }}
-    >
-      <Image
-        src={imageUrl}
-        alt={name}
-        width={36}
-        height={36}
-        className={role ? styles.userImage : styles.clientImage}
-        priority
-      />
-      <div className={styles.clientName}>{name}</div>
-      {role && <div className={styles.userRole}>{role}</div>}
-    </div>
-  );
+  const SlideCard: React.FC<SlideCardProps> = ({ imageUrl, name, role, isSelected, onClick }) => {
+    // Provide fallback for empty or undefined imageUrls
+    const validImageUrl = imageUrl && imageUrl.trim() !== '' ? imageUrl : '/empty-image.png';
+    
+    return (
+      <div
+        className={`${styles.slideCard} ${isSelected ? styles.selected : ""}`}
+        onClick={onClick}
+        style={{ touchAction: "pan-y", pointerEvents: "auto" }}
+      >
+        <Image
+          src={validImageUrl}
+          alt={name}
+          width={36}
+          height={36}
+          className={role ? styles.userImage : styles.clientImage}
+          priority
+          onError={(e) => {
+            e.currentTarget.src = '/empty-image.png';
+          }}
+        />
+        <div className={styles.clientName}>{name}</div>
+        {role && <div className={styles.userRole}>{role}</div>}
+      </div>
+    );
+  };
 
   return (
     <>

@@ -71,20 +71,6 @@ const formSchema = z.object({
     LeadedBy: z.array(z.string()).min(1, { message: "Selecciona al menos un líder*" }),
     AssignedTo: z.array(z.string()).min(1, { message: "Selecciona al menos un colaborador*" }),
   }),
-  resources: z.object({
-    budget: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-      message: "El presupuesto debe ser un número válido*",
-    }),
-    hours: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-      message: "Las horas deben ser un número válido*",
-    }),
-  }),
-  advanced: z.object({
-    methodology: z.string().optional(),
-    risks: z.string().optional(),
-    mitigation: z.string().optional(),
-    stakeholders: z.string().optional(),
-  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -107,16 +93,6 @@ const defaultValues: FormValues = {
     LeadedBy: [],
     AssignedTo: [],
   },
-  resources: {
-    budget: "",
-    hours: "",
-  },
-  advanced: {
-    methodology: "",
-    risks: "",
-    mitigation: "",
-    stakeholders: "",
-  },
 };
 
 const stepFields: (keyof FormValues | string)[][] = [
@@ -131,8 +107,6 @@ const stepFields: (keyof FormValues | string)[][] = [
     "basicInfo.priority",
   ],
   ["teamInfo.LeadedBy", "teamInfo.AssignedTo"],
-  ["resources.budget", "resources.hours"],
-  ["advanced.methodology", "advanced.risks", "advanced.mitigation", "advanced.stakeholders"],
 ];
 
 interface CreateTaskProps {
@@ -722,11 +696,19 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   }, [users, searchCollaborator, form]);
 
   const filteredLeaders = useMemo(() => {
-    return users.filter(
+    const filtered = users.filter(
       (u) =>
         u.fullName.toLowerCase().includes(searchLeader.toLowerCase()) ||
         u.role.toLowerCase().includes(searchLeader.toLowerCase()),
     );
+    console.log('Debug Leader Filter:', {
+      searchLeader,
+      totalUsers: users.length,
+      filteredCount: filtered.length,
+      users: users.map(u => ({ id: u.id, fullName: u.fullName, role: u.role })),
+      filtered: filtered.map(u => ({ id: u.id, fullName: u.fullName, role: u.role }))
+    });
+    return filtered;
   }, [users, searchLeader]);
 
   const filteredClients = useMemo(() => {
@@ -764,10 +746,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         ...values.clientInfo,
         ...values.basicInfo,
         ...values.teamInfo,
-        ...values.resources,
-        ...values.advanced,
-        budget: parseFloat(values.resources.budget.replace("$", "")) || 0,
-        hours: parseInt(values.resources.hours) || 0,
         CreatedBy: user.id,
         createdAt: Timestamp.fromDate(new Date()),
         id: taskId,
@@ -869,7 +847,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             <div className={styles.header}>
               <div className={styles.headerTitle}>Crear Tarea</div>
               <div className={styles.headerProgress}>
-                <Wizard totalSteps={5}>
+                <Wizard totalSteps={3}>
                   <WizardProgress />
                 </Wizard>
               </div>
@@ -879,7 +857,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             </div>
             <div className={styles.content}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <Wizard totalSteps={5}>
+                <Wizard totalSteps={3}>
                   <WizardStep step={0} validator={() => validateStep(stepFields[0] as (keyof FormValues)[])}>
                     <div className={styles.section}>
                       <h2 className={styles.sectionTitle}>Información del Cliente</h2>
@@ -1487,6 +1465,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                       </div>
                     </div>
                   </WizardStep>
+                  
+                  {/* COMMENTED OUT RESOURCE MANAGEMENT STEP */}
+                  {/* 
                   <WizardStep step={3} validator={() => validateStep(stepFields[3] as (keyof FormValues)[])}>
                     <div className={styles.section}>
                       <h2 className={styles.sectionTitle}>Gestión de Recursos</h2>
@@ -1535,6 +1516,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                       </div>
                     </div>
                   </WizardStep>
+                  */}
+                  
+                  {/* COMMENTED OUT ADVANCED CONFIGURATION STEP */}
+                  {/* 
                   <WizardStep step={4} validator={() => validateStep(stepFields[4] as (keyof FormValues)[])}>
                     <div className={styles.section}>
                       <h2 className={styles.sectionTitle}>Configuración Avanzada</h2>
@@ -1608,6 +1593,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                       </div>
                     </div>
                   </WizardStep>
+                  */}
+                  
                   <WizardActions onComplete={() => form.handleSubmit(onSubmit)()} />
                 </Wizard>
               </form>

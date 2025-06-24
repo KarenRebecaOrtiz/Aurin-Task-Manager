@@ -43,6 +43,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
     const { isAdmin, isLoading } = useAuth();
     const { user } = useUser();
     const [localIsLoading, setLocalIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false); // Nuevo estado para el guardado
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [failMessage, setFailMessage] = useState<{ message: string; error: string } | null>(null);
 
@@ -209,6 +210,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
           return;
         }
 
+        setIsSaving(true); // Iniciar estado de guardado
         if (onLoadingChange) {
           onLoadingChange(true);
         }
@@ -281,6 +283,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
           });
           if (onAlertChange) onAlertChange({ type: 'fail', message: 'Error al guardar el cliente.', error: error.message || 'Unknown error' });
         } finally {
+          setIsSaving(false); // Finalizar estado de guardado
           if (onLoadingChange) {
             onLoadingChange(false);
           }
@@ -356,7 +359,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                     ref={fileInputRef}
                     style={{ display: 'none' }}
                     onChange={handleImageChange}
-                    disabled={isClientLoading}
+                    disabled={isSaving || isClientLoading}
                   />
                 </div>
               </div>
@@ -376,7 +379,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   className={styles.input}
                   required
-                  disabled={isClientLoading}
+                  disabled={isSaving || isClientLoading}
                 />
               </div>
 
@@ -394,14 +397,14 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                         onChange={(e) => handleProjectChange(index, e.target.value)}
                         placeholder={`Proyecto ${index + 1}`}
                         className={styles.input}
-                        disabled={isClientLoading}
+                        disabled={isSaving || isClientLoading}
                         style={{ width: '100%' }}
                       />
                       <button
                         type="button"
                         onClick={() => handleDeleteProjectClick(index)}
                         className={styles.deleteProjectButton}
-                        disabled={isClientLoading}
+                        disabled={isSaving || isClientLoading}
                       >
                         <Image src="/trash-2.svg" alt="Eliminar" width={16} height={16} />
                       </button>
@@ -468,17 +471,24 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
               <div className={styles.actions}>
                 <button
                   type="submit"
-                  className={styles.submitButton}
-                  disabled={isClientLoading || !isAdmin}
+                  className={`${styles.submitButton} ${isSaving ? styles.saving : ''}`}
+                  disabled={isSaving || isClientLoading || !isAdmin}
                   style={{ width: '100%' }}
                 >
-                  Guardar cliente
+                  {isSaving ? (
+                    <>
+                      <div className={styles.buttonLoader}></div>
+                      Guardando...
+                    </>
+                  ) : (
+                    'Guardar cliente'
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
                   className={styles.cancelButton}
-                  disabled={isClientLoading}
+                  disabled={isSaving || isClientLoading}
                   style={{ width: '100%' }}
                 >
                   Cancelar

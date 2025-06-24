@@ -233,7 +233,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                       if (el) actionButtonRefs.current.set(client.id, el);
                       else actionButtonRefs.current.delete(client.id);
                     }}
-                    // Removed isAdmin prop
                   />
                 );
               },

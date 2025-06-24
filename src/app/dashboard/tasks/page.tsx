@@ -15,6 +15,7 @@ import {
   updateDoc,
   orderBy,
   limit,
+  addDoc,
 } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { gsap } from 'gsap';
@@ -47,6 +48,7 @@ import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'; // Added useAuth import
 import ToDoDynamic from '@/components/ToDoDynamic';
+import DeletePopup from '@/components/DeletePopup';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -130,6 +132,10 @@ function TasksPageContent() {
   const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
   const [showLoader, setShowLoader] = useState<boolean>(true);
+  // Add delete popup states
+  const [isDeletePopupOpen, setIsDeletePopupOpen] = useState<boolean>(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'task' | 'client'; id: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -148,6 +154,50 @@ function TasksPageContent() {
     }, 3500);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Declare handler functions first before using them
+  const handleMessageSidebarOpen = useCallback((user: User) => {
+    setOpenSidebars((prev) => [
+      ...prev,
+      { id: uuidv4(), type: 'message', data: user },
+    ]);
+    console.log('[TasksPage] Opened message sidebar for user:', user.id);
+  }, []);
+
+  const handleChatSidebarOpen = useCallback((task: Task) => {
+    setOpenSidebars((prev) => [
+      ...prev,
+      { id: uuidv4(), type: 'chat', data: task },
+    ]);
+    console.log('[TasksPage] Opened chat sidebar for task:', task.id);
+  }, []);
+
+  const handleNewTaskOpen = useCallback(() => {
+    setIsCreateTaskOpen(true);
+    setIsEditTaskOpen(false);
+    setEditTaskId(null);
+    console.log('[TasksPage] Opened new task creation');
+  }, []);
+
+  const handleEditTaskOpen = useCallback((taskId: string) => {
+    setEditTaskId(taskId);
+    setIsEditTaskOpen(true);
+    setIsCreateTaskOpen(false);
+    console.log('[TasksPage] Opened task editing for:', taskId);
+  }, []);
+
+  const handleAISidebarOpen = useCallback(() => {
+    setIsAISidebarOpen(true);
+    console.log('[TasksPage] Opened AI sidebar');
+  }, []);
+
+  const handleInviteSidebarOpen = useCallback(() => {
+    setOpenSidebars((prev) => [
+      ...prev,
+      { id: uuidv4(), type: 'invite-sidebar' },
+    ]);
+    console.log('[TasksPage] Opened invite sidebar');
   }, []);
 
   const fetchUsers = useCallback(async () => {
@@ -513,63 +563,123 @@ function TasksPageContent() {
     ]);
   }, []);
 
+  const handleDeleteTaskOpen = useCallback((taskId: string) => {
+    setDeleteTarget({ type: 'task', id: taskId });
+    setIsDeletePopupOpen(true);
+  }, []);
+
   const handleDeleteClientOpen = useCallback((clientId: string) => {
     if (!isAdmin) {
       console.warn('[TasksPage] Non-admin user attempted to delete client:', { clientId, userId: user?.id });
       alert('Solo los administradores pueden eliminar clientes.');
       return;
     }
-    setIsDeleteClientOpen(clientId);
+    setDeleteTarget({ type: 'client', id: clientId });
+    setIsDeletePopupOpen(true);
   }, [isAdmin, user?.id]);
 
-  const handleInviteSidebarOpen = useCallback(() => {
-    setOpenSidebars((prev) => [
-      ...prev,
-      { id: uuidv4(), type: 'invite-sidebar' },
-    ]);
-  }, []);
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget || !user?.id) return;
 
-  const handleNewTaskOpen = useCallback(() => {
-    setIsCreateTaskOpen(true);
-    setIsEditTaskOpen(false);
-    setEditTaskId(null);
-  }, []);
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.type === 'task') {
+        // Delete task logic
+        const taskToDelete = tasks.find(t => t.id === deleteTarget.id);
+        if (!taskToDelete) {
+          throw new Error('Tarea no encontrada');
+        }
 
-  const handleEditTaskOpen = useCallback((taskId: string) => {
-    setIsEditTaskOpen(true);
-    setEditTaskId(taskId);
-    setIsCreateTaskOpen(false);
-  }, []);
+        // Send notifications to involved users
+        const involvedUsers = Array.from(new Set([
+          ...taskToDelete.AssignedTo,
+          ...taskToDelete.LeadedBy,
+          ...(taskToDelete.CreatedBy ? [taskToDelete.CreatedBy] : [])
+        ])).filter(userId => userId !== user.id);
 
-  const handleAISidebarOpen = useCallback(() => {
-    setIsAISidebarOpen(true);
-  }, []);
+        for (const recipientId of involvedUsers) {
+          try {
+            await addDoc(collection(db, 'notifications'), {
+              userId: user.id,
+              recipientId,
+              message: `Se ha eliminado la tarea "${taskToDelete.name}"`,
+              timestamp: Timestamp.now(),
+              read: false,
+              type: 'task_deleted',
+              taskId: deleteTarget.id,
+            });
+            console.log('[TasksPage] Sent notification to:', recipientId);
+          } catch (error) {
+            console.warn('[TasksPage] Error sending notifications:', {
+              taskId: deleteTarget.id,
+              error: error instanceof Error ? error.message : JSON.stringify(error),
+            });
+          }
+        }
 
-  const handleChatSidebarOpen = useCallback((task: Task) => {
-    setOpenSidebars((prev) => [
-      ...prev,
-      { id: uuidv4(), type: 'chat', data: task },
-    ]);
-  }, []);
+        // Delete the task
+        await deleteDoc(doc(db, 'tasks', deleteTarget.id));
+        setTasks((prev) => prev.filter((t) => t.id !== deleteTarget.id));
+        console.log('[TasksPage] Task deleted successfully:', deleteTarget.id);
 
-  const handleMessageSidebarOpen = useCallback((userData: User) => {
-    if (!user?.id || !userData?.id) {
-      console.error('[TasksPage] No authenticated user or invalid user data, cannot open message sidebar:', {
-        senderId: user?.id,
-        receiverId: userData?.id,
+      } else if (deleteTarget.type === 'client') {
+        // Delete client logic
+        await deleteDoc(doc(db, 'clients', deleteTarget.id));
+        setClients((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+        console.log('[TasksPage] Client deleted successfully:', deleteTarget.id);
+      }
+
+      setIsDeletePopupOpen(false);
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error('[TasksPage] Error deleting:', {
+        error: error instanceof Error ? error.message : JSON.stringify(error),
+        target: deleteTarget,
+        userId: user.id,
       });
-      return;
+      alert(`Error al eliminar: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
+    } finally {
+      setIsDeleting(false);
     }
-    console.log('[TasksPage] Opening MessageSidebar for user:', {
-      senderId: user.id,
-      receiver: userData,
-      conversationId: [user.id, userData.id].sort().join('_'),
-    });
-    setOpenSidebars((prev) => [
-      ...prev,
-      { id: uuidv4(), type: 'message', data: userData },
-    ]);
-  }, [user?.id]);
+  }, [deleteTarget, user?.id, tasks, setTasks, setClients]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setIsDeletePopupOpen(false);
+    setDeleteTarget(null);
+  }, []);
+
+  const memoizedDeletePopup = useMemo(() => {
+    if (!isDeletePopupOpen || !deleteTarget) return null;
+
+    const getDeleteContent = () => {
+      if (deleteTarget.type === 'task') {
+        const task = tasks.find(t => t.id === deleteTarget.id);
+        return {
+          title: '¿Seguro que quieres eliminar esta tarea?',
+          description: `Eliminar esta tarea borrará permanentemente todas sus conversaciones y datos asociados. Se notificará a todos los involucrados.`
+        };
+      } else {
+        const client = clients.find(c => c.id === deleteTarget.id);
+        return {
+          title: '¿Seguro que quieres eliminar esta cuenta?',
+          description: `Eliminar esta cuenta borrará permanentemente todos sus proyectos y datos asociados. Se notificará a todos los involucrados.`
+        };
+      }
+    };
+
+    const { title, description } = getDeleteContent();
+
+    return (
+      <DeletePopup
+        isOpen={isDeletePopupOpen}
+        title={title}
+        description={description}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        isDeleting={isDeleting}
+      />
+    );
+  }, [isDeletePopupOpen, deleteTarget, handleDeleteCancel, handleDeleteConfirm, isDeleting, tasks, clients]);
 
   const handleOpenSidebar = useCallback(
     (receiverId: string) => {
@@ -722,9 +832,9 @@ function TasksPageContent() {
                   onEditTaskOpen={handleEditTaskOpen}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
-                  setTasks={setTasks}
                   onOpenProfile={handleOpenProfile}
                   onViewChange={handleViewChange}
+                  onDeleteTaskOpen={handleDeleteTaskOpen}
                 />
               )}
               {taskView === 'kanban' && (
@@ -961,6 +1071,7 @@ function TasksPageContent() {
       <Dock />
       <ToDoDynamic/>
       <Footer />
+      {memoizedDeletePopup}
     </div>
   );
 }

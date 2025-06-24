@@ -251,13 +251,13 @@ const MessageItem = memo(
           }`}
         >
           <Image
-            src={users.find((u) => u.id === message.senderId)?.imageUrl || ''}
+            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/user-round.svg'}
             alt={message.senderName || 'Avatar del remitente'}
             width={46}
             height={46}
             className={styles.avatar}
             onError={(e) => {
-              e.currentTarget.src = '';
+              e.currentTarget.src = '/user-round.svg';
             }}
           />
           <div className={styles.messageContent}>
@@ -1009,6 +1009,43 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         filePath: messageData.filePath || null,
         ...(duration && { hours: duration / 3600 }),
       });
+  
+      // Crear notificaciones para todos los participantes de la tarea (excepto el remitente)
+      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+      if (task.CreatedBy) recipients.add(task.CreatedBy);
+      recipients.delete(user.id); // No notificar al remitente
+      
+      // Crear el mensaje de notificación
+      let notificationMessage = '';
+      if (messageData.text) {
+        const textPreview = messageData.text.length > 50 
+          ? `${messageData.text.substring(0, 50)}...` 
+          : messageData.text;
+        notificationMessage = `${user.firstName || 'Usuario'} escribió en ${task.name}: ${textPreview}`;
+      } else if (messageData.imageUrl) {
+        notificationMessage = `${user.firstName || 'Usuario'} compartió una imagen en ${task.name}`;
+      } else if (messageData.fileUrl) {
+        notificationMessage = `${user.firstName || 'Usuario'} compartió un archivo en ${task.name}`;
+      } else if (duration) {
+        notificationMessage = `${user.firstName || 'Usuario'} registró tiempo en ${task.name}`;
+      } else {
+        notificationMessage = `${user.firstName || 'Usuario'} envió un mensaje en ${task.name}`;
+      }
+
+      // Crear notificaciones para cada participante
+      const notificationPromises = Array.from(recipients).map(recipientId =>
+        addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: notificationMessage,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+          type: 'task_message',
+        })
+      );
+
+      await Promise.all(notificationPromises);
   
       setMessages((prev) =>
         prev.map((msg) =>

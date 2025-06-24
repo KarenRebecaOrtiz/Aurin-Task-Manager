@@ -2,19 +2,15 @@
 
 import { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, deleteDoc, addDoc, query, doc, getDocs, where } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
-import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
-import { getAuth } from 'firebase/auth';
 import UserSwiper from '@/components/UserSwiper';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import Loader from '@/components/Loader'; // Import Loader for loading state
+import { useAuth } from '@/contexts/AuthContext';
+import Loader from '@/components/Loader';
 
 interface Client {
   id: string;
@@ -100,9 +96,9 @@ interface TasksTableProps {
   onEditTaskOpen: (taskId: string) => void;
   onChatSidebarOpen: (task: Task) => void;
   onMessageSidebarOpen: (user: User) => void;
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
   onViewChange: (view: TaskView) => void;
+  onDeleteTaskOpen: (taskId: string) => void; // Add new prop for delete
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(
@@ -114,9 +110,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     onEditTaskOpen,
     onChatSidebarOpen,
     onMessageSidebarOpen,
-    setTasks,
     onOpenProfile,
     onViewChange,
+    onDeleteTaskOpen, // Destructure new prop
   }) => {
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
@@ -129,13 +125,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-    const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
-    const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
-    const [deleteConfirm, setDeleteConfirm] = useState('');
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
-    const deletePopupRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
     const userId = useMemo(() => {
@@ -206,23 +198,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     }, [actionMenuOpenId]);
 
     useEffect(() => {
-      const currentDeletePopupRef = deletePopupRef.current;
-      if (isDeletePopupOpen && currentDeletePopupRef) {
-        gsap.fromTo(
-          currentDeletePopupRef,
-          { opacity: 0, scale: 0.95 },
-          { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
-        );
-        console.log('[TasksTable] Delete popup animated');
-      }
-      return () => {
-        if (currentDeletePopupRef) {
-          gsap.killTweensOf(currentDeletePopupRef);
-        }
-      };
-    }, [isDeletePopupOpen]);
-
-    useEffect(() => {
       const priorityItems = priorityDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
       if (isPriorityDropdownOpen && priorityItems) {
         gsap.fromTo(
@@ -272,20 +247,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           setIsClientDropdownOpen(false);
           console.log('[TasksTable] Client dropdown closed via outside click');
         }
-        if (
-          deletePopupRef.current &&
-          !deletePopupRef.current.contains(event.target as Node) &&
-          isDeletePopupOpen
-        ) {
-          setIsDeletePopupOpen(false);
-          setDeleteConfirm('');
-          setDeleteTaskId(null);
-          console.log('[TasksTable] Delete popup closed via outside click');
-        }
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isDeletePopupOpen]);
+    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen]);
 
     const handleSort = (key: string) => {
       if (key === sortKey) {
@@ -353,151 +318,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         repeat: 1,
       });
       console.log('[TasksTable] Click animation triggered');
-    };
-
-    const handleDeleteTask = async () => {
-      const auth = getAuth();
-      console.log('[TasksTable] Firebase auth user:', {
-        uid: auth.currentUser?.uid,
-        email: auth.currentUser?.email,
-        displayName: auth.currentUser?.displayName,
-      });
-
-      if (!userId || !deleteTaskId || deleteConfirm.toLowerCase() !== 'eliminar') {
-        console.warn('[TasksTable] Invalid deletion attempt:', {
-          userId,
-          deleteTaskId,
-          deleteConfirm,
-          isConfirmValid: deleteConfirm.toLowerCase() === 'eliminar',
-        });
-        return;
-      }
-
-      try {
-        console.log('[TasksTable] Attempting to delete task:', {
-          taskId: deleteTaskId,
-          userId,
-          isAdmin,
-          deleteConfirm,
-        });
-
-        const task = tasks.find((t) => t.id === deleteTaskId);
-        if (!task) {
-          throw new Error('Task not found');
-        }
-        console.log('[TasksTable] Task details:', {
-          taskId: task.id,
-          taskName: task.name,
-          CreatedBy: task.CreatedBy,
-          isAdmin,
-          userId,
-          isCreator: task.CreatedBy === userId,
-        });
-
-        if (!isAdmin && task.CreatedBy !== userId) {
-          throw new Error('Unauthorized to delete task');
-        }
-        console.log('[TasksTable] Local permission check passed:', {
-          isAdmin,
-          isCreator: task.CreatedBy === userId,
-        });
-
-        console.log('[TasksTable] Attempting to delete messages for task:', deleteTaskId);
-        try {
-          const messagesQuery = query(collection(db, `tasks/${deleteTaskId}/messages`));
-          const messagesSnapshot = await getDocs(messagesQuery);
-          console.log('[TasksTable] Messages found:', {
-            messageCount: messagesSnapshot.size,
-            messageIds: messagesSnapshot.docs.map((doc) => doc.id),
-          });
-          for (const msgDoc of messagesSnapshot.docs) {
-            await deleteDoc(doc(db, `tasks/${deleteTaskId}/messages`, msgDoc.id));
-            console.log('[TasksTable] Deleted message:', msgDoc.id);
-          }
-        } catch (error) {
-          console.warn('[TasksTable] Error deleting messages:', {
-            taskId: deleteTaskId,
-            error: error instanceof Error ? error.message : JSON.stringify(error),
-          });
-        }
-
-        console.log('[TasksTable] Attempting to delete notifications for task:', deleteTaskId);
-        try {
-          const notificationsQuery = query(
-            collection(db, 'notifications'),
-            where('taskId', '==', deleteTaskId),
-          );
-          const notificationsSnapshot = await getDocs(notificationsQuery);
-          console.log('[TasksTable] Notifications found:', {
-            notificationCount: notificationsSnapshot.size,
-            notificationIds: notificationsSnapshot.docs.map((doc) => doc.id),
-          });
-          for (const notifDoc of notificationsSnapshot.docs) {
-            await deleteDoc(doc(db, 'notifications', notifDoc.id));
-            console.log('[TasksTable] Deleted notification:', notifDoc.id);
-          }
-        } catch (error) {
-          console.warn('[TasksTable] Error deleting notifications:', {
-            taskId: deleteTaskId,
-            error: error instanceof Error ? error.message : JSON.stringify(error),
-          });
-        }
-
-        console.log('[TasksTable] Preparing to notify involved users for task:', deleteTaskId);
-        try {
-          const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-          if (task.CreatedBy) recipients.add(task.CreatedBy);
-          recipients.delete(userId);
-          console.log('[TasksTable] Notification recipients:', {
-            recipientCount: recipients.size,
-            recipientIds: Array.from(recipients),
-          });
-          for (const recipientId of Array.from(recipients)) {
-            await addDoc(collection(db, 'notifications'), {
-              userId: userId,
-              taskId: deleteTaskId,
-              message: `${user?.firstName || 'Usuario'} eliminó la tarea ${task.name}`,
-              timestamp: Timestamp.now(),
-              read: false,
-              recipientId,
-            });
-            console.log('[TasksTable] Sent notification to:', recipientId);
-          }
-        } catch (error) {
-          console.warn('[TasksTable] Error sending notifications:', {
-            taskId: deleteTaskId,
-            error: error instanceof Error ? error.message : JSON.stringify(error),
-          });
-        }
-
-        console.log('[TasksTable] Attempting to delete task document:', deleteTaskId);
-        await deleteDoc(doc(db, 'tasks', deleteTaskId));
-        console.log('[TasksTable] Task deleted successfully:', deleteTaskId);
-
-        setTasks((prev) => {
-          const updatedTasks = prev.filter((t) => t.id !== deleteTaskId);
-          console.log('[TasksTable] Updated tasks list:', {
-            remainingTasks: updatedTasks.length,
-            removedTaskId: deleteTaskId,
-          });
-          return updatedTasks;
-        });
-
-        setIsDeletePopupOpen(false);
-        setDeleteConfirm('');
-        setDeleteTaskId(null);
-      } catch (error) {
-        console.error('[TasksTable] Error deleting task:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          taskId: deleteTaskId,
-          userId,
-          isAdmin,
-        });
-        alert(`Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
-        setIsDeletePopupOpen(false);
-        setDeleteConfirm('');
-        setDeleteTaskId(null);
-      }
     };
 
     const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
@@ -681,8 +501,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     console.log('[TasksTable] Edit action triggered for task:', task.id);
                   }}
                   onDelete={() => {
-                    setIsDeletePopupOpen(true);
-                    setDeleteTaskId(task.id);
+                    onDeleteTaskOpen(task.id);
                     console.log('[TasksTable] Delete action triggered for task:', task.id);
                   }}
                   animateClick={animateClick}
@@ -867,60 +686,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             console.log('[TasksTable] Row clicked, opening chat for task:', task.id);
           }}
         />
-        {isDeletePopupOpen && (
-          <div className={styles.deletePopupOverlay}>
-            <div className={styles.deletePopup} ref={deletePopupRef}>
-              <div className={styles.deletePopupContent}>
-                <div className={styles.deletePopupText}>
-                  <h2 className={styles.deletePopupTitle}>¿Seguro que quieres eliminar esta tarea?</h2>
-                  <p className={styles.deletePopupDescription}>
-                    Eliminar esta tarea borrará permanentemente todas sus conversaciones y datos asociados. Se notificará a todos los involucrados.{' '}
-                    <strong>Esta acción no se puede deshacer.</strong>
-                  </p>
-                </div>
-                <input
-                  type="text"
-                  value={deleteConfirm}
-                  onChange={(e) => {
-                    setDeleteConfirm(e.target.value);
-                    console.log('[TasksTable] Delete confirm input updated:', e.target.value);
-                  }}
-                  placeholder="Escribe 'Eliminar' para confirmar"
-                  className={styles.deleteConfirmInput}
-                />
-                <div className={styles.deletePopupActions}>
-                  <button
-                    className={styles.deleteConfirmButton}
-                    onClick={() => {
-                      console.log('[TasksTable] Confirm delete button clicked:', {
-                        taskId: deleteTaskId,
-                        deleteConfirm,
-                        isValid: deleteConfirm.toLowerCase() === 'eliminar',
-                        userId,
-                        isAdmin,
-                      });
-                      handleDeleteTask();
-                    }}
-                    disabled={deleteConfirm.toLowerCase() !== 'eliminar'}
-                  >
-                    Confirmar Eliminación
-                  </button>
-                  <button
-                    className={styles.deleteCancelButton}
-                    onClick={() => {
-                      setIsDeletePopupOpen(false);
-                      setDeleteConfirm('');
-                      setDeleteTaskId(null);
-                      console.log('[TasksTable] Delete cancelled');
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   },
