@@ -70,10 +70,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string; error?: string } | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
+  // Eliminar campos de contraseña del estado de errores
   const [errors, setErrors] = useState<{
-    currentPassword?: string;
-    newPassword?: string;
-    confirmPassword?: string;
     fullName?: string;
     role?: string;
     phone?: string;
@@ -85,23 +83,23 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
 
   const technologies = [
     'React', 'Node.js', 'TypeScript', 'JavaScript', 'Python', 'SQL', 'MongoDB', 'PostgreSQL',
-    'Figma', 'Adobe XD', 'Sketch', 'Docker', 'Kubernetes', 'AWS', 'Pandas', 'NumPy',
-    'TensorFlow', 'Blender', 'Adobe Photoshop', 'No-Code Builders', 'Next.js',
+    'Figma (Básico)', 'Figma (Intermedio)', 'Figma (Avanzado)', 'Adobe XD (Básico)', 'Adobe XD (Intermedio)', 'Adobe XD (Avanzado)', 'Sketch (Básico)', 'Sketch (Intermedio)', 'Sketch (Avanzado)', 'Docker', 'Kubernetes', 'AWS', 'Pandas', 'NumPy',
+    'TensorFlow', 'Blender (Básico)', 'Blender (Intermedio)', 'Blender (Avanzado)', 'Adobe Photoshop (Básico)', 'Adobe Photoshop (Intermedio)', 'Adobe Photoshop (Avanzado)', 'No-Code Builders', 'Next.js',
     // Análisis de Datos
     'Airflow', 'Alteryx', 'Apache Spark', 'Dask', 'Databricks', 'DataGrip', 'Domo', 'Google BigQuery',
     'Hadoop', 'Jupyter', 'Kafka', 'Knime', 'Looker', 'Matplotlib', 'Metabase', 'Microsoft Power BI',
     'Mode Analytics', 'Plotly', 'QlikView', 'R', 'RapidMiner', 'Redash', 'Scikit-learn', 'Seaborn',
     'Snowflake', 'Splunk', 'Tableau', 'Talend', 'ThoughtSpot', 'Yellowbrick',
     // Arquitectura
-    'Archicad', 'AutoCAD', 'BIM 360', 'Bluebeam', 'Catia', 'Civil 3D', 'Enscape', 'ETABS', 'Fusion 360',
-    'Grasshopper', 'InfraWorks', 'Lumion', 'MicroStation', 'Navisworks', 'Orca3D', 'Primavera P6',
-    'Revit', 'Rhino', 'Safe', 'SAP2000', 'SketchUp', 'SolidWorks', 'STAAD.Pro', 'Tekla Structures',
-    'Trello', 'Trimble Connect', 'Twinmotion', 'Vectorworks', 'V-Ray', 'ZWCAD',
+    'Archicad (Básico)', 'Archicad (Intermedio)', 'Archicad (Avanzado)', 'AutoCAD (Básico)', 'AutoCAD (Intermedio)', 'AutoCAD (Avanzado)', 'BIM 360 (Básico)', 'BIM 360 (Intermedio)', 'BIM 360 (Avanzado)', 'Bluebeam (Básico)', 'Bluebeam (Intermedio)', 'Bluebeam (Avanzado)', 'Catia (Básico)', 'Catia (Intermedio)', 'Catia (Avanzado)', 'Civil 3D (Básico)', 'Civil 3D (Intermedio)', 'Civil 3D (Avanzado)', 'Enscape (Básico)', 'Enscape (Intermedio)', 'Enscape (Avanzado)', 'ETABS (Básico)', 'ETABS (Intermedio)', 'ETABS (Avanzado)', 'Fusion 360 (Básico)', 'Fusion 360 (Intermedio)', 'Fusion 360 (Avanzado)',
+    'Grasshopper (Básico)', 'Grasshopper (Intermedio)', 'Grasshopper (Avanzado)', 'InfraWorks (Básico)', 'InfraWorks (Intermedio)', 'InfraWorks (Avanzado)', 'Lumion (Básico)', 'Lumion (Intermedio)', 'Lumion (Avanzado)', 'MicroStation (Básico)', 'MicroStation (Intermedio)', 'MicroStation (Avanzado)', 'Navisworks (Básico)', 'Navisworks (Intermedio)', 'Navisworks (Avanzado)', 'Orca3D (Básico)', 'Orca3D (Intermedio)', 'Orca3D (Avanzado)', 'Primavera P6 (Básico)', 'Primavera P6 (Intermedio)', 'Primavera P6 (Avanzado)',
+    'Revit (Básico)', 'Revit (Intermedio)', 'Revit (Avanzado)', 'Rhino (Básico)', 'Rhino (Intermedio)', 'Rhino (Avanzado)', 'Safe (Básico)', 'Safe (Intermedio)', 'Safe (Avanzado)', 'SAP2000 (Básico)', 'SAP2000 (Intermedio)', 'SAP2000 (Avanzado)', 'SketchUp (Básico)', 'SketchUp (Intermedio)', 'SketchUp (Avanzado)', 'SolidWorks (Básico)', 'SolidWorks (Intermedio)', 'SolidWorks (Avanzado)', 'STAAD.Pro (Básico)', 'STAAD.Pro (Intermedio)', 'STAAD.Pro (Avanzado)', 'Tekla Structures (Básico)', 'Tekla Structures (Intermedio)', 'Tekla Structures (Avanzado)',
+    'Trello', 'Trimble Connect (Básico)', 'Trimble Connect (Intermedio)', 'Trimble Connect (Avanzado)', 'Twinmotion (Básico)', 'Twinmotion (Intermedio)', 'Twinmotion (Avanzado)', 'Vectorworks (Básico)', 'Vectorworks (Intermedio)', 'Vectorworks (Avanzado)', 'V-Ray (Básico)', 'V-Ray (Intermedio)', 'V-Ray (Avanzado)', 'ZWCAD (Básico)', 'ZWCAD (Intermedio)', 'ZWCAD (Avanzado)',
     // Arte
-    '3ds Max', 'Affinity Designer', 'After Effects', 'ArtRage', 'Blender', 'Cinema 4D', 'Clip Studio Paint',
-    'Corel Painter', 'Houdini', 'Illustrator', 'InDesign', 'Krita', 'Lightroom', 'Mari', 'Marvelous Designer',
-    'Maya', 'Mudbox', 'Nuke', 'Photoshop', 'Premiere Pro', 'Procreate', 'Rebelle', 'Sculptris', 'Substance Painter',
-    'Toon Boom Harmony', 'Unity', 'Unreal Engine', 'ZBrush', 'Zoner Photo Studio', 'ZWrap',
+    '3ds Max (Básico)', '3ds Max (Intermedio)', '3ds Max (Avanzado)', 'Affinity Designer (Básico)', 'Affinity Designer (Intermedio)', 'Affinity Designer (Avanzado)', 'After Effects (Básico)', 'After Effects (Intermedio)', 'After Effects (Avanzado)', 'ArtRage (Básico)', 'ArtRage (Intermedio)', 'ArtRage (Avanzado)', 'Cinema 4D (Básico)', 'Cinema 4D (Intermedio)', 'Cinema 4D (Avanzado)', 'Clip Studio Paint (Básico)', 'Clip Studio Paint (Intermedio)', 'Clip Studio Paint (Avanzado)',
+    'Corel Painter (Básico)', 'Corel Painter (Intermedio)', 'Corel Painter (Avanzado)', 'Houdini (Básico)', 'Houdini (Intermedio)', 'Houdini (Avanzado)', 'Illustrator (Básico)', 'Illustrator (Intermedio)', 'Illustrator (Avanzado)', 'InDesign (Básico)', 'InDesign (Intermedio)', 'InDesign (Avanzado)', 'Krita (Básico)', 'Krita (Intermedio)', 'Krita (Avanzado)', 'Lightroom (Básico)', 'Lightroom (Intermedio)', 'Lightroom (Avanzado)', 'Mari (Básico)', 'Mari (Intermedio)', 'Mari (Avanzado)', 'Marvelous Designer (Básico)', 'Marvelous Designer (Intermedio)', 'Marvelous Designer (Avanzado)',
+    'Maya (Básico)', 'Maya (Intermedio)', 'Maya (Avanzado)', 'Mudbox (Básico)', 'Mudbox (Intermedio)', 'Mudbox (Avanzado)', 'Nuke (Básico)', 'Nuke (Intermedio)', 'Nuke (Avanzado)', 'Premiere Pro (Básico)', 'Premiere Pro (Intermedio)', 'Premiere Pro (Avanzado)', 'Procreate (Básico)', 'Procreate (Intermedio)', 'Procreate (Avanzado)', 'Rebelle (Básico)', 'Rebelle (Intermedio)', 'Rebelle (Avanzado)', 'Sculptris (Básico)', 'Sculptris (Intermedio)', 'Sculptris (Avanzado)', 'Substance Painter (Básico)', 'Substance Painter (Intermedio)', 'Substance Painter (Avanzado)',
+    'Toon Boom Harmony (Básico)', 'Toon Boom Harmony (Intermedio)', 'Toon Boom Harmony (Avanzado)', 'Unity', 'Unreal Engine', 'ZBrush (Básico)', 'ZBrush (Intermedio)', 'ZBrush (Avanzado)', 'Zoner Photo Studio (Básico)', 'Zoner Photo Studio (Intermedio)', 'Zoner Photo Studio (Avanzado)', 'ZWrap (Básico)', 'ZWrap (Intermedio)', 'ZWrap (Avanzado)',
     // Backend
     'Apollo', 'Deno', 'Django', 'Express.js', 'FastAPI', 'Flask', 'Gin', 'Go', 'GraphQL', 'Hibernate',
     'Java', 'Kotlin', 'Laravel', 'MySQL', 'NestJS', 'Nginx', 'PHP', 'PostgreSQL', 'Prisma', 'RabbitMQ',
@@ -121,10 +119,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     'Jenkins', 'Nexus', 'New Relic', 'OpenShift', 'Prometheus', 'Puppet', 'SaltStack', 'Sentry', 
     'SonarQube', 'Spinnaker', 'Terraform', 'Travis CI', 'Vault', 'Vagrant', 'Zabbix', 'n8n',
     // Diseño gráfico
-    'Adobe Animate', 'Affinity Photo', 'Canva', 'CorelDRAW', 'Crello', 'Figma', 'GIMP', 'Gravit Designer',
-    'Illustrator', 'Inkscape', 'Lunacy', 'Photopea', 'PicMonkey', 'Pixelmator', 'Procreate', 'Sketch',
-    'Snappa', 'Spark', 'Stencila', 'Vectr', 'Visme', 'VistaCreate', 'Xara Designer', 'Zeplin', 'Adobe Express',
-    'Easil', 'DesignCap', 'Genially', 'Krita', 'Photoshop',
+    'Adobe Animate (Básico)', 'Adobe Animate (Intermedio)', 'Adobe Animate (Avanzado)', 'Affinity Photo (Básico)', 'Affinity Photo (Intermedio)', 'Affinity Photo (Avanzado)', 'Canva (Básico)', 'Canva (Intermedio)', 'Canva (Avanzado)', 'CorelDRAW (Básico)', 'CorelDRAW (Intermedio)', 'CorelDRAW (Avanzado)', 'Crello (Básico)', 'Crello (Intermedio)', 'Crello (Avanzado)', 'GIMP (Básico)', 'GIMP (Intermedio)', 'GIMP (Avanzado)', 'Gravit Designer (Básico)', 'Gravit Designer (Intermedio)', 'Gravit Designer (Avanzado)',
+    'Inkscape (Básico)', 'Inkscape (Intermedio)', 'Inkscape (Avanzado)', 'Lunacy (Básico)', 'Lunacy (Intermedio)', 'Lunacy (Avanzado)', 'Photopea (Básico)', 'Photopea (Intermedio)', 'Photopea (Avanzado)', 'PicMonkey (Básico)', 'PicMonkey (Intermedio)', 'PicMonkey (Avanzado)', 'Pixelmator (Básico)', 'Pixelmator (Intermedio)', 'Pixelmator (Avanzado)', 'Snappa (Básico)', 'Snappa (Intermedio)', 'Snappa (Avanzado)', 'Spark (Básico)', 'Spark (Intermedio)', 'Spark (Avanzado)', 'Stencila (Básico)', 'Stencila (Intermedio)', 'Stencila (Avanzado)', 'Vectr (Básico)', 'Vectr (Intermedio)', 'Vectr (Avanzado)', 'Visme (Básico)', 'Visme (Intermedio)', 'Visme (Avanzado)', 'VistaCreate (Básico)', 'VistaCreate (Intermedio)', 'VistaCreate (Avanzado)', 'Xara Designer (Básico)', 'Xara Designer (Intermedio)', 'Xara Designer (Avanzado)', 'Zeplin (Básico)', 'Zeplin (Intermedio)', 'Zeplin (Avanzado)', 'Adobe Express (Básico)', 'Adobe Express (Intermedio)', 'Adobe Express (Avanzado)',
+    'Easil (Básico)', 'Easil (Intermedio)', 'Easil (Avanzado)', 'DesignCap (Básico)', 'DesignCap (Intermedio)', 'DesignCap (Avanzado)', 'Genially (Básico)', 'Genially (Intermedio)', 'Genially (Avanzado)',
     // Frontend
     'Angular', 'Astro', 'Bootstrap', 'Chakra UI', 'Cypress', 'Ember.js', 'ESLint', 'Gatsby', 'Jest',
     'Material UI', 'Next.js', 'Nuxt.js', 'Preact', 'React Native', 'Redux', 'Sass', 'Storybook', 'Svelte',
@@ -152,12 +149,15 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     'Linear', 'Height', 'Todoist', 'Any.do', 'Teamwork', 'Workfront', 'Zoho Projects', 'ProofHub',
     'Paymo', 'TeamGantt', 'GanttProject', 'OpenProject', 'Redmine', 'Taiga', 'Azure DevOps', 'Shortcut',
     'Clubhouse', 'Pivotal Tracker', 'Backlog', 'Favro', 'MeisterTask', 'Freedcamp', 'Hive', 'nTask',
+    // Productivity Tools
+    'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint', 'Microsoft Access',
     // UX/UI
-    'Abstract', 'Adobe XD', 'Axure', 'Balsamiq', 'Coolors', 'Dribbble', 'FigJam', 'Figma', 'Flinto',
-    'Framer', 'InVision', 'Justinmind', 'Lottie', 'Maze', 'Miro', 'Mockflow', 'Origami Studio', 'Penpot',
-    'Proto.io', 'Sketch', 'Smaply', 'Storybook', 'Sympli', 'UXPin', 'UsabilityHub', 'UserTesting',
-    'Whimsical', 'Wireframe.cc', 'Zeplin', 'ZeroHeight'
+    'Abstract (Básico)', 'Abstract (Intermedio)', 'Abstract (Avanzado)', 'Axure (Básico)', 'Axure (Intermedio)', 'Axure (Avanzado)', 'Balsamiq (Básico)', 'Balsamiq (Intermedio)', 'Balsamiq (Avanzado)', 'Coolors (Básico)', 'Coolors (Intermedio)', 'Coolors (Avanzado)', 'Dribbble (Básico)', 'Dribbble (Intermedio)', 'Dribbble (Avanzado)', 'FigJam (Básico)', 'FigJam (Intermedio)', 'FigJam (Avanzado)', 'Flinto (Básico)', 'Flinto (Intermedio)', 'Flinto (Avanzado)',
+    'Framer (Básico)', 'Framer (Intermedio)', 'Framer (Avanzado)', 'InVision (Básico)', 'InVision (Intermedio)', 'InVision (Avanzado)', 'Justinmind (Básico)', 'Justinmind (Intermedio)', 'Justinmind (Avanzado)', 'Lottie (Básico)', 'Lottie (Intermedio)', 'Lottie (Avanzado)', 'Maze (Básico)', 'Maze (Intermedio)', 'Maze (Avanzado)', 'Miro (Básico)', 'Miro (Intermedio)', 'Miro (Avanzado)', 'Mockflow (Básico)', 'Mockflow (Intermedio)', 'Mockflow (Avanzado)', 'Origami Studio (Básico)', 'Origami Studio (Intermedio)', 'Origami Studio (Avanzado)', 'Penpot (Básico)', 'Penpot (Intermedio)', 'Penpot (Avanzado)',
+    'Proto.io (Básico)', 'Proto.io (Intermedio)', 'Proto.io (Avanzado)', 'Smaply (Básico)', 'Smaply (Intermedio)', 'Smaply (Avanzado)', 'Sympli (Básico)', 'Sympli (Intermedio)', 'Sympli (Avanzado)', 'UXPin (Básico)', 'UXPin (Intermedio)', 'UXPin (Avanzado)', 'UsabilityHub (Básico)', 'UsabilityHub (Intermedio)', 'UsabilityHub (Avanzado)', 'UserTesting (Básico)', 'UserTesting (Intermedio)', 'UserTesting (Avanzado)',
+    'Whimsical (Básico)', 'Whimsical (Intermedio)', 'Whimsical (Avanzado)', 'Wireframe.cc (Básico)', 'Wireframe.cc (Intermedio)', 'Wireframe.cc (Avanzado)', 'ZeroHeight (Básico)', 'ZeroHeight (Intermedio)', 'ZeroHeight (Avanzado)'
   ].sort();
+  
   const uniqueTechnologies = [...new Set(technologies)].sort();
   
 
@@ -289,6 +289,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     fetchTeamMembers();
   }, [formData?.teams, userId]);
 
+  // Eliminar validaciones de contraseña
   const validateForm = () => {
     const newErrors: typeof errors = {};
 
@@ -310,12 +311,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     if (formData?.coverPhotoFile && formData.coverPhotoFile.size > 10 * 1024 * 1024) {
       newErrors.coverPhoto = 'La foto de portada no debe exceder 10MB';
     }
-    if (formData?.newPassword || formData?.confirmPassword || formData?.currentPassword) {
-      if (!formData.currentPassword) newErrors.currentPassword = 'La contraseña actual es obligatoria';
-      if (!formData.newPassword) newErrors.newPassword = 'La nueva contraseña es obligatoria';
-      else if (formData.newPassword.length < 8) newErrors.newPassword = 'La nueva contraseña debe tener al menos 8 caracteres';
-      if (formData.newPassword !== formData.confirmPassword) newErrors.confirmPassword = 'Las contraseñas no coinciden';
-    }
+    // Eliminadas validaciones de contraseña
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -475,6 +471,31 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     }
   };
 
+  const LOCAL_STORAGE_KEY = `configFormData_${userId}`;
+
+  // Cargar datos de localStorage si existen (antes de cargar Firestore)
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+    const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setFormData(parsed);
+        setLoading(false);
+      } catch {
+        // Si hay error, ignora y sigue con Firestore
+      }
+    }
+  }, [userId, isLoaded, LOCAL_STORAGE_KEY]);
+
+  // Guardar en localStorage cada vez que formData cambie
+  useEffect(() => {
+    if (formData) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(formData));
+    }
+  }, [formData, LOCAL_STORAGE_KEY]);
+
+  // Limpiar localStorage al guardar exitosamente
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData || !userId || !currentUser) {
@@ -513,12 +534,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
         coverPhotoUrl = await uploadCoverImage(formData.coverPhotoFile, userId);
       }
 
-      if (formData.newPassword && formData.currentPassword) {
-        await currentUser.updatePassword({
-          currentPassword: formData.currentPassword,
-          newPassword: formData.newPassword,
-        });
-      }
+      // Eliminada lógica de cambio de contraseña
 
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, {
@@ -546,6 +562,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
 
       setAlert({ type: 'success', message: 'Perfil actualizado exitosamente' });
       setIsEditing(false);
+      localStorage.removeItem(LOCAL_STORAGE_KEY); // Limpiar caché al guardar
       setTimeout(onClose, 1000);
     } catch (err) {
       setAlert({
@@ -558,6 +575,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     }
   };
 
+  // Limpiar localStorage si se descartan cambios
   const handleDiscard = () => {
     setIsEditing(false);
     setFormData((prev) => {
@@ -594,6 +612,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     });
     setErrors({});
     setAlert(null);
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
     onClose();
   };
 
@@ -950,55 +969,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     disabled={!isOwnProfile || !isEditing}
                   />
                   {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Seguridad</h2>
-            <div className={styles.sectionContent}>
-              <div className={styles.fieldGroup}>
-                <div className={styles.frame239182}>
-                  <div className={styles.label}>Contraseña Actual</div>
-                  <input
-                    type="password"
-                    name="currentPassword"
-                    value={formData.currentPassword || ''}
-                    onChange={handleInputChange}
-                    placeholder="Ingresa tu contraseña actual"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                  />
-                  {errors.currentPassword && <p className={styles.errorText}>{errors.currentPassword}</p>}
-                </div>
-                <div className={styles.frame239183}>
-                  <div className={styles.label}>Nueva Contraseña</div>
-                  <input
-                    type="password"
-                    name="newPassword"
-                    value={formData.newPassword || ''}
-                    onChange={handleInputChange}
-                    placeholder="Ingresa tu nueva contraseña"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                  />
-                  {errors.newPassword && <p className={styles.errorText}>{errors.newPassword}</p>}
-                </div>
-              </div>
-              <div className={styles.fieldGroup}>
-                <div className={styles.frame239182}>
-                  <div className={styles.label}>Confirmar Contraseña</div>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword || ''}
-                    onChange={handleInputChange}
-                    placeholder="Confirma tu nueva contraseña"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                  />
-                  {errors.confirmPassword && <p className={styles.errorText}>{errors.confirmPassword}</p>}
                 </div>
               </div>
             </div>

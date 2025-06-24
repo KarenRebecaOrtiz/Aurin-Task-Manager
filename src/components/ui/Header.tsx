@@ -66,16 +66,6 @@ const isOfficeHours = (date: Date): boolean => {
   return hours >= OFFICE_HOURS.start && hours < OFFICE_HOURS.end;
 };
 
-// Función para detectar el navegador
-const getBrowserInfo = () => {
-  const ua = navigator.userAgent;
-  return {
-    isArc: ua.includes('Arc'),
-    isChrome: ua.includes('Chrome') && !ua.includes('Edge'),
-    userAgent: ua,
-  };
-};
-
 interface Notification {
   id: string;
   userId: string;
@@ -327,7 +317,7 @@ const Header: React.FC<HeaderProps> = ({
   }, [isNotificationsOpen]);
 
   /* ────────────────────────────────────────────
-     EFFECTS – CLOCK AND LOCATION LOGIC
+     EFFECTS – CLOCK AND LOCATION LOGIC (HEARTBEAT)
   ──────────────────────────────────────────── */
   useEffect(() => {
     setTime(new Date());
@@ -339,105 +329,73 @@ const Header: React.FC<HeaderProps> = ({
       }
     }, 1000);
 
-    const browserInfo = getBrowserInfo();
-    console.debug('Browser info:', browserInfo);
+    // Detectar si es desktop (predominante) o mobile
+    const isDesktop = () => {
+      if (typeof window === 'undefined') return false;
+      const ua = navigator.userAgent;
+      return !/Mobi|Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua);
+    };
 
-    const checkGeolocationPermission = async () => {
-      if (typeof window === 'undefined' || !navigator.permissions) {
-        return 'unknown';
-      }
-      try {
-        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-        console.debug('Geolocation permission:', permissionStatus.state);
-        return permissionStatus.state;
-      } catch (error) {
-        console.warn('Error checking geolocation permission:', error);
-        return 'unknown';
+    // Heartbeat para saber si hay alguna pestaña desktop abierta
+    const HEARTBEAT_KEY = 'officeStatusDesktopHeartbeat';
+    const HEARTBEAT_INTERVAL = 10000; // 10 segundos
+    const HEARTBEAT_TTL = 30000; // 30 segundos
+    let heartbeatTimer: NodeJS.Timeout | null = null;
+    let locationInterval: NodeJS.Timeout | null = null;
+    let lastVisibility = document.visibilityState;
+
+    // Escribe heartbeat en localStorage
+    const writeHeartbeat = () => {
+      if (isDesktop()) {
+        localStorage.setItem(HEARTBEAT_KEY, Date.now().toString());
       }
     };
 
-    const fetchWeather = async (lat: number, lon: number) => {
-      try {
-        const weatherResponse = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`,
-        );
-        if (!weatherResponse.ok) {
-          throw new Error(`HTTP error! status: ${weatherResponse.status}`);
-        }
-        const weatherData = await weatherResponse.json();
-        if (weatherData.main && typeof weatherData.main.temp === 'number') {
-          setTemperature(`${Math.round(weatherData.main.temp)}°`);
-          const weatherMain = weatherData.weather[0].main.toLowerCase();
-          const currentTime = new Date();
-          const icon = (() => {
-            switch (weatherMain) {
-              case 'clouds': return '/weather/Cloudy.svg';
-              case 'clear':
-                return currentTime.getHours() >= 6 && currentTime.getHours() < 18
-                  ? '/weather/CoolDay.svg'
-                  : '/weather/CoolNight.svg';
-              case 'rain': return '/weather/Rainy.svg';
-              case 'snow': return '/weather/Snowy.svg';
-              case 'thunderstorm': return '/weather/Storm.svg';
-              case 'windy':
-              case 'gust': return '/weather/Windy.svg';
-              default: return null;
-            }
-          })();
-          setWeatherIcon(icon);
-        }
-      } catch (error) {
-        console.error('Error fetching weather:', error);
+    // Verifica si hay heartbeat reciente
+    const hasRecentHeartbeat = () => {
+      const last = parseInt(localStorage.getItem(HEARTBEAT_KEY) || '0', 10);
+      return Date.now() - last < HEARTBEAT_TTL;
+    };
+
+    // Refresca officeStatus según heartbeat y ubicación
+    const refreshOfficeStatus = async () => {
+      if (!isDesktop()) {
+        setOfficeStatus('No disponible');
+        setLocation('No disponible');
         setTemperature('N/A');
         setWeatherIcon(null);
+        return;
       }
-    };
-
-    const fetchLocationAndWeather = async (lat: number, lon: number) => {
-      try {
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.status === 'OK' && data.results.length > 0) {
-          const result = data.results[0];
-          const city = result.address_components.find((comp: AddressComponent) =>
-            comp.types.includes('locality'),
-          )?.long_name || FALLBACK_LOCATION.name;
-          setLocation(city);
-          await fetchWeather(lat, lon);
-        }
-      } catch (error) {
-        console.error('Error fetching location:', error);
-        setLocation(FALLBACK_LOCATION.name);
+      if (!hasRecentHeartbeat()) {
+        setOfficeStatus('No disponible');
+        setLocation('No disponible');
         setTemperature('N/A');
         setWeatherIcon(null);
+        return;
       }
-    };
-
-    const initializeLocation = async () => {
-      const permission = await checkGeolocationPermission();
+      const permission = await (async () => {
+        if (typeof window === 'undefined' || !navigator.permissions) return 'unknown';
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+          return permissionStatus.state;
+        } catch {
+          return 'unknown';
+        }
+      })();
       if (permission === 'denied') {
-        console.warn('Geolocation permission denied');
-        setLocation(FALLBACK_LOCATION.name);
+        setOfficeStatus('No disponible');
+        setLocation('No disponible');
         setTemperature('N/A');
         setWeatherIcon(null);
-        setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
-        return fetchLocationAndWeather(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
+        return;
       }
-
       if (!navigator.geolocation) {
-        console.warn('Geolocation not supported');
-        setLocation(FALLBACK_LOCATION.name);
+        setOfficeStatus('No disponible');
+        setLocation('No disponible');
         setTemperature('N/A');
         setWeatherIcon(null);
-        setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
-        return fetchLocationAndWeather(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
+        return;
       }
-
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
@@ -449,25 +407,110 @@ const Header: React.FC<HeaderProps> = ({
               OFFICE_LOCATION.lng,
             );
             setOfficeStatus(distance <= OFFICE_RADIUS ? 'En la oficina' : 'Fuera de la oficina');
+          } else {
+            setOfficeStatus('Fuera de horario');
           }
-          await fetchLocationAndWeather(latitude, longitude);
+          try {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
+            );
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            if (data.status === 'OK' && data.results.length > 0) {
+              const result = data.results[0];
+              const city = result.address_components.find((comp: AddressComponent) =>
+                comp.types.includes('locality'),
+              )?.long_name || FALLBACK_LOCATION.name;
+              setLocation(city);
+              try {
+                const weatherResponse = await fetch(
+                  `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`,
+                );
+                if (!weatherResponse.ok) throw new Error();
+                const weatherData = await weatherResponse.json();
+                if (weatherData.main && typeof weatherData.main.temp === 'number') {
+                  setTemperature(`${Math.round(weatherData.main.temp)}°`);
+                  const weatherMain = weatherData.weather[0].main.toLowerCase();
+                  const currentTime = new Date();
+                  const icon = (() => {
+                    switch (weatherMain) {
+                      case 'clouds': return '/weather/Cloudy.svg';
+                      case 'clear':
+                        return currentTime.getHours() >= 6 && currentTime.getHours() < 18
+                          ? '/weather/CoolDay.svg'
+                          : '/weather/CoolNight.svg';
+                      case 'rain': return '/weather/Rainy.svg';
+                      case 'snow': return '/weather/Snowy.svg';
+                      case 'thunderstorm': return '/weather/Storm.svg';
+                      case 'windy':
+                      case 'gust': return '/weather/Windy.svg';
+                      default: return null;
+                    }
+                  })();
+                  setWeatherIcon(icon);
+                }
+              } catch {
+                setTemperature('N/A');
+                setWeatherIcon(null);
+              }
+            }
+          } catch {
+            setLocation(FALLBACK_LOCATION.name);
+            setTemperature('N/A');
+            setWeatherIcon(null);
+          }
         },
-        (error) => {
-          console.error('Geolocation error:', error);
-          setLocation(FALLBACK_LOCATION.name);
+        () => {
+          setOfficeStatus('No disponible');
+          setLocation('No disponible');
           setTemperature('N/A');
           setWeatherIcon(null);
-          setOfficeStatus(isOfficeHours(new Date()) ? 'Ubicación predeterminada' : 'Fuera de horario');
-          fetchLocationAndWeather(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     };
 
-    initializeLocation();
+    // Heartbeat: cada 10s si desktop
+    if (isDesktop()) {
+      writeHeartbeat();
+      heartbeatTimer = setInterval(writeHeartbeat, HEARTBEAT_INTERVAL);
+    }
+
+    // Refresca al montar y cada 15 minutos si la pestaña está activa
+    const setupLocationInterval = () => {
+      refreshOfficeStatus();
+      if (locationInterval) clearInterval(locationInterval);
+      locationInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          refreshOfficeStatus();
+        }
+      }, 15 * 60 * 1000); // 15 minutos
+    };
+    setupLocationInterval();
+
+    // Escucha cambios de storage (heartbeat de otras pestañas)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === HEARTBEAT_KEY) {
+        refreshOfficeStatus();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+
+    // Pausar/continuar refresco según visibilidad de la pestaña
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && lastVisibility !== 'visible') {
+        refreshOfficeStatus();
+      }
+      lastVisibility = document.visibilityState;
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(timer);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (locationInterval) clearInterval(locationInterval);
+      window.removeEventListener('storage', onStorage);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

@@ -428,6 +428,8 @@ $border-dark: rgba(255, 255, 255, 0.1);
   font-weight: 500;
   color: $text-light;
   border: none;
+  user-select: text !important;
+  pointer-events: auto !important;
 
   &::placeholder {
     color: #A0A0A0;

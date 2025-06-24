@@ -119,7 +119,6 @@ function TasksPageContent() {
   const [taskView, setTaskView] = useState<TaskView>('table');
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
-  const [isAISidebarOpen, setIsAISidebarOpen] = useState<boolean>(false);
   const [openSidebars, setOpenSidebars] = useState<Sidebar[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -190,11 +189,6 @@ function TasksPageContent() {
     console.log('[TasksPage] Opened task editing for:', taskId);
   }, []);
 
-  const handleAISidebarOpen = useCallback(() => {
-    setIsAISidebarOpen(true);
-    console.log('[TasksPage] Opened AI sidebar');
-  }, []);
-
   const handleInviteSidebarOpen = useCallback(() => {
     setOpenSidebars((prev) => [
       ...prev,
@@ -248,7 +242,9 @@ function TasksPageContent() {
               id: clerkUser.id,
               imageUrl: clerkUser.imageUrl,
               fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-              role: clerkUser.publicMetadata.role || 'Sin rol',
+              role: userDoc.exists() && userDoc.data().role
+                ? userDoc.data().role
+                : (clerkUser.publicMetadata.role || 'Sin rol'),
               description: clerkUser.publicMetadata.description || 'Sin descripción',
               status,
             };
@@ -885,12 +881,12 @@ function TasksPageContent() {
                   users={memoizedUsers}
                   onNewTaskOpen={handleNewTaskOpen}
                   onEditTaskOpen={handleEditTaskOpen}
-                  onAISidebarOpen={handleAISidebarOpen}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
                   setTasks={setTasks}
                   onOpenProfile={handleOpenProfile}
                   onViewChange={handleViewChange}
+                  onDeleteTaskOpen={handleDeleteTaskOpen}
                 />
               )}
             </>
@@ -1029,7 +1025,7 @@ function TasksPageContent() {
           users={memoizedUsers}
         />
       )}
-      <AISidebar isOpen={isAISidebarOpen} onClose={() => setIsAISidebarOpen(false)} />
+      <AISidebar isOpen={false} onClose={() => {}} />
       {memoizedOpenSidebars.map((sidebar) => {
         if (sidebar.type === 'message' && user?.id && sidebar.data) {
           return (

@@ -937,6 +937,10 @@ const EditTask: React.FC<EditTaskProps> = ({
                           }}
                           placeholder="Ej: Nombre de la cuenta"
                           ref={clientInputRef}
+                          onCopy={e => e.stopPropagation()}
+                          onPaste={e => e.stopPropagation()}
+                          onCut={e => e.stopPropagation()}
+                          onSelect={e => e.stopPropagation()}
                         />
                         {isClientDropdownOpen &&
                           createPortal(
@@ -1067,11 +1071,11 @@ const EditTask: React.FC<EditTaskProps> = ({
                           <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
                         )}
                         {isAdmin &&
-                          form.getValues("clientInfo.clientId") &&
-                          clients.find((c) => c.id === form.getValues("clientInfo.clientId"))?.createdBy === user?.id && (
+                          form.getValues("clientInfo.clientId") && (
                             <button
                               type="button"
                               className={styles.addButton}
+                              style={{ marginTop: 8 }}
                               onClick={(e) => {
                                 animateClick(e.currentTarget);
                                 const client = clients.find((c) => c.id === form.getValues("clientInfo.clientId"));
@@ -1080,7 +1084,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 }
                               }}
                             >
-                              + Nueva Carpeta
+                              + Crear Proyecto
                             </button>
                           )}
                       </div>
@@ -1376,6 +1380,10 @@ const EditTask: React.FC<EditTaskProps> = ({
                           }}
                           placeholder="Ej: John Doe"
                           ref={leaderInputRef}
+                          onCopy={e => e.stopPropagation()}
+                          onPaste={e => e.stopPropagation()}
+                          onCut={e => e.stopPropagation()}
+                          onSelect={e => e.stopPropagation()}
                         />
                         {isLeaderDropdownOpen &&
                           createPortal(
@@ -1462,6 +1470,10 @@ const EditTask: React.FC<EditTaskProps> = ({
                           }}
                           placeholder="Ej: John Doe"
                           ref={collaboratorInputRef}
+                          onCopy={e => e.stopPropagation()}
+                          onPaste={e => e.stopPropagation()}
+                          onCut={e => e.stopPropagation()}
+                          onSelect={e => e.stopPropagation()}
                         />
                         {isCollaboratorDropdownOpen &&
                           createPortal(

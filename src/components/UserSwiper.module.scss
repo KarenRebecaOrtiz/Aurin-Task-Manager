@@ -63,11 +63,7 @@
       inset 4px 4px 8px rgba(209, 217, 230, 0.4);
   }
 
-  &:focus {
-    outline: 1px solid #252525;
-    outline-offset: 2px;
-  }
-
+  
   &[role="button"]:active {
     transform: scale(0.98);
     background: rgba(241, 245, 249, 0.6);
@@ -178,6 +174,8 @@
 .avatarWrapper {
   position: relative;
   display: inline-block;
+  width: 48px;
+  height: 48px;
 
   &:hover .tooltip {
     opacity: 1;
@@ -186,16 +184,35 @@
   }
 }
 
+.statusRing {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  border: 2px solid #28a745;
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 1;
+  background: transparent;
+}
+
 .cardAvatar {
-  --size: 36px;
-  width: var(--size);
-  height: var(--size);
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 40px;
+  height: 40px;
+  z-index: 2;
   border-radius: 50%;
   padding: 2px;
   background: linear-gradient(45deg, #f3f3f3, #ffffff);
   border: none;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease;
+  position: relative;
+  z-index: 2;
 
   &:hover {
     transform: scale(1.1);
@@ -355,7 +372,7 @@
 
 @media (min-width: 770px) and (max-width: 968px) {
   .swiperContainer {
-    max-width: 70vw;
+    max-width: 75vw;
   }
 }
 
@@ -400,26 +417,6 @@
   position: absolute;
   top: -40px;
   left: 50%;
-  transform: translateX(-50%);
-  background-color: #333;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 1.4;
-  text-align: center;
-  white-space: nowrap;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  opacity: 0;
-  animation: fadeIn 0.2s ease-out forwards;
-}
-
-/* Tooltip arrow */
-.tooltipArrow {
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
   transform: translateX(-50%) rotate(45deg);
   width: 8px;
   height: 8px;
@@ -437,4 +434,19 @@
     opacity: 1;
     transform: translate(-50%, 0);
   }
+}
+
+.statusRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #28a745; /* color por defecto, se sobreescribe inline */
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 1;
+  transition: border-color 0.2s;
 }

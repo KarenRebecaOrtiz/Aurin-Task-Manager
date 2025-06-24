@@ -1024,11 +1024,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
                         )}
                         {isAdmin &&
-                          form.getValues("clientInfo.clientId") &&
-                          clients.find((c) => c.id === form.getValues("clientInfo.clientId"))?.createdBy === user?.id && (
+                          form.getValues("clientInfo.clientId") && (
                             <button
                               type="button"
                               className={styles.addButton}
+                              style={{ marginTop: 8 }}
                               onClick={(e) => {
                                 animateClick(e.currentTarget);
                                 const client = clients.find((c) => c.id === form.getValues("clientInfo.clientId"));
@@ -1037,7 +1037,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 }
                               }}
                             >
-                              + Nueva Carpeta
+                              + Crear Proyecto
                             </button>
                           )}
                       </div>

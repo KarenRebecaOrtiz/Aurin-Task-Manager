@@ -127,8 +127,9 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
       );
     }
 
+    // Animar sections al montar (sin scrollTrigger)
     const sections = document.querySelectorAll(`.${styles.section}`);
-    sections.forEach((section) => {
+    sections.forEach((section, i) => {
       gsap.fromTo(
         section,
         { opacity: 0, y: 50 },
@@ -137,17 +138,14 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
           y: 0,
           duration: 0.8,
           ease: 'power2.out',
-          scrollTrigger: {
-            trigger: section,
-            start: 'top 80%',
-            toggleActions: 'play none none none',
-          },
+          delay: 0.1 * i,
         }
       );
     });
 
+    // Animar fields al montar (sin scrollTrigger)
     const fields = document.querySelectorAll(`.${styles.fieldGroup}, .${styles.fieldGroupRow}`);
-    fields.forEach((field) => {
+    fields.forEach((field, i) => {
       gsap.fromTo(
         field,
         { opacity: 0, x: -50 },
@@ -156,17 +154,14 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
           x: 0,
           duration: 0.6,
           ease: 'power2.out',
-          scrollTrigger: {
-            trigger: field,
-            start: 'top 70%',
-            toggleActions: 'play none none none',
-          },
+          delay: 0.15 * i,
         }
       );
     });
 
+    // Animar tablas de equipos al montar (sin scrollTrigger)
     const tables = document.querySelectorAll(`.${styles.teamTableContainer}`);
-    tables.forEach((table) => {
+    tables.forEach((table, i) => {
       gsap.fromTo(
         table,
         { opacity: 0, scale: 0.9 },
@@ -175,11 +170,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
           scale: 1,
           duration: 0.7,
           ease: 'power2.out',
-          scrollTrigger: {
-            trigger: table,
-            start: 'top 80%',
-            toggleActions: 'play none none none',
-          },
+          delay: 0.2 * i,
         }
       );
     });

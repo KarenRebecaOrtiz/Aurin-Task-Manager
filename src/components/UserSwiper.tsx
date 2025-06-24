@@ -31,8 +31,12 @@ interface UserSwiperProps {
 }
 
 const statusColors = {
+  'Disponible': '#28a745',
   'En la oficina': '#28a745',
+  'Ocupado': '#dc3545',
+  'Por terminar': '#ff6f00',
   'Fuera de la oficina': '#dc3545',
+  'Fuera': '#616161',
   'Fuera de horario': '#ff6f00',
 };
 
@@ -43,7 +47,6 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   const { user, isLoaded } = useUser();
   const [users, setUsers] = useState<ClerkUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hoveredUserId, setHoveredUserId] = useState<string | null>(null);
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
 
@@ -246,7 +249,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
         className="splide"
         aria-label="Carrusel de Perfiles de Usuarios"
       >
-        <div className="splide__track" style={{padding:'40px', overflow:'visible!important'}}>
+        <div className="splide__track" style={{ padding: '20px 0', overflow: 'visible!important' }}>
           <ul className="splide__list">
             {users.map((user) => (
               <li key={user.id} className={`splide__slide ${styles.swiperSlide}`}>
@@ -260,40 +263,34 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                 >
                   <div className={styles.cardInfo}>
                     <div className={styles.avatarWrapper}>
-                      <div className={styles.tooltipContainer}>
-                        <button
-                          className={styles.cardAvatar}
-                          tabIndex={0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenProfile({
-                              id: user.id,
-                              imageUrl: user.imageUrl || '',
-                            });
+                      <span
+                        className={styles.statusRing}
+                        style={{ borderColor: statusColors[user.status as keyof typeof statusColors] || '#333' }}
+                      />
+                      <button
+                        className={styles.cardAvatar}
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenProfile({
+                            id: user.id,
+                            imageUrl: user.imageUrl || '',
+                          });
+                        }}
+                        onKeyDown={(e) => handleAvatarKeyDown(e, user)}
+                        aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
+                      >
+                        <Image
+                          src={user.imageUrl || ''}
+                          alt={user.firstName || 'Avatar de usuario'}
+                          width={40}
+                          height={40}
+                          className={styles.avatarImage}
+                          onError={(e) => {
+                            e.currentTarget.src = '';
                           }}
-                          onKeyDown={(e) => handleAvatarKeyDown(e, user)}
-                          onMouseEnter={() => setHoveredUserId(user.id)}
-                          onMouseLeave={() => setHoveredUserId(null)}
-                          aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
-                        >
-                          <Image
-                            src={user.imageUrl || ''}
-                            alt={user.firstName || 'Avatar de usuario'}
-                            width={40}
-                            height={40}
-                            className={styles.avatarImage}
-                            onError={(e) => {
-                              e.currentTarget.src = '';
-                            }}
-                          />
-                        </button>
-                        {hoveredUserId === user.id && (
-                          <div className={styles.tooltip}>
-                            Ver perfil
-                            <div className={styles.tooltipArrow} />
-                          </div>
-                        )}
-                      </div>
+                        />
+                      </button>
                     </div>
                     <div className={styles.cardText}>
                       <div className={styles.cardTitle}>
