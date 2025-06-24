@@ -167,7 +167,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           key: 'action',
           label: 'Acciones',
           width: '10%',
-          mobileVisible: true,
+          mobileVisible: false,
         },
       ],
       [],

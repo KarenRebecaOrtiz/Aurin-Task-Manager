@@ -1,4 +1,4 @@
-// src/app/styles/_variables.scss
+@use "sass:color";
 
 // Color Palette
 $white: #FFFFFF;
@@ -23,7 +23,7 @@ $green-500: #10B981;
   background: $bg;
   border-radius: $radius;
   box-shadow:
-    -#{$intensity}px -#{$intensity}px #{2*$intensity}px lighten($bg, 6%),
+    -#{$intensity}px -#{$intensity}px #{2*$intensity}px color.adjust($bg, $lightness: 6%),
     #{$intensity}px #{$intensity}px #{2*$intensity}px rgba(0, 0, 0, 0.08);
 }
 

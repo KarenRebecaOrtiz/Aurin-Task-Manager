@@ -520,6 +520,48 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return col;
     });
 
+    useEffect(() => {
+      const containerElement = document.querySelector('.tasks-container');
+
+      let startX = 0;
+      let currentX = 0;
+
+      const handleTouchStart = (event: TouchEvent) => {
+        startX = event.touches[0].clientX;
+      };
+
+      const handleTouchMove = (event: TouchEvent) => {
+        currentX = event.touches[0].clientX;
+      };
+
+      const handleTouchEnd = () => {
+        const deltaX = currentX - startX;
+        if (Math.abs(deltaX) > 50) {
+          if (deltaX > 0) {
+            console.log('Swipe right detected');
+            // Logic to switch to the previous container
+          } else {
+            console.log('Swipe left detected');
+            // Logic to switch to the next container
+          }
+        }
+      };
+
+      if (containerElement) {
+        containerElement.addEventListener('touchstart', handleTouchStart);
+        containerElement.addEventListener('touchmove', handleTouchMove);
+        containerElement.addEventListener('touchend', handleTouchEnd);
+      }
+
+      return () => {
+        if (containerElement) {
+          containerElement.removeEventListener('touchstart', handleTouchStart);
+          containerElement.removeEventListener('touchmove', handleTouchMove);
+          containerElement.removeEventListener('touchend', handleTouchEnd);
+        }
+      };
+    }, []);
+
     // Handle loading state - mostrar loader mientras cargan los datos
     if (isLoading || tasks.length === 0) {
       return (

@@ -546,6 +546,30 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }
   };
 
+  useEffect(() => {
+    const sidebarElement = sidebarRef.current;
+    if (!sidebarElement) return;
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (touch.clientY > sidebarElement.offsetHeight * 0.8) {
+        gsap.to(sidebarElement, {
+          y: '100%',
+          opacity: 0,
+          duration: 0.3,
+          ease: 'power2.in',
+          onComplete: onClose,
+        });
+      }
+    };
+
+    sidebarElement.addEventListener('touchmove', handleTouchMove);
+
+    return () => {
+      sidebarElement.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [onClose]);
+
   if (!senderId || !user?.id) {
     return (
       <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>

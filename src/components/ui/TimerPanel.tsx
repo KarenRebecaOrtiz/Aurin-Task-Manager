@@ -31,7 +31,7 @@ interface TimerPanelProps {
   commentInput: string;
   setCommentInput: (value: string) => void;
   totalHours: string;
-  onAddTimeEntry: () => Promise<void>;
+  onAddTimeEntry: (time?: string, date?: Date, comment?: string) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -51,10 +51,6 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
   
   // State management
   const [isMounted, setIsMounted] = useState(false);
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [showFailAlert, setShowFailAlert] = useState(false);
-  const [failErrorMessage, setFailErrorMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasFormBeenInitialized, setHasFormBeenInitialized] = useState(false);
 
   // Default values for form - memoized to prevent re-creation
@@ -112,11 +108,7 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
           height: 0,
           opacity: 0,
           duration: 0.3,
-          ease: 'power2.out',
-          onComplete: () => {
-            setShowSuccessAlert(false);
-            setShowFailAlert(false);
-          }
+          ease: 'power2.out'
         });
       }
     }
@@ -175,8 +167,6 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
 
   const handleCancelClick = useCallback(() => {
     console.log('[TimerPanel:HandleCancelClick] 🔴 Cancel clicked');
-    setShowSuccessAlert(false);
-    setShowFailAlert(false);
     setHasFormBeenInitialized(false);
     onCancel();
   }, [onCancel]);
@@ -216,20 +206,18 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
       totalHours
     });
 
-    setIsSubmitting(true);
-    
     try {
-      await onAddTimeEntry();
+      // Call onAddTimeEntry with the current form values directly
+      await onAddTimeEntry(values.time, values.date, values.comment);
       console.log('[TimerPanel:HandleSubmit] ✅ Time entry added successfully');
-      setShowSuccessAlert(true);
+      
+      // Close the panel automatically after successful submission
+      onCancel();
     } catch (error) {
       console.error('[TimerPanel:HandleSubmit] ❌ Error adding time entry:', error);
-      setFailErrorMessage(error instanceof Error ? error.message : 'Error desconocido');
-      setShowFailAlert(true);
-    } finally {
-      setIsSubmitting(false);
+      alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     }
-  }, [form, onAddTimeEntry, totalHours]);
+  }, [form, onAddTimeEntry, totalHours, onCancel]);
 
   if (!isMounted) {
     return null;
@@ -249,7 +237,7 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
       id="timerPanel"
     >
       <div className={styles.timerPanelContent}>
-        <Wizard totalSteps={4}>
+        <Wizard totalSteps={3}>
           {/* Header with progress */}
           <div style={{ 
             display: 'flex', 
@@ -506,75 +494,6 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
               <div className={styles.timerTotal} style={{ marginTop: '16px', textAlign: 'center' }}>
                 Has invertido: <strong>{totalHours}</strong> en esta tarea.
               </div>
-            </div>
-          </WizardStep>
-
-          {/* Step 4: Feedback */}
-          <WizardStep step={3}>
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              {isSubmitting ? (
-                <div>
-                  <div style={{ 
-                    width: '40px', 
-                    height: '40px', 
-                    border: '4px solid rgba(0,0,0,0.1)', 
-                    borderTop: '4px solid #164C22', 
-                    borderRadius: '50%', 
-                    animation: 'spin 1s linear infinite',
-                    margin: '0 auto 16px'
-                  }} />
-                  <p style={{ fontSize: '18px', color: '#182735' }}>
-                    Guardando tiempo...
-                  </p>
-                </div>
-              ) : showSuccessAlert ? (
-                <div>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#10B981', marginBottom: '8px' }}>
-                    ¡Tiempo Registrado!
-                  </h4>
-                  <p style={{ fontSize: '16px', color: '#71717A', marginBottom: '20px' }}>
-                    Tu tiempo ha sido añadida exitosamente a la tarea.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleCancelClick}
-                    className={styles.timerAddButton}
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              ) : showFailAlert ? (
-                <div>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
-                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#ef4444', marginBottom: '8px' }}>
-                    Error al Registrar
-                  </h4>
-                  <p style={{ fontSize: '16px', color: '#71717A', marginBottom: '8px' }}>
-                    No se pudo registrar el tiempo.
-                  </p>
-                  {failErrorMessage && (
-                    <p style={{ fontSize: '11px', color: '#ef4444', marginBottom: '20px' }}>
-                      {failErrorMessage}
-                    </p>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={handleCancelClick}
-                      className={styles.timerCancelButton}
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p style={{ fontSize: '18px', color: '#182735' }}>
-                    Esperando resultado...
-                  </p>
-                </div>
-              )}
             </div>
           </WizardStep>
 

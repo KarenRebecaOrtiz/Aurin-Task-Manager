@@ -1319,25 +1319,37 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     setIsTimerPanelOpen((prev) => !prev);
   };
 
-  const handleAddTimeEntry = async () => {
+  const handleAddTimeEntry = async (time?: string, date?: Date, comment?: string) => {
     if (!user?.id) {
       alert('No se puede añadir la entrada de tiempo: usuario no autenticado.');
       return;
     }
-    const [hours, minutes] = timerInput.split(':').map(Number);
+    
+    // Use provided parameters or fall back to state
+    const timeToUse = time || timerInput;
+    const dateToUse = date || dateInput;
+    const commentToUse = comment || commentInput;
+    
+    console.log('[ChatSidebar:HandleAddTimeEntry] Using values:', {
+      time: timeToUse,
+      date: dateToUse,
+      comment: commentToUse
+    });
+    
+    const [hours, minutes] = timeToUse.split(':').map(Number);
     if (isNaN(hours) || isNaN(minutes)) {
       alert('Por favor, introduce un formato de tiempo válido (HH:mm).');
       return;
     }
     const totalHours = hours + minutes / 60;
     const timeEntry = `${hours}h ${minutes}m`;
-    const date = dateInput.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' });
+    const dateString = dateToUse.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' });
 
     try {
       const timestamp = Timestamp.now();
       
       // Cifrar el mensaje de tiempo antes de guardarlo
-      const timeMessage = `Añadó una entrada de tiempo de ${timeEntry} el ${date}`;
+      const timeMessage = `Añadó una entrada de tiempo de ${timeEntry} el ${dateString}`;
       const encryptedTimeMessage = encryptMessage(timeMessage);
       
       await addDoc(collection(db, `tasks/${task.id}/messages`), {
@@ -1349,9 +1361,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         hours: totalHours,
       });
       
-      if (commentInput.trim()) {
+      if (commentToUse.trim()) {
         // Cifrar el comentario antes de guardarlo
-        const encryptedComment = encryptMessage(commentInput.trim());
+        const encryptedComment = encryptMessage(commentToUse.trim());
         
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
@@ -1830,7 +1842,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             {activeCardDropdown === 'hours' && (
               <div ref={hoursDropdownRef} className={styles.cardDropdown}>
                 {hoursByUser.length > 0 ? (
-                  teamUsers.map((u) => (
+                  hoursByUser.map((u) => (
                     <div key={u.id} className={styles.cardDropdownItem}>
                       <Image
                         src={u.imageUrl}
@@ -1841,7 +1853,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                       />
                       <span className={styles.hoursUserName}>{u.firstName}</span>
                       <span className={styles.hoursValue}>
-                        {hoursByUser.find((h) => h.id === u.id)?.hours || '0:00'}
+                        {u.hours}
                       </span>
                     </div>
                   ))

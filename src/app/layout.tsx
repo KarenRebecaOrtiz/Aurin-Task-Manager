@@ -56,6 +56,7 @@ export default function RootLayout({
             href="/favicon/android-chrome-512x512.png"
           />
           <meta name="theme-color" content="#ffffff" />
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
           <Script
             src={`https://www.google.com/recaptcha/api.js?render=6Lcxe2UrAAAAAANiSWaLO_46zSm09wRhuYOEHfeb`}
             strategy="beforeInteractive"
