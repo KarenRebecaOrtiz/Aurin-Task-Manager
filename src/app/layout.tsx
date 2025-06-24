@@ -1,7 +1,14 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import Script from "next/script";
+import { Urbanist } from "next/font/google";
 import "./globals.scss";
+
+const urbanist = Urbanist({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  display: "swap",
+});
 
 export const metadata = {
   title: "Aurin Task Manager",
@@ -17,10 +24,6 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="es">
         <head>
-          <link
-            href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700&display=swap"
-            rel="stylesheet"
-          />
           <link
             rel="apple-touch-icon"
             sizes="180x180"
@@ -58,7 +61,7 @@ export default function RootLayout({
             strategy="beforeInteractive"
           />
         </head>
-        <body>
+        <body className={urbanist.className}>
           <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
             <defs>
               <filter id="grayscale">

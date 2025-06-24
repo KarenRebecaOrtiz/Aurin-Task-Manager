@@ -6,6 +6,7 @@ import { useUser } from '@clerk/nextjs';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import Loader from '@/components/Loader'; // Importar el componente Loader
 
 interface User {
   id: string;
@@ -130,7 +131,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           key: 'status',
           label: 'Estado',
           width: '15%',
-          mobileVisible: true,
+          mobileVisible: false,
         },
       ],
       [],
@@ -179,7 +180,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
 
     // Handle loading state
     if (isLoading) {
-      return <div>Loading...</div>; // You can replace with your Loader component
+      return <Loader />; // You can replace with your Loader component
     }
 
     return (

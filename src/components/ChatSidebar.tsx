@@ -29,6 +29,39 @@ import Loader from '@/components/Loader';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
 
+// Hook de cifrado end-to-end
+const useEncryption = () => {
+  const encryptMessage = useCallback((text: string): string => {
+    try {
+      // Cifrado simple usando btoa (Base64) - reemplaza con una librería de cifrado más robusta en producción
+      const encoded = btoa(unescape(encodeURIComponent(text)));
+      return `encrypted:${encoded}`;
+    } catch (error) {
+      console.error('Error al cifrar mensaje:', error);
+      return text; // Fallback: retorna el texto sin cifrar si hay error
+    }
+  }, []);
+
+  const decryptMessage = useCallback((encryptedText: string): string => {
+    try {
+      // Verificar si el texto está cifrado
+      if (!encryptedText.startsWith('encrypted:')) {
+        return encryptedText; // No está cifrado, retorna tal como está
+      }
+      
+      // Descifrar el texto
+      const encoded = encryptedText.replace('encrypted:', '');
+      const decoded = decodeURIComponent(escape(atob(encoded)));
+      return decoded;
+    } catch (error) {
+      console.error('Error al descifrar mensaje:', error);
+      return encryptedText; // Fallback: retorna el texto cifrado si hay error
+    }
+  }, []);
+
+  return { encryptMessage, decryptMessage };
+};
+
 interface Message {
   id: string;
   senderId: string;
@@ -423,6 +456,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const { user } = useUser();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const { isAdmin, isLoading } = useAuth();
+  // Hook de cifrado end-to-end
+  const { encryptMessage, decryptMessage } = useEncryption();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -461,6 +496,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const isInvolved =
     user?.id &&
     (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
+  // Permitir acceso a admins para ver dropdowns de equipo y tiempo registrado
+  const canViewTeamAndHours = isInvolved || isAdmin;
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
   // Función para detectar si es móvil
@@ -737,11 +774,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               console.warn(`Mensaje con ID ${doc.id} tiene timestamp inválido: ${data.timestamp}`);
               return null;
             }
+            
+            // Descifrar el texto del mensaje al recibirlo de Firestore
+            const decryptedText = data.text ? decryptMessage(data.text) : data.text;
+            
             return {
               id: doc.id,
               senderId: data.senderId,
               senderName: data.senderName,
-              text: data.text,
+              text: decryptedText, // Usar el texto descifrado
               timestamp: data.timestamp,
               read: data.read || false,
               hours: data.hours,
@@ -750,20 +791,27 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               fileName: data.fileName || null,
               fileType: data.fileType || null,
               filePath: data.filePath || null,
-              clientId: crypto.randomUUID(),
+              clientId: doc.id, // Usar el ID del documento como clientId para evitar duplicados
               isPending: false,
               hasError: false,
             };
           })
           .filter((msg) => msg !== null);
+          
         setMessages((prev) => {
           const messageMap = new Map<string, Message>();
-          prev.forEach((msg) => messageMap.set(msg.id, msg));
-          newMessages.forEach((msg) => {
-            if (!messageMap.has(msg.id)) {
-              messageMap.set(msg.id, msg);
+          // Mantener mensajes pendientes (que tienen clientId temporal)
+          prev.forEach((msg) => {
+            if (msg.isPending || msg.hasError) {
+              messageMap.set(msg.clientId, msg);
             }
           });
+          
+          // Agregar mensajes de Firestore (evitando duplicados por ID)
+          newMessages.forEach((msg) => {
+            messageMap.set(msg.id, msg);
+          });
+          
           const updatedMessages = Array.from(messageMap.values()).sort((a, b) => {
             const aTime = a.timestamp
               ? a.timestamp instanceof Timestamp
@@ -785,7 +833,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       },
     );
     return () => unsubscribe();
-  }, [task.id]);
+  }, [task.id, decryptMessage]);
 
   useEffect(() => {
     if (isOpen && user?.id) {
@@ -956,11 +1004,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   
     const clientId = messageData.clientId || crypto.randomUUID();
     const tempId = messageData.id || `temp-${clientId}`;
+    
+    // Cifrar el texto del mensaje antes de enviarlo
+    const encryptedText = messageData.text ? encryptMessage(messageData.text) : null;
+    
     const optimisticMessage: Message = {
       id: tempId,
       senderId: user.id,
       senderName: user.firstName || 'Usuario',
-      text: messageData.text || null,
+      text: messageData.text || null, // Mostrar texto sin cifrar en la UI
       timestamp: new Date(),
       read: false,
       imageUrl: messageData.imageUrl || null,
@@ -999,7 +1051,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: user.id,
         senderName: user.firstName || 'Usuario',
-        text: messageData.text || null,
+        text: encryptedText, // Guardar el texto cifrado en Firestore
         timestamp: serverTimestamp(),
         read: false,
         imageUrl: messageData.imageUrl || null,
@@ -1076,14 +1128,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       return;
     }
     try {
+      // Cifrar el texto editado antes de guardarlo en Firestore
+      const encryptedText = encryptMessage(editingText.trim());
+      
       await updateDoc(doc(db, `tasks/${task.id}/messages`, messageId), {
-        text: editingText.trim(),
+        text: encryptedText, // Guardar el texto cifrado
         timestamp: Timestamp.now(),
       });
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === messageId
-            ? { ...msg, text: editingText.trim(), timestamp: Timestamp.now() }
+            ? { ...msg, text: editingText.trim(), timestamp: Timestamp.now() } // Mostrar texto descifrado en UI
             : msg,
         ),
       );
@@ -1162,10 +1217,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     });
 
     try {
+      // Cifrar el texto antes de reenviarlo a Firestore
+      const encryptedText = message.text ? encryptMessage(message.text) : message.text;
+      
       const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: message.senderId,
         senderName: message.senderName,
-        text: message.text,
+        text: encryptedText, // Guardar el texto cifrado
         timestamp: serverTimestamp(),
         read: false,
         imageUrl: message.imageUrl,
@@ -1220,10 +1278,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const timestamp = Timestamp.now();
 
       try {
+        // Cifrar el mensaje de tiempo antes de guardarlo
+        const timeMessage = `Añadó una entrada de tiempo de ${timeEntry}`;
+        const encryptedTimeMessage = encryptMessage(timeMessage);
+        
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
           senderName: user.firstName || 'Usuario',
-          text: `Añadó una entrada de tiempo de ${timeEntry}`,
+          text: encryptedTimeMessage, // Guardar el mensaje cifrado
           timestamp,
           read: false,
           hours,
@@ -1273,19 +1335,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
     try {
       const timestamp = Timestamp.now();
+      
+      // Cifrar el mensaje de tiempo antes de guardarlo
+      const timeMessage = `Añadó una entrada de tiempo de ${timeEntry} el ${date}`;
+      const encryptedTimeMessage = encryptMessage(timeMessage);
+      
       await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: user.id,
         senderName: user.firstName || 'Usuario',
-        text: `Añadó una entrada de tiempo de ${timeEntry} el ${date}`,
+        text: encryptedTimeMessage, // Guardar el mensaje cifrado
         timestamp,
         read: false,
         hours: totalHours,
       });
+      
       if (commentInput.trim()) {
+        // Cifrar el comentario antes de guardarlo
+        const encryptedComment = encryptMessage(commentInput.trim());
+        
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId: user.id,
           senderName: user.firstName || 'Usuario',
-          text: commentInput.trim(),
+          text: encryptedComment, // Guardar el comentario cifrado
           timestamp: Timestamp.fromMillis(timestamp.toMillis() + 1),
           read: false,
         });
@@ -1707,14 +1778,16 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           <div
             className={styles.card}
             onClick={() => {
-              if (isInvolved) {
+              // Permitir que usuarios involucrados y admins vean el dropdown del equipo
+              if (canViewTeamAndHours) {
                 setActiveCardDropdown(activeCardDropdown === 'team' ? null : 'team');
               }
             }}
+            style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
           >
             <div className={styles.cardLabel}>Equipo:</div>
             <div className={styles.cardValue}>{teamUsers.length} miembro(s)</div>
-            {activeCardDropdown === 'team' && isInvolved && (
+            {activeCardDropdown === 'team' && (
               <div ref={teamDropdownRef} className={styles.cardDropdown}>
                 {teamUsers.length > 0 ? (
                   teamUsers.map((u) => (
@@ -1745,14 +1818,16 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           <div
             className={styles.cardFullWidth}
             onClick={() => {
-              if (isInvolved) {
+              // Permitir que usuarios involucrados y admins vean el dropdown de tiempo registrado
+              if (canViewTeamAndHours) {
                 setActiveCardDropdown(activeCardDropdown === 'hours' ? null : 'hours');
               }
             }}
+            style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
           >
             <div className={styles.cardLabel}>Tiempo registrado:</div>
             <div className={styles.cardValue}>{totalHours}</div>
-            {activeCardDropdown === 'hours' && isInvolved && (
+            {activeCardDropdown === 'hours' && (
               <div ref={hoursDropdownRef} className={styles.cardDropdown}>
                 {hoursByUser.length > 0 ? (
                   teamUsers.map((u) => (

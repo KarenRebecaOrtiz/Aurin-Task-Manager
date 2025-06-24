@@ -22,6 +22,7 @@ import { useFormPersistence } from "@/components/ui/use-form-persistence";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext'; 
+import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -186,6 +187,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     "create-task-wizard",
     true,
   );
+
+  // Habilitar atajos de teclado
+  useKeyboardShortcuts({ enabled: isOpen });
 
   // Prevent hydration issues
   useEffect(() => {
@@ -696,19 +700,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   }, [users, searchCollaborator, form]);
 
   const filteredLeaders = useMemo(() => {
-    const filtered = users.filter(
+    return users.filter(
       (u) =>
         u.fullName.toLowerCase().includes(searchLeader.toLowerCase()) ||
         u.role.toLowerCase().includes(searchLeader.toLowerCase()),
     );
-    console.log('Debug Leader Filter:', {
-      searchLeader,
-      totalUsers: users.length,
-      filteredCount: filtered.length,
-      users: users.map(u => ({ id: u.id, fullName: u.fullName, role: u.role })),
-      filtered: filtered.map(u => ({ id: u.id, fullName: u.fullName, role: u.role }))
-    });
-    return filtered;
   }, [users, searchLeader]);
 
   const filteredClients = useMemo(() => {
@@ -991,6 +987,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                   left: projectDropdownPosition?.left,
                                   position: "absolute",
                                   zIndex: 150000,
+                                  width: projectDropdownRef.current?.offsetWidth,
                                 }}
                                 ref={projectDropdownPopperRef}
                               >
@@ -1465,136 +1462,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                       </div>
                     </div>
                   </WizardStep>
-                  
-                  {/* COMMENTED OUT RESOURCE MANAGEMENT STEP */}
-                  {/* 
-                  <WizardStep step={3} validator={() => validateStep(stepFields[3] as (keyof FormValues)[])}>
-                    <div className={styles.section}>
-                      <h2 className={styles.sectionTitle}>Gestión de Recursos</h2>
-                      <div className={styles.resourceRow}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Presupuesto Asignado*</label>
-                          <div className={styles.currencyInput}>
-                            <span className={styles.currencySymbol}>$</span>
-                            <Controller
-                              name="resources.budget"
-                              control={form.control}
-                              render={({ field }) => (
-                                <input
-                                  className={styles.input}
-                                  type="number"
-                                  placeholder="1000.00"
-                                  {...field}
-                                  onChange={(e) => field.onChange(e.target.value)}
-                                />
-                              )}
-                            />
-                          </div>
-                          {form.formState.errors.resources?.budget && (
-                            <span className={styles.error}>{form.formState.errors.resources.budget.message}</span>
-                          )}
-                        </div>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Horas asignadas a esta tarea*</label>
-                          <Controller
-                            name="resources.hours"
-                            control={form.control}
-                            render={({ field }) => (
-                              <input
-                                className={styles.input}
-                                type="number"
-                                placeholder="120"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.value)}
-                              />
-                            )}
-                          />
-                          {form.formState.errors.resources?.hours && (
-                            <span className={styles.error}>{form.formState.errors.resources.hours.message}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </WizardStep>
-                  */}
-                  
-                  {/* COMMENTED OUT ADVANCED CONFIGURATION STEP */}
-                  {/* 
-                  <WizardStep step={4} validator={() => validateStep(stepFields[4] as (keyof FormValues)[])}>
-                    <div className={styles.section}>
-                      <h2 className={styles.sectionTitle}>Configuración Avanzada</h2>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Metodología del Proyecto</label>
-                        <Controller
-                          name="advanced.methodology"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Selecciona una metodología"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.methodology && (
-                          <span className={styles.error}>{form.formState.errors.advanced.methodology.message}</span>
-                        )}
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Riesgos Potenciales</label>
-                        <Controller
-                          name="advanced.risks"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Ej: Retrasos en entregas, Falta de recursos"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.risks && (
-                          <span className={styles.error}>{form.formState.errors.advanced.risks.message}</span>
-                        )}
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Estrategias de Mitigación</label>
-                        <Controller
-                          name="advanced.mitigation"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Ej: Contratar freelancers como respaldo"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.mitigation && (
-                          <span className={styles.error}>{form.formState.errors.advanced.mitigation.message}</span>
-                        )}
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Interesados</label>
-                        <Controller
-                          name="advanced.stakeholders"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Ej: Cliente, equipo interno"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.stakeholders && (
-                          <span className={styles.error}>{form.formState.errors.advanced.stakeholders.message}</span>
-                        )}
-                      </div>
-                    </div>
-                  </WizardStep>
-                  */}
-                  
                   <WizardActions onComplete={() => form.handleSubmit(onSubmit)()} />
                 </Wizard>
               </form>

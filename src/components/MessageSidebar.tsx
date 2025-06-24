@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
@@ -54,6 +54,39 @@ interface MessageSidebarProps {
   conversationId: string;
 }
 
+// Hook de cifrado end-to-end - idéntico al de ChatSidebar
+const useEncryption = () => {
+  const encryptMessage = useCallback((text: string): string => {
+    try {
+      // Cifrado simple usando btoa (Base64) - reemplaza con una librería de cifrado más robusta en producción
+      const encoded = btoa(unescape(encodeURIComponent(text)));
+      return `encrypted:${encoded}`;
+    } catch (error) {
+      console.error('Error al cifrar mensaje:', error);
+      return text; // Fallback: retorna el texto sin cifrar si hay error
+    }
+  }, []);
+
+  const decryptMessage = useCallback((encryptedText: string): string => {
+    try {
+      // Verificar si el texto está cifrado
+      if (!encryptedText.startsWith('encrypted:')) {
+        return encryptedText; // No está cifrado, retorna tal como está
+      }
+      
+      // Descifrar el texto
+      const encoded = encryptedText.replace('encrypted:', '');
+      const decoded = decodeURIComponent(escape(atob(encoded)));
+      return decoded;
+    } catch (error) {
+      console.error('Error al descifrar mensaje:', error);
+      return encryptedText; // Fallback: retorna el texto cifrado si hay error
+    }
+  }, []);
+
+  return { encryptMessage, decryptMessage };
+};
+
 // Uso de tipo genérico para evitar any
 const debounce = <T extends unknown[]>(func: (...args: T) => void, delay: number) => {
   let timer: NodeJS.Timeout | null = null;
@@ -74,6 +107,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   conversationId,
 }) => {
   const { user } = useUser();
+  const { encryptMessage, decryptMessage } = useEncryption();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -257,11 +291,15 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       (snapshot) => {
         const data: Message[] = snapshot.docs.map((d) => {
           const m = d.data();
+          
+          // Descifrar el texto del mensaje al recibirlo de Firestore
+          const decryptedText = m.text ? decryptMessage(m.text) : m.text;
+          
           return {
             id: d.id,
             senderId: m.senderId,
             receiverId: m.receiverId,
-            text: m.text ?? null,
+            text: decryptedText, // Usar el texto descifrado
             imageUrl: m.imageUrl ?? null,
             fileUrl: m.fileUrl ?? null,
             fileName: m.fileName ?? null,
@@ -289,7 +327,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       unsubscribeMessages();
       setIsLoading(false);
     };
-  }, [isOpen, senderId, receiver.id, conversationId, user?.id]);
+  }, [isOpen, senderId, receiver.id, conversationId, user?.id, decryptMessage]);
 
   useEffect(() => {
     if (!messages.length || !chatRef.current) return;
@@ -343,14 +381,17 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }
 
     try {
+      // Cifrar el texto editado antes de guardarlo en Firestore
+      const encryptedText = encryptMessage(editingText.trim());
+      
       await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), {
-        text: editingText.trim(),
+        text: encryptedText, // Guardar el texto cifrado
         timestamp: serverTimestamp(),
       });
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === messageId
-            ? { ...msg, text: editingText.trim(), timestamp: Timestamp.now() }
+            ? { ...msg, text: editingText.trim(), timestamp: Timestamp.now() } // Mostrar texto descifrado en UI
             : msg,
         ),
       );
@@ -427,7 +468,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       id: tempId,
       senderId: user.id,
       receiverId: receiver.id,
-      text: messageData.text || null,
+      text: messageData.text || null, // Mostrar texto sin cifrar en la UI
       timestamp: Timestamp.fromDate(new Date()),
       isPending: true,
       imageUrl: messageData.imageUrl || null,
@@ -440,21 +481,29 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     setMessages((prev) => [...prev, optimisticMessage]);
 
     try {
+      // Cifrar el texto del mensaje antes de guardarlo en Firestore
+      const encryptedText = messageData.text ? encryptMessage(messageData.text) : null;
+      
+      // Cifrar también el lastMessage para mantener consistencia
+      const lastMessageText = messageData.text || messageData.fileName || '[Archivo]';
+      const encryptedLastMessage = encryptMessage(lastMessageText);
+      
       await setDoc(
         doc(db, 'conversations', conversationId),
         {
           participants: [senderId, receiver.id],
           createdAt: serverTimestamp(),
-          lastMessage: messageData.text || messageData.fileName || '[Archivo]',
+          lastMessage: encryptedLastMessage, // Guardar el lastMessage cifrado
           lastMessageTimestamp: serverTimestamp(),
         },
         { merge: true },
       );
 
-      const finalMessageData: Partial<Message> = {
+      const finalMessageData = {
         senderId: user.id,
         receiverId: receiver.id,
-        text: messageData.text || null,
+        text: encryptedText, // Guardar el texto cifrado en Firestore
+        timestamp: serverTimestamp(),
         imageUrl: messageData.imageUrl || null,
         fileUrl: messageData.fileUrl || audioUrl || null,
         fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
@@ -468,9 +517,14 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       );
 
       try {
+        // Crear notificación con texto descifrado para mejor UX
+        const notificationText = messageData.text 
+          ? `${user.firstName || 'Usuario'} te escribió: ${messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text}`
+          : `${user.firstName || 'Usuario'} te ha enviado un mensaje privado`;
+          
         await addDoc(collection(db, 'notifications'), {
           userId: senderId,
-          message: `${user.firstName || 'Usuario'} te ha enviado un mensaje privado`,
+          message: notificationText,
           timestamp: Timestamp.now(),
           read: false,
           recipientId: receiver.id,

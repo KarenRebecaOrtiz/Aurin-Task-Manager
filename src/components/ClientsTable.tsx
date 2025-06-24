@@ -10,6 +10,7 @@ import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './ClientsTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import Loader from '@/components/Loader'; // Importar el componente Loader
 
 interface Client {
   id: string;
@@ -39,12 +40,14 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [searchQuery, setSearchQuery] = useState('');
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
+    const [isDataLoading, setIsDataLoading] = useState(true); // Local loading state for data fetching
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
     const userId = useMemo(() => user?.id || '', [user]);
 
     const fetchClients = useCallback(async () => {
+      setIsDataLoading(true);
       try {
         const querySnapshot = await getDocs(collection(db, 'clients'));
         const clientsData: Client[] = querySnapshot.docs
@@ -62,6 +65,8 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         setClients(clientsData);
       } catch (error) {
         console.error('Error fetching clients:', error);
+      } finally {
+        setIsDataLoading(false);
       }
     }, [setClients]);
 
@@ -243,9 +248,42 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, userId, isAdmin, isLoading, animateClick],
     );
 
-    // Handle loading state
-    if (isLoading) {
-      return <div>Loading...</div>; // You can replace this with your Loader component
+    // Handle loading state - mostrar loader mientras cargan los datos
+    if (isLoading || isDataLoading) {
+      return (
+        <div className={styles.container}>
+          <div className={styles.header}>
+            <div className={styles.searchWrapper}>
+              <input
+                type="text"
+                placeholder="Buscar Cuentas"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={styles.searchInput}
+                aria-label="Buscar cuentas"
+                disabled={isLoading || isDataLoading}
+              />
+            </div>
+            {isAdmin && (
+              <div className={`${styles.createButtonWrapper} ${styles.hideOnMobile}`}>
+                <button
+                  onClick={onCreateOpen}
+                  className={styles.createButton}
+                  aria-label="Crear nueva cuenta"
+                  data-testid="create-client-button"
+                  disabled={isLoading || isDataLoading}
+                  style={{ opacity: isLoading || isDataLoading ? 0.6 : 1 }}
+                >
+                  <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
+                  Nueva Cuenta
+                </button>
+              </div>
+            )}
+          </div>
+          
+          <Loader />
+        </div>
+      );
     }
 
     return (

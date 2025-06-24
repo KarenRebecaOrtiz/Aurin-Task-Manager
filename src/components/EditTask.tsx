@@ -20,10 +20,9 @@ import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/
 import { toast } from "@/components/ui/use-toast";
 import { useFormPersistence } from "@/components/ui/use-form-persistence";
 import { useRouter } from "next/navigation";
-import Splide from "@splidejs/splide";
-import "@splidejs/splide/css/core";
 import { db } from "@/lib/firebase";
-import { useAuth } from '@/contexts/AuthContext'; 
+import { useAuth } from '@/contexts/AuthContext';
+import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -73,20 +72,6 @@ const formSchema = z.object({
     LeadedBy: z.array(z.string()).min(1, { message: "Selecciona al menos un líder*" }),
     AssignedTo: z.array(z.string()).min(1, { message: "Selecciona al menos un colaborador*" }),
   }),
-  resources: z.object({
-    budget: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-      message: "El presupuesto debe ser un número válido*",
-    }),
-    hours: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-      message: "Las horas deben ser un número válido*",
-    }),
-  }),
-  advanced: z.object({
-    methodology: z.string().optional(),
-    risks: z.string().optional(),
-    mitigation: z.string().optional(),
-    stakeholders: z.string().optional(),
-  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -109,16 +94,6 @@ const defaultValues: FormValues = {
     LeadedBy: [],
     AssignedTo: [],
   },
-  resources: {
-    budget: "",
-    hours: "",
-  },
-  advanced: {
-    methodology: "",
-    risks: "",
-    mitigation: "",
-    stakeholders: "",
-  },
 };
 
 const stepFields: (keyof FormValues | string)[][] = [
@@ -133,8 +108,6 @@ const stepFields: (keyof FormValues | string)[][] = [
     "basicInfo.priority",
   ],
   ["teamInfo.LeadedBy", "teamInfo.AssignedTo"],
-  ["resources.budget", "resources.hours"],
-  ["advanced.methodology", "advanced.risks", "advanced.mitigation", "advanced.stakeholders"],
 ];
 
 interface EditTaskProps {
@@ -160,7 +133,7 @@ const EditTask: React.FC<EditTaskProps> = ({
 }) => {
   const { user } = useUser();
   const router = useRouter();
-  const { isAdmin, isLoading } = useAuth(); // Use AuthContext for isAdmin and isLoading
+  const { isAdmin, isLoading } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -168,15 +141,21 @@ const EditTask: React.FC<EditTaskProps> = ({
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
   const [isCollaboratorDropdownOpen, setIsCollaboratorDropdownOpen] = useState(false);
+  const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false);
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
   const [projectDropdownPosition, setProjectDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [collaboratorDropdownPosition, setCollaboratorDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [leaderDropdownPosition, setLeaderDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [clientDropdownPosition, setClientDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [startDatePosition, setStartDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [endDatePosition, setEndDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [searchCollaborator, setSearchCollaborator] = useState("");
+  const [searchLeader, setSearchLeader] = useState("");
+  const [searchClient, setSearchClient] = useState("");
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState("");
@@ -186,6 +165,8 @@ const EditTask: React.FC<EditTaskProps> = ({
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const collaboratorInputRef = useRef<HTMLInputElement>(null);
+  const leaderInputRef = useRef<HTMLInputElement>(null);
+  const clientInputRef = useRef<HTMLInputElement>(null);
   const startDateInputRef = useRef<HTMLDivElement>(null);
   const endDateInputRef = useRef<HTMLDivElement>(null);
   const startDatePopperRef = useRef<HTMLDivElement>(null);
@@ -194,14 +175,8 @@ const EditTask: React.FC<EditTaskProps> = ({
   const statusDropdownPopperRef = useRef<HTMLDivElement>(null);
   const priorityDropdownPopperRef = useRef<HTMLDivElement>(null);
   const collaboratorDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const clientSplideRef = useRef<HTMLDivElement>(null);
-  const pmSplideRef = useRef<HTMLDivElement>(null);
-  const clientSplideInstance = useRef<Splide | null>(null);
-  const pmSplideInstance = useRef<Splide | null>(null);
-  const [clientCanPrev, setClientCanPrev] = useState(false);
-  const [clientCanNext, setClientCanNext] = useState(true);
-  const [pmCanPrev, setPmCanPrev] = useState(false);
-  const [pmCanNext, setPmCanNext] = useState(true);
+  const leaderDropdownPopperRef = useRef<HTMLDivElement>(null);
+  const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -215,12 +190,13 @@ const EditTask: React.FC<EditTaskProps> = ({
     true,
   );
 
+  // Habilitar atajos de teclado
+  useKeyboardShortcuts({ enabled: isOpen });
+
   // Prevent hydration issues
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // Removed local isAdmin fetch useEffect
 
   // Fetch task, clients, and users
   useEffect(() => {
@@ -259,16 +235,6 @@ const EditTask: React.FC<EditTaskProps> = ({
           teamInfo: {
             LeadedBy: taskData.LeadedBy || [],
             AssignedTo: taskData.AssignedTo || [],
-          },
-          resources: {
-            budget: taskData.budget ? taskData.budget.toString() : '',
-            hours: taskData.hours ? taskData.hours.toString() : '',
-          },
-          advanced: {
-            methodology: taskData.methodology || '',
-            risks: taskData.risks || '',
-            mitigation: taskData.mitigation || '',
-            stakeholders: taskData.stakeholders || '',
           },
         };
         form.reset(formValues);
@@ -354,6 +320,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     }
   }, [isOpen, form, clearPersistedData, onHasUnsavedChanges]);
 
+  // Handle alert changes
   useEffect(() => {
     if (onClientAlertChange) {
       if (showSuccessAlert || showFailAlert) {
@@ -417,6 +384,20 @@ const EditTask: React.FC<EditTaskProps> = ({
           left: rect.left + window.scrollX,
         });
       }
+      if (isLeaderDropdownOpen && leaderInputRef.current) {
+        const rect = leaderInputRef.current.getBoundingClientRect();
+        setLeaderDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+      if (isClientDropdownOpen && clientInputRef.current) {
+        const rect = clientInputRef.current.getBoundingClientRect();
+        setClientDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
     };
 
     const animatePoppers = () => {
@@ -444,6 +425,20 @@ const EditTask: React.FC<EditTaskProps> = ({
       if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
         gsap.fromTo(
           collaboratorDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isLeaderDropdownOpen && leaderDropdownPopperRef.current) {
+        gsap.fromTo(
+          leaderDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isClientDropdownOpen && clientDropdownPopperRef.current) {
+        gsap.fromTo(
+          clientDropdownPopperRef.current,
           { opacity: 0, y: -10, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
         );
@@ -495,6 +490,8 @@ const EditTask: React.FC<EditTaskProps> = ({
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
     isCollaboratorDropdownOpen,
+    isLeaderDropdownOpen,
+    isClientDropdownOpen,
   ]);
 
   // Handle click outside to close dropdowns
@@ -554,6 +551,24 @@ const EditTask: React.FC<EditTaskProps> = ({
       ) {
         setIsCollaboratorDropdownOpen(false);
       }
+      if (
+        clientInputRef.current &&
+        !clientInputRef.current.contains(event.target as Node) &&
+        clientDropdownPopperRef.current &&
+        !clientDropdownPopperRef.current.contains(event.target as Node) &&
+        isClientDropdownOpen
+      ) {
+        setIsClientDropdownOpen(false);
+      }
+      if (
+        leaderInputRef.current &&
+        !leaderInputRef.current.contains(event.target as Node) &&
+        leaderDropdownPopperRef.current &&
+        !leaderDropdownPopperRef.current.contains(event.target as Node) &&
+        isLeaderDropdownOpen
+      ) {
+        setIsLeaderDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -564,6 +579,8 @@ const EditTask: React.FC<EditTaskProps> = ({
     isStartDateOpen,
     isEndDateOpen,
     isCollaboratorDropdownOpen,
+    isClientDropdownOpen,
+    isLeaderDropdownOpen,
   ]);
 
   // Handle scroll to close dropdowns
@@ -575,7 +592,9 @@ const EditTask: React.FC<EditTaskProps> = ({
         isProjectDropdownOpen ||
         isStatusDropdownOpen ||
         isPriorityDropdownOpen ||
-        isCollaboratorDropdownOpen
+        isCollaboratorDropdownOpen ||
+        isLeaderDropdownOpen ||
+        isClientDropdownOpen
       ) {
         setIsStartDateOpen(false);
         setIsEndDateOpen(false);
@@ -583,6 +602,8 @@ const EditTask: React.FC<EditTaskProps> = ({
         setIsStatusDropdownOpen(false);
         setIsPriorityDropdownOpen(false);
         setIsCollaboratorDropdownOpen(false);
+        setIsLeaderDropdownOpen(false);
+        setIsClientDropdownOpen(false);
       }
     }, 200);
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -594,127 +615,9 @@ const EditTask: React.FC<EditTaskProps> = ({
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
     isCollaboratorDropdownOpen,
+    isLeaderDropdownOpen,
+    isClientDropdownOpen,
   ]);
-
-  // Initialize client Splide
-  useEffect(() => {
-    if (!isMounted || !clientSplideRef.current || clients.length === 0) return;
-
-    const timer = setTimeout(() => {
-      if (clientSplideInstance.current) {
-        clientSplideInstance.current.destroy();
-        clientSplideInstance.current = null;
-      }
-
-      const perPage = Math.min(clients.length, 6);
-      clientSplideInstance.current = new Splide(clientSplideRef.current, {
-        type: "loop",
-        perPage,
-        perMove: 1,
-        gap: "1rem",
-        autoWidth: false,
-        focus: "center",
-        autoplay: false,
-        drag: true,
-        dragMinThreshold: { mouse: 10, touch: 10 },
-        arrows: false,
-        pagination: false,
-        breakpoints: {
-          1024: { perPage: Math.min(clients.length, 4), gap: "0.75rem" },
-          767: { perPage: Math.min(clients.length, 2), gap: "0.5rem" },
-          480: { perPage: 1, gap: "0.5rem" },
-        },
-      }).mount();
-
-      const updateNavButtons = () => {
-        if (clientSplideInstance.current) {
-          const { index, length } = clientSplideInstance.current;
-          setClientCanPrev(index > 0);
-          setClientCanNext(index < length - perPage);
-        }
-      };
-
-      clientSplideInstance.current.on("moved", updateNavButtons);
-      updateNavButtons();
-
-      clientSplideInstance.current.on("drag", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe started`);
-        gsap.killTweensOf(clientSplideRef.current?.querySelectorAll(".splide__slide"));
-      });
-
-      clientSplideInstance.current.on("dragged", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:clients] Swipe ended, position: ${clientSplideInstance.current?.index}`);
-      });
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      if (clientSplideInstance.current) {
-        clientSplideInstance.current.destroy();
-        clientSplideInstance.current = null;
-      }
-    };
-  }, [clients, isMounted]);
-
-  // Initialize PM Splide
-  useEffect(() => {
-    if (!isMounted || !pmSplideRef.current || users.length === 0) return;
-
-    const timer = setTimeout(() => {
-      if (pmSplideInstance.current) {
-        pmSplideInstance.current.destroy();
-        pmSplideInstance.current = null;
-      }
-
-      const perPage = Math.min(users.length, 6);
-      pmSplideInstance.current = new Splide(pmSplideRef.current, {
-        type: "loop",
-        perPage,
-        perMove: 1,
-        gap: "1rem",
-        autoWidth: false,
-        focus: "center",
-        autoplay: false,
-        drag: true,
-        dragMinThreshold: { mouse: 10, touch: 10 },
-        arrows: false,
-        pagination: false,
-        breakpoints: {
-          1024: { perPage: Math.min(users.length, 4), gap: "0.75rem" },
-          767: { perPage: Math.min(users.length, 2), gap: "0.5rem" },
-          480: { perPage: 1, gap: "0.5rem" },
-        },
-      }).mount();
-
-      const updateNavButtons = () => {
-        if (pmSplideInstance.current) {
-          const { index, length } = pmSplideInstance.current;
-          setPmCanPrev(index > 0);
-          setPmCanNext(index < length - perPage);
-        }
-      };
-
-      pmSplideInstance.current.on("moved", updateNavButtons);
-      updateNavButtons();
-
-      pmSplideInstance.current.on("drag", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe started`);
-        gsap.killTweensOf(pmSplideRef.current?.querySelectorAll(".splide__slide"));
-      });
-
-      pmSplideInstance.current.on("dragged", () => {
-        console.log(`[${new Date().toISOString()}] [Splide:leaders] Swipe ended, position: ${pmSplideInstance.current?.index}`);
-      });
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      if (pmSplideInstance.current) {
-        pmSplideInstance.current.destroy();
-        pmSplideInstance.current = null;
-      }
-    };
-  }, [users, isMounted]);
 
   const animateClick = useCallback((element: HTMLElement) => {
     gsap.to(element, {
@@ -727,17 +630,23 @@ const EditTask: React.FC<EditTaskProps> = ({
     });
   }, []);
 
-  const handleClientSelect = useCallback(
+  const handleClientSelectDropdown = useCallback(
     (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      const currentClientId = form.watch("clientInfo.clientId");
-      if (currentClientId === clientId) {
-        form.setValue("clientInfo.clientId", "");
-      } else {
-        form.setValue("clientInfo.clientId", clientId);
-        form.setValue("clientInfo.project", "");
-      }
+      form.setValue("clientInfo.clientId", clientId);
+      setSearchClient("");
+      setIsClientDropdownOpen(false);
+    },
+    [form, animateClick],
+  );
+
+  const handleClientRemove = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue("clientInfo.clientId", "");
+      form.setValue("clientInfo.project", "");
     },
     [form, animateClick],
   );
@@ -746,12 +655,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     (project: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      const currentProject = form.watch("clientInfo.project");
-      if (currentProject === project) {
-        form.setValue("clientInfo.project", "");
-      } else {
-        form.setValue("clientInfo.project", project);
-      }
+      form.setValue("clientInfo.project", project);
       setIsProjectDropdownOpen(false);
     },
     [form, animateClick],
@@ -777,20 +681,18 @@ const EditTask: React.FC<EditTaskProps> = ({
     [form, animateClick],
   );
 
-  const handlePmSelect = useCallback(
+  const handleLeaderSelect = useCallback(
     (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      const currentLeadedBy = form.getValues("teamInfo.LeadedBy");
-      const isSelected = currentLeadedBy.includes(userId);
-      const newLeadedBy = isSelected
-        ? currentLeadedBy.filter((id) => id !== userId)
-        : [...currentLeadedBy, userId];
-      form.setValue("teamInfo.LeadedBy", newLeadedBy);
-      form.setValue(
-        "teamInfo.AssignedTo",
-        form.getValues("teamInfo.AssignedTo").filter((id) => id !== userId),
-      );
+      const currentLeaders = form.getValues("teamInfo.LeadedBy");
+      const isSelected = currentLeaders.includes(userId);
+      const newLeaders = isSelected
+        ? currentLeaders.filter((id) => id !== userId)
+        : [...currentLeaders, userId];
+      form.setValue("teamInfo.LeadedBy", newLeaders);
+      setSearchLeader("");
+      setIsLeaderDropdownOpen(false);
     },
     [form, animateClick],
   );
@@ -807,7 +709,20 @@ const EditTask: React.FC<EditTaskProps> = ({
           : [...currentAssignedTo, userId];
         form.setValue("teamInfo.AssignedTo", newAssignedTo);
         setSearchCollaborator("");
+        setIsCollaboratorDropdownOpen(false);
       }
+    },
+    [form, animateClick],
+  );
+
+  const handleLeaderRemove = useCallback(
+    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue(
+        "teamInfo.LeadedBy",
+        form.getValues("teamInfo.LeadedBy").filter((id) => id !== userId),
+      );
     },
     [form, animateClick],
   );
@@ -824,38 +739,6 @@ const EditTask: React.FC<EditTaskProps> = ({
     [form, animateClick],
   );
 
-  const handleClientPrev = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (clientSplideInstance.current) {
-      clientSplideInstance.current.go("<");
-      console.log(`[${new Date().toISOString()}] [Splide:clients] Navigated to previous slide`);
-    }
-  }, []);
-
-  const handleClientNext = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (clientSplideInstance.current) {
-      clientSplideInstance.current.go(">");
-      console.log(`[${new Date().toISOString()}] [Splide:clients] Navigated to next slide`);
-    }
-  }, []);
-
-  const handlePmPrev = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (pmSplideInstance.current) {
-      pmSplideInstance.current.go("<");
-      console.log(`[${new Date().toISOString()}] [Splide:leaders] Navigated to previous slide`);
-    }
-  }, []);
-
-  const handlePmNext = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (pmSplideInstance.current) {
-      pmSplideInstance.current.go(">");
-      console.log(`[${new Date().toISOString()}] [Splide:leaders] Navigated to next slide`);
-    }
-  }, []);
-
   const filteredCollaborators = useMemo(() => {
     return users.filter(
       (u) =>
@@ -864,6 +747,22 @@ const EditTask: React.FC<EditTaskProps> = ({
          u.role.toLowerCase().includes(searchCollaborator.toLowerCase())),
     );
   }, [users, searchCollaborator, form]);
+
+  const filteredLeaders = useMemo(() => {
+    return users.filter(
+      (u) =>
+        u.fullName.toLowerCase().includes(searchLeader.toLowerCase()) ||
+        u.role.toLowerCase().includes(searchLeader.toLowerCase()),
+    );
+  }, [users, searchLeader]);
+
+  const filteredClients = useMemo(() => {
+    return clients.filter(
+      (c) =>
+        c.name.toLowerCase().includes(searchClient.toLowerCase()) ||
+        c.projects.some((project) => project.toLowerCase().includes(searchClient.toLowerCase())),
+    );
+  }, [clients, searchClient]);
 
   const onSubmit = async (values: FormValues) => {
     if (!user) {
@@ -890,10 +789,6 @@ const EditTask: React.FC<EditTaskProps> = ({
         ...values.clientInfo,
         ...values.basicInfo,
         ...values.teamInfo,
-        ...values.resources,
-        ...values.advanced,
-        budget: parseFloat(values.resources.budget.replace("$", "")) || 0,
-        hours: parseInt(values.resources.hours) || 0,
         CreatedBy: user.id,
         createdAt: Timestamp.fromDate(new Date()),
       };
@@ -920,15 +815,14 @@ const EditTask: React.FC<EditTaskProps> = ({
       onHasUnsavedChanges(false);
       setTimeout(() => {
         router.push("/dashboard/tasks");
-      }, 3000);
+      }, 2000);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Error desconocido al actualizar la tarea.";
       console.error("Error updating task:", errorMessage);
-      
-      // Mensajes de error más específicos y útiles
+
       let userFriendlyTitle = "❌ Error al Actualizar Tarea";
       let userFriendlyDescription = "No pudimos actualizar tu tarea en este momento. ";
-      
+
       if (errorMessage.includes("permission")) {
         userFriendlyTitle = "🔒 Sin Permisos";
         userFriendlyDescription = "No tienes permisos para actualizar esta tarea. Solo el creador o un administrador pueden editarla.";
@@ -950,13 +844,13 @@ const EditTask: React.FC<EditTaskProps> = ({
       } else {
         userFriendlyDescription += "Por favor, verifica todos los campos y intenta nuevamente. Si el problema persiste, contacta al soporte técnico.";
       }
-      
+
       toast({
         title: userFriendlyTitle,
         description: userFriendlyDescription,
         variant: "error",
       });
-      
+
       setShowFailAlert(true);
       setFailErrorMessage(errorMessage);
       setIsSaving(false);
@@ -967,8 +861,8 @@ const EditTask: React.FC<EditTaskProps> = ({
     const result = await form.trigger(fields as (keyof FormValues)[]);
     if (!result) {
       toast({
-        title: "Error de Validación",
-        description: "Por favor, revisa los campos y corrige los errores.",
+        title: "⚠️ Campos Requeridos",
+        description: "Hay algunos campos obligatorios que necesitan ser completados. Revisa los campos marcados en rojo y completa la información faltante.",
         variant: "error",
       });
     }
@@ -985,41 +879,6 @@ const EditTask: React.FC<EditTaskProps> = ({
     );
   }
 
-  interface SlideCardProps {
-    imageUrl: string;
-    name: string;
-    role?: string;
-    isSelected: boolean;
-    onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  }
-
-  const SlideCard: React.FC<SlideCardProps> = ({ imageUrl, name, role, isSelected, onClick }) => {
-    // Provide fallback for empty or undefined imageUrls
-    const validImageUrl = imageUrl && imageUrl.trim() !== '' ? imageUrl : '/empty-image.png';
-    
-    return (
-      <div
-        className={`${styles.slideCard} ${isSelected ? styles.selected : ""}`}
-        onClick={onClick}
-        style={{ touchAction: "pan-y", pointerEvents: "auto" }}
-      >
-        <Image
-          src={validImageUrl}
-          alt={name}
-          width={36}
-          height={36}
-          className={role ? styles.userImage : styles.clientImage}
-          priority
-          onError={(e) => {
-            e.currentTarget.src = '/empty-image.png';
-          }}
-        />
-        <div className={styles.clientName}>{name}</div>
-        {role && <div className={styles.userRole}>{role}</div>}
-      </div>
-    );
-  };
-
   return (
     <>
       <div className={`${styles.container} ${isOpen ? styles.open : ""} ${isSaving ? styles.saving : ""}`} ref={containerRef}>
@@ -1027,14 +886,18 @@ const EditTask: React.FC<EditTaskProps> = ({
           <>
             <div className={styles.header}>
               <div className={styles.headerTitle}>Editar Tarea</div>
+              <div className={styles.headerProgress}>
+                <Wizard totalSteps={3}>
+                  <WizardProgress />
+                </Wizard>
+              </div>
               <button className={styles.toggleButton} onClick={onToggle}>
                 <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
               </button>
             </div>
             <div className={styles.content}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <Wizard totalSteps={5}>
-                  <WizardProgress />
+                <Wizard totalSteps={3}>
                   <WizardStep step={0} validator={() => validateStep(stepFields[0] as (keyof FormValues)[])}>
                     <div className={styles.section}>
                       <h2 className={styles.sectionTitle}>Información del Cliente</h2>
@@ -1062,68 +925,67 @@ const EditTask: React.FC<EditTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
                         </div>
-                        <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
-                          {clients.length > 1 && (
-                            <>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handleClientPrev}
-                                disabled={!clientCanPrev}
-                                style={{
-                                  position: "absolute",
-                                  display: 'none',
-                                  left: "-40px",
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: clientCanPrev ? 1 : 0.5,
-                                }}
-                              >
-                                Anterior
-                              </button>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handleClientNext}
-                                disabled={!clientCanNext}
-                                style={{
-                                  position: "absolute",
-                                  right: "-40px",
-                                  display: 'none',
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: clientCanNext ? 1 : 0.5,
-                                }}
-                              >
-                                Siguiente
-                              </button>
-                            </>
-                          )}
-                          <div className={styles.slideshow} style={{ overflow: "visible" }}>
-                            <section
-                              ref={clientSplideRef}
-                              style={{ visibility: clients.length ? "visible" : "hidden" }}
-                              className="splide"
-                              aria-label="Carrusel de Cuentas"
+                        <input
+                          className={styles.input}
+                          value={searchClient}
+                          onChange={(e) => {
+                            setSearchClient(e.target.value);
+                            setIsClientDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => setIsClientDropdownOpen(false), 200);
+                          }}
+                          placeholder="Ej: Nombre de la cuenta"
+                          ref={clientInputRef}
+                        />
+                        {isClientDropdownOpen &&
+                          createPortal(
+                            <div
+                              className={styles.dropdown}
+                              style={{
+                                top: clientDropdownPosition?.top,
+                                left: clientDropdownPosition?.left,
+                                position: "absolute",
+                                zIndex: 150000,
+                                width: clientInputRef.current?.offsetWidth,
+                              }}
+                              ref={clientDropdownPopperRef}
                             >
-                              <div className="splide__track">
-                                <ul className="splide__list">
-                                  {clients.map((client) => (
-                                    <li key={client.id} className={`splide__slide ${styles.splideSlide}`}>
-                                      <SlideCard
-                                        imageUrl={client.imageUrl}
-                                        name={client.name}
-                                        isSelected={form.watch("clientInfo.clientId") === client.id}
-                                        onClick={(e) => handleClientSelect(client.id, e)}
-                                      />
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </section>
-                          </div>
+                              {filteredClients.length ? (
+                                filteredClients.map((client) => (
+                                  <div
+                                    key={client.id}
+                                    className={styles.dropdownItem}
+                                    onClick={(e) => handleClientSelectDropdown(client.id, e)}
+                                  >
+                                    {client.name}
+                                    {form.watch("clientInfo.clientId") === client.id && " (Seleccionado)"}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className={styles.emptyState}>
+                                  <span>
+                                    {isAdmin
+                                      ? "No hay coincidencias. Crea una nueva cuenta."
+                                      : "No hay coincidencias. Pide a un administrador que cree una cuenta."}
+                                  </span>
+                                </div>
+                              )}
+                            </div>,
+                            document.body,
+                          )}
+                        <div className={styles.tags}>
+                          {form.watch("clientInfo.clientId") && (
+                            (() => {
+                              const selectedClient = clients.find((c) => c.id === form.watch("clientInfo.clientId"));
+                              return selectedClient ? (
+                                <div key={selectedClient.id} className={styles.tag}>
+                                  {selectedClient.name}
+                                  <button onClick={(e) => handleClientRemove(e)}>X</button>
+                                </div>
+                              ) : null;
+                            })()
+                          )}
                         </div>
                         {form.formState.errors.clientInfo?.clientId && (
                           <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
@@ -1502,72 +1364,85 @@ const EditTask: React.FC<EditTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la persona principal responsable de la tarea.
                         </div>
-                        <div className={styles.splideWrapper} style={{ overflow: "visible", position: "relative" }}>
-                          {users.length > 1 && (
-                            <>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handlePmPrev}
-                                disabled={!pmCanPrev}
-                                style={{
-                                  position: "absolute",
-                                  left: "-40px",
-                                  display: 'none',
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: pmCanPrev ? 1 : 0.5,
-                                }}
-                              >
-                                Anterior
-                              </button>
-                              <button
-                                type="button"
-                                className={styles.navButton}
-                                onClick={handlePmNext}
-                                disabled={!pmCanNext}
-                                style={{
-                                  position: "absolute",
-                                  right: "-40px",
-                                  display: 'none',
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  zIndex: 10,
-                                  opacity: pmCanNext ? 1 : 0.5,
-                                }}
-                              >
-                                Siguiente
-                              </button>
-                            </>
-                          )}
-                          <div className={styles.slideshow} style={{ overflow: "visible" }}>
-                            <section
-                              ref={pmSplideRef}
-                              style={{ visibility: users.length ? "visible" : "hidden" }}
-                              className="splide"
-                              aria-label="Carrusel de Líderes"
+                        <input
+                          className={styles.input}
+                          value={searchLeader}
+                          onChange={(e) => {
+                            setSearchLeader(e.target.value);
+                            setIsLeaderDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => setIsLeaderDropdownOpen(false), 200);
+                          }}
+                          placeholder="Ej: John Doe"
+                          ref={leaderInputRef}
+                        />
+                        {isLeaderDropdownOpen &&
+                          createPortal(
+                            <div
+                              className={styles.dropdown}
+                              style={{
+                                top: leaderDropdownPosition?.top,
+                                left: leaderDropdownPosition?.left,
+                                position: "absolute",
+                                zIndex: 150000,
+                                width: leaderInputRef.current?.offsetWidth,
+                              }}
+                              ref={leaderDropdownPopperRef}
                             >
-                              <div className="splide__track">
-                                <ul className="splide__list">
-                                  {users.map((user) => (
-                                    <li key={user.id} className={`splide__slide ${styles.splideSlide}`}>
-                                      <SlideCard
-                                        imageUrl={user.imageUrl}
-                                        name={user.fullName}
-                                        role={user.role}
-                                        isSelected={form.watch("teamInfo.LeadedBy").includes(user.id)}
-                                        onClick={(e) => handlePmSelect(user.id, e)}
-                                      />
-                                    </li>
-                                  ))}
-                                </ul>
+                              {filteredLeaders.length ? (
+                                filteredLeaders.map((u) => (
+                                  <div
+                                    key={u.id}
+                                    className={styles.dropdownItem}
+                                    onClick={(e) => handleLeaderSelect(u.id, e)}
+                                  >
+                                    {u.fullName} ({u.role})
+                                    {form.watch("teamInfo.LeadedBy").includes(u.id) && " (Seleccionado)"}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className={styles.emptyState}>
+                                  <span>
+                                    {isAdmin
+                                      ? "No hay coincidencias. Invita a nuevos colaboradores."
+                                      : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
+                                  </span>
+                                </div>
+                              )}
+                            </div>,
+                            document.body,
+                          )}
+                        <div className={styles.tags}>
+                          {form.watch("teamInfo.LeadedBy").map((userId) => {
+                            const collaborator = users.find((u) => u.id === userId);
+                            return collaborator ? (
+                              <div key={userId} className={styles.tag}>
+                                {collaborator.fullName}
+                                <button onClick={(e) => handleLeaderRemove(userId, e)}>X</button>
                               </div>
-                            </section>
-                          </div>
+                            ) : null;
+                          })}
                         </div>
                         {form.formState.errors.teamInfo?.LeadedBy && (
                           <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
+                        )}
+                        {isAdmin && (
+                          <div className={styles.addButtonWrapper}>
+                            <div className={styles.addButtonText}>
+                              ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.addButton}
+                              onClick={(e) => {
+                                animateClick(e.currentTarget);
+                                onInviteSidebarOpen();
+                              }}
+                            >
+                              + Invitar Colaborador
+                            </button>
+                          </div>
                         )}
                       </div>
                       <div className={styles.formGroup}>
@@ -1660,127 +1535,6 @@ const EditTask: React.FC<EditTaskProps> = ({
                               + Invitar Colaborador
                             </button>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </WizardStep>
-                  <WizardStep step={3} validator={() => validateStep(stepFields[3] as (keyof FormValues)[])}>
-                    <div className={styles.section}>
-                      <h2 className={styles.sectionTitle}>Gestión de Recursos</h2>
-                      <div className={styles.resourceRow}>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Presupuesto Asignado*</label>
-                          <div className={styles.currencyInput}>
-                            <span className={styles.currencySymbol}>$</span>
-                            <Controller
-                              name="resources.budget"
-                              control={form.control}
-                              render={({ field }) => (
-                                <input
-                                  className={styles.input}
-                                  type="number"
-                                  placeholder="1000.00"
-                                  {...field}
-                                  onChange={(e) => field.onChange(e.target.value)}
-                                />
-                              )}
-                            />
-                          </div>
-                          {form.formState.errors.resources?.budget && (
-                            <span className={styles.error}>{form.formState.errors.resources.budget.message}</span>
-                          )}
-                        </div>
-                        <div className={styles.formGroup}>
-                          <label className={styles.label}>Horas asignadas a esta tarea*</label>
-                          <Controller
-                            name="resources.hours"
-                            control={form.control}
-                            render={({ field }) => (
-                              <input
-                                className={styles.input}
-                                type="number"
-                                placeholder="120"
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.value)}
-                              />
-                            )}
-                          />
-                          {form.formState.errors.resources?.hours && (
-                            <span className={styles.error}>{form.formState.errors.resources.hours.message}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </WizardStep>
-                  <WizardStep step={4} validator={() => validateStep(stepFields[4] as (keyof FormValues)[])}>
-                    <div className={styles.section}>
-                      <h2 className={styles.sectionTitle}>Configuración Avanzada</h2>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Metodología del Proyecto</label>
-                        <Controller
-                          name="advanced.methodology"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Selecciona una metodología"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.methodology && (
-                          <span className={styles.error}>{form.formState.errors.advanced.methodology.message}</span>
-                        )}
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Riesgos Potenciales</label>
-                        <Controller
-                          name="advanced.risks"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Ej: Retrasos en entregas, Falta de recursos"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.risks && (
-                          <span className={styles.error}>{form.formState.errors.advanced.risks.message}</span>
-                        )}
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Estrategias de Mitigación</label>
-                        <Controller
-                          name="advanced.mitigation"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Ej: Contratar freelancers como respaldo"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.mitigation && (
-                          <span className={styles.error}>{form.formState.errors.advanced.mitigation.message}</span>
-                        )}
-                      </div>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>Interesados</label>
-                        <Controller
-                          name="advanced.stakeholders"
-                          control={form.control}
-                          render={({ field }) => (
-                            <input
-                              className={styles.input}
-                              placeholder="Ej: Cliente, equipo interno"
-                              {...field}
-                            />
-                          )}
-                        />
-                        {form.formState.errors.advanced?.stakeholders && (
-                          <span className={styles.error}>{form.formState.errors.advanced.stakeholders.message}</span>
                         )}
                       </div>
                     </div>

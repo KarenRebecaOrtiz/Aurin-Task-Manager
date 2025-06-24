@@ -653,13 +653,11 @@ function TasksPageContent() {
 
     const getDeleteContent = () => {
       if (deleteTarget.type === 'task') {
-        const task = tasks.find(t => t.id === deleteTarget.id);
         return {
           title: '¿Seguro que quieres eliminar esta tarea?',
           description: `Eliminar esta tarea borrará permanentemente todas sus conversaciones y datos asociados. Se notificará a todos los involucrados.`
         };
       } else {
-        const client = clients.find(c => c.id === deleteTarget.id);
         return {
           title: '¿Seguro que quieres eliminar esta cuenta?',
           description: `Eliminar esta cuenta borrará permanentemente todos sus proyectos y datos asociados. Se notificará a todos los involucrados.`
@@ -679,7 +677,7 @@ function TasksPageContent() {
         isDeleting={isDeleting}
       />
     );
-  }, [isDeletePopupOpen, deleteTarget, handleDeleteCancel, handleDeleteConfirm, isDeleting, tasks, clients]);
+  }, [isDeletePopupOpen, deleteTarget, handleDeleteCancel, handleDeleteConfirm, isDeleting]);
 
   const handleOpenSidebar = useCallback(
     (receiverId: string) => {

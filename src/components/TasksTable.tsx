@@ -130,13 +130,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const clientDropdownRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-    const userId = useMemo(() => {
-      const id = user?.id || '';
-      console.log('[TasksTable] User ID:', { userId: id });
-      return id;
-    }, [user]);
-
-    // Removed local isAdmin fetch useEffect
+    const userId = useMemo(() => user?.id || '', [user]);
 
     useEffect(() => {
       setFilteredTasks(tasks);
@@ -526,9 +520,105 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return col;
     });
 
-    // Handle loading state
-    if (isLoading) {
-      return <Loader />;
+    // Handle loading state - mostrar loader mientras cargan los datos
+    if (isLoading || tasks.length === 0) {
+      return (
+        <div className={styles.container}>
+          <UserSwiper
+            onOpenProfile={onOpenProfile}
+            onMessageSidebarOpen={onMessageSidebarOpen}
+            className={styles.hideOnMobile}
+          />
+          <div className={styles.header} style={{margin:'30px 0px'}}>
+            <div className={styles.searchWrapper}>
+              <input
+                type="text"
+                placeholder="Buscar Tareas"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  console.log('[TasksTable] Search query updated:', e.target.value);
+                }}
+                className={styles.searchInput}
+                aria-label="Buscar tareas"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className={styles.filtersWrapper}>
+              <button
+                className={`${styles.viewButton} ${styles.hideOnMobile}`}
+                onClick={(e) => {
+                  if (isLoading) return;
+                  animateClick(e.currentTarget);
+                  onViewChange('kanban');
+                  console.log('[TasksTable] Switching to Kanban view');
+                }}
+                disabled={isLoading}
+              >
+                <Image
+                  src="/kanban.svg"
+                  draggable="false"
+                  alt="kanban"
+                  width={20}
+                  height={20}
+                  style={{
+                    marginLeft: '5px',
+                    transition: 'transform 0.3s ease, filter 0.3s ease',
+                    filter: isLoading 
+                      ? 'grayscale(1) opacity(0.5)' 
+                      : 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                  }}
+                />
+                Vista Kanban
+              </button>
+
+              <button
+                className={styles.createButton}
+                onClick={(e) => {
+                  if (isLoading) return;
+                  animateClick(e.currentTarget);
+                  onNewTaskOpen();
+                  console.log('[TasksTable] New task creation triggered');
+                }}
+                disabled={isLoading}
+              >
+                <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
+                Crear Tarea
+              </button>
+            </div>
+          </div>
+          
+          {isLoading ? (
+            <Loader />
+          ) : (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              minHeight: '300px',
+              gap: '16px'
+            }}>
+              <Image
+                src="/emptyStateImage.png"
+                alt="No hay tareas"
+                width={200}
+                height={200}
+                style={{ opacity: 0.6 }}
+              />
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ marginBottom: '8px', color: 'var(--text-color)' }}>
+                  No hay tareas disponibles
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                  {isAdmin ? 'Comienza creando tu primera tarea' : 'Las tareas aparecerán aquí cuando sean asignadas'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      );
     }
 
     return (
