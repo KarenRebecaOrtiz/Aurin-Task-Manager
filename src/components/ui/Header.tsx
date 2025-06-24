@@ -595,7 +595,7 @@ const Header: React.FC<HeaderProps> = ({
               />
             )}
           </div>
-          <div
+          <div 
             style={{
               fontSize: '10px',
               fontFamily: 'Inconsolata, monospace',
@@ -606,7 +606,7 @@ const Header: React.FC<HeaderProps> = ({
                   ? '#dc3545'
                   : '#ff6f00',
             }}
-            className="ClockOfficeStatus"
+            className={styles.ClockOfficeStatuHidden}
           >
             {officeStatus}
           </div>

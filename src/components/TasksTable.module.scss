@@ -155,9 +155,7 @@
     font-size: 12px;
     min-width: 150px;
   }
-  .container{
-    padding: 0px!important;
-  }
+
 }
 
 .filtersWrapper {
@@ -319,33 +317,6 @@
     inset -1px -1px 4px rgba(255, 255, 255, 0.05);
 }
 
-.dark .createButton {
-  background: #ffffff;
-  color: #000000;
-  box-shadow:
-    inset -2px -2px 4px rgba(0, 0, 0, 0.05),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.dark .createButton:hover {
-  background: #e5e5e5;
-  box-shadow:
-    inset -2px -2px 4px rgba(0, 0, 0, 0.05),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.5),
-    0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.dark .createButton:active {
-  background: #ffffff;
-  box-shadow:
-    inset 1px 1px 4px rgba(0, 0, 0, 0.2),
-    inset -1px -1px 4px rgba(255, 255, 255, 0.2);
-}
-
-.dark .createButton img {
-  filter: invert(1) grayscale(1) brightness(1.5);
-}
 
 .dropdownContainer {
   position: relative;
@@ -444,6 +415,16 @@
 
  .dropdownTrigger img  {
   margin-right: 5px;
+}
+
+
+
+
+:global(body.dark) .createButton  {
+  color: rgb(0, 0, 0);
+  background-color: rgb(239, 239, 239);
+  border-color: rgb(57, 57, 57);
+  box-shadow: none;
 }
 
 

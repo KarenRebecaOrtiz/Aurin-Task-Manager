@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import styles from './Dock.module.scss';
 import Image from 'next/image';
-import ToDoDynamic from '@/components/ToDoDynamic';
 
 
 interface Shortcut {
@@ -174,11 +173,7 @@ const Dock: React.FC = () => {
 
           ))}
         </ul>
-        <ul>
-          <li>
-          <ToDoDynamic/>
-          </li>
-        </ul>
+
 
       </nav>
     </section>
