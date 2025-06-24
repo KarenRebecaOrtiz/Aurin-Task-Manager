@@ -20,6 +20,13 @@
   .typewriterWrapper {
     display: inline-block;
   }
+
+  .superiorHeader{
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+  }
   
   .adminButtonWrapper {
     display: inline-block;
@@ -290,39 +297,7 @@
         2px 2px 6px rgba(0, 0, 0, 0.06);
     }
   
-    /* ——— Modo oscuro ——— */
-    :global(.dark) & {
-      background: rgba(30, 30, 30, 0.7); /* Semi-transparent #1E1E1E */
-      border-color: rgba(255, 255, 255, 0.1);
-      box-shadow:
-        /* Outset: Dark neomorphic */
-        6px 6px 12px rgba(0, 0, 0, 0.5),
-        -6px -6px 12px rgba(255, 255, 255, 0.05),
-        /* Inset: Carved effect */
-        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
   
-      &:hover {
-        transform: translateY(-2px) scale(1.02);
-        background: rgba(30, 30, 30, 0.85);
-        border-color: rgba(255, 255, 255, 0.2);
-        box-shadow:
-          4px 4px 10px rgba(0, 0, 0, 0.6),
-          -4px -4px 10px rgba(255, 255, 255, 0.03),
-          inset -6px -6px 12px rgba(0, 0, 0, 0.45),
-          inset 6px 6px 12px rgba(255, 255, 255, 0.04);
-      }
-  
-      &:active {
-        background: rgba(30, 30, 30, 0.6);
-        border-color: rgba(255, 255, 255, 0.05);
-        box-shadow:
-          inset 2px 2px 6px rgba(0, 0, 0, 0.35),
-          inset -2px -2px 6px rgba(255, 255, 255, 0.02),
-          2px 2px 6px rgba(0, 0, 0, 0.45),
-          -2px -2px 6px rgba(255, 255, 255, 0.04);
-      }
-    }
   
     /* ——— Responsividad ——— */
     @media (max-width: 1024px) {
@@ -513,6 +488,9 @@
       }
     }
   
+
+
+
     /* ——— Responsividad ——— */
     @media (max-width: 1024px) {
       height: 70px;
@@ -722,39 +700,17 @@
         inset -2px -2px 4px rgba(255, 255, 255, 0.4),
         inset 2px 2px 4px rgba(209, 217, 230, 0.2);
     }
+
+  }
+  :global(body.dark) .notificationContainer .notificationButton img{
+    filter: invert(100%) brightness(100%);
+  } 
+  :global(body.dark) .Clock,
+  :global(body.dark) .notificationButton {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.356);
+    box-shadow:none;
   
-    /* ——— Modo oscuro ——— */
-    :global(.dark) & {
-      background: rgba(39, 39, 42, 0.7); /* Semi-transparent #27272a */
-      border-color: rgba(255, 255, 255, 0.1);
-      box-shadow:
-        /* Outset: Dark mode neomorphic */
-        -8px -8px 16px rgba(255, 255, 255, 0.05),
-        8px 8px 16px rgba(0, 0, 0, 0.5),
-        /* Inset: Carved effect */
-        inset -4px -4px 8px rgba(255, 255, 255, 0.03),
-        inset 4px 4px 8px rgba(0, 0, 0, 0.4);
-  
-      &:hover {
-        background: rgba(39, 39, 42, 0.85);
-        border-color: rgba(255, 255, 255, 0.2);
-        box-shadow:
-          -10px -10px 20px rgba(255, 255, 255, 0.07),
-          10px 10px 20px rgba(0, 0, 0, 0.55),
-          inset -6px -6px 12px rgba(255, 255, 255, 0.04),
-          inset 6px 6px 12px rgba(0, 0, 0, 0.45);
-      }
-  
-      &:active {
-        background: rgba(39, 39, 42, 0.6);
-        border-color: rgba(255, 255, 255, 0.05);
-        box-shadow:
-          -4px -4px 8px rgba(255, 255, 255, 0.04),
-          4px 4px 8px rgba(0, 0, 0, 0.45),
-          inset -2px -2px 4px rgba(255, 255, 255, 0.02),
-          inset 2px 2px 4px rgba(0, 0, 0, 0.35);
-      }
-    }
   }
   
   .ClockOfficeStatus {
@@ -900,6 +856,7 @@
       visibility: visible;
       opacity: 1;
     }
+  
     .AvatarMobile {
       display: none;
       visibility: hidden;
@@ -913,6 +870,19 @@
       display: none;
       visibility: hidden;
       opacity: 0;
+    }
+    .text {
+      width: 100%!important;
+    }
+    .notificationButton {
+      width: 64px!important;
+      height: 64px!important;
+    }
+    .superiorHeader{
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      gap: 5px;
     }
     .AvatarMobile {
       display: block;

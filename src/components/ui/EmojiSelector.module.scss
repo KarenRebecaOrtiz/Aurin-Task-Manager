@@ -95,6 +95,11 @@
   }
 }
 
+
+:global(body.dark) .button img{
+    filter: invert(100)brightness(100);
+}
+
 .popover {
   @include neomorphic-container;
   width: 320px;
@@ -119,6 +124,14 @@
     transform: scale(0.95);
     pointer-events: none;
   }
+}
+
+:global(body.dark) .paginationButton,
+:global(body.dark) .tabTrigger,
+:global(body.dark) .emojiButton,
+:global(body.dark) .popover {
+  box-shadow: none;
+  background: #1f1f20;
 }
 
 .searchInput {

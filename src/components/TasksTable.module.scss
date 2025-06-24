@@ -17,14 +17,10 @@
   min-height: calc(100vh - 200px);
 }
 
-.dark .container {
-  background: rgba(39, 39, 42, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset -4px -4px 8px rgba(0, 0, 0, 0.7),
-    inset 4px 4px 8px rgba(255, 255, 255, 0.03),
-    -8px -8px 16px rgba(0, 0, 0, 0.6),
-    8px 8px 16px rgba(255, 255, 255, 0.02);
+:global(body.dark) .container  {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow:none;
 }
 
 .header {
@@ -102,16 +98,14 @@
     2px 2px 4px rgba(0, 0, 0, 0.03);
 }
 
-.dark .searchInput {
-  background: rgba(39, 39, 42, 0.8);
-  color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset -2px -2px 4px rgba(0, 0, 0, 0.7),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.03),
-    -4px -4px 8px rgba(0, 0, 0, 0.6),
-    4px 4px 6px rgba(255, 255, 255, 0.02);
+
+:global(body.dark) .searchInput  {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(224, 224, 224, 0.202);
+  box-shadow:none;
+  color: white!important;
 }
+
 
 .dark .searchInput::placeholder {
   color: #9ca3af;
@@ -160,6 +154,9 @@
     padding: 8px 12px;
     font-size: 12px;
     min-width: 150px;
+  }
+  .container{
+    padding: 0px!important;
   }
 }
 
@@ -249,6 +246,10 @@
     2px 2px 4px rgba(0, 0, 0, 0.03);
 }
 
+:global(body.dark) .filtersWrapper button img{
+  filter: invert(100%) brightness(100%);
+} 
+
 .filterButton img,
 .createButton img,
 .viewButton img {
@@ -256,48 +257,10 @@
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
 }
 
-.dark .filterButton,
-.dark .createButton,
-.dark .viewButton {
-  background: rgba(39, 39, 42, 0.8);
-  color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset -2px -2px 4px rgba(0, 0, 0, 0.7),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.03),
-    -4px -4px 8px rgba(0, 0, 0, 0.6),
-    4px 4px 8px rgba(255, 255, 255, 0.02);
+:global(body.dark).viewButton  {
+  filter: invert(100) brightness(100)!important;
 }
 
-.dark .filterButton img,
-.dark .createButton img,
-.dark .viewButton img {
-  filter: invert(1) grayscale(1) brightness(1.4) drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
-}
-
-.dark .filterButton:hover,
-.dark .createButton:hover,
-.dark .viewButton:hover {
-  background: rgba(39, 39, 42, 0.85);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow:
-    inset -2px -2px 6px rgba(0, 0, 0, 0.8),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.05),
-    -6px -6px 12px rgba(0, 0, 0, 0.7),
-    6px 6px 12px rgba(255, 255, 255, 0.03);
-}
-
-.dark .filterButton:active,
-.dark .createButton:active,
-.dark .viewButton:active {
-  background: rgba(39, 39, 42, 0.6);
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow:
-    inset 2px 2px 6px rgba(255, 255, 255, 0.02),
-    inset -2px -2px 6px rgba(0, 0, 0, 0.75),
-    -2px -2px 4px rgba(0, 0, 0, 0.6),
-    2px 2px 4px rgba(255, 255, 255, 0.01);
-}
 
 @media (max-width: 1024px) {
   .filterButton,
@@ -320,6 +283,17 @@
     gap: 6px;
   }
 }
+
+
+:global(body.dark) .viewButton  {
+  color: white;
+  background-color: black;
+  border-color: rgb(57, 57, 57);
+  box-shadow: none;
+}
+
+
+
 
 .createButton {
   background: #0a0a0a;
@@ -466,6 +440,22 @@
     inset -2px -2px 6px rgba(0, 0, 0, 0.75),
     -2px -2px 4px rgba(0, 0, 0, 0.6),
     2px 2px 4px rgba(255, 255, 255, 0.01);
+}
+
+ .dropdownTrigger img  {
+  margin-right: 5px;
+}
+
+
+:global(body.dark) .dropdownTrigger  {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(224, 224, 224, 0.202);
+  box-shadow:none;
+  color: white;
+}
+:global(body.dark) .dropdownTrigger img  {
+  filter: invert(100)brightness(100);
+  margin-right: 5px;
 }
 
 @media (max-width: 1024px) {
@@ -900,6 +890,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+:global(body.dark) .actionContainer{
+  filter: invert(100%) brightness(100%);
 }
 
 .statusWrapper{

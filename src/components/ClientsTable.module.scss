@@ -111,53 +111,7 @@
         -2px -2px 4px rgba(255, 255, 255, 0.8),
         2px 2px 4px rgba(0, 0, 0, 0.03);
     }
-  
-    /* ——— 🌙 Modo oscuro ——— */
-    :global(.dark) & {
-      background: rgba(39, 39, 42, 0.8); /* Semi-transparent #27272a */
-      color: #E5E7EB;
-      border-color: rgba(255, 255, 255, 0.1);
-      box-shadow:
-        inset -2px -2px 4px rgba(0, 0, 0, 0.7),
-        inset 2px 2px 6px rgba(255, 255, 255, 0.03),
-        -4px -4px 8px rgba(0, 0, 0, 0.6),
-        4px 4px 6px rgba(255, 255, 255, 0.02);
-  
-      &::placeholder {
-        color: #6B7280;
-      }
-  
-      &:hover {
-        background: rgba(39, 39, 42, 0.85);
-        border-color: rgba(255, 255, 255, 0.2);
-        transform: translateY(-1px) scale(1.01);
-        box-shadow:
-          -6px -6px 10px rgba(0, 0, 0, 0.7),
-          6px 6px 10px rgba(255, 255, 255, 0.04),
-          inset -2px -2px 6px rgba(0, 0, 0, 0.8),
-          inset 2px 2px 6px rgba(255, 255, 255, 0.05);
-      }
-  
-      &:focus {
-        background: rgba(39, 39, 42, 0.9);
-        border-color: transparent;
-        box-shadow:
-          inset -4px -4px 4px rgba(0, 0, 0, 0.7),
-          inset 2px 2px 6px rgba(255, 255, 255, 0.08),
-          0 0 0 4px rgba(59, 191, 246, 0.4);
-      }
-  
-      &:active {
-        background: rgba(39, 39, 42, 0.6);
-        border-color: rgba(255, 255, 255, 0.05);
-        transform: scale(0.98);
-        box-shadow:
-          inset -4px -4px 6px rgba(0, 0, 0, 0.75),
-          inset 4px 4px 6px rgba(255, 255, 255, 0.02),
-          -2px -2px 4px rgba(0, 0, 0, 0.6),
-          2px 2px 4px rgba(255, 255, 255, 0.01);
-      }
-    }
+
   
     /* ——— Responsiveness ——— */
     @media (max-width: 1024px) {
@@ -173,6 +127,14 @@
       min-width: 150px;
     }
   }
+
+  :global(body.dark) .searchInput  {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(224, 224, 224, 0.202);
+    box-shadow:none;
+    color: white!important;
+  }
+  
 
 .createButtonWrapper {
     display: flex;

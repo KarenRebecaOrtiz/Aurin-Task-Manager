@@ -108,6 +108,9 @@ interface Sidebar {
   data?: User | Task | { client?: Client };
 }
 
+// Orden de los contenedores (fuera del componente para evitar recreación en cada render)
+const containerOrder: SelectorContainer[] = ['tareas', 'cuentas', 'miembros'];
+
 // Separate component to handle auth context
 function TasksPageContent() {
   const { user } = useUser();
@@ -779,6 +782,46 @@ function TasksPageContent() {
     setIsEditTaskOpen(false);
     setEditTaskId(null);
   }, []);
+
+  // --- SWIPE GESTURE FOR CONTAINER SWITCH ---
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const swipeThreshold = 60; // px
+
+  // Detectar swipe en toda la pantalla
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.innerWidth >= 768) return;
+      touchStartX.current = e.touches[0].clientX;
+      touchEndX.current = e.touches[0].clientX;
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (window.innerWidth >= 768) return;
+      touchEndX.current = e.touches[0].clientX;
+    };
+    const handleTouchEnd = () => {
+      if (window.innerWidth >= 768) return;
+      const deltaX = touchEndX.current - touchStartX.current;
+      if (Math.abs(deltaX) > swipeThreshold) {
+        const currentIdx = containerOrder.indexOf(selectedContainer as SelectorContainer);
+        if (deltaX < 0 && currentIdx < containerOrder.length - 1) {
+          // Swipe left: siguiente contenedor
+          handleContainerChange(containerOrder[currentIdx + 1]);
+        } else if (deltaX > 0 && currentIdx > 0) {
+          // Swipe right: contenedor anterior
+          handleContainerChange(containerOrder[currentIdx - 1]);
+        }
+      }
+    };
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [selectedContainer, handleContainerChange]);
 
   // Handle loading and error states
   if (isLoading) {

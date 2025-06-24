@@ -124,9 +124,7 @@
   transform: translateY(-3px);
   background: rgba(255, 255, 255, 0.12);
 
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.4),
-    6px 6px 12px rgba(0, 0, 0, 0.05);
+  box-shadow:none;
 }
 
 /* 🌑 Modo oscuro */
@@ -190,6 +188,10 @@
 
 :global(body.dark) .actionButton:hover {
   background-color: #272727;
+}
+
+:global(body.dark) .actionContainer{
+  filter: invert(100%) brightness(100%);
 }
 
 .actionButton img {

@@ -542,8 +542,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-        <div className={styles.Clock}>
+      <div className={styles.superiorHeader}>        <div className={styles.Clock}>
           <div
             style={{ fontSize: '10px', fontFamily: 'Inconsolata, monospace' }}
             className="ClockDate"

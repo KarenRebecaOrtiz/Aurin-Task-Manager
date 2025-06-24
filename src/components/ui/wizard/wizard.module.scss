@@ -183,6 +183,16 @@
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
+:global(body.dark) .wizardButton:hover:not(:disabled),
+:global(body.dark) .wizardButton {
+  background: rgba(21, 21, 21, 0.8);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.356);
+  box-shadow:none;
+
+}
+
+
 .wizardButton:hover:not(:disabled) {
   background: $zinc-100;
   transform: translateY(-2px);

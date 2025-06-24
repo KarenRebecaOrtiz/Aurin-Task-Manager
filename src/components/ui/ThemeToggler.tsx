@@ -61,8 +61,8 @@ const ThemeToggler = () => {
     // For now, we'll rely on transition for smooth changes
   }}
   onMouseEnter={(e) => {
-    e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-    e.currentTarget.style.background = isDarkMode ? 'rgba(30, 30, 30, 0.85)' : 'rgba(241, 245, 249, 0.85)';
+    e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';    
+    e.currentTarget.style.background = isDarkMode ? 'rgb(17 17 17 / 70%)' : 'rgba(241, 245, 249, 0.85)';
     e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
     e.currentTarget.style.boxShadow = isDarkMode
       ? '10px 10px 20px rgba(0, 0, 0, 0.65), -10px -10px 20px rgba(255, 255, 255, 0.07), inset -6px -6px 12px rgba(0, 0, 0, 0.45), inset 6px 6px 12px rgba(255, 255, 255, 0.04)'

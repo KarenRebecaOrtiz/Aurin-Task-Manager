@@ -58,7 +58,7 @@
   }
 
   :global(.dark) & {
-    background: rgba(39, 39, 42, 0.7);
+    background: rgb(12, 12, 12);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow:
       -8px -8px 16px rgba(255, 255, 255, 0.05),
@@ -289,14 +289,12 @@
   background: rgba(241, 245, 249, 0.5);
   border-radius: 12px;
   box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.7),
-    6px 6px 12px rgba(0, 0, 0, 0.05);
+  none;
 
   :global(.dark) & {
-    background: rgba(39, 39, 42, 0.5);
+    background: rgb(18, 18, 19);
     box-shadow:
-      -6px -6px 12px rgba(255, 255, 255, 0.03),
-      6px 6px 12px rgba(0, 0, 0, 0.3);
+     none;
   }
 
   @media (min-width: 768px) {
@@ -366,7 +364,7 @@
     inset 2px 2px 4px rgba(209, 217, 230, 0.2);
 
   :global(.dark) & {
-    background: rgba(30, 30, 30, 0.7);
+    background: rgb(24, 24, 24);
     border-color: rgba(255, 255, 255, 0.1);
     color: #d1d5db;
     box-shadow:

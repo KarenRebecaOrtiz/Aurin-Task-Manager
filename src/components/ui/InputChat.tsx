@@ -533,267 +533,269 @@ export default function InputChat({
         onCancel={handleCloseTimerPanel}
         ref={timerPanelRef}
       />
-      <form
-        className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
-        ref={inputWrapperRef}
-        onDragOver={handleDragOver}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        onSubmit={handleSend}
-      >
-        <div className={styles.toolbar}>
-          {formatButtons.map(({ id, icon, label, shortcut }) => (
-            <button
-              key={id}
-              type="button"
-              className={`${styles['format-button']} ${styles.tooltip}`}
-              data-active={editor?.isActive(id) ? 'true' : 'false'}
-              onClick={() => toggleFormat(id)}
-              disabled={isSending || isProcessing}
-              title={`${label} (${shortcut})`}
-              aria-label={label}
-            >
-              <Image
-                src={icon}
-                alt={label}
-                width={16}
-                height={16}
-                className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`}
-                style={{ filter: 'none', fill: '#000000' }}
-              />
-            </button>
-          ))}
-        </div>
-        {isProcessing && (
-          <div className={styles.processingSpinner}>
-            <svg width="16" height="16" viewBox="0 0 24 24" className="animate-spin">
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-                className="opacity-25"
-              />
-              <path
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                className="opacity-75"
-              />
-            </svg>
+      {!isTimerPanelOpen && (
+        <form
+          className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
+          ref={inputWrapperRef}
+          onDragOver={handleDragOver}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onSubmit={handleSend}
+        >
+          <div className={styles.toolbar}>
+            {formatButtons.map(({ id, icon, label, shortcut }) => (
+              <button
+                key={id}
+                type="button"
+                className={`${styles['format-button']} ${styles.tooltip}`}
+                data-active={editor?.isActive(id) ? 'true' : 'false'}
+                onClick={() => toggleFormat(id)}
+                disabled={isSending || isProcessing}
+                title={`${label} (${shortcut})`}
+                aria-label={label}
+              >
+                <Image
+                  src={icon}
+                  alt={label}
+                  width={16}
+                  height={16}
+                  className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`}
+                  style={{ filter: 'none', fill: '#000000' }}
+                />
+              </button>
+            ))}
           </div>
-        )}
-        {previewUrl && (
-          <div className={styles.imagePreview}>
-            <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
-            <button
-              className={styles.removeImageButton}
-              onClick={handleRemoveFile}
-              type="button"
-              title="Eliminar imagen"
-            >
-              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
-            </button>
-          </div>
-        )}
-        {file && !previewUrl && (
-          <div className={styles.filePreview}>
-            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-            <span>{file.name}</span>
-            <button
-              className={styles.removeImageButton}
-              onClick={handleRemoveFile}
-              type="button"
-              title="Eliminar archivo"
-            >
-              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
-            </button>
-          </div>
-        )}
-        <div className="relative">
-          <EditorContent
-            ref={editorRef}
-            editor={editor}
-            style={{
-              fontFamily: '"Inter Tight", sans-serif',
-              minHeight: '36px',
-              maxHeight: '200px',
-              resize: 'none',
-              overflow: 'hidden',
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
-                e.preventDefault();
-                handleSend(e);
-              } else if (e.key === 'Enter') {
-                setTimeout(adjustEditorHeight, 0);
-              }
-            }}
-          />
-        </div>
-        <div className={styles.actions}>
-          <div className={styles.timerContainer} style={{ width: '100%' }}>
-            <button
-              className={styles.playStopButton}
-              onClick={onToggleTimer}
-              disabled={isProcessing}
-              type="button"
-              aria-label={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
-              title={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
-            >
-              <Image
-                src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
-                alt={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
-                width={12}
-                height={12}
-              />
-            </button>
-            <div
-              className={styles.timer}
-              onClick={handleToggleTimerPanel}
-              title="Abrir/cerrar panel de temporizador"
-            >
-              <span>{formatTime(timerSeconds)}</span>
-              <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
+          {isProcessing && (
+            <div className={styles.processingSpinner}>
+              <svg width="16" height="16" viewBox="0 0 24 24" className="animate-spin">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                  className="opacity-25"
+                />
+                <path
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  className="opacity-75"
+                />
+              </svg>
             </div>
+          )}
+          {previewUrl && (
+            <div className={styles.imagePreview}>
+              <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
+              <button
+                className={styles.removeImageButton}
+                onClick={handleRemoveFile}
+                type="button"
+                title="Eliminar imagen"
+              >
+                <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              </button>
+            </div>
+          )}
+          {file && !previewUrl && (
+            <div className={styles.filePreview}>
+              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+              <span>{file.name}</span>
+              <button
+                className={styles.removeImageButton}
+                onClick={handleRemoveFile}
+                type="button"
+                title="Eliminar archivo"
+              >
+                <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              </button>
+            </div>
+          )}
+          <div className="relative">
+            <EditorContent
+              ref={editorRef}
+              editor={editor}
+              style={{
+                fontFamily: '"Inter Tight", sans-serif',
+                minHeight: '36px',
+                maxHeight: '200px',
+                resize: 'none',
+                overflow: 'hidden',
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
+                  e.preventDefault();
+                  handleSend(e);
+                } else if (e.key === 'Enter') {
+                  setTimeout(adjustEditorHeight, 0);
+                }
+              }}
+            />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-            <div className={styles.dropupContainer} ref={dropupRef}>
+          <div className={styles.actions}>
+            <div className={styles.timerContainer} style={{ width: '100%' }}>
+              <button
+                className={styles.playStopButton}
+                onClick={onToggleTimer}
+                disabled={isProcessing}
+                type="button"
+                aria-label={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
+                title={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
+              >
+                <Image
+                  src={isTimerRunning ? '/Stop.svg' : '/Play.svg'}
+                  alt={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
+                  width={12}
+                  height={12}
+                />
+              </button>
+              <div
+                className={styles.timer}
+                onClick={handleToggleTimerPanel}
+                title="Abrir/cerrar panel de temporizador"
+              >
+                <span>{formatTime(timerSeconds)}</span>
+                <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+              <div className={styles.dropupContainer} ref={dropupRef}>
+                <button
+                  type="button"
+                  className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${
+                    hasReformulated ? styles.reformulated : ''
+                  } ${isProcessing ? 'processing' : ''}`}
+                  onClick={() => setIsDropupOpen((prev) => !prev)}
+                  disabled={isSending || isProcessing || !editor || editor.isEmpty}
+                  aria-label="Reformular texto con Gemini AI"
+                  title="Reformular texto con Gemini AI ✨"
+                  aria-expanded={isDropupOpen}
+                >
+                  <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} />
+                </button>
+                {isDropupOpen && (
+                  <div className={styles.dropupMenu} role="menu">
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('correct')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Corregir ortografía y gramática"
+                    >
+                      ✏️ Corregir
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('rewrite')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Reescribir el texto con diferentes palabras"
+                    >
+                      🔄 Re-escribir
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('friendly')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Transformar a un tono más amigable y cercano"
+                    >
+                      😊 Hacer amigable
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('professional')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Convertir a un tono más profesional y formal"
+                    >
+                      💼 Hacer profesional
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('concise')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Hacer el texto más conciso y directo"
+                    >
+                      ⚡ Hacer conciso
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('summarize')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Resumir los puntos más importantes"
+                    >
+                      📝 Resumir
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('keypoints')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Extraer los puntos clave como lista"
+                    >
+                      🎯 Puntos clave
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropupItem}
+                      onClick={() => handleReformulate('list')}
+                      disabled={isProcessing}
+                      role="menuitem"
+                      title="Convertir en lista organizada"
+                    >
+                      📋 Convertir en lista
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
-                className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${
-                  hasReformulated ? styles.reformulated : ''
-                } ${isProcessing ? 'processing' : ''}`}
-                onClick={() => setIsDropupOpen((prev) => !prev)}
-                disabled={isSending || isProcessing || !editor || editor.isEmpty}
-                aria-label="Reformular texto con Gemini AI"
-                title="Reformular texto con Gemini AI ✨"
-                aria-expanded={isDropupOpen}
+                className={`${styles.imageButton} ${styles.tooltip}`}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending || isProcessing}
+                aria-label="Adjuntar archivo"
+                title="Adjuntar archivo"
               >
-                <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} />
+                <Image
+                  src="/paperclip.svg"
+                  alt="Adjuntar"
+                  width={16}
+                  height={16}
+                  style={{ filter: 'invert(100)' }}
+                />
               </button>
-              {isDropupOpen && (
-                <div className={styles.dropupMenu} role="menu">
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('correct')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Corregir ortografía y gramática"
-                  >
-                    ✏️ Corregir
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('rewrite')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Reescribir el texto con diferentes palabras"
-                  >
-                    🔄 Re-escribir
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('friendly')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Transformar a un tono más amigable y cercano"
-                  >
-                    😊 Hacer amigable
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('professional')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Convertir a un tono más profesional y formal"
-                  >
-                    💼 Hacer profesional
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('concise')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Hacer el texto más conciso y directo"
-                  >
-                    ⚡ Hacer conciso
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('summarize')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Resumir los puntos más importantes"
-                  >
-                    📝 Resumir
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('keypoints')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Extraer los puntos clave como lista"
-                  >
-                    🎯 Puntos clave
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('list')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Convertir en lista organizada"
-                  >
-                    📋 Convertir en lista
-                  </button>
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              className={`${styles.imageButton} ${styles.tooltip}`}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSending || isProcessing}
-              aria-label="Adjuntar archivo"
-              title="Adjuntar archivo"
-            >
-              <Image
-                src="/paperclip.svg"
-                alt="Adjuntar"
-                width={16}
-                height={16}
-                style={{ filter: 'invert(100)' }}
+              <EmojiSelector
+                onEmojiSelect={(emoji) => {
+                  editor?.commands.insertContent(emoji);
+                  setTimeout(adjustEditorHeight, 0);
+                }}
+                disabled={isSending || isProcessing}
+                value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''}
+                containerRef={containerRef}
               />
-            </button>
-            <EmojiSelector
-              onEmojiSelect={(emoji) => {
-                editor?.commands.insertContent(emoji);
-                setTimeout(adjustEditorHeight, 0);
-              }}
-              disabled={isSending || isProcessing}
-              value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''}
-              containerRef={containerRef}
-            />
-            <button
-              type="submit"
-              className={styles.sendButton}
-              disabled={isSending || isProcessing || (!editor || editor.isEmpty) && !file}
-              aria-label="Enviar mensaje"
-            >
-              <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
-            </button>
+              <button
+                type="submit"
+                className={styles.sendButton}
+                disabled={isSending || isProcessing || (!editor || editor.isEmpty) && !file}
+                aria-label="Enviar mensaje"
+              >
+                <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
+              </button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      )}
       <input
         type="file"
         ref={fileInputRef}

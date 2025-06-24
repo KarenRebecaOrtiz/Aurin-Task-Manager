@@ -17,16 +17,7 @@
     position: relative;
     margin-top: 10px;
     transition: all 0.3s ease;
-  
-    :global(.dark) & {
-      background: rgba(39, 39, 42, 0.8);
-      border-color: rgba(255, 255, 255, 0.1);
-      box-shadow:
-        inset -2px -2px 4px rgba(0, 0, 0, 0.7),
-        inset 2px 2px 6px rgba(255, 255, 255, 0.03),
-        -4px -4px 8px rgba(0, 0, 0, 0.6),
-        4px 4px 6px rgba(255, 255, 255, 0.02);
-    }
+
   
     &:hover {
       background: rgba(241, 245, 249, 0.85);
@@ -35,6 +26,18 @@
         background: rgba(39, 39, 42, 0.85);
       }
     }
+  }
+
+    
+  :global(body.dark) .inputWrapper  {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.356);
+    box-shadow:none;
+  
+  }
+  :global(body.dark) .inputWrapper button img  {
+    filter: invert(100) brightness(100);
+  
   }
   
   .input {
@@ -181,6 +184,13 @@
       }
     }
   
+}
+
+
+@media screen and (max-width: 767px) {
+  .inputWrapper button {
+    min-width: 50px;
+  }
 }
 
   .countdownDisplay {

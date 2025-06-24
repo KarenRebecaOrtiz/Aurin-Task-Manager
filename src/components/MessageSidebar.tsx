@@ -119,7 +119,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [showDownArrow, setShowDownArrow] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
   const lastScrollTop = useRef(0);
+  const dragStartY = useRef(0);
+  const isDragging = useRef(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -570,6 +573,32 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     };
   }, [onClose]);
 
+  // Drag-to-close en mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (window.innerWidth >= 768) return;
+    // Si el touch es dentro del chat, no activar drag-to-close
+    if (chatRef.current && chatRef.current.contains(e.target as Node)) return;
+    dragStartY.current = e.touches[0].clientY;
+    isDragging.current = true;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (window.innerWidth >= 768 || !isDragging.current) return;
+    if (chatRef.current && chatRef.current.contains(e.target as Node)) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - dragStartY.current;
+    if (deltaY > 0) setDragOffset(deltaY);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (window.innerWidth >= 768 || !isDragging.current) return;
+    isDragging.current = false;
+    if (dragOffset > window.innerHeight * 0.3) {
+      onClose();
+    }
+    setDragOffset(0);
+  }, [dragOffset, onClose]);
+
   if (!senderId || !user?.id) {
     return (
       <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
@@ -600,7 +629,14 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   }
 
   return (
-    <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
+    <div
+      className={`${styles.container} ${isOpen ? styles.open : ''}`}
+      ref={sidebarRef}
+      style={window.innerWidth < 768 ? { transform: `translateY(${dragOffset}px)` } : undefined}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className={styles.header}>
         <div className={styles.controls}>
           <div
