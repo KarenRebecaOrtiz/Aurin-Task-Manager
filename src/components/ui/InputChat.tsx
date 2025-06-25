@@ -58,6 +58,7 @@ interface InputChatProps {
   containerRef: React.RefObject<HTMLElement>;
   timerPanelRef?: React.RefObject<HTMLDivElement>;
   totalHours: string;
+  isRestoringTimer?: boolean;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -85,6 +86,7 @@ export default function InputChat({
   setCommentInput,
   onAddTimeEntry,
   totalHours,
+  isRestoringTimer,
 }: InputChatProps) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -656,6 +658,25 @@ export default function InputChat({
                 title="Abrir/cerrar panel de temporizador"
               >
                 <span>{formatTime(timerSeconds)}</span>
+                {isRestoringTimer && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '-8px', 
+                    right: '-8px', 
+                    background: '#3b82f6', 
+                    color: 'white', 
+                    borderRadius: '50%', 
+                    width: '16px', 
+                    height: '16px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontSize: '10px',
+                    animation: 'pulse 1s infinite'
+                  }}>
+                    ↻
+                  </div>
+                )}
                 <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
               </div>
             </div>

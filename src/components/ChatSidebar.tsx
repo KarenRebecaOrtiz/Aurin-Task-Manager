@@ -597,16 +597,32 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       (doc) => {
         if (doc.exists()) {
           const timerData = doc.data() as TimerState;
+          console.log('[ChatSidebar:Timer] Firestore timer update:', {
+            isRunning: timerData.isRunning,
+            startTime: timerData.startTime?.toDate(),
+            accumulatedSeconds: timerData.accumulatedSeconds,
+            taskId: task.id,
+            userId: user.id
+          });
+          
           setIsTimerRunning(timerData.isRunning);
           if (timerData.isRunning && timerData.startTime) {
             const start = timerData.startTime.toDate().getTime();
             const now = Date.now();
             const elapsedSeconds = Math.floor((now - start) / 1000) + timerData.accumulatedSeconds;
+            console.log('[ChatSidebar:Timer] Calculating elapsed time:', {
+              start: new Date(start),
+              now: new Date(now),
+              elapsedSeconds,
+              accumulatedSeconds: timerData.accumulatedSeconds
+            });
             setTimerSeconds(elapsedSeconds);
           } else {
+            console.log('[ChatSidebar:Timer] Setting accumulated time:', timerData.accumulatedSeconds);
             setTimerSeconds(timerData.accumulatedSeconds);
           }
         } else {
+          console.log('[ChatSidebar:Timer] Initializing new timer document');
           setDoc(timerDocRef, {
             userId: user.id,
             isRunning: false,
@@ -1262,10 +1278,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const toggleTimer = async (_e: React.MouseEvent) => {
     if (!user?.id || !task.id) {
+      console.error('[ChatSidebar:ToggleTimer] Missing user ID or task ID:', { userId: user?.id, taskId: task.id });
       return;
     }
+    
     handleClick(_e.currentTarget as HTMLElement);
     const wasRunning = isTimerRunning;
+    console.log('[ChatSidebar:ToggleTimer] Toggling timer:', {
+      wasRunning,
+      currentSeconds: timerSeconds,
+      taskId: task.id,
+      userId: user.id
+    });
+    
     setIsTimerRunning((prev) => !prev);
     setHasInteracted(true);
 
@@ -1276,6 +1301,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const displayMinutes = Math.floor((timerSeconds % 3600) / 60);
       const timeEntry = `${displayHours}h ${displayMinutes}m`;
       const timestamp = Timestamp.now();
+
+      console.log('[ChatSidebar:ToggleTimer] Stopping timer and adding time entry:', {
+        hours,
+        timeEntry,
+        timerSeconds
+      });
 
       try {
         // Cifrar el mensaje de tiempo antes de guardarlo
@@ -1297,16 +1328,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           accumulatedSeconds: 0,
         });
         setTimerSeconds(0);
+        console.log('[ChatSidebar:ToggleTimer] Timer stopped and time entry added successfully');
       } catch (error) {
         console.error('Error adding time entry', error);
       }
     } else if (!wasRunning) {
+      console.log('[ChatSidebar:ToggleTimer] Starting timer');
       try {
         await setDoc(timerDocRef, {
           userId: user.id,
           isRunning: true,
+          startTime: serverTimestamp(),
           accumulatedSeconds: timerSeconds,
         });
+        console.log('[ChatSidebar:ToggleTimer] Timer started successfully');
       } catch (error) {
         console.error('Error starting timer', error);
       }
@@ -1474,10 +1509,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
         case '6months':
-          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
           break;
         case '1year':
-          startDate = new Date(now.getTime() - 365 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
           break;
         default:
           startDate = new Date(0);
@@ -1636,10 +1671,10 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       case '6months':
-        startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
+        startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
         break;
       case '1year':
-        startDate = new Date(now.getTime() - 365 * 24 * 60 * 1000);
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         break;
       default:
         return true;

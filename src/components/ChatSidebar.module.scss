@@ -175,6 +175,7 @@
 
 .avatar {
   border-radius: 50%;
+  object-fit: cover;
 }
 
 // -----------------------------------
@@ -931,7 +932,6 @@
 .messageText {
   font-size: 14px;
   color: #333;
-  line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
 
@@ -945,9 +945,6 @@
   h2 { font-size: 1.3em; }
   h3 { font-size: 1.1em; }
 
-  p {
-    margin: 8px 0;
-  }
 
   strong, b {
     font-weight: 700;

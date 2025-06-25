@@ -152,6 +152,7 @@
 
 .avatar {
   border-radius: 50%;
+  object-fit: cover;
 }
 
 /* Área de chat */
@@ -630,9 +631,7 @@
 }
 
 .error {
-  color: #ff4d4f;
-  text-align: center;
-  padding: 10px;
+  display: none;
 }
 
 .loader {
