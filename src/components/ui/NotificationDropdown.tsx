@@ -26,7 +26,6 @@ interface NotificationDropdownProps {
   notifications: Notification[];
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   dropdownPosition: { top: number; right: number };
-  time: Date | null;
   onNotificationClick: (notification: Notification) => void;
   onDeleteNotification: (notificationId: string) => void;
   onClose: () => void;
@@ -38,7 +37,6 @@ export default React.memo(function NotificationDropdown({
   notifications,
   users,
   dropdownPosition,
-  time,
   onNotificationClick,
   onDeleteNotification,
   onClose,

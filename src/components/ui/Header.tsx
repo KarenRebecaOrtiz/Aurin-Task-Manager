@@ -723,7 +723,6 @@ const Header: React.FC<HeaderProps> = ({
             notifications={notifications}
             users={users}
             dropdownPosition={dropdownPosition}
-            time={time}
             onNotificationClick={handleNotificationClick}
             onDeleteNotification={handleDeleteNotification}
             onClose={handleCloseNotifications}

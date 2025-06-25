@@ -329,7 +329,6 @@ export default function InputChat({
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     
-    const editorElement = e.currentTarget as HTMLElement;
     const selection = window.getSelection();
     const hasSelection = selection && selection.toString().length > 0;
     
@@ -360,7 +359,7 @@ export default function InputChat({
             try {
               await navigator.clipboard.writeText(selection.toString());
               editor?.commands.deleteSelection();
-            } catch (err) {
+            } catch {
               // Fallback for older browsers
               const textArea = document.createElement('textarea');
               textArea.value = selection.toString();
@@ -381,7 +380,7 @@ export default function InputChat({
           if (hasSelection) {
             try {
               await navigator.clipboard.writeText(selection.toString());
-            } catch (err) {
+            } catch {
               // Fallback for older browsers
               const textArea = document.createElement('textarea');
               textArea.value = selection.toString();
@@ -401,7 +400,7 @@ export default function InputChat({
           try {
             const text = await navigator.clipboard.readText();
             editor?.commands.insertContent(text);
-          } catch (err) {
+          } catch {
             // Fallback for older browsers or when clipboard access is denied
             editor?.commands.focus();
             document.execCommand('paste');
@@ -423,7 +422,7 @@ export default function InputChat({
       }
     ];
 
-    menuItems.forEach((item, index) => {
+    menuItems.forEach((item) => {
       if (item.type === 'separator') {
         const separator = document.createElement('hr');
         separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';

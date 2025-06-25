@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo, forwardRef, Dispatch } from 'react';
-import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
@@ -22,7 +21,6 @@ import {
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
-import { InputMessage } from './ui/InputMessage';
 import InputChat from './ui/InputChat';
 import styles from './ChatSidebar.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
@@ -530,7 +528,7 @@ const MessageItem = memo(
                             try {
                               await navigator.clipboard.writeText(selection.toString());
                               document.execCommand('delete');
-                            } catch (err) {
+                            } catch {
                               // Fallback for older browsers
                               const textArea = document.createElement('textarea');
                               textArea.value = selection.toString();
@@ -551,7 +549,7 @@ const MessageItem = memo(
                           if (hasSelection) {
                             try {
                               await navigator.clipboard.writeText(selection.toString());
-                            } catch (err) {
+                            } catch {
                               // Fallback for older browsers
                               const textArea = document.createElement('textarea');
                               textArea.value = selection.toString();
@@ -571,7 +569,7 @@ const MessageItem = memo(
                           try {
                             const text = await navigator.clipboard.readText();
                             document.execCommand('insertText', false, text);
-                          } catch (err) {
+                          } catch {
                             // Fallback for older browsers
                             document.execCommand('paste');
                           }
@@ -599,7 +597,7 @@ const MessageItem = memo(
                       }
                     ];
 
-                    menuItems.forEach((item, index) => {
+                    menuItems.forEach((item) => {
                       if (item.type === 'separator') {
                         const separator = document.createElement('hr');
                         separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
@@ -777,7 +775,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const timerPanelRef = useRef<HTMLDivElement>(null);
   const summarizeDropdownRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
-  const [isRestoringTimer, setIsRestoringTimer] = useState(false);
+  const [isRestoringTimer] = useState(false);
 
   const isCreator = useMemo(() => user?.id === task.CreatedBy, [user?.id, task.CreatedBy]);
   const isInvolved = useMemo(() => 

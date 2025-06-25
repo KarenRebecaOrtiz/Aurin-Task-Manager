@@ -437,7 +437,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
                   try {
                     await navigator.clipboard.writeText(selection.toString());
                     document.execCommand('delete');
-                  } catch (err) {
+                  } catch {
                     // Fallback for older browsers
                     const textArea = document.createElement('textarea');
                     textArea.value = selection.toString();
@@ -458,7 +458,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
                 if (hasSelection) {
                   try {
                     await navigator.clipboard.writeText(selection.toString());
-                  } catch (err) {
+                  } catch {
                     // Fallback for older browsers
                     const textArea = document.createElement('textarea');
                     textArea.value = selection.toString();
@@ -478,7 +478,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
                 try {
                   const text = await navigator.clipboard.readText();
                   document.execCommand('insertText', false, text);
-                } catch (err) {
+                } catch {
                   // Fallback for older browsers
                   document.execCommand('paste');
                 }
@@ -506,7 +506,7 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
             }
           ];
 
-          menuItems.forEach((item, index) => {
+          menuItems.forEach((item) => {
             if (item.type === 'separator') {
               const separator = document.createElement('hr');
               separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';

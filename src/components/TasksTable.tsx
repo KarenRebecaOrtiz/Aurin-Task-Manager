@@ -173,7 +173,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     };
 
     const memoizedFilteredTasks = useMemo(() => {
-      let filtered = tasks.filter((task) => {
+      const filtered = tasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
