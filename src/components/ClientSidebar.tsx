@@ -380,6 +380,82 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                   className={styles.input}
                   required
                   disabled={isSaving || isClientLoading}
+                  onKeyDown={(e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                      switch (e.key.toLowerCase()) {
+                        case 'a':
+                          e.preventDefault();
+                          e.currentTarget.select();
+                          break;
+                        case 'c':
+                          e.preventDefault();
+                          const targetC = e.currentTarget as HTMLInputElement;
+                          if (targetC.selectionStart !== targetC.selectionEnd) {
+                            const selectedText = form.name.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                            navigator.clipboard.writeText(selectedText).catch(() => {
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selectedText;
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                            });
+                          }
+                          break;
+                        case 'v':
+                          e.preventDefault();
+                          const targetV = e.currentTarget as HTMLInputElement;
+                          navigator.clipboard.readText().then(text => {
+                            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                              const start = targetV.selectionStart;
+                              const end = targetV.selectionEnd;
+                              const newValue = form.name.substring(0, start) + text + form.name.substring(end);
+                              setForm((prev) => ({ ...prev, name: newValue }));
+                              setTimeout(() => {
+                                targetV.setSelectionRange(start + text.length, start + text.length);
+                              }, 0);
+                            } else {
+                              setForm((prev) => ({ ...prev, name: form.name + text }));
+                            }
+                          }).catch(() => {
+                            document.execCommand('paste');
+                          });
+                          break;
+                        case 'x':
+                          e.preventDefault();
+                          const targetX = e.currentTarget as HTMLInputElement;
+                          if (targetX.selectionStart !== targetX.selectionEnd) {
+                            const selectedText = form.name.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                            navigator.clipboard.writeText(selectedText).then(() => {
+                              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                const start = targetX.selectionStart;
+                                const end = targetX.selectionEnd;
+                                const newValue = form.name.substring(0, start) + form.name.substring(end);
+                                setForm((prev) => ({ ...prev, name: newValue }));
+                              } else {
+                                setForm((prev) => ({ ...prev, name: '' }));
+                              }
+                            }).catch(() => {
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selectedText;
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                const start = targetX.selectionStart;
+                                const end = targetX.selectionEnd;
+                                const newValue = form.name.substring(0, start) + form.name.substring(end);
+                                setForm((prev) => ({ ...prev, name: newValue }));
+                              } else {
+                                setForm((prev) => ({ ...prev, name: '' }));
+                              }
+                            });
+                          }
+                          break;
+                      }
+                    }
+                  }}
                 />
               </div>
 
@@ -399,6 +475,82 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                         className={styles.input}
                         disabled={isSaving || isClientLoading}
                         style={{ width: '100%' }}
+                        onKeyDown={(e) => {
+                          if (e.ctrlKey || e.metaKey) {
+                            switch (e.key.toLowerCase()) {
+                              case 'a':
+                                e.preventDefault();
+                                e.currentTarget.select();
+                                break;
+                              case 'c':
+                                e.preventDefault();
+                                const targetC = e.currentTarget as HTMLInputElement;
+                                if (targetC.selectionStart !== targetC.selectionEnd) {
+                                  const selectedText = project.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                                  navigator.clipboard.writeText(selectedText).catch(() => {
+                                    const textArea = document.createElement('textarea');
+                                    textArea.value = selectedText;
+                                    document.body.appendChild(textArea);
+                                    textArea.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(textArea);
+                                  });
+                                }
+                                break;
+                              case 'v':
+                                e.preventDefault();
+                                const targetV = e.currentTarget as HTMLInputElement;
+                                navigator.clipboard.readText().then(text => {
+                                  if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                    const start = targetV.selectionStart;
+                                    const end = targetV.selectionEnd;
+                                    const newValue = project.substring(0, start) + text + project.substring(end);
+                                    handleProjectChange(index, newValue);
+                                    setTimeout(() => {
+                                      targetV.setSelectionRange(start + text.length, start + text.length);
+                                    }, 0);
+                                  } else {
+                                    handleProjectChange(index, project + text);
+                                  }
+                                }).catch(() => {
+                                  document.execCommand('paste');
+                                });
+                                break;
+                              case 'x':
+                                e.preventDefault();
+                                const targetX = e.currentTarget as HTMLInputElement;
+                                if (targetX.selectionStart !== targetX.selectionEnd) {
+                                  const selectedText = project.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                                  navigator.clipboard.writeText(selectedText).then(() => {
+                                    if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                      const start = targetX.selectionStart;
+                                      const end = targetX.selectionEnd;
+                                      const newValue = project.substring(0, start) + project.substring(end);
+                                      handleProjectChange(index, newValue);
+                                    } else {
+                                      handleProjectChange(index, '');
+                                    }
+                                  }).catch(() => {
+                                    const textArea = document.createElement('textarea');
+                                    textArea.value = selectedText;
+                                    document.body.appendChild(textArea);
+                                    textArea.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(textArea);
+                                    if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                      const start = targetX.selectionStart;
+                                      const end = targetX.selectionEnd;
+                                      const newValue = project.substring(0, start) + project.substring(end);
+                                      handleProjectChange(index, newValue);
+                                    } else {
+                                      handleProjectChange(index, '');
+                                    }
+                                  });
+                                }
+                                break;
+                            }
+                          }
+                        }}
                       />
                       <button
                         type="button"
@@ -429,6 +581,82 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                           }
                           className={styles.deleteConfirmInput}
                           disabled={isClientLoading}
+                          onKeyDown={(e) => {
+                            if (e.ctrlKey || e.metaKey) {
+                              switch (e.key.toLowerCase()) {
+                                case 'a':
+                                  e.preventDefault();
+                                  e.currentTarget.select();
+                                  break;
+                                case 'c':
+                                  e.preventDefault();
+                                  const targetC = e.currentTarget as HTMLInputElement;
+                                  if (targetC.selectionStart !== targetC.selectionEnd) {
+                                    const selectedText = form.deleteConfirm.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                                    navigator.clipboard.writeText(selectedText).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = selectedText;
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                    });
+                                  }
+                                  break;
+                                case 'v':
+                                  e.preventDefault();
+                                  const targetV = e.currentTarget as HTMLInputElement;
+                                  navigator.clipboard.readText().then(text => {
+                                    if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                      const start = targetV.selectionStart;
+                                      const end = targetV.selectionEnd;
+                                      const newValue = form.deleteConfirm.substring(0, start) + text + form.deleteConfirm.substring(end);
+                                      setForm((prev) => ({ ...prev, deleteConfirm: newValue }));
+                                      setTimeout(() => {
+                                        targetV.setSelectionRange(start + text.length, start + text.length);
+                                      }, 0);
+                                    } else {
+                                      setForm((prev) => ({ ...prev, deleteConfirm: form.deleteConfirm + text }));
+                                    }
+                                  }).catch(() => {
+                                    document.execCommand('paste');
+                                  });
+                                  break;
+                                case 'x':
+                                  e.preventDefault();
+                                  const targetX = e.currentTarget as HTMLInputElement;
+                                  if (targetX.selectionStart !== targetX.selectionEnd) {
+                                    const selectedText = form.deleteConfirm.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                                    navigator.clipboard.writeText(selectedText).then(() => {
+                                      if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                        const start = targetX.selectionStart;
+                                        const end = targetX.selectionEnd;
+                                        const newValue = form.deleteConfirm.substring(0, start) + form.deleteConfirm.substring(end);
+                                        setForm((prev) => ({ ...prev, deleteConfirm: newValue }));
+                                      } else {
+                                        setForm((prev) => ({ ...prev, deleteConfirm: '' }));
+                                      }
+                                    }).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = selectedText;
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                      if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                        const start = targetX.selectionStart;
+                                        const end = targetX.selectionEnd;
+                                        const newValue = form.deleteConfirm.substring(0, start) + form.deleteConfirm.substring(end);
+                                        setForm((prev) => ({ ...prev, deleteConfirm: newValue }));
+                                      } else {
+                                        setForm((prev) => ({ ...prev, deleteConfirm: '' }));
+                                      }
+                                    });
+                                  }
+                                  break;
+                              }
+                            }
+                          }}
                         />
 
                         <button

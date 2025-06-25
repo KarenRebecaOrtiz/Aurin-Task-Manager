@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 /* Importación de fuente Inter Tight */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
@@ -83,21 +84,21 @@
   flex: 1;
   color: #1f2732;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
 }
 
 .title {
   color: #182735;
   font-size: 19.2px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 700;
 }
 
 .description {
   color: #71717A;
   font-size: 14.4px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
 }
 
@@ -134,7 +135,7 @@
 .cardLabel {
   color: #182735;
   font-size: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   text-align: center;
   font-weight: 700;
 }
@@ -145,7 +146,7 @@
   gap: 5px;
   color: #182735;
   font-size: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   text-align: center;
 }
@@ -197,7 +198,7 @@
 .sender {
   color: #1b2734;
   font-size: 14px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 700;
 }
 
@@ -216,7 +217,7 @@
 .text {
   color: #1b2734;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
 }
 
@@ -250,7 +251,7 @@
   padding: 12px 16px;
   font-size: 14px;
   color: #1b2734d9;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   cursor: pointer;
   transition: background-color 0.3s ease, box-shadow 0.2s ease;
   &:hover {
@@ -293,7 +294,7 @@
   border-radius: 10px;
   color: #1b2734d9;
   font-size: 14.4px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   box-shadow:
     inset -2px -2px 4px rgba(255, 255, 255, 0.03),
     inset 2px 2px 6px rgba(0, 0, 0, 0.15);
@@ -308,7 +309,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
 }
 
@@ -342,7 +343,7 @@
   color: #ffffff;
   font-size: 12px;
   font-weight: 500;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   margin-bottom: 8px;
 }
 
@@ -408,7 +409,7 @@
   border-radius: 10px;
   color: #1b2734d9;
   font-size: 15px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   opacity: 0.85;
   box-shadow:
@@ -503,8 +504,22 @@
 }
 
 .imageWrapper {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image {
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
 }
 
 .file {
@@ -553,10 +568,16 @@
   background: #f5f5f5;
   border-radius: 4px;
   margin-bottom: 5px;
+  max-width: 100%;
 }
 
 .previewImage {
   border-radius: 4px;
+  width: auto;
+  height: auto;
+  max-width: 100px;
+  max-height: 100px;
+  object-fit: contain;
 }
 
 .removeImageButton {

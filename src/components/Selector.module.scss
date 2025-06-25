@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 .container {
   position: fixed;
   right: 0;
@@ -174,14 +175,12 @@
 }
 
 :global(body.dark) .container {
-  background: #1f1f20;
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.05),
-    6px 6px 12px rgba(0, 0, 0, 0.4);
+  background:  #27272a;
+  box-shadow:none
 }
 
 :global(body.dark) .input {
-  background: #2c2c2f;
+  background: #27272a;
   color: #f9fafb;
   box-shadow: -3px -3px 6px rgba(255, 255, 255, 0.02), 3px 3px 6px rgba(0, 0, 0, 0.3);
 }
@@ -223,7 +222,7 @@
 }
 
 :global(.dark) .menubar {
-  background: rgba(13, 13, 13, 0.8);
+  background:#27272a;
   border-color: #242428;
 }
 
@@ -240,7 +239,7 @@
   border: none;
   border-radius: 2px;
   cursor: pointer;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-size: 14px;
   font-weight: 500;
   background-color: transparent;

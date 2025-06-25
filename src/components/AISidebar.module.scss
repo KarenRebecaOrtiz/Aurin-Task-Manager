@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 /* Importación de fuente Inter Tight */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 @import '@/app/styles/utils';
@@ -185,21 +186,21 @@
   flex: 1;
   color: #1f2732;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
 }
 
 .title {
   color: #182735;
   font-size: 19.2px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 700;
 }
 
 .description {
   color: #71717A;
   font-size: 14.4px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
 }
 
@@ -248,7 +249,7 @@
 .cardLabel {
   color: #182735;
   font-size: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   text-align: center;
   font-weight: 700;
 }
@@ -259,7 +260,7 @@
   gap: 5px;
   color: #182735;
   font-size: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   text-align: center;
 }
@@ -309,7 +310,7 @@
 .sender {
   color: #1b2734;
   font-size: 14px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 700;
 }
 
@@ -328,14 +329,14 @@
 .text {
   color: #1b2734;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
 }
 
 .readBy {
   color: #A1A1AA;
   font-size: 12px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   margin-top: 5px;
 }
@@ -395,7 +396,7 @@
   border-radius: 4px;
   color: white;
   font-size: 14.4px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
 }
 
 .editSaveButton, .editCancelButton {
@@ -406,7 +407,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
 }
 
@@ -453,7 +454,7 @@
   border-radius: 10px;
   color: #1b2734d9;
   font-size: 15px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   opacity: 0.85;
   box-shadow:
@@ -744,7 +745,7 @@
   background: #f5f5f519;
   border-radius: 14px;
   padding: 10px 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-size: 14px;
   color: #00000084;
   border: none;
@@ -781,7 +782,7 @@
   background: transparent;
   border: none;
   color: #1b2734d9;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-size: 14px;
   text-align: center;
   width: 30px;
@@ -801,7 +802,7 @@
 .timerTotal {
   font-size: 13px;
   color: #1b2734d9;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   margin-bottom: 10px;
   text-align: center;
   opacity: 0.8;
@@ -827,7 +828,7 @@
   border-radius: 14px;
   font-size: 14px;
   font-weight: 500;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   transition: all 0.3s ease-in-out;
 }
 
@@ -838,7 +839,7 @@
   border-radius: 14px;
   font-size: 14px;
   font-weight: 500;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   padding: 10px 20px;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.1),
@@ -865,7 +866,7 @@
   border-radius: 14px;
   font-size: 14px;
   font-weight: 500;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   padding: 10px 20px;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.008),
@@ -893,7 +894,7 @@
   background-color: #1f1f20;
   border: 1px solid #444546;
   color: white;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
 }
 
 /* Dropdown del menú de tarea */
@@ -918,7 +919,7 @@
   padding: 12px 16px;
   font-size: 14px;
   color: #1b2734d9;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   cursor: pointer;
   transition:
     background-color 0.3s ease,
@@ -973,7 +974,7 @@
 .statusOption {
   padding: 12px 16px;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   color: #1b2734d9;
   background: transparent;
   cursor: pointer;
@@ -1077,7 +1078,7 @@
 .deletePopupTitle {
   color: #1b2734d9;
   font-size: 18px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 700;
   text-transform: capitalize;
   text-align: center;
@@ -1086,7 +1087,7 @@
 .deletePopupDescription {
   color: #1b2734b3;
   font-size: 14px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   text-align: center;
 }
@@ -1103,7 +1104,7 @@
   border-radius: 12px;
   border: none;
   font-size: 14px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   color: #1b2734d9;
   box-shadow:
     inset -2px -2px 4px rgba(255, 255, 255, 0.08),
@@ -1137,7 +1138,7 @@
   border: none;
   border-radius: 14px;
   cursor: pointer;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   box-shadow:
     -2px -2px 4px rgba(255, 255, 255, 0.06),
     2px 2px 6px rgba(0, 0, 0, 0.3);
@@ -1163,7 +1164,7 @@
   border: none;
   border-radius: 14px;
   cursor: pointer;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   box-shadow:
     -2px -2px 4px rgba(255, 255, 255, 0.06),
     2px 2px 6px rgba(0, 0, 0, 0.2);
@@ -1244,7 +1245,7 @@
   gap: 8px;
   padding: 12px 16px;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   color: #1b2734d9;
   cursor: default;
@@ -1301,13 +1302,13 @@
 /* Tipografía interna */
 .hoursUserName {
   flex: 1;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1b2734d9;
 }
 
 .hoursValue {
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   color: #1b2734d9;
 }
@@ -1350,7 +1351,7 @@
   color: #ffffff;
   font-size: 12px;
   font-weight: 500;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   margin-bottom: 8px;
 }
 
@@ -1688,7 +1689,7 @@ $red-accent: #c91111;
   border-radius: 10px;
   color: $text-color;
   font-size: 15px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   opacity: 0.85;
   box-shadow:

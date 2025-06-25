@@ -1,0 +1,50 @@
+@use './variables' as *;
+
+// Mixin para reemplazar fácilmente las fuentes en componentes
+@mixin urbanist-font($weight: $font-weight-normal, $size: $text-base, $line-height: $leading-normal) {
+  font-family: $font-family-primary;
+  font-weight: $weight;
+  font-size: $size;
+  line-height: $line-height;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Clases de utilidad para reemplazar fuentes específicas
+.urbanist-text {
+  @include urbanist-font();
+}
+
+.urbanist-heading {
+  @include urbanist-font($font-weight-semibold, $text-xl, $leading-tight);
+}
+
+.urbanist-button {
+  @include urbanist-font($font-weight-medium, $text-sm, $leading-none);
+  letter-spacing: 0.025em;
+}
+
+.urbanist-input {
+  @include urbanist-font($font-weight-normal, $text-base, $leading-normal);
+}
+
+.urbanist-caption {
+  @include urbanist-font($font-weight-normal, $text-xs, $leading-normal);
+}
+
+// Reemplazos directos para fuentes comunes
+.inter-tight-replace {
+  @include urbanist-font();
+}
+
+.montserrat-replace {
+  @include urbanist-font();
+}
+
+.work-sans-replace {
+  @include urbanist-font();
+}
+
+.inter-replace {
+  @include urbanist-font();
+} 

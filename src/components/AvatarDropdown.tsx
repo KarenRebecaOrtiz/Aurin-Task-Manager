@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Image from 'next/image';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
@@ -16,12 +16,17 @@ const statusOptions = [
   { label: 'Fuera', value: 'Fuera', color: '#616161' },
 ];
 
-const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
+interface AvatarDropdownProps {
+  onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+const AvatarDropdown = ({ onChangeContainer, isOpen, onToggle }: AvatarDropdownProps) => {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [status, setStatus] = useState('Disponible');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
@@ -65,7 +70,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
     if (!user?.id) return;
     try {
       await updateDoc(doc(db, 'users', user.id), { status: newStatus });
-      setIsDropdownOpen(false);
+      onToggle(); // Close dropdown after status change
     } catch (error) {
       console.error('Error updating status:', error);
     }
@@ -73,7 +78,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
 
   // GSAP animation for dropdown
   useEffect(() => {
-    if (isDropdownOpen && dropdownRef.current && portalContainer) {
+    if (isOpen && dropdownRef.current && portalContainer) {
       dropdownRef.current.style.display = 'block';
       gsap.fromTo(
         dropdownRef.current,
@@ -98,7 +103,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
           delay: 0.1,
         },
       );
-    } else if (!isDropdownOpen && dropdownRef.current) {
+    } else if (!isOpen && dropdownRef.current) {
       gsap.to(dropdownRef.current, {
         opacity: 0,
         y: -10,
@@ -110,52 +115,39 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         },
       });
     }
-  }, [isDropdownOpen, portalContainer]);
+  }, [isOpen, portalContainer]);
 
   // Close dropdown on outside click
+  const onToggleRef = useRef(onToggle);
+  onToggleRef.current = onToggle;
+
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (
+      buttonRef.current &&
+      !buttonRef.current.contains(event.target as Node) &&
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node)
+    ) {
+      onToggleRef.current();
+    }
+  }, []);
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node) &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
-      }
-    };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
-
-  // Hover handlers
-  const handleMouseEnterButton = () => {
-    setIsDropdownOpen(true);
-  };
-
-  const handleMouseLeaveButton = () => {
-    // Don’t close immediately, wait for dropdown leave
-  };
-
-  const handleMouseEnterDropdown = () => {
-    setIsDropdownOpen(true);
-  };
-
-  const handleMouseLeaveDropdown = () => {
-    setIsDropdownOpen(false);
-  };
+  }, [handleClickOutside]);
 
   // Menu item handlers
   const handleConfig = () => {
     onChangeContainer('config');
-    setIsDropdownOpen(false);
+    onToggle(); // Close dropdown
   };
 
   const handleLogout = () => {
     signOut();
-    setIsDropdownOpen(false);
+    onToggle(); // Close dropdown
   };
 
   const currentStatus = statusOptions.find((opt) => opt.value === status) || statusOptions[0];
@@ -184,8 +176,6 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
           right: `${dropdownPosition.right}px`,
           width: '200px',
         }}
-        onMouseEnter={handleMouseEnterDropdown}
-        onMouseLeave={handleMouseLeaveDropdown}
       >
         {statusOptions.map((option) => (
           <div
@@ -232,11 +222,9 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
       <button
         ref={buttonRef}
         className={styles.avatarButton}
-        onClick={() => setIsDropdownOpen((prev) => !prev)}
-        onMouseEnter={handleMouseEnterButton}
-        onMouseLeave={handleMouseLeaveButton}
+        onClick={onToggle}
         aria-haspopup="true"
-        aria-expanded={isDropdownOpen}
+        aria-expanded={isOpen}
         aria-label="Abrir menú de usuario"
       >
         {profilePhoto ? (
@@ -255,7 +243,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
           style={{ backgroundColor: currentStatus.color }}
         />
       </button>
-      {isDropdownOpen && portalContainer && createPortal(<DropdownMenu />, portalContainer)}
+      {isOpen && portalContainer && createPortal(<DropdownMenu />, portalContainer)}
     </div>
   );
 };

@@ -9,6 +9,7 @@ import styles from './ConfigDropdown.module.scss';
 interface Option {
   value: string;
   label: string;
+  region?: string;
 }
 
 interface ConfigDropdownProps {
@@ -140,35 +141,52 @@ const ConfigDropdown: React.FC<ConfigDropdownProps> = ({
 
   const dropdownPosition = getDropdownPosition();
 
-  const DropdownMenu = () => (
-    <div
-      ref={dropdownRef}
-      className={styles.dropdownMenu}
-      style={{
-        top: `${dropdownPosition.top}px`,
-        left: `${dropdownPosition.left}px`,
-        width: triggerRef.current?.offsetWidth,
-      }}
-    >
-      {options.map((option) => (
-        <div
-          key={option.value}
-          className={`${styles.dropdownItem} ${
-            isMulti
-              ? value.includes(option.value)
-                ? styles.selected
-                : ''
-              : value === option.value
-              ? styles.selected
-              : ''
-          }`}
-          onClick={() => handleSelect(option)}
-        >
-          {option.label}
-        </div>
-      ))}
-    </div>
-  );
+  const DropdownMenu = () => {
+    // Agrupar opciones por región
+    const groupedOptions = options.reduce((acc, option) => {
+      const region = option.region || 'Otros';
+      if (!acc[region]) {
+        acc[region] = [];
+      }
+      acc[region].push(option);
+      return acc;
+    }, {} as { [key: string]: Option[] });
+
+    return (
+      <div
+        ref={dropdownRef}
+        className={styles.dropdownMenu}
+        style={{
+          top: `${dropdownPosition.top}px`,
+          left: `${dropdownPosition.left}px`,
+          width: triggerRef.current?.offsetWidth,
+        }}
+      >
+        {Object.entries(groupedOptions).map(([region, regionOptions]) => (
+          <div key={region}>
+            <div className={styles.regionLabel}>{region}</div>
+            {regionOptions.map((option) => (
+              <div
+                key={option.value}
+                className={`${styles.dropdownItem} ${
+                  isMulti
+                    ? value.includes(option.value)
+                      ? styles.selected
+                      : ''
+                    : value === option.value
+                    ? styles.selected
+                    : ''
+                }`}
+                onClick={() => handleSelect(option)}
+              >
+                {option.label}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className={`${styles.dropdown} ${className || ''}`}>

@@ -1,7 +1,8 @@
 .swiperContainer {
-  padding:10px 0;
+  padding: 20px 0; /* Aumentado el espaciado superior e inferior */
   overflow-x: hidden;
   margin: 0 auto;
+  position: relative; /* Para posicionar los viñetados */
 }
 
 .splide {
@@ -10,7 +11,7 @@
 }
 
 .splide__track {
-  padding: 40px 0px;
+  padding: 50px 0px; /* Aumentado el espaciado vertical */
   overflow: visible !important;
   overflow-x: hidden !important;
 }
@@ -76,20 +77,18 @@
   }
 
   :global(.dark) & {
-    background: rgba(8, 8, 8, 0.7);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: #27272a;
+    border-color:none;
+    border: none;
     box-shadow:none;
     color: white;
 
     &:hover {
-      background: rgba(39, 39, 42, 0.85);
-      border-color: rgba(255, 255, 255, 0.2);
+      background: #323236;
+      border-color: none;
+      border: none;
       transform: translateY(-2px) scale(1.02);
-      box-shadow:
-        -4px -4px 8px rgba(0, 0, 0, 0.6),
-        4px 4px 8px rgba(255, 255, 255, 0.03),
-        inset -4px -4px 8px rgba(0, 0, 0, 0.45),
-        inset 4px 4px 8px rgba(255, 255, 255, 0.04);
+      box-shadow:none;
     }
 
     &[role="button"]:active {
@@ -372,7 +371,7 @@
 
 @media (min-width: 770px) and (max-width: 968px) {
   .swiperContainer {
-    max-width: 75vw;
+    max-width: 85vw;
   }
 }
 
@@ -380,17 +379,18 @@
   .swiperContainer {
     max-width: 85vw;
   }
+
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {
   .swiperContainer {
-    max-width: 80vw;
+    max-width: 85vw;
   }
 }
 
 @media (min-width: 1201px) and (max-width: 1500px) {
   .swiperContainer {
-    max-width: 80vw;
+    max-width: 85vw;
   }
 }
 
@@ -449,4 +449,62 @@
   pointer-events: none;
   z-index: 1;
   transition: border-color 0.2s;
+}
+
+/* Viñetado izquierdo */
+.vignetteLeft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60px; /* Ancho base más pequeño */
+  height: 100%;
+  background: linear-gradient(to right, #f2f5f8 0%, rgba(242, 245, 248, 0.8) 30%, rgba(242, 245, 248, 0.4) 60%, transparent 100%);
+  z-index: 10;
+  pointer-events: none;
+  
+  :global(.dark) & {
+    background: linear-gradient(to right, #1a1a1a 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
+  }
+  
+  /* Responsive */
+  @media (min-width: 768px) {
+    width: 80px;
+  }
+  
+  @media (min-width: 1024px) {
+    width: 100px;
+  }
+  
+  @media (min-width: 1200px) {
+    width: 120px;
+  }
+}
+
+/* Viñetado derecho */
+.vignetteRight {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60px; /* Ancho base más pequeño */
+  height: 100%;
+  background: linear-gradient(to left, #f2f5f8 0%, rgba(242, 245, 248, 0.8) 30%, rgba(242, 245, 248, 0.4) 60%, transparent 100%);
+  z-index: 10;
+  pointer-events: none;
+  
+  :global(.dark) & {
+    background: linear-gradient(to left, #1a1a1a 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
+  }
+  
+  /* Responsive */
+  @media (min-width: 768px) {
+    width: 80px;
+  }
+  
+  @media (min-width: 1024px) {
+    width: 100px;
+  }
+  
+  @media (min-width: 1200px) {
+    width: 120px;
+  }
 }

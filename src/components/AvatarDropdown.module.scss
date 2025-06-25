@@ -2,18 +2,17 @@
    AVATAR DROPDOWN - CRYSTALLIZED NEUMORPHIC STYLE
    ============================================================== */
 
-/* Container for the avatar and dropdown */
 .avatarContainer {
     position: relative;
     display: inline-flex;
     align-items: center;
-    z-index: 3200; /* Matches StatusDropdown */
+    z-index: 200; 
   }
   
   /* Avatar button */
   .avatarButton {
-    width: 50px;
-    height: 50px;
+    width: 55px;
+    height: 55px;
     padding: 0;
     border-radius: 50%;
     display: flex;
@@ -216,16 +215,14 @@
     background: transparent;
     cursor: pointer;
     font-size: 14px;
-  font-family: "Urbanist", sans-serif;
+    font-family: "Urbanist", sans-serif;
     color: #333333;
     gap: 8px;
     transition:
-      transform 0.3s ease,
       background 0.3s ease,
       box-shadow 0.3s ease;
   
     &:hover {
-      transform: translateY(-2px);
       background: rgba(241, 245, 249, 0.85);
       box-shadow:
         -6px -6px 12px rgba(255, 255, 255, 0.95),
@@ -253,16 +250,14 @@
     background: transparent;
     cursor: pointer;
     font-size: 14px;
-  font-family: "Urbanist", sans-serif;
+    font-family: "Urbanist", sans-serif;
     color: #333333;
     gap: 8px;
     transition:
-      transform 0.3s ease,
       background 0.3s ease,
       box-shadow 0.3s ease;
   
     &:hover {
-      transform: translateY(-2px);
       background: rgba(241, 245, 249, 0.85);
       box-shadow:
         -6px -6px 12px rgba(255, 255, 255, 0.95),

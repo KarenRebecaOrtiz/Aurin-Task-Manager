@@ -1,27 +1,28 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo, forwardRef, Dispatch } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
+import { useUser } from '@clerk/nextjs';
 import {
   collection,
   addDoc,
   onSnapshot,
   query,
   orderBy,
-  updateDoc,
-  doc,
-  deleteDoc,
-  getDoc,
-  setDoc,
   serverTimestamp,
   Timestamp,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
 } from 'firebase/firestore';
-import { useUser } from '@clerk/nextjs';
-import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
-import { deleteTask } from '@/lib/taskUtils';
+import { gsap } from 'gsap';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
+import { InputMessage } from './ui/InputMessage';
 import InputChat from './ui/InputChat';
 import styles from './ChatSidebar.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
@@ -147,6 +148,39 @@ const MessageItem = memo(
       ref,
     ) => {
       const actionMenuRef = useRef<HTMLDivElement>(null);
+
+      // GSAP animations for action menu
+      useEffect(() => {
+        if (actionMenuOpenId === message.id && actionMenuRef.current) {
+          // Animate in
+          gsap.fromTo(
+            actionMenuRef.current,
+            { 
+              opacity: 0, 
+              y: -10, 
+              scale: 0.95,
+              transformOrigin: 'top right'
+            },
+            { 
+              opacity: 1, 
+              y: 0, 
+              scale: 1, 
+              duration: 0.2, 
+              ease: 'power2.out' 
+            }
+          );
+        } else if (actionMenuRef.current) {
+          // Animate out
+          gsap.to(actionMenuRef.current, {
+            opacity: 0,
+            y: -10,
+            scale: 0.95,
+            duration: 0.15,
+            ease: 'power2.in'
+          });
+        }
+      }, [actionMenuOpenId, message.id]);
+
       const renderMessageContent = useCallback(() => {
         if (message.imageUrl) {
           return (
@@ -154,11 +188,20 @@ const MessageItem = memo(
               <Image
                 src={message.imageUrl}
                 alt={message.fileName || 'Imagen'}
-                width={200}
-                height={200}
+                width={0}
+                height={0}
+                sizes="100vw"
                 className={`${styles.image} ${message.isPending ? styles.pendingImage : ''}`}
                 onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
                 onError={() => console.warn('Image load failed', message.imageUrl)}
+                draggable="false"
+                style={{
+                  width: 'auto',
+                  height: 'auto',
+                  maxWidth: '100%',
+                  maxHeight: '300px',
+                  objectFit: 'contain'
+                }}
               />
               {message.isPending && (
                 <div className={styles.imageLoader}>
@@ -339,7 +382,27 @@ const MessageItem = memo(
                               setActionMenuOpenId(null);
                             }}
                           >
-                            Reenviar
+                            Reintentar Envío
+                          </div>
+                        )}
+                        {(message.imageUrl || message.fileUrl) && !message.hasError && (
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => {
+                              // Download file
+                              if (message.imageUrl || message.fileUrl) {
+                                const link = document.createElement('a');
+                                link.href = message.imageUrl || message.fileUrl || '';
+                                link.download = message.fileName || 'archivo';
+                                link.target = '_blank';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }
+                              setActionMenuOpenId(null);
+                            }}
+                          >
+                            Descargar Archivo
                           </div>
                         )}
                         <div
@@ -366,6 +429,229 @@ const MessageItem = memo(
                   autoFocus
                   rows={3}
                   style={{ resize: 'vertical', minHeight: '36px', maxHeight: '200px' }}
+                  onKeyDown={(e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                      switch (e.key.toLowerCase()) {
+                        case 'a':
+                          e.preventDefault();
+                          e.currentTarget.select();
+                          break;
+                        case 'c':
+                          e.preventDefault();
+                          const selection = window.getSelection();
+                          if (selection && selection.toString().length > 0) {
+                            navigator.clipboard.writeText(selection.toString()).catch(() => {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                            });
+                          }
+                          break;
+                        case 'v':
+                          e.preventDefault();
+                          navigator.clipboard.readText().then(text => {
+                            const target = e.currentTarget;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            const newValue = editingText.substring(0, start) + text + editingText.substring(end);
+                            setEditingText(newValue);
+                            // Set cursor position after paste
+                            setTimeout(() => {
+                              target.setSelectionRange(start + text.length, start + text.length);
+                            }, 0);
+                          }).catch(() => {
+                            // Fallback for older browsers or when clipboard access is denied
+                            document.execCommand('paste');
+                          });
+                          break;
+                        case 'x':
+                          e.preventDefault();
+                          const cutSelection = window.getSelection();
+                          if (cutSelection && cutSelection.toString().length > 0) {
+                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                              const target = e.currentTarget;
+                              const start = target.selectionStart;
+                              const end = target.selectionEnd;
+                              const newValue = editingText.substring(0, start) + editingText.substring(end);
+                              setEditingText(newValue);
+                            }).catch(() => {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = cutSelection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                              const target = e.currentTarget;
+                              const start = target.selectionStart;
+                              const end = target.selectionEnd;
+                              const newValue = editingText.substring(0, start) + editingText.substring(end);
+                              setEditingText(newValue);
+                            });
+                          }
+                          break;
+                      }
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    
+                    const selection = window.getSelection();
+                    const hasSelection = selection && selection.toString().length > 0;
+                    
+                    const menu = document.createElement('div');
+                    menu.className = 'context-menu';
+                    menu.style.cssText = `
+                      position: fixed;
+                      top: ${e.clientY}px;
+                      left: ${e.clientX}px;
+                      background: white;
+                      border: 1px solid #ccc;
+                      border-radius: 4px;
+                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                      z-index: 1000;
+                      font-family: 'Inter Tight', sans-serif;
+                      font-size: 14px;
+                      min-width: 150px;
+                    `;
+
+                    const menuItems = [
+                      { label: 'Deshacer', action: () => document.execCommand('undo'), shortcut: 'Ctrl+Z' },
+                      { label: 'Rehacer', action: () => document.execCommand('redo'), shortcut: 'Ctrl+Y' },
+                      { type: 'separator' },
+                      { 
+                        label: 'Cortar', 
+                        action: async () => {
+                          if (hasSelection) {
+                            try {
+                              await navigator.clipboard.writeText(selection.toString());
+                              document.execCommand('delete');
+                            } catch (err) {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                              document.execCommand('delete');
+                            }
+                          }
+                        }, 
+                        shortcut: 'Ctrl+X', 
+                        disabled: !hasSelection 
+                      },
+                      { 
+                        label: 'Copiar', 
+                        action: async () => {
+                          if (hasSelection) {
+                            try {
+                              await navigator.clipboard.writeText(selection.toString());
+                            } catch (err) {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                            }
+                          }
+                        }, 
+                        shortcut: 'Ctrl+C', 
+                        disabled: !hasSelection 
+                      },
+                      { 
+                        label: 'Pegar', 
+                        action: async () => {
+                          try {
+                            const text = await navigator.clipboard.readText();
+                            document.execCommand('insertText', false, text);
+                          } catch (err) {
+                            // Fallback for older browsers
+                            document.execCommand('paste');
+                          }
+                        }, 
+                        shortcut: 'Ctrl+V'
+                      },
+                      { type: 'separator' },
+                      { 
+                        label: 'Seleccionar Todo', 
+                        action: () => {
+                          const target = e.currentTarget;
+                          target.select();
+                        }, 
+                        shortcut: 'Ctrl+A'
+                      },
+                      { 
+                        label: 'Eliminar', 
+                        action: () => {
+                          if (hasSelection) {
+                            document.execCommand('delete');
+                          }
+                        }, 
+                        shortcut: 'Delete', 
+                        disabled: !hasSelection 
+                      }
+                    ];
+
+                    menuItems.forEach((item, index) => {
+                      if (item.type === 'separator') {
+                        const separator = document.createElement('hr');
+                        separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
+                        menu.appendChild(separator);
+                        return;
+                      }
+
+                      const menuItem = document.createElement('div');
+                      menuItem.style.cssText = `
+                        padding: 8px 12px;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+                      `;
+                      menuItem.innerHTML = `
+                        <span>${item.label}</span>
+                        <span style="color: #666; font-size: 12px;">${item.shortcut}</span>
+                      `;
+                      
+                      if (!item.disabled) {
+                        menuItem.addEventListener('click', () => {
+                          item.action();
+                          document.body.removeChild(menu);
+                        });
+                        
+                        menuItem.addEventListener('mouseenter', () => {
+                          menuItem.style.backgroundColor = '#f5f5f5';
+                        });
+                        menuItem.addEventListener('mouseleave', () => {
+                          menuItem.style.backgroundColor = 'transparent';
+                        });
+                      }
+                      
+                      menu.appendChild(menuItem);
+                    });
+
+                    document.body.appendChild(menu);
+
+                    // Close menu when clicking outside
+                    const closeMenu = () => {
+                      if (document.body.contains(menu)) {
+                        document.body.removeChild(menu);
+                      }
+                      document.removeEventListener('click', closeMenu);
+                    };
+                    
+                    setTimeout(() => {
+                      document.addEventListener('click', closeMenu);
+                    }, 0);
+                  }}
                 />
                 <button
                   className={styles.editSaveButton}
@@ -491,13 +777,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const timerPanelRef = useRef<HTMLDivElement>(null);
   const summarizeDropdownRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
+  const [isRestoringTimer, setIsRestoringTimer] = useState(false);
 
-  const isCreator = user?.id === task.CreatedBy;
-  const isInvolved =
+  const isCreator = useMemo(() => user?.id === task.CreatedBy, [user?.id, task.CreatedBy]);
+  const isInvolved = useMemo(() => 
     user?.id &&
-    (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id);
+    (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id),
+    [user?.id, task.AssignedTo, task.LeadedBy, task.CreatedBy]
+  );
   // Permitir acceso a admins para ver dropdowns de equipo y tiempo registrado
-  const canViewTeamAndHours = isInvolved || isAdmin;
+  const canViewTeamAndHours = useMemo(() => isInvolved || isAdmin, [isInvolved, isAdmin]);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
   // Función para detectar si es móvil
@@ -559,11 +848,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (!task.id) {
       return;
     }
+    console.log('[ChatSidebar:TaskListener] Setting up task listener for:', task.id);
     const unsubscribe = onSnapshot(
       doc(db, 'tasks', task.id),
       (doc) => {
         if (doc.exists()) {
           const taskData = doc.data();
+          console.log('[ChatSidebar:TaskListener] Task updated:', {
+            id: doc.id,
+            status: taskData.status,
+            assignedTo: taskData.AssignedTo,
+            leadedBy: taskData.LeadedBy,
+            createdBy: taskData.CreatedBy
+          });
           setTask({
             id: doc.id,
             clientId: taskData.clientId || '',
@@ -581,10 +878,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         }
       },
       (error) => {
-        console.error('Error listening to task', error);
+        console.error('[ChatSidebar:TaskListener] Error listening to task:', error);
       },
     );
-    return () => unsubscribe();
+    return () => {
+      console.log('[ChatSidebar:TaskListener] Cleaning up task listener');
+      unsubscribe();
+    };
   }, [task.id]);
 
   useEffect(() => {
@@ -995,13 +1295,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
     setIsDeleting(true);
     try {
-      await deleteTask(task.id, user.id, isAdmin, task);
+      // Close the sidebar instead of deleting the task
       setIsDeletePopupOpen(false);
       setDeleteConfirm('');
       onClose();
     } catch (error) {
-      console.error('Error deleting task', error);
-      alert(`Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
+      console.error('Error closing task', error);
+      alert(`Error al cerrar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     } finally {
       setIsDeleting(false);
     }
@@ -1432,40 +1732,52 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     });
     const totalHours = Math.floor(totalMinutes / 60);
     const remainingMinutes = Math.round(totalMinutes % 60);
-    return `${totalHours}h ${remainingMinutes}m`;
+    const result = `${totalHours}h ${remainingMinutes}m`;
+    console.log('[ChatSidebar:TotalHours] Recalculated:', result, 'from', timeMessages.length, 'time messages');
+    return result;
   }, [messages]);
 
   const hoursByUser = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
+    console.log('[ChatSidebar:HoursByUser] Found time messages:', timeMessages.map(msg => ({
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      hours: msg.hours
+    })));
+    
     const hoursMap: { [userId: string]: number } = {};
     timeMessages.forEach((msg) => {
       hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours!;
     });
-    const involvedUsers = new Set<string>([...task.LeadedBy, ...task.AssignedTo, task.CreatedBy || '']);
-    return Array.from(involvedUsers)
-      .map((userId) => {
-        const u = users.find((u) => u.id === userId) || {
-          id: userId,
-          fullName: 'Desconocido',
-          firstName: 'Desconocido',
-          imageUrl: '/default-image.png',
-        };
-        const totalMinutes = (hoursMap[userId] || 0) * 60;
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = Math.round(totalMinutes % 60);
-        return {
-          id: userId,
-          firstName: u.firstName || u.fullName.split(' ')[0],
-          imageUrl: u.imageUrl,
-          hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
-        };
-      })
-      .filter((u) => hoursMap[u.id]);
-  }, [messages, users, task.LeadedBy, task.AssignedTo, task.CreatedBy]);
+    console.log('[ChatSidebar:HoursByUser] Hours map:', hoursMap);
+    
+    // Get all users who have actually registered time
+    const usersWithTime = Object.keys(hoursMap).filter(userId => hoursMap[userId] > 0);
+    
+    const result = usersWithTime.map((userId) => {
+      const u = users.find((u) => u.id === userId) || {
+        id: userId,
+        fullName: 'Desconocido',
+        firstName: 'Desconocido',
+        imageUrl: '/default-image.png',
+      };
+      const totalMinutes = hoursMap[userId] * 60;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = Math.round(totalMinutes % 60);
+      return {
+        id: userId,
+        firstName: u.firstName || u.fullName.split(' ')[0],
+        imageUrl: u.imageUrl,
+        hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
+      };
+    });
+    console.log('[ChatSidebar:HoursByUser] Recalculated:', result.length, 'users with time entries', result);
+    return result;
+  }, [messages, users]);
 
   const teamUsers = useMemo(() => {
     const teamUserIds = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-    return Array.from(teamUserIds).map((userId) => {
+    const result = Array.from(teamUserIds).map((userId) => {
       const u = users.find((u) => u.id === userId) || {
         id: userId,
         fullName: 'Desconocido',
@@ -1479,6 +1791,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         role: task.LeadedBy.includes(userId) ? 'Responsable' : 'Asignado',
       };
     });
+    console.log('[ChatSidebar:TeamUsers] Recalculated:', result.length, 'team members');
+    return result;
   }, [task.AssignedTo, task.LeadedBy, users]);
 
   const handleGenerateSummary = async (interval: string) => {
@@ -1987,6 +2301,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         setCommentInput={setCommentInput}
         onAddTimeEntry={handleAddTimeEntry}
         totalHours={totalHours}
+        isRestoringTimer={isRestoringTimer}
       />
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>

@@ -70,7 +70,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string; error?: string } | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
-  // Eliminar campos de contraseña del estado de errores
   const [errors, setErrors] = useState<{
     fullName?: string;
     role?: string;
@@ -79,6 +78,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     portfolio?: string;
     profilePhoto?: string;
     coverPhoto?: string;
+    description?: string;
   }>({});
 
   const technologies = [
@@ -151,6 +151,23 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     'Clubhouse', 'Pivotal Tracker', 'Backlog', 'Favro', 'MeisterTask', 'Freedcamp', 'Hive', 'nTask',
     // Productivity Tools
     'Microsoft Word', 'Microsoft Excel', 'Microsoft PowerPoint', 'Microsoft Access',
+    // Apple Tools
+    'Final Cut Pro (Básico)', 'Final Cut Pro (Intermedio)', 'Final Cut Pro (Avanzado)',
+    'Logic Pro (Básico)', 'Logic Pro (Intermedio)', 'Logic Pro (Avanzado)',
+    'GarageBand (Básico)', 'GarageBand (Intermedio)', 'GarageBand (Avanzado)',
+    'Motion (Básico)', 'Motion (Intermedio)', 'Motion (Avanzado)',
+    'Compressor (Básico)', 'Compressor (Intermedio)', 'Compressor (Avanzado)',
+    'MainStage (Básico)', 'MainStage (Intermedio)', 'MainStage (Avanzado)',
+    'Xcode (Básico)', 'Xcode (Intermedio)', 'Xcode (Avanzado)',
+    'Swift (Básico)', 'Swift (Intermedio)', 'Swift (Avanzado)',
+    'SwiftUI (Básico)', 'SwiftUI (Intermedio)', 'SwiftUI (Avanzado)',
+    'Pages (Básico)', 'Pages (Intermedio)', 'Pages (Avanzado)',
+    'Numbers (Básico)', 'Numbers (Intermedio)', 'Numbers (Avanzado)',
+    'Keynote (Básico)', 'Keynote (Intermedio)', 'Keynote (Avanzado)',
+    'iMovie (Básico)', 'iMovie (Intermedio)', 'iMovie (Avanzado)',
+    'Photos (Básico)', 'Photos (Intermedio)', 'Photos (Avanzado)',
+    'Sketch (Básico)', 'Sketch (Intermedio)', 'Sketch (Avanzado)',
+    'Figma (Básico)', 'Figma (Intermedio)', 'Figma (Avanzado)', 'Adobe XD (Básico)', 'Adobe XD (Intermedio)', 'Adobe XD (Avanzado)', 'Sketch (Básico)', 'Sketch (Intermedio)', 'Sketch (Avanzado)', 'Docker', 'Kubernetes', 'AWS', 'Pandas', 'NumPy',
     // UX/UI
     'Abstract (Básico)', 'Abstract (Intermedio)', 'Abstract (Avanzado)', 'Axure (Básico)', 'Axure (Intermedio)', 'Axure (Avanzado)', 'Balsamiq (Básico)', 'Balsamiq (Intermedio)', 'Balsamiq (Avanzado)', 'Coolors (Básico)', 'Coolors (Intermedio)', 'Coolors (Avanzado)', 'Dribbble (Básico)', 'Dribbble (Intermedio)', 'Dribbble (Avanzado)', 'FigJam (Básico)', 'FigJam (Intermedio)', 'FigJam (Avanzado)', 'Flinto (Básico)', 'Flinto (Intermedio)', 'Flinto (Avanzado)',
     'Framer (Básico)', 'Framer (Intermedio)', 'Framer (Avanzado)', 'InVision (Básico)', 'InVision (Intermedio)', 'InVision (Avanzado)', 'Justinmind (Básico)', 'Justinmind (Intermedio)', 'Justinmind (Avanzado)', 'Lottie (Básico)', 'Lottie (Intermedio)', 'Lottie (Avanzado)', 'Maze (Básico)', 'Maze (Intermedio)', 'Maze (Avanzado)', 'Miro (Básico)', 'Miro (Intermedio)', 'Miro (Avanzado)', 'Mockflow (Básico)', 'Mockflow (Intermedio)', 'Mockflow (Avanzado)', 'Origami Studio (Básico)', 'Origami Studio (Intermedio)', 'Origami Studio (Avanzado)', 'Penpot (Básico)', 'Penpot (Intermedio)', 'Penpot (Avanzado)',
@@ -167,11 +184,162 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   ].sort();
 
   const ladaOptions = [
-    { value: '+52', label: '+52 (México)' },
-    { value: '+1', label: '+1 (EE.UU./Canadá)' },
-    { value: '+44', label: '+44 (Reino Unido)' },
-    { value: '+33', label: '+33 (Francia)' },
-    { value: '+49', label: '+49 (Alemania)' },
+    // México
+    { value: '+52', label: '🇲🇽 +52', region: 'México' },
+    
+    // América del Norte
+    { value: '+1', label: '🇺🇸 +1', region: 'América del Norte' },
+    { value: '+1-809', label: '🇩🇴 +1-809', region: 'América del Norte' },
+    { value: '+1-787', label: '🇵🇷 +1-787', region: 'América del Norte' },
+    
+    // América Central
+    { value: '+502', label: '🇬🇹 +502', region: 'América Central' },
+    { value: '+503', label: '🇸🇻 +503', region: 'América Central' },
+    { value: '+504', label: '🇭🇳 +504', region: 'América Central' },
+    { value: '+505', label: '🇳🇮 +505', region: 'América Central' },
+    { value: '+506', label: '🇨🇷 +506', region: 'América Central' },
+    { value: '+507', label: '🇵🇦 +507', region: 'América Central' },
+    { value: '+501', label: '🇧🇿 +501', region: 'América Central' },
+    
+    // América del Sur
+    { value: '+54', label: '🇦🇷 +54', region: 'América del Sur' },
+    { value: '+55', label: '🇧🇷 +55', region: 'América del Sur' },
+    { value: '+56', label: '🇨🇱 +56', region: 'América del Sur' },
+    { value: '+57', label: '🇨🇴 +57', region: 'América del Sur' },
+    { value: '+58', label: '🇻🇪 +58', region: 'América del Sur' },
+    { value: '+51', label: '🇵🇪 +51', region: 'América del Sur' },
+    { value: '+593', label: '🇪🇨 +593', region: 'América del Sur' },
+    { value: '+595', label: '🇵🇾 +595', region: 'América del Sur' },
+    { value: '+598', label: '🇺🇾 +598', region: 'América del Sur' },
+    { value: '+591', label: '🇧🇴 +591', region: 'América del Sur' },
+    { value: '+592', label: '🇬🇾 +592', region: 'América del Sur' },
+    
+    // Europa Occidental
+    { value: '+44', label: '🇬🇧 +44', region: 'Europa Occidental' },
+    { value: '+33', label: '🇫🇷 +33', region: 'Europa Occidental' },
+    { value: '+49', label: '🇩🇪 +49', region: 'Europa Occidental' },
+    { value: '+34', label: '🇪🇸 +34', region: 'Europa Occidental' },
+    { value: '+39', label: '🇮🇹 +39', region: 'Europa Occidental' },
+    { value: '+31', label: '🇳🇱 +31', region: 'Europa Occidental' },
+    { value: '+32', label: '🇧🇪 +32', region: 'Europa Occidental' },
+    { value: '+351', label: '🇵🇹 +351', region: 'Europa Occidental' },
+    { value: '+41', label: '🇨🇭 +41', region: 'Europa Occidental' },
+    { value: '+43', label: '🇦🇹 +43', region: 'Europa Occidental' },
+    { value: '+30', label: '🇬🇷 +30', region: 'Europa Occidental' },
+    { value: '+353', label: '🇮🇪 +353', region: 'Europa Occidental' },
+    { value: '+46', label: '🇸🇪 +46', region: 'Europa Occidental' },
+    { value: '+47', label: '🇳🇴 +47', region: 'Europa Occidental' },
+    { value: '+45', label: '🇩🇰 +45', region: 'Europa Occidental' },
+    { value: '+358', label: '🇫🇮 +358', region: 'Europa Occidental' },
+    { value: '+420', label: '🇨🇿 +420', region: 'Europa Occidental' },
+    { value: '+48', label: '🇵🇱 +48', region: 'Europa Occidental' },
+    
+    // Europa del Este
+    { value: '+7', label: '🇷🇺 +7', region: 'Europa del Este' },
+    { value: '+380', label: '🇺🇦 +380', region: 'Europa del Este' },
+    { value: '+373', label: '🇲🇩 +373', region: 'Europa del Este' },
+    { value: '+374', label: '🇦🇲 +374', region: 'Europa del Este' },
+    { value: '+995', label: '🇬🇪 +995', region: 'Europa del Este' },
+    { value: '+994', label: '🇦🇿 +994', region: 'Europa del Este' },
+    { value: '+993', label: '🇹🇲 +993', region: 'Europa del Este' },
+    { value: '+992', label: '🇹🇯 +992', region: 'Europa del Este' },
+    { value: '+996', label: '🇰🇬 +996', region: 'Europa del Este' },
+    { value: '+998', label: '🇺🇿 +998', region: 'Europa del Este' },
+    
+    // Asia Oriental
+    { value: '+81', label: '🇯🇵 +81', region: 'Asia Oriental' },
+    { value: '+82', label: '🇰🇷 +82', region: 'Asia Oriental' },
+    { value: '+86', label: '🇨🇳 +86', region: 'Asia Oriental' },
+    { value: '+886', label: '🇹🇼 +886', region: 'Asia Oriental' },
+    { value: '+852', label: '🇭🇰 +852', region: 'Asia Oriental' },
+    { value: '+853', label: '🇲🇴 +853', region: 'Asia Oriental' },
+    { value: '+84', label: '🇻🇳 +84', region: 'Asia Oriental' },
+    { value: '+855', label: '🇰🇭 +855', region: 'Asia Oriental' },
+    { value: '+856', label: '🇱🇦 +856', region: 'Asia Oriental' },
+    { value: '+66', label: '🇹🇭 +66', region: 'Asia Oriental' },
+    { value: '+95', label: '🇲🇲 +95', region: 'Asia Oriental' },
+    { value: '+60', label: '🇲🇾 +60', region: 'Asia Oriental' },
+    { value: '+65', label: '🇸🇬 +65', region: 'Asia Oriental' },
+    { value: '+673', label: '🇧🇳 +673', region: 'Asia Oriental' },
+    
+    // Asia Meridional
+    { value: '+91', label: '🇮🇳 +91', region: 'Asia Meridional' },
+    { value: '+880', label: '🇧🇩 +880', region: 'Asia Meridional' },
+    { value: '+977', label: '🇳🇵 +977', region: 'Asia Meridional' },
+    { value: '+94', label: '🇱🇰 +94', region: 'Asia Meridional' },
+    { value: '+960', label: '🇲🇻 +960', region: 'Asia Meridional' },
+    { value: '+975', label: '🇧🇹 +975', region: 'Asia Meridional' },
+    { value: '+92', label: '🇵🇰 +92', region: 'Asia Meridional' },
+    { value: '+93', label: '🇦🇫 +93', region: 'Asia Meridional' },
+    { value: '+98', label: '🇮🇷 +98', region: 'Asia Meridional' },
+    { value: '+964', label: '🇮🇶 +964', region: 'Asia Meridional' },
+    { value: '+965', label: '🇰🇼 +965', region: 'Asia Meridional' },
+    { value: '+966', label: '🇸🇦 +966', region: 'Asia Meridional' },
+    { value: '+967', label: '🇾🇪 +967', region: 'Asia Meridional' },
+    { value: '+968', label: '🇴🇲 +968', region: 'Asia Meridional' },
+    { value: '+971', label: '🇦🇪 +971', region: 'Asia Meridional' },
+    { value: '+972', label: '🇮🇱 +972', region: 'Asia Meridional' },
+    { value: '+973', label: '🇧🇭 +973', region: 'Asia Meridional' },
+    { value: '+974', label: '🇶🇦 +974', region: 'Asia Meridional' },
+    { value: '+90', label: '🇹🇷 +90', region: 'Asia Meridional' },
+    
+    // África
+    { value: '+27', label: '🇿🇦 +27', region: 'África' },
+    { value: '+20', label: '🇪🇬 +20', region: 'África' },
+    { value: '+212', label: '🇲🇦 +212', region: 'África' },
+    { value: '+234', label: '🇳🇬 +234', region: 'África' },
+    { value: '+254', label: '🇰🇪 +254', region: 'África' },
+    { value: '+233', label: '🇬🇭 +233', region: 'África' },
+    { value: '+225', label: '🇨🇮 +225', region: 'África' },
+    { value: '+221', label: '🇸🇳 +221', region: 'África' },
+    { value: '+237', label: '🇨🇲 +237', region: 'África' },
+    { value: '+236', label: '🇨🇫 +236', region: 'África' },
+    { value: '+235', label: '🇹🇩 +235', region: 'África' },
+    { value: '+241', label: '🇬🇦 +241', region: 'África' },
+    { value: '+242', label: '🇨🇬 +242', region: 'África' },
+    { value: '+243', label: '🇨🇩 +243', region: 'África' },
+    { value: '+244', label: '🇦🇴 +244', region: 'África' },
+    { value: '+245', label: '🇬🇼 +245', region: 'África' },
+    { value: '+249', label: '🇸🇩 +249', region: 'África' },
+    { value: '+250', label: '🇷🇼 +250', region: 'África' },
+    { value: '+251', label: '🇪🇹 +251', region: 'África' },
+    { value: '+252', label: '🇸🇴 +252', region: 'África' },
+    { value: '+253', label: '🇩🇯 +253', region: 'África' },
+    { value: '+255', label: '🇹🇿 +255', region: 'África' },
+    { value: '+256', label: '🇺🇬 +256', region: 'África' },
+    { value: '+257', label: '🇧🇮 +257', region: 'África' },
+    { value: '+258', label: '🇲🇿 +258', region: 'África' },
+    { value: '+260', label: '🇿🇲 +260', region: 'África' },
+    { value: '+261', label: '🇲🇬 +261', region: 'África' },
+    { value: '+262', label: '🇷🇪 +262', region: 'África' },
+    { value: '+263', label: '🇿🇼 +263', region: 'África' },
+    { value: '+264', label: '🇳🇦 +264', region: 'África' },
+    { value: '+265', label: '🇲🇼 +265', region: 'África' },
+    { value: '+266', label: '🇱🇸 +266', region: 'África' },
+    { value: '+267', label: '🇧🇼 +267', region: 'África' },
+    { value: '+268', label: '🇸🇿 +268', region: 'África' },
+    { value: '+269', label: '🇰🇲 +269', region: 'África' },
+    
+    // Oceanía
+    { value: '+61', label: '🇦🇺 +61', region: 'Oceanía' },
+    { value: '+64', label: '🇳🇿 +64', region: 'Oceanía' },
+    { value: '+675', label: '🇵🇬 +675', region: 'Oceanía' },
+    { value: '+676', label: '🇹🇴 +676', region: 'Oceanía' },
+    { value: '+677', label: '🇸🇧 +677', region: 'Oceanía' },
+    { value: '+678', label: '🇻🇺 +678', region: 'Oceanía' },
+    { value: '+679', label: '🇫🇯 +679', region: 'Oceanía' },
+    { value: '+680', label: '🇵🇼 +680', region: 'Oceanía' },
+    { value: '+681', label: '🇼🇫 +681', region: 'Oceanía' },
+    { value: '+682', label: '🇨🇰 +682', region: 'Oceanía' },
+    { value: '+683', label: '🇳🇺 +683', region: 'Oceanía' },
+    { value: '+685', label: '🇼🇸 +685', region: 'Oceanía' },
+    { value: '+686', label: '🇰🇮 +686', region: 'Oceanía' },
+    { value: '+687', label: '🇳🇨 +687', region: 'Oceanía' },
+    { value: '+688', label: '🇹🇻 +688', region: 'Oceanía' },
+    { value: '+689', label: '🇵🇫 +689', region: 'Oceanía' },
+    { value: '+690', label: '🇹🇰 +690', region: 'Oceanía' },
+    { value: '+691', label: '🇫🇲 +691', region: 'Oceanía' },
+    { value: '+692', label: '🇲🇭 +692', region: 'Oceanía' },
   ];
 
   useEffect(() => {
@@ -626,21 +794,103 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
     setAlert(null);
   };
 
+  // Función helper para manejar shortcuts de teclado en inputs
+  const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, fieldName: string) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = formData[fieldName as keyof ConfigForm]?.toString().substring(targetC.selectionStart || 0, targetC.selectionEnd || 0) || '';
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const currentValue = formData[fieldName as keyof ConfigForm]?.toString() || '';
+              const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+              setFormData(prev => ({ ...prev, [fieldName]: newValue }));
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              const currentValue = formData[fieldName as keyof ConfigForm]?.toString() || '';
+              setFormData(prev => ({ ...prev, [fieldName]: currentValue + text }));
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = formData[fieldName as keyof ConfigForm]?.toString().substring(targetX.selectionStart || 0, targetX.selectionEnd || 0) || '';
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const currentValue = formData[fieldName as keyof ConfigForm]?.toString() || '';
+                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
+                setFormData(prev => ({ ...prev, [fieldName]: newValue }));
+              } else {
+                setFormData(prev => ({ ...prev, [fieldName]: '' }));
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const currentValue = formData[fieldName as keyof ConfigForm]?.toString() || '';
+                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
+                setFormData(prev => ({ ...prev, [fieldName]: newValue }));
+              } else {
+                setFormData(prev => ({ ...prev, [fieldName]: '' }));
+              }
+            });
+          }
+          break;
+      }
+    }
+  }, [formData]);
+
   const formatPhoneNumber = (phone: string) => {
     // Si phone está vacío, mostrar placeholder
     if (!phone) return '';
     
     const digits = phone.replace(/\D/g, '');
     
-    // Formatear según la cantidad de dígitos
-    if (digits.length <= 2) {
-      return `(${digits}`;
-    } else if (digits.length <= 5) {
-      return `(${digits.slice(0, 2)})-${digits.slice(2)}`;
-    } else if (digits.length <= 7) {
-      return `(${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5)}`;
+    // Formatear según la cantidad de dígitos para formato XXX-XXX-XX-XX
+    if (digits.length <= 3) {
+      return digits;
+    } else if (digits.length <= 6) {
+      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else if (digits.length <= 8) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
     } else {
-      return `(${digits.slice(0, 2)})-${digits.slice(2, 5)}-${digits.slice(5, 7)}-${digits.slice(7, 10)}`;
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
     }
   };
 
@@ -845,6 +1095,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     placeholder="Escribe tu nombre completo"
                     className={styles.input}
                     disabled={!isOwnProfile || !isEditing}
+                    onKeyDown={(e) => handleInputKeyDown(e, 'fullName')}
                   />
                   {errors.fullName && <p className={styles.errorText}>{errors.fullName}</p>}
                 </div>
@@ -858,6 +1109,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     placeholder="¿Cuál es tu cargo actual?"
                     className={styles.input}
                     disabled={!isOwnProfile || !isEditing}
+                    onKeyDown={(e) => handleInputKeyDown(e, 'role')}
                   />
                   {errors.role && <p className={styles.errorText}>{errors.role}</p>}
                 </div>
@@ -873,7 +1125,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     placeholder="Breve descripción personal"
                     className={styles.input}
                     disabled={!isOwnProfile || !isEditing}
+                    onKeyDown={(e) => handleInputKeyDown(e, 'description')}
                   />
+                  {errors.description && <p className={styles.errorText}>{errors.description}</p>}
                 </div>
               </div>
               <div className={styles.fieldGroupRow}>
@@ -898,6 +1152,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     className={styles.input}
                     disabled={!isOwnProfile || !isEditing}
                     maxLength={10}
+                    onKeyDown={(e) => handleInputKeyDown(e, 'birthDate')}
                   />
                   {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
                 </div>
@@ -919,10 +1174,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                       name="phone"
                       value={formatPhoneNumber(formData.phone || '')}
                       onChange={handlePhoneChange}
-                      placeholder="XX-XXX-XX-XX"
+                      placeholder="XXX-XXX-XX-XX"
                       className={styles.input}
                       disabled={!isOwnProfile || !isEditing}
                       maxLength={15}
+                      onKeyDown={(e) => handleInputKeyDown(e, 'phone')}
                     />
                   </div>
                   {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
@@ -937,6 +1193,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     placeholder="Ciudad, País"
                     className={styles.input}
                     disabled={!isOwnProfile || !isEditing}
+                    onKeyDown={(e) => handleInputKeyDown(e, 'city')}
                   />
                 </div>
               </div>
@@ -967,6 +1224,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                     placeholder="https://miportafolio.com"
                     className={styles.input}
                     disabled={!isOwnProfile || !isEditing}
+                    onKeyDown={(e) => handleInputKeyDown(e, 'portfolio')}
                   />
                   {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
                 </div>

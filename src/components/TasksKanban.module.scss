@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 .container {
   padding: 24px;
   background: rgba(241, 245, 249, 0.8);
@@ -10,7 +11,7 @@
     8px 8px 16px rgba(0, 0, 0, 0.05),
     inset -4px -4px 8px rgba(255, 255, 255, 0.9),
     inset 4px 4px 8px rgba(0, 0, 0, 0.05);
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -51,7 +52,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   font-size: 14px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1e293b;
   box-shadow:
@@ -199,7 +200,7 @@
   -webkit-backdrop-filter: blur(8px);
   color: #1e293b;
   font-size: 14px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.8),
@@ -393,7 +394,7 @@
   background: rgba(241, 245, 249, 0.8);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   font-size: 14px;
   color: #1e293b;
@@ -540,7 +541,7 @@
 .dropdownItem {
   padding: 10px 16px;
   font-size: 13px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1e293b;
   cursor: pointer;
@@ -809,7 +810,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   font-size: 14px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1e293b;
   box-shadow:
@@ -863,6 +864,32 @@
     inset 4px 4px 8px rgba(255, 255, 255, 0.03);
   transform: translateY(-2px);
 }
+
+// Estilos para touch dragging en administradores
+.touchDraggable {
+  touch-action: none !important;
+  user-select: none;
+  
+  &:active {
+    transform: scale(1.02);
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.9),
+      8px 8px 16px rgba(0, 0, 0, 0.1),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.95),
+      inset 4px 4px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+:global(.dark) .touchDraggable {
+  &:active {
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.06),
+      8px 8px 16px rgba(0, 0, 0, 0.6),
+      inset -4px -4px 8px rgba(0, 0, 0, 0.5),
+      inset 4px 4px 8px rgba(255, 255, 255, 0.04);
+  }
+}
+
 .taskHeader {
   display: flex;
   justify-content: space-between;
@@ -1121,7 +1148,6 @@
     gap: 16px; 
   }
 }
-
 .kanbanColumn {
   flex: 0 0 280px;
     background: var(--column-bg, #ffffff);
@@ -1456,4 +1482,28 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   @media (max-width: 767px) {
     display: none;
   }
+}
+
+.touchDragIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  margin-top: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 6px;
+  font-size: 10px;
+  color: #3b82f6;
+  font-weight: 500;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+  
+  span {
+    font-size: 10px;
+  }
+}
+
+:global(.dark) .touchDragIndicator {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
 }

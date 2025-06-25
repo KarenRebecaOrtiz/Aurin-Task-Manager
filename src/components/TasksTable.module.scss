@@ -1,3 +1,5 @@
+@use '@/app/styles/variables' as *;
+
 .container {
   padding: 24px;
   background: rgba(241, 245, 249, 0.8);
@@ -10,7 +12,7 @@
     8px 8px 16px rgba(0, 0, 0, 0.05),
     inset -4px -4px 8px rgba(255, 255, 255, 0.9),
     inset 4px 4px 8px rgba(0, 0, 0, 0.05);
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   display: block;
   flex-direction: column;
   gap: 16px;
@@ -18,8 +20,9 @@
 }
 
 :global(body.dark) .container  {
-  background: rgba(0, 0, 0, 0.8);
-  border-color: rgba(0, 0, 0, 0.1);
+  background: #0d0d0d;
+  border-color: none;
+  border: none;
   box-shadow:none;
 }
 
@@ -46,7 +49,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   font-size: 14px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1e293b;
   box-shadow:
@@ -100,15 +103,16 @@
 
 
 :global(body.dark) .searchInput  {
-  background: rgba(0, 0, 0, 0.8);
-  border-color: rgba(224, 224, 224, 0.202);
+  background:  #27272a;
+  border-color: none;
+  border: none;
   box-shadow:none;
   color: white!important;
 }
 
 
 .dark .searchInput::placeholder {
-  color: #9ca3af;
+  color: #efefef;
 }
 
 .dark .searchInput:hover {
@@ -204,7 +208,7 @@
   -webkit-backdrop-filter: blur(8px);
   color: #1e293b;
   font-size: 14px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.8),
@@ -284,10 +288,11 @@
 
 
 :global(body.dark) .viewButton  {
-  color: white;
-  background-color: black;
-  border-color: rgb(57, 57, 57);
-  box-shadow: none;
+  background:  #27272a;
+  border-color: none;
+  border: none;
+  box-shadow:none;
+  color: white!important;
 }
 
 
@@ -334,7 +339,7 @@
   background: rgba(241, 245, 249, 0.8);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   font-size: 14px;
   color: #1e293b;
@@ -379,14 +384,10 @@
 }
 
 .dark .dropdownTrigger {
-  background: rgba(39, 39, 42, 0.8);
+  background:#dcdcdd;
   color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset -2px -2px 4px rgba(0, 0, 0, 0.7),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.03),
-    -4px -4px 8px rgba(0, 0, 0, 0.6),
-    4px 4px 8px rgba(255, 255, 255, 0.02);
+  border-color:none;
+  box-shadow:none;
 }
 
 .dark .dropdownTrigger img {
@@ -422,20 +423,21 @@
 
 :global(body.dark) .createButton  {
   color: rgb(0, 0, 0);
-  background-color: rgb(239, 239, 239);
-  border-color: rgb(57, 57, 57);
+  background-color: #dcdcdd;
+  border-color:none;
   box-shadow: none;
 }
 
 
 :global(body.dark) .dropdownTrigger  {
-  background: rgba(0, 0, 0, 0.8);
-  border-color: rgba(224, 224, 224, 0.202);
+  background:#27272a;
+  border-color:none;
   box-shadow:none;
-  color: white;
+  color: rgba(255, 255, 255, 0.532);
+  border: none;
 }
 :global(body.dark) .dropdownTrigger img  {
-  filter: invert(100)brightness(100);
+  filter: invert(80)brightness(80);
   margin-right: 5px;
 }
 
@@ -462,6 +464,7 @@
   left: 0;
   right: 0;
   z-index: 10;
+  max-height: 200px;
   overflow-y: auto;
   border-radius: 12px;
   padding: 8px 0;
@@ -478,6 +481,25 @@
     background 0.3s ease,
     box-shadow 0.3s ease,
     border-color 0.3s ease;
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
 }
 
 .dark .dropdownItems {
@@ -507,7 +529,7 @@
 .dropdownItem {
   padding: 10px 16px;
   font-size: 13px;
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1e293b;
   cursor: pointer;

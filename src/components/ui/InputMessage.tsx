@@ -29,7 +29,6 @@ interface Message {
 }
 
 interface InputMessageProps {
-  taskId: string;
   userId: string | undefined;
   userFirstName: string | undefined;
   onSendMessage: (
@@ -44,7 +43,6 @@ interface InputMessageProps {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export function InputMessage({
-  taskId,
   userId,
   userFirstName,
   onSendMessage,
@@ -182,53 +180,277 @@ export function InputMessage({
     [editor],
   );
 
-  // Handle keydown for shortcuts
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!editor) return;
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key.toLowerCase()) {
-          case 'b':
-            e.preventDefault();
-            toggleFormat('bold');
-            break;
-          case 'i':
-            e.preventDefault();
-            toggleFormat('italic');
-            break;
-          case 'u':
-            e.preventDefault();
-            toggleFormat('underline');
-            break;
-          case '`':
-            e.preventDefault();
-            toggleFormat('code');
-            break;
-          case 'a':
-            e.preventDefault();
-            editor.commands.selectAll();
-            break;
-        }
-      }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
-        e.preventDefault();
-        switch (e.key) {
-          case '8':
-            toggleFormat('bullet');
-            break;
-          case '7':
-            toggleFormat('numbered');
-            break;
-        }
-      }
-    },
-    [toggleFormat, editor],
-  );
+  // Send message
+  const handleSend = useCallback(async (e: React.FormEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    if (!userId || (!editor || editor.isEmpty) && !file || isSending || isProcessing) {
+      return;
+    }
 
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    setHasReformulated(false);
+    setIsDropupOpen(false);
+
+    const clientId = crypto.randomUUID();
+    const tempId = `temp-${clientId}`;
+    const finalMessageData: Partial<Message> = {
+      id: tempId,
+      senderId: userId,
+      senderName: userFirstName || 'Usuario',
+      text: editor.getHTML(),
+      timestamp: Timestamp.now(),
+      read: false,
+      imageUrl: null,
+      fileUrl: null,
+      fileName: file ? file.name : null,
+      fileType: file ? file.type : null,
+      filePath: null,
+      isPending: false,
+      hasError: false,
+      clientId,
+    };
+
+    try {
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) throw new Error('Failed to upload image');
+        const data = await response.json();
+        finalMessageData.imageUrl = data.imageUrl;
+      }
+
+      await onSendMessage(finalMessageData);
+      editor?.commands.clearContent();
+      setFile(null);
+      setPreviewUrl(null);
+      console.log('[InputMessage] Message sent successfully');
+    } catch (error) {
+      console.error('[InputMessage] Error sending message:', error);
+      // Mark message as failed
+      finalMessageData.hasError = true;
+      await onSendMessage(finalMessageData);
+    }
+  }, [userId, editor, file, isSending, isProcessing, userFirstName, onSendMessage]);
+
+  // Handle keydown for shortcuts
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          editor?.commands.selectAll();
+          break;
+        case 'c':
+          e.preventDefault();
+          const selection = window.getSelection();
+          if (selection && selection.toString().length > 0) {
+            navigator.clipboard.writeText(selection.toString()).catch(() => {
+              // Fallback for older browsers
+              const textArea = document.createElement('textarea');
+              textArea.value = selection.toString();
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          navigator.clipboard.readText().then(text => {
+            editor?.commands.insertContent(text);
+          }).catch(() => {
+            // Fallback for older browsers or when clipboard access is denied
+            editor?.commands.focus();
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const cutSelection = window.getSelection();
+          if (cutSelection && cutSelection.toString().length > 0) {
+            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+              editor?.commands.deleteSelection();
+            }).catch(() => {
+              // Fallback for older browsers
+              const textArea = document.createElement('textarea');
+              textArea.value = cutSelection.toString();
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              editor?.commands.deleteSelection();
+            });
+          }
+          break;
+        case 'z':
+          // Undo - let browser handle it naturally
+          break;
+        case 'y':
+          // Redo - let browser handle it naturally
+          break;
+      }
+    }
+    
+    // Handle Enter to send
+    if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
+      e.preventDefault();
+      handleSend(e);
+    }
+  }, [isSending, isProcessing, handleSend, editor]);
+
+  // Handle context menu for editor
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    const selection = window.getSelection();
+    const hasSelection = selection && selection.toString().length > 0;
+    
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.style.cssText = `
+      position: fixed;
+      top: ${e.clientY}px;
+      left: ${e.clientX}px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 14px;
+      min-width: 150px;
+    `;
+
+    const menuItems = [
+      { label: 'Deshacer', action: () => editor?.commands.undo(), shortcut: 'Ctrl+Z' },
+      { label: 'Rehacer', action: () => editor?.commands.redo(), shortcut: 'Ctrl+Y' },
+      { type: 'separator' },
+      { 
+        label: 'Cortar', 
+        action: async () => {
+          if (hasSelection) {
+            try {
+              await navigator.clipboard.writeText(selection.toString());
+              editor?.commands.deleteSelection();
+            } catch {
+              // Fallback for older browsers
+              const textArea = document.createElement('textarea');
+              textArea.value = selection.toString();
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              editor?.commands.deleteSelection();
+            }
+          }
+        }, 
+        shortcut: 'Ctrl+X', 
+        disabled: !hasSelection 
+      },
+      { 
+        label: 'Copiar', 
+        action: async () => {
+          if (hasSelection) {
+            try {
+              await navigator.clipboard.writeText(selection.toString());
+            } catch {
+              // Fallback for older browsers
+              const textArea = document.createElement('textarea');
+              textArea.value = selection.toString();
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            }
+          }
+        }, 
+        shortcut: 'Ctrl+C', 
+        disabled: !hasSelection 
+      },
+      { 
+        label: 'Pegar', 
+        action: async () => {
+          try {
+            const text = await navigator.clipboard.readText();
+            editor?.commands.insertContent(text);
+          } catch {
+            // Fallback for older browsers or when clipboard access is denied
+            editor?.commands.focus();
+            document.execCommand('paste');
+          }
+        }, 
+        shortcut: 'Ctrl+V' 
+      },
+      { type: 'separator' },
+      { label: 'Seleccionar todo', action: () => editor?.commands.selectAll(), shortcut: 'Ctrl+A' },
+      { 
+        label: 'Eliminar', 
+        action: () => {
+          if (editor && hasSelection) {
+            editor.commands.deleteSelection();
+          }
+        }, 
+        shortcut: 'Delete', 
+        disabled: !hasSelection 
+      }
+    ];
+
+    menuItems.forEach((item) => {
+      if (item.type === 'separator') {
+        const separator = document.createElement('hr');
+        separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
+        menu.appendChild(separator);
+        return;
+      }
+
+      const menuItem = document.createElement('div');
+      menuItem.style.cssText = `
+        padding: 8px 12px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+      `;
+      menuItem.innerHTML = `
+        <span>${item.label}</span>
+        <span style="color: #666; font-size: 12px;">${item.shortcut}</span>
+      `;
+      
+      if (!item.disabled) {
+        menuItem.addEventListener('click', () => {
+          item.action();
+          document.body.removeChild(menu);
+        });
+        menuItem.addEventListener('mouseenter', () => {
+          menuItem.style.backgroundColor = '#f5f5f5';
+        });
+        menuItem.addEventListener('mouseleave', () => {
+          menuItem.style.backgroundColor = 'transparent';
+        });
+      }
+      
+      menu.appendChild(menuItem);
+    });
+
+    document.body.appendChild(menu);
+
+    // Close menu when clicking outside
+    const closeMenu = () => {
+      if (document.body.contains(menu)) {
+        document.body.removeChild(menu);
+      }
+      document.removeEventListener('click', closeMenu);
+    };
+    
+    setTimeout(() => {
+      document.addEventListener('click', closeMenu);
+    }, 0);
+  }, [editor]);
 
   // File handling
   const selectFile = (f: File) => {
@@ -331,102 +553,6 @@ export function InputMessage({
     }
   };
 
-  // Send message
-  const handleSend = async (e: React.FormEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    if (!userId || (!editor || editor.isEmpty) && !file || isSending || isProcessing) {
-      return;
-    }
-
-    setHasReformulated(false);
-    setIsDropupOpen(false);
-
-    const clientId = crypto.randomUUID();
-    const tempId = `temp-${clientId}`;
-
-    try {
-      let finalMessageData: Partial<Message> = {
-        id: tempId,
-        senderId: userId,
-        senderName: userFirstName || 'Usuario',
-        text: editor.getHTML(),
-        timestamp: Timestamp.now(),
-        read: false,
-        imageUrl: null,
-        fileUrl: null,
-        fileName: file ? file.name : null,
-        fileType: file ? file.type : null,
-        filePath: null,
-        isPending: false,
-        hasError: false,
-        clientId,
-      };
-
-      if (file) {
-        const optimisticMessage: Partial<Message> = {
-          ...finalMessageData,
-          imageUrl: file.type.startsWith('image/') ? previewUrl : null,
-          isPending: true,
-        };
-
-        await onSendMessage(optimisticMessage);
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userId', userId);
-        formData.append('type', 'message');
-        formData.append('conversationId', taskId);
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-          headers: { 'x-clerk-user-id': userId },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to upload file');
-        }
-
-        const { url, fileName, fileType, filePath } = await response.json();
-
-        finalMessageData = {
-          ...finalMessageData,
-          imageUrl: file.type.startsWith('image/') && url ? url : null,
-          fileUrl: url && !file.type.startsWith('image/') ? url : null,
-          fileName,
-          fileType,
-          filePath,
-          isPending: false,
-        };
-
-        await onSendMessage(finalMessageData);
-      } else {
-        await onSendMessage(finalMessageData);
-      }
-
-      editor?.commands.clearContent();
-      setFile(null);
-      setPreviewUrl(null);
-      setHasReformulated(false);
-      adjustEditorHeight();
-    } catch (error) {
-      console.error('[InputMessage:HandleSend] Error:', error);
-      if (file) {
-        await onSendMessage({
-          id: tempId,
-          senderId: userId,
-          senderName: userFirstName || 'Usuario',
-          text: editor?.getHTML() || null,
-          timestamp: Timestamp.now(),
-          isPending: false,
-          hasError: true,
-          clientId,
-        });
-      }
-      alert('Error al enviar el mensaje.');
-    }
-  };
-
   const formatButtons = [
     { id: 'bold', icon: '/input/bold.svg', label: 'Negrita', shortcut: 'Ctrl+B' },
     { id: 'italic', icon: '/input/italic.svg', label: 'Cursiva', shortcut: 'Ctrl+I' },
@@ -465,6 +591,7 @@ export function InputMessage({
                 height={16}
                 className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`}
                 style={{ filter: 'none', fill: '#000000' }}
+                draggable="false"
               />
             </button>
           ))}
@@ -491,20 +618,35 @@ export function InputMessage({
         )}
         {previewUrl && (
           <div className={styles.imagePreview}>
-            <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
+            <Image 
+              src={previewUrl} 
+              alt="Previsualización" 
+              width={0}
+              height={0}
+              sizes="100px"
+              className={styles.previewImage}
+              draggable="false"
+              style={{
+                width: 'auto',
+                height: 'auto',
+                maxWidth: '100px',
+                maxHeight: '100px',
+                objectFit: 'contain'
+              }}
+            />
             <button
               className={styles.removeImageButton}
               onClick={handleRemoveFile}
               type="button"
               title="Eliminar imagen"
             >
-              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
             </button>
           </div>
         )}
         {file && !previewUrl && (
           <div className={styles.filePreview}>
-            <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+            <Image src="/file.svg" alt="Archivo" width={16} height={16} draggable="false" />
             <span>{file.name}</span>
             <button
               className={styles.removeImageButton}
@@ -512,7 +654,7 @@ export function InputMessage({
               type="button"
               title="Eliminar archivo"
             >
-              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+              <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
             </button>
           </div>
         )}
@@ -527,14 +669,8 @@ export function InputMessage({
               resize: 'none',
               overflow: 'hidden',
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
-                e.preventDefault();
-                handleSend(e);
-              } else if (e.key === 'Enter') {
-                setTimeout(adjustEditorHeight, 0);
-              }
-            }}
+            onKeyDown={handleKeyDown}
+            onContextMenu={handleContextMenu}
           />
         </div>
         <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
@@ -551,7 +687,7 @@ export function InputMessage({
                 title="Reformular texto con Gemini AI ✨"
                 aria-expanded={isDropupOpen}
               >
-                <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} />
+                <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} draggable="false" />
               </button>
               {isDropupOpen && (
                 <div className={styles.dropupMenu} role="menu">
@@ -652,6 +788,7 @@ export function InputMessage({
                 width={16}
                 height={16}
                 style={{ filter: 'invert(100)' }}
+                draggable="false"
               />
             </button>
             <EmojiSelector
@@ -669,7 +806,7 @@ export function InputMessage({
               disabled={isSending || isProcessing || (!editor || editor.isEmpty) && !file}
               aria-label="Enviar mensaje"
             >
-              <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
+              <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} draggable="false" />
             </button>
           </div>
         </div>

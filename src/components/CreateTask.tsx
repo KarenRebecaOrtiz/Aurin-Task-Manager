@@ -833,8 +833,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     );
   }
 
-
-
   return (
     <>
       <div className={`${styles.container} ${isOpen ? styles.open : ""} ${isSaving ? styles.saving : ""}`} ref={containerRef}>
@@ -893,6 +891,85 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           }}
                           placeholder="Ej: Nombre de la cuenta"
                           ref={clientInputRef}
+                          onKeyDown={(e) => {
+                            if (e.ctrlKey || e.metaKey) {
+                              switch (e.key.toLowerCase()) {
+                                case 'a':
+                                  e.preventDefault();
+                                  e.currentTarget.select();
+                                  break;
+                                case 'c':
+                                  e.preventDefault();
+                                  const selection = window.getSelection();
+                                  if (selection && selection.toString().length > 0) {
+                                    navigator.clipboard.writeText(selection.toString()).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = selection.toString();
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                    });
+                                  }
+                                  break;
+                                case 'v':
+                                  e.preventDefault();
+                                  const targetV = e.currentTarget as HTMLInputElement | null;
+                                  navigator.clipboard.readText().then(text => {
+                                    if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                      const start = targetV.selectionStart;
+                                      const end = targetV.selectionEnd;
+                                      const newValue = searchClient.substring(0, start) + text + searchClient.substring(end);
+                                      setSearchClient(newValue);
+                                      setIsClientDropdownOpen(text.trim() !== "");
+                                      setTimeout(() => {
+                                        targetV.setSelectionRange(start + text.length, start + text.length);
+                                      }, 0);
+                                    } else {
+                                      setSearchClient(searchClient + text);
+                                    }
+                                  }).catch(() => {
+                                    document.execCommand('paste');
+                                  });
+                                  break;
+                                case 'x':
+                                  e.preventDefault();
+                                  const cutSelection = window.getSelection();
+                                  if (cutSelection && cutSelection.toString().length > 0) {
+                                    navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                                      const targetX = e.currentTarget as HTMLInputElement | null;
+                                      if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                        const start = targetX.selectionStart;
+                                        const end = targetX.selectionEnd;
+                                        const newValue = searchClient.substring(0, start) + searchClient.substring(end);
+                                        setSearchClient(newValue);
+                                        setIsClientDropdownOpen(newValue.trim() !== "");
+                                      } else {
+                                        setSearchClient('');
+                                      }
+                                    }).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = cutSelection.toString();
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                      const targetX2 = e.currentTarget as HTMLInputElement | null;
+                                      if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
+                                        const start = targetX2.selectionStart;
+                                        const end = targetX2.selectionEnd;
+                                        const newValue = searchClient.substring(0, start) + searchClient.substring(end);
+                                        setSearchClient(newValue);
+                                        setIsClientDropdownOpen(newValue.trim() !== "");
+                                      } else {
+                                        setSearchClient('');
+                                      }
+                                    });
+                                  }
+                                  break;
+                              }
+                            }
+                          }}
                         />
                         {isClientDropdownOpen &&
                           createPortal(
@@ -1058,6 +1135,82 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Crear wireframe"
                                   {...field}
+                                  onKeyDown={(e) => {
+                                    if (e.ctrlKey || e.metaKey) {
+                                      switch (e.key.toLowerCase()) {
+                                        case 'a':
+                                          e.preventDefault();
+                                          e.currentTarget.select();
+                                          break;
+                                        case 'c':
+                                          e.preventDefault();
+                                          const selection = window.getSelection();
+                                          if (selection && selection.toString().length > 0) {
+                                            navigator.clipboard.writeText(selection.toString()).catch(() => {
+                                              const textArea = document.createElement('textarea');
+                                              textArea.value = selection.toString();
+                                              document.body.appendChild(textArea);
+                                              textArea.select();
+                                              document.execCommand('copy');
+                                              document.body.removeChild(textArea);
+                                            });
+                                          }
+                                          break;
+                                        case 'v':
+                                          e.preventDefault();
+                                          const targetV = e.currentTarget as HTMLInputElement | null;
+                                          navigator.clipboard.readText().then(text => {
+                                            if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                              const start = targetV.selectionStart;
+                                              const end = targetV.selectionEnd;
+                                              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
+                                              field.onChange(newValue);
+                                              setTimeout(() => {
+                                                targetV.setSelectionRange(start + text.length, start + text.length);
+                                              }, 0);
+                                            } else {
+                                              field.onChange((field.value || '') + text);
+                                            }
+                                          }).catch(() => {
+                                            document.execCommand('paste');
+                                          });
+                                          break;
+                                        case 'x':
+                                          e.preventDefault();
+                                          const cutSelection = window.getSelection();
+                                          if (cutSelection && cutSelection.toString().length > 0) {
+                                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                                              const targetX = e.currentTarget as HTMLInputElement | null;
+                                              if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                                const start = targetX.selectionStart;
+                                                const end = targetX.selectionEnd;
+                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                                                field.onChange(newValue);
+                                              } else {
+                                                field.onChange('');
+                                              }
+                                            }).catch(() => {
+                                              const textArea = document.createElement('textarea');
+                                              textArea.value = cutSelection.toString();
+                                              document.body.appendChild(textArea);
+                                              textArea.select();
+                                              document.execCommand('copy');
+                                              document.body.removeChild(textArea);
+                                              const targetX2 = e.currentTarget as HTMLInputElement | null;
+                                              if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
+                                                const start = targetX2.selectionStart;
+                                                const end = targetX2.selectionEnd;
+                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                                                field.onChange(newValue);
+                                              } else {
+                                                field.onChange('');
+                                              }
+                                            });
+                                          }
+                                          break;
+                                      }
+                                    }
+                                  }}
                                 />
                               )}
                             />
@@ -1075,6 +1228,82 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Diseñar wireframes para la nueva app móvil"
                                   {...field}
+                                  onKeyDown={(e) => {
+                                    if (e.ctrlKey || e.metaKey) {
+                                      switch (e.key.toLowerCase()) {
+                                        case 'a':
+                                          e.preventDefault();
+                                          e.currentTarget.select();
+                                          break;
+                                        case 'c':
+                                          e.preventDefault();
+                                          const selection = window.getSelection();
+                                          if (selection && selection.toString().length > 0) {
+                                            navigator.clipboard.writeText(selection.toString()).catch(() => {
+                                              const textArea = document.createElement('textarea');
+                                              textArea.value = selection.toString();
+                                              document.body.appendChild(textArea);
+                                              textArea.select();
+                                              document.execCommand('copy');
+                                              document.body.removeChild(textArea);
+                                            });
+                                          }
+                                          break;
+                                        case 'v':
+                                          e.preventDefault();
+                                          const targetV = e.currentTarget as HTMLInputElement | null;
+                                          navigator.clipboard.readText().then(text => {
+                                            if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                              const start = targetV.selectionStart;
+                                              const end = targetV.selectionEnd;
+                                              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
+                                              field.onChange(newValue);
+                                              setTimeout(() => {
+                                                targetV.setSelectionRange(start + text.length, start + text.length);
+                                              }, 0);
+                                            } else {
+                                              field.onChange((field.value || '') + text);
+                                            }
+                                          }).catch(() => {
+                                            document.execCommand('paste');
+                                          });
+                                          break;
+                                        case 'x':
+                                          e.preventDefault();
+                                          const cutSelection = window.getSelection();
+                                          if (cutSelection && cutSelection.toString().length > 0) {
+                                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                                              const targetX = e.currentTarget as HTMLInputElement | null;
+                                              if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                                const start = targetX.selectionStart;
+                                                const end = targetX.selectionEnd;
+                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                                                field.onChange(newValue);
+                                              } else {
+                                                field.onChange('');
+                                              }
+                                            }).catch(() => {
+                                              const textArea = document.createElement('textarea');
+                                              textArea.value = cutSelection.toString();
+                                              document.body.appendChild(textArea);
+                                              textArea.select();
+                                              document.execCommand('copy');
+                                              document.body.removeChild(textArea);
+                                              const targetX2 = e.currentTarget as HTMLInputElement | null;
+                                              if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
+                                                const start = targetX2.selectionStart;
+                                                const end = targetX2.selectionEnd;
+                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                                                field.onChange(newValue);
+                                              } else {
+                                                field.onChange('');
+                                              }
+                                            });
+                                          }
+                                          break;
+                                      }
+                                    }
+                                  }}
                                 />
                               )}
                             />
@@ -1094,6 +1323,82 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
                                   {...field}
+                                  onKeyDown={(e) => {
+                                    if (e.ctrlKey || e.metaKey) {
+                                      switch (e.key.toLowerCase()) {
+                                        case 'a':
+                                          e.preventDefault();
+                                          e.currentTarget.select();
+                                          break;
+                                        case 'c':
+                                          e.preventDefault();
+                                          const selection = window.getSelection();
+                                          if (selection && selection.toString().length > 0) {
+                                            navigator.clipboard.writeText(selection.toString()).catch(() => {
+                                              const textArea = document.createElement('textarea');
+                                              textArea.value = selection.toString();
+                                              document.body.appendChild(textArea);
+                                              textArea.select();
+                                              document.execCommand('copy');
+                                              document.body.removeChild(textArea);
+                                            });
+                                          }
+                                          break;
+                                        case 'v':
+                                          e.preventDefault();
+                                          const targetV = e.currentTarget as HTMLInputElement | null;
+                                          navigator.clipboard.readText().then(text => {
+                                            if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                              const start = targetV.selectionStart;
+                                              const end = targetV.selectionEnd;
+                                              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
+                                              field.onChange(newValue);
+                                              setTimeout(() => {
+                                                targetV.setSelectionRange(start + text.length, start + text.length);
+                                              }, 0);
+                                            } else {
+                                              field.onChange((field.value || '') + text);
+                                            }
+                                          }).catch(() => {
+                                            document.execCommand('paste');
+                                          });
+                                          break;
+                                        case 'x':
+                                          e.preventDefault();
+                                          const cutSelection = window.getSelection();
+                                          if (cutSelection && cutSelection.toString().length > 0) {
+                                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                                              const targetX = e.currentTarget as HTMLInputElement | null;
+                                              if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                                const start = targetX.selectionStart;
+                                                const end = targetX.selectionEnd;
+                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                                                field.onChange(newValue);
+                                              } else {
+                                                field.onChange('');
+                                              }
+                                            }).catch(() => {
+                                              const textArea = document.createElement('textarea');
+                                              textArea.value = cutSelection.toString();
+                                              document.body.appendChild(textArea);
+                                              textArea.select();
+                                              document.execCommand('copy');
+                                              document.body.removeChild(textArea);
+                                              const targetX2 = e.currentTarget as HTMLInputElement | null;
+                                              if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
+                                                const start = targetX2.selectionStart;
+                                                const end = targetX2.selectionEnd;
+                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                                                field.onChange(newValue);
+                                              } else {
+                                                field.onChange('');
+                                              }
+                                            });
+                                          }
+                                          break;
+                                      }
+                                    }
+                                  }}
                                 />
                               )}
                             />
@@ -1333,6 +1638,85 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           }}
                           placeholder="Ej: John Doe"
                           ref={leaderInputRef}
+                          onKeyDown={(e) => {
+                            if (e.ctrlKey || e.metaKey) {
+                              switch (e.key.toLowerCase()) {
+                                case 'a':
+                                  e.preventDefault();
+                                  e.currentTarget.select();
+                                  break;
+                                case 'c':
+                                  e.preventDefault();
+                                  const selection = window.getSelection();
+                                  if (selection && selection.toString().length > 0) {
+                                    navigator.clipboard.writeText(selection.toString()).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = selection.toString();
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                    });
+                                  }
+                                  break;
+                                case 'v':
+                                  e.preventDefault();
+                                  const targetV = e.currentTarget as HTMLInputElement | null;
+                                  navigator.clipboard.readText().then(text => {
+                                    if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                      const start = targetV.selectionStart;
+                                      const end = targetV.selectionEnd;
+                                      const newValue = searchLeader.substring(0, start) + text + searchLeader.substring(end);
+                                      setSearchLeader(newValue);
+                                      setIsLeaderDropdownOpen(text.trim() !== "");
+                                      setTimeout(() => {
+                                        targetV.setSelectionRange(start + text.length, start + text.length);
+                                      }, 0);
+                                    } else {
+                                      setSearchLeader(searchLeader + text);
+                                    }
+                                  }).catch(() => {
+                                    document.execCommand('paste');
+                                  });
+                                  break;
+                                case 'x':
+                                  e.preventDefault();
+                                  const cutSelection = window.getSelection();
+                                  if (cutSelection && cutSelection.toString().length > 0) {
+                                    navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                                      const targetX = e.currentTarget as HTMLInputElement | null;
+                                      if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                        const start = targetX.selectionStart;
+                                        const end = targetX.selectionEnd;
+                                        const newValue = searchLeader.substring(0, start) + searchLeader.substring(end);
+                                        setSearchLeader(newValue);
+                                        setIsLeaderDropdownOpen(newValue.trim() !== "");
+                                      } else {
+                                        setSearchLeader('');
+                                      }
+                                    }).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = cutSelection.toString();
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                      const targetX2 = e.currentTarget as HTMLInputElement | null;
+                                      if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
+                                        const start = targetX2.selectionStart;
+                                        const end = targetX2.selectionEnd;
+                                        const newValue = searchLeader.substring(0, start) + searchLeader.substring(end);
+                                        setSearchLeader(newValue);
+                                        setIsLeaderDropdownOpen(newValue.trim() !== "");
+                                      } else {
+                                        setSearchLeader('');
+                                      }
+                                    });
+                                  }
+                                  break;
+                              }
+                            }
+                          }}
                         />
                         {isLeaderDropdownOpen &&
                           createPortal(
@@ -1402,6 +1786,85 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           }}
                           placeholder="Ej: John Doe"
                           ref={collaboratorInputRef}
+                          onKeyDown={(e) => {
+                            if (e.ctrlKey || e.metaKey) {
+                              switch (e.key.toLowerCase()) {
+                                case 'a':
+                                  e.preventDefault();
+                                  e.currentTarget.select();
+                                  break;
+                                case 'c':
+                                  e.preventDefault();
+                                  const selection = window.getSelection();
+                                  if (selection && selection.toString().length > 0) {
+                                    navigator.clipboard.writeText(selection.toString()).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = selection.toString();
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                    });
+                                  }
+                                  break;
+                                case 'v':
+                                  e.preventDefault();
+                                  const targetV = e.currentTarget as HTMLInputElement | null;
+                                  navigator.clipboard.readText().then(text => {
+                                    if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                      const start = targetV.selectionStart;
+                                      const end = targetV.selectionEnd;
+                                      const newValue = searchCollaborator.substring(0, start) + text + searchCollaborator.substring(end);
+                                      setSearchCollaborator(newValue);
+                                      setIsCollaboratorDropdownOpen(text.trim() !== "");
+                                      setTimeout(() => {
+                                        targetV.setSelectionRange(start + text.length, start + text.length);
+                                      }, 0);
+                                    } else {
+                                      setSearchCollaborator(searchCollaborator + text);
+                                    }
+                                  }).catch(() => {
+                                    document.execCommand('paste');
+                                  });
+                                  break;
+                                case 'x':
+                                  e.preventDefault();
+                                  const cutSelection = window.getSelection();
+                                  if (cutSelection && cutSelection.toString().length > 0) {
+                                    navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                                      const targetX = e.currentTarget as HTMLInputElement | null;
+                                      if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                        const start = targetX.selectionStart;
+                                        const end = targetX.selectionEnd;
+                                        const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
+                                        setSearchCollaborator(newValue);
+                                        setIsCollaboratorDropdownOpen(newValue.trim() !== "");
+                                      } else {
+                                        setSearchCollaborator('');
+                                      }
+                                    }).catch(() => {
+                                      const textArea = document.createElement('textarea');
+                                      textArea.value = cutSelection.toString();
+                                      document.body.appendChild(textArea);
+                                      textArea.select();
+                                      document.execCommand('copy');
+                                      document.body.removeChild(textArea);
+                                      const targetX2 = e.currentTarget as HTMLInputElement | null;
+                                      if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
+                                        const start = targetX2.selectionStart;
+                                        const end = targetX2.selectionEnd;
+                                        const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
+                                        setSearchCollaborator(newValue);
+                                        setIsCollaboratorDropdownOpen(newValue.trim() !== "");
+                                      } else {
+                                        setSearchCollaborator('');
+                                      }
+                                    });
+                                  }
+                                  break;
+                              }
+                            }
+                          }}
                         />
                         {isCollaboratorDropdownOpen &&
                           createPortal(

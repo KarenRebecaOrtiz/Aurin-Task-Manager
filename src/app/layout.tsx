@@ -6,8 +6,9 @@ import "./globals.scss";
 
 const urbanist = Urbanist({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
+  variable: "--font-urbanist",
 });
 
 export const metadata = {
@@ -62,7 +63,7 @@ export default function RootLayout({
             strategy="beforeInteractive"
           />
         </head>
-        <body className={urbanist.className}>
+        <body className={`${urbanist.className} ${urbanist.variable}`}>
           <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
             <defs>
               <filter id="grayscale">

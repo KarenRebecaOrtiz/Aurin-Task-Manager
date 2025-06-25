@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 .actionContainer {
     position: relative;
     display: flex;
@@ -37,7 +38,7 @@
     background: #1f1f20;
     color: #ffffff;
     font-size: 12px;
-    font-family: 'Inter Tight', sans-serif;
+    font-family: $font-family-primary;
     font-weight: 500;
     padding: 6px 12px;
     border-radius: 4px;

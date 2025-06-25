@@ -819,6 +819,36 @@ function TasksPageContent() {
     };
   }, [selectedContainer, handleContainerChange]);
 
+  // Handle browser back button navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      // If user is in ConfigPage or Create/Edit Task, redirect to home TasksTable
+      if (selectedContainer === 'config' || isCreateTaskOpen || isEditTaskOpen) {
+        // Prevent the default back navigation
+        window.history.pushState(null, '', window.location.pathname);
+        
+        // Navigate to home TasksTable
+        setSelectedContainer('tareas');
+        setIsCreateTaskOpen(false);
+        setIsEditTaskOpen(false);
+        setEditTaskId(null);
+        setHasUnsavedChanges(false);
+      }
+    };
+
+    // Add a history entry when entering ConfigPage or Create/Edit Task
+    if (selectedContainer === 'config' || isCreateTaskOpen || isEditTaskOpen) {
+      window.history.pushState(null, '', window.location.pathname);
+    }
+
+    // Listen for popstate events (back button)
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen]);
+
   // Handle loading and error states
   if (isLoading) {
     return <Loader />;

@@ -38,104 +38,145 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
   const [cursorPos, setCursorPos] = React.useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = React.useState(false);
   const [isCursorEnabled, setIsCursorEnabled] = React.useState(true);
+  const [isTouchDevice, setIsTouchDevice] = React.useState(false);
   const cursorRef = React.useRef<HTMLDivElement>(null);
 
-  // Load cursor visibility from localStorage on mount
+  // Detect touch device on mount
   React.useEffect(() => {
+    const detectTouchDevice = () => {
+      // Check for touch support - most reliable method
+      const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      // Check for pointer events with touch capability (coarse pointer = touch/finger)
+      const hasPointerTouch = window.matchMedia('(pointer: coarse)').matches;
+      
+      // Check for hover capability (touch devices typically don't have hover)
+      const hasHoverSupport = window.matchMedia('(hover: hover)').matches;
+      
+      // More specific touch detection - only disable if device has touch AND lacks hover
+      // This ensures laptops with touch screens still get cursor functionality
+      const isTouchOnly = hasTouchSupport && !hasHoverSupport;
+      
+      // Alternative: use pointer: coarse which specifically indicates touch/finger input
+      const isTouchDevice = hasPointerTouch || isTouchOnly;
+      
+      setIsTouchDevice(isTouchDevice);
+      
+      // Automatically disable cursor only on touch-only devices
+      if (isTouchDevice) {
+        setIsCursorEnabled(false);
+      }
+    };
+
+    detectTouchDevice();
+    
+    // Re-detect on resize (in case of device rotation or window changes)
+    window.addEventListener('resize', detectTouchDevice);
+    return () => window.removeEventListener('resize', detectTouchDevice);
+  }, []);
+
+  // Load cursor visibility from localStorage on mount (only for non-touch devices)
+  React.useEffect(() => {
+    if (isTouchDevice) {
+      return;
+    }
+    
     try {
       const savedVisibility = localStorage.getItem('cursorIsEnabled');
       if (savedVisibility !== null) {
         const parsedVisibility = JSON.parse(savedVisibility);
         setIsCursorEnabled(parsedVisibility);
-        console.log('[CursorProvider] Loaded cursor visibility from localStorage:', parsedVisibility);
       }
-    } catch (error) {
-      console.error('[CursorProvider] Error loading cursor visibility from localStorage:', error);
+    } catch {
+      // Silent error handling
     }
-  }, []);
+  }, [isTouchDevice]);
 
-  // Save cursor visibility to localStorage whenever it changes
+  // Save cursor visibility to localStorage whenever it changes (only for non-touch devices)
   React.useEffect(() => {
+    if (isTouchDevice) {
+      return;
+    }
+    
     try {
       localStorage.setItem('cursorIsEnabled', JSON.stringify(isCursorEnabled));
-      console.log('[CursorProvider] Saved cursor visibility to localStorage:', isCursorEnabled);
-    } catch (error) {
-      console.error('[CursorProvider] Error saving cursor visibility to localStorage:', error);
+    } catch {
+      // Silent error handling
     }
-  }, [isCursorEnabled]);
+  }, [isCursorEnabled, isTouchDevice]);
 
-  // Handle Cmd+Shift+L or Ctrl+Shift+L to toggle cursor
+  // Handle Cmd+Shift+L or Ctrl+Shift+L to toggle cursor (only for non-touch devices)
   React.useEffect(() => {
-    console.log('[CursorProvider] Registering keydown listener for Cmd+Shift+L/Ctrl+Shift+L');
-    const isHTMLElement = (target: EventTarget): target is HTMLElement => {
-      return target instanceof HTMLElement;
-    };
+    if (isTouchDevice) {
+      return;
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      console.log('[CursorProvider] Keydown detected:', {
-        metaKey: event.metaKey,
-        ctrlKey: event.ctrlKey,
-        shiftKey: event.shiftKey,
-        key: event.key,
-        target: isHTMLElement(event.target) ? event.target.tagName : 'Unknown',
-        targetId: isHTMLElement(event.target) ? event.target.id : 'Unknown',
-        targetClass: isHTMLElement(event.target) ? event.target.className : 'Unknown',
-        defaultPrevented: event.defaultPrevented,
-      });
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'l') {
         event.preventDefault();
-        console.log('[CursorProvider] Cmd/Ctrl+Shift+L pressed, toggling cursor. Current state:', isCursorEnabled);
-        setIsCursorEnabled((prev) => {
-          const newState = !prev;
-          console.log('[CursorProvider] New cursor state:', newState);
-          return newState;
-        });
+        setIsCursorEnabled((prev) => !prev);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => {
-      console.log('[CursorProvider] Cleaning up keydown listener');
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
     };
-  }, [isCursorEnabled]);
+  }, [isCursorEnabled, isTouchDevice]);
 
-  // Handle mouse movement and visibility
-  React.useEffect(() => {
+  // Handle mouse movement and visibility (only for non-touch devices)
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!isCursorEnabled || isTouchDevice) return;
     const parent = document.body;
-    console.log('[CursorProvider] Setting up mouse listeners on body');
+    const rect = parent.getBoundingClientRect();
+    setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setIsActive(true);
+  }, [isCursorEnabled, isTouchDevice]);
+
+  const handleMouseLeave = React.useCallback(() => {
+    if (!isCursorEnabled || isTouchDevice) return;
+    setIsActive(false);
+  }, [isCursorEnabled, isTouchDevice]);
+
+  React.useEffect(() => {
+    if (isTouchDevice) {
+      return;
+    }
+    
+    const parent = document.body;
 
     if (getComputedStyle(parent).position === 'static') {
       parent.style.position = 'relative';
     }
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isCursorEnabled) return;
-      const rect = parent.getBoundingClientRect();
-      setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-      setIsActive(true);
-    };
-    const handleMouseLeave = () => {
-      if (!isCursorEnabled) return;
-      setIsActive(false);
-    };
-
     parent.addEventListener('mousemove', handleMouseMove);
     parent.addEventListener('mouseleave', handleMouseLeave);
 
-    parent.style.cursor = isCursorEnabled && isActive ? 'none' : 'default';
-    console.log('[CursorProvider] Cursor style set to:', parent.style.cursor);
+    // Update cursor style based on current state
+    const updateCursorStyle = () => {
+      parent.style.cursor = isCursorEnabled ? 'none' : 'default';
+    };
+    updateCursorStyle();
 
     return () => {
-      console.log('[CursorProvider] Cleaning up mouse listeners');
       parent.removeEventListener('mousemove', handleMouseMove);
       parent.removeEventListener('mouseleave', handleMouseLeave);
       parent.style.cursor = 'default';
     };
-  }, [isCursorEnabled, isActive]);
+  }, [isCursorEnabled, isTouchDevice, handleMouseMove, handleMouseLeave]);
+
+  // Handle cursor style updates when isActive changes
+  React.useEffect(() => {
+    if (isTouchDevice) {
+      return;
+    }
+    
+    const parent = document.body;
+    parent.style.cursor = isCursorEnabled && isActive ? 'none' : 'default';
+  }, [isActive, isCursorEnabled, isTouchDevice]);
 
   return (
-    <CursorContext.Provider value={{ cursorPos, isActive, cursorRef, isCursorEnabled }}>
+    <CursorContext.Provider value={{ cursorPos, isActive, cursorRef, isCursorEnabled: isCursorEnabled && !isTouchDevice }}>
       <div data-slot="cursor-provider" {...props}>
         {children}
       </div>
@@ -156,10 +197,9 @@ const Cursor: React.FC<CursorProps> = ({ children, className, style, ...props })
   const y = useMotionValue(0);
 
   React.useEffect(() => {
-    console.log('[Cursor] Updating cursor position:', { x: cursorPos.x, y: cursorPos.y, isActive, isCursorEnabled });
     x.set(cursorPos.x);
     y.set(cursorPos.y);
-  }, [cursorPos, x, y, isActive, isCursorEnabled]);
+  }, [cursorPos.x, cursorPos.y, x, y]);
 
   return (
     <AnimatePresence>
@@ -263,7 +303,6 @@ const CursorFollow: React.FC<CursorFollowProps> = ({
   }, [align, sideOffset]);
 
   React.useEffect(() => {
-    console.log('[CursorFollow] Updating follower position:', { x: cursorPos.x, y: cursorPos.y, isActive, isCursorEnabled });
     const offset = calculateOffset();
     const cursorRect = cursorRef.current?.getBoundingClientRect();
     const cursorWidth = cursorRect?.width ?? 20;
@@ -271,7 +310,7 @@ const CursorFollow: React.FC<CursorFollowProps> = ({
 
     x.set(cursorPos.x - offset.x + cursorWidth / 2);
     y.set(cursorPos.y - offset.y + cursorHeight / 2);
-  }, [calculateOffset, cursorPos, cursorRef, x, y, isActive, isCursorEnabled]);
+  }, [cursorPos.x, cursorPos.y, calculateOffset, x, y, cursorRef]);
 
   return (
     <AnimatePresence>

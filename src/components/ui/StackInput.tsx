@@ -60,8 +60,25 @@ const StackInput: React.FC<StackInputProps> = ({
       onChange([...value, option]);
     }
     setInputValue('');
-    setIsOpen(false);
-    inputRef.current?.focus();
+    
+    // Cerrar suavemente con animación GSAP
+    if (dropdownRef.current) {
+      gsap.to(dropdownRef.current, {
+        opacity: 0,
+        y: -10,
+        scale: 0.95,
+        duration: 0.2,
+        ease: 'power2.in',
+        onComplete: () => {
+          setIsOpen(false);
+          dropdownRef.current!.style.display = 'none';
+          inputRef.current?.focus();
+        },
+      });
+    } else {
+      setIsOpen(false);
+      inputRef.current?.focus();
+    }
   };
 
   // Handle tag removal

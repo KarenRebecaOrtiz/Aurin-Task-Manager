@@ -125,10 +125,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
+    const userDropdownRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+    const [userFilter, setUserFilter] = useState<string>('');
 
     const userId = useMemo(() => user?.id || '', [user]);
 
@@ -140,31 +143,50 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       });
     }, [tasks]);
 
+    const getInvolvedUserIds = (task: Task) => {
+      const ids = new Set<string>();
+      if (task.CreatedBy) ids.add(task.CreatedBy);
+      if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
+      if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
+      return Array.from(ids);
+    };
+
+    const handleUserFilter = (id: string) => {
+      // Animate filter change
+      const userDropdownTrigger = userDropdownRef.current?.querySelector(`.${styles.dropdownTrigger}`);
+      if (userDropdownTrigger) {
+        const filterIcon = userDropdownTrigger.querySelector('img');
+        if (filterIcon) {
+          gsap.to(filterIcon, {
+            rotation: 360,
+            scale: 1.2,
+            duration: 0.3,
+            ease: 'power2.out',
+            yoyo: true,
+            repeat: 1
+          });
+        }
+      }
+      
+      setUserFilter(id);
+      setIsUserDropdownOpen(false);
+    };
+
     const memoizedFilteredTasks = useMemo(() => {
-      const filtered = tasks.filter((task) => {
+      let filtered = tasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
-        const passesFilters = matchesSearch && matchesPriority && matchesClient;
-        console.log('[TasksTable] Task filter check:', {
-          taskId: task.id,
-          taskName: task.name,
-          matchesSearch,
-          matchesPriority,
-          matchesClient,
-          passesFilters,
-          searchQuery,
-          priorityFilter,
-          clientFilter,
-        });
-        return passesFilters;
-      });
-      console.log('[TasksTable] Filtered tasks:', {
-        filteredCount: filtered.length,
-        filteredTaskIds: filtered.map((t) => t.id),
+        let matchesUser = true;
+        if (userFilter === 'me') {
+          matchesUser = getInvolvedUserIds(task).includes(userId);
+        } else if (userFilter && userFilter !== 'me') {
+          matchesUser = getInvolvedUserIds(task).includes(userFilter);
+        }
+        return matchesSearch && matchesPriority && matchesClient && matchesUser;
       });
       return filtered;
-    }, [tasks, searchQuery, priorityFilter, clientFilter]);
+    }, [tasks, searchQuery, priorityFilter, clientFilter, userFilter, userId]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
@@ -216,6 +238,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     }, [isClientDropdownOpen]);
 
     useEffect(() => {
+      const userItems = userDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
+      if (isUserDropdownOpen && userItems) {
+        gsap.fromTo(
+          userItems,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+        );
+        console.log('[TasksTable] User dropdown animated');
+      }
+    }, [isUserDropdownOpen]);
+
+    useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
           actionMenuRef.current &&
@@ -241,10 +275,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           setIsClientDropdownOpen(false);
           console.log('[TasksTable] Client dropdown closed via outside click');
         }
+        if (
+          userDropdownRef.current &&
+          !userDropdownRef.current.contains(event.target as Node) &&
+          isUserDropdownOpen
+        ) {
+          setIsUserDropdownOpen(false);
+          console.log('[TasksTable] User dropdown closed via outside click');
+        }
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen]);
+    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isUserDropdownOpen]);
 
     const handleSort = (key: string) => {
       if (key === sortKey) {
@@ -316,16 +358,42 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
+      
+      // Animate filter change
+      const filterIcon = e.currentTarget.querySelector('img');
+      if (filterIcon) {
+        gsap.to(filterIcon, {
+          rotation: 360,
+          scale: 1.2,
+          duration: 0.3,
+          ease: 'power2.out',
+          yoyo: true,
+          repeat: 1
+        });
+      }
+      
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
-      console.log('[TasksTable] Priority filter selected:', priority);
     };
 
     const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
+      
+      // Animate filter change
+      const filterIcon = e.currentTarget.querySelector('img');
+      if (filterIcon) {
+        gsap.to(filterIcon, {
+          rotation: 360,
+          scale: 1.2,
+          duration: 0.3,
+          ease: 'power2.out',
+          yoyo: true,
+          repeat: 1
+        });
+      }
+      
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
-      console.log('[TasksTable] Client filter selected:', clientId);
     };
 
     
@@ -578,12 +646,100 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 placeholder="Buscar Tareas"
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  console.log('[TasksTable] Search query updated:', e.target.value);
+                  const newValue = e.target.value;
+                  setSearchQuery(newValue);
+                  
+                  // Animate search input when typing
+                  const searchInput = e.currentTarget;
+                  gsap.to(searchInput, {
+                    scale: 1.02,
+                    duration: 0.2,
+                    ease: 'power2.out',
+                    yoyo: true,
+                    repeat: 1
+                  });
+                  
+                  console.log('[TasksTable] Search query updated:', newValue);
                 }}
                 className={styles.searchInput}
                 aria-label="Buscar tareas"
                 disabled={isLoading}
+                onKeyDown={(e) => {
+                  if (e.ctrlKey || e.metaKey) {
+                    switch (e.key.toLowerCase()) {
+                      case 'a':
+                        e.preventDefault();
+                        e.currentTarget.select();
+                        break;
+                      case 'c':
+                        e.preventDefault();
+                        const targetC = e.currentTarget as HTMLInputElement;
+                        if (targetC.selectionStart !== targetC.selectionEnd) {
+                          const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                          navigator.clipboard.writeText(selectedText).catch(() => {
+                            const textArea = document.createElement('textarea');
+                            textArea.value = selectedText;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                          });
+                        }
+                        break;
+                      case 'v':
+                        e.preventDefault();
+                        const targetV = e.currentTarget as HTMLInputElement;
+                        navigator.clipboard.readText().then(text => {
+                          if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                            const start = targetV.selectionStart;
+                            const end = targetV.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                            setTimeout(() => {
+                              targetV.setSelectionRange(start + text.length, start + text.length);
+                            }, 0);
+                          } else {
+                            setSearchQuery(searchQuery + text);
+                          }
+                        }).catch(() => {
+                          document.execCommand('paste');
+                        });
+                        break;
+                      case 'x':
+                        e.preventDefault();
+                        const targetX = e.currentTarget as HTMLInputElement;
+                        if (targetX.selectionStart !== targetX.selectionEnd) {
+                          const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                          navigator.clipboard.writeText(selectedText).then(() => {
+                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                              const start = targetX.selectionStart;
+                              const end = targetX.selectionEnd;
+                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                              setSearchQuery(newValue);
+                            } else {
+                              setSearchQuery('');
+                            }
+                          }).catch(() => {
+                            const textArea = document.createElement('textarea');
+                            textArea.value = selectedText;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                              const start = targetX.selectionStart;
+                              const end = targetX.selectionEnd;
+                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                              setSearchQuery(newValue);
+                            } else {
+                              setSearchQuery('');
+                            }
+                          });
+                        }
+                        break;
+                    }
+                  }
+                }}
               />
             </div>
 
@@ -677,11 +833,100 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               placeholder="Buscar Tareas"
               value={searchQuery}
               onChange={(e) => {
-                setSearchQuery(e.target.value);
-                console.log('[TasksTable] Search query updated:', e.target.value);
+                const newValue = e.target.value;
+                setSearchQuery(newValue);
+                
+                // Animate search input when typing
+                const searchInput = e.currentTarget;
+                gsap.to(searchInput, {
+                  scale: 1.02,
+                  duration: 0.2,
+                  ease: 'power2.out',
+                  yoyo: true,
+                  repeat: 1
+                });
+                
+                console.log('[TasksTable] Search query updated:', newValue);
               }}
               className={styles.searchInput}
               aria-label="Buscar tareas"
+              disabled={isLoading}
+              onKeyDown={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  switch (e.key.toLowerCase()) {
+                    case 'a':
+                      e.preventDefault();
+                      e.currentTarget.select();
+                      break;
+                    case 'c':
+                      e.preventDefault();
+                      const targetC = e.currentTarget as HTMLInputElement;
+                      if (targetC.selectionStart !== targetC.selectionEnd) {
+                        const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                        navigator.clipboard.writeText(selectedText).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = selectedText;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        });
+                      }
+                      break;
+                    case 'v':
+                      e.preventDefault();
+                      const targetV = e.currentTarget as HTMLInputElement;
+                      navigator.clipboard.readText().then(text => {
+                        if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                          const start = targetV.selectionStart;
+                          const end = targetV.selectionEnd;
+                          const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
+                          setSearchQuery(newValue);
+                          setTimeout(() => {
+                            targetV.setSelectionRange(start + text.length, start + text.length);
+                          }, 0);
+                        } else {
+                          setSearchQuery(searchQuery + text);
+                        }
+                      }).catch(() => {
+                        document.execCommand('paste');
+                      });
+                      break;
+                    case 'x':
+                      e.preventDefault();
+                      const targetX = e.currentTarget as HTMLInputElement;
+                      if (targetX.selectionStart !== targetX.selectionEnd) {
+                        const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                        navigator.clipboard.writeText(selectedText).then(() => {
+                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                            const start = targetX.selectionStart;
+                            const end = targetX.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                          } else {
+                            setSearchQuery('');
+                          }
+                        }).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = selectedText;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                            const start = targetX.selectionStart;
+                            const end = targetX.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                          } else {
+                            setSearchQuery('');
+                          }
+                        });
+                      }
+                      break;
+                  }
+                }
+              }}
             />
           </div>
 
@@ -775,22 +1020,59 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     </div>
   </div>
 
-  {/* <button
-    className={`${styles.filterButton} ${styles.hideOnMobile}`} // Add hideOnMobile class
-    onClick={(e) => {
-      animateClick(e.currentTarget);
-      onAISidebarOpen();
-      console.log('[TasksTable] AI sidebar opened');
-    }}
-  >
-    <Image
-      src="/gemini.svg"
-      alt="AI"
-      width={20}
-      height={20}
-      
-    />
-  </button> */}
+  {isAdmin && (
+    <div className={styles.filter}>
+      <div className={styles.dropdownContainer} ref={userDropdownRef}>
+        <div
+          className={styles.dropdownTrigger}
+          onClick={(e) => {
+            animateClick(e.currentTarget);
+            setIsUserDropdownOpen((prev) => !prev);
+            console.log('[TasksTable] User dropdown toggled');
+          }}
+        >
+          <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
+          <span>
+            {userFilter === '' 
+              ? 'Todos' 
+              : userFilter === 'me' 
+              ? 'Mis tareas' 
+              : users.find(u => u.id === userFilter)?.fullName || 'Usuario'}
+          </span>
+        </div>
+        {isUserDropdownOpen && (
+          <div className={styles.dropdownItems}>
+            <div
+              className={styles.dropdownItem}
+              style={{fontWeight: userFilter === '' ? 700 : 400}}
+              onClick={() => handleUserFilter('')}
+            >
+              Todos
+            </div>
+            <div
+              className={styles.dropdownItem}
+              style={{fontWeight: userFilter === 'me' ? 700 : 400}}
+              onClick={() => handleUserFilter('me')}
+            >
+              Mis tareas
+            </div>
+            {users
+              .filter((u) => u.id !== userId)
+              .map((u) => (
+                <div
+                  key={u.id}
+                  className={styles.dropdownItem}
+                  style={{fontWeight: userFilter === u.id ? 700 : 400}}
+                  onClick={() => handleUserFilter(u.id)}
+                >
+                  {u.fullName}
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )}
 
   
   <button

@@ -198,6 +198,164 @@ const EditTask: React.FC<EditTaskProps> = ({
     setIsMounted(true);
   }, []);
 
+  // Funciones para manejo de shortcuts de teclado específicas para cada tipo de input
+  const handleSearchInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, setter: (value: string) => void, currentValue: string, setDropdownOpen: (open: boolean) => void) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = currentValue.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+              setter(newValue);
+              setDropdownOpen(text.trim() !== "");
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              setter(currentValue + text);
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = currentValue.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
+                setter(newValue);
+                setDropdownOpen(newValue.trim() !== "");
+              } else {
+                setter('');
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
+                setter(newValue);
+                setDropdownOpen(newValue.trim() !== "");
+              } else {
+                setter('');
+              }
+            });
+          }
+          break;
+      }
+    }
+  }, []);
+
+  const handleFormInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, field: { value?: string; onChange: (value: string) => void }) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
+              field.onChange(newValue);
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              field.onChange((field.value || '') + text);
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            });
+          }
+          break;
+      }
+    }
+  }, []);
+
   // Fetch task, clients, and users
   useEffect(() => {
     if (!taskId || !user?.id) return;
@@ -937,6 +1095,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                           }}
                           placeholder="Ej: Nombre de la cuenta"
                           ref={clientInputRef}
+                          onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchClient, searchClient, setIsClientDropdownOpen)}
                           onCopy={e => e.stopPropagation()}
                           onPaste={e => e.stopPropagation()}
                           onCut={e => e.stopPropagation()}
@@ -1105,6 +1264,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Crear wireframe"
                                   {...field}
+                                  onKeyDown={(e) => handleFormInputKeyDown(e, field)}
                                 />
                               )}
                             />
@@ -1122,6 +1282,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Diseñar wireframes para la nueva app móvil"
                                   {...field}
+                                  onKeyDown={(e) => handleFormInputKeyDown(e, field)}
                                 />
                               )}
                             />
@@ -1141,6 +1302,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
                                   {...field}
+                                  onKeyDown={(e) => handleFormInputKeyDown(e, field)}
                                 />
                               )}
                             />
@@ -1380,6 +1542,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                           }}
                           placeholder="Ej: John Doe"
                           ref={leaderInputRef}
+                          onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchLeader, searchLeader, setIsLeaderDropdownOpen)}
                           onCopy={e => e.stopPropagation()}
                           onPaste={e => e.stopPropagation()}
                           onCut={e => e.stopPropagation()}
@@ -1470,6 +1633,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                           }}
                           placeholder="Ej: John Doe"
                           ref={collaboratorInputRef}
+                          onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchCollaborator, searchCollaborator, setIsCollaboratorDropdownOpen)}
                           onCopy={e => e.stopPropagation()}
                           onPaste={e => e.stopPropagation()}
                           onCut={e => e.stopPropagation()}

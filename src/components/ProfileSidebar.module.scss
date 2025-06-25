@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 .container {
     position: fixed;
     top: 0;
@@ -41,7 +42,7 @@
   .title {
     color: #fafafa;
     font-size: 19.2px;
-    font-family: 'Inter Tight', sans-serif;
+    font-family: $font-family-primary;
     font-weight: 700;
     margin: 10px 0;
   }
@@ -69,14 +70,14 @@
   .label {
     color: #e5e5e5;
     font-size: 14px;
-    font-family: 'Inter Tight', sans-serif;
+    font-family: $font-family-primary;
     font-weight: 500;
   }
   
   .value {
     color: #d1d1d1;
     font-size: 14.4px;
-    font-family: 'Inter Tight', sans-serif;
+    font-family: $font-family-primary;
     background: #2d2d2d;
     padding: 8px 12px;
     border-radius: 4px;

@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 /* Importación de fuente Inter Tight */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 @import '@/app/styles/utils';
@@ -85,21 +86,21 @@
   flex: 1;
   color: #1f2732;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
 }
 
 .title {
   color: #182735;
   font-size: 19.2px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 700;
 }
 
 .description {
   color: #71717A;
   font-size: 14.4px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
 }
 
@@ -143,6 +144,7 @@
 
 .card {
   min-width: 120px;
+  cursor: pointer;
 }
 
 .cardFullWidth {
@@ -157,7 +159,7 @@
 .cardLabel {
   color: #182735;
   font-size: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   text-align: center;
   font-weight: 700;
 }
@@ -168,7 +170,7 @@
   gap: 5px;
   color: #182735;
   font-size: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   text-align: center;
 }
@@ -225,7 +227,7 @@
 .sender {
   color: #1b2734;
   font-size: 14px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   font-weight: 700;
 }
 
@@ -244,14 +246,14 @@
 .text {
   color: #1b2734;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
 }
 
 .readBy {
   color: #A1A1AA;
   font-size: 12px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   margin-top: 5px;
 }
@@ -323,7 +325,7 @@
   border-radius: 4px;
   color: #383838;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
 }
 
 .editSaveButton, .editCancelButton {
@@ -334,7 +336,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
 }
 
@@ -381,7 +383,7 @@
   border-radius: 10px;
   color: #1b2734d9;
   font-size: 15px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   opacity: 0.85;
   box-shadow:
@@ -706,18 +708,70 @@
 .timerContainer {
   display: flex;
   flex-direction: row;
-  margin-left: 5px;
+  margin-left: 10px;
 }
 
 .timerContainer div {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 15px;
+  gap: 2px;
 }
 
 .timerContainer div span {
   color: #1b2734d9;
+}
+
+.timerNumbers {
+  --timer-text-color: #1b2734d9;
+  font-variant-numeric: tabular-nums;
+  --number-flow-char-height: 0.85em;
+  display: flex;
+  align-items: baseline;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--timer-text-color, #1b2734d9);
+  
+  :global(.number-flow) {
+    display: inline-block;
+    font-family: $font-family-primary;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  :global(.number-flow-separator) {
+    margin: 0 1px;
+  }
+}
+
+.restoreIndicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8; 
+    transform: scale(1.1);
+  }
+}
+
+:global(body.dark) .timerNumbers {
+  --timer-text-color: white;
 }
 
 :global(body.dark) .timerContainer div span {
@@ -795,7 +849,7 @@
   border-radius: 10px;
   color: #1b2734d9;
   font-size: 15px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   opacity: 0.85;
   box-shadow:
@@ -830,7 +884,7 @@
   border-radius: 10px;
   color: #1b2734d9;
   font-size: 15px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 400;
   opacity: 0.85;
   box-shadow:
@@ -847,7 +901,7 @@
 .timerTotal {
   color: #182735;
   font-size: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: $font-family-primary;
   text-align: center;
   font-weight: 700;
 }
@@ -866,7 +920,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.8),
@@ -900,7 +954,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.8),
@@ -1086,7 +1140,7 @@
   padding: 12px 16px;
   text-align: left;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1f2937;
   cursor: pointer;
@@ -1309,7 +1363,7 @@
   padding: 12px 16px;
   text-align: left;
   font-size: 14px;
-  font-family: "Inter Tight", sans-serif;
+  font-family: $font-family-primary;
   font-weight: 500;
   color: #1f2937;
   cursor: pointer;
@@ -1451,7 +1505,7 @@
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Inter Tight', sans-serif;
+  font-family: $font-family-primary;
   font-size: 14px;
   font-weight: 500;
   color: #475569;
@@ -1537,12 +1591,20 @@
 .imageWrapper {
   position: relative;
   display: inline-block;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .image {
   border-radius: 8px;
   cursor: pointer;
   transition: opacity 0.3s ease;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
 }
 
 .pendingImage {
@@ -1573,6 +1635,9 @@
 .message.error {
   border-left: 3px solid #ef4444;
   padding-left: 8px;
+  background: rgba(239, 68, 68, 0.05);
+  border-radius: 8px;
+  margin-left: 4px;
 }
 
 .errorMessage {
@@ -1596,11 +1661,13 @@
 .filePreview {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  color: white;
+  padding: 5px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  max-width: 100%;
 }
 
 .imagePreview {
@@ -1609,7 +1676,12 @@
 }
 
 .previewImage {
-  border-radius: 8px;
+  border-radius: 4px;
+  width: auto;
+  height: auto;
+  max-width: 100px;
+  max-height: 100px;
+  object-fit: contain;
 }
 
 .removeImageButton {
@@ -1703,7 +1775,7 @@
     padding: 6px 8px;
     border-radius: 4px;
     font-size: 12px;
-    font-family: "Inter Tight", sans-serif;
+    font-family: $font-family-primary;
     font-weight: 400;
     white-space: nowrap;
     opacity: 0;
@@ -1758,7 +1830,7 @@
     padding: 6px 8px;
     border-radius: 4px;
     font-size: 12px;
-    font-family: "Inter Tight", sans-serif;
+    font-family: $font-family-primary;
     font-weight: 400;
     white-space: nowrap;
     opacity: 0;
@@ -1806,6 +1878,7 @@
     right: 0;
     width: 100%;
     height: 95vh;
+    z-index: 100000;
     max-height: 95vh;
     border-radius: 24px 24px 0 0;
     transform: translateY(100%);
@@ -1983,5 +2056,34 @@
   .card,
   .cardFullWidth {
     padding: 10px;
+  }
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  position: relative;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  &:active {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+:global(body.dark) .timer {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  &:active {
+    background-color: rgba(255, 255, 255, 0.15);
   }
 }

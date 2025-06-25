@@ -324,6 +324,241 @@ const AdviceInput: React.FC<AdviceInputProps> = ({ isAdmin }) => {
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
         disabled={!!activeAdviceId || isDeleting}
+        onKeyDown={(e) => {
+          if (e.ctrlKey || e.metaKey) {
+            switch (e.key.toLowerCase()) {
+              case 'a':
+                e.preventDefault();
+                e.currentTarget.select();
+                break;
+              case 'c':
+                e.preventDefault();
+                const targetC = e.currentTarget as HTMLInputElement;
+                if (targetC.selectionStart !== targetC.selectionEnd) {
+                  const selectedText = inputText.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                  navigator.clipboard.writeText(selectedText).catch(() => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = selectedText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                  });
+                }
+                break;
+              case 'v':
+                e.preventDefault();
+                const targetV = e.currentTarget as HTMLInputElement;
+                navigator.clipboard.readText().then(text => {
+                  if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                    const start = targetV.selectionStart;
+                    const end = targetV.selectionEnd;
+                    const newValue = inputText.substring(0, start) + text + inputText.substring(end);
+                    setInputText(newValue);
+                    // Set cursor position after paste
+                    setTimeout(() => {
+                      targetV.setSelectionRange(start + text.length, start + text.length);
+                    }, 0);
+                  } else {
+                    setInputText(inputText + text);
+                  }
+                }).catch(() => {
+                  // Fallback for older browsers or when clipboard access is denied
+                  document.execCommand('paste');
+                });
+                break;
+              case 'x':
+                e.preventDefault();
+                const targetX = e.currentTarget as HTMLInputElement;
+                if (targetX.selectionStart !== targetX.selectionEnd) {
+                  const selectedText = inputText.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                  navigator.clipboard.writeText(selectedText).then(() => {
+                    if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                      const start = targetX.selectionStart;
+                      const end = targetX.selectionEnd;
+                      const newValue = inputText.substring(0, start) + inputText.substring(end);
+                      setInputText(newValue);
+                    } else {
+                      setInputText('');
+                    }
+                  }).catch(() => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = selectedText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                      const start = targetX.selectionStart;
+                      const end = targetX.selectionEnd;
+                      const newValue = inputText.substring(0, start) + inputText.substring(end);
+                      setInputText(newValue);
+                    } else {
+                      setInputText('');
+                    }
+                  });
+                }
+                break;
+            }
+          }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          
+          const selection = window.getSelection();
+          const hasSelection = selection && selection.toString().length > 0;
+          
+          const menu = document.createElement('div');
+          menu.className = 'context-menu';
+          menu.style.cssText = `
+            position: fixed;
+            top: ${e.clientY}px;
+            left: ${e.clientX}px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-family: 'Inter Tight', sans-serif;
+            font-size: 14px;
+            min-width: 150px;
+          `;
+
+          const menuItems = [
+            { label: 'Deshacer', action: () => document.execCommand('undo'), shortcut: 'Ctrl+Z' },
+            { label: 'Rehacer', action: () => document.execCommand('redo'), shortcut: 'Ctrl+Y' },
+            { type: 'separator' },
+            { 
+              label: 'Cortar', 
+              action: async () => {
+                if (hasSelection) {
+                  try {
+                    await navigator.clipboard.writeText(selection.toString());
+                    document.execCommand('delete');
+                  } catch (err) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = selection.toString();
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    document.execCommand('delete');
+                  }
+                }
+              }, 
+              shortcut: 'Ctrl+X', 
+              disabled: !hasSelection 
+            },
+            { 
+              label: 'Copiar', 
+              action: async () => {
+                if (hasSelection) {
+                  try {
+                    await navigator.clipboard.writeText(selection.toString());
+                  } catch (err) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = selection.toString();
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                  }
+                }
+              }, 
+              shortcut: 'Ctrl+C', 
+              disabled: !hasSelection 
+            },
+            { 
+              label: 'Pegar', 
+              action: async () => {
+                try {
+                  const text = await navigator.clipboard.readText();
+                  document.execCommand('insertText', false, text);
+                } catch (err) {
+                  // Fallback for older browsers
+                  document.execCommand('paste');
+                }
+              }, 
+              shortcut: 'Ctrl+V'
+            },
+            { type: 'separator' },
+            { 
+              label: 'Seleccionar Todo', 
+              action: () => {
+                const target = e.currentTarget;
+                target.select();
+              }, 
+              shortcut: 'Ctrl+A'
+            },
+            { 
+              label: 'Eliminar', 
+              action: () => {
+                if (hasSelection) {
+                  document.execCommand('delete');
+                }
+              }, 
+              shortcut: 'Delete', 
+              disabled: !hasSelection 
+            }
+          ];
+
+          menuItems.forEach((item, index) => {
+            if (item.type === 'separator') {
+              const separator = document.createElement('hr');
+              separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
+              menu.appendChild(separator);
+              return;
+            }
+
+            const menuItem = document.createElement('div');
+            menuItem.style.cssText = `
+              padding: 8px 12px;
+              cursor: pointer;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+            `;
+            menuItem.innerHTML = `
+              <span>${item.label}</span>
+              <span style="color: #666; font-size: 12px;">${item.shortcut}</span>
+            `;
+            
+            if (!item.disabled) {
+              menuItem.addEventListener('click', () => {
+                item.action();
+                document.body.removeChild(menu);
+              });
+              
+              menuItem.addEventListener('mouseenter', () => {
+                menuItem.style.backgroundColor = '#f5f5f5';
+              });
+              menuItem.addEventListener('mouseleave', () => {
+                menuItem.style.backgroundColor = 'transparent';
+              });
+            }
+            
+            menu.appendChild(menuItem);
+          });
+
+          document.body.appendChild(menu);
+
+          // Close menu when clicking outside
+          const closeMenu = () => {
+            if (document.body.contains(menu)) {
+              document.body.removeChild(menu);
+            }
+            document.removeEventListener('click', closeMenu);
+          };
+          
+          setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+          }, 0);
+        }}
       />
       {errorMessage && (
         <div className={styles.errorMessage}>

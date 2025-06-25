@@ -116,6 +116,7 @@ const Header: React.FC<HeaderProps> = ({
   ──────────────────────────────────────────── */
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
+  const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [hasViewedNotifications, setHasViewedNotifications] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
@@ -197,9 +198,18 @@ const Header: React.FC<HeaderProps> = ({
     if (!el || !isLoaded) return;
     const text = `Te damos la bienvenida de nuevo, ${userName}`;
     el.innerHTML = '';
+    
+    // Add container with flex styles for vertical alignment
+    const container = document.createElement('div');
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.flexDirection = 'row';
+    el.appendChild(container);
+    
     const textWrapper = document.createElement('span');
     textWrapper.className = styles.typewriterWrapper;
-    el.appendChild(textWrapper);
+    container.appendChild(textWrapper);
+    
     text.split(' ').forEach((word, idx, arr) => {
       const span = document.createElement('span');
       span.className = styles.typewriterChar;
@@ -244,7 +254,7 @@ const Header: React.FC<HeaderProps> = ({
         </span>
       `;
       buttonWrapper.appendChild(button);
-      el.appendChild(buttonWrapper);
+      container.appendChild(buttonWrapper);
     }
 
     return () => gsap.killTweensOf(el.querySelectorAll(`.${styles.typewriterChar}`));
@@ -268,23 +278,27 @@ const Header: React.FC<HeaderProps> = ({
   ──────────────────────────────────────────── */
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsNotificationsOpen(false);
+      if (e.key === 'Escape') {
+        setIsNotificationsOpen(false);
+        setIsAvatarDropdownOpen(false);
+      }
     };
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Element;
       
-      // Si el dropdown no está abierto, no hacer nada
-      if (!isNotificationsOpen) return;
-      
       // Si el click fue en el botón de notificaciones, no cerrar (ya se maneja en toggleNotifications)
       if (notificationButtonRef.current?.contains(target)) return;
       
-      // Si el click fue dentro del dropdown, no cerrar
+      // Si el click fue dentro del dropdown de notificaciones, no cerrar
       if (target.closest('[data-notification-dropdown]')) return;
       
-      // Si llegamos aquí, el click fue fuera del dropdown y del botón, entonces cerrar
+      // Si el click fue dentro del dropdown del avatar, no cerrar
+      if (target.closest('#avatar-dropdown-portal')) return;
+      
+      // Si llegamos aquí, el click fue fuera de ambos dropdowns, entonces cerrar
       setIsNotificationsOpen(false);
+      setIsAvatarDropdownOpen(false);
     };
 
     document.addEventListener('keydown', handleEscape);
@@ -294,7 +308,7 @@ const Header: React.FC<HeaderProps> = ({
       document.removeEventListener('keydown', handleEscape);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isNotificationsOpen]);
+  }, []);
 
   /* ────────────────────────────────────────────
      EFFECTS – BLOCK BODY SCROLL WHEN DROPDOWN IS OPEN
@@ -543,11 +557,23 @@ const Header: React.FC<HeaderProps> = ({
      NOTIFICATION BUTTON HANDLERS
   ──────────────────────────────────────────── */
   const toggleNotifications = useCallback(() => {
+    // Cerrar AvatarDropdown si está abierto
+    if (isAvatarDropdownOpen) {
+      setIsAvatarDropdownOpen(false);
+    }
     setIsNotificationsOpen((prev) => !prev);
     setHasInteracted(true);
     if (!isNotificationsOpen) {
       setHasViewedNotifications(true);
     }
+  }, [isNotificationsOpen, isAvatarDropdownOpen]);
+
+  const toggleAvatarDropdown = useCallback(() => {
+    // Cerrar NotificationDropdown si está abierto
+    if (isNotificationsOpen) {
+      setIsNotificationsOpen(false);
+    }
+    setIsAvatarDropdownOpen((prev) => !prev);
   }, [isNotificationsOpen]);
 
   const handleNotificationClick = useCallback((notification: Notification) => {
@@ -572,7 +598,11 @@ const Header: React.FC<HeaderProps> = ({
     <div ref={wrapperRef} className={styles.wrapper}>
       <div className={styles.lefContainer}>
         <div className={styles.AvatarMobile}>
-          <AvatarDropdown onChangeContainer={onChangeContainer} />
+          <AvatarDropdown 
+            onChangeContainer={onChangeContainer} 
+            isOpen={isAvatarDropdownOpen}
+            onToggle={toggleAvatarDropdown}
+          />
         </div>
         <div className={styles.frame14}>
           <div className={styles.title}>
@@ -701,7 +731,11 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className={styles.AvatarDesktop}>
-          <AvatarDropdown onChangeContainer={onChangeContainer} />
+          <AvatarDropdown 
+            onChangeContainer={onChangeContainer} 
+            isOpen={isAvatarDropdownOpen}
+            onToggle={toggleAvatarDropdown}
+          />
         </div>
       </div>
     </div>

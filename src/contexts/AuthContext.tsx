@@ -30,8 +30,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const fetchAdminStatus = async () => {
       if (!user?.id) {
-        console.warn('[AuthProvider] No userId provided, skipping admin status fetch');
         setIsAdmin(false);
+        setIsLoading(false);
+        return;
+      }
+
+      // Intenta leer de sessionStorage primero
+      const cacheKey = `isAdmin-${user.id}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached !== null) {
+        setIsAdmin(cached === 'true');
         setIsLoading(false);
         return;
       }
@@ -39,27 +47,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         setIsLoading(true);
         setError(null);
-        console.log('[AuthProvider] Fetching admin status for user:', user.id);
         const userDoc = await getDoc(doc(db, 'users', user.id));
         if (userDoc.exists()) {
           const access = userDoc.data().access;
-          setIsAdmin(access === 'admin');
-          console.log('[AuthProvider] Admin status fetched:', {
-            userId: user.id,
-            access,
-            isAdmin: access === 'admin',
-          });
+          const isAdminValue = access === 'admin';
+          setIsAdmin(isAdminValue);
+          sessionStorage.setItem(cacheKey, isAdminValue ? 'true' : 'false');
         } else {
           setIsAdmin(false);
-          console.warn('[AuthProvider] User document not found for ID:', user.id);
+          sessionStorage.setItem(cacheKey, 'false');
         }
-      } catch (error) {
-        console.error('[AuthProvider] Error fetching admin status:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          userId: user.id,
-        });
+      } catch {
         setError('Failed to fetch admin status');
         setIsAdmin(false);
+        sessionStorage.setItem(cacheKey, 'false');
       } finally {
         setIsLoading(false);
       }

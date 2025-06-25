@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, memo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
@@ -125,14 +125,127 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
     const [clientFilter, setClientFilter] = useState<string>('');
+    const [userFilter, setUserFilter] = useState<string>('');
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+    const [isTouchDevice, setIsTouchDevice] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
+    const userDropdownRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+    const userId = useMemo(() => user?.id || '', [user]);
+
+    const getInvolvedUserIds = (task: Task) => {
+      const ids = new Set<string>();
+      if (task.CreatedBy) ids.add(task.CreatedBy);
+      if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
+      if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
+      return Array.from(ids);
+    };
+
+    const handleUserFilter = (id: string) => {
+      // Animate filter change
+      const userDropdownTrigger = userDropdownRef.current?.querySelector(`.${styles.dropdownTrigger}`);
+      if (userDropdownTrigger) {
+        const filterIcon = userDropdownTrigger.querySelector('img');
+        if (filterIcon) {
+          gsap.to(filterIcon, {
+            rotation: 360,
+            scale: 1.2,
+            duration: 0.3,
+            ease: 'power2.out',
+            yoyo: true,
+            repeat: 1
+          });
+        }
+      }
+      
+      setUserFilter(id);
+      setIsUserDropdownOpen(false);
+    };
+
+    // Función helper para manejar shortcuts de teclado en inputs
+    const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'a':
+            e.preventDefault();
+            e.currentTarget.select();
+            break;
+          case 'c':
+            e.preventDefault();
+            const targetC = e.currentTarget as HTMLInputElement;
+            if (targetC.selectionStart !== targetC.selectionEnd) {
+              const selectedText = targetC.value.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+              navigator.clipboard.writeText(selectedText).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = selectedText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+              });
+            }
+            break;
+          case 'v':
+            e.preventDefault();
+            const targetV = e.currentTarget as HTMLInputElement;
+            navigator.clipboard.readText().then(text => {
+              if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                const start = targetV.selectionStart;
+                const end = targetV.selectionEnd;
+                const newValue = targetV.value.substring(0, start) + text + targetV.value.substring(end);
+                setSearchQuery(newValue);
+                setTimeout(() => {
+                  targetV.setSelectionRange(start + text.length, start + text.length);
+                }, 0);
+              } else {
+                setSearchQuery(targetV.value + text);
+              }
+            }).catch(() => {
+              document.execCommand('paste');
+            });
+            break;
+          case 'x':
+            e.preventDefault();
+            const targetX = e.currentTarget as HTMLInputElement;
+            if (targetX.selectionStart !== targetX.selectionEnd) {
+              const selectedText = targetX.value.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+              navigator.clipboard.writeText(selectedText).then(() => {
+                if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                  const start = targetX.selectionStart;
+                  const end = targetX.selectionEnd;
+                  const newValue = targetX.value.substring(0, start) + targetX.value.substring(end);
+                  setSearchQuery(newValue);
+                } else {
+                  setSearchQuery('');
+                }
+              }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = selectedText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                  const start = targetX.selectionStart;
+                  const end = targetX.selectionEnd;
+                  const newValue = targetX.value.substring(0, start) + targetX.value.substring(end);
+                  setSearchQuery(newValue);
+                } else {
+                  setSearchQuery('');
+                }
+              });
+            }
+            break;
+        }
+      }
+    }, []);
 
     const statusColumns = useMemo(
       () => [
@@ -147,13 +260,23 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       [],
     );
 
-    const userId = useMemo(() => {
-      const id = user?.id || '';
-      console.log('[TasksKanban] User ID:', { userId: id });
-      return id;
-    }, [user]);
-
     // Removed local isAdmin fetch useEffect
+
+    // Detect touch device
+    useEffect(() => {
+      const checkTouchDevice = () => {
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        setIsTouchDevice(isTouch);
+        console.log('[TasksKanban] Touch device detected:', isTouch);
+      };
+      
+      checkTouchDevice();
+      window.addEventListener('resize', checkTouchDevice);
+      
+      return () => {
+        window.removeEventListener('resize', checkTouchDevice);
+      };
+    }, []);
 
     // GSAP Animation for appearance and disappearance
     useEffect(() => {
@@ -190,11 +313,19 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       const visibleTasks = isAdmin
         ? tasks // Admins see all tasks
         : tasks.filter((task) => task.AssignedTo.includes(userId) || task.CreatedBy === userId); // Non-admins see only assigned or created tasks
-      return visibleTasks.filter((task) => {
+      
+      const filtered = visibleTasks.filter((task) => {
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
-        const passesFilters = matchesSearch && matchesPriority && matchesClient;
+        let matchesUser = true;
+        if (userFilter === 'me') {
+          matchesUser = getInvolvedUserIds(task).includes(userId);
+        } else if (userFilter && userFilter !== 'me') {
+          matchesUser = getInvolvedUserIds(task).includes(userFilter);
+        }
+        const passesFilters = matchesSearch && matchesPriority && matchesClient && matchesUser;
+        
         console.log('[TasksKanban] Task filter check:', {
           taskId: task.id,
           taskName: task.name,
@@ -204,11 +335,14 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           matchesSearch,
           matchesPriority,
           matchesClient,
+          matchesUser,
           passesFilters,
         });
         return passesFilters;
       });
-    }, [tasks, searchQuery, priorityFilter, clientFilter, userId, isAdmin]);
+
+      return filtered;
+    }, [tasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, isAdmin]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
@@ -217,6 +351,50 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
         assignedToUser: memoizedFilteredTasks.filter((t) => t.AssignedTo.includes(userId)).map((t) => t.id),
       });
+
+      // Animate task cards when filtering changes - use setTimeout to avoid DOM access during render
+      setTimeout(() => {
+        const taskCards = document.querySelectorAll(`.${styles.taskCard}`);
+        taskCards.forEach((card, index) => {
+          gsap.fromTo(
+            card,
+            { 
+              opacity: 0, 
+              y: 20, 
+              scale: 0.95,
+              rotationX: -5
+            },
+            { 
+              opacity: 1, 
+              y: 0, 
+              scale: 1,
+              rotationX: 0,
+              duration: 0.4,
+              delay: index * 0.05,
+              ease: 'power2.out'
+            }
+          );
+        });
+
+        // Animate column headers with task counts
+        const columnHeaders = document.querySelectorAll(`.${styles.columnHeader}`);
+        columnHeaders.forEach((header) => {
+          const taskCount = header.querySelector(`.${styles.taskCount}`);
+          if (taskCount) {
+            gsap.fromTo(
+              taskCount,
+              { scale: 1.2, backgroundColor: '#e6f4ff' },
+              { 
+                scale: 1, 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                duration: 0.3,
+                ease: 'power2.out'
+              }
+            );
+          }
+        });
+      }, 0);
+
     }, [memoizedFilteredTasks, userId]);
 
     useEffect(() => {
@@ -258,6 +436,18 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     }, [isClientDropdownOpen]);
 
     useEffect(() => {
+      const userItems = userDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
+      if (isUserDropdownOpen && userItems) {
+        gsap.fromTo(
+          userItems,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+        );
+        console.log('[TasksKanban] User dropdown animated');
+      }
+    }, [isUserDropdownOpen]);
+
+    useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
           actionMenuRef.current &&
@@ -280,10 +470,18 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         ) {
           setIsClientDropdownOpen(false);
         }
+        if (
+          userDropdownRef.current &&
+          !userDropdownRef.current.contains(event.target as Node) &&
+          isUserDropdownOpen
+        ) {
+          setIsUserDropdownOpen(false);
+          console.log('[TasksKanban] User dropdown closed via outside click');
+        }
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, userId]);
+    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isUserDropdownOpen]);
 
     const animateClick = (element: HTMLElement) => {
       gsap.to(element, {
@@ -298,12 +496,40 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
     const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
+      
+      // Animate filter change
+      const filterIcon = e.currentTarget.querySelector('img');
+      if (filterIcon) {
+        gsap.to(filterIcon, {
+          rotation: 360,
+          scale: 1.2,
+          duration: 0.3,
+          ease: 'power2.out',
+          yoyo: true,
+          repeat: 1
+        });
+      }
+      
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
     };
 
     const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
+      
+      // Animate filter change
+      const filterIcon = e.currentTarget.querySelector('img');
+      if (filterIcon) {
+        gsap.to(filterIcon, {
+          rotation: 360,
+          scale: 1.2,
+          duration: 0.3,
+          ease: 'power2.out',
+          yoyo: true,
+          repeat: 1
+        });
+      }
+      
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
     };
@@ -405,6 +631,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       statusColumns.forEach((status) => {
         groups[status.id] = filteredTasks.filter((task) => task.status === status.title);
       });
+      
       console.log('[TasksKanban] Tasks grouped by status:', {
         groups: Object.keys(groups).map((statusId) => ({
           status: statusColumns.find((s) => s.id === statusId)?.title,
@@ -415,6 +642,40 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       });
       return groups;
     }, [filteredTasks, userId, statusColumns]);
+
+    // Handle animations for empty columns
+    useEffect(() => {
+      const animateEmptyColumns = () => {
+        statusColumns.forEach((status) => {
+          const columnElement = document.querySelector(`[data-status="${status.id}"]`);
+          if (columnElement) {
+            const taskList = columnElement.querySelector(`.${styles.taskList}`);
+            const taskCount = groupedTasks[status.id]?.length || 0;
+            
+            if (taskList) {
+              if (taskCount === 0) {
+                gsap.to(taskList, {
+                  opacity: 0.5,
+                  scale: 0.98,
+                  duration: 0.3,
+                  ease: 'power2.out'
+                });
+              } else {
+                gsap.to(taskList, {
+                  opacity: 1,
+                  scale: 1,
+                  duration: 0.3,
+                  ease: 'power2.out'
+                });
+              }
+            }
+          }
+        });
+      };
+
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(animateEmptyColumns);
+    }, [groupedTasks, statusColumns]);
 
     // Handle loading state
     if (isLoading) {
@@ -433,11 +694,24 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
               placeholder="Buscar Tareas"
               value={searchQuery}
               onChange={(e) => {
-                setSearchQuery(e.target.value);
-                console.log('[TasksKanban] Search query updated:', e.target.value);
+                const newValue = e.target.value;
+                setSearchQuery(newValue);
+                
+                // Animate search input when typing
+                const searchInput = e.currentTarget;
+                gsap.to(searchInput, {
+                  scale: 1.02,
+                  duration: 0.2,
+                  ease: 'power2.out',
+                  yoyo: true,
+                  repeat: 1
+                });
+                
+                console.log('[TasksKanban] Search query updated:', newValue);
               }}
               className={styles.searchInput}
               aria-label="Buscar tareas"
+              onKeyDown={handleInputKeyDown}
             />
           </div>
 
@@ -527,37 +801,59 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                 )}
               </div>
             </div>
-            {/* <button
-              className={styles.filterButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onAISidebarOpen();
-              }}
-            >
-              <Image
-                src="/gemini.svg"
-                alt="AI"
-                width={20}
-                height={20}
-                style={{
-                  marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.2)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                }}
-              />
-              Pregunta a Gemini
-            </button> */}
+            {isAdmin && (
+              <div className={styles.filter}>
+                <div className={styles.dropdownContainer} ref={userDropdownRef}>
+                  <div
+                    className={styles.dropdownTrigger}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      setIsUserDropdownOpen((prev) => !prev);
+                      console.log('[TasksKanban] User dropdown toggled');
+                    }}
+                  >
+                    <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
+                    <span>
+                      {userFilter === '' 
+                        ? 'Todos' 
+                        : userFilter === 'me' 
+                        ? 'Mis tareas' 
+                        : users.find(u => u.id === userFilter)?.fullName || 'Usuario'}
+                    </span>
+                  </div>
+                  {isUserDropdownOpen && (
+                    <div className={styles.dropdownItems}>
+                      <div
+                        className={styles.dropdownItem}
+                        style={{fontWeight: userFilter === '' ? 700 : 400}}
+                        onClick={() => handleUserFilter('')}
+                      >
+                        Todos
+                      </div>
+                      <div
+                        className={styles.dropdownItem}
+                        style={{fontWeight: userFilter === 'me' ? 700 : 400}}
+                        onClick={() => handleUserFilter('me')}
+                      >
+                        Mis tareas
+                      </div>
+                      {users
+                        .filter((u) => u.id !== userId)
+                        .map((u) => (
+                          <div
+                            key={u.id}
+                            className={styles.dropdownItem}
+                            style={{fontWeight: userFilter === u.id ? 700 : 400}}
+                            onClick={() => handleUserFilter(u.id)}
+                          >
+                            {u.fullName}
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <button
               className={styles.createButton}
               onClick={(e) => {
@@ -600,13 +896,15 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`${styles.taskCard} ${snapshot.isDragging ? styles.dragging : ''}`}
+                              className={`${styles.taskCard} ${snapshot.isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
                               onClick={() => {
                                 onChatSidebarOpen(task);
                                 console.log('[TasksKanban] Task card clicked, opening chat for task:', task.id);
                               }}
                               style={{
                                 ...provided.draggableProps.style,
+                                cursor: isAdmin ? 'grab' : 'pointer',
+                                touchAction: isAdmin ? 'none' : 'auto', // Enable touch dragging for admins
                               }}
                             >
                               <div className={styles.taskHeader}>
@@ -617,13 +915,16 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                                     userId={userId}
                                     isOpen={actionMenuOpenId === task.id}
                                     onOpen={() => {
-                                      setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id);
+                                      setActionMenuOpenId(task.id);
+                                      console.log('[TasksKanban] Action menu opened for task:', task.id);
                                     }}
                                     onEdit={() => {
                                       onEditTaskOpen(task.id);
+                                      console.log('[TasksKanban] Edit task requested:', task.id);
                                     }}
                                     onDelete={() => {
-                                      onDeleteTaskOpen(task.id); // Llama al popup global
+                                      onDeleteTaskOpen(task.id);
+                                      console.log('[TasksKanban] Delete task requested:', task.id);
                                     }}
                                     animateClick={animateClick}
                                     actionMenuRef={actionMenuRef}
@@ -637,6 +938,11 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                                   />
                                 )}
                               </div>
+                              {isAdmin && isTouchDevice && (
+                                <div className={styles.touchDragIndicator}>
+                                  <span>👆 Arrastra para mover</span>
+                                </div>
+                              )}
                               <div className={styles.taskDetails}>
                                 <div className={styles.clientInfo}>
                                   {clients.find((c) => c.id === task.clientId) ? (

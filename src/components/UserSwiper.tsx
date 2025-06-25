@@ -244,12 +244,18 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
 
   return (
     <div className={`${styles.swiperContainer} ${className || ''}`}>
+      {/* Viñetado izquierdo */}
+      <div className={styles.vignetteLeft}></div>
+      
+      {/* Viñetado derecho */}
+      <div className={styles.vignetteRight}></div>
+      
       <section
         ref={splideRef}
         className="splide"
         aria-label="Carrusel de Perfiles de Usuarios"
       >
-        <div className="splide__track" style={{ padding: '20px 0', overflow: 'visible!important' }}>
+        <div className="splide__track" style={{ paddingTop: '30px', paddingBottom: '30px', paddingLeft: '0px', paddingRight: '0px', overflow: 'visible!important' }}>
           <ul className="splide__list">
             {users.map((user) => (
               <li key={user.id} className={`splide__slide ${styles.swiperSlide}`}>

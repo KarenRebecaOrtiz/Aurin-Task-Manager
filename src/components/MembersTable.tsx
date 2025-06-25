@@ -194,6 +194,82 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               onChange={(e) => setSearchQuery(e.target.value)}
               className={styles.searchInput}
               aria-label="Buscar Miembros"
+              onKeyDown={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  switch (e.key.toLowerCase()) {
+                    case 'a':
+                      e.preventDefault();
+                      e.currentTarget.select();
+                      break;
+                    case 'c':
+                      e.preventDefault();
+                      const targetC = e.currentTarget as HTMLInputElement;
+                      if (targetC.selectionStart !== targetC.selectionEnd) {
+                        const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                        navigator.clipboard.writeText(selectedText).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = selectedText;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        });
+                      }
+                      break;
+                    case 'v':
+                      e.preventDefault();
+                      const targetV = e.currentTarget as HTMLInputElement;
+                      navigator.clipboard.readText().then(text => {
+                        if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                          const start = targetV.selectionStart;
+                          const end = targetV.selectionEnd;
+                          const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
+                          setSearchQuery(newValue);
+                          setTimeout(() => {
+                            targetV.setSelectionRange(start + text.length, start + text.length);
+                          }, 0);
+                        } else {
+                          setSearchQuery(searchQuery + text);
+                        }
+                      }).catch(() => {
+                        document.execCommand('paste');
+                      });
+                      break;
+                    case 'x':
+                      e.preventDefault();
+                      const targetX = e.currentTarget as HTMLInputElement;
+                      if (targetX.selectionStart !== targetX.selectionEnd) {
+                        const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                        navigator.clipboard.writeText(selectedText).then(() => {
+                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                            const start = targetX.selectionStart;
+                            const end = targetX.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                          } else {
+                            setSearchQuery('');
+                          }
+                        }).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = selectedText;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                            const start = targetX.selectionStart;
+                            const end = targetX.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                          } else {
+                            setSearchQuery('');
+                          }
+                        });
+                      }
+                      break;
+                  }
+                }
+              }}
             />
           </div>
           

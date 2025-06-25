@@ -427,6 +427,7 @@
       background 0.3s ease,
       border-color 0.3s ease,
       opacity 0.3s ease;
+    will-change: transform, box-shadow, background, border-color, opacity;
   
     &:last-child {
       margin-bottom: 0;
@@ -434,6 +435,11 @@
   
     &.read {
       opacity: 0.75;
+    }
+
+    /* Estilos para swipe */
+    &.swiping {
+      transition: transform 0.2s ease;
     }
   
     /* ——— Hover: Levitar ——— */
@@ -446,6 +452,7 @@
         6px 6px 12px rgba(0, 0, 0, 0.1),
         inset -4px -4px 8px rgba(255, 255, 255, 0.5),
         inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+      will-change: transform, box-shadow, background, border-color;
     }
   
     /* ——— Active: Presionado ——— */
@@ -465,7 +472,6 @@
       background: rgba(39, 39, 42, 0.7);
   
       &:hover {
-        transform: translateY(-2px) scale(1.02);
         background: rgba(39, 39, 42, 0.85);
         border-color: rgba(255, 255, 255, 0.2);
         box-shadow:
@@ -489,10 +495,15 @@
         opacity: 0.5;
       }
     }
+
+
+@media (max-width: 969px){
+
+  .adminButtonWrapper{
+    display: none;
+  }
+}
   
-
-
-
     /* ——— Responsividad ——— */
     @media (max-width: 1024px) {
       height: 70px;
@@ -1287,6 +1298,21 @@
 
   &.read {
     opacity: 0.7;
+  }
+
+  /* Estilos para swipe */
+  &.swiping {
+    transition: transform 0.2s ease;
+  }
+
+  .notificationContent {
+    align-items: flex-start;
+    min-height: auto;
+  }
+
+  .notificationTextContent {
+    font-size: 15px;
+    line-height: 1.5;
   }
 
   :global(.dark) & {

@@ -36,7 +36,23 @@ const ImagePreviewOverlay: React.FC<ImagePreviewOverlayProps> = ({ src, alt, onC
   return createPortal(
     <div ref={overlayRef} className={styles.imagePreviewOverlay}>
       <div className={styles.imagePreviewContainer}>
-        <Image src={src} alt={alt} width={800} height={600} objectFit="contain" />
+        <Image 
+          src={src} 
+          alt={alt} 
+          width={0} 
+          height={0} 
+          sizes="90vw" 
+          draggable="false"
+          style={{
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            objectFit: 'contain',
+            display: 'block',
+            margin: '0 auto'
+          }}
+        />
         <button className={styles.closeButton} onClick={onClose}>
           ×
         </button>

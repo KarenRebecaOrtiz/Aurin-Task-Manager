@@ -1,3 +1,4 @@
+@use '@/app/styles/variables' as *;
 @import '@/app/styles/utils';
 
 .container {
@@ -36,7 +37,7 @@
     padding: 6px 8px;
     border-radius: 4px;
     font-size: 12px;
-    font-family: "Inter Tight", sans-serif;
+    font-family: $font-family-primary;
     font-weight: 400;
     white-space: nowrap;
     opacity: 0;
@@ -197,7 +198,7 @@
     padding: 6px 8px;
     border-radius: 4px;
     font-size: 12px;
-    font-family: "Inter Tight", sans-serif;
+    font-family: $font-family-primary;
     font-weight: 400;
     white-space: nowrap;
     opacity: 0;
@@ -281,7 +282,7 @@
     padding: 6px 8px;
     border-radius: 4px;
     font-size: 12px;
-    font-family: "Inter Tight", sans-serif;
+    font-family: $font-family-primary;
     font-weight: 400;
     white-space: nowrap;
     opacity: 0;
@@ -401,7 +402,7 @@
     padding: 6px 8px;
     border-radius: 4px;
     font-size: 12px;
-    font-family: "Inter Tight", sans-serif;
+    font-family: $font-family-primary;
     font-weight: 400;
     white-space: nowrap;
     opacity: 0;

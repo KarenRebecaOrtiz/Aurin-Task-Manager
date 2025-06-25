@@ -1,15 +1,20 @@
 // src/app/globals.scss
-@use './styles/variables';
+@use './styles/variables' as *;
 @use './styles/reset';
 @use './styles/base';
+@use './styles/typography';
+@use './styles/typography-utils';
+
 * {
   box-sizing: border-box;
 }
+
 body.no-scroll {
   overflow: hidden;
   position: fixed;
   width: 100%;
 }
+
 /* app/globals.css */
 
 :root {
@@ -32,11 +37,8 @@ body.no-scroll {
   box-sizing: border-box;
 }
 
-body {
-  font-family: 'Urbanist', sans-serif;
-}
 .dark {
-  --background: #0D0D0D;
+  --background: #000000;
   --text-primary: #FFFFFF;
   --text-secondary: #A1A1AA;
   --button-bg: transparent;
@@ -44,17 +46,25 @@ body {
   --button-bg-hover: #444444;
   --header-bg: #ffffff;
 }
+
 .grecaptcha-badge {
   display: none !important;
 }
+
 body {
   margin: 0;
-  font-family: "Urbanist", sans-serif;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-normal;
+  font-size: $text-base;
+  line-height: $leading-normal;
   background: var(--background);
   color: var(--text-primary);
   position: relative;
   z-index: 0;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 
   &::before {
     content: '';

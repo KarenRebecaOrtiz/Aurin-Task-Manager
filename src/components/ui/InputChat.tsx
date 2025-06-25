@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
+import NumberFlow, { NumberFlowGroup } from '@number-flow/react';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
 import TimerPanel from './TimerPanel';
@@ -254,34 +255,58 @@ export default function InputChat({
       if (!editor) return;
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
-          case 'b':
-            e.preventDefault();
-            toggleFormat('bold');
-            break;
-          case 'i':
-            e.preventDefault();
-            toggleFormat('italic');
-            break;
-          case 'u':
-            e.preventDefault();
-            toggleFormat('underline');
-            break;
-          case '`':
-            e.preventDefault();
-            toggleFormat('code');
-            break;
           case 'a':
             e.preventDefault();
             editor.commands.selectAll();
             break;
           case 'c':
-            // Copy - let browser handle it naturally
+            e.preventDefault();
+            const selection = window.getSelection();
+            if (selection && selection.toString().length > 0) {
+              navigator.clipboard.writeText(selection.toString()).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = selection.toString();
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+              });
+            }
             break;
           case 'v':
-            // Paste - let browser handle it naturally
+            e.preventDefault();
+            navigator.clipboard.readText().then(text => {
+              editor.commands.insertContent(text);
+            }).catch(() => {
+              // Fallback for older browsers or when clipboard access is denied
+              editor.commands.focus();
+              document.execCommand('paste');
+            });
             break;
           case 'x':
-            // Cut - let browser handle it naturally
+            e.preventDefault();
+            const cutSelection = window.getSelection();
+            if (cutSelection && cutSelection.toString().length > 0) {
+              navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                editor.commands.deleteSelection();
+              }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = cutSelection.toString();
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                editor.commands.deleteSelection();
+              });
+            }
+            break;
+          case 'z':
+            // Undo - let browser handle it naturally
+            break;
+          case 'y':
+            // Redo - let browser handle it naturally
             break;
         }
       }
@@ -299,6 +324,157 @@ export default function InputChat({
     },
     [toggleFormat, editor],
   );
+
+  // Handle context menu for editor
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    const editorElement = e.currentTarget as HTMLElement;
+    const selection = window.getSelection();
+    const hasSelection = selection && selection.toString().length > 0;
+    
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.style.cssText = `
+      position: fixed;
+      top: ${e.clientY}px;
+      left: ${e.clientX}px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 14px;
+      min-width: 150px;
+    `;
+
+    const menuItems = [
+      { label: 'Deshacer', action: () => editor?.commands.undo(), shortcut: 'Ctrl+Z' },
+      { label: 'Rehacer', action: () => editor?.commands.redo(), shortcut: 'Ctrl+Y' },
+      { type: 'separator' },
+      { 
+        label: 'Cortar', 
+        action: async () => {
+          if (hasSelection) {
+            try {
+              await navigator.clipboard.writeText(selection.toString());
+              editor?.commands.deleteSelection();
+            } catch (err) {
+              // Fallback for older browsers
+              const textArea = document.createElement('textarea');
+              textArea.value = selection.toString();
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              editor?.commands.deleteSelection();
+            }
+          }
+        }, 
+        shortcut: 'Ctrl+X', 
+        disabled: !hasSelection 
+      },
+      { 
+        label: 'Copiar', 
+        action: async () => {
+          if (hasSelection) {
+            try {
+              await navigator.clipboard.writeText(selection.toString());
+            } catch (err) {
+              // Fallback for older browsers
+              const textArea = document.createElement('textarea');
+              textArea.value = selection.toString();
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            }
+          }
+        }, 
+        shortcut: 'Ctrl+C', 
+        disabled: !hasSelection 
+      },
+      { 
+        label: 'Pegar', 
+        action: async () => {
+          try {
+            const text = await navigator.clipboard.readText();
+            editor?.commands.insertContent(text);
+          } catch (err) {
+            // Fallback for older browsers or when clipboard access is denied
+            editor?.commands.focus();
+            document.execCommand('paste');
+          }
+        }, 
+        shortcut: 'Ctrl+V' 
+      },
+      { type: 'separator' },
+      { label: 'Seleccionar todo', action: () => editor?.commands.selectAll(), shortcut: 'Ctrl+A' },
+      { 
+        label: 'Eliminar', 
+        action: () => {
+          if (editor && hasSelection) {
+            editor.commands.deleteSelection();
+          }
+        }, 
+        shortcut: 'Delete', 
+        disabled: !hasSelection 
+      }
+    ];
+
+    menuItems.forEach((item, index) => {
+      if (item.type === 'separator') {
+        const separator = document.createElement('hr');
+        separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
+        menu.appendChild(separator);
+        return;
+      }
+
+      const menuItem = document.createElement('div');
+      menuItem.style.cssText = `
+        padding: 8px 12px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+      `;
+      menuItem.innerHTML = `
+        <span>${item.label}</span>
+        <span style="color: #666; font-size: 12px;">${item.shortcut}</span>
+      `;
+      
+      if (!item.disabled) {
+        menuItem.addEventListener('click', () => {
+          item.action();
+          document.body.removeChild(menu);
+        });
+        menuItem.addEventListener('mouseenter', () => {
+          menuItem.style.backgroundColor = '#f5f5f5';
+        });
+        menuItem.addEventListener('mouseleave', () => {
+          menuItem.style.backgroundColor = 'transparent';
+        });
+      }
+      
+      menu.appendChild(menuItem);
+    });
+
+    document.body.appendChild(menu);
+
+    // Close menu when clicking outside
+    const closeMenu = () => {
+      if (document.body.contains(menu)) {
+        document.body.removeChild(menu);
+      }
+      document.removeEventListener('click', closeMenu);
+    };
+    
+    setTimeout(() => {
+      document.addEventListener('click', closeMenu);
+    }, 0);
+  }, [editor]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -503,14 +679,6 @@ export default function InputChat({
     }
   };
 
-  // Format time
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   const formatButtons = [
     { id: 'bold', icon: '/input/bold.svg', label: 'Negrita', shortcut: 'Ctrl+B' },
     { id: 'italic', icon: '/input/italic.svg', label: 'Cursiva', shortcut: 'Ctrl+I' },
@@ -563,6 +731,7 @@ export default function InputChat({
                   height={16}
                   className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`}
                   style={{ filter: 'none', fill: '#000000' }}
+                  draggable="false"
                 />
               </button>
             ))}
@@ -589,20 +758,20 @@ export default function InputChat({
           )}
           {previewUrl && (
             <div className={styles.imagePreview}>
-              <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} />
+              <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} draggable="false" />
               <button
                 className={styles.removeImageButton}
                 onClick={handleRemoveFile}
                 type="button"
                 title="Eliminar imagen"
               >
-                <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+                <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>
             </div>
           )}
           {file && !previewUrl && (
             <div className={styles.filePreview}>
-              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+              <Image src="/file.svg" alt="Archivo" width={16} height={16} draggable="false" />
               <span>{file.name}</span>
               <button
                 className={styles.removeImageButton}
@@ -610,7 +779,7 @@ export default function InputChat({
                 type="button"
                 title="Eliminar archivo"
               >
-                <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} />
+                <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>
             </div>
           )}
@@ -633,6 +802,7 @@ export default function InputChat({
                   setTimeout(adjustEditorHeight, 0);
                 }
               }}
+              onContextMenu={handleContextMenu}
             />
           </div>
           <div className={styles.actions}>
@@ -650,6 +820,7 @@ export default function InputChat({
                   alt={isTimerRunning ? 'Detener temporizador' : 'Iniciar temporizador'}
                   width={12}
                   height={12}
+                  draggable="false"
                 />
               </button>
               <div
@@ -657,27 +828,35 @@ export default function InputChat({
                 onClick={handleToggleTimerPanel}
                 title="Abrir/cerrar panel de temporizador"
               >
-                <span>{formatTime(timerSeconds)}</span>
+                <NumberFlowGroup>
+                  <div className={styles.timerNumbers}>
+                    <NumberFlow 
+                      trend={-1} 
+                      value={Math.floor(timerSeconds / 3600)} 
+                      format={{ minimumIntegerDigits: 2 }} 
+                    />
+                    <NumberFlow
+                      prefix=":"
+                      trend={-1}
+                      value={Math.floor((timerSeconds % 3600) / 60)}
+                      digits={{ 1: { max: 5 } }}
+                      format={{ minimumIntegerDigits: 2 }}
+                    />
+                    <NumberFlow
+                      prefix=":"
+                      trend={-1}
+                      value={timerSeconds % 60}
+                      digits={{ 1: { max: 5 } }}
+                      format={{ minimumIntegerDigits: 2 }}
+                    />
+                  </div>
+                </NumberFlowGroup>
                 {isRestoringTimer && (
-                  <div style={{ 
-                    position: 'absolute', 
-                    top: '-8px', 
-                    right: '-8px', 
-                    background: '#3b82f6', 
-                    color: 'white', 
-                    borderRadius: '50%', 
-                    width: '16px', 
-                    height: '16px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    animation: 'pulse 1s infinite'
-                  }}>
+                  <div className={styles.restoreIndicator}>
                     ↻
                   </div>
                 )}
-                <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} />
+                <Image src="/chevron-down.svg" alt="Abrir panel de temporizador" width={12} height={12} draggable="false" />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
@@ -693,7 +872,7 @@ export default function InputChat({
                   title="Reformular texto con Gemini AI ✨"
                   aria-expanded={isDropupOpen}
                 >
-                  <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} />
+                  <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} draggable="false" />
                 </button>
                 {isDropupOpen && (
                   <div className={styles.dropupMenu} role="menu">
@@ -794,6 +973,7 @@ export default function InputChat({
                   width={16}
                   height={16}
                   style={{ filter: 'invert(100)' }}
+                  draggable="false"
                 />
               </button>
               <EmojiSelector
