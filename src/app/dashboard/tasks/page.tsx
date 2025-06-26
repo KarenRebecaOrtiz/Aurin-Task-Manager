@@ -720,6 +720,7 @@ function TasksPageContent() {
 
   const handleContainerChange = useCallback(
     (newContainer: Container) => {
+      console.log('[TasksPage] handleContainerChange called with:', newContainer);
       if ((isCreateTaskOpen || isEditTaskOpen) && hasUnsavedChanges && selectedContainer !== newContainer) {
         setPendingContainer(newContainer);
         setIsConfirmExitOpen(true);
