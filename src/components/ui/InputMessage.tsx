@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
+import sanitizeHtml from 'sanitize-html';
 import { Timestamp } from 'firebase/firestore';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
@@ -10,6 +11,14 @@ import { EmojiSelector } from './EmojiSelector';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
+import { 
+  saveErrorMessage,
+  removeErrorMessage,
+  PersistedMessage
+} from '@/lib/messagePersistence';
+import { useEditorPersistence } from './use-form-persistence';
+import { toast } from './use-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface Message {
   id: string;
@@ -26,6 +35,12 @@ interface Message {
   isPending?: boolean;
   hasError?: boolean;
   clientId: string;
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text: string | null;
+    imageUrl?: string | null;
+  } | null;
 }
 
 interface InputMessageProps {
@@ -38,6 +53,8 @@ interface InputMessageProps {
   ) => Promise<void>;
   isSending: boolean;
   containerRef: React.RefObject<HTMLElement>;
+  replyingTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -48,6 +65,8 @@ export function InputMessage({
   onSendMessage,
   isSending,
   containerRef,
+  replyingTo,
+  onCancelReply,
 }: InputMessageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -55,9 +74,20 @@ export function InputMessage({
   const [isDropupOpen, setIsDropupOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasReformulated, setHasReformulated] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const dropupRef = useRef<HTMLDivElement>(null);
+  const conversationId = 'message-sidebar'; // ID único para esta conversación
+
+  // Local state for replyingTo if not provided as prop
+  const [internalReplyingTo, setInternalReplyingTo] = useState<Message | null>(null);
+  const effectiveReplyingTo = typeof replyingTo !== 'undefined' ? replyingTo : internalReplyingTo;
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Initialize Tiptap editor
   const editor = useEditor({
@@ -69,6 +99,7 @@ export function InputMessage({
       Underline,
     ],
     content: '',
+    immediatelyRender: false,
     onUpdate: () => {
       adjustEditorHeight();
     },
@@ -79,7 +110,7 @@ export function InputMessage({
         'aria-label': 'Escribir mensaje',
       },
     },
-  });
+  }, [isClient]);
 
   // Auto-resize editor height
   const editorRef = useRef<HTMLDivElement>(null);
@@ -113,6 +144,7 @@ export function InputMessage({
         } else {
           setTimeout(() => {
             adjustEditorHeight();
+            editor.commands.focus('end');
             callback();
           }, 100);
         }
@@ -180,10 +212,21 @@ export function InputMessage({
     [editor],
   );
 
+  // Usar el hook de persistencia del editor
+  const { watchAndSave, clearPersistedData, restoredData } = useEditorPersistence(
+    editor,
+    `draft_${conversationId}`,
+    true
+  );
+
   // Send message
   const handleSend = useCallback(async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!userId || (!editor || editor.isEmpty) && !file || isSending || isProcessing) {
+    // Permitir envío si hay texto O archivo (o ambos)
+    const hasText = editor && !editor.isEmpty;
+    const hasFile = file !== null;
+    
+    if (!userId || (!hasText && !hasFile) || isSending || isProcessing) {
       return;
     }
 
@@ -196,7 +239,7 @@ export function InputMessage({
       id: tempId,
       senderId: userId,
       senderName: userFirstName || 'Usuario',
-      text: editor.getHTML(),
+      text: hasText ? editor.getHTML() : null,
       timestamp: Timestamp.now(),
       read: false,
       imageUrl: null,
@@ -207,6 +250,12 @@ export function InputMessage({
       isPending: false,
       hasError: false,
       clientId,
+      replyTo: effectiveReplyingTo ? {
+        id: effectiveReplyingTo.id,
+        senderName: effectiveReplyingTo.senderName,
+        text: effectiveReplyingTo.text,
+        imageUrl: effectiveReplyingTo.imageUrl || undefined,
+      } : undefined,
     };
 
     try {
@@ -226,14 +275,40 @@ export function InputMessage({
       editor?.commands.clearContent();
       setFile(null);
       setPreviewUrl(null);
+      
+      // Limpiar mensaje guardado al enviar exitosamente
+      removeErrorMessage(conversationId);
+      clearPersistedData(); // Clear draft after successful send
+      
+      // Limpiar reply después de enviar
+      if (onCancelReply) {
+        onCancelReply();
+      }
+      
       console.log('[InputMessage] Message sent successfully');
     } catch (error) {
       console.error('[InputMessage] Error sending message:', error);
+      
+      // Guardar mensaje con error para poder reintentarlo
+      const errorMessage: PersistedMessage = {
+        id: tempId,
+        text: hasText ? editor.getHTML() : '',
+        timestamp: Date.now(),
+        hasError: true,
+        file: file ? {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          previewUrl: previewUrl || undefined,
+        } : undefined,
+      };
+      saveErrorMessage(conversationId, errorMessage);
+      
       // Mark message as failed
       finalMessageData.hasError = true;
       await onSendMessage(finalMessageData);
     }
-  }, [userId, editor, file, isSending, isProcessing, userFirstName, onSendMessage]);
+  }, [userId, editor, file, isSending, isProcessing, userFirstName, onSendMessage, conversationId, previewUrl, effectiveReplyingTo, onCancelReply, clearPersistedData]);
 
   // Handle keydown for shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -455,13 +530,21 @@ export function InputMessage({
   // File handling
   const selectFile = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
-      alert('El archivo supera los 10 MB.');
+      toast({
+        title: 'Archivo demasiado grande',
+        description: 'El archivo supera los 10 MB.',
+        variant: 'error',
+      });
       return;
     }
     const fileExtension = f.name.split('.').pop()?.toLowerCase();
     const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'];
     if (!fileExtension || !validExtensions.includes(fileExtension)) {
-      alert(`Extensión no permitida. Permitidas: ${validExtensions.join(', ')}`);
+      toast({
+        title: 'Extensión no permitida',
+        description: `Extensión no permitida. Permitidas: ${validExtensions.join(', ')}`,
+        variant: 'error',
+      });
       return;
     }
     setFile(f);
@@ -547,7 +630,11 @@ export function InputMessage({
       setHasReformulated(true);
     } catch (error) {
       console.error('[InputMessage:Reformulate] Error:', error);
-      alert('❌ Error al procesar el texto con Gemini AI.');
+      toast({
+        title: 'Error al procesar el texto con Gemini AI',
+        description: '❌ Error al procesar el texto con Gemini AI.',
+        variant: 'error',
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -562,8 +649,151 @@ export function InputMessage({
     { id: 'numbered', icon: '/list-ordered.svg', label: 'Lista numerada', shortcut: 'Ctrl+Shift+7' },
   ];
 
+  // Restaurar contenido del editor desde cache
+  useEffect(() => {
+    if (restoredData && restoredData.content && restoredData.content.trim() && 
+        restoredData.content !== '<p></p>' && restoredData.content !== '<p><br></p>' && 
+        editor && editor.isEmpty) {
+      editor.commands.setContent(restoredData.content);
+      console.log('[InputMessage] Contenido restaurado desde cache');
+      toast({
+        title: 'Progreso restaurado',
+        description: 'Se ha restaurado el mensaje guardado.',
+        variant: 'info',
+      });
+    }
+  }, [restoredData, editor]);
+
+  // Guardar contenido automáticamente cuando cambie
+  useEffect(() => {
+    if (!editor) return;
+    
+    const saveContent = () => {
+      const content = editor.getHTML();
+      if (content.trim() && content !== '<p></p>' && content !== '<p><br></p>') {
+        watchAndSave();
+      }
+    };
+
+    // Guardar cada 2 segundos mientras se escribe
+    const interval = setInterval(saveContent, 2000);
+    
+    return () => clearInterval(interval);
+  }, [editor, watchAndSave]);
+
+  // 4. Clear draft when reply is cancelled
+  const handleCancelReply = useCallback(() => {
+    if (typeof replyingTo !== 'undefined' && onCancelReply) {
+      onCancelReply();
+    } else {
+      setInternalReplyingTo(null);
+    }
+    // Don't clear the draft here, let the user keep their text
+    console.log('[InputMessage] Reply cancelled, keeping draft text');
+  }, [replyingTo, onCancelReply]);
+
   return (
     <div className={styles.inputWrapper}>
+      <AnimatePresence>
+        {restoredData && restoredData.content && restoredData.content.trim() && (
+          <motion.div
+            className={styles.persistedData}
+            key="persisted-msg"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <span>Mensaje guardado restaurado</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearPersistedData();
+                editor?.commands.clearContent();
+              }}
+            >
+              Borrar
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {effectiveReplyingTo && (
+        <div className={styles.replyContainer}>
+          <div className={styles.replyContent}>
+            <div className={styles.replyHeader}>
+              <span className={styles.replyLabel}>Respondiendo a {effectiveReplyingTo.senderName}</span>
+              <button
+                type="button"
+                className={styles.replyCancelButton}
+                onClick={handleCancelReply}
+                aria-label="Cancelar respuesta"
+              >
+                <Image src="/x.svg" alt="Cancelar" width={16} height={16} />
+              </button>
+            </div>
+            <div className={styles.replyPreview}>
+              {effectiveReplyingTo.imageUrl && (
+                <Image
+                  src={effectiveReplyingTo.imageUrl}
+                  alt="Imagen"
+                  width={40}
+                  height={40}
+                  className={styles.replyImage}
+                  draggable="false"
+                />
+              )}
+              {effectiveReplyingTo.text && (
+                <span 
+                  className={styles.replyText}
+                  dangerouslySetInnerHTML={{ 
+                    __html: sanitizeHtml(effectiveReplyingTo.text.length > 50 
+                      ? `${effectiveReplyingTo.text.substring(0, 50)}...` 
+                      : effectiveReplyingTo.text, {
+                      allowedTags: ['strong', 'em', 'u', 'code'],
+                      allowedAttributes: {
+                        '*': ['style', 'class']
+                      },
+                      transformTags: {
+                        'strong': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `font-weight: bold; ${attribs.style || ''}`
+                          }
+                        }),
+                        'em': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `font-style: italic; ${attribs.style || ''}`
+                          }
+                        }),
+                        'u': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `text-decoration: underline; ${attribs.style || ''}`
+                          }
+                        }),
+                        'code': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}`
+                          }
+                        })
+                      }
+                    })
+                  }}
+                />
+              )}
+              {!effectiveReplyingTo.text && !effectiveReplyingTo.imageUrl && (
+                <span className={styles.replyText}>Mensaje</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <form
         className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
         ref={inputWrapperRef}
@@ -803,7 +1033,7 @@ export function InputMessage({
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={isSending || isProcessing || (!editor || editor.isEmpty) && !file}
+              disabled={isSending || isProcessing || ((!editor || editor.isEmpty) && !file)}
               aria-label="Enviar mensaje"
             >
               <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} draggable="false" />

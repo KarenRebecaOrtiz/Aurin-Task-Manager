@@ -1,0 +1,149 @@
+/* ==============================================================
+   USER AVATAR - REUTILIZABLE AVATAR WITH STATUS
+   ============================================================== */
+
+.avatarContainer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Size variants */
+.small {
+  width: 32px;
+  height: 32px;
+  
+  .statusDot {
+    width: 8px;
+    height: 8px;
+    border-width: 1px;
+  }
+}
+
+.medium {
+  width: 46px;
+  height: 46px;
+  
+  .statusDot {
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
+  }
+}
+
+.large {
+  width: 55px;
+  height: 55px;
+  
+  .statusDot {
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
+  }
+}
+
+/* Avatar image */
+.avatarImage {
+  border-radius: 50%;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(241, 245, 249, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.9),
+    2px 2px 4px rgba(0, 0, 0, 0.08),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.5),
+    inset 1px 1px 2px rgba(209, 217, 230, 0.3);
+
+  :global(.dark) & {
+    background: rgba(30, 30, 30, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      2px 2px 4px rgba(0, 0, 0, 0.5),
+      -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset -1px -1px 2px rgba(0, 0, 0, 0.4),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.03);
+  }
+}
+
+/* Avatar placeholder */
+.avatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(241, 245, 249, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #333;
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.9),
+    2px 2px 4px rgba(0, 0, 0, 0.08),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.5),
+    inset 1px 1px 2px rgba(209, 217, 230, 0.3);
+
+  :global(.dark) & {
+    background: rgba(30, 30, 30, 0.7);
+    color: #d1d5db;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      2px 2px 4px rgba(0, 0, 0, 0.5),
+      -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset -1px -1px 2px rgba(0, 0, 0, 0.4),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.03);
+  }
+
+  &.small {
+    font-size: 12px;
+  }
+
+  &.medium {
+    font-size: 14px;
+  }
+
+  &.large {
+    font-size: 18px;
+  }
+}
+
+/* Status dot */
+.statusDot {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+
+  :global(.dark) & {
+    border-color: rgba(30, 30, 30, 0.7);
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .large .statusDot {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .medium .statusDot {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .small .statusDot {
+    width: 10px;
+    height: 10px;
+  }
+} 

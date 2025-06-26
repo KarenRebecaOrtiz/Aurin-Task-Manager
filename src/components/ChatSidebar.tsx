@@ -27,39 +27,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
-
-// Hook de cifrado end-to-end
-const useEncryption = () => {
-  const encryptMessage = useCallback((text: string): string => {
-    try {
-      // Cifrado simple usando btoa (Base64) - reemplaza con una librería de cifrado más robusta en producción
-      const encoded = btoa(unescape(encodeURIComponent(text)));
-      return `encrypted:${encoded}`;
-    } catch (error) {
-      console.error('Error al cifrar mensaje:', error);
-      return text; // Fallback: retorna el texto sin cifrar si hay error
-    }
-  }, []);
-
-  const decryptMessage = useCallback((encryptedText: string): string => {
-    try {
-      // Verificar si el texto está cifrado
-      if (!encryptedText.startsWith('encrypted:')) {
-        return encryptedText; // No está cifrado, retorna tal como está
-      }
-      
-      // Descifrar el texto
-      const encoded = encryptedText.replace('encrypted:', '');
-      const decoded = decodeURIComponent(escape(atob(encoded)));
-      return decoded;
-    } catch (error) {
-      console.error('Error al descifrar mensaje:', error);
-      return encryptedText; // Fallback: retorna el texto cifrado si hay error
-    }
-  }, []);
-
-  return { encryptMessage, decryptMessage };
-};
+import { AnimatePresence, motion } from 'framer-motion';
+import UserAvatar from './ui/UserAvatar';
 
 interface Message {
   id: string;
@@ -77,6 +46,12 @@ interface Message {
   isPending?: boolean;
   hasError?: boolean;
   clientId: string;
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text: string | null;
+    imageUrl?: string | null;
+  } | null;
 }
 
 interface TimerState {
@@ -122,6 +97,10 @@ interface MessageItemProps {
   setImagePreviewSrc: Dispatch<React.SetStateAction<string | null>>;
   editingMessageId: string | null;
   editingText: string;
+  isDraggingMessage: boolean;
+  draggedMessageId: string | null;
+  dragOffset: number;
+  onMessageDragStart: (messageId: string, e: React.MouseEvent | React.TouchEvent) => void;
 }
 
 const MessageItem = memo(
@@ -142,6 +121,10 @@ const MessageItem = memo(
         setImagePreviewSrc,
         editingMessageId,
         editingText,
+        isDraggingMessage,
+        draggedMessageId,
+        dragOffset,
+        onMessageDragStart,
       },
       ref,
     ) => {
@@ -180,9 +163,83 @@ const MessageItem = memo(
       }, [actionMenuOpenId, message.id]);
 
       const renderMessageContent = useCallback(() => {
+        const contentElements = [];
+
+        // 1. Si hay cita (replyTo), agregarla PRIMERO
+        if (message.replyTo) {
+          contentElements.push(
+            <div key="reply" className={styles.replyIndicator}>
+              <div className={styles.replyContent}>
+                <div className={styles.replyHeader}>
+                  <span className={styles.replyLabel}>Respondiendo a {message.replyTo.senderName}</span>
+                </div>
+                <div className={styles.replyPreview}>
+                  {message.replyTo.imageUrl && (
+                    <Image
+                      src={message.replyTo.imageUrl}
+                      alt="Imagen"
+                      width={24}
+                      height={24}
+                      className={styles.replyImage}
+                      draggable="false"
+                    />
+                  )}
+                  {message.replyTo.text && (
+                    <span 
+                      className={styles.replyText}
+                      dangerouslySetInnerHTML={{ 
+                        __html: sanitizeHtml(message.replyTo.text, {
+                          allowedTags: ['strong', 'em', 'u', 'code'],
+                          allowedAttributes: {
+                            '*': ['style', 'class']
+                          },
+                          transformTags: {
+                            'strong': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `font-weight: bold; ${attribs.style || ''}`
+                              }
+                            }),
+                            'em': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `font-style: italic; ${attribs.style || ''}`
+                              }
+                            }),
+                            'u': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `text-decoration: underline; ${attribs.style || ''}`
+                              }
+                            }),
+                            'code': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}`
+                              }
+                            })
+                          }
+                        })
+                      }}
+                    />
+                  )}
+                  {!message.replyTo.text && !message.replyTo.imageUrl && (
+                    <span className={styles.replyText}>Mensaje</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // 2. Si hay imagen, agregarla SEGUNDO
         if (message.imageUrl) {
-          return (
-            <div className={styles.imageWrapper}>
+          contentElements.push(
+            <div key="image" className={styles.imageWrapper}>
               <Image
                 src={message.imageUrl}
                 alt={message.fileName || 'Imagen'}
@@ -224,9 +281,11 @@ const MessageItem = memo(
             </div>
           );
         }
+
+        // Si hay archivo de audio, agregarlo
         if (message.fileUrl && message.fileType?.startsWith('audio/')) {
-          return (
-            <div className={styles.file}>
+          contentElements.push(
+            <div key="audio" className={styles.file}>
               <audio controls src={message.fileUrl} className="max-w-xs">
                 Tu navegador no soporta el elemento de audio.
               </audio>
@@ -238,9 +297,11 @@ const MessageItem = memo(
             </div>
           );
         }
-        if (message.fileUrl) {
-          return (
-            <div className={styles.file}>
+
+        // Si hay archivo (no imagen, no audio), agregarlo
+        if (message.fileUrl && !message.imageUrl && !message.fileType?.startsWith('audio/')) {
+          contentElements.push(
+            <div key="file" className={styles.file}>
               <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
                 <Image src="/file.svg" alt="Archivo" width={16} height={16} />
                 <span>{message.fileName}</span>
@@ -248,6 +309,8 @@ const MessageItem = memo(
             </div>
           );
         }
+
+        // Si hay texto, agregarlo
         if (message.text) {
           // Configure sanitize-html to allow Tiptap's common HTML tags and attributes
           const sanitizeOptions = {
@@ -307,14 +370,31 @@ const MessageItem = memo(
           // Sanitize the HTML content
           const sanitizedHtml = sanitizeHtml(message.text, sanitizeOptions);
 
-          return (
+          contentElements.push(
             <div 
+              key="text"
               className={styles.messageText}
               dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
             />
           );
         }
-        return null;
+
+        // Si no hay ningún contenido, retornar null
+        if (contentElements.length === 0) {
+          return null;
+        }
+
+        // Si solo hay un elemento, retornarlo directamente
+        if (contentElements.length === 1) {
+          return contentElements[0];
+        }
+
+        // Si hay múltiples elementos, retornarlos en un contenedor
+        return (
+          <div className={styles.messageContentWrapper}>
+            {contentElements}
+          </div>
+        );
       }, [message, setImagePreviewSrc, styles]);
 
       return (
@@ -322,17 +402,25 @@ const MessageItem = memo(
           ref={ref}
           className={`${styles.message} ${message.isPending ? styles.pending : ''} ${
             message.hasError && message.senderId === userId ? styles.error : ''
-          }`}
+          } ${isDraggingMessage && draggedMessageId === message.id ? styles.dragging : ''}`}
+          style={{
+            transform: isDraggingMessage && draggedMessageId === message.id 
+              ? `translateX(-${dragOffset}px)` 
+              : 'translateX(0)',
+            transition: isDraggingMessage && draggedMessageId === message.id 
+              ? 'none' 
+              : 'transform 0.3s ease-out'
+          }}
+          data-drag-threshold={isDraggingMessage && draggedMessageId === message.id && dragOffset >= 60 ? 'true' : 'false'}
+          onMouseDown={(e) => onMessageDragStart(message.id, e)}
+          onTouchStart={(e) => onMessageDragStart(message.id, e)}
         >
-          <Image
-            src={users.find((u) => u.id === message.senderId)?.imageUrl || '/user-round.svg'}
-            alt={message.senderName || 'Avatar del remitente'}
-            width={46}
-            height={46}
-            className={styles.avatar}
-            onError={(e) => {
-              e.currentTarget.src = '/user-round.svg';
-            }}
+          <UserAvatar
+            userId={message.senderId}
+            imageUrl={users.find((u) => u.id === message.senderId)?.imageUrl}
+            userName={message.senderName}
+            size="medium"
+            showStatus={true}
           />
           <div className={styles.messageContent}>
             <div className={styles.messageHeader}>
@@ -383,7 +471,28 @@ const MessageItem = memo(
                             Reintentar Envío
                           </div>
                         )}
-                        {(message.imageUrl || message.fileUrl) && !message.hasError && (
+                        {message.text && message.text.trim() && (
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={() => {
+                              // Copy message text
+                              const textToCopy = message.text || '';
+                              navigator.clipboard.writeText(textToCopy).catch(() => {
+                                // Fallback for older browsers
+                                const textArea = document.createElement('textarea');
+                                textArea.value = textToCopy;
+                                document.body.appendChild(textArea);
+                                textArea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textArea);
+                              });
+                              setActionMenuOpenId(null);
+                            }}
+                          >
+                            Copiar
+                          </div>
+                        )}
+                        {(message.imageUrl || message.fileUrl) && (
                           <div
                             className={styles.actionDropdownItem}
                             onClick={() => {
@@ -730,6 +839,39 @@ const removeCachedMessage = (taskId: string, clientId: string) => {
   }
 };
 
+// Hook de cifrado end-to-end
+const useEncryption = () => {
+  const encryptMessage = useCallback((text: string): string => {
+    try {
+      // Cifrado simple usando btoa (Base64) - reemplaza con una librería de cifrado más robusta en producción
+      const encoded = btoa(unescape(encodeURIComponent(text)));
+      return `encrypted:${encoded}`;
+    } catch (error) {
+      console.error('Error al cifrar mensaje:', error);
+      return text; // Fallback: retorna el texto sin cifrar si hay error
+    }
+  }, []);
+
+  const decryptMessage = useCallback((encryptedText: string): string => {
+    try {
+      // Verificar si el texto está cifrado
+      if (!encryptedText.startsWith('encrypted:')) {
+        return encryptedText; // No está cifrado, retorna tal como está
+      }
+      
+      // Descifrar el texto
+      const encoded = encryptedText.replace('encrypted:', '');
+      const decoded = decodeURIComponent(escape(atob(encoded)));
+      return decoded;
+    } catch (error) {
+      console.error('Error al descifrar mensaje:', error);
+      return encryptedText; // Fallback: retorna el texto cifrado si hay error
+    }
+  }, []);
+
+  return { encryptMessage, decryptMessage };
+};
+
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isOpen,
   onClose,
@@ -763,6 +905,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [isSummarizeDropdownOpen, setIsSummarizeDropdownOpen] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isDraggingMessage, setIsDraggingMessage] = useState(false);
+  const [draggedMessageId, setDraggedMessageId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
   const chatRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -776,6 +922,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const summarizeDropdownRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
   const [isRestoringTimer] = useState(false);
+  const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
 
   const isCreator = useMemo(() => user?.id === task.CreatedBy, [user?.id, task.CreatedBy]);
   const isInvolved = useMemo(() => 
@@ -962,8 +1109,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   useEffect(() => {
     if (isOpen && messages.length > 0 && lastMessageRef.current) {
       const timer = setTimeout(() => {
-        lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }, 350); // Slightly longer than the sidebar animation (300ms)
+        lastMessageRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }, 100); // Reduced delay for instant positioning
       
       return () => clearTimeout(timer);
     }
@@ -1018,19 +1165,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         setActiveCardDropdown(null);
       }
       if (
-        activeCardDropdown === 'hours' &&
-        hoursDropdownRef.current &&
-        !hoursDropdownRef.current.contains(event.target as Node)
-      ) {
-        setActiveCardDropdown(null);
-      }
-      if (
         summarizeDropdownRef.current &&
         !summarizeDropdownRef.current.contains(event.target as Node) &&
         isSummarizeDropdownOpen
       ) {
         setIsSummarizeDropdownOpen(false);
       }
+      // Cerrar dropdown de detalles si se hace click fuera
+      // if (isDetailsDropdownOpen) {
+      //   const headerSection = document.querySelector(`.${styles.headerSection}`);
+      //   if (headerSection && !headerSection.contains(event.target as Node)) {
+      //     setIsDetailsDropdownOpen(false);
+      //   }
+      // }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -1043,6 +1190,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     isDeletePopupOpen,
     activeCardDropdown,
     isSummarizeDropdownOpen,
+    isDetailsDropdownOpen,
   ]);
 
   useEffect(() => {
@@ -1108,6 +1256,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               clientId: doc.id, // Usar el ID del documento como clientId para evitar duplicados
               isPending: false,
               hasError: false,
+              replyTo: data.replyTo || null, // Incluir la información de replyTo
             };
           })
           .filter((msg) => msg !== null);
@@ -1338,6 +1487,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       isPending: messageData.isPending !== undefined ? messageData.isPending : true,
       hasError: messageData.hasError || false,
       clientId,
+      replyTo: messageData.replyTo || null, // Incluir la información de replyTo
     };
   
     // Update or add the message
@@ -1373,6 +1523,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
         fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
         filePath: messageData.filePath || null,
+        replyTo: messageData.replyTo || null, // Incluir la información de replyTo en Firestore
         ...(duration && { hours: duration / 3600 }),
       });
   
@@ -1545,6 +1696,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         fileName: message.fileName,
         fileType: message.fileType,
         filePath: message.filePath,
+        replyTo: message.replyTo || null, // Incluir la información de replyTo
         ...(message.hours && { hours: message.hours }),
       });
 
@@ -1608,7 +1760,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
       try {
         // Cifrar el mensaje de tiempo antes de guardarlo
-        const timeMessage = `Añadó una entrada de tiempo de ${timeEntry}`;
+        const timeMessage = `Añadió una entrada de tiempo de ${timeEntry}`;
         const encryptedTimeMessage = encryptMessage(timeMessage);
         
         await addDoc(collection(db, `tasks/${task.id}/messages`), {
@@ -1682,7 +1834,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const timestamp = Timestamp.now();
       
       // Cifrar el mensaje de tiempo antes de guardarlo
-      const timeMessage = `Añadó una entrada de tiempo de ${timeEntry} el ${dateString}`;
+      const timeMessage = `Añadió una entrada de tiempo de ${timeEntry} el ${dateString}`;
       const encryptedTimeMessage = encryptMessage(timeMessage);
       
       await addDoc(collection(db, `tasks/${task.id}/messages`), {
@@ -1999,30 +2151,161 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
     });
   }, [messages]);
 
+  // Funciones para manejar drag y reply
+  const messageDragStartX = useRef(0);
+  const messageDragStartY = useRef(0);
+  const isDraggingMessageRef = useRef(false);
+
+  const handleMessageDragStart = useCallback((messageId: string, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[ChatSidebar] Drag start for message:', messageId);
+    
+    // Guardar posición inicial
+    if ('touches' in e) {
+      messageDragStartX.current = e.touches[0].clientX;
+      messageDragStartY.current = e.touches[0].clientY;
+    } else {
+      messageDragStartX.current = e.clientX;
+      messageDragStartY.current = e.clientY;
+    }
+    
+    setIsDraggingMessage(true);
+    isDraggingMessageRef.current = true;
+    setDraggedMessageId(messageId);
+    setDragOffset(0);
+  }, []);
+
+  const handleMessageDragMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDraggingMessageRef.current || !draggedMessageId) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    // Calcular delta desde la posición inicial
+    const deltaX = messageDragStartX.current - currentX;
+    const deltaY = Math.abs(messageDragStartY.current - currentY);
+    
+    console.log('[ChatSidebar] Drag move - deltaX:', deltaX, 'deltaY:', deltaY);
+    
+    // Solo permitir drag horizontal si el movimiento vertical es menor
+    if (deltaY < 50) {
+      const maxOffset = 80; // Máximo desplazamiento
+      
+      // Permitir drag en ambas direcciones
+      if (Math.abs(deltaX) > 0) {
+        const clampedOffset = Math.max(-maxOffset, Math.min(deltaX, maxOffset));
+        setDragOffset(clampedOffset);
+        console.log('[ChatSidebar] Drag offset set to:', clampedOffset);
+      } else {
+        setDragOffset(0);
+      }
+    }
+  }, [draggedMessageId]);
+
+  const handleMessageDragEnd = useCallback(() => {
+    if (!isDraggingMessageRef.current || !draggedMessageId) return;
+    
+    console.log('[ChatSidebar] Drag end - final offset:', dragOffset);
+    
+    const threshold = 60; // Umbral para activar la respuesta
+    
+    // Activar respuesta si se arrastra hacia la izquierda más allá del umbral
+    if (dragOffset >= threshold) {
+      // Activar respuesta
+      const messageToReply = messages.find(msg => msg.id === draggedMessageId);
+      if (messageToReply) {
+        setReplyingTo(messageToReply);
+        console.log('[ChatSidebar] Reply activated for message:', messageToReply.id);
+      }
+    }
+    
+    // Resetear estados con animación
+    setIsDraggingMessage(false);
+    isDraggingMessageRef.current = false;
+    setDraggedMessageId(null);
+    
+    // Animar el regreso a la posición original
+    setTimeout(() => {
+      setDragOffset(0);
+    }, 50);
+  }, [draggedMessageId, dragOffset, messages]);
+
+  // Eventos globales para el drag
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragMove(e as unknown as React.MouseEvent);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragEnd();
+      }
+    };
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragMove(e as unknown as React.TouchEvent);
+      }
+    };
+
+    const handleGlobalTouchEnd = () => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragEnd();
+      }
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+  }, [handleMessageDragMove, handleMessageDragEnd]);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
+
+  // Debug: Monitorear cambios en replyingTo
+  useEffect(() => {
+    console.log('[ChatSidebar] replyingTo changed:', replyingTo);
+  }, [replyingTo]);
+
   // Move drag-related hooks here (before any conditional return)
-  const [dragOffset, setDragOffset] = useState(0);
-  const dragStartY = useRef(0);
-  const isDragging = useRef(false);
+  const sidebarDragStartY = useRef(0);
+  const isDraggingSidebar = useRef(false);
 
   // Move useCallback hooks here
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (window.innerWidth >= 768) return;
     if (chatRef.current && chatRef.current.contains(e.target as Node)) return;
-    dragStartY.current = e.touches[0].clientY;
-    isDragging.current = true;
+    sidebarDragStartY.current = e.touches[0].clientY;
+    isDraggingSidebar.current = true;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (window.innerWidth >= 768 || !isDragging.current) return;
+    if (window.innerWidth >= 768 || !isDraggingSidebar.current) return;
     if (chatRef.current && chatRef.current.contains(e.target as Node)) return;
     const currentY = e.touches[0].clientY;
-    const deltaY = currentY - dragStartY.current;
+    const deltaY = currentY - sidebarDragStartY.current;
     if (deltaY > 0) setDragOffset(deltaY);
   }, []);
 
   const handleTouchEnd = useCallback(() => {
-    if (window.innerWidth >= 768 || !isDragging.current) return;
-    isDragging.current = false;
+    if (window.innerWidth >= 768 || !isDraggingSidebar.current) return;
+    isDraggingSidebar.current = false;
     if (dragOffset > window.innerHeight * 0.3) {
       onClose();
     }
@@ -2141,110 +2424,134 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             )}
           </div>
         </div>
-        <div className={styles.title}>{task.name}</div>
-        <div className={styles.description}>{task.description || 'Sin descripción'}</div>
-        <div className={styles.details}>
-          <div
-            className={`${styles.card} ${isCreator || isAdmin ? styles.statusCard : ''}`}
-            onClick={() => {
-              if (isCreator || isAdmin) {
-                setActiveCardDropdown(activeCardDropdown === 'status' ? null : 'status');
-              }
-            }}
-          >
-            <div className={styles.cardLabel}>Estado de la tarea:</div>
-            <div className={styles.cardValue}>{task.status}</div>
-            {activeCardDropdown === 'status' && (isCreator || isAdmin) && (
-              <div ref={statusDropdownRef} className={styles.cardDropdown}>
-                {statusOptions.map((status) => (
-                  <div key={status} className={styles.cardDropdownItem} onClick={(e) => {
-                    e.stopPropagation();
-                    handleStatusChange(status);
-                    setActiveCardDropdown(null);
-                  }}>
-                    {status}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div
-            className={styles.card}
-            onClick={() => {
-              // Permitir que usuarios involucrados y admins vean el dropdown del equipo
-              if (canViewTeamAndHours) {
-                setActiveCardDropdown(activeCardDropdown === 'team' ? null : 'team');
-              }
-            }}
-            style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
-          >
-            <div className={styles.cardLabel}>Equipo:</div>
-            <div className={styles.cardValue}>{teamUsers.length} miembro(s)</div>
-            {activeCardDropdown === 'team' && (
-              <div ref={teamDropdownRef} className={styles.cardDropdown}>
-                {teamUsers.length > 0 ? (
-                  teamUsers.map((u) => (
-                    <div key={u.id} className={styles.cardDropdownItem}>
-                      <Image
-                        src={u.imageUrl}
-                        alt={u.firstName || 'Avatar del miembro'}
-                        width={24}
-                        height={24}
-                        className={styles.avatar}
-                      />
-                      <span className={styles.teamUserName}>{u.firstName}</span>
-                      <span className={styles.teamRole}>{u.role}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.cardDropdownItem}>No hay miembros asignados a esta tarea</div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className={styles.card}>
-            <div className={styles.cardLabel}>Fecha:</div>
-            <div className={styles.cardValue}>
-              {formatDate(task.startDate)} - {formatDate(task.endDate)}
-            </div>
-          </div>
-          <div
-            className={styles.cardFullWidth}
-            onClick={() => {
-              // Permitir que usuarios involucrados y admins vean el dropdown de tiempo registrado
-              if (canViewTeamAndHours) {
-                setActiveCardDropdown(activeCardDropdown === 'hours' ? null : 'hours');
-              }
-            }}
-            style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
-          >
-            <div className={styles.cardLabel}>Tiempo registrado:</div>
-            <div className={styles.cardValue}>{totalHours}</div>
-            {activeCardDropdown === 'hours' && (
-              <div ref={hoursDropdownRef} className={styles.cardDropdown}>
-                {hoursByUser.length > 0 ? (
-                  hoursByUser.map((u) => (
-                    <div key={u.id} className={styles.cardDropdownItem}>
-                      <Image
-                        src={u.imageUrl}
-                        alt={u.firstName || 'Avatar del usuario'}
-                        width={24}
-                        height={24}
-                        className={styles.avatar}
-                      />
-                      <span className={styles.hoursUserName}>{u.firstName}</span>
-                      <span className={styles.hoursValue}>
-                        {u.hours}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.cardDropdownItem}>Aún no hay tiempo registrado en esta tarea</div>
-                )}
-              </div>
-            )}
-          </div>
+        <div 
+          className={styles.headerSection}
+          onClick={(e) => {
+            handleClick(e.currentTarget);
+            setIsDetailsDropdownOpen(!isDetailsDropdownOpen);
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className={styles.title}>{task.name}</div>
+          <div className={styles.description}>{task.description || 'Sin descripción'}</div>
+          <Image 
+            src="/chevron-down.svg" 
+            alt="Ver detalles" 
+            width={16} 
+            height={16} 
+            className={`${styles.chevronIcon} ${isDetailsDropdownOpen ? styles.rotated : ''}`}
+          />
         </div>
+        <AnimatePresence initial={false}>
+          {isDetailsDropdownOpen && (
+            <motion.div
+              className={styles.details}
+              key="details-dropdown"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div
+                className={`${styles.card} ${isCreator || isAdmin ? styles.statusCard : ''}`}
+                onClick={() => {
+                  if (isCreator || isAdmin) {
+                    setActiveCardDropdown(activeCardDropdown === 'status' ? null : 'status');
+                  }
+                }}
+              >
+                <div className={styles.cardLabel}>Estado de la tarea:</div>
+                <div className={styles.cardValue}>{task.status}</div>
+                {activeCardDropdown === 'status' && (isCreator || isAdmin) && (
+                  <div ref={statusDropdownRef} className={styles.cardDropdown}>
+                    {statusOptions.map((status) => (
+                      <div key={status} className={styles.cardDropdownItem} onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusChange(status);
+                        setActiveCardDropdown(null);
+                      }}>
+                        {status}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div
+                className={styles.card}
+                onClick={() => {
+                  if (canViewTeamAndHours) {
+                    setActiveCardDropdown(activeCardDropdown === 'team' ? null : 'team');
+                  }
+                }}
+                style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
+              >
+                <div className={styles.cardLabel}>Equipo:</div>
+                <div className={styles.cardValue}>{teamUsers.length} miembro(s)</div>
+                {activeCardDropdown === 'team' && (
+                  <div ref={teamDropdownRef} className={styles.cardDropdown}>
+                    {teamUsers.length > 0 ? (
+                      teamUsers.map((u) => (
+                        <div key={u.id} className={styles.cardDropdownItem}>
+                          <Image
+                            src={u.imageUrl}
+                            alt={u.firstName || 'Avatar del miembro'}
+                            width={24}
+                            height={24}
+                            className={styles.avatar}
+                          />
+                          <span className={styles.teamUserName}>{u.firstName}</span>
+                          <span className={styles.teamRole}>{u.role}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className={styles.cardDropdownItem}>No hay miembros asignados a esta tarea</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className={styles.card}>
+                <div className={styles.cardLabel}>Fecha:</div>
+                <div className={styles.cardValue}>
+                  {formatDate(task.startDate)} - {formatDate(task.endDate)}
+                </div>
+              </div>
+              <div
+                className={styles.cardFullWidth}
+                onClick={() => {
+                  if (canViewTeamAndHours) {
+                    setActiveCardDropdown(activeCardDropdown === 'hours' ? null : 'hours');
+                  }
+                }}
+                style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
+              >
+                <div className={styles.cardLabel}>Tiempo registrado:</div>
+                <div className={styles.cardValue}>{totalHours}</div>
+                {activeCardDropdown === 'hours' && (
+                  <div ref={hoursDropdownRef} className={styles.cardDropdown}>
+                    {hoursByUser.length > 0 ? (
+                      hoursByUser.map((u) => (
+                        <div key={u.id} className={styles.cardDropdownItem}>
+                          <Image
+                            src={u.imageUrl}
+                            alt={u.firstName || 'Avatar del usuario'}
+                            width={24}
+                            height={24}
+                            className={styles.avatar}
+                          />
+                          <span className={styles.hoursUserName}>{u.firstName}</span>
+                          <span className={styles.hoursValue}>{u.hours}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className={styles.cardDropdownItem}>Aún no hay tiempo registrado en esta tarea</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <div className={styles.chat} ref={chatRef}>
         {isLoading && (
@@ -2272,6 +2579,10 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             setImagePreviewSrc={setImagePreviewSrc}
             editingMessageId={editingMessageId}
             editingText={editingText}
+            isDraggingMessage={isDraggingMessage}
+            draggedMessageId={draggedMessageId}
+            dragOffset={dragOffset}
+            onMessageDragStart={handleMessageDragStart}
             ref={index === messages.length - 1 ? lastMessageRef : null}
           />
         ))}
@@ -2300,6 +2611,8 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         onAddTimeEntry={handleAddTimeEntry}
         totalHours={totalHours}
         isRestoringTimer={isRestoringTimer}
+        replyingTo={replyingTo}
+        onCancelReply={handleCancelReply}
       />
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>
@@ -2347,6 +2660,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         <ImagePreviewOverlay
           src={imagePreviewSrc}
           alt="Vista previa de imagen"
+          fileName={messages.find(m => m.imageUrl === imagePreviewSrc)?.fileName}
           onClose={() => setImagePreviewSrc(null)}
         />
       )}

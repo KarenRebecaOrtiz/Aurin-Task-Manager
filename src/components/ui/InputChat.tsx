@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
+import sanitizeHtml from 'sanitize-html';
 import { Timestamp } from 'firebase/firestore';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
@@ -12,6 +13,14 @@ import TimerPanel from './TimerPanel';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
+import { useEditorPersistence } from './use-form-persistence';
+import { 
+  saveErrorMessage,
+  removeErrorMessage,
+  PersistedMessage
+} from '@/lib/messagePersistence';
+import { toast } from './use-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface Message {
   id: string;
@@ -29,6 +38,12 @@ interface Message {
   isPending?: boolean;
   hasError?: boolean;
   clientId: string;
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text: string | null;
+    imageUrl?: string | null;
+  } | null;
 }
 
 interface InputChatProps {
@@ -60,6 +75,8 @@ interface InputChatProps {
   timerPanelRef?: React.RefObject<HTMLDivElement>;
   totalHours: string;
   isRestoringTimer?: boolean;
+  replyingTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -88,6 +105,8 @@ export default function InputChat({
   onAddTimeEntry,
   totalHours,
   isRestoringTimer,
+  replyingTo,
+  onCancelReply,
 }: InputChatProps) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -95,9 +114,27 @@ export default function InputChat({
   const [isDropupOpen, setIsDropupOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasReformulated, setHasReformulated] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const dropupRef = useRef<HTMLDivElement>(null);
+  const conversationId = `chat-sidebar-${taskId}`; // ID único para esta conversación
+
+  // Local state for replyingTo if not provided as prop
+  const [internalReplyingTo, setInternalReplyingTo] = useState<Message | null>(null);
+  const effectiveReplyingTo = typeof replyingTo !== 'undefined' ? replyingTo : internalReplyingTo;
+  const setReplyingTo = typeof replyingTo !== 'undefined' && onCancelReply ? (msg: Message | null) => {
+    if (msg) {
+      // No setter provided, so do nothing
+    } else {
+      onCancelReply();
+    }
+  } : setInternalReplyingTo;
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Initialize Tiptap editor
   const editor = useEditor({
@@ -109,6 +146,7 @@ export default function InputChat({
       Underline,
     ],
     content: '',
+    immediatelyRender: false,
     onUpdate: () => {
       adjustEditorHeight();
     },
@@ -119,7 +157,7 @@ export default function InputChat({
         'aria-label': 'Escribir mensaje',
       },
     },
-  });
+  }, [isClient]);
 
   // Auto-resize editor height
   const editorRef = useRef<HTMLDivElement>(null);
@@ -153,6 +191,7 @@ export default function InputChat({
         } else {
           setTimeout(() => {
             adjustEditorHeight();
+            editor.commands.focus('end');
             callback();
           }, 100);
         }
@@ -483,17 +522,26 @@ export default function InputChat({
   // File handling
   const selectFile = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
-      alert('El archivo supera los 10 MB.');
+      toast({
+        title: 'Archivo demasiado grande',
+        description: 'El archivo supera los 10 MB.',
+        variant: 'error',
+      });
       return;
     }
     const fileExtension = f.name.split('.').pop()?.toLowerCase();
     const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'];
     if (!fileExtension || !validExtensions.includes(fileExtension)) {
-      alert(`Extensión no permitida. Permitidas: ${validExtensions.join(', ')}`);
+      toast({
+        title: 'Extensión no permitida',
+        description: `Extensión no permitida. Permitidas: ${validExtensions.join(', ')}`,
+        variant: 'error',
+      });
       return;
     }
     setFile(f);
-    setPreviewUrl(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
+    const newPreviewUrl = f.type.startsWith('image/') ? URL.createObjectURL(f) : null;
+    setPreviewUrl(newPreviewUrl);
   };
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
@@ -575,7 +623,11 @@ export default function InputChat({
       setHasReformulated(true);
     } catch (error) {
       console.error('[InputChat:Reformulate] Error:', error);
-      alert('❌ Error al procesar el texto con Gemini AI.');
+      toast({
+        title: 'Error al procesar el texto con Gemini AI',
+        description: '❌ Error al procesar el texto con Gemini AI.',
+        variant: 'error',
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -584,7 +636,11 @@ export default function InputChat({
   // Send message
   const handleSend = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    if (!userId || (!editor || editor.isEmpty) && !file || isSending || isProcessing) {
+    // Permitir envío si hay texto O archivo (o ambos)
+    const hasText = editor && !editor.isEmpty;
+    const hasFile = file !== null;
+    
+    if (!userId || (!hasText && !hasFile) || isSending || isProcessing) {
       return;
     }
 
@@ -600,7 +656,7 @@ export default function InputChat({
         id: tempId,
         senderId: userId,
         senderName: userFirstName || 'Usuario',
-        text: editor.getHTML(),
+        text: hasText ? editor.getHTML() : null,
         read: false,
         imageUrl: null,
         fileUrl: null,
@@ -610,6 +666,12 @@ export default function InputChat({
         isPending: false,
         hasError: false,
         clientId,
+        replyTo: effectiveReplyingTo ? {
+          id: effectiveReplyingTo.id,
+          senderName: effectiveReplyingTo.senderName,
+          text: effectiveReplyingTo.text,
+          ...(effectiveReplyingTo.imageUrl && { imageUrl: effectiveReplyingTo.imageUrl }),
+        } : undefined,
       };
 
       if (file) {
@@ -659,20 +721,55 @@ export default function InputChat({
       setPreviewUrl(null);
       setHasReformulated(false);
       adjustEditorHeight();
+      
+      // Limpiar mensaje guardado al enviar exitosamente
+      removeErrorMessage(conversationId);
+      clearPersistedData();
+      
+      // Limpiar reply después de enviar
+      if (onCancelReply) {
+        onCancelReply();
+      }
     } catch (error) {
       console.error('[InputChat:HandleSend] Error:', error);
+      
+      // Guardar mensaje con error para poder reintentarlo
+      const errorMessage: PersistedMessage = {
+        id: tempId,
+        text: hasText ? editor.getHTML() : '',
+        timestamp: Date.now(),
+        hasError: true,
+        file: file ? {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          previewUrl: previewUrl || undefined,
+        } : undefined,
+        replyTo: effectiveReplyingTo ? {
+          id: effectiveReplyingTo.id,
+          senderName: effectiveReplyingTo.senderName,
+          text: effectiveReplyingTo.text,
+          imageUrl: effectiveReplyingTo.imageUrl || undefined,
+        } : undefined,
+      };
+      saveErrorMessage(conversationId, errorMessage);
+      
       if (file) {
         await onSendMessage({
           id: tempId,
           senderId: userId,
           senderName: userFirstName || 'Usuario',
-          text: editor?.getHTML() || null,
+          text: hasText ? editor.getHTML() : null,
           isPending: false,
           hasError: true,
           clientId,
         });
       }
-      alert('Error al enviar el mensaje.');
+      toast({
+        title: 'Error al enviar',
+        description: 'Error al enviar el mensaje. Se ha guardado localmente para reintentar.',
+        variant: 'error',
+      });
     } finally {
       setIsSending(false);
     }
@@ -687,8 +784,142 @@ export default function InputChat({
     { id: 'numbered', icon: '/list-ordered.svg', label: 'Lista numerada', shortcut: 'Ctrl+Shift+7' },
   ];
 
+  // Usar el hook de persistencia del editor
+  const { watchAndSave, clearPersistedData, restoredData } = useEditorPersistence(
+    editor,
+    `draft_${conversationId}`,
+    true
+  );
+
+  // Restaurar contenido del editor desde cache
+  useEffect(() => {
+    if (restoredData && restoredData.content && restoredData.content.trim() && 
+        restoredData.content !== '<p></p>' && restoredData.content !== '<p><br></p>' && 
+        editor && editor.isEmpty) {
+      editor.commands.setContent(restoredData.content);
+      console.log('[InputChat] Contenido restaurado desde cache');
+    }
+  }, [restoredData, editor]);
+
+  // Guardar contenido automáticamente cuando cambie
+  useEffect(() => {
+    if (!editor) return;
+    
+    const saveContent = () => {
+      const content = editor.getHTML();
+      if (content.trim() && content !== '<p></p>' && content !== '<p><br></p>') {
+        watchAndSave();
+      }
+    };
+
+    // Guardar cada 2 segundos mientras se escribe
+    const interval = setInterval(saveContent, 2000);
+    
+    return () => clearInterval(interval);
+  }, [editor, watchAndSave]);
+
   return (
     <div className={styles.inputWrapper}>
+      <AnimatePresence>
+        {restoredData && restoredData.content && restoredData.content.trim() && (
+          <motion.div
+            className={styles.persistedData}
+            key="persisted-msg"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <span>Mensaje guardado restaurado</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearPersistedData();
+                editor?.commands.clearContent();
+              }}
+            >
+              Borrar
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {effectiveReplyingTo && (
+        <div className={styles.replyContainer}>
+          <div className={styles.replyContent}>
+            <div className={styles.replyHeader}>
+              <span className={styles.replyLabel}>Respondiendo a {effectiveReplyingTo.senderName}</span>
+              <button
+                type="button"
+                className={styles.replyCancelButton}
+                onClick={() => setReplyingTo(null)}
+                aria-label="Cancelar respuesta"
+              >
+                <Image src="/x.svg" alt="Cancelar" width={16} height={16} />
+              </button>
+            </div>
+            <div className={styles.replyPreview}>
+              {effectiveReplyingTo.imageUrl && (
+                <Image
+                  src={effectiveReplyingTo.imageUrl}
+                  alt="Imagen"
+                  width={40}
+                  height={40}
+                  className={styles.replyImage}
+                  draggable="false"
+                />
+              )}
+              {effectiveReplyingTo.text && (
+                <span 
+                  className={styles.replyText}
+                  dangerouslySetInnerHTML={{ 
+                    __html: sanitizeHtml(effectiveReplyingTo.text.length > 50 
+                      ? `${effectiveReplyingTo.text.substring(0, 50)}...` 
+                      : effectiveReplyingTo.text, {
+                      allowedTags: ['strong', 'em', 'u', 'code'],
+                      allowedAttributes: {
+                        '*': ['style', 'class']
+                      },
+                      transformTags: {
+                        'strong': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `font-weight: bold; ${attribs.style || ''}`
+                          }
+                        }),
+                        'em': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `font-style: italic; ${attribs.style || ''}`
+                          }
+                        }),
+                        'u': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `text-decoration: underline; ${attribs.style || ''}`
+                          }
+                        }),
+                        'code': (tagName: string, attribs: Record<string, string>) => ({
+                          tagName,
+                          attribs: {
+                            ...attribs,
+                            style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}`
+                          }
+                        })
+                      }
+                    })
+                  }}
+                />
+              )}
+              {!effectiveReplyingTo.text && !effectiveReplyingTo.imageUrl && (
+                <span className={styles.replyText}>Mensaje</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <TimerPanel
         isOpen={isTimerPanelOpen}
         timerInput={timerInput}
@@ -794,7 +1025,63 @@ export default function InputChat({
                 overflow: 'hidden',
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
+                if (e.ctrlKey || e.metaKey) {
+                  switch (e.key.toLowerCase()) {
+                    case 'a':
+                      e.preventDefault();
+                      editor?.commands.selectAll();
+                      break;
+                    case 'c':
+                      e.preventDefault();
+                      const selection = window.getSelection();
+                      if (selection && selection.toString().length > 0) {
+                        navigator.clipboard.writeText(selection.toString()).catch(() => {
+                          // Fallback for older browsers
+                          const textArea = document.createElement('textarea');
+                          textArea.value = selection.toString();
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        });
+                      }
+                      break;
+                    case 'v':
+                      e.preventDefault();
+                      navigator.clipboard.readText().then(text => {
+                        editor?.commands.insertContent(text);
+                      }).catch(() => {
+                        // Fallback for older browsers or when clipboard access is denied
+                        editor?.commands.focus();
+                        document.execCommand('paste');
+                      });
+                      break;
+                    case 'x':
+                      e.preventDefault();
+                      const cutSelection = window.getSelection();
+                      if (cutSelection && cutSelection.toString().length > 0) {
+                        navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                          editor?.commands.deleteSelection();
+                        }).catch(() => {
+                          // Fallback for older browsers
+                          const textArea = document.createElement('textarea');
+                          textArea.value = cutSelection.toString();
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                          editor?.commands.deleteSelection();
+                        });
+                      }
+                      break;
+                    case 'z':
+                      // Undo - let browser handle it naturally
+                      break;
+                    case 'y':
+                      // Redo - let browser handle it naturally
+                      break;
+                  }
+                } else if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
                   e.preventDefault();
                   handleSend(e);
                 } else if (e.key === 'Enter') {
@@ -987,7 +1274,7 @@ export default function InputChat({
               <button
                 type="submit"
                 className={styles.sendButton}
-                disabled={isSending || isProcessing || (!editor || editor.isEmpty) && !file}
+                disabled={isSending || isProcessing || ((!editor || editor.isEmpty) && !file)}
                 aria-label="Enviar mensaje"
               >
                 <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />

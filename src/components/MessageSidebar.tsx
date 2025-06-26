@@ -1,29 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
-import { useUser } from '@clerk/nextjs';
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-  doc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-} from 'firebase/firestore';
+import { Timestamp, collection, doc, onSnapshot, addDoc, query, orderBy, serverTimestamp, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
-import { InputMessage } from './ui/InputMessage'; // Changed from default import to named import
+import { InputMessage } from './ui/InputMessage';
 import styles from './MessageSidebar.module.scss';
+import { useUser } from '@clerk/nextjs';
+import UserAvatar from './ui/UserAvatar';
 
 interface Message {
   id: string;
@@ -37,6 +24,13 @@ interface Message {
   filePath?: string | null;
   timestamp: Timestamp | null;
   isPending?: boolean;
+  hasError?: boolean;
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text: string | null;
+    imageUrl?: string | null;
+  } | null;
 }
 
 interface UserCard {
@@ -112,13 +106,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState('');
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
-  const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [showDownArrow, setShowDownArrow] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isDraggingMessage, setIsDraggingMessage] = useState(false);
+  const [draggedMessageId, setDraggedMessageId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const lastScrollTop = useRef(0);
   const dragStartY = useRef(0);
@@ -211,7 +205,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         actionMenuOpenId
       ) {
         setActionMenuOpenId(null);
-        setActionMenuPosition(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -264,7 +257,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       }
       if (actionMenuOpenId) {
         setActionMenuOpenId(null);
-        setActionMenuPosition(null);
       }
       lastScrollTop.current = chat.scrollTop;
     }, 100);
@@ -274,7 +266,11 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     if (messages.length > 0) {
       const wasAtBottom = isAtBottom();
       if (wasAtBottom || messages[messages.length - 1].senderId === user?.id) {
-        chat.scrollTop = chat.scrollHeight;
+        // Scroll suave para mensajes nuevos
+        chat.scrollTo({
+          top: chat.scrollHeight,
+          behavior: 'smooth'
+        });
         setShowDownArrow(false);
       } else if (messages[messages.length - 1].senderId !== user?.id) {
         setShowDownArrow(true);
@@ -332,6 +328,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             filePath: m.filePath ?? null,
             timestamp: m.timestamp || null,
             isPending: false,
+            replyTo: m.replyTo || null, // Incluir la información de replyTo
           };
         });
         setMessages((prev) => {
@@ -395,39 +392,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       top = rect.top + window.scrollY - menuHeight - 4;
     }
 
-    setActionMenuPosition({ top, left });
     setActionMenuOpenId(actionMenuOpenId === messageId ? null : messageId);
-  };
-
-  const handleEditMessage = async (messageId: string) => {
-    if (!user?.id || !editingText.trim()) {
-      alert('El mensaje no puede estar vacío.');
-      return;
-    }
-
-    try {
-      // Cifrar el texto editado antes de guardarlo en Firestore
-      const encryptedText = encryptMessage(editingText.trim());
-      
-      await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), {
-        text: encryptedText, // Guardar el texto cifrado
-        timestamp: serverTimestamp(),
-      });
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId
-            ? { ...msg, text: editingText.trim(), timestamp: Timestamp.now() } // Mostrar texto descifrado en UI
-            : msg,
-        ),
-      );
-      setEditingMessageId(null);
-      setEditingText('');
-      setActionMenuOpenId(null);
-      setActionMenuPosition(null);
-    } catch (error) {
-      console.error('[MessageSidebar] Error editing message:', error);
-      alert('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
-    }
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -468,7 +433,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       }
       await deleteDoc(messageRef);
       setActionMenuOpenId(null);
-      setActionMenuPosition(null);
       console.log('[MessageSidebar] Message deleted:', messageId);
     } catch (error) {
       console.error('[MessageSidebar] Error deleting message:', error);
@@ -501,6 +465,12 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
       fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
       filePath: messageData.filePath || null,
+      replyTo: replyingTo ? {
+        id: replyingTo.id,
+        senderName: replyingTo.senderId === user.id ? (user.firstName || 'Yo') : receiver.fullName,
+        text: replyingTo.text,
+        imageUrl: replyingTo.imageUrl || undefined,
+      } : null, // Incluir la información de replyTo en el mensaje optimista
     };
 
     setMessages((prev) => [...prev, optimisticMessage]);
@@ -524,16 +494,18 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         { merge: true },
       );
 
-      const finalMessageData = {
-        senderId: user.id,
+      const finalMessageData: Partial<Message> = {
+        senderId,
         receiverId: receiver.id,
-        text: encryptedText, // Guardar el texto cifrado en Firestore
-        timestamp: serverTimestamp(),
-        imageUrl: messageData.imageUrl || null,
-        fileUrl: messageData.fileUrl || audioUrl || null,
-        fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
-        fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
-        filePath: messageData.filePath || null,
+        text: encryptedText,
+        timestamp: Timestamp.now(),
+        isPending: false,
+        replyTo: replyingTo ? {
+          id: replyingTo.id,
+          senderName: replyingTo.senderId === user.id ? (user.firstName || 'Yo') : receiver.fullName,
+          text: replyingTo.text,
+          imageUrl: replyingTo.imageUrl || undefined,
+        } : undefined,
       };
 
       await addDoc(
@@ -561,6 +533,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       }
 
       setError(null);
+      
+      // Limpiar reply después de enviar
+      setReplyingTo(null);
     } catch (error) {
       console.error('[MessageSidebar] Failed to send message:', error);
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
@@ -620,6 +595,128 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }
     setDragOffset(0);
   }, [dragOffset, onClose]);
+
+  // Funciones para manejar drag y reply
+  const handleMessageDragStart = useCallback((messageId: string, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[MessageSidebar] Drag start for message:', messageId);
+    
+    setIsDraggingMessage(true);
+    setDraggedMessageId(messageId);
+    setDragOffset(0);
+  }, []);
+
+  // Eventos globales para el drag
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDraggingMessage && draggedMessageId) {
+        const clientX = e.clientX;
+        const startX = e.clientX;
+        
+        const deltaX = startX - clientX;
+        const maxOffset = 80; // Máximo desplazamiento hacia la izquierda
+        
+        if (deltaX > 0) {
+          setDragOffset(Math.min(deltaX, maxOffset));
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDraggingMessage && draggedMessageId) {
+        const threshold = 60; // Umbral para activar la respuesta
+        
+        // Activar respuesta si se arrastra hacia la izquierda más allá del umbral
+        if (dragOffset >= threshold) {
+          // Activar respuesta
+          const messageToReply = messages.find(msg => msg.id === draggedMessageId);
+          if (messageToReply) {
+            setReplyingTo(messageToReply);
+            console.log('[MessageSidebar] Reply activated for message:', messageToReply.id);
+          }
+        }
+        
+        // Resetear estados con animación
+        setIsDraggingMessage(false);
+        setDraggedMessageId(null);
+        
+        // Animar el regreso a la posición original
+        setTimeout(() => {
+          setDragOffset(0);
+        }, 50);
+      }
+    };
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDraggingMessage && draggedMessageId) {
+        const clientX = e.touches[0].clientX;
+        const startX = e.touches[0].clientX;
+        
+        const deltaX = startX - clientX;
+        const maxOffset = 80; // Máximo desplazamiento hacia la izquierda
+        
+        if (deltaX > 0) {
+          setDragOffset(Math.min(deltaX, maxOffset));
+        }
+      }
+    };
+
+    const handleGlobalTouchEnd = () => {
+      if (isDraggingMessage && draggedMessageId) {
+        const threshold = 60; // Umbral para activar la respuesta
+        
+        // Activar respuesta si se arrastra hacia la izquierda más allá del umbral
+        if (dragOffset >= threshold) {
+          // Activar respuesta
+          const messageToReply = messages.find(msg => msg.id === draggedMessageId);
+          if (messageToReply) {
+            setReplyingTo(messageToReply);
+            console.log('[MessageSidebar] Reply activated for message:', messageToReply.id);
+          }
+        }
+        
+        // Resetear estados con animación
+        setIsDraggingMessage(false);
+        setDraggedMessageId(null);
+        
+        // Animar el regreso a la posición original
+        setTimeout(() => {
+          setDragOffset(0);
+        }, 50);
+      }
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+  }, [isDraggingMessage, draggedMessageId, dragOffset, messages]);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
+
+  // Scroll to bottom when sidebar opens
+  useEffect(() => {
+    if (isOpen && chatRef.current && messages.length > 0) {
+      const timer = setTimeout(() => {
+        if (chatRef.current) {
+          chatRef.current.scrollTop = chatRef.current.scrollHeight;
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, messages.length]);
 
   if (!senderId || !user?.id) {
     return (
@@ -693,469 +790,97 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
         {messages.map((m) => {
-          const isMe = m.senderId === user.id;
-          const senderName = isMe ? (user.firstName || 'Yo') : receiver.fullName;
-
           return (
             <div
               key={m.id}
               data-message-id={m.id}
-              className={`${styles.message} ${m.isPending ? styles.pending : ''}`}
+              className={`${styles.message} ${m.isPending ? styles.pending : ''} ${
+                isDraggingMessage && draggedMessageId === m.id ? styles.dragging : ''
+              }`}
+              style={{
+                transform: isDraggingMessage && draggedMessageId === m.id 
+                  ? `translateX(-${dragOffset}px)` 
+                  : 'translateX(0)',
+                transition: isDraggingMessage && draggedMessageId === m.id 
+                  ? 'none' 
+                  : 'transform 0.3s ease-out'
+              }}
+              data-drag-threshold={isDraggingMessage && draggedMessageId === m.id && dragOffset >= 60 ? 'true' : 'false'}
+              onMouseDown={(e) => handleMessageDragStart(m.id, e)}
+              onTouchStart={(e) => handleMessageDragStart(m.id, e)}
             >
-              <Image
-                src={isMe ? (user.imageUrl || '') : (receiver.imageUrl || '')}
-                alt={senderName}
-                width={46}
-                height={46}
-                className={styles.avatar}
-                onError={(e) => {
-                  e.currentTarget.src = '';
-                }}
+              <UserAvatar
+                userId={m.senderId}
+                imageUrl={m.senderId === senderId ? user?.imageUrl : receiver.imageUrl}
+                userName={m.senderId === senderId ? (user?.firstName || 'Yo') : receiver.fullName}
+                size="medium"
+                showStatus={true}
               />
               <div className={styles.messageContent}>
                 <div className={styles.messageHeader}>
-                  <span className={styles.sender}>{senderName}</span>
+                  <div className={styles.sender}>
+                    {m.senderId === senderId ? 'Tú' : receiver.fullName}
+                  </div>
                   <div className={styles.timestampWrapper}>
                     <span className={styles.timestamp}>
-                      {m.timestamp instanceof Timestamp
-                        ? m.timestamp.toDate().toLocaleTimeString('es-MX', {
+                      {m.timestamp?.toDate().toLocaleTimeString('es-MX', {
                             hour: '2-digit',
                             minute: '2-digit',
                             timeZone: 'America/Mexico_City',
-                          })
-                        : 'Sin fecha'}
+                      })}
                     </span>
-                    {isMe && !m.isPending && (
-                      <div className={styles.messageActions}>
-                        <button
-                          className={styles.actionButton}
-                          onClick={(e) => handleOpenActionMenu(m.id, e)}
-                          aria-label="Opciones"
-                        >
-                          <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
-                        </button>
-                        {actionMenuOpenId === m.id &&
-                          createPortal(
-                            <div
-                              ref={actionMenuRef}
-                              className={styles.actionDropdown}
-                              style={{
-                                top: actionMenuPosition ? `${actionMenuPosition.top}px` : '0px',
-                                left: actionMenuPosition ? `${actionMenuPosition.left}px` : '0px',
-                                position: 'absolute',
-                                zIndex: 130000,
-                                opacity: 1,
-                              }}
-                            >
-                              <div
-                                className={styles.actionDropdownItem}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingMessageId(m.id);
-                                  setEditingText(m.text || '');
-                                  setActionMenuOpenId(null);
-                                  setActionMenuPosition(null);
-                                }}
-                              >
-                                Editar mensaje
-                              </div>
-                              <div
-                                className={styles.actionDropdownItem}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteMessage(m.id);
-                                  setActionMenuOpenId(null);
-                                  setActionMenuPosition(null);
-                                }}
-                              >
-                                Eliminar mensaje
-                              </div>
-                            </div>,
-                            document.body,
-                          )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {(m.fileUrl || m.imageUrl) && (
-                  <div className={styles.fileActionsRow}>
-                    <button
-                      className={styles.downloadButton}
-                      onClick={() => window.open(m.imageUrl || m.fileUrl, '_blank')}
-                      aria-label="Descargar archivo"
-                      disabled={m.isPending}
-                    >
-                      <Image src="/download.svg" alt="Descargar" width={16} height={16} />
-                    </button>
-                  </div>
-                )}
-                {editingMessageId === m.id ? (
-                  <div className={styles.editContainer}>
-                    <textarea
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      className={styles.editInput}
-                      autoFocus
-                      rows={3}
-                      style={{ resize: 'vertical', minHeight: '36px', maxHeight: '200px' }}
-                      onKeyDown={(e) => {
-                        if (e.ctrlKey || e.metaKey) {
-                          switch (e.key.toLowerCase()) {
-                            case 'a':
-                              e.preventDefault();
-                              e.currentTarget.select();
-                              break;
-                            case 'c':
-                              e.preventDefault();
-                              const selection = window.getSelection();
-                              if (selection && selection.toString().length > 0) {
-                                navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                  // Fallback for older browsers
-                                  const textArea = document.createElement('textarea');
-                                  textArea.value = selection.toString();
-                                  document.body.appendChild(textArea);
-                                  textArea.select();
-                                  document.execCommand('copy');
-                                  document.body.removeChild(textArea);
-                                });
-                              }
-                              break;
-                            case 'v':
-                              e.preventDefault();
-                              navigator.clipboard.readText().then(text => {
-                                const target = e.currentTarget;
-                                const start = target.selectionStart;
-                                const end = target.selectionEnd;
-                                const newValue = editingText.substring(0, start) + text + editingText.substring(end);
-                                setEditingText(newValue);
-                                // Set cursor position after paste
-                                setTimeout(() => {
-                                  target.setSelectionRange(start + text.length, start + text.length);
-                                }, 0);
-                              }).catch(() => {
-                                // Fallback for older browsers or when clipboard access is denied
-                                document.execCommand('paste');
-                              });
-                              break;
-                            case 'x':
-                              e.preventDefault();
-                              const cutSelection = window.getSelection();
-                              if (cutSelection && cutSelection.toString().length > 0) {
-                                navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                  const target = e.currentTarget;
-                                  const start = target.selectionStart;
-                                  const end = target.selectionEnd;
-                                  const newValue = editingText.substring(0, start) + editingText.substring(end);
-                                  setEditingText(newValue);
-                                }).catch(() => {
-                                  // Fallback for older browsers
-                                  const textArea = document.createElement('textarea');
-                                  textArea.value = cutSelection.toString();
-                                  document.body.appendChild(textArea);
-                                  textArea.select();
-                                  document.execCommand('copy');
-                                  document.body.removeChild(textArea);
-                                  const target = e.currentTarget;
-                                  const start = target.selectionStart;
-                                  const end = target.selectionEnd;
-                                  const newValue = editingText.substring(0, start) + editingText.substring(end);
-                                  setEditingText(newValue);
-                                });
-                              }
-                              break;
-                          }
-                        }
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        
-                        const selection = window.getSelection();
-                        const hasSelection = selection && selection.toString().length > 0;
-                        
-                        const menu = document.createElement('div');
-                        menu.className = 'context-menu';
-                        menu.style.cssText = `
-                          position: fixed;
-                          top: ${e.clientY}px;
-                          left: ${e.clientX}px;
-                          background: white;
-                          border: 1px solid #ccc;
-                          border-radius: 4px;
-                          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                          z-index: 1000;
-                          font-family: 'Inter Tight', sans-serif;
-                          font-size: 14px;
-                          min-width: 150px;
-                        `;
-
-                        const menuItems = [
-                          { label: 'Deshacer', action: () => document.execCommand('undo'), shortcut: 'Ctrl+Z' },
-                          { label: 'Rehacer', action: () => document.execCommand('redo'), shortcut: 'Ctrl+Y' },
-                          { type: 'separator' },
-                          { 
-                            label: 'Cortar', 
-                            action: async () => {
-                              if (hasSelection) {
-                                try {
-                                  await navigator.clipboard.writeText(selection.toString());
-                                  document.execCommand('delete');
-                                } catch {
-                                  // Fallback for older browsers
-                                  const textArea = document.createElement('textarea');
-                                  textArea.value = selection.toString();
-                                  document.body.appendChild(textArea);
-                                  textArea.select();
-                                  document.execCommand('copy');
-                                  document.body.removeChild(textArea);
-                                  document.execCommand('delete');
-                                }
-                              }
-                            }, 
-                            shortcut: 'Ctrl+X', 
-                            disabled: !hasSelection 
-                          },
-                          { 
-                            label: 'Copiar', 
-                            action: async () => {
-                              if (hasSelection) {
-                                try {
-                                  await navigator.clipboard.writeText(selection.toString());
-                                } catch {
-                                  // Fallback for older browsers
-                                  const textArea = document.createElement('textarea');
-                                  textArea.value = selection.toString();
-                                  document.body.appendChild(textArea);
-                                  textArea.select();
-                                  document.execCommand('copy');
-                                  document.body.removeChild(textArea);
-                                }
-                              }
-                            }, 
-                            shortcut: 'Ctrl+C', 
-                            disabled: !hasSelection 
-                          },
-                          { 
-                            label: 'Pegar', 
-                            action: async () => {
-                              try {
-                                const text = await navigator.clipboard.readText();
-                                document.execCommand('insertText', false, text);
-                              } catch {
-                                // Fallback for older browsers
-                                document.execCommand('paste');
-                              }
-                            }, 
-                            shortcut: 'Ctrl+V'
-                          },
-                          { type: 'separator' },
-                          { 
-                            label: 'Seleccionar Todo', 
-                            action: () => {
-                              const target = e.currentTarget;
-                              target.select();
-                            }, 
-                            shortcut: 'Ctrl+A'
-                          },
-                          { 
-                            label: 'Eliminar', 
-                            action: () => {
-                              if (hasSelection) {
-                                document.execCommand('delete');
-                              }
-                            }, 
-                            shortcut: 'Delete', 
-                            disabled: !hasSelection 
-                          }
-                        ];
-
-                        menuItems.forEach((item) => {
-                          if (item.type === 'separator') {
-                            const separator = document.createElement('hr');
-                            separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
-                            menu.appendChild(separator);
-                            return;
-                          }
-
-                          const menuItem = document.createElement('div');
-                          menuItem.style.cssText = `
-                            padding: 8px 12px;
-                            cursor: pointer;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
-                          `;
-                          menuItem.innerHTML = `
-                            <span>${item.label}</span>
-                            <span style="color: #666; font-size: 12px;">${item.shortcut}</span>
-                          `;
-                          
-                          if (!item.disabled) {
-                            menuItem.addEventListener('click', () => {
-                              item.action();
-                              document.body.removeChild(menu);
-                            });
-                            
-                            menuItem.addEventListener('mouseenter', () => {
-                              menuItem.style.backgroundColor = '#f5f5f5';
-                            });
-                            menuItem.addEventListener('mouseleave', () => {
-                              menuItem.style.backgroundColor = 'transparent';
-                            });
-                          }
-                          
-                          menu.appendChild(menuItem);
-                        });
-
-                        document.body.appendChild(menu);
-
-                        // Close menu when clicking outside
-                        const closeMenu = () => {
-                          if (document.body.contains(menu)) {
-                            document.body.removeChild(menu);
-                          }
-                          document.removeEventListener('click', closeMenu);
-                        };
-                        
-                        setTimeout(() => {
-                          document.addEventListener('click', closeMenu);
-                        }, 0);
-                      }}
-                    />
-                    <button
-                      className={styles.editSaveButton}
-                      onClick={() => handleEditMessage(m.id)}
-                      disabled={!editingText.trim()}
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      className={styles.editCancelButton}
-                      onClick={() => {
-                        setEditingMessageId(null);
-                        setEditingText('');
-                      }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    {m.text && (
-                      <div className={styles.messageText}>
-                        {(() => {
-                          // Configure sanitize-html to allow Tiptap's common HTML tags and attributes
-                          const sanitizeOptions = {
-                            allowedTags: [
-                              'p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'code', 'span', 'div'
-                            ],
-                            allowedAttributes: {
-                              '*': ['style', 'class']
-                            },
-                            transformTags: {
-                              // Apply consistent styling for Tiptap tags
-                              'strong': (tagName: string, attribs: Record<string, string>) => ({
-                                tagName,
-                                attribs: {
-                                  ...attribs,
-                                  style: `font-weight: bold; ${attribs.style || ''}`
-                                }
-                              }),
-                              'em': (tagName: string, attribs: Record<string, string>) => ({
-                                tagName,
-                                attribs: {
-                                  ...attribs,
-                                  style: `font-style: italic; ${attribs.style || ''}`
-                                }
-                              }),
-                              'u': (tagName: string, attribs: Record<string, string>) => ({
-                                tagName,
-                                attribs: {
-                                  ...attribs,
-                                  style: `text-decoration: underline; ${attribs.style || ''}`
-                                }
-                              }),
-                              'code': (tagName: string, attribs: Record<string, string>) => ({
-                                tagName,
-                                attribs: {
-                                  ...attribs,
-                                  style: `font-family: monospace; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; ${attribs.style || ''}`
-                                }
-                              }),
-                              'ul': (tagName: string, attribs: Record<string, string>) => ({
-                                tagName,
-                                attribs: {
-                                  ...attribs,
-                                  class: `list-disc pl-5 ${attribs.class || ''}`
-                                }
-                              }),
-                              'ol': (tagName: string, attribs: Record<string, string>) => ({
-                                tagName,
-                                attribs: {
-                                  ...attribs,
-                                  class: `list-decimal pl-5 ${attribs.class || ''}`
-                                }
-                              })
-                            }
-                          };
-
-                          // Sanitize the HTML content
-                          const sanitizedHtml = sanitizeHtml(m.text, sanitizeOptions);
-
-                          return (
-                            <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
-                          );
-                        })()}
-                      </div>
-                    )}
-                    {m.imageUrl && (
-                      <div className={styles.imageWrapper}>
-                        <Image
-                          src={m.imageUrl}
-                          alt={m.fileName || 'Imagen'}
-                          width={0}
-                          height={0}
-                          sizes="100vw"
-                          className={styles.image}
-                          onClick={() => !m.isPending && setImagePreviewSrc(m.imageUrl!)}
-                          onError={(e) => {
-                            e.currentTarget.src = '/default-image.png';
-                          }}
-                          draggable="false"
-                          style={{
-                            width: 'auto',
-                            height: 'auto',
-                            maxWidth: '100%',
-                            maxHeight: '300px',
-                            objectFit: 'contain'
-                          }}
-                        />
-                      </div>
-                    )}
-                    {m.fileUrl && !m.imageUrl && (
-                      <a
-                        href={m.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.file}
-                        download={m.fileName}
-                        onClick={(e) => m.isPending && e.preventDefault()}
-                      >
-                        <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-                        {m.fileName}
-                      </a>
-                    )}
-                    {/* Action menu for message options */}
-                    {user?.id === m.senderId && !m.isPending && (
+                    {m.senderId === senderId && !m.isPending && (
                       <div className={styles.actionContainer}>
                         <button
                           className={styles.actionButton}
-                          onClick={() => setActionMenuOpenId(actionMenuOpenId === m.id ? null : m.id)}
+                          onClick={(e) => handleOpenActionMenu(m.id, e)}
                         >
                           <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
                         </button>
                         {actionMenuOpenId === m.id && (
                           <div ref={actionMenuRef} className={styles.actionDropdown}>
+                            {!m.hasError && (
+                              <div
+                                className={styles.actionDropdownItem}
+                                onClick={() => {
+                                  setActionMenuOpenId(null);
+                                }}
+                              >
+                                Editar
+                              </div>
+                            )}
+                            {m.hasError && (
+                              <div
+                                className={styles.actionDropdownItem}
+                                onClick={() => {
+                                  handleSendMessage(m);
+                                  setActionMenuOpenId(null);
+                                }}
+                              >
+                                Reintentar Envío
+                              </div>
+                            )}
+                            {m.text && m.text.trim() && (
+                              <div
+                                className={styles.actionDropdownItem}
+                                onClick={() => {
+                                  // Copy message text
+                                  const textToCopy = m.text || '';
+                                  navigator.clipboard.writeText(textToCopy).catch(() => {
+                                    // Fallback for older browsers
+                                    const textArea = document.createElement('textarea');
+                                    textArea.value = textToCopy;
+                                    document.body.appendChild(textArea);
+                                    textArea.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(textArea);
+                                  });
+                                  setActionMenuOpenId(null);
+                                }}
+                              >
+                                Copiar
+                              </div>
+                            )}
                             {(m.imageUrl || m.fileUrl) && (
                               <div
                                 className={styles.actionDropdownItem}
@@ -1176,21 +901,196 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                                 Descargar Archivo
                               </div>
                             )}
-                            <div
-                              className={styles.actionDropdownItem}
+                              <div
+                                className={styles.actionDropdownItem}
                               onClick={() => {
-                                // Handle delete message
-                                setActionMenuOpenId(null);
-                              }}
-                            >
+                                  handleDeleteMessage(m.id);
+                                  setActionMenuOpenId(null);
+                                }}
+                              >
                               Eliminar
-                            </div>
+                              </div>
                           </div>
-                        )}
+                          )}
                       </div>
                     )}
-                  </>
-                )}
+                  </div>
+                </div>
+                
+                {/* Estructura jerárquica: Cita 1, Archivo 2, Mensaje 3 */}
+                <div className={styles.messageContentWrapper}>
+                  {/* 1. Cita (replyTo) - PRIMERO */}
+                  {m.replyTo && (
+                    <div className={styles.replyIndicator}>
+                      <div className={styles.replyContent}>
+                        <div className={styles.replyHeader}>
+                          <span className={styles.replyLabel}>Respondiendo a {m.replyTo.senderName}</span>
+                        </div>
+                        <div className={styles.replyPreview}>
+                          {m.replyTo.imageUrl && (
+                            <Image
+                              src={m.replyTo.imageUrl}
+                              alt="Imagen"
+                              width={24}
+                              height={24}
+                              className={styles.replyImage}
+                              draggable="false"
+                            />
+                          )}
+                          {m.replyTo.text && (
+                            <span 
+                              className={styles.replyText}
+                              dangerouslySetInnerHTML={{ 
+                                __html: sanitizeHtml(m.replyTo.text, {
+                                  allowedTags: ['strong', 'em', 'u', 'code'],
+                                  allowedAttributes: {
+                                    '*': ['style', 'class']
+                                  },
+                                  transformTags: {
+                                    'strong': (tagName: string, attribs: Record<string, string>) => ({
+                                      tagName,
+                                      attribs: {
+                                        ...attribs,
+                                        style: `font-weight: bold; ${attribs.style || ''}`
+                                      }
+                                    }),
+                                    'em': (tagName: string, attribs: Record<string, string>) => ({
+                                      tagName,
+                                      attribs: {
+                                        ...attribs,
+                                        style: `font-style: italic; ${attribs.style || ''}`
+                                      }
+                                    }),
+                                    'u': (tagName: string, attribs: Record<string, string>) => ({
+                                      tagName,
+                                      attribs: {
+                                        ...attribs,
+                                        style: `text-decoration: underline; ${attribs.style || ''}`
+                                      }
+                                    }),
+                                    'code': (tagName: string, attribs: Record<string, string>) => ({
+                                      tagName,
+                                      attribs: {
+                                        ...attribs,
+                                        style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}`
+                                      }
+                                    })
+                                  }
+                                })
+                              }}
+                            />
+                          )}
+                          {!m.replyTo.text && !m.replyTo.imageUrl && (
+                            <span className={styles.replyText}>Mensaje</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Archivo adjunto - SEGUNDO */}
+                    {m.imageUrl && (
+                      <div className={styles.imageWrapper}>
+                        <Image
+                          src={m.imageUrl}
+                          alt={m.fileName || 'Imagen'}
+                          width={0}
+                          height={0}
+                          sizes="100vw"
+                        className={`${styles.image} ${m.isPending ? styles.pendingImage : ''}`}
+                          onClick={() => !m.isPending && setImagePreviewSrc(m.imageUrl!)}
+                        onError={() => console.warn('Image load failed', m.imageUrl)}
+                          draggable="false"
+                          style={{
+                            width: 'auto',
+                            height: 'auto',
+                            maxWidth: '100%',
+                            maxHeight: '300px',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      {m.isPending && (
+                        <div className={styles.imageLoader}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" className="animate-spin">
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                              className="opacity-25"
+                            />
+                            <path
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              className="opacity-75"
+                            />
+                          </svg>
+                      </div>
+                    )}
+                              </div>
+                            )}
+
+                  {/* 3. Mensaje de texto - TERCERO */}
+                  {m.text && (
+                    <div 
+                      className={styles.messageText}
+                      dangerouslySetInnerHTML={{ 
+                        __html: sanitizeHtml(m.text, {
+                          allowedTags: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'code', 'span', 'div'],
+                          allowedAttributes: {
+                            '*': ['style', 'class']
+                          },
+                          transformTags: {
+                            'strong': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `font-weight: bold; ${attribs.style || ''}`
+                              }
+                            }),
+                            'em': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `font-style: italic; ${attribs.style || ''}`
+                              }
+                            }),
+                            'u': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `text-decoration: underline; ${attribs.style || ''}`
+                              }
+                            }),
+                            'code': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                style: `font-family: monospace; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; ${attribs.style || ''}`
+                              }
+                            }),
+                            'ul': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                class: `list-disc pl-5 ${attribs.class || ''}`
+                              }
+                            }),
+                            'ol': (tagName: string, attribs: Record<string, string>) => ({
+                              tagName,
+                              attribs: {
+                                ...attribs,
+                                class: `list-decimal pl-5 ${attribs.class || ''}`
+                              }
+                            })
+                          }
+                        })
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -1216,11 +1116,23 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         onSendMessage={handleSendMessage}
         isSending={isSending}
         containerRef={sidebarRef}
+        replyingTo={replyingTo ? {
+          id: replyingTo.id,
+          senderId: replyingTo.senderId,
+          senderName: replyingTo.senderId === user?.id ? (user?.firstName || 'Yo') : receiver.fullName,
+          text: replyingTo.text,
+          timestamp: replyingTo.timestamp,
+          read: true,
+          clientId: replyingTo.id,
+          imageUrl: replyingTo.imageUrl,
+        } : null}
+        onCancelReply={handleCancelReply}
       />
       {imagePreviewSrc && (
         <ImagePreviewOverlay
           src={imagePreviewSrc}
           alt="Vista previa de imagen"
+          fileName={messages.find(m => m.imageUrl === imagePreviewSrc)?.fileName}
           onClose={() => setImagePreviewSrc(null)}
         />
       )}
