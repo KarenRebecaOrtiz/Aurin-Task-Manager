@@ -24,10 +24,10 @@ import Marquee from '@/components/ui/Marquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import OnboardingStepper from '@/components/OnboardingStepper';
 import Selector from '@/components/Selector';
-import MembersTable from '@/components/MembersTable';
-import ClientsTable from '@/components/ClientsTable';
-import TasksTable from '@/components/TasksTable';
-import TasksKanban from '@/components/TasksKanban';
+import MembersTable, { cleanupMembersTableListeners } from '@/components/MembersTable';
+import ClientsTable, { cleanupClientsTableListeners } from '@/components/ClientsTable';
+import TasksTable, { cleanupTasksTableListeners } from '@/components/TasksTable';
+import TasksKanban, { cleanupTasksKanbanListeners } from '@/components/TasksKanban';
 import CreateTask from '@/components/CreateTask';
 import EditTask from '@/components/EditTask';
 import AISidebar from '@/components/AISidebar';
@@ -49,6 +49,8 @@ import Loader from '@/components/Loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'; // Added useAuth import
 import ToDoDynamic from '@/components/ToDoDynamic';
 import DeletePopup from '@/components/DeletePopup';
+import FailAlert from '@/components/FailAlert';
+import SuccessAlert from '@/components/SuccessAlert';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -141,15 +143,19 @@ function TasksPageContent() {
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState<boolean>(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'task' | 'client'; id: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  // Add alert states
+  const [showSuccessAlert, setShowSuccessAlert] = useState<boolean>(false);
+  const [showFailAlert, setShowFailAlert] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [failMessage, setFailMessage] = useState<string>('');
+  const [failErrorMessage, setFailErrorMessage] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
   const deletePopupRef = useRef<HTMLDivElement>(null);
   const confirmExitPopupRef = useRef<HTMLDivElement>(null);
 
-  const memoizedClients = useMemo(() => clients, [clients]);
   const memoizedUsers = useMemo(() => users, [users]);
-  const memoizedTasks = useMemo(() => tasks, [tasks]);
   const memoizedOpenSidebars = useMemo(() => openSidebars, [openSidebars]);
 
   useEffect(() => {
@@ -161,22 +167,41 @@ function TasksPageContent() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Cleanup all table listeners when component unmounts
+  useEffect(() => {
+    return () => {
+      console.log('[TasksPage] Cleaning up all table listeners on unmount');
+      cleanupMembersTableListeners();
+      cleanupClientsTableListeners();
+      cleanupTasksTableListeners();
+      cleanupTasksKanbanListeners();
+    };
+  }, []);
+
   // Declare handler functions first before using them
   const handleMessageSidebarOpen = useCallback((user: User) => {
     setOpenSidebars((prev) => [
       ...prev,
-      { id: uuidv4(), type: 'message', data: user },
+      { id: uuidv4(), type: 'message' as const, data: user },
     ]);
-    console.log('[TasksPage] Opened message sidebar for user:', user.id);
-  }, []);
+    console.log('[TasksPage] Opened message sidebar for user:', user.fullName);
+    
+    // Agregar entrada al historial para el botón atrás
+    const currentState = { sidebar: 'message', user: user.id, container: selectedContainer };
+    window.history.pushState(currentState, '', window.location.pathname);
+  }, [selectedContainer]);
 
   const handleChatSidebarOpen = useCallback((task: Task) => {
     setOpenSidebars((prev) => [
       ...prev,
-      { id: uuidv4(), type: 'chat', data: task },
+      { id: uuidv4(), type: 'chat' as const, data: task },
     ]);
-    console.log('[TasksPage] Opened chat sidebar for task:', task.id);
-  }, []);
+    console.log('[TasksPage] Opened chat sidebar for task:', task.name);
+    
+    // Agregar entrada al historial para el botón atrás
+    const currentState = { sidebar: 'chat', task: task.id, container: selectedContainer };
+    window.history.pushState(currentState, '', window.location.pathname);
+  }, [selectedContainer]);
 
   const handleNewTaskOpen = useCallback(() => {
     setIsCreateTaskOpen(true);
@@ -826,35 +851,68 @@ function TasksPageContent() {
     };
   }, [selectedContainer, handleContainerChange]);
 
-  // Handle browser back button navigation
+  // Keyboard shortcut: Ctrl/Cmd + ArrowLeft/ArrowRight for section switch
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isCreateTaskOpen || isEditTaskOpen) return;
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const currentIdx = containerOrder.indexOf(selectedContainer as SelectorContainer);
+        if (e.key === 'ArrowLeft' && currentIdx > 0) {
+          handleContainerChange(containerOrder[currentIdx - 1]);
+        } else if (e.key === 'ArrowRight' && currentIdx < containerOrder.length - 1) {
+          handleContainerChange(containerOrder[currentIdx + 1]);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCreateTaskOpen, isEditTaskOpen, selectedContainer, handleContainerChange]);
+
+  // Browser back button navigation
   useEffect(() => {
     const handlePopState = () => {
-      // If user is in ConfigPage or Create/Edit Task, redirect to home TasksTable
-      if (selectedContainer === 'config' || isCreateTaskOpen || isEditTaskOpen) {
-        // Prevent the default back navigation
-        window.history.pushState(null, '', window.location.pathname);
+      // Si hay sidebars abiertos, cerrarlos y volver a la vista principal
+      if (memoizedOpenSidebars.length > 0) {
+        console.log('[TasksPage] Browser back detected, closing sidebars');
+        // Cerrar todos los sidebars abiertos
+        setOpenSidebars([]);
         
-        // Navigate to home TasksTable
-        setSelectedContainer('tareas');
-        setIsCreateTaskOpen(false);
-        setIsEditTaskOpen(false);
-        setEditTaskId(null);
-        setHasUnsavedChanges(false);
+        // Si estamos en una vista específica, mantenerla
+        // Si no, ir a tareas por defecto
+        if (!['tareas', 'cuentas', 'miembros', 'config'].includes(selectedContainer)) {
+          handleContainerChange('tareas');
+        }
       }
     };
 
-    // Add a history entry when entering ConfigPage or Create/Edit Task
-    if (selectedContainer === 'config' || isCreateTaskOpen || isEditTaskOpen) {
-      window.history.pushState(null, '', window.location.pathname);
-    }
-
-    // Listen for popstate events (back button)
     window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [memoizedOpenSidebars.length, selectedContainer, handleContainerChange]);
 
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [selectedContainer, isCreateTaskOpen, isEditTaskOpen]);
+  // Alert handlers
+  const handleShowSuccessAlert = useCallback((message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessAlert(true);
+    setShowFailAlert(false);
+  }, []);
+
+  const handleShowFailAlert = useCallback((message: string, error?: string) => {
+    setFailMessage(message);
+    setFailErrorMessage(error || '');
+    setShowFailAlert(true);
+    setShowSuccessAlert(false);
+  }, []);
+
+  const handleCloseSuccessAlert = useCallback(() => {
+    setShowSuccessAlert(false);
+    setSuccessMessage('');
+  }, []);
+
+  const handleCloseFailAlert = useCallback(() => {
+    setShowFailAlert(false);
+    setFailMessage('');
+    setFailErrorMessage('');
+  }, []);
 
   // Handle loading and error states
   if (isLoading) {
@@ -870,6 +928,7 @@ function TasksPageContent() {
       <Marquee />
       {showLoader && <Loader />}
       <SyncUserToFirestore />
+      
       <div ref={headerRef}>
         <Header
           selectedContainer={selectedContainer}
@@ -899,9 +958,6 @@ function TasksPageContent() {
             <>
               {taskView === 'table' && (
                 <TasksTable
-                  tasks={memoizedTasks}
-                  clients={memoizedClients}
-                  users={memoizedUsers}
                   onNewTaskOpen={handleNewTaskOpen}
                   onEditTaskOpen={handleEditTaskOpen}
                   onChatSidebarOpen={handleChatSidebarOpen}
@@ -913,14 +969,10 @@ function TasksPageContent() {
               )}
               {taskView === 'kanban' && (
                 <TasksKanban
-                  tasks={memoizedTasks}
-                  clients={memoizedClients}
-                  users={memoizedUsers}
                   onNewTaskOpen={handleNewTaskOpen}
                   onEditTaskOpen={handleEditTaskOpen}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
-                  setTasks={setTasks}
                   onOpenProfile={handleOpenProfile}
                   onViewChange={handleViewChange}
                   onDeleteTaskOpen={handleDeleteTaskOpen}
@@ -930,23 +982,22 @@ function TasksPageContent() {
           )}
           {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
             <ClientsTable
-              clients={memoizedClients}
               onCreateOpen={handleCreateClientOpen}
               onEditOpen={handleEditClientOpen}
               onDeleteOpen={handleDeleteClientOpen}
-              setClients={setClients}
             />
           )}
           {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
             <MembersTable
-              users={memoizedUsers}
-              tasks={memoizedTasks}
               onInviteSidebarOpen={handleInviteSidebarOpen}
               onMessageSidebarOpen={handleMessageSidebarOpen}
             />
           )}
           {selectedContainer === 'config' && !isCreateTaskOpen && !isEditTaskOpen && (
-            <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')} />
+            <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
+            />
           )}
           {isCreateTaskOpen && (
             <CreateTask
@@ -956,6 +1007,8 @@ function TasksPageContent() {
               onCreateClientOpen={handleCreateClientOpen}
               onEditClientOpen={handleEditClientOpen}
               onTaskCreated={() => setIsCreateTaskOpen(false)}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
             />
           )}
           {isEditTaskOpen && editTaskId && (
@@ -970,6 +1023,8 @@ function TasksPageContent() {
               onCreateClientOpen={handleCreateClientOpen}
               onEditClientOpen={handleEditClientOpen}
               onInviteSidebarOpen={handleInviteSidebarOpen}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
             />
           )}
         </div>
@@ -1146,6 +1201,21 @@ function TasksPageContent() {
       <ToDoDynamic/>
       <Footer />
       {memoizedDeletePopup}
+      
+      {/* Alert Components */}
+      {showSuccessAlert && (
+        <SuccessAlert
+          message={successMessage}
+          onClose={handleCloseSuccessAlert}
+        />
+      )}
+      {showFailAlert && (
+        <FailAlert
+          message={failMessage}
+          error={failErrorMessage}
+          onClose={handleCloseFailAlert}
+        />
+      )}
     </div>
   );
 }

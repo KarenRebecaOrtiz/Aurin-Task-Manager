@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
@@ -10,7 +10,7 @@ import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './ClientsTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import Loader from '@/components/Loader'; // Importar el componente Loader
+import SkeletonLoader from '@/components/SkeletonLoader'; // Import SkeletonLoader
 
 interface Client {
   id: string;
@@ -22,19 +22,40 @@ interface Client {
   createdAt: string;
 }
 
+// Cache global persistente para ClientsTable
+const clientsTableCache = {
+  clients: new Map<string, { data: Client[]; timestamp: number }>(),
+  listeners: new Map<string, { clients: (() => void) | null }>(),
+};
+
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+
+// Función para limpiar listeners de ClientsTable
+export const cleanupClientsTableListeners = () => {
+  console.log('[ClientsTable] Cleaning up all listeners');
+  clientsTableCache.listeners.forEach((listener) => {
+    if (listener.clients) listener.clients();
+  });
+  clientsTableCache.listeners.clear();
+  clientsTableCache.clients.clear();
+};
+
 interface ClientsTableProps {
-  clients: Client[];
   onCreateOpen: () => void;
   onEditOpen: (client: Client) => void;
   onDeleteOpen: (clientId: string) => void;
-  setClients: React.Dispatch<React.SetStateAction<Client[]>>;
 }
 
 const ClientsTable: React.FC<ClientsTableProps> = memo(
-  ({ clients, onCreateOpen, onEditOpen, onDeleteOpen, setClients }) => {
+  ({ onCreateOpen, onEditOpen, onDeleteOpen }) => {
     console.log('ClientsTable rendered');
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
+    
+    // Estados optimizados con refs para evitar re-renders
+    const clientsRef = useRef<Client[]>([]);
+    
+    const [clients, setClients] = useState<Client[]>([]);
     const [filteredClients, setFilteredClients] = useState<Client[]>([]);
     const [sortKey, setSortKey] = useState<string>('name');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -46,33 +67,94 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    const fetchClients = useCallback(async () => {
-      setIsDataLoading(true);
-      try {
-        const querySnapshot = await getDocs(collection(db, 'clients'));
-        const clientsData: Client[] = querySnapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            name: doc.data().name || '',
-            imageUrl: doc.data().imageUrl || '/empty-image.png',
-            projectCount: doc.data().projectCount || 0,
-            projects: doc.data().projects || [],
-            createdBy: doc.data().createdBy || '',
-            createdAt: doc.data().createdAt || new Date().toISOString(),
-          }))
-          .filter((client) => client.name && client.createdBy);
-        console.log('Fetched clients:', clientsData.map((c) => ({ id: c.id, name: c.name })));
-        setClients(clientsData);
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-      } finally {
-        setIsDataLoading(false);
-      }
-    }, [setClients]);
+    // Función para verificar cache válido
+    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Client[]; timestamp: number }>) => {
+      const cached = cacheMap.get(cacheKey);
+      if (!cached) return false;
+      
+      const now = Date.now();
+      return (now - cached.timestamp) < CACHE_DURATION;
+    }, []);
 
+    // Setup de clients con cache optimizado
     useEffect(() => {
-      fetchClients();
-    }, [fetchClients]);
+      if (!user?.id) return;
+
+      const cacheKey = `clients_${user.id}`;
+      
+      // Verificar si ya existe un listener para este usuario
+      const existingListener = clientsTableCache.listeners.get(cacheKey);
+      
+      if (existingListener?.clients) {
+        console.log('[ClientsTable] Reusing existing clients listener');
+        // El listener ya existe, solo actualizar los datos si hay cache
+        if (clientsTableCache.clients.has(cacheKey)) {
+          const cachedData = clientsTableCache.clients.get(cacheKey)!.data;
+          clientsRef.current = cachedData;
+          setClients(cachedData);
+          setIsDataLoading(false);
+        }
+        return;
+      }
+      
+      // Verificar cache primero
+      if (isCacheValid(cacheKey, clientsTableCache.clients)) {
+        const cachedData = clientsTableCache.clients.get(cacheKey)!.data;
+        clientsRef.current = cachedData;
+        setClients(cachedData);
+        setIsDataLoading(false);
+        console.log('[ClientsTable] Using cached clients on remount:', cachedData.length);
+        return;
+      }
+
+      console.log('[ClientsTable] Setting up new clients onSnapshot listener');
+      setIsDataLoading(true);
+
+      const clientsQuery = query(collection(db, 'clients'));
+      const unsubscribeClients = onSnapshot(
+        clientsQuery,
+        (snapshot) => {
+          const clientsData: Client[] = snapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              name: doc.data().name || '',
+              imageUrl: doc.data().imageUrl || '/empty-image.png',
+              projectCount: doc.data().projectCount || 0,
+              projects: doc.data().projects || [],
+              createdBy: doc.data().createdBy || '',
+              createdAt: doc.data().createdAt || new Date().toISOString(),
+            }))
+            .filter((client) => client.name && client.createdBy);
+          
+          console.log('[ClientsTable] Clients onSnapshot update:', clientsData.length);
+          
+          clientsRef.current = clientsData;
+          setClients(clientsData);
+          
+          // Actualizar cache
+          clientsTableCache.clients.set(cacheKey, {
+            data: clientsData,
+            timestamp: Date.now(),
+          });
+          
+          setIsDataLoading(false);
+        },
+        (error) => {
+          console.error('[ClientsTable] Error in clients onSnapshot:', error);
+          setClients([]);
+          setIsDataLoading(false);
+        }
+      );
+
+      // Guardar el listener en el cache global
+      clientsTableCache.listeners.set(cacheKey, {
+        clients: unsubscribeClients,
+      });
+
+      return () => {
+        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+      };
+    }, [user?.id, isCacheValid]);
 
     const memoizedFilteredClients = useMemo(() => {
       return clients.filter((client) =>
@@ -357,7 +439,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
             )}
           </div>
           
-          <Loader />
+          <SkeletonLoader type="clients" rows={6} />
         </div>
       );
     }

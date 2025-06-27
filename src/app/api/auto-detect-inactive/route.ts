@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-
-// Inicializar Firebase Admin si no está inicializado
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const adminDb = getFirestore();
+import { initializeFirebase } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +9,10 @@ export async function POST(request: NextRequest) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Inicializar Firebase Admin
+    await initializeFirebase();
+    const adminDb = getFirestore();
 
     console.log('[Auto-Detect] Starting automatic inactive user detection...');
     

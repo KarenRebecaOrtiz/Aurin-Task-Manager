@@ -122,11 +122,11 @@
 
       .numberFlow {
         pointer-events: none;
-        color: #111827; // text-gray-900
+        color: #000000; // text-black
 
         // Dark mode support
         @media (prefers-color-scheme: dark) {
-          color: #f9fafb; // dark:text-gray-100
+          color: #000000; // dark:text-black
         }
       }
     }

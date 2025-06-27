@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, onSnapshot, query, getDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -43,9 +43,36 @@ interface Task {
   AssignedTo: string[];
   createdAt: string;
   CreatedBy?: string;
+  lastActivity?: string;
+  hasUnreadUpdates?: boolean;
+  lastViewedBy?: { [userId: string]: string };
 }
 
 type TaskView = 'table' | 'kanban';
+
+// Cache global persistente para TasksKanban
+const tasksKanbanCache = {
+  tasks: new Map<string, { data: Task[]; timestamp: number }>(),
+  clients: new Map<string, { data: Client[]; timestamp: number }>(),
+  users: new Map<string, { data: User[]; timestamp: number }>(),
+  listeners: new Map<string, { tasks: (() => void) | null; clients: (() => void) | null; users: (() => void) | null }>(),
+};
+
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+
+// Función para limpiar listeners de TasksKanban
+export const cleanupTasksKanbanListeners = () => {
+  console.log('[TasksKanban] Cleaning up all listeners');
+  tasksKanbanCache.listeners.forEach((listener) => {
+    if (listener.tasks) listener.tasks();
+    if (listener.clients) listener.clients();
+    if (listener.users) listener.users();
+  });
+  tasksKanbanCache.listeners.clear();
+  tasksKanbanCache.tasks.clear();
+  tasksKanbanCache.clients.clear();
+  tasksKanbanCache.users.clear();
+};
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
@@ -93,36 +120,37 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
 };
 
 interface TasksKanbanProps {
-  tasks: Task[];
-  clients: Client[];
-  users: User[];
   onNewTaskOpen: () => void;
   onEditTaskOpen: (taskId: string) => void;
   onChatSidebarOpen: (task: Task) => void;
   onMessageSidebarOpen: (user: User) => void;
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
   onViewChange: (view: TaskView) => void;
-  onDeleteTaskOpen: (taskId: string) => void; // Nueva prop para borrar
+  onDeleteTaskOpen: (taskId: string) => void;
 }
 
 const TasksKanban: React.FC<TasksKanbanProps> = memo(
   ({
-    tasks,
-    clients,
-    users,
     onNewTaskOpen,
     onEditTaskOpen,
     onChatSidebarOpen,
     onMessageSidebarOpen,
-    setTasks,
     onOpenProfile,
     onViewChange,
-    onDeleteTaskOpen, // destructura la nueva prop
+    onDeleteTaskOpen,
   }) => {
     const { user } = useUser();
-    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
-    const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
+    const { isAdmin, isLoading } = useAuth();
+    
+    // Estados optimizados con refs para evitar re-renders
+    const tasksRef = useRef<Task[]>([]);
+    const clientsRef = useRef<Client[]>([]);
+    const usersRef = useRef<User[]>([]);
+    
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
     const [clientFilter, setClientFilter] = useState<string>('');
@@ -132,6 +160,10 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
     const [isTouchDevice, setIsTouchDevice] = useState(false);
+    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+    const [isLoadingClients, setIsLoadingClients] = useState(true);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+    
     const containerRef = useRef<HTMLDivElement>(null);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
@@ -140,6 +172,15 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
     const userId = useMemo(() => user?.id || '', [user]);
+
+    // Función para verificar cache válido
+    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
+      const cached = cacheMap.get(cacheKey);
+      if (!cached) return false;
+      
+      const now = Date.now();
+      return (now - cached.timestamp) < CACHE_DURATION;
+    }, []);
 
     const getInvolvedUserIds = (task: Task) => {
       const ids = new Set<string>();
@@ -682,8 +723,277 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       requestAnimationFrame(animateEmptyColumns);
     }, [groupedTasks, statusColumns]);
 
+    // Setup de tasks con cache optimizado
+    useEffect(() => {
+      if (!user?.id) return;
+
+      const cacheKey = `tasks_${user.id}`;
+      
+      // Verificar si ya existe un listener para este usuario
+      const existingListener = tasksKanbanCache.listeners.get(cacheKey);
+      
+      if (existingListener?.tasks) {
+        console.log('[TasksKanban] Reusing existing tasks listener');
+        // El listener ya existe, solo actualizar los datos si hay cache
+        if (tasksKanbanCache.tasks.has(cacheKey)) {
+          const cachedData = tasksKanbanCache.tasks.get(cacheKey)!.data;
+          tasksRef.current = cachedData;
+          setTasks(cachedData);
+          setIsLoadingTasks(false);
+        }
+        return;
+      }
+      
+      // Verificar cache primero
+      if (isCacheValid(cacheKey, tasksKanbanCache.tasks)) {
+        const cachedData = tasksKanbanCache.tasks.get(cacheKey)!.data;
+        tasksRef.current = cachedData;
+        setTasks(cachedData);
+        setIsLoadingTasks(false);
+        console.log('[TasksKanban] Using cached tasks on remount:', cachedData.length);
+        return;
+      }
+
+      console.log('[TasksKanban] Setting up new tasks onSnapshot listener');
+      setIsLoadingTasks(true);
+
+      const tasksQuery = query(collection(db, 'tasks'));
+      const unsubscribeTasks = onSnapshot(
+        tasksQuery,
+        (snapshot) => {
+          const tasksData: Task[] = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            clientId: doc.data().clientId || '',
+            project: doc.data().project || '',
+            name: doc.data().name || '',
+            description: doc.data().description || '',
+            status: doc.data().status || '',
+            priority: doc.data().priority || '',
+            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
+            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
+            LeadedBy: doc.data().LeadedBy || [],
+            AssignedTo: doc.data().AssignedTo || [],
+            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            CreatedBy: doc.data().CreatedBy || '',
+            lastActivity: doc.data().lastActivity?.toDate().toISOString() || doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
+            lastViewedBy: doc.data().lastViewedBy || {},
+          }));
+
+          console.log('[TasksKanban] Tasks onSnapshot update:', tasksData.length);
+          
+          tasksRef.current = tasksData;
+          setTasks(tasksData);
+          
+          // Actualizar cache
+          tasksKanbanCache.tasks.set(cacheKey, {
+            data: tasksData,
+            timestamp: Date.now(),
+          });
+          
+          setIsLoadingTasks(false);
+        },
+        (error) => {
+          console.error('[TasksKanban] Error in tasks onSnapshot:', error);
+          setTasks([]);
+          setIsLoadingTasks(false);
+        }
+      );
+
+      // Guardar el listener en el cache global
+      tasksKanbanCache.listeners.set(cacheKey, {
+        tasks: unsubscribeTasks,
+        clients: existingListener?.clients || null,
+        users: existingListener?.users || null,
+      });
+
+      return () => {
+        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+      };
+    }, [user?.id, isCacheValid]);
+
+    // Setup de clients con cache optimizado
+    useEffect(() => {
+      if (!user?.id) return;
+
+      const cacheKey = `clients_${user.id}`;
+      
+      // Verificar si ya existe un listener para este usuario
+      const existingListener = tasksKanbanCache.listeners.get(cacheKey);
+      
+      if (existingListener?.clients) {
+        console.log('[TasksKanban] Reusing existing clients listener');
+        // El listener ya existe, solo actualizar los datos si hay cache
+        if (tasksKanbanCache.clients.has(cacheKey)) {
+          const cachedData = tasksKanbanCache.clients.get(cacheKey)!.data;
+          clientsRef.current = cachedData;
+          setClients(cachedData);
+          setIsLoadingClients(false);
+        }
+        return;
+      }
+      
+      // Verificar cache primero
+      if (isCacheValid(cacheKey, tasksKanbanCache.clients)) {
+        const cachedData = tasksKanbanCache.clients.get(cacheKey)!.data;
+        clientsRef.current = cachedData;
+        setClients(cachedData);
+        setIsLoadingClients(false);
+        console.log('[TasksKanban] Using cached clients on remount:', cachedData.length);
+        return;
+      }
+
+      console.log('[TasksKanban] Setting up new clients onSnapshot listener');
+      setIsLoadingClients(true);
+
+      const clientsQuery = query(collection(db, 'clients'));
+      const unsubscribeClients = onSnapshot(
+        clientsQuery,
+        (snapshot) => {
+          const clientsData: Client[] = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            name: doc.data().name || '',
+            imageUrl: doc.data().imageUrl || '/empty-image.png',
+          }));
+
+          console.log('[TasksKanban] Clients onSnapshot update:', clientsData.length);
+          
+          clientsRef.current = clientsData;
+          setClients(clientsData);
+          
+          // Actualizar cache
+          tasksKanbanCache.clients.set(cacheKey, {
+            data: clientsData,
+            timestamp: Date.now(),
+          });
+          
+          setIsLoadingClients(false);
+        },
+        (error) => {
+          console.error('[TasksKanban] Error in clients onSnapshot:', error);
+          setClients([]);
+          setIsLoadingClients(false);
+        }
+      );
+
+      // Guardar el listener en el cache global
+      tasksKanbanCache.listeners.set(cacheKey, {
+        tasks: existingListener?.tasks || null,
+        clients: unsubscribeClients,
+        users: existingListener?.users || null,
+      });
+
+      return () => {
+        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+      };
+    }, [user?.id, isCacheValid]);
+
+    // Setup de users con cache optimizado
+    useEffect(() => {
+      if (!user?.id) return;
+
+      const cacheKey = `users_${user.id}`;
+      
+      // Verificar si ya existe un listener para este usuario
+      const existingListener = tasksKanbanCache.listeners.get(cacheKey);
+      
+      if (existingListener?.users) {
+        console.log('[TasksKanban] Reusing existing users listener');
+        // El listener ya existe, solo actualizar los datos si hay cache
+        if (tasksKanbanCache.users.has(cacheKey)) {
+          const cachedData = tasksKanbanCache.users.get(cacheKey)!.data;
+          usersRef.current = cachedData;
+          setUsers(cachedData);
+          setIsLoadingUsers(false);
+        }
+        return;
+      }
+      
+      // Verificar cache primero
+      if (isCacheValid(cacheKey, tasksKanbanCache.users)) {
+        const cachedData = tasksKanbanCache.users.get(cacheKey)!.data;
+        usersRef.current = cachedData;
+        setUsers(cachedData);
+        setIsLoadingUsers(false);
+        console.log('[TasksKanban] Using cached users on remount:', cachedData.length);
+        return;
+      }
+
+      console.log('[TasksKanban] Setting up new users onSnapshot listener');
+      setIsLoadingUsers(true);
+
+      // Usar la misma lógica de fetch que MembersTable
+      const fetchUsers = async () => {
+        try {
+          const response = await fetch('/api/users');
+          if (!response.ok) {
+            throw new Error(`Failed to fetch users: ${response.status}`);
+          }
+          
+          const clerkUsers: {
+            id: string;
+            imageUrl?: string;
+            firstName?: string;
+            lastName?: string;
+            publicMetadata: { role?: string; description?: string };
+          }[] = await response.json();
+
+          const usersData: User[] = await Promise.all(
+            clerkUsers.map(async (clerkUser) => {
+              try {
+                const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
+                return {
+                  id: clerkUser.id,
+                  imageUrl: clerkUser.imageUrl || '',
+                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                  role: userDoc.exists() && userDoc.data().role
+                    ? userDoc.data().role
+                    : (clerkUser.publicMetadata.role || 'Sin rol'),
+                };
+              } catch {
+                return {
+                  id: clerkUser.id,
+                  imageUrl: clerkUser.imageUrl || '',
+                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                  role: clerkUser.publicMetadata.role || 'Sin rol',
+                };
+              }
+            }),
+          );
+          
+          usersRef.current = usersData;
+          setUsers(usersData);
+          
+          // Actualizar cache
+          tasksKanbanCache.users.set(cacheKey, {
+            data: usersData,
+            timestamp: Date.now(),
+          });
+          
+        } catch (error) {
+          console.error('[TasksKanban] Error fetching users:', error);
+          setUsers([]);
+        } finally {
+          setIsLoadingUsers(false);
+        }
+      };
+
+      fetchUsers();
+
+      // Guardar el listener en el cache global (para este caso, no hay onSnapshot)
+      tasksKanbanCache.listeners.set(cacheKey, {
+        tasks: existingListener?.tasks || null,
+        clients: existingListener?.clients || null,
+        users: null, // No hay listener para users, solo fetch
+      });
+
+      return () => {
+        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+      };
+    }, [user?.id, isCacheValid]);
+
     // Handle loading state
-    if (isLoading) {
+    if (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers) {
       return <Loader />;
     }
 

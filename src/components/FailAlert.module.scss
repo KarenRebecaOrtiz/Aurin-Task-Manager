@@ -1,7 +1,7 @@
 @import "@/app/styles/_variables.scss";
 
 .notifications-container {
-  width: 320px;
+  width: 330px;
   height: auto;
   font-size: 0.875rem;
   line-height: 1.25rem;
@@ -10,109 +10,77 @@
   gap: 1rem;
 }
 
-.flex {
+.card {
+  width: 330px;
+  height: 80px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  padding: 10px 15px;
+  background-color: #ffffff;
+  box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+  position: relative;
+  overflow: hidden;
   display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 15px;
 }
 
-.flex-shrink-0 {
-  flex-shrink: 0;
+.wave {
+  position: absolute;
+  transform: rotate(90deg);
+  left: -31px;
+  top: 32px;
+  width: 80px;
+  fill: #ef44443a;
 }
 
-.toast {
-  &.error {
-    position: relative;
-    width: 100%;
-    padding: 1rem;
-    border-radius: 16px;
-    background: rgba(254, 226, 226, 0.7); // Translucent red
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition:
-      transform 0.3s ease,
-      box-shadow 0.3s ease,
-      background 0.3s ease,
-      border-color 0.3s ease,
-      opacity 0.3s ease;
-
-    &:hover {
-      transform: translateY(-2px) scale(1.02);
-      background: rgba(254, 226, 226, 0.85);
-      border-color: rgba(255, 255, 255, 0.4);
-      box-shadow:
-        -6px -6px 12px rgba(255, 255, 255, 0.95),
-        6px 6px 12px rgba(0, 0, 0, 0.1),
-        inset -4px -4px 8px rgba(255, 255, 255, 0.5),
-        inset 4px 4px 8px rgba(209, 217, 230, 0.3);
-    }
-
-    &:active {
-      transform: scale(0.98);
-      background: rgba(254, 226, 226, 0.6);
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow:
-        inset -2px -2px 6px rgba(255, 255, 255, 0.4),
-        inset 2px 2px 6px rgba(209, 217, 230, 0.2),
-        -2px -2px 6px rgba(255, 255, 255, 0.85),
-        2px 2px 6px rgba(0, 0, 0, 0.04);
-    }
-
-    :global(.dark) & {
-      background: rgba(153, 27, 27, 0.7); // Dark mode red
-      border: 1px solid rgba(255, 255, 255, 0.1);
-
-      &:hover {
-        transform: translateY(-2px) scale(1.02);
-        background: rgba(153, 27, 27, 0.85);
-        border-color: rgba(255, 255, 255, 0.2);
-        box-shadow:
-          -6px -6px 12px rgba(255, 255, 255, 0.06),
-          6px 6px 12px rgba(0, 0, 0, 0.55),
-          inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-          inset 4px 4px 8px rgba(255, 255, 255, 0.03);
-      }
-
-      &:active {
-        background: rgba(153, 27, 27, 0.6);
-        border-color: rgba(255, 255, 255, 0.05);
-        box-shadow:
-          inset -2px -2px 6px rgba(0, 0, 0, 0.35),
-          inset 2px 2px 6px rgba(255, 255, 255, 0.02),
-          -2px -2px 6px rgba(255, 255, 255, 0.03),
-          2px 2px 6px rgba(0, 0, 0, 0.4);
-      }
-    }
-  }
+.icon-container {
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ef444448;
+  border-radius: 50%;
+  margin-left: 8px;
 }
 
-.error-svg {
-  color: #ef4444; // rgb(239, 68, 68)
-  width: 1.25rem;
-  height: 1.25rem;
+.icon {
+  width: 17px;
+  height: 17px;
+  color: #dc2626;
 }
 
-.prompt-wrap {
-  margin-left: 0.75rem;
+.message-text-container {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  justify-content: center;
+  align-items: flex-start;
+  flex-grow: 1;
 }
 
-.prompt-heading {
+.message-text,
+.sub-text {
+  margin: 0;
+  cursor: default;
+}
+
+.message-text {
+  color: #dc2626;
+  font-size: 17px;
   font-weight: bold;
-  color: #991b1b; // rgb(153, 27, 27)
-  font-size: 14px;
 }
 
-.prompt-description {
-  margin-top: 0.5rem;
-  color: #b91c1c; // rgb(185, 28, 28)
-  font-size: 12px;
+.sub-text {
+  font-size: 14px;
+  color: #555;
+}
 
-  small {
-    font-size: 0.75rem;
-    color: #7f1d1d; // rgb(127, 29, 29)
-  }
+.error-details {
+  font-size: 12px;
+  color: #991b1b;
+  margin-top: 2px;
 }
 
 .audio-error {

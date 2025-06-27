@@ -4,13 +4,15 @@ import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
+import { collection, onSnapshot, query, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext';
-import Loader from '@/components/Loader';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { getLastActivityTimestamp, hasUnreadUpdates, markTaskAsViewed } from '@/lib/taskUtils';
 
 interface Client {
@@ -53,6 +55,30 @@ interface AvatarGroupProps {
   currentUserId: string;
 }
 
+// Cache global persistente para TasksTable
+const tasksTableCache = {
+  tasks: new Map<string, { data: Task[]; timestamp: number }>(),
+  clients: new Map<string, { data: Client[]; timestamp: number }>(),
+  users: new Map<string, { data: User[]; timestamp: number }>(),
+  listeners: new Map<string, { tasks: (() => void) | null; clients: (() => void) | null; users: (() => void) | null }>(),
+};
+
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+
+// Función para limpiar listeners de TasksTable
+export const cleanupTasksTableListeners = () => {
+  console.log('[TasksTable] Cleaning up all listeners');
+  tasksTableCache.listeners.forEach((listener) => {
+    if (listener.tasks) listener.tasks();
+    if (listener.clients) listener.clients();
+    if (listener.users) listener.users();
+  });
+  tasksTableCache.listeners.clear();
+  tasksTableCache.tasks.clear();
+  tasksTableCache.clients.clear();
+  tasksTableCache.users.clear();
+};
+
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, currentUserId }) => {
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
@@ -93,9 +119,6 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
 };
 
 interface TasksTableProps {
-  tasks: Task[];
-  clients: Client[];
-  users: User[];
   onNewTaskOpen: () => void;
   onEditTaskOpen: (taskId: string) => void;
   onChatSidebarOpen: (task: Task) => void;
@@ -107,9 +130,6 @@ interface TasksTableProps {
 
 const TasksTable: React.FC<TasksTableProps> = memo(
   ({
-    tasks,
-    clients,
-    users,
     onNewTaskOpen,
     onEditTaskOpen,
     onChatSidebarOpen,
@@ -120,7 +140,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(
   }) => {
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth();
-    const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
+    
+    // Estados optimizados con refs para evitar re-renders
+    const tasksRef = useRef<Task[]>([]);
+    const clientsRef = useRef<Client[]>([]);
+    const usersRef = useRef<User[]>([]);
+    
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
     const [sortKey, setSortKey] = useState<string>('lastActivity');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [searchQuery, setSearchQuery] = useState('');
@@ -130,6 +159,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+    const [isLoadingClients, setIsLoadingClients] = useState(true);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+    
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
@@ -138,6 +171,284 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [userFilter, setUserFilter] = useState<string>('');
 
     const userId = useMemo(() => user?.id || '', [user]);
+
+    // Función para verificar cache válido
+    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
+      const cached = cacheMap.get(cacheKey);
+      if (!cached) return false;
+      
+      const now = Date.now();
+      return (now - cached.timestamp) < CACHE_DURATION;
+    }, []);
+
+    // Setup de tasks con cache optimizado
+    useEffect(() => {
+      if (!user?.id) return;
+
+      const cacheKey = `tasks_${user.id}`;
+      
+      // Verificar si ya existe un listener para este usuario
+      const existingListener = tasksTableCache.listeners.get(cacheKey);
+      
+      if (existingListener?.tasks) {
+        console.log('[TasksTable] Reusing existing tasks listener');
+        // El listener ya existe, solo actualizar los datos si hay cache
+        if (tasksTableCache.tasks.has(cacheKey)) {
+          const cachedData = tasksTableCache.tasks.get(cacheKey)!.data;
+          tasksRef.current = cachedData;
+          setTasks(cachedData);
+          setIsLoadingTasks(false);
+        }
+        return;
+      }
+      
+      // Verificar cache primero
+      if (isCacheValid(cacheKey, tasksTableCache.tasks)) {
+        const cachedData = tasksTableCache.tasks.get(cacheKey)!.data;
+        tasksRef.current = cachedData;
+        setTasks(cachedData);
+        setIsLoadingTasks(false);
+        console.log('[TasksTable] Using cached tasks on remount:', cachedData.length);
+        return;
+      }
+
+      console.log('[TasksTable] Setting up new tasks onSnapshot listener');
+      setIsLoadingTasks(true);
+
+      const tasksQuery = query(collection(db, 'tasks'));
+      const unsubscribeTasks = onSnapshot(
+        tasksQuery,
+        (snapshot) => {
+          const tasksData: Task[] = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            clientId: doc.data().clientId || '',
+            project: doc.data().project || '',
+            name: doc.data().name || '',
+            description: doc.data().description || '',
+            status: doc.data().status || '',
+            priority: doc.data().priority || '',
+            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
+            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
+            LeadedBy: doc.data().LeadedBy || [],
+            AssignedTo: doc.data().AssignedTo || [],
+            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            CreatedBy: doc.data().CreatedBy || '',
+            lastActivity: doc.data().lastActivity?.toDate().toISOString() || doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
+            lastViewedBy: doc.data().lastViewedBy || {},
+          }));
+
+          console.log('[TasksTable] Tasks onSnapshot update:', tasksData.length);
+          
+          tasksRef.current = tasksData;
+          setTasks(tasksData);
+          
+          // Actualizar cache
+          tasksTableCache.tasks.set(cacheKey, {
+            data: tasksData,
+            timestamp: Date.now(),
+          });
+          
+          setIsLoadingTasks(false);
+        },
+        (error) => {
+          console.error('[TasksTable] Error in tasks onSnapshot:', error);
+          setTasks([]);
+          setIsLoadingTasks(false);
+        }
+      );
+
+      // Guardar el listener en el cache global
+      tasksTableCache.listeners.set(cacheKey, {
+        tasks: unsubscribeTasks,
+        clients: existingListener?.clients || null,
+        users: existingListener?.users || null,
+      });
+
+      return () => {
+        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+      };
+    }, [user?.id, isCacheValid]);
+
+    // Setup de clients con cache optimizado
+    useEffect(() => {
+      if (!user?.id) return;
+
+      const cacheKey = `clients_${user.id}`;
+      
+      // Verificar si ya existe un listener para este usuario
+      const existingListener = tasksTableCache.listeners.get(cacheKey);
+      
+      if (existingListener?.clients) {
+        console.log('[TasksTable] Reusing existing clients listener');
+        // El listener ya existe, solo actualizar los datos si hay cache
+        if (tasksTableCache.clients.has(cacheKey)) {
+          const cachedData = tasksTableCache.clients.get(cacheKey)!.data;
+          clientsRef.current = cachedData;
+          setClients(cachedData);
+          setIsLoadingClients(false);
+        }
+        return;
+      }
+      
+      // Verificar cache primero
+      if (isCacheValid(cacheKey, tasksTableCache.clients)) {
+        const cachedData = tasksTableCache.clients.get(cacheKey)!.data;
+        clientsRef.current = cachedData;
+        setClients(cachedData);
+        setIsLoadingClients(false);
+        console.log('[TasksTable] Using cached clients on remount:', cachedData.length);
+        return;
+      }
+
+      console.log('[TasksTable] Setting up new clients onSnapshot listener');
+      setIsLoadingClients(true);
+
+      const clientsQuery = query(collection(db, 'clients'));
+      const unsubscribeClients = onSnapshot(
+        clientsQuery,
+        (snapshot) => {
+          const clientsData: Client[] = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            name: doc.data().name || '',
+            imageUrl: doc.data().imageUrl || '/empty-image.png',
+          }));
+
+          console.log('[TasksTable] Clients onSnapshot update:', clientsData.length);
+          
+          clientsRef.current = clientsData;
+          setClients(clientsData);
+          
+          // Actualizar cache
+          tasksTableCache.clients.set(cacheKey, {
+            data: clientsData,
+            timestamp: Date.now(),
+          });
+          
+          setIsLoadingClients(false);
+        },
+        (error) => {
+          console.error('[TasksTable] Error in clients onSnapshot:', error);
+          setClients([]);
+          setIsLoadingClients(false);
+        }
+      );
+
+      // Guardar el listener en el cache global
+      tasksTableCache.listeners.set(cacheKey, {
+        tasks: existingListener?.tasks || null,
+        clients: unsubscribeClients,
+        users: existingListener?.users || null,
+      });
+
+      return () => {
+        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+      };
+    }, [user?.id, isCacheValid]);
+
+    // Setup de users con cache optimizado (usar la misma lógica que MembersTable)
+    useEffect(() => {
+      if (!user?.id) return;
+
+      const cacheKey = `users_${user.id}`;
+      
+      // Verificar si ya existe un listener para este usuario
+      const existingListener = tasksTableCache.listeners.get(cacheKey);
+      
+      if (existingListener?.users) {
+        console.log('[TasksTable] Reusing existing users listener');
+        // El listener ya existe, solo actualizar los datos si hay cache
+        if (tasksTableCache.users.has(cacheKey)) {
+          const cachedData = tasksTableCache.users.get(cacheKey)!.data;
+          usersRef.current = cachedData;
+          setUsers(cachedData);
+          setIsLoadingUsers(false);
+        }
+        return;
+      }
+      
+      // Verificar cache primero
+      if (isCacheValid(cacheKey, tasksTableCache.users)) {
+        const cachedData = tasksTableCache.users.get(cacheKey)!.data;
+        usersRef.current = cachedData;
+        setUsers(cachedData);
+        setIsLoadingUsers(false);
+        console.log('[TasksTable] Using cached users on remount:', cachedData.length);
+        return;
+      }
+
+      console.log('[TasksTable] Setting up new users onSnapshot listener');
+      setIsLoadingUsers(true);
+
+      // Usar la misma lógica de fetch que MembersTable
+      const fetchUsers = async () => {
+        try {
+          const response = await fetch('/api/users');
+          if (!response.ok) {
+            throw new Error(`Failed to fetch users: ${response.status}`);
+          }
+          
+          const clerkUsers: {
+            id: string;
+            imageUrl?: string;
+            firstName?: string;
+            lastName?: string;
+            publicMetadata: { role?: string; description?: string };
+          }[] = await response.json();
+
+          const usersData: User[] = await Promise.all(
+            clerkUsers.map(async (clerkUser) => {
+              try {
+                const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
+                return {
+                  id: clerkUser.id,
+                  imageUrl: clerkUser.imageUrl || '',
+                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                  role: userDoc.exists() && userDoc.data().role
+                    ? userDoc.data().role
+                    : (clerkUser.publicMetadata.role || 'Sin rol'),
+                };
+              } catch {
+                return {
+                  id: clerkUser.id,
+                  imageUrl: clerkUser.imageUrl || '',
+                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                  role: clerkUser.publicMetadata.role || 'Sin rol',
+                };
+              }
+            }),
+          );
+          
+          usersRef.current = usersData;
+          setUsers(usersData);
+          
+          // Actualizar cache
+          tasksTableCache.users.set(cacheKey, {
+            data: usersData,
+            timestamp: Date.now(),
+          });
+          
+        } catch (error) {
+          console.error('[TasksTable] Error fetching users:', error);
+          setUsers([]);
+        } finally {
+          setIsLoadingUsers(false);
+        }
+      };
+
+      fetchUsers();
+
+      // Guardar el listener en el cache global (para este caso, no hay onSnapshot)
+      tasksTableCache.listeners.set(cacheKey, {
+        tasks: existingListener?.tasks || null,
+        clients: existingListener?.clients || null,
+        users: null, // No hay listener para users, solo fetch
+      });
+
+      return () => {
+        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+      };
+    }, [user?.id, isCacheValid]);
 
     useEffect(() => {
       setFilteredTasks(tasks);
@@ -680,8 +991,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       };
     }, []);
 
-    // Handle loading state - mostrar loader mientras cargan los datos
-    if (isLoading || tasks.length === 0) {
+    // Handle loading state
+    if (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers) {
       return (
         <div className={styles.container}>
           <UserSwiper
@@ -691,180 +1002,22 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           />
           <div className={styles.header} style={{margin:'30px 0px'}}>
             <div className={styles.searchWrapper}>
-              <input
-                type="text"
-                placeholder="Buscar Tareas"
-                value={searchQuery}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  setSearchQuery(newValue);
-                  
-                  // Animate search input when typing
-                  const searchInput = e.currentTarget;
-                  gsap.to(searchInput, {
-                    scale: 1.02,
-                    duration: 0.2,
-                    ease: 'power2.out',
-                    yoyo: true,
-                    repeat: 1
-                  });
-                  
-                  console.log('[TasksTable] Search query updated:', newValue);
-                }}
-                className={styles.searchInput}
-                aria-label="Buscar tareas"
-                disabled={isLoading}
-                onKeyDown={(e) => {
-                  if (e.ctrlKey || e.metaKey) {
-                    switch (e.key.toLowerCase()) {
-                      case 'a':
-                        e.preventDefault();
-                        e.currentTarget.select();
-                        break;
-                      case 'c':
-                        e.preventDefault();
-                        const targetC = e.currentTarget as HTMLInputElement;
-                        if (targetC.selectionStart !== targetC.selectionEnd) {
-                          const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-                          navigator.clipboard.writeText(selectedText).catch(() => {
-                            const textArea = document.createElement('textarea');
-                            textArea.value = selectedText;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                          });
-                        }
-                        break;
-                      case 'v':
-                        e.preventDefault();
-                        const targetV = e.currentTarget as HTMLInputElement;
-                        navigator.clipboard.readText().then(text => {
-                          if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                            const start = targetV.selectionStart;
-                            const end = targetV.selectionEnd;
-                            const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
-                            setSearchQuery(newValue);
-                            setTimeout(() => {
-                              targetV.setSelectionRange(start + text.length, start + text.length);
-                            }, 0);
-                          } else {
-                            setSearchQuery(searchQuery + text);
-                          }
-                        }).catch(() => {
-                          document.execCommand('paste');
-                        });
-                        break;
-                      case 'x':
-                        e.preventDefault();
-                        const targetX = e.currentTarget as HTMLInputElement;
-                        if (targetX.selectionStart !== targetX.selectionEnd) {
-                          const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-                          navigator.clipboard.writeText(selectedText).then(() => {
-                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                              const start = targetX.selectionStart;
-                              const end = targetX.selectionEnd;
-                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                              setSearchQuery(newValue);
-                            } else {
-                              setSearchQuery('');
-                            }
-                          }).catch(() => {
-                            const textArea = document.createElement('textarea');
-                            textArea.value = selectedText;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                              const start = targetX.selectionStart;
-                              const end = targetX.selectionEnd;
-                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                              setSearchQuery(newValue);
-                            } else {
-                              setSearchQuery('');
-                            }
-                          });
-                        }
-                        break;
-                    }
-                  }
-                }}
-              />
-            </div>
-
-            <div className={styles.filtersWrapper}>
-              <button
-                className={`${styles.viewButton} ${styles.hideOnMobile}`}
-                onClick={(e) => {
-                  if (isLoading) return;
-                  animateClick(e.currentTarget);
-                  onViewChange('kanban');
-                  console.log('[TasksTable] Switching to Kanban view');
-                }}
-                disabled={isLoading}
-              >
-                <Image
-                  src="/kanban.svg"
-                  draggable="false"
-                  alt="kanban"
-                  width={20}
-                  height={20}
-                  style={{
-                    marginLeft: '5px',
-                    transition: 'transform 0.3s ease, filter 0.3s ease',
-                    filter: isLoading 
-                      ? 'grayscale(1) opacity(0.5)' 
-                      : 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                  }}
-                />
-                Vista Kanban
-              </button>
-
-              <button
-                className={styles.createButton}
-                onClick={(e) => {
-                  if (isLoading) return;
-                  animateClick(e.currentTarget);
-                  onNewTaskOpen();
-                  console.log('[TasksTable] New task creation triggered');
-                }}
-                disabled={isLoading}
-              >
-                <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
-                Crear Tarea
-              </button>
-            </div>
-          </div>
-          
-          {isLoading ? (
-            <Loader />
-          ) : (
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              minHeight: '300px',
-              gap: '16px'
-            }}>
-              <Image
-                src="/emptyStateImage.png"
-                alt="No hay tareas"
-                width={200}
-                height={200}
-                style={{ opacity: 0.6 }}
-              />
-              <div style={{ textAlign: 'center' }}>
-                <h3 style={{ marginBottom: '8px', color: 'var(--text-color)' }}>
-                  No hay tareas disponibles
-                </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                  {isAdmin ? 'Comienza creando tu primera tarea' : 'Las tareas aparecerán aquí cuando sean asignadas'}
-                </p>
+              <div className={styles.searchInput} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+                <div style={{ width: '100%', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
               </div>
             </div>
-          )}
+            <div className={styles.filtersWrapper}>
+              <div className={styles.viewButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+                <div style={{ width: '20px', height: '20px', background: '#f0f0f0', borderRadius: '4px' }} />
+                <div style={{ width: '80px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
+              </div>
+              <div className={styles.createButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+                <div style={{ width: '16px', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
+                <div style={{ width: '100px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
+              </div>
+            </div>
+          </div>
+          <SkeletonLoader type="tasks" rows={8} />
         </div>
       );
     }

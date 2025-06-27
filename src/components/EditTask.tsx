@@ -11,11 +11,6 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
-import SuccessAlert from "./SuccessAlert";
-import FailAlert from "./FailAlert";
-import { z } from "zod";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import { toast } from "@/components/ui/use-toast";
 import { useFormPersistence } from "@/components/ui/use-form-persistence";
@@ -24,6 +19,9 @@ import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
+import { z } from "zod";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -120,6 +118,8 @@ interface EditTaskProps {
   onEditClientOpen: (client: Client) => void;
   onInviteSidebarOpen: () => void;
   onClientAlertChange?: (alert: { type: "success" | "fail"; message?: string; error?: string } | null) => void;
+  onShowSuccessAlert?: (message: string) => void;
+  onShowFailAlert?: (message: string, error?: string) => void;
 }
 
 const EditTask: React.FC<EditTaskProps> = ({
@@ -131,6 +131,8 @@ const EditTask: React.FC<EditTaskProps> = ({
   onEditClientOpen,
   onInviteSidebarOpen,
   onClientAlertChange,
+  onShowSuccessAlert,
+  onShowFailAlert,
 }) => {
   const { user } = useUser();
   const router = useRouter();
@@ -199,307 +201,44 @@ const EditTask: React.FC<EditTaskProps> = ({
     setIsMounted(true);
   }, []);
 
-  // Funciones para manejo de shortcuts de teclado específicas para cada tipo de input
-  const handleSearchInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, setter: (value: string) => void, currentValue: string, setDropdownOpen: (open: boolean) => void) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'a':
-          e.preventDefault();
-          e.currentTarget.select();
-          break;
-        case 'c':
-          e.preventDefault();
-          const targetC = e.currentTarget as HTMLInputElement;
-          if (targetC.selectionStart !== targetC.selectionEnd) {
-            const selectedText = currentValue.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-            navigator.clipboard.writeText(selectedText).catch(() => {
-              const textArea = document.createElement('textarea');
-              textArea.value = selectedText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-            });
-          }
-          break;
-        case 'v':
-          e.preventDefault();
-          const targetV = e.currentTarget as HTMLInputElement;
-          navigator.clipboard.readText().then(text => {
-            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-              const start = targetV.selectionStart;
-              const end = targetV.selectionEnd;
-              const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
-              setter(newValue);
-              setDropdownOpen(text.trim() !== "");
-              setTimeout(() => {
-                targetV.setSelectionRange(start + text.length, start + text.length);
-              }, 0);
-            } else {
-              setter(currentValue + text);
-            }
-          }).catch(() => {
-            document.execCommand('paste');
-          });
-          break;
-        case 'x':
-          e.preventDefault();
-          const targetX = e.currentTarget as HTMLInputElement;
-          if (targetX.selectionStart !== targetX.selectionEnd) {
-            const selectedText = currentValue.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-            navigator.clipboard.writeText(selectedText).then(() => {
-              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                const start = targetX.selectionStart;
-                const end = targetX.selectionEnd;
-                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
-                setter(newValue);
-                setDropdownOpen(newValue.trim() !== "");
-              } else {
-                setter('');
-              }
-            }).catch(() => {
-              const textArea = document.createElement('textarea');
-              textArea.value = selectedText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                const start = targetX.selectionStart;
-                const end = targetX.selectionEnd;
-                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
-                setter(newValue);
-                setDropdownOpen(newValue.trim() !== "");
-              } else {
-                setter('');
-              }
-            });
-          }
-          break;
-      }
-    }
-  }, []);
-
-  const handleFormInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, field: { value?: string; onChange: (value: string) => void }) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'a':
-          e.preventDefault();
-          e.currentTarget.select();
-          break;
-        case 'c':
-          e.preventDefault();
-          const targetC = e.currentTarget as HTMLInputElement;
-          if (targetC.selectionStart !== targetC.selectionEnd) {
-            const selectedText = (field.value || '').substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-            navigator.clipboard.writeText(selectedText).catch(() => {
-              const textArea = document.createElement('textarea');
-              textArea.value = selectedText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-            });
-          }
-          break;
-        case 'v':
-          e.preventDefault();
-          const targetV = e.currentTarget as HTMLInputElement;
-          navigator.clipboard.readText().then(text => {
-            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-              const start = targetV.selectionStart;
-              const end = targetV.selectionEnd;
-              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
-              field.onChange(newValue);
-              setTimeout(() => {
-                targetV.setSelectionRange(start + text.length, start + text.length);
-              }, 0);
-            } else {
-              field.onChange((field.value || '') + text);
-            }
-          }).catch(() => {
-            document.execCommand('paste');
-          });
-          break;
-        case 'x':
-          e.preventDefault();
-          const targetX = e.currentTarget as HTMLInputElement;
-          if (targetX.selectionStart !== targetX.selectionEnd) {
-            const selectedText = (field.value || '').substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-            navigator.clipboard.writeText(selectedText).then(() => {
-              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                const start = targetX.selectionStart;
-                const end = targetX.selectionEnd;
-                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                field.onChange(newValue);
-              } else {
-                field.onChange('');
-              }
-            }).catch(() => {
-              const textArea = document.createElement('textarea');
-              textArea.value = selectedText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                const start = targetX.selectionStart;
-                const end = targetX.selectionEnd;
-                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                field.onChange(newValue);
-              } else {
-                field.onChange('');
-              }
-            });
-          }
-          break;
-      }
-    }
-  }, []);
-
-  // Fetch task, clients, and users
-  useEffect(() => {
-    if (!taskId || !user?.id) return;
-
-    const fetchTask = async () => {
-      try {
-        const taskDoc = await getDoc(doc(db, 'tasks', taskId));
-        if (!taskDoc.exists()) {
-          console.warn('[EditTask] Task not found:', taskId);
-          router.push('/dashboard/tasks');
-          return;
-        }
-        const taskData = taskDoc.data();
-        if (taskData.CreatedBy !== user.id) {
-          console.warn('[EditTask] User not authorized to edit task:', taskId);
-          router.push('/dashboard/tasks');
-          return;
-        }
-        const status = taskData.status === 'Por Comenzar' ? 'Por Iniciar' :
-                       taskData.status === 'Cancelada' ? 'Cancelado' : taskData.status || 'Por Iniciar';
-        const formValues: FormValues = {
-          clientInfo: {
-            clientId: taskData.clientId || '',
-            project: taskData.project || '',
-          },
-          basicInfo: {
-            name: taskData.name || '',
-            description: taskData.description || '',
-            objectives: taskData.objectives || '',
-            startDate: taskData.startDate ? taskData.startDate.toDate() : null,
-            endDate: taskData.endDate ? taskData.endDate.toDate() : null,
-            status: status as FormValues["basicInfo"]["status"],
-            priority: taskData.priority || 'Baja',
-          },
-          teamInfo: {
-            LeadedBy: taskData.LeadedBy || [],
-            AssignedTo: taskData.AssignedTo || [],
-          },
-        };
-        form.reset(formValues);
-      } catch (error) {
-        console.error('[EditTask] Error fetching task:', error);
-        router.push('/dashboard/tasks');
-      }
-    };
-
-    const clientsCollection = collection(db, 'clients');
-    const unsubscribeClients = onSnapshot(
-      clientsCollection,
-      (snapshot) => {
-        const clientsData: Client[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '',
-          projects: doc.data().projects || [],
-          createdBy: doc.data().createdBy || '',
-        }));
-        setClients(clientsData);
-      },
-      (error) => {
-        console.error('[EditTask] Error listening to clients:', error);
-      },
-    );
-
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Failed to fetch users');
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string };
-        }[] = await response.json();
-        
-        // Obtener datos de Firestore para cada usuario
-        const usersData: User[] = await Promise.all(
-          clerkUsers.map(async (clerkUser) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: userDoc.exists() && userDoc.data().role
-                  ? userDoc.data().role
-                  : (clerkUser.publicMetadata.role || 'Sin rol'),
-              };
-            } catch (docError) {
-              console.warn('[EditTask] Error fetching user document:', {
-                userId: clerkUser.id,
-                error: docError instanceof Error ? docError.message : 'Unknown error',
-              });
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: clerkUser.publicMetadata.role || 'Sin rol',
-              };
-            }
-          }),
-        );
-        setUsers(usersData);
-      } catch (error) {
-        console.error('[EditTask] Error fetching users:', error);
-      }
-    };
-
-    fetchTask();
-    fetchUsers();
-    return () => unsubscribeClients();
-  }, [taskId, user?.id, router]);
-
   // Track unsaved changes
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      saveFormData();
-      const isChanged = Object.keys(value).some((key) => {
-        const current = value[key as keyof FormValues];
-        const initial = defaultValues[key as keyof FormValues];
-        if (Array.isArray(current) && Array.isArray(initial)) {
-          return current.join() !== initial.join();
-        }
-        return current !== initial;
-      });
-      onHasUnsavedChanges(isChanged);
+  const defaultValuesRef = useRef(defaultValues);
+  defaultValuesRef.current = defaultValues;
+
+  const checkForChanges = useCallback((value: FormValues) => {
+    saveFormData();
+    const isChanged = Object.keys(value).some((key) => {
+      const current = value[key as keyof FormValues];
+      const initial = defaultValuesRef.current[key as keyof FormValues];
+      if (Array.isArray(current) && Array.isArray(initial)) {
+        return current.join() !== initial.join();
+      }
+      return current !== initial;
     });
+    onHasUnsavedChanges(isChanged);
+  }, [saveFormData, onHasUnsavedChanges]);
+
+  useEffect(() => {
+    const subscription = form.watch(checkForChanges);
     return () => subscription.unsubscribe();
-  }, [form, onHasUnsavedChanges, saveFormData]);
+  }, [form, checkForChanges]);
 
   // Reset form when closing
+  const resetForm = useCallback(() => {
+    form.reset(defaultValuesRef.current);
+    clearPersistedData();
+    setShowSuccessAlert(false);
+    setShowFailAlert(false);
+    onHasUnsavedChanges(false);
+    setIsStartDateOpen(false);
+    setIsEndDateOpen(false);
+  }, [form, clearPersistedData, onHasUnsavedChanges]);
+
   useEffect(() => {
     if (!isOpen) {
-      form.reset(defaultValues);
-      clearPersistedData();
-      setShowSuccessAlert(false);
-      setShowFailAlert(false);
-      onHasUnsavedChanges(false);
-      setIsStartDateOpen(false);
-      setIsEndDateOpen(false);
+      resetForm();
     }
-  }, [isOpen, form, clearPersistedData, onHasUnsavedChanges]);
+  }, [isOpen, resetForm]);
 
   // Handle alert changes
   useEffect(() => {
@@ -945,7 +684,7 @@ const EditTask: React.FC<EditTaskProps> = ({
         (u.fullName.toLowerCase().includes(searchCollaborator.toLowerCase()) ||
          u.role.toLowerCase().includes(searchCollaborator.toLowerCase())),
     );
-  }, [users, searchCollaborator, watchedLeadedBy]); // Removed form dependency
+  }, [users, searchCollaborator, watchedLeadedBy]);
 
   const filteredLeaders = useMemo(() => {
     return users.filter(
@@ -1010,8 +749,14 @@ const EditTask: React.FC<EditTaskProps> = ({
         });
       }
 
-      setShowSuccessAlert(true);
-      form.reset(defaultValues);
+      // Use parent alert handlers if available, otherwise use local state
+      if (onShowSuccessAlert) {
+        onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha actualizado exitosamente.`);
+      } else {
+        setShowSuccessAlert(true);
+      }
+      
+      form.reset(defaultValuesRef.current);
       clearPersistedData();
       setIsSaving(false);
       onHasUnsavedChanges(false);
@@ -1024,7 +769,11 @@ const EditTask: React.FC<EditTaskProps> = ({
       
       // Cerrar el alert de éxito después de 2 segundos
       setTimeout(() => {
-        setShowSuccessAlert(false);
+        if (onShowSuccessAlert) {
+          // Parent will handle closing
+        } else {
+          setShowSuccessAlert(false);
+        }
       }, 2000);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Error desconocido al actualizar la tarea.";
@@ -1061,8 +810,14 @@ const EditTask: React.FC<EditTaskProps> = ({
         variant: "error",
       });
 
-      setShowFailAlert(true);
-      setFailErrorMessage(errorMessage);
+      // Use parent alert handlers if available, otherwise use local state
+      if (onShowFailAlert) {
+        onShowFailAlert("No se pudo actualizar la tarea.", errorMessage);
+      } else {
+        setShowFailAlert(true);
+        setFailErrorMessage(errorMessage);
+      }
+      
       setIsSaving(false);
     }
   };
@@ -1078,6 +833,280 @@ const EditTask: React.FC<EditTaskProps> = ({
     }
     return result;
   };
+
+  // Funciones para manejo de shortcuts de teclado específicas para cada tipo de input
+  const handleSearchInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, setter: (value: string) => void, currentValue: string, setDropdownOpen: (open: boolean) => void) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = currentValue.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+              setter(newValue);
+              setDropdownOpen(text.trim() !== "");
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              setter(currentValue + text);
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = currentValue.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
+                setter(newValue);
+                setDropdownOpen(newValue.trim() !== "");
+              } else {
+                setter('');
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
+                setter(newValue);
+                setDropdownOpen(newValue.trim() !== "");
+              } else {
+                setter('');
+              }
+            });
+          }
+          break;
+      }
+    }
+  }, []);
+
+  const handleFormInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, field: { value?: string; onChange: (value: string) => void }) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
+              field.onChange(newValue);
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              field.onChange((field.value || '') + text);
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            });
+          }
+          break;
+      }
+    }
+  }, []);
+
+  // Fetch task, clients, and users
+  const fetchTask = useCallback(async () => {
+    if (!taskId || !user?.id) return;
+    
+    try {
+      const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+      if (!taskDoc.exists()) {
+        console.warn('[EditTask] Task not found:', taskId);
+        router.push('/dashboard/tasks');
+        return;
+      }
+      const taskData = taskDoc.data();
+      if (taskData.CreatedBy !== user.id) {
+        console.warn('[EditTask] User not authorized to edit task:', taskId);
+        router.push('/dashboard/tasks');
+        return;
+      }
+      const status = taskData.status === 'Por Comenzar' ? 'Por Iniciar' :
+                     taskData.status === 'Cancelada' ? 'Cancelado' : taskData.status || 'Por Iniciar';
+      const formValues: FormValues = {
+        clientInfo: {
+          clientId: taskData.clientId || '',
+          project: taskData.project || '',
+        },
+        basicInfo: {
+          name: taskData.name || '',
+          description: taskData.description || '',
+          objectives: taskData.objectives || '',
+          startDate: taskData.startDate ? taskData.startDate.toDate() : null,
+          endDate: taskData.endDate ? taskData.endDate.toDate() : null,
+          status: status as FormValues["basicInfo"]["status"],
+          priority: taskData.priority || 'Baja',
+        },
+        teamInfo: {
+          LeadedBy: taskData.LeadedBy || [],
+          AssignedTo: taskData.AssignedTo || [],
+        },
+      };
+      form.reset(formValues);
+    } catch (error) {
+      console.error('[EditTask] Error fetching task:', error);
+      router.push('/dashboard/tasks');
+    }
+  }, [taskId, user?.id, router, form]);
+
+  useEffect(() => {
+    if (!taskId || !user?.id) return;
+
+    const clientsCollection = collection(db, 'clients');
+    const unsubscribeClients = onSnapshot(
+      clientsCollection,
+      (snapshot) => {
+        const clientsData: Client[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name || '',
+          imageUrl: doc.data().imageUrl || '',
+          projects: doc.data().projects || [],
+          createdBy: doc.data().createdBy || '',
+        }));
+        setClients(clientsData);
+      },
+      (error) => {
+        console.error('[EditTask] Error listening to clients:', error);
+      },
+    );
+
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users');
+        if (!response.ok) throw new Error('Failed to fetch users');
+        const clerkUsers: {
+          id: string;
+          imageUrl?: string;
+          firstName?: string;
+          lastName?: string;
+          publicMetadata: { role?: string };
+        }[] = await response.json();
+        
+        // Obtener datos de Firestore para cada usuario
+        const usersData: User[] = await Promise.all(
+          clerkUsers.map(async (clerkUser) => {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
+              return {
+                id: clerkUser.id,
+                imageUrl: clerkUser.imageUrl || '',
+                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                role: userDoc.exists() && userDoc.data().role
+                  ? userDoc.data().role
+                  : (clerkUser.publicMetadata.role || 'Sin rol'),
+              };
+            } catch (docError) {
+              console.warn('[EditTask] Error fetching user document:', {
+                userId: clerkUser.id,
+                error: docError instanceof Error ? docError.message : 'Unknown error',
+              });
+              return {
+                id: clerkUser.id,
+                imageUrl: clerkUser.imageUrl || '',
+                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                role: clerkUser.publicMetadata.role || 'Sin rol',
+              };
+            }
+          }),
+        );
+        setUsers(usersData);
+      } catch (error) {
+        console.error('[EditTask] Error fetching users:', error);
+      }
+    };
+
+    fetchTask();
+    fetchUsers();
+    return () => unsubscribeClients();
+  }, [taskId, user?.id, router, fetchTask]);
 
   if (isLoading || !isMounted) {
     return (
@@ -1118,7 +1147,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                             type="button"
                             onClick={() => {
                               clearPersistedData();
-                              form.reset(defaultValues);
+                              form.reset(defaultValuesRef.current);
                               toast({
                                 title: "Progreso eliminado",
                                 description: "Se ha reiniciado el formulario.",
@@ -1783,21 +1812,6 @@ const EditTask: React.FC<EditTaskProps> = ({
           </div>
         )}
       </div>
-      {showSuccessAlert && (
-        <SuccessAlert
-          message={`La tarea "${form.getValues("basicInfo.name")}" se ha actualizado exitosamente.`}
-          onClose={() => setShowSuccessAlert(false)}
-          actionLabel="Ver Tareas"
-          onAction={() => router.push("/dashboard/tasks")}
-        />
-      )}
-      {showFailAlert && (
-        <FailAlert
-          message="No se pudo actualizar la tarea."
-          error={failErrorMessage}
-          onClose={() => setShowFailAlert(false)}
-        />
-      )}
     </>
   );
 };

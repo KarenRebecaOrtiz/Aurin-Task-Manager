@@ -4,9 +4,8 @@ import { useUser } from '@clerk/nextjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/lib/firebase';
-import SuccessAlert from './SuccessAlert';
-import FailAlert from './FailAlert';
 import ConfigDropdown from './ui/ConfigDropdown';
 import StackInput from './ui/StackInput';
 import Table from './Table';
@@ -58,16 +57,54 @@ interface User {
 interface ConfigPageProps {
   userId: string;
   onClose: () => void;
+  onShowSuccessAlert?: (message: string) => void;
+  onShowFailAlert?: (message: string, error?: string) => void;
 }
 
-const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
+// Variantes de animación para Framer Motion
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4 }
+  }
+};
+
+const tableVariants = {
+  hidden: { opacity: 0, scale: 0.95, y: 20 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" as const }
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.95,
+    y: -20,
+    transition: { duration: 0.3 }
+  }
+};
+
+const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessAlert, onShowFailAlert }) => {
   const { user: currentUser, isLoaded } = useUser();
   const [config, setConfig] = useState<Config | null>(null);
   const [formData, setFormData] = useState<ConfigForm | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{ [team: string]: User[] }>({});
-  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string; error?: string } | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<{
@@ -179,8 +216,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   
 
   const teamsOptions = [
-    'Análisis de Datos', 'Arquitectura', 'Arte', 'Backend', 'Cloud Computing', 'DevOps', 'Diseño gráfico',
-    'Frontend', 'Inteligencia Artificial', 'No-Code Builders', 'Project Management', 'UX/UI',
+    'Análisis de Datos', 'Arquitectura', 'Arte', 'Desarrollo', 'Cloud Computing', 'DevOps', 'Diseño gráfico',
+    'Inteligencia Artificial', 'No-Code Builders', 'Project Management', 'UX/UI',
   ].sort();
 
   const ladaOptions = [
@@ -417,13 +454,15 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
       },
       (err) => {
         console.error('[ConfigPage] Error fetching user config:', err);
-        setAlert({ type: 'error', message: 'Error al cargar el perfil', error: err.message });
+        if (onShowFailAlert) {
+          onShowFailAlert('Error al cargar el perfil', err.message);
+        }
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [userId, currentUser, isLoaded]);
+  }, [userId, currentUser, isLoaded, onShowFailAlert]);
 
   useEffect(() => {
     const fetchTeamMembers = async () => {
@@ -440,22 +479,22 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
           membersByTeam[team] = querySnapshot.docs
             .map((doc) => ({
               id: doc.id,
-              fullName: doc.data().fullName || '',
+              fullName: doc.data().fullName || 'Sin nombre',
               role: doc.data().role || 'Sin rol',
               profilePhoto: doc.data().profilePhoto || '',
-              teams: doc.data().teams || [],
-            }))
-            .filter((member) => member.id !== userId);
+            }));
         }
         setTeamMembers(membersByTeam);
       } catch (err) {
         console.error('[ConfigPage] Error fetching team members:', err);
-        setAlert({ type: 'error', message: 'Error al cargar los miembros del equipo', error: err.message });
+        if (onShowFailAlert) {
+          onShowFailAlert('Error al cargar los miembros del equipo', err instanceof Error ? err.message : 'Error desconocido');
+        }
       }
     };
 
     fetchTeamMembers();
-  }, [formData?.teams, userId]);
+  }, [formData?.teams, userId, onShowFailAlert]);
 
   // Eliminar validaciones de contraseña
   const validateForm = () => {
@@ -667,12 +706,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData || !userId || !currentUser) {
-      setAlert({ type: 'error', message: 'Datos inválidos, por favor intenta de nuevo' });
+      if (onShowFailAlert) onShowFailAlert('Datos inválidos, por favor intenta de nuevo');
       return;
     }
 
     if (!validateForm()) {
-      setAlert({ type: 'error', message: 'Por favor corrige los errores en el formulario' });
+      if (onShowFailAlert) onShowFailAlert('Por favor corrige los errores en el formulario');
       return;
     }
 
@@ -728,16 +767,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
         status: formData.status || 'Disponible',
       });
 
-      setAlert({ type: 'success', message: 'Perfil actualizado exitosamente' });
+      if (onShowSuccessAlert) onShowSuccessAlert('Perfil actualizado exitosamente');
       setIsEditing(false);
       localStorage.removeItem(LOCAL_STORAGE_KEY); // Limpiar caché al guardar
       setTimeout(onClose, 1000);
     } catch (err) {
-      setAlert({
-        type: 'error',
-        message: 'Error al guardar los datos, por favor intenta de nuevo',
-        error: err instanceof Error ? err.message : 'Error desconocido',
-      });
+      if (onShowFailAlert) onShowFailAlert('Error al guardar los datos, por favor intenta de nuevo', err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);
     }
@@ -779,19 +814,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
       };
     });
     setErrors({});
-    setAlert(null);
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     onClose();
   };
 
   const toggleEdit = () => {
-    setIsEditing((prev) => !prev);
-    setErrors({});
-    setAlert(null);
-  };
-
-  const handleAlertClose = () => {
-    setAlert(null);
+    setIsEditing(!isEditing);
   };
 
   // Función helper para manejar shortcuts de teclado en inputs
@@ -1252,9 +1280,19 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
             </div>
           </section>
 
-          <section className={styles.section}>
+          <motion.section 
+            className={styles.section} 
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
             <h2 className={styles.sectionTitle}>Equipos</h2>
-            <div className={styles.sectionContent}>
+            <motion.div 
+              className={styles.sectionContent}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
               <div className={styles.fieldGroup} style={{flexDirection: 'row', justifyContent:'space-between', width:"100%"}}>
                 <div className={styles.teamsDescription}>
                   Escribe y selecciona aquí tus equipos (máximo 3)
@@ -1269,40 +1307,76 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose }) => {
                   className={styles.teamsSelect}
                 />
               </div>
-              {formData.teams?.map((team) => (
-                <div key={team} className={styles.teamTableContainer}>
-                  <div className={styles.teamHeader}>
-                    <h3 className={styles.teamHeading}>{team}</h3>
-                    {isOwnProfile && isEditing && (
-                      <button
-                        className={styles.removeTeamButton}
-                        onClick={() => handleRemoveTeam(team)}
-                        title="Eliminar equipo"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                  <p className={styles.teamSubheading}>
-                    Lista de miembros del equipo (excluyéndote a ti)
-                  </p>
-                  <Table
-                    data={teamMembers[team] || []}
-                    columns={teamTableColumns}
-                    itemsPerPage={5}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
+              
+              <AnimatePresence mode="wait">
+                {formData.teams && formData.teams.length > 0 ? (
+                  formData.teams.map((team) => (
+                    <motion.div 
+                      key={team} 
+                      className={styles.teamTableContainer}
+                      variants={tableVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      layout
+                    >
+                      <div className={styles.teamHeader}>
+                        <h3 className={styles.teamHeading}>{team}</h3>
+                        <div className={styles.teamMemberCount}>
+                          {teamMembers[team]?.length || 0} miembro{(teamMembers[team]?.length || 0) !== 1 ? 's' : ''}
+                        </div>
+                        {isOwnProfile && isEditing && (
+                          <button
+                            className={styles.removeTeamButton}
+                            onClick={() => handleRemoveTeam(team)}
+                            title="Eliminar equipo"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      <p className={styles.teamSubheading}>
+                        Miembros del equipo {team}
+                      </p>
+                      {teamMembers[team] && teamMembers[team].length > 0 ? (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2, duration: 0.4 }}
+                        >
+                          <Table
+                            data={teamMembers[team]}
+                            columns={teamTableColumns}
+                            itemsPerPage={5}
+                          />
+                        </motion.div>
+                      ) : (
+                        <motion.div 
+                          className={styles.noTeamMembers}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.3 }}
+                        >
+                          No hay miembros en este equipo
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div 
+                    className={styles.noDataMessage}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    No perteneces a ningún equipo
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </motion.section>
         </div>
       </div>
-      {alert?.type === 'success' && (
-        <SuccessAlert message={alert.message} onClose={handleAlertClose} />
-      )}
-      {alert?.type === 'error' && (
-        <FailAlert message={alert.message} error={alert.error || 'Error desconocido'} onClose={handleAlertClose} />
-      )}
     </>
   );
 };

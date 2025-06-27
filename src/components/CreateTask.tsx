@@ -11,15 +11,12 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
-import SuccessAlert from "./SuccessAlert";
-import FailAlert from "./FailAlert";
 import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import { toast } from "@/components/ui/use-toast";
 import { useFormPersistence } from "@/components/ui/use-form-persistence";
-import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
@@ -119,6 +116,8 @@ interface CreateTaskProps {
   onEditClientOpen: (client: Client) => void;
   onClientAlertChange?: (alert: { type: "success" | "fail"; message?: string; error?: string } | null) => void;
   onTaskCreated?: () => void; // Nueva prop para manejar cuando se crea exitosamente la tarea
+  onShowSuccessAlert?: (message: string) => void;
+  onShowFailAlert?: (message: string, error?: string) => void;
 }
 
 const CreateTask: React.FC<CreateTaskProps> = ({
@@ -129,9 +128,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   onEditClientOpen,
   onClientAlertChange,
   onTaskCreated,
+  onShowSuccessAlert,
+  onShowFailAlert,
 }) => {
   const { user } = useUser();
-  const router = useRouter();
   const { isAdmin, isLoading } = useAuth(); // Use AuthContext for isAdmin and isLoading
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -765,7 +765,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         });
       }
 
-      setShowSuccessAlert(true);
+      // Use parent alert handlers if available, otherwise use local state
+      if (onShowSuccessAlert) {
+        onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha creado exitosamente.`);
+      } else {
+        setShowSuccessAlert(true);
+      }
+      
       form.reset(defaultValues);
       clearPersistedData();
       setIsSaving(false);
@@ -800,7 +806,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         userFriendlyTitle = "⏱️ Tiempo de Espera Agotado";
         userFriendlyDescription = "La operación tardó demasiado en completarse. Tu conexión puede ser lenta, intenta nuevamente.";
       } else {
-        userFriendlyDescription += "Por favor, verifica todos los campos y intenta nuevamente. Si el problema persiste, contacta al soporte técnico.";
+        userFriendlyDescription += "Por favor, verifica todos los campos e intenta nuevamente. Si el problema persiste, contacta al soporte técnico.";
       }
       
       toast({
@@ -809,8 +815,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         variant: "error",
       });
       
-      setShowFailAlert(true);
-      setFailErrorMessage(errorMessage);
+      // Use parent alert handlers if available, otherwise use local state
+      if (onShowFailAlert) {
+        onShowFailAlert("No se pudo crear la tarea.", errorMessage);
+      } else {
+        setShowFailAlert(true);
+        setFailErrorMessage(errorMessage);
+      }
+      
       setIsSaving(false);
     }
   };
@@ -1941,21 +1953,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           </div>
         )}
       </div>
-      {showSuccessAlert && (
-        <SuccessAlert
-          message={`La tarea "${form.getValues("basicInfo.name")}" se ha creado exitosamente.`}
-          onClose={() => setShowSuccessAlert(false)}
-          actionLabel="Ver Tareas"
-          onAction={() => router.push("/dashboard/tasks")}
-        />
-      )}
-      {showFailAlert && (
-        <FailAlert
-          message="No se pudo crear la tarea."
-          error={failErrorMessage}
-          onClose={() => setShowFailAlert(false)}
-        />
-      )}
     </>
   );
 };
