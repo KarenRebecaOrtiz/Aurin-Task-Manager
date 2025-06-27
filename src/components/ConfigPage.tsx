@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import ConfigDropdown from './ui/ConfigDropdown';
 import StackInput from './ui/StackInput';
 import Table from './Table';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { gsap } from 'gsap';
 import styles from './ConfigPage.module.scss';
 
@@ -982,11 +983,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
   }, []);
 
   if (loading || !isLoaded) {
-    return (
-      <div className={styles.frame239189}>
-        <p>Cargando configuración...</p>
-      </div>
-    );
+    return <SkeletonLoader type="config" rows={5} />;
   }
 
   if (!formData || !currentUser) {

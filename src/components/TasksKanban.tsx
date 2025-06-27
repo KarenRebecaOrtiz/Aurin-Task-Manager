@@ -13,7 +13,7 @@ import styles from './TasksTable.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import Loader from '@/components/Loader'; // Import Loader for loading state
+import SkeletonLoader from '@/components/SkeletonLoader'; // Import SkeletonLoader
 import { updateTaskActivity } from '@/lib/taskUtils';
 
 interface Client {
@@ -994,7 +994,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
     // Handle loading state
     if (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers) {
-      return <Loader />;
+      return <SkeletonLoader type="kanban" rows={6} />;
     }
 
     return (
