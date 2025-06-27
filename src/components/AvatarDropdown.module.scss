@@ -168,6 +168,7 @@
   /* Dropdown menu */
   .dropdownMenu {
     position: absolute;
+    margin-top: 10px;
     top: 100%;
     right: 0;
     display: flex;
@@ -307,4 +308,21 @@
       background: rgba(255, 255, 255, 0.1);
     }
   }
-}
+
+
+  }
+  /* Section Label */
+  .sectionLabel {
+    padding: 8px 20px 4px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: "Urbanist", sans-serif;
+    transition: color 0.3s ease;
+
+    :global(.dark) & {
+      color: #9ca3af;
+    }
+  }

@@ -543,9 +543,12 @@ const Header: React.FC<HeaderProps> = ({
      NOTIFICATION BUTTON HANDLERS
   ──────────────────────────────────────────── */
   const toggleNotifications = useCallback(() => {
-    setIsNotificationsOpen((prev) => !prev);
+    const newIsOpen = !isNotificationsOpen;
+    setIsNotificationsOpen(newIsOpen);
     setHasInteracted(true);
-    if (!isNotificationsOpen) {
+    
+    // Si se está abriendo el dropdown, marcar como vistas
+    if (newIsOpen) {
       setHasViewedNotifications(true);
     }
   }, [isNotificationsOpen]);

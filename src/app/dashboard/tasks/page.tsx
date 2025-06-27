@@ -729,8 +729,18 @@ function TasksPageContent() {
   const handleNotificationClick = useCallback(
     async (notification: Notification) => {
       try {
+        // Actualización optimista: marcar como leída inmediatamente en el estado local
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, read: true } : n
+          )
+        );
+        
+        // Actualizar en Firestore
         await updateDoc(doc(db, 'notifications', notification.id), { read: true });
         console.log('[TasksPage] Notification marked as read:', notification.id);
+        
+        // Navegar según el tipo de notificación
         if (notification.type === 'private_message' && notification.conversationId && user?.id) {
           const receiverId = notification.userId === user.id ? notification.recipientId : notification.userId;
           handleOpenSidebar(receiverId);
@@ -744,6 +754,12 @@ function TasksPageContent() {
         }
       } catch (err) {
         console.error('[TasksPage] Error handling notification click:', err);
+        // Revertir la actualización optimista en caso de error
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, read: false } : n
+          )
+        );
       }
     },
     [user?.id, tasks, handleOpenSidebar, handleChatSidebarOpen],

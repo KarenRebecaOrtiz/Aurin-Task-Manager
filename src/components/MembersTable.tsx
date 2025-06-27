@@ -432,10 +432,10 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     // Aplicar filtro de búsqueda (memoizado)
     useEffect(() => {
       const filtered = memoizedFilteredUsers.filter(
-        (u) =>
-          u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          u.status?.toLowerCase().includes(searchQuery.toLowerCase()),
+          (u) =>
+            u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.status?.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       setFilteredUsers(filtered);
     }, [memoizedFilteredUsers, searchQuery]);
@@ -444,7 +444,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const handleSort = useCallback(
       (key: string) => {
         setSortKey(key);
-        setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+          setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
       },
       [],
     );

@@ -130,23 +130,6 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
     };
   }, []);
 
-  // Hover handlers
-  const handleMouseEnterButton = () => {
-    setIsDropdownOpen(true);
-  };
-
-  const handleMouseLeaveButton = () => {
-    // Don't close immediately, wait for dropdown leave
-  };
-
-  const handleMouseEnterDropdown = () => {
-    setIsDropdownOpen(true);
-  };
-
-  const handleMouseLeaveDropdown = () => {
-    setIsDropdownOpen(false);
-  };
-
   // Menu item handlers
   const handleConfig = () => {
     onChangeContainer('config');
@@ -182,11 +165,11 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         style={{
           top: `${dropdownPosition.top}px`,
           right: `${dropdownPosition.right}px`,
-          width: '200px',
+          width: '220px',
         }}
-        onMouseEnter={handleMouseEnterDropdown}
-        onMouseLeave={handleMouseLeaveDropdown}
       >
+        {/* Estados Section */}
+        <div className={styles.sectionLabel}>Estados</div>
         {statusOptions.map((option) => (
           <div
             key={option.value}
@@ -202,16 +185,20 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
             {option.label}
           </div>
         ))}
+        
         <div className={styles.separator} />
+        
+        {/* Configuración Section */}
+        <div className={styles.sectionLabel}>Configuración</div>
         <button onClick={handleConfig} className={styles.dropdownItem}>
           <Image
             src="/settings.svg"
-            alt="Configuración"
+            alt="Perfil"
             width={16}
             height={16}
             className={styles.dropdownIcon}
           />
-          Configuración
+          Perfil
         </button>
         <button onClick={handleLogout} className={styles.dropdownItem}>
           <Image
@@ -233,8 +220,6 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         ref={buttonRef}
         className={styles.avatarButton}
         onClick={() => setIsDropdownOpen((prev) => !prev)}
-        onMouseEnter={handleMouseEnterButton}
-        onMouseLeave={handleMouseLeaveButton}
         aria-haspopup="true"
         aria-expanded={isDropdownOpen}
         aria-label="Abrir menú de usuario"

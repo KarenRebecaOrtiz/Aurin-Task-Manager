@@ -495,6 +495,10 @@ export default React.memo(function NotificationDropdown({
     prevProps.notifications.length === nextProps.notifications.length &&
     prevProps.users.length === nextProps.users.length &&
     prevProps.dropdownPosition.top === nextProps.dropdownPosition.top &&
-    prevProps.dropdownPosition.right === nextProps.dropdownPosition.right
+    prevProps.dropdownPosition.right === nextProps.dropdownPosition.right &&
+    // Verificar si el estado read de las notificaciones ha cambiado
+    prevProps.notifications.every((prevNotif, index) => 
+      nextProps.notifications[index] && prevNotif.read === nextProps.notifications[index].read
+    )
   );
 });
