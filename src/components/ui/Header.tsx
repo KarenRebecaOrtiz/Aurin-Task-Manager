@@ -80,6 +80,7 @@ interface Notification {
 
 interface HeaderProps {
   selectedContainer: 'tareas' | 'cuentas' | 'miembros' | 'config';
+  isArchiveTableOpen?: boolean;
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
@@ -90,6 +91,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   selectedContainer,
+  isArchiveTableOpen,
   users,
   notifications,
   onNotificationClick,
@@ -525,6 +527,11 @@ const Header: React.FC<HeaderProps> = ({
      HELPERS
   ──────────────────────────────────────────── */
   const getSubtitle = () => {
+    // Si el archivo está abierto, mostrar texto específico para archivo
+    if (isArchiveTableOpen) {
+      return 'Aquí puedes ver y gestionar todas las tareas archivadas';
+    }
+    
     switch (selectedContainer) {
       case 'tareas':
         return 'Esta es una lista de tus tareas actuales';

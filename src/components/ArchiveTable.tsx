@@ -11,10 +11,9 @@ import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
-import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
-import { getLastActivityTimestamp, hasUnreadUpdates, markTaskAsViewed, archiveTask } from '@/lib/taskUtils';
+import { hasUnreadUpdates, markTaskAsViewed, unarchiveTask, archiveTask } from '@/lib/taskUtils';
 
 interface Client {
   id: string;
@@ -59,13 +58,12 @@ interface AvatarGroupProps {
   currentUserId: string;
 }
 
-// Cache global persistente para TasksTable
-const tasksTableCache = {
-  tasks: new Map<string, { data: Task[]; timestamp: number; isLoading: boolean }>(),
-  clients: new Map<string, { data: Client[]; timestamp: number; isLoading: boolean }>(),
-  users: new Map<string, { data: User[]; timestamp: number; isLoading: boolean }>(),
+// Cache global persistente para ArchiveTable
+const archiveTableCache = {
+  tasks: new Map<string, { data: Task[]; timestamp: number }>(),
+  clients: new Map<string, { data: Client[]; timestamp: number }>(),
+  users: new Map<string, { data: User[]; timestamp: number }>(),
   listeners: new Map<string, { tasks: (() => void) | null; clients: (() => void) | null; users: (() => void) | null }>(),
-  // Cache persistente en localStorage
   persistentCache: {
     tasks: new Map<string, { data: Task[]; timestamp: number }>(),
     clients: new Map<string, { data: Client[]; timestamp: number }>(),
@@ -76,66 +74,18 @@ const tasksTableCache = {
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 const PERSISTENT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
 
-// Función para cargar cache persistente desde localStorage
-const loadPersistentCache = () => {
-  try {
-    const stored = localStorage.getItem('tasksTableCache');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const now = Date.now();
-      
-      // Cargar solo datos válidos
-      Object.keys(parsed).forEach(key => {
-        if (parsed[key] && typeof parsed[key] === 'object') {
-          Object.keys(parsed[key]).forEach(cacheKey => {
-            const item = parsed[key][cacheKey];
-            if (item && (now - item.timestamp) < PERSISTENT_CACHE_DURATION) {
-              tasksTableCache.persistentCache[key as keyof typeof tasksTableCache.persistentCache].set(cacheKey, item);
-            }
-          });
-        }
-      });
-      console.log('[TasksTable] Persistent cache loaded from localStorage');
-    }
-  } catch (error) {
-    console.warn('[TasksTable] Error loading persistent cache:', error);
-  }
-};
-
-// Función para guardar cache persistente en localStorage
-const savePersistentCache = () => {
-  try {
-    const toStore: Record<string, Record<string, { data: Task[] | Client[] | User[]; timestamp: number }>> = {};
-    Object.keys(tasksTableCache.persistentCache).forEach(key => {
-      toStore[key] = {};
-      tasksTableCache.persistentCache[key as keyof typeof tasksTableCache.persistentCache].forEach((value, cacheKey) => {
-        toStore[key][cacheKey] = value;
-      });
-    });
-    localStorage.setItem('tasksTableCache', JSON.stringify(toStore));
-  } catch (error) {
-    console.warn('[TasksTable] Error saving persistent cache:', error);
-  }
-};
-
-// Cargar cache persistente al inicializar
-loadPersistentCache();
-
-// Función para limpiar listeners de TasksTable
-export const cleanupTasksTableListeners = () => {
-  console.log('[TasksTable] Cleaning up all listeners');
-  tasksTableCache.listeners.forEach((listener) => {
+// Función para limpiar listeners de ArchiveTable
+export const cleanupArchiveTableListeners = () => {
+  console.log('[ArchiveTable] Cleaning up all listeners');
+  archiveTableCache.listeners.forEach((listener) => {
     if (listener.tasks) listener.tasks();
     if (listener.clients) listener.clients();
     if (listener.users) listener.users();
   });
-  tasksTableCache.listeners.clear();
-  tasksTableCache.tasks.clear();
-  tasksTableCache.clients.clear();
-  tasksTableCache.users.clear();
-  
-  // Guardar cache persistente antes de limpiar
-  savePersistentCache();
+  archiveTableCache.listeners.clear();
+  archiveTableCache.tasks.clear();
+  archiveTableCache.clients.clear();
+  archiveTableCache.users.clear();
 };
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, currentUserId }) => {
@@ -177,30 +127,24 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
   );
 };
 
-interface TasksTableProps {
-  onNewTaskOpen: () => void;
+interface ArchiveTableProps {
   onEditTaskOpen: (taskId: string) => void;
-  onChatSidebarOpen: (task: Task) => void;
-  onMessageSidebarOpen: (user: User) => void;
-  onOpenProfile: (user: { id: string; imageUrl: string }) => void;
   onViewChange: (view: TaskView) => void;
   onDeleteTaskOpen: (taskId: string) => void;
-  onArchiveTableOpen: () => void;
+  onClose: () => void;
+  onChatSidebarOpen: (task: Task) => void;
 }
 
-const TasksTable: React.FC<TasksTableProps> = memo(
+const ArchiveTable: React.FC<ArchiveTableProps> = memo(
   ({
-    onNewTaskOpen,
     onEditTaskOpen,
-    onChatSidebarOpen,
-    onMessageSidebarOpen,
-    onOpenProfile,
     onViewChange,
     onDeleteTaskOpen,
-    onArchiveTableOpen,
+    onClose,
+    onChatSidebarOpen,
   }) => {
     const { user } = useUser();
-    const { isAdmin, isLoading } = useAuth();
+    const { isAdmin } = useAuth();
     
     // Estados optimizados con refs para evitar re-renders
     const tasksRef = useRef<Task[]>([]);
@@ -211,7 +155,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [clients, setClients] = useState<Client[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
-    const [sortKey, setSortKey] = useState<string>('lastActivity');
+    const [sortKey, setSortKey] = useState<string>('archivedAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
@@ -223,7 +167,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-
+    
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
@@ -238,8 +182,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    // Función para verificar cache válido - estabilizada
-    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number; isLoading: boolean }>) => {
+    // Función para verificar cache válido
+    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
       const cached = cacheMap.get(cacheKey);
       if (!cached) return false;
       
@@ -247,7 +191,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return (now - cached.timestamp) < CACHE_DURATION;
     }, []);
 
-    // Función para verificar cache persistente válido - estabilizada
+    // Función para verificar cache persistente válido
     const isPersistentCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
       const cached = cacheMap.get(cacheKey);
       if (!cached) return false;
@@ -256,56 +200,60 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return (now - cached.timestamp) < PERSISTENT_CACHE_DURATION;
     }, []);
 
-    // Setup de tasks con cache optimizado
+    // Setup de tasks archivadas con cache optimizado
     useEffect(() => {
       if (!user?.id) return;
 
-      const cacheKey = `tasks_${user.id}`;
+      const cacheKey = `archived_tasks_${user.id}`;
       
       // Verificar si ya existe un listener para este usuario
-      const existingListener = tasksTableCache.listeners.get(cacheKey);
+      const existingListener = archiveTableCache.listeners.get(cacheKey);
       
       if (existingListener?.tasks) {
-        console.log('[TasksTable] Reusing existing tasks listener');
+        console.log('[ArchiveTable] Reusing existing tasks listener');
         // El listener ya existe, solo actualizar los datos si hay cache
-        if (tasksTableCache.tasks.has(cacheKey)) {
-          const cachedData = tasksTableCache.tasks.get(cacheKey)!.data;
+        if (archiveTableCache.tasks.has(cacheKey)) {
+          const cachedData = archiveTableCache.tasks.get(cacheKey)!.data;
           tasksRef.current = cachedData;
-          setTasks(cachedData);
+          setTasks([...cachedData]);
+          setIsLoadingTasks(false);
+          console.log('[ArchiveTable] Using cached tasks data, loading set to false');
+        } else {
+          console.log('[ArchiveTable] No cached tasks data, but listener exists, setting loading to false');
           setIsLoadingTasks(false);
         }
         return;
       }
       
       // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, tasksTableCache.persistentCache.tasks)) {
-        const cachedData = tasksTableCache.persistentCache.tasks.get(cacheKey)!.data;
+      if (isPersistentCacheValid(cacheKey, archiveTableCache.persistentCache.tasks)) {
+        const cachedData = archiveTableCache.persistentCache.tasks.get(cacheKey)!.data;
         tasksRef.current = cachedData;
         setTasks(cachedData);
         setIsLoadingTasks(false);
-        console.log('[TasksTable] Using persistent cached tasks:', cachedData.length);
+        console.log('[ArchiveTable] Using persistent cached tasks:', cachedData.length);
         
         // Restaurar en cache principal
-        tasksTableCache.tasks.set(cacheKey, {
+        archiveTableCache.tasks.set(cacheKey, {
           data: cachedData,
           timestamp: Date.now(),
-          isLoading: false,
         });
       }
       
       // Verificar cache principal
-      if (isCacheValid(cacheKey, tasksTableCache.tasks)) {
-        const cachedData = tasksTableCache.tasks.get(cacheKey)!.data;
+      if (isCacheValid(cacheKey, archiveTableCache.tasks)) {
+        const cachedData = archiveTableCache.tasks.get(cacheKey)!.data;
         tasksRef.current = cachedData;
         setTasks(cachedData);
         setIsLoadingTasks(false);
-        console.log('[TasksTable] Using cached tasks on remount:', cachedData.length);
+        console.log('[ArchiveTable] Using cached tasks on remount:', cachedData.length);
         return;
       }
 
-      console.log('[TasksTable] Setting up new tasks onSnapshot listener');
+      console.log('[ArchiveTable] Setting up new tasks listener');
       setIsLoadingTasks(true);
 
+      // Usar el mismo método que TasksTable
       const tasksQuery = query(collection(db, 'tasks'));
       const unsubscribeTasks = onSnapshot(
         tasksQuery,
@@ -332,35 +280,37 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             archivedBy: doc.data().archivedBy || '',
           }));
 
-          console.log('[TasksTable] Tasks onSnapshot update:', tasksData.length);
+          // Filtrar solo tareas archivadas
+          const archivedTasks = tasksData.filter(task => task.archived);
+
+          console.log('[ArchiveTable] Tasks onSnapshot update:', archivedTasks.length);
           
-          tasksRef.current = tasksData;
-          setTasks(tasksData);
+          tasksRef.current = archivedTasks;
+          setTasks(archivedTasks);
           
           // Actualizar cache
-          tasksTableCache.tasks.set(cacheKey, {
-            data: tasksData,
+          archiveTableCache.tasks.set(cacheKey, {
+            data: archivedTasks,
             timestamp: Date.now(),
-            isLoading: false,
           });
           
           // Actualizar cache persistente
-          tasksTableCache.persistentCache.tasks.set(cacheKey, {
-            data: tasksData,
+          archiveTableCache.persistentCache.tasks.set(cacheKey, {
+            data: archivedTasks,
             timestamp: Date.now(),
           });
           
           setIsLoadingTasks(false);
         },
         (error) => {
-          console.error('[TasksTable] Error in tasks onSnapshot:', error);
+          console.error('[ArchiveTable] Error in tasks onSnapshot:', error);
           setTasks([]);
           setIsLoadingTasks(false);
         }
       );
 
       // Guardar el listener en el cache global
-      tasksTableCache.listeners.set(cacheKey, {
+      archiveTableCache.listeners.set(cacheKey, {
         tasks: unsubscribeTasks,
         clients: existingListener?.clients || null,
         users: existingListener?.users || null,
@@ -378,49 +328,53 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       const cacheKey = `clients_${user.id}`;
       
       // Verificar si ya existe un listener para este usuario
-      const existingListener = tasksTableCache.listeners.get(cacheKey);
+      const existingListener = archiveTableCache.listeners.get(cacheKey);
       
       if (existingListener?.clients) {
-        console.log('[TasksTable] Reusing existing clients listener');
+        console.log('[ArchiveTable] Reusing existing clients listener');
         // El listener ya existe, solo actualizar los datos si hay cache
-        if (tasksTableCache.clients.has(cacheKey)) {
-          const cachedData = tasksTableCache.clients.get(cacheKey)!.data;
+        if (archiveTableCache.clients.has(cacheKey)) {
+          const cachedData = archiveTableCache.clients.get(cacheKey)!.data;
           clientsRef.current = cachedData;
           setClients(cachedData);
+          setIsLoadingClients(false);
+          console.log('[ArchiveTable] Using cached clients data, loading set to false');
+        } else {
+          console.log('[ArchiveTable] No cached clients data, but listener exists, setting loading to false');
           setIsLoadingClients(false);
         }
         return;
       }
       
       // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, tasksTableCache.persistentCache.clients)) {
-        const cachedData = tasksTableCache.persistentCache.clients.get(cacheKey)!.data;
+      if (isPersistentCacheValid(cacheKey, archiveTableCache.persistentCache.clients)) {
+        const cachedData = archiveTableCache.persistentCache.clients.get(cacheKey)!.data;
         clientsRef.current = cachedData;
         setClients(cachedData);
         setIsLoadingClients(false);
-        console.log('[TasksTable] Using persistent cached clients:', cachedData.length);
+        console.log('[ArchiveTable] Using persistent cached clients:', cachedData.length);
         
         // Restaurar en cache principal
-        tasksTableCache.clients.set(cacheKey, {
+        archiveTableCache.clients.set(cacheKey, {
           data: cachedData,
           timestamp: Date.now(),
-          isLoading: false,
         });
       }
       
       // Verificar cache principal
-      if (isCacheValid(cacheKey, tasksTableCache.clients)) {
-        const cachedData = tasksTableCache.clients.get(cacheKey)!.data;
+      if (isCacheValid(cacheKey, archiveTableCache.clients)) {
+        const cachedData = archiveTableCache.clients.get(cacheKey)!.data;
         clientsRef.current = cachedData;
         setClients(cachedData);
         setIsLoadingClients(false);
-        console.log('[TasksTable] Using cached clients on remount:', cachedData.length);
+        console.log('[ArchiveTable] Using cached clients on remount:', cachedData.length);
         return;
       }
 
-      console.log('[TasksTable] Setting up new clients onSnapshot listener');
+      console.log('[ArchiveTable] Setting up new clients listener');
       setIsLoadingClients(true);
 
+      // Usar el mismo método que TasksTable
       const clientsQuery = query(collection(db, 'clients'));
       const unsubscribeClients = onSnapshot(
         clientsQuery,
@@ -431,20 +385,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             imageUrl: doc.data().imageUrl || '/empty-image.png',
           }));
 
-          console.log('[TasksTable] Clients onSnapshot update:', clientsData.length);
+          console.log('[ArchiveTable] Clients onSnapshot update:', clientsData.length);
           
           clientsRef.current = clientsData;
           setClients(clientsData);
           
           // Actualizar cache
-          tasksTableCache.clients.set(cacheKey, {
+          archiveTableCache.clients.set(cacheKey, {
             data: clientsData,
             timestamp: Date.now(),
-            isLoading: false,
           });
           
           // Actualizar cache persistente
-          tasksTableCache.persistentCache.clients.set(cacheKey, {
+          archiveTableCache.persistentCache.clients.set(cacheKey, {
             data: clientsData,
             timestamp: Date.now(),
           });
@@ -452,14 +405,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           setIsLoadingClients(false);
         },
         (error) => {
-          console.error('[TasksTable] Error in clients onSnapshot:', error);
+          console.error('[ArchiveTable] Error in clients onSnapshot:', error);
           setClients([]);
           setIsLoadingClients(false);
         }
       );
 
       // Guardar el listener en el cache global
-      tasksTableCache.listeners.set(cacheKey, {
+      archiveTableCache.listeners.set(cacheKey, {
         tasks: existingListener?.tasks || null,
         clients: unsubscribeClients,
         users: existingListener?.users || null,
@@ -470,57 +423,60 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       };
     }, [user?.id, isCacheValid, isPersistentCacheValid]);
 
-    // Setup de users con cache optimizado (usar la misma lógica que MembersTable)
+    // Setup de users con cache optimizado
     useEffect(() => {
       if (!user?.id) return;
 
       const cacheKey = `users_${user.id}`;
       
       // Verificar si ya existe un listener para este usuario
-      const existingListener = tasksTableCache.listeners.get(cacheKey);
+      const existingListener = archiveTableCache.listeners.get(cacheKey);
       
       if (existingListener?.users) {
-        console.log('[TasksTable] Reusing existing users listener');
+        console.log('[ArchiveTable] Reusing existing users listener');
         // El listener ya existe, solo actualizar los datos si hay cache
-        if (tasksTableCache.users.has(cacheKey)) {
-          const cachedData = tasksTableCache.users.get(cacheKey)!.data;
+        if (archiveTableCache.users.has(cacheKey)) {
+          const cachedData = archiveTableCache.users.get(cacheKey)!.data;
           usersRef.current = cachedData;
           setUsers(cachedData);
+          setIsLoadingUsers(false);
+          console.log('[ArchiveTable] Using cached users data, loading set to false');
+        } else {
+          console.log('[ArchiveTable] No cached users data, but listener exists, setting loading to false');
           setIsLoadingUsers(false);
         }
         return;
       }
       
       // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, tasksTableCache.persistentCache.users)) {
-        const cachedData = tasksTableCache.persistentCache.users.get(cacheKey)!.data;
+      if (isPersistentCacheValid(cacheKey, archiveTableCache.persistentCache.users)) {
+        const cachedData = archiveTableCache.persistentCache.users.get(cacheKey)!.data;
         usersRef.current = cachedData;
         setUsers(cachedData);
         setIsLoadingUsers(false);
-        console.log('[TasksTable] Using persistent cached users:', cachedData.length);
+        console.log('[ArchiveTable] Using persistent cached users:', cachedData.length);
         
         // Restaurar en cache principal
-        tasksTableCache.users.set(cacheKey, {
+        archiveTableCache.users.set(cacheKey, {
           data: cachedData,
           timestamp: Date.now(),
-          isLoading: false,
         });
       }
       
       // Verificar cache principal
-      if (isCacheValid(cacheKey, tasksTableCache.users)) {
-        const cachedData = tasksTableCache.users.get(cacheKey)!.data;
+      if (isCacheValid(cacheKey, archiveTableCache.users)) {
+        const cachedData = archiveTableCache.users.get(cacheKey)!.data;
         usersRef.current = cachedData;
         setUsers(cachedData);
         setIsLoadingUsers(false);
-        console.log('[TasksTable] Using cached users on remount:', cachedData.length);
+        console.log('[ArchiveTable] Using cached users on remount:', cachedData.length);
         return;
       }
 
-      console.log('[TasksTable] Setting up new users fetch');
+      console.log('[ArchiveTable] Setting up new users fetch');
       setIsLoadingUsers(true);
 
-      // Usar la misma lógica de fetch que MembersTable
+      // Usar la misma lógica de fetch que TasksTable
       const fetchUsers = async () => {
         try {
           const response = await fetch('/api/users');
@@ -563,20 +519,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           setUsers(usersData);
           
           // Actualizar cache
-          tasksTableCache.users.set(cacheKey, {
+          archiveTableCache.users.set(cacheKey, {
             data: usersData,
             timestamp: Date.now(),
-            isLoading: false,
           });
           
           // Actualizar cache persistente
-          tasksTableCache.persistentCache.users.set(cacheKey, {
+          archiveTableCache.persistentCache.users.set(cacheKey, {
             data: usersData,
             timestamp: Date.now(),
           });
           
         } catch (error) {
-          console.error('[TasksTable] Error fetching users:', error);
+          console.error('[ArchiveTable] Error fetching users:', error);
           setUsers([]);
         } finally {
           setIsLoadingUsers(false);
@@ -586,7 +541,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       fetchUsers();
 
       // Guardar el listener en el cache global (para este caso, no hay onSnapshot)
-      tasksTableCache.listeners.set(cacheKey, {
+      archiveTableCache.listeners.set(cacheKey, {
         tasks: existingListener?.tasks || null,
         clients: existingListener?.clients || null,
         users: null, // No hay listener para users, solo fetch
@@ -597,73 +552,141 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       };
     }, [user?.id, isCacheValid, isPersistentCacheValid]);
 
+    // Filtrar tareas basado en búsqueda y filtros
     useEffect(() => {
-      setFilteredTasks(tasks);
-      console.log('[TasksTable] Initialized filteredTasks:', {
-        totalTasks: tasks.length,
-        taskIds: tasks.map((t) => t.id),
-      });
-    }, [tasks]);
+      let filtered = tasks;
 
-    const getInvolvedUserIds = useCallback((task: Task) => {
-      const ids = new Set<string>();
-      if (task.CreatedBy) ids.add(task.CreatedBy);
-      if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
-      if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
-      return Array.from(ids);
-    }, []);
+      // Filtro de búsqueda
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (task: Task) =>
+            task.name.toLowerCase().includes(query) ||
+            task.description.toLowerCase().includes(query) ||
+            task.project.toLowerCase().includes(query) ||
+            clients.find((c: Client) => c.id === task.clientId)?.name.toLowerCase().includes(query)
+        );
+      }
 
-    const handleUserFilter = useCallback((id: string) => {
-      // Animate filter change
-      const userDropdownTrigger = userDropdownRef.current?.querySelector(`.${styles.dropdownTrigger}`);
-      if (userDropdownTrigger) {
-        const filterIcon = userDropdownTrigger.querySelector('img');
-        if (filterIcon) {
-          gsap.to(filterIcon, {
-            rotation: 360,
-            scale: 1.2,
-            duration: 0.3,
-            ease: 'power2.out',
-            yoyo: true,
-            repeat: 1
-          });
+      // Filtro de prioridad
+      if (priorityFilter) {
+        filtered = filtered.filter((task) => task.priority === priorityFilter);
+      }
+
+      // Filtro de cliente
+      if (clientFilter) {
+        filtered = filtered.filter((task) => task.clientId === clientFilter);
+      }
+
+      // Filtro de usuario
+      if (userFilter) {
+        const getInvolvedUserIds = (task: Task) => {
+          return [...task.LeadedBy, ...task.AssignedTo];
+        };
+
+        if (userFilter === 'me') {
+          filtered = filtered.filter((task) => getInvolvedUserIds(task).includes(userId));
+        } else {
+          filtered = filtered.filter((task) => getInvolvedUserIds(task).includes(userFilter));
         }
       }
-      
+
+      setFilteredTasks(filtered);
+    }, [tasks, searchQuery, priorityFilter, clientFilter, userFilter, clients, userId]);
+
+    const handleUserFilter = (id: string) => {
       setUserFilter(id);
       setIsUserDropdownOpen(false);
-    }, []);
+    };
 
-    const memoizedFilteredTasks = useMemo(() => {
-      const filtered = tasks.filter((task) => {
-        // Excluir tareas archivadas
-        if (task.archived) {
-          return false;
+    // Función para obtener el nombre del cliente
+    const getClientName = useCallback((clientId: string) => {
+      const client = clients.find((c) => c.id === clientId);
+      return client?.name || 'Cliente no encontrado';
+    }, [clients]);
+
+    // Handler reforzado para desarchivar
+    const handleUnarchiveTask = useCallback(async (task: Task) => {
+      if (!isAdmin) {
+        console.warn('[ArchiveTable] Unarchive intentado por usuario no admin');
+        return;
+      }
+      try {
+        await unarchiveTask(task.id, userId, isAdmin, task);
+      } catch (error) {
+        console.error('[ArchiveTable] Error unarchiving task:', error);
+        throw error; // Re-lanzar el error para que onArchive lo maneje
+      }
+    }, [userId, isAdmin]);
+
+    // Función para deshacer
+    const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
+      try {
+        if (undoItem.action === 'unarchive') {
+          // Volver a archivar la tarea (deshacer el desarchivo)
+          await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
+          setTasks((prevTasks) => 
+            [...prevTasks, { ...undoItem.task, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }]
+          );
         }
         
-        const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-        const matchesClient = !clientFilter || task.clientId === clientFilter;
-        let matchesUser = true;
-        if (userFilter === 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userId);
-        } else if (userFilter && userFilter !== 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userFilter);
+        // Remover del undo stack
+        setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+        setShowUndo(false);
+        
+        if (undoTimeoutRef.current) {
+          clearTimeout(undoTimeoutRef.current);
         }
-        return matchesSearch && matchesPriority && matchesClient && matchesUser;
-      });
-      return filtered;
-    }, [tasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
+      } catch (error) {
+        console.error('[ArchiveTable] Error undoing action:', error);
+      }
+    }, [userId, isAdmin]);
 
-    useEffect(() => {
-      setFilteredTasks(memoizedFilteredTasks);
-      console.log('[TasksTable] Updated filteredTasks:', {
-        filteredCount: memoizedFilteredTasks.length,
-        filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
-      });
-    }, [memoizedFilteredTasks]);
+    // Ordenar tareas
+    const sortedTasks = useMemo(() => {
+      return [...filteredTasks].sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
 
-    // Función para manejar el clic en una fila de tarea
+        switch (sortKey) {
+          case 'name':
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+            break;
+          case 'priority':
+            const priorityOrder = { Alta: 3, Media: 2, Baja: 1 };
+            aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+            bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+            break;
+          case 'status':
+            aValue = a.status.toLowerCase();
+            bValue = b.status.toLowerCase();
+            break;
+          case 'client':
+            aValue = getClientName(a.clientId);
+            bValue = getClientName(b.clientId);
+            break;
+          case 'archivedAt':
+            aValue = a.archivedAt || a.createdAt;
+            bValue = b.archivedAt || b.createdAt;
+            break;
+          case 'lastActivity':
+            aValue = a.lastActivity || a.createdAt;
+            bValue = b.lastActivity || b.createdAt;
+            break;
+          default:
+            aValue = a.createdAt;
+            bValue = b.createdAt;
+        }
+
+        if (sortDirection === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+    }, [filteredTasks, sortKey, sortDirection, getClientName]);
+
     const handleTaskRowClick = async (task: Task) => {
       // Marcar la tarea como vista
       if (userId) {
@@ -672,220 +695,65 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       
       // Abrir el chat de la tarea
       onChatSidebarOpen(task);
-      console.log('[TasksTable] Row clicked, opening chat for task:', task.id);
+      console.log('[ArchiveTable] Row clicked, opening chat for task:', task.id);
     };
 
-    useEffect(() => {
-      const currentActionMenuRef = actionMenuRef.current;
-      if (actionMenuOpenId && currentActionMenuRef) {
-        gsap.fromTo(
-          currentActionMenuRef,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-        console.log('[TasksTable] Action menu animated for task:', actionMenuOpenId);
-      }
-      return () => {
-        if (currentActionMenuRef) {
-          gsap.killTweensOf(currentActionMenuRef);
-        }
-      };
-    }, [actionMenuOpenId]);
-
-    useEffect(() => {
-      const priorityItems = priorityDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
-      if (isPriorityDropdownOpen && priorityItems) {
-        gsap.fromTo(
-          priorityItems,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-        console.log('[TasksTable] Priority dropdown animated');
-      }
-    }, [isPriorityDropdownOpen]);
-
-    useEffect(() => {
-      const clientItems = clientDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
-      if (isClientDropdownOpen && clientItems) {
-        gsap.fromTo(
-          clientItems,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-        console.log('[TasksTable] Client dropdown animated');
-      }
-    }, [isClientDropdownOpen]);
-
-    useEffect(() => {
-      const userItems = userDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
-      if (isUserDropdownOpen && userItems) {
-        gsap.fromTo(
-          userItems,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-        console.log('[TasksTable] User dropdown animated');
-      }
-    }, [isUserDropdownOpen]);
-
+    // Manejar clicks fuera del ActionMenu
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
           actionMenuRef.current &&
           !actionMenuRef.current.contains(event.target as Node) &&
-          !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
+          !actionButtonRefs.current.has((event.target as Element).closest('button')?.id || '')
         ) {
           setActionMenuOpenId(null);
-          console.log('[TasksTable] Action menu closed via outside click');
-        }
-        if (
-          priorityDropdownRef.current &&
-          !priorityDropdownRef.current.contains(event.target as Node) &&
-          isPriorityDropdownOpen
-        ) {
-          setIsPriorityDropdownOpen(false);
-          console.log('[TasksTable] Priority dropdown closed via outside click');
-        }
-        if (
-          clientDropdownRef.current &&
-          !clientDropdownRef.current.contains(event.target as Node) &&
-          isClientDropdownOpen
-        ) {
-          setIsClientDropdownOpen(false);
-          console.log('[TasksTable] Client dropdown closed via outside click');
-        }
-        if (
-          userDropdownRef.current &&
-          !userDropdownRef.current.contains(event.target as Node) &&
-          isUserDropdownOpen
-        ) {
-          setIsUserDropdownOpen(false);
-          console.log('[TasksTable] User dropdown closed via outside click');
         }
       };
+
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isUserDropdownOpen]);
+    }, []);
 
     const handleSort = (key: string) => {
-      if (key === sortKey) {
-        setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      if (sortKey === key) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
       } else {
         setSortKey(key);
-        setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
+        setSortDirection('desc');
       }
-      console.log('[TasksTable] Sorting tasks:', { sortKey: key, sortDirection });
     };
 
-    const sortedTasks = useMemo(() => {
-      const sorted = [...filteredTasks];
-      if (sortKey === 'lastActivity') {
-        sorted.sort((a, b) => {
-          const activityA = getLastActivityTimestamp(a);
-          const activityB = getLastActivityTimestamp(b);
-          return sortDirection === 'asc' ? activityA - activityB : activityB - activityA;
-        });
-      } else if (sortKey === 'clientId') {
-        sorted.sort((a, b) => {
-          const clientA = clients.find((c) => c.id === a.clientId)?.name || '';
-          const clientB = clients.find((c) => c.id === b.clientId)?.name || '';
-          return sortDirection === 'asc'
-            ? clientA.localeCompare(clientB)
-            : clientB.localeCompare(clientA);
-        });
-      } else if (sortKey === 'status') {
-        const statusOrder = ['En Proceso', 'Backlog', 'Por Iniciar', 'Finalizado', 'Cancelado'];
-        sorted.sort((a, b) => {
-          const indexA = statusOrder.indexOf(a.status);
-          const indexB = statusOrder.indexOf(b.status);
-          return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
-        });
-      } else if (sortKey === 'priority') {
-        const priorityOrder = ['Alta', 'Media', 'Baja'];
-        sorted.sort((a, b) => {
-          const indexA = priorityOrder.indexOf(a.priority);
-          const indexB = priorityOrder.indexOf(b.priority);
-          return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
-        });
-      } else if (sortKey === 'createdAt') {
-        sorted.sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-        });
-      } else {
-        sorted.sort((a, b) =>
-          sortDirection === 'asc'
-            ? String(a[sortKey as keyof Task]).localeCompare(String(b[sortKey as keyof Task]))
-            : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task])),
-        );
-      }
-      console.log('[TasksTable] Tasks sorted:', {
-        sortedCount: sorted.length,
-        sortedTaskIds: sorted.map((t) => t.id),
-        sortKey,
-        sortDirection,
-      });
-      return sorted;
-    }, [filteredTasks, sortKey, sortDirection, clients]);
-
-    const animateClick = (element: HTMLElement) => {
+    const animateClick = useCallback((element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
-        opacity: 0.8,
-        duration: 0.15,
-        ease: 'power1.out',
+        duration: 0.1,
         yoyo: true,
         repeat: 1,
       });
-      console.log('[TasksTable] Click animation triggered');
-    };
+    }, []);
 
     const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
-      animateClick(e.currentTarget);
-      
-      // Animate filter change
-      const filterIcon = e.currentTarget.querySelector('img');
-      if (filterIcon) {
-        gsap.to(filterIcon, {
-          rotation: 360,
-          scale: 1.2,
-          duration: 0.3,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 1
-        });
-      }
-      
+      e.stopPropagation();
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
     };
 
     const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      animateClick(e.currentTarget);
-      
-      // Animate filter change
-      const filterIcon = e.currentTarget.querySelector('img');
-      if (filterIcon) {
-        gsap.to(filterIcon, {
-          rotation: 360,
-          scale: 1.2,
-          duration: 0.3,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 1
-        });
-      }
-      
+      e.stopPropagation();
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
     };
 
-    // Función para obtener las clases CSS de una fila de tarea
-    const getRowClassName = useCallback(() => {
-      return ''; // Removido el indicador de actualización de la fila completa
-    }, []);
+    // Función para obtener la clase de la fila
+    const getRowClassName = (task: Task) => {
+      let className = styles.taskRow;
+      if (task.hasUnreadUpdates) {
+        className += ` ${styles.unread}`;
+      }
+      return className;
+    };
 
+    // Configurar columnas de la tabla - ESPECÍFICO PARA ARCHIVETABLE
     const baseColumns = [
       {
         key: 'clientId',
@@ -896,7 +764,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'name',
         label: 'Tarea',
-        width: '70%', 
+        width: '50%', 
         mobileVisible: true,
       },
       {
@@ -906,15 +774,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         mobileVisible: false,
       },
       {
-        key: 'status',
-        label: 'Estado',
-        width: '30%', 
-        mobileVisible: false,
-      },
-      {
-        key: 'priority',
-        label: 'Prioridad',
-        width: '10%',
+        key: 'archivedAt',
+        label: 'Fecha de Archivado',
+        width: '20%',
         mobileVisible: false,
       },
       {
@@ -931,7 +793,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           ...col,
           render: (task: Task) => {
             const client = clients.find((c) => c.id === task.clientId);
-            console.log('[TasksTable] Rendering client column:', {
+            console.log('[ArchiveTable] Rendering client column:', {
               taskId: task.id,
               clientId: task.clientId,
               clientName: client?.name,
@@ -959,7 +821,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           ...col,
           render: (task: Task) => {
             const hasUpdates = hasUnreadUpdates(task, userId);
-            console.log('[TasksTable] Rendering name column:', {
+            console.log('[ArchiveTable] Rendering name column:', {
               taskId: task.id,
               taskName: task.name,
               hasUpdates,
@@ -981,7 +843,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            console.log('[TasksTable] Rendering assignedTo column:', {
+            console.log('[ArchiveTable] Rendering assignedTo column:', {
               taskId: task.id,
               assignedUserIds: task.AssignedTo,
               currentUserId: userId,
@@ -990,61 +852,21 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           },
         };
       }
-      if (col.key === 'status') {
+      if (col.key === 'archivedAt') {
         return {
           ...col,
           render: (task: Task) => {
-            console.log('[TasksTable] Rendering status column:', {
+            console.log('[ArchiveTable] Rendering archivedAt column:', {
               taskId: task.id,
-              status: task.status,
+              archivedAt: task.archivedAt,
             });
             return (
-              <div className={styles.statusWrapper}>
-                <Image
-                  src={
-                    task.status === 'En Proceso'
-                      ? '/timer.svg'
-                      : task.status === 'Backlog'
-                      ? '/circle-help.svg'
-                      : task.status === 'Por Iniciar'
-                      ? '/circle.svg'
-                      : task.status === 'Cancelado'
-                      ? '/circle-x.svg'
-                      : '/timer.svg'
-                  }
-                  alt={task.status}
-                  width={16}
-                  height={16}
-                />
-                <span className={styles[`status-${task.status.replace(' ', '-')}`]}>{task.status}</span>
-              </div>
-            );
-          },
-        };
-      }
-      if (col.key === 'priority') {
-        return {
-          ...col,
-          render: (task: Task) => {
-            console.log('[TasksTable] Rendering priority column:', {
-              taskId: task.id,
-              priority: task.priority,
-            });
-            return (
-              <div className={styles.priorityWrapper}>
-                <Image
-                  src={
-                    task.priority === 'Alta'
-                      ? '/arrow-up.svg'
-                      : task.priority === 'Media'
-                      ? '/arrow-right.svg'
-                      : '/arrow-down.svg'
-                  }
-                  alt={task.priority}
-                  width={16}
-                  height={16}
-                />
-                <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
+              <div className={styles.archivedAtWrapper}>
+                {task.archivedAt ? (
+                  <span>{new Date(task.archivedAt).toLocaleDateString()}</span>
+                ) : (
+                  <span>Sin archivar</span>
+                )}
               </div>
             );
           },
@@ -1054,9 +876,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            // Solo admins pueden ver el ActionMenu en TasksTable
+            // Solo admins pueden ver el ActionMenu en ArchiveTable
             if (isAdmin) {
-              console.log('[TasksTable] Rendering action column:', {
+              console.log('[ArchiveTable] Rendering action column:', {
                 taskId: task.id,
                 taskName: task.name,
                 isAdmin,
@@ -1068,24 +890,24 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   isOpen={actionMenuOpenId === task.id}
                   onOpen={() => {
                     setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id);
-                    console.log('[TasksTable] Action menu toggled for task:', task.id);
+                    console.log('[ArchiveTable] Action menu toggled for task:', task.id);
                   }}
                   onEdit={() => {
                     onEditTaskOpen(task.id);
                     setActionMenuOpenId(null);
-                    console.log('[TasksTable] Edit action triggered for task:', task.id);
+                    console.log('[ArchiveTable] Edit action triggered for task:', task.id);
                   }}
                   onDelete={() => {
                     onDeleteTaskOpen(task.id);
                     setActionMenuOpenId(null);
-                    console.log('[TasksTable] Delete action triggered for task:', task.id);
+                    console.log('[ArchiveTable] Delete action triggered for task:', task.id);
                   }}
                   onArchive={async () => {
                     try {
                       // Guardar en undo stack
                       const undoItem = {
                         task: { ...task },
-                        action: 'archive' as const,
+                        action: 'unarchive' as const,
                         timestamp: Date.now()
                       };
                       setUndoStack(prev => [...prev, undoItem]);
@@ -1103,28 +925,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                       }, 3000);
 
                       // Actualizar estado local optimísticamente
-                      setTasks((prevTasks) => 
-                        prevTasks.map((t) => 
-                          t.id === task.id 
-                            ? { ...t, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }
-                            : t
-                        )
+                      setTasks((prevTasks) =>
+                        prevTasks.filter((t) => t.id !== task.id)
                       );
                       
-                      // Ejecutar la función de archivo
-                      await archiveTask(task.id, userId, isAdmin, task);
+                      // Ejecutar la función de desarchivo
+                      await handleUnarchiveTask(task);
                       setActionMenuOpenId(null);
-                      console.log('[TasksTable] Task archived successfully:', task.id);
+                      console.log('[ArchiveTable] Task unarchived successfully:', task.id);
                     } catch (error) {
                       // Revertir el cambio si hay error
-                      setTasks((prevTasks) => 
-                        prevTasks.map((t) => 
-                          t.id === task.id 
-                            ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
-                            : t
-                        )
-                      );
-                      console.error('[TasksTable] Error archiving task:', error);
+                      setTasks((prevTasks) => [...prevTasks, { ...task, archived: true }]);
+                      console.error('[ArchiveTable] Error unarchiving task:', error);
                     }
                   }}
                   animateClick={animateClick}
@@ -1132,10 +944,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   actionButtonRef={(el) => {
                     if (el) {
                       actionButtonRefs.current.set(task.id, el);
-                      console.log('[TasksTable] Action button ref set for task:', task.id);
+                      console.log('[ArchiveTable] Action button ref set for task:', task.id);
                     } else {
                       actionButtonRefs.current.delete(task.id);
-                      console.log('[TasksTable] Action button ref removed for task:', task.id);
+                      console.log('[ArchiveTable] Action button ref removed for task:', task.id);
                     }
                   }}
                 />
@@ -1148,184 +960,58 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return col;
     });
 
+    // Cleanup effect for timeouts
     useEffect(() => {
-      const containerElement = document.querySelector('.tasks-container');
-
-      let startX = 0;
-      let currentX = 0;
-
-      const handleTouchStart = (event: TouchEvent) => {
-        startX = event.touches[0].clientX;
-      };
-
-      const handleTouchMove = (event: TouchEvent) => {
-        currentX = event.touches[0].clientX;
-      };
-
-      const handleTouchEnd = () => {
-        const deltaX = currentX - startX;
-        if (Math.abs(deltaX) > 50) {
-          if (deltaX > 0) {
-            console.log('Swipe right detected');
-            // Logic to switch to the previous container
-          } else {
-            console.log('Swipe left detected');
-            // Logic to switch to the next container
-          }
-        }
-      };
-
-      if (containerElement) {
-        containerElement.addEventListener('touchstart', handleTouchStart);
-        containerElement.addEventListener('touchmove', handleTouchMove);
-        containerElement.addEventListener('touchend', handleTouchEnd);
-      }
-
       return () => {
-        if (containerElement) {
-          containerElement.removeEventListener('touchstart', handleTouchStart);
-          containerElement.removeEventListener('touchmove', handleTouchMove);
-          containerElement.removeEventListener('touchend', handleTouchEnd);
+        const timeoutId = undoTimeoutRef.current;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
       };
     }, []);
 
-    // Función para deshacer
-    const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
-      try {
-        if (undoItem.action === 'archive') {
-          // Desarchivar la tarea
-          await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
-          setTasks((prevTasks) => 
-            prevTasks.map((t) => 
-              t.id === undoItem.task.id 
-                ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
-                : t
-            )
-          );
-        }
-        
-        // Remover del undo stack
-        setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
-        setShowUndo(false);
-        
-        if (undoTimeoutRef.current) {
-          clearTimeout(undoTimeoutRef.current);
-        }
-      } catch (error) {
-        console.error('[TasksTable] Error undoing action:', error);
-      }
-    }, [userId, isAdmin]);
-
-    // Guardar cache persistente cuando los datos cambien
-    useEffect(() => {
-      if (tasks.length > 0 || clients.length > 0 || users.length > 0) {
-        // Guardar cache persistente cada 30 segundos si hay datos
-        const saveInterval = setInterval(() => {
-          savePersistentCache();
-        }, 30000);
-
-        return () => clearInterval(saveInterval);
-      }
-    }, [tasks.length, clients.length, users.length]);
-
-    // Cleanup all table listeners when component unmounts
-    useEffect(() => {
-      return () => {
-        console.log('[TasksTable] Cleaning up all table listeners on unmount');
-        cleanupTasksTableListeners();
-        
-        // Cleanup undo timeout
-        if (undoTimeoutRef.current) {
-          clearTimeout(undoTimeoutRef.current);
-        }
-      };
-    }, []);
-
-    // Handle loading state - más inteligente
-    const shouldShowLoader = useMemo(() => {
-      // Si hay datos en caché, no mostrar loader
-      const hasCachedData = tasks.length > 0 || clients.length > 0 || users.length > 0;
-      
-      // Solo mostrar loader si no hay datos y realmente está cargando
-      return !hasCachedData && (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers);
-    }, [tasks.length, clients.length, users.length, isLoading, isLoadingTasks, isLoadingClients, isLoadingUsers]);
-
-    if (shouldShowLoader) {
+    // Loading state
+    console.log('[ArchiveTable] Loading states:', { isLoadingTasks, isLoadingClients, isLoadingUsers });
+    if (isLoadingTasks || isLoadingClients || isLoadingUsers) {
+      console.log('[ArchiveTable] Showing skeleton loader');
       return (
         <div className={styles.container}>
-          <style jsx>{`
-            @keyframes pulse {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.5; }
-            }
-          `}</style>
-          <UserSwiper
-            onOpenProfile={onOpenProfile}
-            onMessageSidebarOpen={onMessageSidebarOpen}
-            className={styles.hideOnMobile}
-          />
-          <div className={styles.header} style={{margin:'30px 0px'}}>
-            <div className={styles.searchWrapper}>
-              <div className={styles.searchInput} style={{ opacity: 0.5, pointerEvents: 'none' }}>
-                <div style={{ width: '100%', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
-              </div>
-            </div>
-            <div className={styles.filtersWrapper}>
-              <div className={styles.viewButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
-                <div style={{ width: '20px', height: '20px', background: '#f0f0f0', borderRadius: '4px' }} />
-                <div style={{ width: '80px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
-              </div>
-              <div className={styles.createButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
-                <div style={{ width: '16px', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
-                <div style={{ width: '100px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
-              </div>
-            </div>
-          </div>
-          <SkeletonLoader type="tasks" rows={8} />
+          <SkeletonLoader type="tasks" />
         </div>
       );
     }
 
+    console.log('[ArchiveTable] Showing table with', sortedTasks.length, 'tasks');
     return (
-      <div className={styles.container}>
+      <motion.div 
+        className={styles.container}
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ 
+          duration: 0.2, 
+          ease: [0.25, 0.46, 0.45, 0.94],
+          opacity: { duration: 0.15 },
+          scale: { duration: 0.2 }
+        }}
+      >
         <style jsx>{`
           @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
           }
         `}</style>
-        <UserSwiper
-          onOpenProfile={onOpenProfile}
-          onMessageSidebarOpen={onMessageSidebarOpen}
-          className={styles.hideOnMobile}
-        />
         <div className={styles.header} style={{margin:'30px 0px'}}>
           <div className={styles.searchWrapper}>
             <input
               type="text"
-              placeholder="Buscar Tareas"
+              placeholder="Buscar tareas archivadas..."
               value={searchQuery}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setSearchQuery(newValue);
-                
-                // Animate search input when typing
-                const searchInput = e.currentTarget;
-                gsap.to(searchInput, {
-                  scale: 1.02,
-                  duration: 0.2,
-                  ease: 'power2.out',
-                  yoyo: true,
-                  repeat: 1
-                });
-                
-                console.log('[TasksTable] Search query updated:', newValue);
-              }}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className={styles.searchInput}
-              aria-label="Buscar tareas"
-              disabled={isLoading}
               onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchQuery('');
+                }
                 if (e.ctrlKey || e.metaKey) {
                   switch (e.key.toLowerCase()) {
                     case 'a':
@@ -1403,21 +1089,21 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               }}
             />
           </div>
-
           <div className={styles.filtersWrapper}>
             <div className={styles.buttonWithTooltip}>
               <button
                 className={`${styles.viewButton} ${styles.hideOnMobile}`}
                 onClick={(e) => {
                   animateClick(e.currentTarget);
-                  onViewChange('kanban');
-                  console.log('[TasksTable] Switching to Kanban view');
+                  onViewChange('table');
+                  onClose();
+                  console.log('[ArchiveTable] Returning to Tasks Table');
                 }}
               >
                 <Image
-                  src="/kanban.svg"
+                  src="/arrow-left.svg"
                   draggable="false"
-                  alt="kanban"
+                  alt="Volver a tareas"
                   width={20}
                   height={20}
                   style={{
@@ -1438,42 +1124,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   }}
                 />
               </button>
-              <span className={styles.tooltip}>Vista Kanban</span>
-            </div>
-            <div className={styles.buttonWithTooltip}>
-              <button
-                className={`${styles.viewButton} ${styles.hideOnMobile}`}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  onArchiveTableOpen();
-                  console.log('[TasksTable] Opening Archive Table');
-                }}
-              >
-                <Image
-                  src="/archive.svg"
-                  draggable="false"
-                  alt="archivo"
-                  width={20}
-                  height={20}
-                  style={{
-                    marginLeft: '5px',
-                    transition: 'transform 0.3s ease, filter 0.3s ease',
-                    filter:
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                  }}
-                />
-              </button>
-              <span className={styles.tooltip}>Archivo</span>
+              <span className={styles.tooltip}>Volver a Tareas</span>
             </div>
             <div className={styles.buttonWithTooltip}>
               <div className={styles.filter}>
@@ -1483,7 +1134,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     onClick={(e) => {
                       animateClick(e.currentTarget);
                       setIsPriorityDropdownOpen((prev) => !prev);
-                      console.log('[TasksTable] Priority dropdown toggled');
+                      console.log('[ArchiveTable] Priority dropdown toggled');
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
@@ -1514,7 +1165,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     onClick={(e) => {
                       animateClick(e.currentTarget);
                       setIsClientDropdownOpen((prev) => !prev);
-                      console.log('[TasksTable] Client dropdown toggled');
+                      console.log('[ArchiveTable] Client dropdown toggled');
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
@@ -1547,7 +1198,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                       onClick={(e) => {
                         animateClick(e.currentTarget);
                         setIsUserDropdownOpen((prev) => !prev);
-                        console.log('[TasksTable] User dropdown toggled');
+                        console.log('[ArchiveTable] User dropdown toggled');
                       }}
                     >
                       <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
@@ -1594,25 +1245,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 <span className={styles.tooltip}>Filtrar por Usuario</span>
               </div>
             )}
-
-            
-            <div className={styles.buttonWithTooltip}>
-              <button
-                className={styles.createButton}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  onNewTaskOpen();
-                  console.log('[TasksTable] New task creation triggered');
-                }}
-              >
-                <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
-                Crear Tarea
-              </button>
-              <span className={styles.tooltip}>Crear Nueva Tarea</span>
-            </div>
           </div>
         </div>
-
         <Table
           data={sortedTasks}
           columns={columns}
@@ -1624,7 +1258,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             handleTaskRowClick(task);
           }}
           getRowClassName={getRowClassName}
-          emptyStateType="tasks"
+          emptyStateType="archive"
         />
         
         {/* Undo Notification */}
@@ -1664,7 +1298,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   borderRadius: '50%',
                   animation: 'pulse 2s infinite'
                 }} />
-                <span>Tarea archivada</span>
+                <span>Tarea desarchivada</span>
               </div>
               <button
                 onClick={() => handleUndo(undoStack[undoStack.length - 1])}
@@ -1694,11 +1328,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     );
   },
 );
 
-TasksTable.displayName = 'TasksTable';
+ArchiveTable.displayName = 'ArchiveTable';
 
-export default TasksTable;
+export default ArchiveTable; 

@@ -28,6 +28,7 @@ import MembersTable, { cleanupMembersTableListeners } from '@/components/Members
 import ClientsTable, { cleanupClientsTableListeners } from '@/components/ClientsTable';
 import TasksTable, { cleanupTasksTableListeners } from '@/components/TasksTable';
 import TasksKanban, { cleanupTasksKanbanListeners } from '@/components/TasksKanban';
+import ArchiveTable, { cleanupArchiveTableListeners } from '@/components/ArchiveTable';
 import CreateTask from '@/components/CreateTask';
 import EditTask from '@/components/EditTask';
 import AISidebar from '@/components/AISidebar';
@@ -122,6 +123,7 @@ function TasksPageContent() {
   const { isAdmin, isLoading, error } = useAuth(); // Use AuthContext
   const [selectedContainer, setSelectedContainer] = useState<Container>('tareas');
   const [taskView, setTaskView] = useState<TaskView>('table');
+  const [isArchiveTableOpen, setIsArchiveTableOpen] = useState<boolean>(false);
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
   const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
   const [openSidebars, setOpenSidebars] = useState<Sidebar[]>([]);
@@ -175,6 +177,7 @@ function TasksPageContent() {
       cleanupClientsTableListeners();
       cleanupTasksTableListeners();
       cleanupTasksKanbanListeners();
+      cleanupArchiveTableListeners();
     };
   }, []);
 
@@ -202,20 +205,6 @@ function TasksPageContent() {
     const currentState = { sidebar: 'chat', task: task.id, container: selectedContainer };
     window.history.pushState(currentState, '', window.location.pathname);
   }, [selectedContainer]);
-
-  const handleNewTaskOpen = useCallback(() => {
-    setIsCreateTaskOpen(true);
-    setIsEditTaskOpen(false);
-    setEditTaskId(null);
-    console.log('[TasksPage] Opened new task creation');
-  }, []);
-
-  const handleEditTaskOpen = useCallback((taskId: string) => {
-    setEditTaskId(taskId);
-    setIsEditTaskOpen(true);
-    setIsCreateTaskOpen(false);
-    console.log('[TasksPage] Opened task editing for:', taskId);
-  }, []);
 
   const handleInviteSidebarOpen = useCallback(() => {
     setOpenSidebars((prev) => [
@@ -593,11 +582,6 @@ function TasksPageContent() {
     ]);
   }, []);
 
-  const handleDeleteTaskOpen = useCallback((taskId: string) => {
-    setDeleteTarget({ type: 'task', id: taskId });
-    setIsDeletePopupOpen(true);
-  }, []);
-
   const handleDeleteClientOpen = useCallback((clientId: string) => {
     if (!isAdmin) {
       console.warn('[TasksPage] Non-admin user attempted to delete client:', { clientId, userId: user?.id });
@@ -816,11 +800,6 @@ function TasksPageContent() {
     handleContainerChange('config');
   }, [handleContainerChange]);
 
-  const handleViewChange = useCallback((view: TaskView) => {
-    setTaskView(view);
-    console.log('[TasksPage] Task view changed to:', view);
-  }, []);
-
   const handleCreateTaskToggle = useCallback(() => {
     setIsCreateTaskOpen((prev) => !prev);
     setIsEditTaskOpen(false);
@@ -899,11 +878,18 @@ function TasksPageContent() {
           handleContainerChange('tareas');
         }
       }
+      
+      // Si ArchiveTable está abierto, cerrarlo y volver a TasksTable
+      if (isArchiveTableOpen) {
+        console.log('[TasksPage] Browser back detected, closing ArchiveTable');
+        setIsArchiveTableOpen(false);
+        setTaskView('table');
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [memoizedOpenSidebars.length, selectedContainer, handleContainerChange]);
+  }, [memoizedOpenSidebars.length, selectedContainer, handleContainerChange, isArchiveTableOpen]);
 
   // Alert handlers
   const handleShowSuccessAlert = useCallback((message: string) => {
@@ -930,6 +916,35 @@ function TasksPageContent() {
     setFailErrorMessage('');
   }, []);
 
+  const handleArchiveTableOpen = useCallback(() => {
+    setIsArchiveTableOpen(true);
+    console.log('[TasksPage] Opening Archive Table');
+    
+    // Agregar entrada al historial para el botón atrás
+    const currentState = { archiveTable: true, container: selectedContainer };
+    window.history.pushState(currentState, '', window.location.pathname);
+  }, [selectedContainer]);
+
+  const handleArchiveTableClose = useCallback(() => {
+    setIsArchiveTableOpen(false);
+    console.log('[TasksPage] Closing Archive Table');
+  }, []);
+
+  // Funciones optimizadas para ArchiveTable props
+  const handleArchiveTableEditTask = useCallback((taskId: string) => {
+    setEditTaskId(taskId);
+    setIsEditTaskOpen(true);
+  }, []);
+
+  const handleArchiveTableDeleteTask = useCallback((taskId: string) => {
+    setDeleteTarget({ type: 'task', id: taskId });
+    setIsDeletePopupOpen(true);
+  }, []);
+
+  const handleArchiveTableViewChange = useCallback((view: TaskView) => {
+    setTaskView(view);
+  }, []);
+
   // Handle loading and error states
   if (isLoading) {
     return <Loader />;
@@ -948,6 +963,7 @@ function TasksPageContent() {
       <div ref={headerRef}>
         <Header
           selectedContainer={selectedContainer}
+          isArchiveTableOpen={isArchiveTableOpen}
           users={memoizedUsers}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
@@ -972,26 +988,48 @@ function TasksPageContent() {
         <div ref={contentRef} className={styles.content}>
           {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && (
             <>
-              {taskView === 'table' && (
+              {taskView === 'table' && !isArchiveTableOpen && (
                 <TasksTable
-                  onNewTaskOpen={handleNewTaskOpen}
-                  onEditTaskOpen={handleEditTaskOpen}
+                  onNewTaskOpen={() => setIsCreateTaskOpen(true)}
+                  onEditTaskOpen={(taskId) => {
+                    setEditTaskId(taskId);
+                    setIsEditTaskOpen(true);
+                  }}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
                   onOpenProfile={handleOpenProfile}
-                  onViewChange={handleViewChange}
-                  onDeleteTaskOpen={handleDeleteTaskOpen}
+                  onViewChange={setTaskView}
+                  onDeleteTaskOpen={(taskId) => {
+                    setDeleteTarget({ type: 'task', id: taskId });
+                    setIsDeletePopupOpen(true);
+                  }}
+                  onArchiveTableOpen={handleArchiveTableOpen}
+                />
+              )}
+              {taskView === 'table' && isArchiveTableOpen && (
+                <ArchiveTable
+                  onEditTaskOpen={handleArchiveTableEditTask}
+                  onViewChange={handleArchiveTableViewChange}
+                  onDeleteTaskOpen={handleArchiveTableDeleteTask}
+                  onClose={handleArchiveTableClose}
+                  onChatSidebarOpen={handleChatSidebarOpen}
                 />
               )}
               {taskView === 'kanban' && (
                 <TasksKanban
-                  onNewTaskOpen={handleNewTaskOpen}
-                  onEditTaskOpen={handleEditTaskOpen}
+                  onNewTaskOpen={() => setIsCreateTaskOpen(true)}
+                  onEditTaskOpen={(taskId) => {
+                    setEditTaskId(taskId);
+                    setIsEditTaskOpen(true);
+                  }}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
                   onOpenProfile={handleOpenProfile}
-                  onViewChange={handleViewChange}
-                  onDeleteTaskOpen={handleDeleteTaskOpen}
+                  onViewChange={setTaskView}
+                  onDeleteTaskOpen={(taskId) => {
+                    setDeleteTarget({ type: 'task', id: taskId });
+                    setIsDeletePopupOpen(true);
+                  }}
                 />
               )}
             </>

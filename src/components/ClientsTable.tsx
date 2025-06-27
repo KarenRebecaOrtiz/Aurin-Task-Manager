@@ -667,6 +667,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
               sortKey={sortKey}
               sortDirection={sortDirection}
               onSort={handleSort}
+              emptyStateType="clients"
             />
           </>
         )}

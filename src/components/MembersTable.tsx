@@ -543,6 +543,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             u.id !== user?.id &&
             onMessageSidebarOpen(u)
           }
+          emptyStateType="members"
         />
       </div>
     );

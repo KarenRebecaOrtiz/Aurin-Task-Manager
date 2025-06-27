@@ -26,10 +26,11 @@ interface TableProps<T extends HasId> {
   onSort?: (key: string) => void;
   onRowClick?: (item: T, columnKey: string) => void;
   getRowClassName?: (item: T) => string;
+  emptyStateType?: 'tasks' | 'archive' | 'clients' | 'members' | 'team';
 }
 
 const Table = memo(
-  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick, getRowClassName }: TableProps<T>) => {
+  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick, getRowClassName, emptyStateType }: TableProps<T>) => {
     const [currentPage, setCurrentPage] = useState(1);
     const tableRef = useRef<HTMLDivElement>(null);
 
@@ -90,24 +91,59 @@ const Table = memo(
     const handleNextPage = useCallback(() => setCurrentPage((prev) => Math.min(prev + 1, totalPages)), [totalPages]);
     const handleLastPage = useCallback(() => setCurrentPage(totalPages), [totalPages]);
 
-    const EmptyState = () => (
-      <div className={styles.emptyState}>
-        <Image
-          src="/emptyStateImage.png"
-          alt="No hay tareas asignadas"
-          width={189}
-          height={190}
-          className={styles.emptyStateImage}
-          style={{ width: 'auto', height: 'auto' }}
-        />
-        <div className={styles.emptyStateText}>
-          <div className={styles.emptyStateTitle}>¡Parece que aún no hay nada aquí!</div>
-          <div className={styles.emptyStateSubtitle}>
-            Te haremos saber cuando haya nueva actividad, siempre puedes verlo desde tu centro de notificaciones.
+    const EmptyState = () => {
+      const getEmptyStateContent = () => {
+        switch (emptyStateType) {
+          case 'archive':
+            return {
+              title: 'No hay tareas archivadas',
+              subtitle: 'Las tareas que archives aparecerán aquí para mantener un historial organizado de tu trabajo.'
+            };
+          case 'clients':
+            return {
+              title: 'No hay cuentas registradas',
+              subtitle: 'Crea tu primera cuenta para comenzar a organizar tus proyectos y tareas.'
+            };
+          case 'members':
+            return {
+              title: 'No hay miembros en el equipo',
+              subtitle: 'Invita a tu equipo para colaborar en proyectos y tareas de manera eficiente.'
+            };
+          case 'team':
+            return {
+              title: 'No hay miembros en el equipo',
+              subtitle: 'Agrega miembros a tu equipo para mejorar la colaboración y productividad.'
+            };
+          case 'tasks':
+          default:
+            return {
+              title: 'No hay tareas asignadas',
+              subtitle: 'Crea tu primera tarea para comenzar a organizar tu trabajo y proyectos.'
+            };
+        }
+      };
+
+      const content = getEmptyStateContent();
+
+      return (
+        <div className={styles.emptyState}>
+          <Image
+            src="/emptyStateImage.png"
+            alt="No hay datos"
+            width={189}
+            height={190}
+            className={styles.emptyStateImage}
+            style={{ width: 'auto', height: 'auto' }}
+          />
+          <div className={styles.emptyStateText}>
+            <div className={styles.emptyStateTitle}>{content.title}</div>
+            <div className={styles.emptyStateSubtitle}>
+              {content.subtitle}
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    };
 
     return (
       <div className={styles.tableContainer}>
@@ -210,7 +246,8 @@ const Table = memo(
       prevProps.itemsPerPage === nextProps.itemsPerPage &&
       prevProps.onSort === nextProps.onSort &&
       prevProps.onRowClick === nextProps.onRowClick &&
-      prevProps.getRowClassName === nextProps.getRowClassName
+      prevProps.getRowClassName === nextProps.getRowClassName &&
+      prevProps.emptyStateType === nextProps.emptyStateType
     );
   },
 );

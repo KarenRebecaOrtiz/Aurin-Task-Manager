@@ -6,6 +6,9 @@ interface Task {
   LeadedBy: string[];
   CreatedBy?: string;
   name: string;
+  archived?: boolean;
+  archivedAt?: Timestamp | string;
+  archivedBy?: string;
 }
 
 interface TaskWithActivity {
@@ -126,5 +129,87 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
     console.log('[taskUtils] Task deleted successfully:', taskId);
   } catch (error) {
     throw new Error(`Failed to delete task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+  }
+}
+
+// Función para archivar una tarea
+export async function archiveTask(taskId: string, userId: string, isAdmin: boolean, task: Task) {
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    // Verificar permisos
+    if (!isAdmin && task.CreatedBy !== userId) {
+      throw new Error('No tienes permisos para archivar esta tarea');
+    }
+
+    const now = Timestamp.now();
+    await updateDoc(doc(db, 'tasks', taskId), {
+      archived: true,
+      archivedAt: now,
+      archivedBy: userId,
+    });
+
+    // Enviar notificaciones
+    const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+    if (task.CreatedBy) recipients.add(task.CreatedBy);
+    recipients.delete(userId);
+    for (const recipientId of recipients) {
+      await addDoc(collection(db, 'notifications'), {
+        userId,
+        taskId,
+        message: `Usuario archivó la tarea ${task.name}`,
+        timestamp: now,
+        read: false,
+        recipientId,
+      });
+      console.log('[taskUtils] Sent archive notification to:', recipientId);
+    }
+
+    console.log('[taskUtils] Task archived successfully:', taskId);
+  } catch (error) {
+    throw new Error(`Failed to archive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+  }
+}
+
+// Función para desarchivar una tarea
+export async function unarchiveTask(taskId: string, userId: string, isAdmin: boolean, task: Task) {
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    // Verificar permisos
+    if (!isAdmin && task.CreatedBy !== userId) {
+      throw new Error('No tienes permisos para desarchivar esta tarea');
+    }
+
+    const now = Timestamp.now();
+    await updateDoc(doc(db, 'tasks', taskId), {
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+    });
+
+    // Enviar notificaciones
+    const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+    if (task.CreatedBy) recipients.add(task.CreatedBy);
+    recipients.delete(userId);
+    for (const recipientId of recipients) {
+      await addDoc(collection(db, 'notifications'), {
+        userId,
+        taskId,
+        message: `Usuario desarchivó la tarea ${task.name}`,
+        timestamp: now,
+        read: false,
+        recipientId,
+      });
+      console.log('[taskUtils] Sent unarchive notification to:', recipientId);
+    }
+
+    console.log('[taskUtils] Task unarchived successfully:', taskId);
+  } catch (error) {
+    throw new Error(`Failed to unarchive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
   }
 }

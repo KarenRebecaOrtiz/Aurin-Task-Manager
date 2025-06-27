@@ -1031,154 +1031,169 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           </div>
 
           <div className={styles.filtersWrapper}>
-            <button
-              className={styles.viewButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onViewChange('table');
-              }}
-            >
-              <Image
-                src="/table.svg"
-                alt="table"
-                draggable="false"
-                width={20}
-                height={20}
-                style={{
-                  marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+            <div className={styles.buttonWithTooltip}>
+              <button
+                className={styles.viewButton}
+                onClick={(e) => {
+                  animateClick(e.currentTarget);
+                  onViewChange('table');
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.81)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                }}
-              />
-            </button>
-            <div className={styles.filter}>
-              <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
-                <div
-                  className={styles.dropdownTrigger}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setIsPriorityDropdownOpen((prev) => !prev);
+              >
+                <Image
+                  src="/table.svg"
+                  alt="table"
+                  draggable="false"
+                  width={20}
+                  height={20}
+                  style={{
+                    marginLeft: '5px',
+                    transition: 'transform 0.3s ease, filter 0.3s ease',
+                    filter:
+                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
                   }}
-                >
-                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
-                  <span>{priorityFilter || 'Prioridad'}</span>
-                </div>
-                {isPriorityDropdownOpen && (
-                  <div className={styles.dropdownItems}>
-                    {['Alta', 'Media', 'Baja', ''].map((priority) => (
-                      <div
-                        key={priority || 'all'}
-                        className={styles.dropdownItem}
-                        onClick={(e) => handlePrioritySelect(priority, e)}
-                      >
-                        {priority || 'Todos'}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className={styles.filter}>
-              <div className={styles.dropdownContainer} ref={clientDropdownRef}>
-                <div
-                  className={styles.dropdownTrigger}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setIsClientDropdownOpen((prev) => !prev);
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.filter =
+                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.81)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
                   }}
-                >
-                  <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
-                  <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
-                </div>
-                {isClientDropdownOpen && (
-                  <div className={styles.dropdownItems}>
-                    {[{ id: '', name: 'Todos' }, ...clients].map((client) => (
-                      <div
-                        key={client.id || 'all'}
-                        className={styles.dropdownItem}
-                        onClick={(e) => handleClientSelect(client.id, e)}
-                      >
-                        {client.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.filter =
+                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                  }}
+                />
+              </button>
+              <span className={styles.tooltip}>Vista Tabla</span>
             </div>
-            {isAdmin && (
+            <div className={styles.buttonWithTooltip}>
               <div className={styles.filter}>
-                <div className={styles.dropdownContainer} ref={userDropdownRef}>
+                <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
                   <div
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsUserDropdownOpen((prev) => !prev);
-                      console.log('[TasksKanban] User dropdown toggled');
+                      setIsPriorityDropdownOpen((prev) => !prev);
                     }}
                   >
-                    <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
-                    <span>
-                      {userFilter === '' 
-                        ? 'Todos' 
-                        : userFilter === 'me' 
-                        ? 'Mis tareas' 
-                        : users.find(u => u.id === userFilter)?.fullName || 'Usuario'}
-                    </span>
+                    <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
+                    <span>{priorityFilter || 'Prioridad'}</span>
                   </div>
-                  {isUserDropdownOpen && (
+                  {isPriorityDropdownOpen && (
                     <div className={styles.dropdownItems}>
-                      <div
-                        className={styles.dropdownItem}
-                        style={{fontWeight: userFilter === '' ? 700 : 400}}
-                        onClick={() => handleUserFilter('')}
-                      >
-                        Todos
-                      </div>
-                      <div
-                        className={styles.dropdownItem}
-                        style={{fontWeight: userFilter === 'me' ? 700 : 400}}
-                        onClick={() => handleUserFilter('me')}
-                      >
-                        Mis tareas
-                      </div>
-                      {users
-                        .filter((u) => u.id !== userId)
-                        .map((u) => (
-                          <div
-                            key={u.id}
-                            className={styles.dropdownItem}
-                            style={{fontWeight: userFilter === u.id ? 700 : 400}}
-                            onClick={() => handleUserFilter(u.id)}
-                          >
-                            {u.fullName}
-                          </div>
-                        ))}
+                      {['Alta', 'Media', 'Baja', ''].map((priority) => (
+                        <div
+                          key={priority || 'all'}
+                          className={styles.dropdownItem}
+                          onClick={(e) => handlePrioritySelect(priority, e)}
+                        >
+                          {priority || 'Todos'}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
+              <span className={styles.tooltip}>Filtrar por Prioridad</span>
+            </div>
+            <div className={styles.buttonWithTooltip}>
+              <div className={styles.filter}>
+                <div className={styles.dropdownContainer} ref={clientDropdownRef}>
+                  <div
+                    className={styles.dropdownTrigger}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      setIsClientDropdownOpen((prev) => !prev);
+                    }}
+                  >
+                    <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
+                    <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
+                  </div>
+                  {isClientDropdownOpen && (
+                    <div className={styles.dropdownItems}>
+                      {[{ id: '', name: 'Todos' }, ...clients].map((client) => (
+                        <div
+                          key={client.id || 'all'}
+                          className={styles.dropdownItem}
+                          onClick={(e) => handleClientSelect(client.id, e)}
+                        >
+                          {client.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <span className={styles.tooltip}>Filtrar por Cuenta</span>
+            </div>
+            {isAdmin && (
+              <div className={styles.buttonWithTooltip}>
+                <div className={styles.filter}>
+                  <div className={styles.dropdownContainer} ref={userDropdownRef}>
+                    <div
+                      className={styles.dropdownTrigger}
+                      onClick={(e) => {
+                        animateClick(e.currentTarget);
+                        setIsUserDropdownOpen((prev) => !prev);
+                        console.log('[TasksKanban] User dropdown toggled');
+                      }}
+                    >
+                      <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
+                      <span>
+                        {userFilter === '' 
+                          ? 'Todos' 
+                          : userFilter === 'me' 
+                          ? 'Mis tareas' 
+                          : users.find(u => u.id === userFilter)?.fullName || 'Usuario'}
+                      </span>
+                    </div>
+                    {isUserDropdownOpen && (
+                      <div className={styles.dropdownItems}>
+                        <div
+                          className={styles.dropdownItem}
+                          style={{fontWeight: userFilter === '' ? 700 : 400}}
+                          onClick={() => handleUserFilter('')}
+                        >
+                          Todos
+                        </div>
+                        <div
+                          className={styles.dropdownItem}
+                          style={{fontWeight: userFilter === 'me' ? 700 : 400}}
+                          onClick={() => handleUserFilter('me')}
+                        >
+                          Mis tareas
+                        </div>
+                        {users
+                          .filter((u) => u.id !== userId)
+                          .map((u) => (
+                            <div
+                              key={u.id}
+                              className={styles.dropdownItem}
+                              style={{fontWeight: userFilter === u.id ? 700 : 400}}
+                              onClick={() => handleUserFilter(u.id)}
+                            >
+                              {u.fullName}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className={styles.tooltip}>Filtrar por Usuario</span>
+              </div>
             )}
-            <button
-              className={styles.createButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                onNewTaskOpen();
-              }}
-            >
-              <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
-              Crear Tarea
-            </button>
+            <div className={styles.buttonWithTooltip}>
+              <button
+                className={styles.createButton}
+                onClick={(e) => {
+                  animateClick(e.currentTarget);
+                  onNewTaskOpen();
+                }}
+              >
+                <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
+                Crear Tarea
+              </button>
+              <span className={styles.tooltip}>Crear Nueva Tarea</span>
+            </div>
           </div>
         </div>
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -1240,6 +1255,10 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                                     onDelete={() => {
                                       onDeleteTaskOpen(task.id);
                                       console.log('[TasksKanban] Delete task requested:', task.id);
+                                    }}
+                                    onArchive={() => {
+                                      // TODO: Implement archive functionality
+                                      console.log('[TasksKanban] Archive task requested:', task.id);
                                     }}
                                     animateClick={animateClick}
                                     actionMenuRef={actionMenuRef}

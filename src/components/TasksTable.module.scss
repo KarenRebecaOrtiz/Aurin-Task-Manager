@@ -1215,3 +1215,33 @@
   box-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
 }
 
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 41, 59, 0.95);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  transition: opacity 0.18s cubic-bezier(.4,0,.2,1);
+}
+
+.buttonWithTooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.buttonWithTooltip:hover .tooltip,
+.buttonWithTooltip:focus .tooltip {
+  opacity: 1;
+  pointer-events: auto;
+}
+
