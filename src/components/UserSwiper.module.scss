@@ -173,8 +173,8 @@
 .avatarWrapper {
   position: relative;
   display: inline-block;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
 
   &:hover .tooltip {
     opacity: 1;
@@ -183,30 +183,16 @@
   }
 }
 
-.statusRing {
+.cardAvatar {
   position: absolute;
   top: 0;
   left: 0;
-  width: 48px;
-  height: 48px;
-  border: 2px solid #28a745;
-  border-radius: 50%;
-  box-sizing: border-box;
-  pointer-events: none;
-  z-index: 1;
-  background: transparent;
-}
-
-.cardAvatar {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   z-index: 2;
   border-radius: 50%;
-  padding: 2px;
-  background: linear-gradient(45deg, #f3f3f3, #ffffff);
+  padding: 0;
+  background: transparent;
   border: none;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease;
@@ -215,7 +201,6 @@
 
   &:hover {
     transform: scale(1.1);
-    background: linear-gradient(45deg, #e0e0e0, #f0f0f0);
   }
 
   &:active {
@@ -225,14 +210,6 @@
   &:focus {
     outline: 2px solid #178d00;
     outline-offset: 2px;
-  }
-
-  @media (min-width: 480px) {
-    --size: 48px;
-  }
-
-  @media (min-width: 768px) {
-    --size: 56px;
   }
 }
 

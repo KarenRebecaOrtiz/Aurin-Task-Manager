@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
+import { updateTaskActivity } from '@/lib/taskUtils';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -747,6 +748,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         id: taskId,
       };
       await setDoc(taskDocRef, taskData);
+
+      // Actualizar la actividad de la tarea (aunque sea nueva, establece la actividad inicial)
+      await updateTaskActivity(taskId, 'edit');
 
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...values.teamInfo.AssignedTo]);
       recipients.delete(user.id);

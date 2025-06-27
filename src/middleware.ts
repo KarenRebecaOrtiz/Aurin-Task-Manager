@@ -6,10 +6,24 @@ const isProtectedRoute = createRouteMatcher([
   '/api(.*)',
 ]);
 
+// APIs que no requieren autenticación
+const publicApis = [
+  '/api/detect-inactive-users',
+  '/api/reset-status',
+  '/api/init-user-activity',
+  '/api/auto-detect-inactive'
+];
+
 export default clerkMiddleware(async (auth, req) => {
   if (req.nextUrl.pathname === '/_not-found') {
     return NextResponse.next();
   }
+  
+  // Verificar si es una API pública
+  if (publicApis.includes(req.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+  
   if (isProtectedRoute(req)) {
     const { userId } = await auth();
     if (!userId) {

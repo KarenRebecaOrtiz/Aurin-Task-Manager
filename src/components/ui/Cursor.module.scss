@@ -39,8 +39,8 @@
     background-color: #0c0c0c;
     color: #ffffff;
     padding: 4px 8px;
-    font-weight: 600;
-
+    font-weight: 700;
+    font-family: inherit;
     border-radius: 6px;
     font-size: 14px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -48,6 +48,7 @@
     white-space: nowrap;
     overflow: hidden; 
     text-overflow: ellipsis; 
+    letter-spacing: 0.5px;
   }
 
 // Hide cursor on mobile devices (viewports smaller than 768px)

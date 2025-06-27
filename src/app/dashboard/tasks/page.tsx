@@ -88,6 +88,9 @@ interface Task {
   AssignedTo: string[];
   createdAt: string;
   CreatedBy?: string;
+  lastActivity?: string;
+  hasUnreadUpdates?: boolean;
+  lastViewedBy?: { [userId: string]: string };
 }
 
 interface Notification {
@@ -330,6 +333,9 @@ function TasksPageContent() {
           AssignedTo: doc.data().AssignedTo || [],
           createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
           CreatedBy: doc.data().CreatedBy || '',
+          lastActivity: doc.data().lastActivity?.toDate?.()?.toISOString() || doc.data().lastActivity || null,
+          hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
+          lastViewedBy: doc.data().lastViewedBy || {},
         }));
 
         if (!isAdmin) {

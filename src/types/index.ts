@@ -31,4 +31,7 @@ export interface Task {
   AssignedTo: string[];
   createdAt: string;
   CreatedBy?: string;
+  lastActivity?: string;
+  hasUnreadUpdates?: boolean;
+  lastViewedBy?: { [userId: string]: string };
 }

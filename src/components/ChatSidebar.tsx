@@ -29,6 +29,8 @@ import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/
 import { ai } from '@/lib/firebase';
 import { AnimatePresence, motion } from 'framer-motion';
 import UserAvatar from './ui/UserAvatar';
+import { useEncryption } from '@/hooks/useEncryption';
+import { updateTaskActivity } from '@/lib/taskUtils';
 
 interface Message {
   id: string;
@@ -839,39 +841,6 @@ const removeCachedMessage = (taskId: string, clientId: string) => {
   }
 };
 
-// Hook de cifrado end-to-end
-const useEncryption = () => {
-  const encryptMessage = useCallback((text: string): string => {
-    try {
-      // Cifrado simple usando btoa (Base64) - reemplaza con una librería de cifrado más robusta en producción
-      const encoded = btoa(unescape(encodeURIComponent(text)));
-      return `encrypted:${encoded}`;
-    } catch (error) {
-      console.error('Error al cifrar mensaje:', error);
-      return text; // Fallback: retorna el texto sin cifrar si hay error
-    }
-  }, []);
-
-  const decryptMessage = useCallback((encryptedText: string): string => {
-    try {
-      // Verificar si el texto está cifrado
-      if (!encryptedText.startsWith('encrypted:')) {
-        return encryptedText; // No está cifrado, retorna tal como está
-      }
-      
-      // Descifrar el texto
-      const encoded = encryptedText.replace('encrypted:', '');
-      const decoded = decodeURIComponent(escape(atob(encoded)));
-      return decoded;
-    } catch (error) {
-      console.error('Error al descifrar mensaje:', error);
-      return encryptedText; // Fallback: retorna el texto cifrado si hay error
-    }
-  }, []);
-
-  return { encryptMessage, decryptMessage };
-};
-
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isOpen,
   onClose,
@@ -1418,6 +1387,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       await updateDoc(doc(db, 'tasks', task.id), {
         status,
       });
+      
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(task.id, 'status_change');
+      
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
       recipients.delete(user?.id || '');
@@ -1572,6 +1545,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         ),
       );
       removeCachedMessage(task.id, clientId);
+      
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(task.id, 'message');
     } catch (error) {
       console.error('Send message error', error);
       setMessages((prev) =>
@@ -1609,6 +1585,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       );
       setEditingMessageId(null);
       setEditingText('');
+      
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(task.id, 'message');
     } catch (error) {
       console.error('Error editing message:', error);
       alert('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
@@ -1779,6 +1758,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         });
         setTimerSeconds(0);
         console.log('[ChatSidebar:ToggleTimer] Timer stopped and time entry added successfully');
+        
+        // Actualizar la actividad de la tarea
+        await updateTaskActivity(task.id, 'time_entry');
       } catch (error) {
         console.error('Error adding time entry', error);
       }
@@ -1863,6 +1845,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setCommentInput('');
       setIsTimerPanelOpen(false);
       setHasInteracted(true);
+      
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(task.id, 'time_entry');
     } catch (error) {
       console.error('Error adding time entry', error);
       alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);

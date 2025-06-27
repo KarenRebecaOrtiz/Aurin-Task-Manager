@@ -9,6 +9,9 @@ import {
   type HTMLMotionProps,
   type Transition,
 } from 'framer-motion';
+import { useUser } from '@clerk/nextjs';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import styles from './Cursor.module.scss';
 
 interface CursorContextType {
@@ -16,6 +19,7 @@ interface CursorContextType {
   isActive: boolean;
   cursorRef: React.RefObject<HTMLDivElement | null>;
   isCursorEnabled: boolean;
+  userFirstName: string;
 }
 
 const CursorContext = React.createContext<CursorContextType | undefined>(undefined);
@@ -39,7 +43,35 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
   const [isActive, setIsActive] = React.useState(false);
   const [isCursorEnabled, setIsCursorEnabled] = React.useState(true);
   const [isTouchDevice, setIsTouchDevice] = React.useState(false);
+  const [userFirstName, setUserFirstName] = React.useState('');
   const cursorRef = React.useRef<HTMLDivElement>(null);
+  const { user } = useUser();
+
+  // Fetch user's first name from Firestore
+  React.useEffect(() => {
+    if (!user?.id) {
+      setUserFirstName('');
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', user.id);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const displayName = data.displayName || '';
+        // Extract first name from displayName
+        const firstName = displayName.split(' ')[0] || '';
+        setUserFirstName(firstName);
+      } else {
+        setUserFirstName('');
+      }
+    }, (error) => {
+      console.error('Error listening to user data:', error);
+      setUserFirstName('');
+    });
+
+    return () => unsubscribe();
+  }, [user?.id]);
 
   // Detect touch device on mount
   React.useEffect(() => {
@@ -176,7 +208,7 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
   }, [isActive, isCursorEnabled, isTouchDevice]);
 
   return (
-    <CursorContext.Provider value={{ cursorPos, isActive, cursorRef, isCursorEnabled: isCursorEnabled && !isTouchDevice }}>
+    <CursorContext.Provider value={{ cursorPos, isActive, cursorRef, isCursorEnabled: isCursorEnabled && !isTouchDevice, userFirstName }}>
       <div data-slot="cursor-provider" {...props}>
         {children}
       </div>
@@ -238,7 +270,7 @@ interface CursorFollowProps extends HTMLMotionProps<'div'> {
   sideOffset?: number;
   align?: Align;
   transition?: Transition;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 // CursorFollow component
@@ -251,7 +283,7 @@ const CursorFollow: React.FC<CursorFollowProps> = ({
   transition = { type: 'spring', stiffness: 500, damping: 50, bounce: 0 },
   ...props
 }) => {
-  const { cursorPos, isActive, cursorRef, isCursorEnabled } = useCursor();
+  const { cursorPos, isActive, cursorRef, isCursorEnabled, userFirstName } = useCursor();
   const cursorFollowRef = React.useRef<HTMLDivElement>(null);
 
   const x = useMotionValue(0);
@@ -325,7 +357,11 @@ const CursorFollow: React.FC<CursorFollowProps> = ({
           exit={{ scale: 0, opacity: 0 }}
           {...props}
         >
-          {children}
+          {children || (
+            <div className={styles.cursorFollowContent}>
+              {userFirstName || 'Usuario'}
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

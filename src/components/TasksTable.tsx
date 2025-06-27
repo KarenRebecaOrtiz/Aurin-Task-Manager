@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, memo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -11,6 +11,7 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
+import { getLastActivityTimestamp, hasUnreadUpdates, markTaskAsViewed } from '@/lib/taskUtils';
 
 interface Client {
   id: string;
@@ -39,6 +40,9 @@ interface Task {
   AssignedTo: string[];
   createdAt: string;
   CreatedBy?: string;
+  lastActivity?: string;
+  hasUnreadUpdates?: boolean;
+  lastViewedBy?: { [userId: string]: string };
 }
 
 type TaskView = 'table' | 'kanban';
@@ -98,7 +102,7 @@ interface TasksTableProps {
   onMessageSidebarOpen: (user: User) => void;
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
   onViewChange: (view: TaskView) => void;
-  onDeleteTaskOpen: (taskId: string) => void; // Add new prop for delete
+  onDeleteTaskOpen: (taskId: string) => void;
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(
@@ -112,12 +116,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     onMessageSidebarOpen,
     onOpenProfile,
     onViewChange,
-    onDeleteTaskOpen, // Destructure new prop
+    onDeleteTaskOpen,
   }) => {
     const { user } = useUser();
-    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
+    const { isAdmin, isLoading } = useAuth();
     const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
-    const [sortKey, setSortKey] = useState<string>('createdAt');
+    const [sortKey, setSortKey] = useState<string>('lastActivity');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
@@ -195,6 +199,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
       });
     }, [memoizedFilteredTasks]);
+
+    // Función para manejar el clic en una fila de tarea
+    const handleTaskRowClick = async (task: Task) => {
+      // Marcar la tarea como vista
+      if (userId) {
+        await markTaskAsViewed(task.id, userId);
+      }
+      
+      // Abrir el chat de la tarea
+      onChatSidebarOpen(task);
+      console.log('[TasksTable] Row clicked, opening chat for task:', task.id);
+    };
 
     useEffect(() => {
       const currentActionMenuRef = actionMenuRef.current;
@@ -300,7 +316,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     const sortedTasks = useMemo(() => {
       const sorted = [...filteredTasks];
-      if (sortKey === 'clientId') {
+      if (sortKey === 'lastActivity') {
+        sorted.sort((a, b) => {
+          const activityA = getLastActivityTimestamp(a);
+          const activityB = getLastActivityTimestamp(b);
+          return sortDirection === 'asc' ? activityA - activityB : activityB - activityA;
+        });
+      } else if (sortKey === 'clientId') {
         sorted.sort((a, b) => {
           const clientA = clients.find((c) => c.id === a.clientId)?.name || '';
           const clientB = clients.find((c) => c.id === b.clientId)?.name || '';
@@ -396,7 +418,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       setIsClientDropdownOpen(false);
     };
 
-    
+    // Función para obtener las clases CSS de una fila de tarea
+    const getRowClassName = useCallback(() => {
+      return ''; // Removido el indicador de actualización de la fila completa
+    }, []);
+
     const baseColumns = [
       {
         key: 'clientId',
@@ -448,18 +474,43 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               clientName: client?.name,
             });
             return client ? (
-              <Image
-                style={{ borderRadius: '999px' }}
-                src={client.imageUrl || '/empty-image.png'}
-                alt={client.name || 'Client Image'}
-                width={40}
-                height={40}
-                className={styles.clientImage}
-                onError={(e) => {
-                  e.currentTarget.src = '/empty-image.png';
-                }}
-              />
+              <div className={styles.clientWrapper}>
+                <Image
+                  style={{ borderRadius: '999px' }}
+                  src={client.imageUrl || '/empty-image.png'}
+                  alt={client.name || 'Client Image'}
+                  width={40}
+                  height={40}
+                  className={styles.clientImage}
+                  onError={(e) => {
+                    e.currentTarget.src = '/empty-image.png';
+                  }}
+                />
+              </div>
             ) : 'Sin cuenta';
+          },
+        };
+      }
+      if (col.key === 'name') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            const hasUpdates = hasUnreadUpdates(task, userId);
+            console.log('[TasksTable] Rendering name column:', {
+              taskId: task.id,
+              taskName: task.name,
+              hasUpdates,
+            });
+            return (
+              <div className={styles.taskNameWrapper}>
+                <span className={styles.taskName}>{task.name}</span>
+                {hasUpdates && (
+                  <div className={styles.updateIndicator}>
+                    <div className={styles.updateDot}></div>
+                  </div>
+                )}
+              </div>
+            );
           },
         };
       }
@@ -577,7 +628,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                       console.log('[TasksTable] Action button ref removed for task:', task.id);
                     }
                   }}
-                  // Removed isAdmin prop
                 />
               );
             }
@@ -1096,9 +1146,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           sortDirection={sortDirection}
           onSort={handleSort}
           onRowClick={(task: Task) => {
-            onChatSidebarOpen(task);
-            console.log('[TasksTable] Row clicked, opening chat for task:', task.id);
+            handleTaskRowClick(task);
           }}
+          getRowClassName={getRowClassName}
         />
       </div>
     );

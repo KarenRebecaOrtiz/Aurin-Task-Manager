@@ -96,7 +96,6 @@
   }
 }
 
-
 :global(body.dark) .button img{
     filter: invert(100)brightness(100);
 }
@@ -104,27 +103,57 @@
 .popover {
   @include neomorphic-container;
   width: 320px;
+  min-height: 320px;
   max-height: 350px;
-  transform: translateX(-70px)!important;
   overflow-y: auto;
   padding: 8px;
+  overflow: visible !important;
   position: absolute;
-  z-index: 50;
+  z-index: 1;
   border-radius: 8px;
-  transition:
-    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    -8px -8px 16px #ffffff,
+    8px 8px 24px rgba(209, 217, 230, 0.8);
+  background: #f1f5f9;
 
-  &.popoverOpen {
-    opacity: 1;
-    transform: scale(1);
+  :global(body.dark) & {
+    background: #1f1f20;
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.04),
+      8px 8px 24px rgba(0, 0, 0, 0.4);
   }
 
-  &.popoverClosed {
-    opacity: 0;
-    transform: scale(0.95);
-    pointer-events: none;
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
   }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+    
+    :global(body.dark) & {
+      background: #475569;
+    }
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+    
+    :global(body.dark) & {
+      background: #64748b;
+    }
+  }
+}
+
+.pageContainer {
+  width: 100%;
+  position: relative;
+  overflow: visible;
 }
 
 :global(body.dark) .paginationButton,
@@ -170,6 +199,10 @@
   padding: 4px;
   margin-bottom: 8px;
   border-bottom: 1px solid #e4e8ee;
+  position: sticky;
+  top: 0;
+  background: inherit;
+  z-index: 1;
 
   :global(body.dark) & {
     border-bottom: 1px solid #2c2c2f;
@@ -186,6 +219,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
 
   &::before {
     content: attr(aria-label);
@@ -237,6 +271,9 @@
   &.active {
     background: $bg-accent;
     transform: scale(1.05);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -244,6 +281,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 220px;
 }
 
 .categorySection {
@@ -258,6 +296,8 @@
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 4px;
+  overflow: visible !important;
+  padding: 8px 0;
 }
 
 .emojiButton {
@@ -270,6 +310,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  transition: all 0.2s ease;
 
   &::before {
     content: attr(title);
@@ -325,6 +366,11 @@
 
   &.selected {
     background: #e0f7fa;
+    transform: scale(1.1);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    
     :global(body.dark) & {
       background: #2a4b5b;
     }
@@ -333,6 +379,7 @@
 
 .emoji {
   line-height: 1;
+  user-select: none;
 }
 
 .checkIcon {
@@ -349,12 +396,20 @@
 
 .emptyState {
   text-align: center;
-  padding: 16px;
+  padding: 32px 16px;
   color: #666;
   font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 
   :global(body.dark) & {
     color: #999;
+  }
+
+  p {
+    margin: 0;
   }
 }
 
@@ -363,6 +418,7 @@
   padding: 8px;
   color: #666;
   font-size: 12px;
+  font-style: italic;
 
   :global(body.dark) & {
     color: #999;
@@ -375,6 +431,7 @@
   align-items: center;
   padding: 8px 0;
   border-top: 1px solid #e4e8ee;
+  margin-top: 8px;
 
   :global(body.dark) & {
     border-top: 1px solid #2c2c2f;
@@ -390,6 +447,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
+  transition: all 0.2s ease;
 
   &::before {
     content: attr(aria-label);
@@ -438,9 +496,14 @@
     visibility: visible;
   }
 
+  &:hover:not(:disabled) {
+    transform: scale(1.05);
+  }
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 }
 
@@ -456,6 +519,7 @@
 .pageInfo {
   font-size: 12px;
   color: #666;
+  font-weight: 500;
 
   :global(body.dark) & {
     color: #999;

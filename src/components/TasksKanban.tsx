@@ -14,6 +14,7 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 import Loader from '@/components/Loader'; // Import Loader for loading state
+import { updateTaskActivity } from '@/lib/taskUtils';
 
 interface Client {
   id: string;
@@ -592,6 +593,10 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
         // Update Firestore
         await updateDoc(doc(db, 'tasks', task.id), { status: destStatus });
+        
+        // Actualizar la actividad de la tarea
+        await updateTaskActivity(task.id, 'status_change');
+        
         console.log('[TasksKanban] Task moved successfully:', {
           taskId: task.id,
           taskName: task.name,

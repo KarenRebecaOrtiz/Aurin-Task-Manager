@@ -55,6 +55,7 @@ interface InputMessageProps {
   containerRef: React.RefObject<HTMLElement>;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
+  conversationId?: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -67,6 +68,7 @@ export function InputMessage({
   containerRef,
   replyingTo,
   onCancelReply,
+  conversationId,
 }: InputMessageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export function InputMessage({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const dropupRef = useRef<HTMLDivElement>(null);
-  const conversationId = 'message-sidebar'; // ID único para esta conversación
+  const currentConversationId = conversationId || 'default-conversation'; // Usar el prop o un fallback
 
   // Local state for replyingTo if not provided as prop
   const [internalReplyingTo, setInternalReplyingTo] = useState<Message | null>(null);
@@ -215,7 +217,7 @@ export function InputMessage({
   // Usar el hook de persistencia del editor
   const { watchAndSave, clearPersistedData, restoredData } = useEditorPersistence(
     editor,
-    `draft_${conversationId}`,
+    `draft_${currentConversationId}`,
     true
   );
 
@@ -277,7 +279,7 @@ export function InputMessage({
       setPreviewUrl(null);
       
       // Limpiar mensaje guardado al enviar exitosamente
-      removeErrorMessage(conversationId);
+      removeErrorMessage(currentConversationId);
       clearPersistedData(); // Clear draft after successful send
       
       // Limpiar reply después de enviar
@@ -302,13 +304,13 @@ export function InputMessage({
           previewUrl: previewUrl || undefined,
         } : undefined,
       };
-      saveErrorMessage(conversationId, errorMessage);
+      saveErrorMessage(currentConversationId, errorMessage);
       
       // Mark message as failed
       finalMessageData.hasError = true;
       await onSendMessage(finalMessageData);
     }
-  }, [userId, editor, file, isSending, isProcessing, userFirstName, onSendMessage, conversationId, previewUrl, effectiveReplyingTo, onCancelReply, clearPersistedData]);
+  }, [userId, editor, file, isSending, isProcessing, userFirstName, onSendMessage, currentConversationId, previewUrl, effectiveReplyingTo, onCancelReply, clearPersistedData]);
 
   // Handle keydown for shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

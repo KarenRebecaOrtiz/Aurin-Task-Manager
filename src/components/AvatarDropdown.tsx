@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Image from 'next/image';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './AvatarDropdown.module.scss';
 import { gsap } from 'gsap';
 import { createPortal } from 'react-dom';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 const statusOptions = [
   { label: 'Disponible', value: 'Disponible', color: '#178d00' },
@@ -20,11 +21,13 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [status, setStatus] = useState('Disponible');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  
+  // Usar el hook de estado online
+  const { currentStatus: onlineStatus, updateStatus } = useOnlineStatus();
 
   // Create portal container
   useEffect(() => {
@@ -46,15 +49,12 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
       if (docSnap.exists()) {
         const data = docSnap.data();
         setProfilePhoto(data.profilePhoto || '');
-        setStatus(data.status || 'Disponible');
       } else {
         setProfilePhoto('');
-        setStatus('Disponible');
       }
     }, (error) => {
       console.error('Error listening to Firestore:', error);
       setProfilePhoto('');
-      setStatus('Disponible');
     });
 
     return () => unsubscribe();
@@ -64,7 +64,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   const handleStatusChange = async (newStatus: string) => {
     if (!user?.id) return;
     try {
-      await updateDoc(doc(db, 'users', user.id), { status: newStatus });
+      await updateStatus(newStatus);
       setIsDropdownOpen(false);
     } catch (error) {
       console.error('Error updating status:', error);
@@ -136,7 +136,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   };
 
   const handleMouseLeaveButton = () => {
-    // Don’t close immediately, wait for dropdown leave
+    // Don't close immediately, wait for dropdown leave
   };
 
   const handleMouseEnterDropdown = () => {
@@ -158,7 +158,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
     setIsDropdownOpen(false);
   };
 
-  const currentStatus = statusOptions.find((opt) => opt.value === status) || statusOptions[0];
+  const currentStatusOption = statusOptions.find((opt) => opt.value === onlineStatus) || statusOptions[0];
 
   // Calculate dropdown position
   const getDropdownPosition = () => {
@@ -193,7 +193,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
             className={`${styles.statusOption} ${option.value.replace(' ', '_')}`}
             onClick={() => handleStatusChange(option.value)}
             role="option"
-            aria-selected={status === option.value}
+            aria-selected={onlineStatus === option.value}
           >
             <div
               className={styles.statusDot}
@@ -252,7 +252,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         )}
         <div
           className={styles.statusDot}
-          style={{ backgroundColor: currentStatus.color }}
+          style={{ backgroundColor: currentStatusOption.color }}
         />
       </button>
       {isDropdownOpen && portalContainer && createPortal(<DropdownMenu />, portalContainer)}

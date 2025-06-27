@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
+import { updateTaskActivity } from '@/lib/taskUtils';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -431,12 +432,34 @@ const EditTask: React.FC<EditTaskProps> = ({
           lastName?: string;
           publicMetadata: { role?: string };
         }[] = await response.json();
-        const usersData: User[] = clerkUsers.map((user) => ({
-          id: user.id,
-          imageUrl: user.imageUrl || '',
-          fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sin nombre',
-          role: user.publicMetadata.role || 'Sin rol',
-        }));
+        
+        // Obtener datos de Firestore para cada usuario
+        const usersData: User[] = await Promise.all(
+          clerkUsers.map(async (clerkUser) => {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
+              return {
+                id: clerkUser.id,
+                imageUrl: clerkUser.imageUrl || '',
+                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                role: userDoc.exists() && userDoc.data().role
+                  ? userDoc.data().role
+                  : (clerkUser.publicMetadata.role || 'Sin rol'),
+              };
+            } catch (docError) {
+              console.warn('[EditTask] Error fetching user document:', {
+                userId: clerkUser.id,
+                error: docError instanceof Error ? docError.message : 'Unknown error',
+              });
+              return {
+                id: clerkUser.id,
+                imageUrl: clerkUser.imageUrl || '',
+                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                role: clerkUser.publicMetadata.role || 'Sin rol',
+              };
+            }
+          }),
+        );
         setUsers(usersData);
       } catch (error) {
         console.error('[EditTask] Error fetching users:', error);
@@ -446,7 +469,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     fetchTask();
     fetchUsers();
     return () => unsubscribeClients();
-  }, [taskId, user?.id, router, form]);
+  }, [taskId, user?.id, router]);
 
   // Track unsaved changes
   useEffect(() => {
@@ -495,127 +518,145 @@ const EditTask: React.FC<EditTaskProps> = ({
     }
   }, [onClientAlertChange, showSuccessAlert, showFailAlert, failErrorMessage, form]);
 
-  // Combined useEffect for dropdowns and container animations
+  // Optimized dropdown positions useEffect - only run when dropdowns actually open/close
+  const updatePositions = useCallback(() => {
+    if (isStartDateOpen && startDateInputRef.current) {
+      const rect = startDateInputRef.current.getBoundingClientRect();
+      setStartDatePosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isEndDateOpen && endDateInputRef.current) {
+      const rect = endDateInputRef.current.getBoundingClientRect();
+      setEndDatePosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isProjectDropdownOpen && projectDropdownRef.current) {
+      const rect = projectDropdownRef.current.getBoundingClientRect();
+      setProjectDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isStatusDropdownOpen && statusDropdownRef.current) {
+      const rect = statusDropdownRef.current.getBoundingClientRect();
+      setStatusDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isPriorityDropdownOpen && priorityDropdownRef.current) {
+      const rect = priorityDropdownRef.current.getBoundingClientRect();
+      setPriorityDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isCollaboratorDropdownOpen && collaboratorInputRef.current) {
+      const rect = collaboratorInputRef.current.getBoundingClientRect();
+      setCollaboratorDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isLeaderDropdownOpen && leaderInputRef.current) {
+      const rect = leaderInputRef.current.getBoundingClientRect();
+      setLeaderDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    if (isClientDropdownOpen && clientInputRef.current) {
+      const rect = clientInputRef.current.getBoundingClientRect();
+      setClientDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [
+    isStartDateOpen,
+    isEndDateOpen,
+    isProjectDropdownOpen,
+    isStatusDropdownOpen,
+    isPriorityDropdownOpen,
+    isCollaboratorDropdownOpen,
+    isLeaderDropdownOpen,
+    isClientDropdownOpen,
+  ]);
+
+  const animatePoppers = useCallback(() => {
+    if (isProjectDropdownOpen && projectDropdownPopperRef.current) {
+      gsap.fromTo(
+        projectDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+    if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
+      gsap.fromTo(
+        statusDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+    if (isPriorityDropdownOpen && priorityDropdownPopperRef.current) {
+      gsap.fromTo(
+        priorityDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+    if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
+      gsap.fromTo(
+        collaboratorDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+    if (isLeaderDropdownOpen && leaderDropdownPopperRef.current) {
+      gsap.fromTo(
+        leaderDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+    if (isClientDropdownOpen && clientDropdownPopperRef.current) {
+      gsap.fromTo(
+        clientDropdownPopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+    if (isStartDateOpen && startDatePopperRef.current) {
+      gsap.fromTo(
+        startDatePopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+    if (isEndDateOpen && endDatePopperRef.current) {
+      gsap.fromTo(
+        endDatePopperRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+      );
+    }
+  }, [
+    isProjectDropdownOpen,
+    isStatusDropdownOpen,
+    isPriorityDropdownOpen,
+    isCollaboratorDropdownOpen,
+    isLeaderDropdownOpen,
+    isClientDropdownOpen,
+    isStartDateOpen,
+    isEndDateOpen,
+  ]);
+
   useEffect(() => {
     if (!isMounted) return;
-
-    const updatePositions = () => {
-      if (isStartDateOpen && startDateInputRef.current) {
-        const rect = startDateInputRef.current.getBoundingClientRect();
-        setStartDatePosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isEndDateOpen && endDateInputRef.current) {
-        const rect = endDateInputRef.current.getBoundingClientRect();
-        setEndDatePosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isProjectDropdownOpen && projectDropdownRef.current) {
-        const rect = projectDropdownRef.current.getBoundingClientRect();
-        setProjectDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isStatusDropdownOpen && statusDropdownRef.current) {
-        const rect = statusDropdownRef.current.getBoundingClientRect();
-        setStatusDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isPriorityDropdownOpen && priorityDropdownRef.current) {
-        const rect = priorityDropdownRef.current.getBoundingClientRect();
-        setPriorityDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isCollaboratorDropdownOpen && collaboratorInputRef.current) {
-        const rect = collaboratorInputRef.current.getBoundingClientRect();
-        setCollaboratorDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isLeaderDropdownOpen && leaderInputRef.current) {
-        const rect = leaderInputRef.current.getBoundingClientRect();
-        setLeaderDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isClientDropdownOpen && clientInputRef.current) {
-        const rect = clientInputRef.current.getBoundingClientRect();
-        setClientDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-    };
-
-    const animatePoppers = () => {
-      if (isProjectDropdownOpen && projectDropdownPopperRef.current) {
-        gsap.fromTo(
-          projectDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
-        gsap.fromTo(
-          statusDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isPriorityDropdownOpen && priorityDropdownPopperRef.current) {
-        gsap.fromTo(
-          priorityDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
-        gsap.fromTo(
-          collaboratorDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isLeaderDropdownOpen && leaderDropdownPopperRef.current) {
-        gsap.fromTo(
-          leaderDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isClientDropdownOpen && clientDropdownPopperRef.current) {
-        gsap.fromTo(
-          clientDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isStartDateOpen && startDatePopperRef.current) {
-        gsap.fromTo(
-          startDatePopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isEndDateOpen && endDatePopperRef.current) {
-        gsap.fromTo(
-          endDatePopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-    };
 
     if (containerRef.current) {
       if (isOpen) {
@@ -637,19 +678,14 @@ const EditTask: React.FC<EditTaskProps> = ({
     updatePositions();
     animatePoppers();
 
-    window.addEventListener("resize", updatePositions);
-    return () => window.removeEventListener("resize", updatePositions);
+    const handleResize = debounce(updatePositions, 100);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [
     isOpen,
     isMounted,
-    isStartDateOpen,
-    isEndDateOpen,
-    isProjectDropdownOpen,
-    isStatusDropdownOpen,
-    isPriorityDropdownOpen,
-    isCollaboratorDropdownOpen,
-    isLeaderDropdownOpen,
-    isClientDropdownOpen,
+    updatePositions,
+    animatePoppers,
   ]);
 
   // Handle click outside to close dropdowns
@@ -897,14 +933,19 @@ const EditTask: React.FC<EditTaskProps> = ({
     [form, animateClick],
   );
 
+  // Memoize form values to avoid unnecessary re-renders
+  const watchedLeadedBy = form.watch("teamInfo.LeadedBy");
+  const watchedAssignedTo = form.watch("teamInfo.AssignedTo");
+  const currentLeadedBy = form.getValues("teamInfo.LeadedBy");
+
   const filteredCollaborators = useMemo(() => {
     return users.filter(
       (u) =>
-        !form.getValues("teamInfo.LeadedBy").includes(u.id) &&
+        !watchedLeadedBy.includes(u.id) &&
         (u.fullName.toLowerCase().includes(searchCollaborator.toLowerCase()) ||
          u.role.toLowerCase().includes(searchCollaborator.toLowerCase())),
     );
-  }, [users, searchCollaborator, form]);
+  }, [users, searchCollaborator, watchedLeadedBy]); // Removed form dependency
 
   const filteredLeaders = useMemo(() => {
     return users.filter(
@@ -953,6 +994,9 @@ const EditTask: React.FC<EditTaskProps> = ({
 
       await setDoc(doc(db, "tasks", taskId), taskData);
 
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(taskId, 'edit');
+
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...values.teamInfo.AssignedTo]);
       recipients.delete(user.id);
       for (const recipientId of Array.from(recipients)) {
@@ -971,8 +1015,16 @@ const EditTask: React.FC<EditTaskProps> = ({
       clearPersistedData();
       setIsSaving(false);
       onHasUnsavedChanges(false);
+      
+      // Cerrar el modal de edición
+      onToggle();
+      
+      // Redirigir inmediatamente después de guardar exitosamente
+      router.push("/dashboard/tasks");
+      
+      // Cerrar el alert de éxito después de 2 segundos
       setTimeout(() => {
-        router.push("/dashboard/tasks");
+        setShowSuccessAlert(false);
       }, 2000);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Error desconocido al actualizar la tarea.";
@@ -1535,7 +1587,9 @@ const EditTask: React.FC<EditTaskProps> = ({
                           value={searchLeader}
                           onChange={(e) => {
                             setSearchLeader(e.target.value);
-                            setIsLeaderDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onFocus={() => {
+                            setIsLeaderDropdownOpen(true);
                           }}
                           onBlur={() => {
                             setTimeout(() => setIsLeaderDropdownOpen(false), 200);
@@ -1569,7 +1623,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                     onClick={(e) => handleLeaderSelect(u.id, e)}
                                   >
                                     {u.fullName} ({u.role})
-                                    {form.watch("teamInfo.LeadedBy").includes(u.id) && " (Seleccionado)"}
+                                    {watchedLeadedBy.includes(u.id) && " (Seleccionado)"}
                                   </div>
                                 ))
                               ) : (
@@ -1585,7 +1639,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                             document.body,
                           )}
                         <div className={styles.tags}>
-                          {form.watch("teamInfo.LeadedBy").map((userId) => {
+                          {watchedLeadedBy.map((userId) => {
                             const collaborator = users.find((u) => u.id === userId);
                             return collaborator ? (
                               <div key={userId} className={styles.tag}>
@@ -1626,7 +1680,9 @@ const EditTask: React.FC<EditTaskProps> = ({
                           value={searchCollaborator}
                           onChange={(e) => {
                             setSearchCollaborator(e.target.value);
-                            setIsCollaboratorDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onFocus={() => {
+                            setIsCollaboratorDropdownOpen(true);
                           }}
                           onBlur={() => {
                             setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
@@ -1657,16 +1713,16 @@ const EditTask: React.FC<EditTaskProps> = ({
                                   <div
                                     key={u.id}
                                     className={`${styles.dropdownItem} ${
-                                      form.getValues("teamInfo.LeadedBy").includes(u.id) ? styles.disabled : ""
+                                      currentLeadedBy.includes(u.id) ? styles.disabled : ""
                                     }`}
                                     onClick={(e) => {
-                                      if (!form.getValues("teamInfo.LeadedBy").includes(u.id)) {
+                                      if (!currentLeadedBy.includes(u.id)) {
                                         handleCollaboratorSelect(u.id, e);
                                       }
                                     }}
                                   >
                                     {u.fullName} ({u.role}){" "}
-                                    {form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
+                                    {watchedAssignedTo.includes(u.id) && "(Seleccionado)"}
                                   </div>
                                 ))
                               ) : (
@@ -1682,7 +1738,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                             document.body,
                           )}
                         <div className={styles.tags}>
-                          {form.watch("teamInfo.AssignedTo").map((userId) => {
+                          {watchedAssignedTo.map((userId) => {
                             const collaborator = users.find((u) => u.id === userId);
                             return collaborator ? (
                               <div key={userId} className={styles.tag}>

@@ -1127,6 +1127,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           imageUrl: replyingTo.imageUrl,
         } : null}
         onCancelReply={handleCancelReply}
+        conversationId={conversationId}
       />
       {imagePreviewSrc && (
         <ImagePreviewOverlay

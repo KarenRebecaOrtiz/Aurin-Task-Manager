@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import Image from 'next/image';
 import Splide from '@splidejs/splide';
 import '@splidejs/splide/css/core';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './UserSwiper.module.scss';
+import UserAvatar from './ui/UserAvatar';
 
 interface ClerkUser {
   id: string;
@@ -32,12 +32,9 @@ interface UserSwiperProps {
 
 const statusColors = {
   'Disponible': '#28a745',
-  'En la oficina': '#28a745',
   'Ocupado': '#dc3545',
   'Por terminar': '#ff6f00',
-  'Fuera de la oficina': '#dc3545',
   'Fuera': '#616161',
-  'Fuera de horario': '#ff6f00',
 };
 
 const CACHE_KEY = 'cached_users';
@@ -97,7 +94,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
           .filter((u) => u.id !== user?.id)
           .map((user) => ({
             ...user,
-            status: 'En la oficina',
+            status: 'Disponible',
           }));
         setUsers(updatedUsers);
         setCachedUsers(updatedUsers);
@@ -108,24 +105,22 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
           usersRef,
           (snapshot) => {
             const statusMap: { [id: string]: string } = {};
+            
             snapshot.forEach((doc) => {
-              const firestoreStatus = doc.data().status || 'Disponible';
-              statusMap[doc.id] =
-                firestoreStatus === 'Disponible' ? 'En la oficina' :
-                firestoreStatus === 'No disponible' ? 'Fuera de la oficina' :
-                'Fuera de horario';
+              const data = doc.data();
+              const firestoreStatus = data.status || 'Disponible';
+              statusMap[doc.id] = firestoreStatus;
             });
+            
             setUsers((prevUsers) => {
               const newUsers = prevUsers
-                .filter((u) => u.id !== user?.id)
                 .map((user) => ({
                   ...user,
-                  status: statusMap[user.id] || user.status || 'En la oficina',
+                  status: statusMap[user.id] || 'Disponible',
                 }));
               setCachedUsers(newUsers);
               return newUsers;
             });
-            console.log('[UserSwiper] User statuses updated:', statusMap);
           },
           (error) => {
             console.error('[UserSwiper] Firestore listener error:', error);
@@ -269,10 +264,6 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                 >
                   <div className={styles.cardInfo}>
                     <div className={styles.avatarWrapper}>
-                      <span
-                        className={styles.statusRing}
-                        style={{ borderColor: statusColors[user.status as keyof typeof statusColors] || '#333' }}
-                      />
                       <button
                         className={styles.cardAvatar}
                         tabIndex={0}
@@ -286,15 +277,12 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                         onKeyDown={(e) => handleAvatarKeyDown(e, user)}
                         aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
                       >
-                        <Image
-                          src={user.imageUrl || ''}
-                          alt={user.firstName || 'Avatar de usuario'}
-                          width={40}
-                          height={40}
-                          className={styles.avatarImage}
-                          onError={(e) => {
-                            e.currentTarget.src = '';
-                          }}
+                        <UserAvatar
+                          userId={user.id}
+                          imageUrl={user.imageUrl}
+                          userName={`${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Usuario'}
+                          size="medium"
+                          showStatus={true}
                         />
                       </button>
                     </div>

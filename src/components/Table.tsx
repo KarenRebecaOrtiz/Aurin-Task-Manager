@@ -25,10 +25,11 @@ interface TableProps<T extends HasId> {
   sortDirection?: 'asc' | 'desc';
   onSort?: (key: string) => void;
   onRowClick?: (item: T, columnKey: string) => void;
+  getRowClassName?: (item: T) => string;
 }
 
 const Table = memo(
-  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick }: TableProps<T>) => {
+  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick, getRowClassName }: TableProps<T>) => {
     const [currentPage, setCurrentPage] = useState(1);
     const tableRef = useRef<HTMLDivElement>(null);
 
@@ -137,7 +138,7 @@ const Table = memo(
             <EmptyState />
           ) : (
             paginatedData.map((item, index) => (
-              <div key={item.id || `row-${index}`} className={styles.row}>
+              <div key={item.id || `row-${index}`} className={`${styles.row} ${getRowClassName?.(item) || ''}`}>
                 {columns.map((column) => (
                   <div
                     key={column.key}
@@ -208,7 +209,8 @@ const Table = memo(
       prevProps.columns === nextProps.columns &&
       prevProps.itemsPerPage === nextProps.itemsPerPage &&
       prevProps.onSort === nextProps.onSort &&
-      prevProps.onRowClick === nextProps.onRowClick
+      prevProps.onRowClick === nextProps.onRowClick &&
+      prevProps.getRowClassName === nextProps.getRowClassName
     );
   },
 );
