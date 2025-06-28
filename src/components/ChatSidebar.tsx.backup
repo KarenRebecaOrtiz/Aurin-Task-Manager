@@ -1,15 +1,29 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, memo, forwardRef, Dispatch, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo, forwardRef, Dispatch } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
-import { Timestamp, doc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  Timestamp,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
-import InfiniteScroll from 'react-infinite-scroll-component';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
 import InputChat from './ui/InputChat';
+import ActionMessages from './ui/ActionMessages';
+import MessageItemOptimized from './MessageItemOptimized';
 import styles from './ChatSidebar.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import Loader from '@/components/Loader';
@@ -19,9 +33,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import UserAvatar from './ui/UserAvatar';
 import { useEncryption } from '@/hooks/useEncryption';
 import { updateTaskActivity } from '@/lib/taskUtils';
-import { useMessagePagination } from '@/hooks/useMessagePagination';
-import { useMessageActions } from '@/hooks/useMessageActions';
-import { useMessageDrag } from '@/hooks/useMessageDrag';
+import { useMessageOptimization } from '@/hooks/useMessageOptimization';
+import { useFirestoreOptimization } from '@/hooks/useFirestoreOptimization';
+import { useAnimationOptimization } from '@/hooks/useAnimationOptimization';
 
 interface Message {
   id: string;
@@ -45,6 +59,13 @@ interface Message {
     text: string | null;
     imageUrl?: string | null;
   } | null;
+}
+
+interface TimerState {
+  userId: string;
+  isRunning: boolean;
+  startTime: Timestamp | null;
+  accumulatedSeconds: number;
 }
 
 interface ChatSidebarProps {
@@ -77,16 +98,17 @@ interface MessageItemProps {
   actionMenuOpenId: string | null;
   setEditingMessageId: Dispatch<React.SetStateAction<string | null>>;
   setEditingText: Dispatch<React.SetStateAction<string>>;
+  handleEditMessage: (messageId: string) => Promise<void>;
   handleDeleteMessage: (messageId: string) => Promise<void>;
   handleResendMessage: (message: Message) => Promise<void>;
   setImagePreviewSrc: Dispatch<React.SetStateAction<string | null>>;
   editingMessageId: string | null;
+  editingText: string;
   isDraggingMessage: boolean;
   draggedMessageId: string | null;
   dragOffset: number;
   onMessageDragStart: (messageId: string, e: React.MouseEvent | React.TouchEvent) => void;
-  isNewChunk?: boolean;
-  isLoadingChunk: boolean;
+  handleClick: (element: HTMLElement) => void;
 }
 
 const MessageItem = memo(
@@ -101,21 +123,21 @@ const MessageItem = memo(
         actionMenuOpenId,
         setEditingMessageId,
         setEditingText,
+        handleEditMessage,
         handleDeleteMessage,
         handleResendMessage,
         setImagePreviewSrc,
         editingMessageId,
+        editingText,
         isDraggingMessage,
         draggedMessageId,
         dragOffset,
         onMessageDragStart,
-        isNewChunk,
-        isLoadingChunk,
+        handleClick,
       },
       ref,
     ) => {
       const actionMenuRef = useRef<HTMLDivElement>(null);
-      const messageRef = useRef<HTMLDivElement>(null);
 
       // GSAP animations for action menu
       useEffect(() => {
@@ -148,28 +170,6 @@ const MessageItem = memo(
           });
         }
       }, [actionMenuOpenId, message.id]);
-
-      // Animación de fade in para nuevos chunks
-      useEffect(() => {
-        if (isNewChunk && messageRef.current && !isLoadingChunk) { // Solo animar cuando no está cargando
-          gsap.fromTo(
-            messageRef.current,
-            { 
-              opacity: 0, 
-              y: -20,
-              scale: 0.98
-            },
-            { 
-              opacity: 1, 
-              y: 0, 
-              scale: 1,
-              duration: 0.4, 
-              ease: 'power2.out',
-              delay: 0.1
-            }
-          );
-        }
-      }, [isNewChunk, isLoadingChunk]);
 
       const renderMessageContent = useCallback(() => {
         const contentElements = [];
@@ -408,19 +408,10 @@ const MessageItem = memo(
 
       return (
         <div
-          ref={(el) => {
-            // Combinar refs
-            if (typeof ref === 'function') {
-              ref(el);
-            } else if (ref) {
-              ref.current = el;
-            }
-            messageRef.current = el;
-          }}
+          ref={ref}
           className={`${styles.message} ${message.isPending ? styles.pending : ''} ${
             message.hasError && message.senderId === userId ? styles.error : ''
           } ${isDraggingMessage && draggedMessageId === message.id ? styles.dragging : ''}`}
-          data-message-id={message.id}
           style={{
             transform: isDraggingMessage && draggedMessageId === message.id 
               ? `translateX(-${dragOffset}px)` 
@@ -457,104 +448,309 @@ const MessageItem = memo(
                   })}
                 </span>
                 {userId === message.senderId && !message.isPending && (
-                  <div className={styles.actionContainer}>
-                    <button
-                      className={styles.actionButton}
-                      onClick={() => setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id)}
-                    >
-                      <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
-                    </button>
-                    {actionMenuOpenId === message.id && (
-                      <div ref={actionMenuRef} className={styles.actionDropdown}>
-                        {!message.hours && !message.hasError && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              setEditingMessageId(message.id);
-                              setEditingText(message.text || '');
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Editar
-                          </div>
-                        )}
-                        {message.hasError && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              handleResendMessage(message);
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Reintentar Envío
-                          </div>
-                        )}
-                        {message.text && message.text.trim() && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              // Copy message text
-                              const textToCopy = message.text || '';
-                              navigator.clipboard.writeText(textToCopy).catch(() => {
-                                // Fallback for older browsers
-                                const textArea = document.createElement('textarea');
-                                textArea.value = textToCopy;
-                                document.body.appendChild(textArea);
-                                textArea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textArea);
-                              });
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Copiar
-                          </div>
-                        )}
-                        {(message.imageUrl || message.fileUrl) && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              // Download file
-                              if (message.imageUrl || message.fileUrl) {
-                                const link = document.createElement('a');
-                                link.href = message.imageUrl || message.fileUrl || '';
-                                link.download = message.fileName || 'archivo';
-                                link.target = '_blank';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                              }
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Descargar Archivo
-                          </div>
-                        )}
-                        <div
-                          className={styles.actionDropdownItem}
-                          onClick={() => {
-                            handleDeleteMessage(message.id);
-                            setActionMenuOpenId(null);
-                          }}
-                        >
-                          Eliminar
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <ActionMessages
+                    message={message}
+                    userId={userId}
+                    isOpen={actionMenuOpenId === message.id}
+                    onOpen={() => setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id)}
+                    onEdit={() => {
+                      setEditingMessageId(message.id);
+                      setEditingText(message.text || '');
+                      setActionMenuOpenId(null);
+                    }}
+                    onDelete={() => {
+                      handleDeleteMessage(message.id);
+                      setActionMenuOpenId(null);
+                    }}
+                    onCopy={() => {
+                      // Copy message text
+                      const textToCopy = message.text || '';
+                      navigator.clipboard.writeText(textToCopy).catch(() => {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = textToCopy;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                      });
+                      setActionMenuOpenId(null);
+                    }}
+                    onResend={() => {
+                      handleResendMessage(message);
+                      setActionMenuOpenId(null);
+                    }}
+                    onDownload={() => {
+                      // Download file
+                      if (message.imageUrl || message.fileUrl) {
+                        const link = document.createElement('a');
+                        link.href = message.imageUrl || message.fileUrl || '';
+                        link.download = message.fileName || 'archivo';
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                      setActionMenuOpenId(null);
+                    }}
+                    animateClick={handleClick}
+                    actionMenuRef={actionMenuRef}
+                    actionButtonRef={() => {
+                      // No necesitamos hacer nada especial aquí
+                    }}
+                  />
                 )}
               </div>
             </div>
             {editingMessageId === message.id ? (
               <div className={styles.editContainer}>
-                <div className={styles.editContent}>
-                  <div className={styles.editHeader}>
-                    <span className={styles.editLabel}>✏️ Editando en el input principal</span>
-                  </div>
-                  <div className={styles.editPreview}>
-                    <span className={styles.editText}>Usa el input de abajo para editar este mensaje</span>
-                  </div>
-                </div>
+                <textarea
+                  value={editingText}
+                  onChange={(e) => setEditingText(e.target.value)}
+                  className={styles.editInput}
+                  autoFocus
+                  rows={3}
+                  style={{ resize: 'vertical', minHeight: '36px', maxHeight: '200px' }}
+                  onKeyDown={(e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                      switch (e.key.toLowerCase()) {
+                        case 'a':
+                          e.preventDefault();
+                          e.currentTarget.select();
+                          break;
+                        case 'c':
+                          e.preventDefault();
+                          const selection = window.getSelection();
+                          if (selection && selection.toString().length > 0) {
+                            navigator.clipboard.writeText(selection.toString()).catch(() => {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                            });
+                          }
+                          break;
+                        case 'v':
+                          e.preventDefault();
+                          navigator.clipboard.readText().then(text => {
+                            const target = e.currentTarget;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            const newValue = editingText.substring(0, start) + text + editingText.substring(end);
+                            setEditingText(newValue);
+                            // Set cursor position after paste
+                            setTimeout(() => {
+                              target.setSelectionRange(start + text.length, start + text.length);
+                            }, 0);
+                          }).catch(() => {
+                            // Fallback for older browsers or when clipboard access is denied
+                            document.execCommand('paste');
+                          });
+                          break;
+                        case 'x':
+                          e.preventDefault();
+                          const cutSelection = window.getSelection();
+                          if (cutSelection && cutSelection.toString().length > 0) {
+                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                              const target = e.currentTarget;
+                              const start = target.selectionStart;
+                              const end = target.selectionEnd;
+                              const newValue = editingText.substring(0, start) + editingText.substring(end);
+                              setEditingText(newValue);
+                            }).catch(() => {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = cutSelection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                              const target = e.currentTarget;
+                              const start = target.selectionStart;
+                              const end = target.selectionEnd;
+                              const newValue = editingText.substring(0, start) + editingText.substring(end);
+                              setEditingText(newValue);
+                            });
+                          }
+                          break;
+                      }
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    
+                    const selection = window.getSelection();
+                    const hasSelection = selection && selection.toString().length > 0;
+                    
+                    const menu = document.createElement('div');
+                    menu.className = 'context-menu';
+                    menu.style.cssText = `
+                      position: fixed;
+                      top: ${e.clientY}px;
+                      left: ${e.clientX}px;
+                      background: white;
+                      border: 1px solid #ccc;
+                      border-radius: 4px;
+                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                      z-index: 1000;
+                      font-family: 'Inter Tight', sans-serif;
+                      font-size: 14px;
+                      min-width: 150px;
+                    `;
+
+                    const menuItems = [
+                      { label: 'Deshacer', action: () => document.execCommand('undo'), shortcut: 'Ctrl+Z' },
+                      { label: 'Rehacer', action: () => document.execCommand('redo'), shortcut: 'Ctrl+Y' },
+                      { type: 'separator' },
+                      { 
+                        label: 'Cortar', 
+                        action: async () => {
+                          if (hasSelection) {
+                            try {
+                              await navigator.clipboard.writeText(selection.toString());
+                              document.execCommand('delete');
+                            } catch {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                              document.execCommand('delete');
+                            }
+                          }
+                        }, 
+                        shortcut: 'Ctrl+X', 
+                        disabled: !hasSelection 
+                      },
+                      { 
+                        label: 'Copiar', 
+                        action: async () => {
+                          if (hasSelection) {
+                            try {
+                              await navigator.clipboard.writeText(selection.toString());
+                            } catch {
+                              // Fallback for older browsers
+                              const textArea = document.createElement('textarea');
+                              textArea.value = selection.toString();
+                              document.body.appendChild(textArea);
+                              textArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(textArea);
+                            }
+                          }
+                        }, 
+                        shortcut: 'Ctrl+C', 
+                        disabled: !hasSelection 
+                      },
+                      { 
+                        label: 'Pegar', 
+                        action: async () => {
+                          try {
+                            const text = await navigator.clipboard.readText();
+                            document.execCommand('insertText', false, text);
+                          } catch {
+                            // Fallback for older browsers
+                            document.execCommand('paste');
+                          }
+                        }, 
+                        shortcut: 'Ctrl+V'
+                      },
+                      { type: 'separator' },
+                      { 
+                        label: 'Seleccionar Todo', 
+                        action: () => {
+                          const target = e.currentTarget;
+                          target.select();
+                        }, 
+                        shortcut: 'Ctrl+A'
+                      },
+                      { 
+                        label: 'Eliminar', 
+                        action: () => {
+                          if (hasSelection) {
+                            document.execCommand('delete');
+                          }
+                        }, 
+                        shortcut: 'Delete', 
+                        disabled: !hasSelection 
+                      }
+                    ];
+
+                    menuItems.forEach((item) => {
+                      if (item.type === 'separator') {
+                        const separator = document.createElement('hr');
+                        separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
+                        menu.appendChild(separator);
+                        return;
+                      }
+
+                      const menuItem = document.createElement('div');
+                      menuItem.style.cssText = `
+                        padding: 8px 12px;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+                      `;
+                      menuItem.innerHTML = `
+                        <span>${item.label}</span>
+                        <span style="color: #666; font-size: 12px;">${item.shortcut}</span>
+                      `;
+                      
+                      if (!item.disabled) {
+                        menuItem.addEventListener('click', () => {
+                          item.action();
+                          document.body.removeChild(menu);
+                        });
+                        
+                        menuItem.addEventListener('mouseenter', () => {
+                          menuItem.style.backgroundColor = '#f5f5f5';
+                        });
+                        menuItem.addEventListener('mouseleave', () => {
+                          menuItem.style.backgroundColor = 'transparent';
+                        });
+                      }
+                      
+                      menu.appendChild(menuItem);
+                    });
+
+                    document.body.appendChild(menu);
+
+                    // Close menu when clicking outside
+                    const closeMenu = () => {
+                      if (document.body.contains(menu)) {
+                        document.body.removeChild(menu);
+                      }
+                      document.removeEventListener('click', closeMenu);
+                    };
+                    
+                    setTimeout(() => {
+                      document.addEventListener('click', closeMenu);
+                    }, 0);
+                  }}
+                />
+                <button
+                  className={styles.editSaveButton}
+                  onClick={() => handleEditMessage(message.id)}
+                  disabled={!editingText.trim()}
+                >
+                  Guardar
+                </button>
+                <button
+                  className={styles.editCancelButton}
+                  onClick={() => {
+                    setEditingMessageId(null);
+                    setEditingText('');
+                  }}
+                >
+                  Cancelar
+                </button>
               </div>
             ) : (
               renderMessageContent()
@@ -571,10 +767,52 @@ const MessageItem = memo(
       prevProps.message.hasError === nextProps.message.hasError &&
       prevProps.message.text === nextProps.message.text &&
       prevProps.actionMenuOpenId === nextProps.actionMenuOpenId &&
-      prevProps.editingMessageId === nextProps.editingMessageId
+      prevProps.editingMessageId === nextProps.editingMessageId &&
+      prevProps.editingText === nextProps.editingText
     );
   },
 );
+
+// Caché para mensajes con error
+const getCachedMessages = (taskId: string) => {
+  try {
+    const cached = localStorage.getItem(`failedMessages_${taskId}`);
+    if (!cached) return [];
+    const parsed = JSON.parse(cached) as Message[];
+    return parsed.filter(
+      (msg) =>
+        msg.timestamp &&
+        (msg.timestamp instanceof Timestamp ||
+          (msg.timestamp instanceof Date && !isNaN(msg.timestamp.getTime()))),
+    );
+  } catch (error) {
+    console.error('Error parsing cached messages', error);
+    return [];
+  }
+};
+
+const saveCachedMessage = (taskId: string, message: Message) => {
+  try {
+    const cached = getCachedMessages(taskId);
+    // Evitar duplicados por clientId
+    if (!cached.some((msg) => msg.clientId === message.clientId)) {
+      cached.push(message);
+      localStorage.setItem(`failedMessages_${taskId}`, JSON.stringify(cached));
+    }
+  } catch (error) {
+    console.error('Error saving to localStorage', error);
+  }
+};
+
+const removeCachedMessage = (taskId: string, clientId: string) => {
+  try {
+    const cached = getCachedMessages(taskId);
+    const updated = cached.filter((msg: Message) => msg.clientId !== clientId);
+    localStorage.setItem(`failedMessages_${taskId}`, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error removing from localStorage', error);
+  }
+};
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isOpen,
@@ -586,9 +824,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const { user } = useUser();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const { isAdmin, isLoading } = useAuth();
+  // Hook de cifrado end-to-end
   const { encryptMessage, decryptMessage } = useEncryption();
-  
-  // Estados de UI
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
@@ -603,16 +841,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [task] = useState(initialTask);
+  const [task, setTask] = useState(initialTask);
   const [activeCardDropdown, setActiveCardDropdown] = useState<'status' | 'team' | 'hours' | null>(null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const [isSummarizeDropdownOpen, setIsSummarizeDropdownOpen] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
-  const [isLoadingChunk, setIsLoadingChunk] = useState(false);
-
-  // Refs
+  const [isDraggingMessage, setIsDraggingMessage] = useState(false);
+  const [draggedMessageId, setDraggedMessageId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const chatRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -624,72 +863,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const timerPanelRef = useRef<HTMLDivElement>(null);
   const summarizeDropdownRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef<Message[]>([]);
-  const chatRef = useRef<HTMLDivElement>(null);
   const [isRestoringTimer] = useState(false);
+  const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
 
-  // Hooks optimizados
-  const {
-    messages,
-    isLoading: isLoadingMessages,
-    isLoadingMore,
-    hasMore,
-    loadMoreMessages,
-    addOptimisticMessage,
-    updateOptimisticMessage,
-  } = useMessagePagination({
-    taskId: task.id,
-    pageSize: 10, // Optimizado de 5 a 10 para mejor rendimiento
-    decryptMessage,
-  });
-
-  // Hook para drag de mensajes y reply
-  const {
-    isDraggingMessage,
-    draggedMessageId,
-    dragOffset,
-    handleMessageDragStart,
-  } = useMessageDrag({
-    onReplyActivated: (messageId: string) => {
-      const messageToReply = messages.find(msg => msg.id === messageId);
-      if (messageToReply) {
-        setReplyingTo(messageToReply);
-        console.log('[ChatSidebar] Reply activated for message:', messageToReply.id);
-      }
-    },
-  });
-
-  // Función para cargar más mensajes (sin preservación de scroll)
-  const handleLoadMoreMessages = useCallback(() => {
-    if (hasMore && !isLoadingMore && !isLoadingChunk) {
-      setIsLoadingChunk(true);
-      loadMoreMessages().finally(() => {
-        setIsLoadingChunk(false);
-      });
-    }
-  }, [hasMore, isLoadingMore, isLoadingChunk, loadMoreMessages]);
-
-  const {
-    isSending,
-    sendMessage,
-    editMessage,
-    deleteMessage,
-    resendMessage,
-    markMessagesAsRead,
-    sendTimeMessage,
-  } = useMessageActions({
-    task,
-    encryptMessage,
-    addOptimisticMessage,
-    updateOptimisticMessage,
-  });
-
-  // Computed values
   const isCreator = useMemo(() => user?.id === task.CreatedBy, [user?.id, task.CreatedBy]);
   const isInvolved = useMemo(() => 
     user?.id &&
     (task.AssignedTo.includes(user.id) || task.LeadedBy.includes(user.id) || task.CreatedBy === user.id),
     [user?.id, task.AssignedTo, task.LeadedBy, task.CreatedBy]
   );
+  // Permitir acceso a admins para ver dropdowns de equipo y tiempo registrado
   const canViewTeamAndHours = useMemo(() => isInvolved || isAdmin, [isInvolved, isAdmin]);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
@@ -700,19 +883,23 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const toggleBodyScroll = (disable: boolean) => {
     if (typeof document !== 'undefined') {
       if (disable) {
+        // Guardar la posición actual del scroll
         const scrollY = window.scrollY;
         document.body.style.position = 'fixed';
         document.body.style.top = `-${scrollY}px`;
         document.body.style.width = '100%';
         document.body.style.overflow = 'hidden';
+        // Guardar la posición en un atributo para restaurarla después
         document.body.setAttribute('data-scroll-y', scrollY.toString());
       } else {
+        // Restaurar el scroll del body
         const scrollY = document.body.getAttribute('data-scroll-y');
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.overflow = '';
         document.body.removeAttribute('data-scroll-y');
+        // Restaurar la posición del scroll
         if (scrollY) {
           window.scrollTo(0, parseInt(scrollY));
         }
@@ -720,9 +907,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  // Efectos de UI y animaciones
   useEffect(() => {
+    // Bloquear/desbloquear scroll cuando el sidebar se abre/cierra
     toggleBodyScroll(isOpen);
+    
+    // Cleanup: asegurar que el scroll se restaure al desmontar el componente
     return () => {
       if (isOpen) {
         toggleBodyScroll(false);
@@ -742,7 +931,102 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, [isTimerRunning]);
 
-  // Efecto para animaciones del sidebar
+  useEffect(() => {
+    if (!task.id) {
+      return;
+    }
+    console.log('[ChatSidebar:TaskListener] Setting up task listener for:', task.id);
+    const unsubscribe = onSnapshot(
+      doc(db, 'tasks', task.id),
+      (doc) => {
+        if (doc.exists()) {
+          const taskData = doc.data();
+          console.log('[ChatSidebar:TaskListener] Task updated:', {
+            id: doc.id,
+            status: taskData.status,
+            assignedTo: taskData.AssignedTo,
+            leadedBy: taskData.LeadedBy,
+            createdBy: taskData.CreatedBy
+          });
+          setTask({
+            id: doc.id,
+            clientId: taskData.clientId || '',
+            project: taskData.project || '',
+            name: taskData.name || '',
+            description: taskData.description || '',
+            status: taskData.status || '',
+            priority: taskData.priority || '',
+            startDate: taskData.startDate ? taskData.startDate.toDate().toISOString() : null,
+            endDate: taskData.endDate ? taskData.endDate.toDate().toISOString() : null,
+            LeadedBy: taskData.LeadedBy || [],
+            AssignedTo: taskData.AssignedTo || [],
+            CreatedBy: taskData.CreatedBy || '',
+          });
+        }
+      },
+      (error) => {
+        console.error('[ChatSidebar:TaskListener] Error listening to task:', error);
+      },
+    );
+    return () => {
+      console.log('[ChatSidebar:TaskListener] Cleaning up task listener');
+      unsubscribe();
+    };
+  }, [task.id]);
+
+  useEffect(() => {
+    if (!task.id || !user?.id) {
+      return;
+    }
+    const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
+    const unsubscribe = onSnapshot(
+      timerDocRef,
+      (doc) => {
+        if (doc.exists()) {
+          const timerData = doc.data() as TimerState;
+          console.log('[ChatSidebar:Timer] Firestore timer update:', {
+            isRunning: timerData.isRunning,
+            startTime: timerData.startTime?.toDate(),
+            accumulatedSeconds: timerData.accumulatedSeconds,
+            taskId: task.id,
+            userId: user.id
+          });
+          
+          setIsTimerRunning(timerData.isRunning);
+          if (timerData.isRunning && timerData.startTime) {
+            const start = timerData.startTime.toDate().getTime();
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - start) / 1000) + timerData.accumulatedSeconds;
+            console.log('[ChatSidebar:Timer] Calculating elapsed time:', {
+              start: new Date(start),
+              now: new Date(now),
+              elapsedSeconds,
+              accumulatedSeconds: timerData.accumulatedSeconds
+            });
+            setTimerSeconds(elapsedSeconds);
+          } else {
+            console.log('[ChatSidebar:Timer] Setting accumulated time:', timerData.accumulatedSeconds);
+            setTimerSeconds(timerData.accumulatedSeconds);
+          }
+        } else {
+          console.log('[ChatSidebar:Timer] Initializing new timer document');
+          setDoc(timerDocRef, {
+            userId: user.id,
+            isRunning: false,
+            startTime: null,
+            accumulatedSeconds: 0,
+          }).catch((error) => {
+            console.error('Error initializing timer', error);
+          });
+        }
+      },
+      (error) => {
+        console.error('Error listening to timer', error);
+      },
+    );
+    return () => unsubscribe();
+  }, [task.id, user?.id]);
+
   useEffect(() => {
     if (sidebarRef.current) {
       const mobile = isMobile();
@@ -764,25 +1048,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   }, [isOpen, onClose]);
 
-  // Efecto para cerrar dropdowns al hacer scroll
   useEffect(() => {
-    const handleScroll = () => {
-      setActionMenuOpenId(null);
-    };
-    
-    const chatEl = chatRef.current;
-    if (chatEl) {
-      chatEl.addEventListener('scroll', handleScroll);
+    if (isOpen && messages.length > 0 && lastMessageRef.current) {
+      const timer = setTimeout(() => {
+        lastMessageRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }, 100); // Reduced delay for instant positioning
+      
+      return () => clearTimeout(timer);
     }
-    
-    return () => {
-      if (chatEl) {
-        chatEl.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, []);
+  }, [isOpen, messages.length]);
 
-  // Efecto para click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node) && isOpen) {
@@ -838,6 +1113,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       ) {
         setIsSummarizeDropdownOpen(false);
       }
+      // Cerrar dropdown de detalles si se hace click fuera
+      // if (isDetailsDropdownOpen) {
+      //   const headerSection = document.querySelector(`.${styles.headerSection}`);
+      //   if (headerSection && !headerSection.contains(event.target as Node)) {
+      //     setIsDetailsDropdownOpen(false);
+      //   }
+      // }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -853,7 +1135,212 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     isDetailsDropdownOpen,
   ]);
 
-  // Handlers
+  useEffect(() => {
+    if (!task.id) {
+      return;
+    }
+    const cachedMessages = getCachedMessages(task.id);
+    if (cachedMessages.length > 0) {
+      setMessages((prev) => {
+        const messageMap = new Map<string, Message>(prev.map((msg) => [msg.id, msg]));
+        cachedMessages.forEach((msg: Message) => {
+          if (!messageMap.has(msg.id) && msg.timestamp) {
+            messageMap.set(msg.id, {
+              ...msg,
+              timestamp: msg.timestamp instanceof Timestamp ? msg.timestamp : new Date(msg.timestamp),
+            });
+          }
+        });
+        return Array.from(messageMap.values()).sort((a, b) => {
+          const aTime = a.timestamp
+            ? a.timestamp instanceof Timestamp
+              ? a.timestamp.toDate().getTime()
+              : a.timestamp.getTime()
+            : 0;
+          const bTime = b.timestamp
+            ? b.timestamp instanceof Timestamp
+              ? b.timestamp.toDate().getTime()
+              : b.timestamp.getTime()
+            : 0;
+          return aTime - bTime;
+        });
+      });
+    }
+
+    const messagesQuery = query(collection(db, `tasks/${task.id}/messages`), orderBy('timestamp', 'asc'));
+    const unsubscribe = onSnapshot(
+      messagesQuery,
+      (snapshot) => {
+        const newMessages: Message[] = snapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            if (!data.timestamp) {
+              console.warn(`Mensaje con ID ${doc.id} tiene timestamp inválido: ${data.timestamp}`);
+              return null;
+            }
+            
+            // Descifrar el texto del mensaje al recibirlo de Firestore
+            const decryptedText = data.text ? decryptMessage(data.text) : data.text;
+            
+            return {
+              id: doc.id,
+              senderId: data.senderId,
+              senderName: data.senderName,
+              text: decryptedText, // Usar el texto descifrado
+              timestamp: data.timestamp,
+              read: data.read || false,
+              hours: data.hours,
+              imageUrl: data.imageUrl || null,
+              fileUrl: data.fileUrl || null,
+              fileName: data.fileName || null,
+              fileType: data.fileType || null,
+              filePath: data.filePath || null,
+              clientId: doc.id, // Usar el ID del documento como clientId para evitar duplicados
+              isPending: false,
+              hasError: false,
+              replyTo: data.replyTo || null, // Incluir la información de replyTo
+            };
+          })
+          .filter((msg) => msg !== null);
+          
+        setMessages((prev) => {
+          const messageMap = new Map<string, Message>();
+          // Mantener mensajes pendientes (que tienen clientId temporal)
+          prev.forEach((msg) => {
+            if (msg.isPending || msg.hasError) {
+              messageMap.set(msg.clientId, msg);
+            }
+          });
+          
+          // Agregar mensajes de Firestore (evitando duplicados por ID)
+          newMessages.forEach((msg) => {
+            messageMap.set(msg.id, msg);
+          });
+          
+          const updatedMessages = Array.from(messageMap.values()).sort((a, b) => {
+            const aTime = a.timestamp
+              ? a.timestamp instanceof Timestamp
+                ? a.timestamp.toDate().getTime()
+                : a.timestamp.getTime()
+              : 0;
+            const bTime = b.timestamp
+              ? b.timestamp instanceof Timestamp
+                ? b.timestamp.toDate().getTime()
+                : b.timestamp.getTime()
+              : 0;
+            return aTime - bTime;
+          });
+          return updatedMessages;
+        });
+      },
+      (error) => {
+        console.error('Error fetching messages', error);
+      },
+    );
+    return () => unsubscribe();
+  }, [task.id, decryptMessage]);
+
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      setHasInteracted(true);
+      const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
+      unreadMessages.forEach(async (msg) => {
+        try {
+          await updateDoc(doc(db, `tasks/${task.id}/messages`, msg.id), {
+            read: true,
+          });
+        } catch (error) {
+          console.error('Error marking message as read', error);
+        }
+      });
+    }
+  }, [isOpen, messages, user?.id, task.id]);
+
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio('/NotificationSound.mp3');
+    }
+    const newUnreadMessages = messages.filter(
+      (msg) =>
+        !msg.read &&
+        !msg.isPending &&
+        !prevMessagesRef.current.some(
+          (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId,
+        ),
+    );
+    if (newUnreadMessages.length > 0 && user?.id && hasInteracted) {
+      const latestMessage = newUnreadMessages[newUnreadMessages.length - 1];
+      if (latestMessage.senderId !== user.id) {
+        audioRef.current.play().catch((error) => {
+          console.error('Error playing notification sound', error);
+        });
+      }
+    }
+    prevMessagesRef.current = messages;
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, [messages, user?.id, hasInteracted]);
+
+  useEffect(() => {
+    if (lastMessageRef.current && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      // Solo hacer scroll si el último mensaje es nuevo (enviado o recibido)
+      if (lastMessage.isPending || !prevMessagesRef.current.some((prev) => prev.id === lastMessage.id)) {
+        lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setActionMenuOpenId(null);
+    };
+    const chatEl = chatRef.current;
+    if (chatEl) {
+      chatEl.addEventListener('scroll', handleScroll);
+    }
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      if (chatEl) {
+        chatEl.removeEventListener('scroll', handleScroll);
+      }
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (actionMenuOpenId && actionMenuRef.current) {
+      gsap.fromTo(
+        actionMenuRef.current,
+        { opacity: 0, y: -5, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+    }
+  }, [actionMenuOpenId]);
+
+  useEffect(() => {
+    if (isTaskMenuOpen && taskMenuRef.current) {
+      gsap.fromTo(
+        taskMenuRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
+      );
+    }
+  }, [isTaskMenuOpen]);
+
+  useEffect(() => {
+    if (isDeletePopupOpen && deletePopupRef.current) {
+      gsap.fromTo(
+        deletePopupRef.current,
+        { opacity: 0, scale: 0.95 },
+        { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' },
+      );
+    }
+  }, [isDeletePopupOpen]);
+
   const handleClick = (element: HTMLElement) => {
     gsap.to(element, {
       scale: 0.95,
@@ -873,6 +1360,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       await updateDoc(doc(db, 'tasks', task.id), {
         status,
       });
+      
+      // Actualizar la actividad de la tarea
       await updateTaskActivity(task.id, 'status_change');
       
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
@@ -899,6 +1388,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
     setIsDeleting(true);
     try {
+      // Close the sidebar instead of deleting the task
       setIsDeletePopupOpen(false);
       setDeleteConfirm('');
       onClose();
@@ -916,59 +1406,161 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     audioUrl?: string,
     duration?: number,
   ) => {
-    if (!user?.id) return;
+    if (!user?.id || isSending) {
+      return;
+    }
+    setIsSending(true);
+  
+    const clientId = messageData.clientId || crypto.randomUUID();
+    const tempId = messageData.id || `temp-${clientId}`;
     
-    // Incluir información de reply si existe
-    const messageWithReply = {
-      ...messageData,
+    // Cifrar el texto del mensaje antes de enviarlo
+    const encryptedText = messageData.text ? encryptMessage(messageData.text) : null;
+    
+    const optimisticMessage: Message = {
+      id: tempId,
       senderId: user.id,
       senderName: user.firstName || 'Usuario',
-      replyTo: replyingTo ? {
-        id: replyingTo.id,
-        senderName: replyingTo.senderName,
-        text: replyingTo.text,
-        imageUrl: replyingTo.imageUrl,
-      } : null,
+      text: messageData.text || null, // Mostrar texto sin cifrar en la UI
+      timestamp: new Date(),
+      read: false,
+      imageUrl: messageData.imageUrl || null,
+      fileUrl: messageData.fileUrl || audioUrl || null,
+      fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
+      fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
+      filePath: messageData.filePath || null,
+      hours: duration ? duration / 3600 : undefined,
+      isPending: messageData.isPending !== undefined ? messageData.isPending : true,
+      hasError: messageData.hasError || false,
+      clientId,
+      replyTo: messageData.replyTo || null, // Incluir la información de replyTo
     };
-    
-    await sendMessage(messageWithReply, isAudio, audioUrl, duration);
-    
-    // Limpiar el estado de reply después de enviar
-    setReplyingTo(null);
+  
+    // Update or add the message
+    setMessages((prev) => {
+      const existingIndex = prev.findIndex((msg) => msg.clientId === clientId);
+      if (existingIndex !== -1) {
+        // Update existing message
+        const updatedMessages = [...prev];
+        updatedMessages[existingIndex] = { ...optimisticMessage };
+        return updatedMessages;
+      }
+      // Add new message
+      return [...prev, optimisticMessage];
+    });
+  
+    setHasInteracted(true);
+  
+    // Skip Firestore update if the message is just an optimistic update (still pending)
+    if (messageData.isPending) {
+      setIsSending(false);
+      return;
+    }
+  
+    try {
+      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        senderId: user.id,
+        senderName: user.firstName || 'Usuario',
+        text: encryptedText, // Guardar el texto cifrado en Firestore
+        timestamp: serverTimestamp(),
+        read: false,
+        imageUrl: messageData.imageUrl || null,
+        fileUrl: messageData.fileUrl || audioUrl || null,
+        fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
+        fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
+        filePath: messageData.filePath || null,
+        replyTo: messageData.replyTo || null, // Incluir la información de replyTo en Firestore
+        ...(duration && { hours: duration / 3600 }),
+      });
+  
+      // Crear notificaciones para todos los participantes de la tarea (excepto el remitente)
+      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+      if (task.CreatedBy) recipients.add(task.CreatedBy);
+      recipients.delete(user.id); // No notificar al remitente
+      
+      // Crear el mensaje de notificación
+      let notificationMessage = '';
+      if (messageData.text) {
+        const textPreview = messageData.text.length > 50 
+          ? `${messageData.text.substring(0, 50)}...` 
+          : messageData.text;
+        notificationMessage = `${user.firstName || 'Usuario'} escribió en ${task.name}: ${textPreview}`;
+      } else if (messageData.imageUrl) {
+        notificationMessage = `${user.firstName || 'Usuario'} compartió una imagen en ${task.name}`;
+      } else if (messageData.fileUrl) {
+        notificationMessage = `${user.firstName || 'Usuario'} compartió un archivo en ${task.name}`;
+      } else if (duration) {
+        notificationMessage = `${user.firstName || 'Usuario'} registró tiempo en ${task.name}`;
+      } else {
+        notificationMessage = `${user.firstName || 'Usuario'} envió un mensaje en ${task.name}`;
+      }
+
+      // Crear notificaciones para cada participante
+      const notificationPromises = Array.from(recipients).map(recipientId =>
+        addDoc(collection(db, 'notifications'), {
+          userId: user.id,
+          taskId: task.id,
+          message: notificationMessage,
+          timestamp: Timestamp.now(),
+          read: false,
+          recipientId,
+          type: 'task_message',
+        })
+      );
+
+      await Promise.all(notificationPromises);
+  
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.clientId === clientId
+            ? { ...msg, id: docRef.id, isPending: false, timestamp: Timestamp.now() }
+            : msg,
+        ),
+      );
+      removeCachedMessage(task.id, clientId);
+      
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(task.id, 'message');
+    } catch (error) {
+      console.error('Send message error', error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.clientId === clientId
+            ? { ...msg, isPending: false, hasError: true }
+            : msg,
+        ),
+      );
+      saveCachedMessage(task.id, { ...optimisticMessage, isPending: false, hasError: true });
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleEditMessage = async (messageId: string, newText?: string) => {
-    if (!user?.id) {
-      alert('El mensaje no puede estar vacío.');
-      return;
-    }
-    
-    // Si se proporciona newText, es desde el input principal
-    if (newText) {
-      if (!newText.trim()) {
-        alert('El mensaje no puede estar vacío.');
-        return;
-      }
-      try {
-        await editMessage(messageId, newText.trim());
-        setEditingMessageId(null);
-        setEditingText('');
-      } catch (error) {
-        console.error('Error editing message:', error);
-        alert('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
-      }
-      return;
-    }
-    
-    // Si no se proporciona newText, es desde el menú de acciones (modo legacy)
-    if (!editingText.trim()) {
+  const handleEditMessage = async (messageId: string) => {
+    if (!user?.id || !editingText.trim()) {
       alert('El mensaje no puede estar vacío.');
       return;
     }
     try {
-      await editMessage(messageId, editingText.trim());
+      // Cifrar el texto editado antes de guardarlo en Firestore
+      const encryptedText = encryptMessage(editingText.trim());
+      
+      await updateDoc(doc(db, `tasks/${task.id}/messages`, messageId), {
+        text: encryptedText, // Guardar el texto cifrado
+        timestamp: Timestamp.now(),
+      });
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, text: editingText.trim(), timestamp: Timestamp.now() } // Mostrar texto descifrado en UI
+            : msg,
+        ),
+      );
       setEditingMessageId(null);
       setEditingText('');
+      
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(task.id, 'message');
     } catch (error) {
       console.error('Error editing message:', error);
       alert('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
@@ -976,20 +1568,113 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    if (!user?.id) {
+      console.log('[ChatSidebar:DeleteMessage] No user ID, aborting delete');
+      return;
+    }
     try {
-      await deleteMessage(messageId);
+      console.log('[ChatSidebar:DeleteMessage] Deleting message', messageId);
+      const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
+      const messageDoc = await getDoc(messageRef);
+      if (messageDoc.exists()) {
+        const messageData = messageDoc.data();
+        if (messageData.filePath) {
+          try {
+            const response = await fetch('/api/delete-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filePath: messageData.filePath }),
+            });
+            if (!response.ok) {
+              console.error('[ChatSidebar:DeleteMessage] Failed to delete GCS file', await response.json());
+            } else {
+              console.log('[ChatSidebar:DeleteMessage] GCS file deleted successfully');
+            }
+          } catch (error) {
+            console.error('[ChatSidebar:DeleteMessage] Error deleting GCS file', error);
+          }
+        }
+      }
+      await deleteDoc(messageRef);
       setActionMenuOpenId(null);
+      setMessages((prev) => {
+        const updated = prev.filter((msg) => msg.id !== messageId);
+        const deletedMessage = prev.find((msg) => msg.id === messageId);
+        if (deletedMessage?.hasError) {
+          removeCachedMessage(task.id, deletedMessage.clientId);
+        }
+        return updated;
+      });
+      console.log('[ChatSidebar:DeleteMessage] Message deleted successfully');
     } catch (error) {
-      console.error('Error deleting message:', error);
+      console.error('[ChatSidebar:DeleteMessage] Error deleting message', error);
     }
   };
 
   const handleResendMessage = async (message: Message) => {
+    if (!user?.id || isSending) {
+      return;
+    }
+    setIsSending(true);
+
+    const newTempId = `temp-${Date.now()}-${Math.random()}`;
+    const newClientId = crypto.randomUUID();
+    const resendMessage: Message = {
+      ...message,
+      id: newTempId,
+      clientId: newClientId,
+      timestamp: Timestamp.fromDate(new Date()),
+      isPending: true,
+      hasError: false,
+    };
+
+    setMessages((prev) => {
+      const updated = prev.filter((msg) => msg.clientId !== message.clientId);
+      return [...updated, resendMessage];
+    });
+
     try {
-      await resendMessage(message);
+      // Cifrar el texto antes de reenviarlo a Firestore
+      const encryptedText = message.text ? encryptMessage(message.text) : message.text;
+      
+      const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        senderId: message.senderId,
+        senderName: message.senderName,
+        text: encryptedText, // Guardar el texto cifrado
+        timestamp: serverTimestamp(),
+        read: false,
+        imageUrl: message.imageUrl,
+        fileUrl: message.fileUrl,
+        fileName: message.fileName,
+        fileType: message.fileType,
+        filePath: message.filePath,
+        replyTo: message.replyTo || null, // Incluir la información de replyTo
+        ...(message.hours && { hours: message.hours }),
+      });
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === newTempId
+            ? { ...msg, id: docRef.id, isPending: false, timestamp: Timestamp.now() }
+            : msg,
+        ),
+      );
+      removeCachedMessage(task.id, message.clientId);
     } catch (error) {
-      console.error('Error resending message:', error);
+      console.error('Resend message error', error);
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === newTempId) {
+            const failedMessage = { ...msg, isPending: false, hasError: true };
+            saveCachedMessage(task.id, failedMessage);
+            return failedMessage;
+          }
+          return msg;
+        }),
+      );
       alert('Error al reenviar el mensaje');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -1001,6 +1686,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     
     handleClick(_e.currentTarget as HTMLElement);
     const wasRunning = isTimerRunning;
+    console.log('[ChatSidebar:ToggleTimer] Toggling timer:', {
+      wasRunning,
+      currentSeconds: timerSeconds,
+      taskId: task.id,
+      userId: user.id
+    });
     
     setIsTimerRunning((prev) => !prev);
     setHasInteracted(true);
@@ -1011,9 +1702,27 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const displayHours = Math.floor(timerSeconds / 3600);
       const displayMinutes = Math.floor((timerSeconds % 3600) / 60);
       const timeEntry = `${displayHours}h ${displayMinutes}m`;
+      const timestamp = Timestamp.now();
+
+      console.log('[ChatSidebar:ToggleTimer] Stopping timer and adding time entry:', {
+        hours,
+        timeEntry,
+        timerSeconds
+      });
 
       try {
-        await sendTimeMessage(user.id, user.firstName || 'Usuario', hours, timeEntry);
+        // Cifrar el mensaje de tiempo antes de guardarlo
+        const timeMessage = `Añadió una entrada de tiempo de ${timeEntry}`;
+        const encryptedTimeMessage = encryptMessage(timeMessage);
+        
+        await addDoc(collection(db, `tasks/${task.id}/messages`), {
+          senderId: user.id,
+          senderName: user.firstName || 'Usuario',
+          text: encryptedTimeMessage, // Guardar el mensaje cifrado
+          timestamp,
+          read: false,
+          hours,
+        });
         await setDoc(timerDocRef, {
           userId: user.id,
           isRunning: false,
@@ -1021,10 +1730,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           accumulatedSeconds: 0,
         });
         setTimerSeconds(0);
+        console.log('[ChatSidebar:ToggleTimer] Timer stopped and time entry added successfully');
+        
+        // Actualizar la actividad de la tarea
+        await updateTaskActivity(task.id, 'time_entry');
       } catch (error) {
         console.error('Error adding time entry', error);
       }
     } else if (!wasRunning) {
+      console.log('[ChatSidebar:ToggleTimer] Starting timer');
       try {
         await setDoc(timerDocRef, {
           userId: user.id,
@@ -1032,6 +1746,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           startTime: serverTimestamp(),
           accumulatedSeconds: timerSeconds,
         });
+        console.log('[ChatSidebar:ToggleTimer] Timer started successfully');
       } catch (error) {
         console.error('Error starting timer', error);
       }
@@ -1050,9 +1765,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       return;
     }
     
+    // Use provided parameters or fall back to state
     const timeToUse = time || timerInput;
     const dateToUse = date || dateInput;
     const commentToUse = comment || commentInput;
+    
+    console.log('[ChatSidebar:HandleAddTimeEntry] Using values:', {
+      time: timeToUse,
+      date: dateToUse,
+      comment: commentToUse
+    });
     
     const [hours, minutes] = timeToUse.split(':').map(Number);
     if (isNaN(hours) || isNaN(minutes)) {
@@ -1064,12 +1786,41 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     const dateString = dateToUse.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' });
 
     try {
-      await sendTimeMessage(user.id, user.firstName || 'Usuario', totalHours, timeEntry, dateString, commentToUse);
+      const timestamp = Timestamp.now();
+      
+      // Cifrar el mensaje de tiempo antes de guardarlo
+      const timeMessage = `Añadió una entrada de tiempo de ${timeEntry} el ${dateString}`;
+      const encryptedTimeMessage = encryptMessage(timeMessage);
+      
+      await addDoc(collection(db, `tasks/${task.id}/messages`), {
+        senderId: user.id,
+        senderName: user.firstName || 'Usuario',
+        text: encryptedTimeMessage, // Guardar el mensaje cifrado
+        timestamp,
+        read: false,
+        hours: totalHours,
+      });
+      
+      if (commentToUse.trim()) {
+        // Cifrar el comentario antes de guardarlo
+        const encryptedComment = encryptMessage(commentToUse.trim());
+        
+        await addDoc(collection(db, `tasks/${task.id}/messages`), {
+          senderId: user.id,
+          senderName: user.firstName || 'Usuario',
+          text: encryptedComment, // Guardar el comentario cifrado
+          timestamp: Timestamp.fromMillis(timestamp.toMillis() + 1),
+          read: false,
+        });
+      }
       setTimerInput('00:00');
       setDateInput(new Date());
       setCommentInput('');
       setIsTimerPanelOpen(false);
       setHasInteracted(true);
+      
+      // Actualizar la actividad de la tarea
+      await updateTaskActivity(task.id, 'time_entry');
     } catch (error) {
       console.error('Error adding time entry', error);
       alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
@@ -1089,19 +1840,29 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     });
     const totalHours = Math.floor(totalMinutes / 60);
     const remainingMinutes = Math.round(totalMinutes % 60);
-    return `${totalHours}h ${remainingMinutes}m`;
+    const result = `${totalHours}h ${remainingMinutes}m`;
+    console.log('[ChatSidebar:TotalHours] Recalculated:', result, 'from', timeMessages.length, 'time messages');
+    return result;
   }, [messages]);
 
   const hoursByUser = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
+    console.log('[ChatSidebar:HoursByUser] Found time messages:', timeMessages.map(msg => ({
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      hours: msg.hours
+    })));
+    
     const hoursMap: { [userId: string]: number } = {};
     timeMessages.forEach((msg) => {
       hoursMap[msg.senderId] = (hoursMap[msg.senderId] || 0) + msg.hours!;
     });
+    console.log('[ChatSidebar:HoursByUser] Hours map:', hoursMap);
     
+    // Get all users who have actually registered time
     const usersWithTime = Object.keys(hoursMap).filter(userId => hoursMap[userId] > 0);
     
-    return usersWithTime.map((userId) => {
+    const result = usersWithTime.map((userId) => {
       const u = users.find((u) => u.id === userId) || {
         id: userId,
         fullName: 'Desconocido',
@@ -1118,11 +1879,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
       };
     });
+    console.log('[ChatSidebar:HoursByUser] Recalculated:', result.length, 'users with time entries', result);
+    return result;
   }, [messages, users]);
 
   const teamUsers = useMemo(() => {
     const teamUserIds = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-    return Array.from(teamUserIds).map((userId) => {
+    const result = Array.from(teamUserIds).map((userId) => {
       const u = users.find((u) => u.id === userId) || {
         id: userId,
         fullName: 'Desconocido',
@@ -1136,6 +1899,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         role: task.LeadedBy.includes(userId) ? 'Responsable' : 'Asignado',
       };
     });
+    console.log('[ChatSidebar:TeamUsers] Recalculated:', result.length, 'team members');
+    return result;
   }, [task.AssignedTo, task.LeadedBy, users]);
 
   const handleGenerateSummary = async (interval: string) => {
@@ -1251,6 +2016,8 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
 
       const systemInstruction = `Eres un analista experto en gestión de proyectos. Creas resúmenes claros, estructurados y actionables de la actividad en tareas. Usa markdown para formatear tu respuesta y proporciona insights valiosos sobre el progreso y la colaboración del equipo.`;
 
+      console.log(`[ChatSidebar:GenerateSummary] Iniciando resumen para ${interval}...`);
+      
       const model = getGenerativeModel(ai, {
         model: 'gemini-1.5-flash',
         generationConfig,
@@ -1342,49 +2109,166 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
     });
   }, [messages]);
 
+  // Funciones para manejar drag y reply
+  const messageDragStartX = useRef(0);
+  const messageDragStartY = useRef(0);
+  const isDraggingMessageRef = useRef(false);
+
+  const handleMessageDragStart = useCallback((messageId: string, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[ChatSidebar] Drag start for message:', messageId);
+    
+    // Guardar posición inicial
+    if ('touches' in e) {
+      messageDragStartX.current = e.touches[0].clientX;
+      messageDragStartY.current = e.touches[0].clientY;
+    } else {
+      messageDragStartX.current = e.clientX;
+      messageDragStartY.current = e.clientY;
+    }
+    
+    setIsDraggingMessage(true);
+    isDraggingMessageRef.current = true;
+    setDraggedMessageId(messageId);
+    setDragOffset(0);
+  }, []);
+
+  const handleMessageDragMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDraggingMessageRef.current || !draggedMessageId) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    // Calcular delta desde la posición inicial
+    const deltaX = messageDragStartX.current - currentX;
+    const deltaY = Math.abs(messageDragStartY.current - currentY);
+    
+    console.log('[ChatSidebar] Drag move - deltaX:', deltaX, 'deltaY:', deltaY);
+    
+    // Solo permitir drag horizontal si el movimiento vertical es menor
+    if (deltaY < 50) {
+      const maxOffset = 80; // Máximo desplazamiento
+      
+      // Permitir drag en ambas direcciones
+      if (Math.abs(deltaX) > 0) {
+        const clampedOffset = Math.max(-maxOffset, Math.min(deltaX, maxOffset));
+        setDragOffset(clampedOffset);
+        console.log('[ChatSidebar] Drag offset set to:', clampedOffset);
+      } else {
+        setDragOffset(0);
+      }
+    }
+  }, [draggedMessageId]);
+
+  const handleMessageDragEnd = useCallback(() => {
+    if (!isDraggingMessageRef.current || !draggedMessageId) return;
+    
+    console.log('[ChatSidebar] Drag end - final offset:', dragOffset);
+    
+    const threshold = 60; // Umbral para activar la respuesta
+    
+    // Activar respuesta si se arrastra hacia la izquierda más allá del umbral
+    if (dragOffset >= threshold) {
+      // Activar respuesta
+      const messageToReply = messages.find(msg => msg.id === draggedMessageId);
+      if (messageToReply) {
+        setReplyingTo(messageToReply);
+        console.log('[ChatSidebar] Reply activated for message:', messageToReply.id);
+      }
+    }
+    
+    // Resetear estados con animación
+    setIsDraggingMessage(false);
+    isDraggingMessageRef.current = false;
+    setDraggedMessageId(null);
+    
+    // Animar el regreso a la posición original
+    setTimeout(() => {
+      setDragOffset(0);
+    }, 50);
+  }, [draggedMessageId, dragOffset, messages]);
+
+  // Eventos globales para el drag
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragMove(e as unknown as React.MouseEvent);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragEnd();
+      }
+    };
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragMove(e as unknown as React.TouchEvent);
+      }
+    };
+
+    const handleGlobalTouchEnd = () => {
+      if (isDraggingMessageRef.current) {
+        handleMessageDragEnd();
+      }
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+  }, [handleMessageDragMove, handleMessageDragEnd]);
+
   const handleCancelReply = useCallback(() => {
     setReplyingTo(null);
   }, []);
 
-  // Efecto para marcar mensajes como leídos
+  // Debug: Monitorear cambios en replyingTo
   useEffect(() => {
-    if (isOpen && user?.id) {
-      setHasInteracted(true);
-      const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
-      if (unreadMessages.length > 0) {
-        markMessagesAsRead(unreadMessages.map(msg => msg.id));
-      }
-    }
-  }, [isOpen, messages, user?.id, markMessagesAsRead]);
+    console.log('[ChatSidebar] replyingTo changed:', replyingTo);
+  }, [replyingTo]);
 
-  // Efecto para sonido de notificaciones
-  useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio('/NotificationSound.mp3');
+  // Move drag-related hooks here (before any conditional return)
+  const sidebarDragStartY = useRef(0);
+  const isDraggingSidebar = useRef(false);
+
+  // Move useCallback hooks here
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (window.innerWidth >= 768) return;
+    if (chatRef.current && chatRef.current.contains(e.target as Node)) return;
+    sidebarDragStartY.current = e.touches[0].clientY;
+    isDraggingSidebar.current = true;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (window.innerWidth >= 768 || !isDraggingSidebar.current) return;
+    if (chatRef.current && chatRef.current.contains(e.target as Node)) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - sidebarDragStartY.current;
+    if (deltaY > 0) setDragOffset(deltaY);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (window.innerWidth >= 768 || !isDraggingSidebar.current) return;
+    isDraggingSidebar.current = false;
+    if (dragOffset > window.innerHeight * 0.3) {
+      onClose();
     }
-    const newUnreadMessages = messages.filter(
-      (msg) =>
-        !msg.read &&
-        !msg.isPending &&
-        !prevMessagesRef.current.some(
-          (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId,
-        ),
-    );
-    if (newUnreadMessages.length > 0 && user?.id && hasInteracted) {
-      const latestMessage = newUnreadMessages[newUnreadMessages.length - 1];
-      if (latestMessage.senderId !== user.id) {
-        audioRef.current.play().catch((error) => {
-          console.error('Error playing notification sound', error);
-        });
-      }
-    }
-    prevMessagesRef.current = messages;
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
-  }, [messages, user?.id, hasInteracted]);
+    setDragOffset(0);
+  }, [dragOffset, onClose]);
 
   if (isLoading) {
     return <Loader />;
@@ -1394,6 +2278,10 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
     <div
       className={`${styles.container} ${isOpen ? styles.open : ''}`}
       ref={sidebarRef}
+      style={window.innerWidth < 768 ? { transform: `translateY(${dragOffset}px)` } : undefined}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div className={styles.header}>
         <div className={styles.controls}>
@@ -1623,68 +2511,40 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           )}
         </AnimatePresence>
       </div>
-      <div className={styles.chat} ref={chatRef} id="chat-container">
-        {isLoadingMessages && (
+      <div className={styles.chat} ref={chatRef}>
+        {isLoading && (
           <div className={styles.loader}>
             <div className={styles.spinner} />
           </div>
         )}
-        {!isLoadingMessages && messages.length === 0 && (
+        {!isLoading && messages.length === 0 && (
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
-        
-        {/* 
-          Scroll inverso optimizado:
-          - flexDirection: column-reverse: Los mensajes más recientes aparecen abajo
-          - inverse={true}: InfiniteScroll carga mensajes antiguos al hacer scroll hacia arriba
-          - scrollThreshold="200px": Carga nuevos chunks cuando el usuario está a 200px del tope
-          - Preservación de scroll: Mantiene la posición del usuario al cargar chunks
-          - pageSize: 10: Carga 10 mensajes por chunk para mejor rendimiento
-        */}
-        <InfiniteScroll
-          dataLength={messages.length}
-          next={handleLoadMoreMessages}
-          hasMore={hasMore}
-          loader={
-            <div className={styles.chunkLoader}>
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
-                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75" />
-              </svg>
-              <span>Cargando mensajes...</span>
-            </div>
-          }
-          endMessage={<div className={styles.noMessages}>No hay más mensajes.</div>}
-          style={{ display: 'flex', flexDirection: 'column-reverse', overflow: 'visible' }}
-          scrollableTarget="chat-container"
-          inverse={true}
-          scrollThreshold="200px"
-        >
-          {messages.map((message, index) => (
-            <MessageItem
-              key={message.id}
-              message={message}
-              users={users}
-              userId={user?.id}
-              styles={styles}
-              setActionMenuOpenId={setActionMenuOpenId}
-              actionMenuOpenId={actionMenuOpenId}
-              setEditingMessageId={setEditingMessageId}
-              setEditingText={setEditingText}
-              handleDeleteMessage={handleDeleteMessage}
-              handleResendMessage={handleResendMessage}
-              setImagePreviewSrc={setImagePreviewSrc}
-              editingMessageId={editingMessageId}
-              isDraggingMessage={isDraggingMessage}
-              draggedMessageId={draggedMessageId}
-              dragOffset={dragOffset}
-              onMessageDragStart={handleMessageDragStart}
-              ref={index === messages.length - 1 ? lastMessageRef : null}
-              isNewChunk={false}
-              isLoadingChunk={isLoadingChunk}
-            />
-          ))}
-        </InfiniteScroll>
+        {messages.map((message, index) => (
+          <MessageItem
+            key={message.clientId}
+            message={message}
+            users={users}
+            userId={user?.id}
+            styles={styles}
+            setActionMenuOpenId={setActionMenuOpenId}
+            actionMenuOpenId={actionMenuOpenId}
+            setEditingMessageId={setEditingMessageId}
+            setEditingText={setEditingText}
+            handleEditMessage={handleEditMessage}
+            handleDeleteMessage={handleDeleteMessage}
+            handleResendMessage={handleResendMessage}
+            setImagePreviewSrc={setImagePreviewSrc}
+            editingMessageId={editingMessageId}
+            editingText={editingText}
+            isDraggingMessage={isDraggingMessage}
+            draggedMessageId={draggedMessageId}
+            dragOffset={dragOffset}
+            onMessageDragStart={handleMessageDragStart}
+            handleClick={handleClick}
+            ref={index === messages.length - 1 ? lastMessageRef : null}
+          />
+        ))}
       </div>
       <InputChat
         taskId={task.id}
@@ -1692,7 +2552,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         userFirstName={user?.firstName}
         onSendMessage={handleSendMessage}
         isSending={isSending}
-        setIsSending={() => {}} // No longer needed
+        setIsSending={setIsSending}
         timerSeconds={timerSeconds}
         isTimerRunning={isTimerRunning}
         onToggleTimer={toggleTimer}
@@ -1712,13 +2572,6 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         isRestoringTimer={isRestoringTimer}
         replyingTo={replyingTo}
         onCancelReply={handleCancelReply}
-        editingMessageId={editingMessageId}
-        editingText={editingText}
-        onEditMessage={handleEditMessage}
-        onCancelEdit={() => {
-          setEditingMessageId(null);
-          setEditingText('');
-        }}
       />
       {isDeletePopupOpen && (
         <div className={styles.deletePopupOverlay}>

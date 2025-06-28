@@ -218,12 +218,42 @@
 // -----------------------------------
 .chat {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   flex: 1;
   overflow-y: auto;
   padding: 16px;
   gap: 16px;
   max-height: calc(100vh - 200px);
+  scroll-behavior: auto; /* Evitar scroll suave nativo */
+  overscroll-behavior: contain; /* Prevenir comportamiento de rebote */
+  height: 100%; /* Asegurar que el contenedor tenga altura definida */
+  position: relative; /* Para posicionar el loader */
+}
+
+.chunkLoader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  color: #666;
+  gap: 8px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  position: sticky;
+  top: 0; /* Fijar el loader en la parte superior */
+  z-index: 10;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+:global(body.dark) .chunkLoader {
+  background: rgba(255, 255, 255, 0.05);
+  color: #a1a1aa;
 }
 
 .message {
@@ -440,36 +470,67 @@
 // Contenedor de Edición de Mensajes
 // -----------------------------------
 .editContainer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  animation: slideInEdit 0.3s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .editContent {
+    .editHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+
+      .editLabel {
+        font-size: 12px;
+        font-weight: 600;
+        color: #d97706;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .editCancelButton {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+
+    .editPreview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #92400e;
+
+      .editText {
+        flex: 1;
+        font-style: italic;
+      }
+    }
+  }
 }
 
-.editInput {
-  padding: 8px;
-  background: #f4f5f4;
-  border: 1px solid #efefef;
-  border-radius: 4px;
-  color: #383838;
-  font-size: 14px;
-  font-family: $font-family-primary;
-}
-
-.editSaveButton, .editCancelButton {
-  padding: 8px 8px;
-  background: #ffffff;
-  color: #000000;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-family: $font-family-primary;
-  font-weight: 500;
-}
-
-.editCancelButton {
-  background: #555555;
-  color: #D1D1D1;
+@keyframes slideInEdit {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 // -----------------------------------

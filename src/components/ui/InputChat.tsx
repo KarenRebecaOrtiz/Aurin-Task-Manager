@@ -77,6 +77,10 @@ interface InputChatProps {
   isRestoringTimer?: boolean;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
+  editingMessageId?: string | null;
+  editingText?: string;
+  onEditMessage?: (messageId: string, newText: string) => Promise<void>;
+  onCancelEdit?: () => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -107,6 +111,10 @@ export default function InputChat({
   isRestoringTimer,
   replyingTo,
   onCancelReply,
+  editingMessageId,
+  editingText,
+  onEditMessage,
+  onCancelEdit,
 }: InputChatProps) {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -292,6 +300,14 @@ export default function InputChat({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (!editor) return;
+      
+      // Cancelar edición con Escape
+      if (e.key === 'Escape' && editingMessageId && onCancelEdit) {
+        e.preventDefault();
+        onCancelEdit();
+        return;
+      }
+      
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
           case 'a':
@@ -341,27 +357,10 @@ export default function InputChat({
               });
             }
             break;
-          case 'z':
-            // Undo - let browser handle it naturally
-            break;
-          case 'y':
-            // Redo - let browser handle it naturally
-            break;
-        }
-      }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
-        e.preventDefault();
-        switch (e.key) {
-          case '8':
-            toggleFormat('bullet');
-            break;
-          case '7':
-            toggleFormat('numbered');
-            break;
         }
       }
     },
-    [toggleFormat, editor],
+    [editor, editingMessageId, onCancelEdit],
   );
 
   // Handle context menu for editor
@@ -633,7 +632,7 @@ export default function InputChat({
     }
   };
 
-  // Send message
+  // Send message or edit message
   const handleSend = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     // Permitir envío si hay texto O archivo (o ambos)
@@ -644,6 +643,56 @@ export default function InputChat({
       return;
     }
 
+    // Si estamos en modo edición, manejar la edición
+    if (editingMessageId && onEditMessage) {
+      const newText = editor.getHTML();
+      if (!newText.trim()) {
+        toast({
+          title: 'Mensaje vacío',
+          description: 'El mensaje no puede estar vacío.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      try {
+        setIsSending(true);
+        await onEditMessage(editingMessageId, newText);
+        
+        // Limpiar después de editar exitosamente
+        editor?.commands.clearContent();
+        setFile(null);
+        setPreviewUrl(null);
+        setHasReformulated(false);
+        adjustEditorHeight();
+        
+        // Limpiar mensaje guardado al editar exitosamente
+        removeErrorMessage(conversationId);
+        clearPersistedData();
+        
+        // Limpiar reply después de editar
+        if (onCancelReply) {
+          onCancelReply();
+        }
+        
+        // Limpiar modo edición
+        if (onCancelEdit) {
+          onCancelEdit();
+        }
+      } catch (error) {
+        console.error('[InputChat:HandleEdit] Error:', error);
+        toast({
+          title: 'Error al editar',
+          description: 'Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.',
+          variant: 'error',
+        });
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    // Modo envío normal
     setHasReformulated(false);
     setIsDropupOpen(false);
     setIsSending(true);
@@ -801,6 +850,16 @@ export default function InputChat({
     }
   }, [restoredData, editor]);
 
+  // Cargar contenido para edición
+  useEffect(() => {
+    if (editingMessageId && editingText && editor) {
+      editor.commands.setContent(editingText);
+      editor.commands.focus('end');
+      adjustEditorHeight();
+      console.log('[InputChat] Contenido cargado para edición:', editingText);
+    }
+  }, [editingMessageId, editingText, editor, adjustEditorHeight]);
+
   // Guardar contenido automáticamente cuando cambie
   useEffect(() => {
     if (!editor) return;
@@ -916,6 +975,26 @@ export default function InputChat({
               {!effectiveReplyingTo.text && !effectiveReplyingTo.imageUrl && (
                 <span className={styles.replyText}>Mensaje</span>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {editingMessageId && (
+        <div className={styles.editContainer}>
+          <div className={styles.editContent}>
+            <div className={styles.editHeader}>
+              <span className={styles.editLabel}>✏️ Editando mensaje</span>
+              <button
+                type="button"
+                className={styles.editCancelButton}
+                onClick={onCancelEdit}
+                aria-label="Cancelar edición"
+              >
+                <Image src="/x.svg" alt="Cancelar" width={16} height={16} />
+              </button>
+            </div>
+            <div className={styles.editPreview}>
+              <span className={styles.editText}>Presiona Enter para guardar o Esc para cancelar</span>
             </div>
           </div>
         </div>
