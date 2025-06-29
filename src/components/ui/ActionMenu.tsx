@@ -104,7 +104,8 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                   hasElement: !!el,
                 });
               }}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event from bubbling up to parent card
                 if (canEditOrDelete) {
                   onOpen();
                   console.log('[ActionMenu] Action menu toggled for task:', task.id, { isAdmin, isCreator });
@@ -139,6 +140,9 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                     top: dropdownPosition.top, 
                     left: dropdownPosition.left 
                   }}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent any clicks within dropdown from bubbling up
+                  }}
                   onLoad={() => {
                     console.log('[ActionMenu] Dropdown portal loaded with position:', dropdownPosition);
                   }}
@@ -146,6 +150,7 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                 <div
                   className={styles.dropdownItem}
                   onClick={(e) => {
+                    e.stopPropagation(); // Prevent event from bubbling up to parent card
                     animateClick(e.currentTarget);
                     onEdit();
                     console.log('[ActionMenu] Edit clicked for task:', task.id, { isAdmin, isCreator });
@@ -159,6 +164,7 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                 <div
                   className={styles.dropdownItem}
                       onClick={(e) => {
+                        e.stopPropagation(); // Prevent event from bubbling up to parent card
                         animateClick(e.currentTarget);
                         onArchive();
                         console.log('[ActionMenu] Archive clicked for task:', task.id, { isAdmin, isCreator });
@@ -183,6 +189,7 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                   <div
                     className={`${styles.dropdownItem} ${styles.deleteItem}`}
                   onClick={(e) => {
+                    e.stopPropagation(); // Prevent event from bubbling up to parent card
                     animateClick(e.currentTarget);
                     onDelete();
                     console.log('[ActionMenu] Delete clicked for task:', task.id, { isAdmin, isCreator });

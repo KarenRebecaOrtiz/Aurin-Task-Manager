@@ -1,3 +1,6 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
 @import "@/app/styles/_variables.scss";
 
 .wizardContainer {
@@ -19,6 +22,7 @@
 }
 
 .wizardProgressDot {
+  @extend .wizardProgressDot;
   /* Dimensions and layout */
   width: 14px; /* Slightly larger than original for prominence */
   height: 14px;

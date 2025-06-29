@@ -2,19 +2,79 @@
 
 import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, addDoc, doc, updateDoc, onSnapshot, query, getDoc } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
+import { collection, doc, updateDoc, onSnapshot, query, getDoc, addDoc, Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
-import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { db } from '@/lib/firebase'; // Kept for deleteTask and dragEnd logic
+import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, PointerSensor, TouchSensor, DragStartEvent, DragEndEvent, useDroppable } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { db } from '@/lib/firebase';
 import ActionMenu from './ui/ActionMenu';
-import styles from './TasksTable.module.scss';
+import styles from './TasksKanban.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import SkeletonLoader from '@/components/SkeletonLoader'; // Import SkeletonLoader
-import { updateTaskActivity } from '@/lib/taskUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import SkeletonLoader from '@/components/SkeletonLoader';
+import { updateTaskActivity, archiveTask } from '@/lib/taskUtils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTaskNotifications } from '@/hooks/useTaskNotifications';
+import NotificationDot from '@/components/ui/NotificationDot';
+
+interface DebugInfo {
+  cursorPosition: { x: number; y: number };
+  cardPosition: { x: number; y: number; width: number; height: number };
+  cardOffset: { x: number; y: number };
+  dragStartPosition: { x: number; y: number };
+  isDragging: boolean;
+  taskId: string | null;
+  timestamp: number;
+}
+
+const DebugOverlay: React.FC<{ debugInfo: DebugInfo | null }> = ({ debugInfo }) => {
+  if (!debugInfo || !debugInfo.isDragging) return null;
+
+  const offsetMagnitude = Math.sqrt(
+    Math.pow(debugInfo.cardOffset.x, 2) + Math.pow(debugInfo.cardOffset.y, 2)
+  );
+  const isWellCentered = offsetMagnitude < 20;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: '10px',
+        left: '10px',
+        background: isWellCentered ? 'rgba(0, 128, 0, 0.9)' : 'rgba(255, 0, 0, 0.9)',
+        color: 'white',
+        padding: '10px',
+        borderRadius: '8px',
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        zIndex: 10000,
+        maxWidth: '300px',
+        whiteSpace: 'pre-wrap',
+      }}
+    >
+      <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
+        🔍 DRAG DEBUG {isWellCentered ? '✅' : '❌'}
+      </div>
+      <div>Cursor: ({debugInfo.cursorPosition.x.toFixed(1)}, {debugInfo.cursorPosition.y.toFixed(1)})</div>
+      <div>
+        Card Center: (
+        {(debugInfo.cardPosition.x + debugInfo.cardPosition.width / 2).toFixed(1)},{' '}
+        {(debugInfo.cardPosition.y + debugInfo.cardPosition.height / 2).toFixed(1)})
+      </div>
+      <div>Card Size: {debugInfo.cardPosition.width.toFixed(1)} × {debugInfo.cardPosition.height.toFixed(1)}</div>
+      <div>Offset: ({debugInfo.cardOffset.x.toFixed(1)}, {debugInfo.cardOffset.y.toFixed(1)})</div>
+      <div>Offset Magnitude: {offsetMagnitude.toFixed(1)}px</div>
+      <div>Start: ({debugInfo.dragStartPosition.x.toFixed(1)}, {debugInfo.dragStartPosition.y.toFixed(1)})</div>
+      <div>Task ID: {debugInfo.taskId}</div>
+      <div>Time: {new Date(debugInfo.timestamp).toLocaleTimeString()}</div>
+      <div style={{ marginTop: '5px', fontWeight: 'bold' }}>
+        {isWellCentered ? '✅ WELL CENTERED' : '❌ NEEDS FIX'}
+      </div>
+    </div>
+  );
+};
 
 interface Client {
   id: string;
@@ -46,11 +106,13 @@ interface Task {
   lastActivity?: string;
   hasUnreadUpdates?: boolean;
   lastViewedBy?: { [userId: string]: string };
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 type TaskView = 'table' | 'kanban';
 
-// Cache global persistente para TasksKanban
 const tasksKanbanCache = {
   tasks: new Map<string, { data: Task[]; timestamp: number }>(),
   clients: new Map<string, { data: Client[]; timestamp: number }>(),
@@ -58,9 +120,8 @@ const tasksKanbanCache = {
   listeners: new Map<string, { tasks: (() => void) | null; clients: (() => void) | null; users: (() => void) | null }>(),
 };
 
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
+const CACHE_DURATION = 10 * 60 * 1000;
 
-// Función para limpiar listeners de TasksKanban
 export const cleanupTasksKanbanListeners = () => {
   console.log('[TasksKanban] Cleaning up all listeners');
   tasksKanbanCache.listeners.forEach((listener) => {
@@ -129,6 +190,245 @@ interface TasksKanbanProps {
   onDeleteTaskOpen: (taskId: string) => void;
 }
 
+interface SortableItemProps {
+  id: string;
+  task: Task;
+  onChatSidebarOpen: (task: Task) => void;
+  isAdmin: boolean;
+  userId: string;
+  setActionMenuOpenId: (id: string | null) => void;
+  actionMenuOpenId: string | null;
+  onEditTaskOpen: (taskId: string) => void;
+  onDeleteTaskOpen: (taskId: string) => void;
+  onArchiveTask: (task: Task) => Promise<void>;
+  animateClick: (element: HTMLElement) => void;
+  actionButtonRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
+  actionMenuRef: React.RefObject<HTMLDivElement>;
+  isTouchDevice: boolean;
+  clients: Client[];
+  users: User[];
+  getUnreadCount: (task: Task) => number;
+  markAsViewed: (taskId: string) => Promise<void>;
+}
+
+const SortableItem: React.FC<SortableItemProps> = ({
+  id,
+  task,
+  onChatSidebarOpen,
+  isAdmin,
+  userId,
+  setActionMenuOpenId,
+  actionMenuOpenId,
+  onEditTaskOpen,
+  onDeleteTaskOpen,
+  onArchiveTask,
+  animateClick,
+  actionButtonRefs,
+  actionMenuRef,
+  isTouchDevice,
+  clients,
+  users,
+  getUnreadCount,
+  markAsViewed,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    zIndex: isDragging ? 10000 : 'auto',
+    boxShadow: isDragging ? '0 8px 25px rgba(0, 0, 0, 0.15)' : 'none',
+    cursor: isAdmin ? 'grab' : 'pointer',
+    touchAction: isAdmin ? 'none' : 'manipulation',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`${styles.taskCard} ${isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
+      onClick={async () => {
+        // Marcar la tarea como vista usando el nuevo sistema
+        await markAsViewed(task.id);
+        
+        onChatSidebarOpen(task);
+        console.log('[TasksKanban] Task card clicked, opening chat for task:', task.id);
+      }}
+    >
+      <div className={styles.taskHeader}>
+        <div className={styles.taskNameWrapper}>
+        <span className={styles.taskName}>{task.name}</span>
+          {(() => {
+            const updateCount = getUnreadCount(task);
+            console.log('[TasksKanban] Task:', task.id, 'Count:', updateCount, 'HasUpdates:', task.hasUnreadUpdates);
+            return (
+              <NotificationDot count={updateCount} />
+            );
+          })()}
+        </div>
+        {(isAdmin || task.CreatedBy === userId) && (
+          <ActionMenu
+            task={task}
+            userId={userId}
+            isOpen={actionMenuOpenId === task.id}
+            onOpen={() => {
+              setActionMenuOpenId(task.id);
+              console.log('[TasksKanban] Action menu opened for task:', task.id);
+            }}
+            onEdit={() => {
+              onEditTaskOpen(task.id);
+              console.log('[TasksKanban] Edit task requested:', task.id);
+            }}
+            onDelete={() => {
+              onDeleteTaskOpen(task.id);
+              console.log('[TasksKanban] Delete task requested:', task.id);
+            }}
+            onArchive={async () => {
+              try {
+                // Actualizar estado local optimísticamente
+                const updatedTask = { ...task, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId };
+                await onArchiveTask(updatedTask);
+                setActionMenuOpenId(null);
+                console.log('[TasksKanban] Task archived successfully:', task.id);
+              } catch (error) {
+                console.error('[TasksKanban] Error archiving task:', error);
+              }
+            }}
+            animateClick={animateClick}
+            actionMenuRef={actionMenuRef}
+            actionButtonRef={(el) => {
+              if (el) {
+                actionButtonRefs.current.set(task.id, el);
+              } else {
+                actionButtonRefs.current.delete(task.id);
+              }
+            }}
+          />
+        )}
+      </div>
+      {isAdmin && isTouchDevice && (
+        <div className={styles.touchDragIndicator}>
+          <span>👆 Arrastra para mover</span>
+        </div>
+      )}
+      <div className={styles.taskDetails}>
+        <div className={styles.taskDetailsRow}>
+          <div className={styles.taskDetailsLeft}>
+            <div className={styles.clientInfo}>
+              {clients.find((c) => c.id === task.clientId) ? (
+                <Image
+                  style={{ borderRadius: '999px' }}
+                  src={clients.find((c) => c.id === task.clientId)?.imageUrl || '/empty-image.png'}
+                  alt={clients.find((c) => c.id === task.clientId)?.name || 'Client Image'}
+                  width={24}
+                  height={24}
+                  className={styles.clientImage}
+                  onError={(e) => {
+                    e.currentTarget.src = '/empty-image.png';
+                  }}
+                />
+              ) : (
+                <span className={styles.noClient}>Sin cuenta</span>
+              )}
+            </div>
+            <div className={styles.priorityWrapper}>
+              <Image
+                src={
+                  task.priority === 'Alta'
+                    ? '/arrow-up.svg'
+                    : task.priority === 'Media'
+                    ? '/arrow-right.svg'
+                    : '/arrow-down.svg'
+                }
+                alt={task.priority}
+                width={16}
+                height={16}
+              />
+              <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
+            </div>
+          </div>
+        </div>
+        <AvatarGroup assignedUserIds={task.AssignedTo} users={users} currentUserId={userId} />
+      </div>
+    </div>
+  );
+};
+
+const DroppableColumn: React.FC<{ id: string; children: React.ReactNode; className?: string }> = ({ id, children, className }) => {
+  const { setNodeRef } = useDroppable({ id });
+  
+  return (
+    <div 
+      ref={setNodeRef} 
+      className={className}
+      style={{ touchAction: 'manipulation' }}
+    >
+      {children}
+    </div>
+  );
+};
+
+// Type for Firestore timestamp
+interface FirestoreTimestamp {
+  toDate(): Date;
+}
+
+// Type guard for Firestore timestamp
+const isFirestoreTimestamp = (timestamp: unknown): timestamp is FirestoreTimestamp => {
+  return timestamp !== null && 
+         typeof timestamp === 'object' && 
+         'toDate' in timestamp && 
+         typeof (timestamp as FirestoreTimestamp).toDate === 'function';
+};
+
+// Helper function to safely convert Firestore timestamp or string to ISO string
+const safeTimestampToISO = (timestamp: unknown): string => {
+  if (!timestamp) return new Date().toISOString();
+  
+  // If it's already a string, return it
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  
+  // If it's a Firestore timestamp, convert it
+  if (isFirestoreTimestamp(timestamp)) {
+    return timestamp.toDate().toISOString();
+  }
+  
+  // If it's a Date object, convert it
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  
+  // Fallback to current date
+  return new Date().toISOString();
+};
+
+// Helper function to safely convert Firestore timestamp or string to ISO string or null
+const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
+  if (!timestamp) return null;
+  
+  // If it's already a string, return it
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  
+  // If it's a Firestore timestamp, convert it
+  if (isFirestoreTimestamp(timestamp)) {
+    return timestamp.toDate().toISOString();
+  }
+  
+  // If it's a Date object, convert it
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  
+  // Fallback to null
+  return null;
+};
+
 const TasksKanban: React.FC<TasksKanbanProps> = memo(
   ({
     onNewTaskOpen,
@@ -141,12 +441,11 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
   }) => {
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth();
-    
-    // Estados optimizados con refs para evitar re-renders
+
     const tasksRef = useRef<Task[]>([]);
     const clientsRef = useRef<Client[]>([]);
     const usersRef = useRef<User[]>([]);
-    
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -163,7 +462,18 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-    
+    const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+    // Undo functionality for archive actions
+    const [undoStack, setUndoStack] = useState<Array<{task: Task, action: 'archive' | 'unarchive', timestamp: number}>>([]);
+    const [showUndo, setShowUndo] = useState(false);
+    const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+    const debugRef = useRef<DebugInfo | null>(null);
+    const dragStartRef = useRef<{ x: number; y: number; taskId: string } | null>(null);
+    const currentDraggedElementRef = useRef<HTMLElement | null>(null);
+
     const containerRef = useRef<HTMLDivElement>(null);
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
@@ -173,11 +483,181 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    // Función para verificar cache válido
+    // Usar el hook de notificaciones simplificado
+    const { getUnreadCount, markAsViewed } = useTaskNotifications();
+
+    const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 8, // 8px movement required to start drag
+        },
+      }),
+      useSensor(TouchSensor, {
+        activationConstraint: {
+          delay: 250, // 250ms delay before drag starts
+          tolerance: 5, // 5px tolerance for finger movement during delay
+        },
+      })
+    );
+
+    const updateDebugInfo = useCallback((info: Partial<DebugInfo>) => {
+      const newInfo = {
+        ...debugRef.current,
+        ...info,
+        timestamp: Date.now(),
+      } as DebugInfo;
+
+      debugRef.current = newInfo;
+      setDebugInfo(newInfo);
+
+      console.log('🔍 DRAG DEBUG:', {
+        cursor: newInfo.cursorPosition,
+        card: newInfo.cardPosition,
+        offset: newInfo.cardOffset,
+        start: newInfo.dragStartPosition,
+        taskId: newInfo.taskId,
+        isDragging: newInfo.isDragging,
+        offsetMagnitude: Math.sqrt(
+          Math.pow(newInfo.cardOffset.x, 2) + Math.pow(newInfo.cardOffset.y, 2)
+        ),
+        shouldBeCentered: newInfo.cardOffset.x < 50 && newInfo.cardOffset.y < 50,
+      });
+    }, []);
+
+    const handleMouseMove = useCallback(
+      (e: MouseEvent) => {
+        if (!debugRef.current?.isDragging || !currentDraggedElementRef.current) return;
+
+        const cursorPos = {
+          x: e.clientX,
+          y: e.clientY,
+        };
+
+        const cardElement = currentDraggedElementRef.current;
+        const cardRect = cardElement.getBoundingClientRect();
+
+        const cardPos = {
+          x: cardRect.left,
+          y: cardRect.top,
+          width: cardRect.width,
+          height: cardRect.height,
+        };
+
+        const cardCenterX = cardPos.x + cardPos.width / 2;
+        const cardCenterY = cardPos.y + cardPos.height / 2;
+        const cardOffset = {
+          x: cursorPos.x - cardCenterX,
+          y: cursorPos.y - cardCenterY,
+        };
+
+        updateDebugInfo({
+          cursorPosition: cursorPos,
+          cardPosition: cardPos,
+          cardOffset,
+        });
+      },
+      [updateDebugInfo]
+    );
+
+    const handleTouchMove = useCallback(
+      (e: TouchEvent) => {
+        if (!debugRef.current?.isDragging || !currentDraggedElementRef.current) return;
+
+        const touch = e.touches[0];
+        const cursorPos = {
+          x: touch.clientX,
+          y: touch.clientY,
+        };
+
+        const cardElement = currentDraggedElementRef.current;
+        const cardRect = cardElement.getBoundingClientRect();
+
+        const cardPos = {
+          x: cardRect.left,
+          y: cardRect.top,
+          width: cardRect.width,
+          height: cardRect.height,
+        };
+
+        const cardCenterX = cardPos.x + cardPos.width / 2;
+        const cardCenterY = cardPos.y + cardPos.height / 2;
+        const cardOffset = {
+          x: cursorPos.x - cardCenterX,
+          y: cursorPos.y - cardCenterY,
+        };
+
+        updateDebugInfo({
+          cursorPosition: cursorPos,
+          cardPosition: cardPos,
+          cardOffset,
+        });
+      },
+      [updateDebugInfo]
+    );
+
+    const startDragDebug = useCallback((taskId: string, startX: number, startY: number) => {
+      dragStartRef.current = { x: startX, y: startY, taskId };
+
+      const draggedElement = document.querySelector(`[data-dnd-id="${taskId}"]`) as HTMLElement;
+      if (!draggedElement) return;
+
+      const rect = draggedElement.getBoundingClientRect();
+      const cardCenterX = rect.left + rect.width / 2;
+      const cardCenterY = rect.top + rect.height / 2;
+
+      const centerOffsetX = startX - cardCenterX;
+      const centerOffsetY = startY - cardCenterY;
+
+      updateDebugInfo({
+        isDragging: true,
+        taskId,
+        dragStartPosition: { x: startX, y: startY },
+        cursorPosition: { x: startX, y: startY },
+        cardPosition: {
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+          height: rect.height,
+        },
+        cardOffset: { x: centerOffsetX, y: centerOffsetY },
+      });
+
+      currentDraggedElementRef.current = draggedElement;
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+      console.log('🔍 DRAG STARTED:', { taskId, startX, startY, centerOffsetX, centerOffsetY });
+    }, [updateDebugInfo, handleMouseMove, handleTouchMove]);
+
+    const stopDragDebug = useCallback(() => {
+      if (debugRef.current?.isDragging) {
+        updateDebugInfo({
+          isDragging: false,
+          taskId: null,
+        });
+
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('touchmove', handleTouchMove);
+
+        dragStartRef.current = null;
+        currentDraggedElementRef.current = null;
+
+        console.log('🔍 DRAG STOPPED');
+      }
+    }, [updateDebugInfo, handleMouseMove, handleTouchMove]);
+
+    useEffect(() => {
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('touchmove', handleTouchMove);
+      };
+    }, [handleMouseMove, handleTouchMove]);
+
     const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
       const cached = cacheMap.get(cacheKey);
       if (!cached) return false;
-      
+
       const now = Date.now();
       return (now - cached.timestamp) < CACHE_DURATION;
     }, []);
@@ -191,7 +671,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     };
 
     const handleUserFilter = (id: string) => {
-      // Animate filter change
       const userDropdownTrigger = userDropdownRef.current?.querySelector(`.${styles.dropdownTrigger}`);
       if (userDropdownTrigger) {
         const filterIcon = userDropdownTrigger.querySelector('img');
@@ -206,12 +685,11 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           });
         }
       }
-      
+
       setUserFilter(id);
       setIsUserDropdownOpen(false);
     };
 
-    // Función helper para manejar shortcuts de teclado en inputs
     const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
@@ -302,25 +780,63 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       [],
     );
 
-    // Removed local isAdmin fetch useEffect
+    // Helper function to normalize status values
+    const normalizeStatus = (status: string): string => {
+      if (!status) return 'Por Iniciar'; // Default for empty/null status
+      
+      const normalized = status.trim();
+      
+      // Handle common variations
+      const statusMap: { [key: string]: string } = {
+        'por iniciar': 'Por Iniciar',
+        'por-iniciar': 'Por Iniciar',
+        'pendiente': 'Por Iniciar',
+        'pending': 'Por Iniciar',
+        'to do': 'Por Iniciar',
+        'todo': 'Por Iniciar',
+        'diseno': 'Diseño',
+        'diseño': 'Diseño',
+        'design': 'Diseño',
+        'desarrollo': 'Desarrollo',
+        'development': 'Desarrollo',
+        'dev': 'Desarrollo',
+        'en proceso': 'En Proceso',
+        'en-proceso': 'En Proceso',
+        'in progress': 'En Proceso',
+        'progreso': 'En Proceso',
+        'finalizado': 'Finalizado',
+        'finalizada': 'Finalizado',
+        'completed': 'Finalizado',
+        'completado': 'Finalizado',
+        'completada': 'Finalizado',
+        'done': 'Finalizado',
+        'terminado': 'Finalizado',
+        'terminada': 'Finalizado',
+        'finished': 'Finalizado',
+        'backlog': 'Backlog',
+        'cancelado': 'Cancelado',
+        'cancelada': 'Cancelado',
+        'cancelled': 'Cancelado',
+      };
+      
+      return statusMap[normalized.toLowerCase()] || normalized;
+    };
 
-    // Detect touch device
     useEffect(() => {
       const checkTouchDevice = () => {
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         setIsTouchDevice(isTouch);
         console.log('[TasksKanban] Touch device detected:', isTouch);
       };
-      
+
       checkTouchDevice();
       window.addEventListener('resize', checkTouchDevice);
-      
+
       return () => {
         window.removeEventListener('resize', checkTouchDevice);
       };
     }, []);
 
-    // GSAP Animation for appearance and disappearance
     useEffect(() => {
       const container = containerRef.current;
       if (!container) return;
@@ -353,10 +869,15 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
     const memoizedFilteredTasks = useMemo(() => {
       const visibleTasks = isAdmin
-        ? tasks // Admins see all tasks
-        : tasks.filter((task) => task.AssignedTo.includes(userId) || task.CreatedBy === userId); // Non-admins see only assigned or created tasks
-      
+        ? tasks
+        : tasks.filter((task) => task.AssignedTo.includes(userId) || task.CreatedBy === userId);
+
       const filtered = visibleTasks.filter((task) => {
+        // Excluir tareas archivadas (como en TasksTable)
+        if (task.archived) {
+          return false;
+        }
+        
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
@@ -367,11 +888,12 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           matchesUser = getInvolvedUserIds(task).includes(userFilter);
         }
         const passesFilters = matchesSearch && matchesPriority && matchesClient && matchesUser;
-        
+
         console.log('[TasksKanban] Task filter check:', {
           taskId: task.id,
           taskName: task.name,
           status: task.status,
+          archived: task.archived,
           assignedTo: task.AssignedTo,
           isAssignedToUser: task.AssignedTo.includes(userId),
           matchesSearch,
@@ -394,31 +916,29 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         assignedToUser: memoizedFilteredTasks.filter((t) => t.AssignedTo.includes(userId)).map((t) => t.id),
       });
 
-      // Animate task cards when filtering changes - use setTimeout to avoid DOM access during render
       setTimeout(() => {
         const taskCards = document.querySelectorAll(`.${styles.taskCard}`);
         taskCards.forEach((card, index) => {
           gsap.fromTo(
             card,
-            { 
-              opacity: 0, 
-              y: 20, 
+            {
+              opacity: 0,
+              y: 20,
               scale: 0.95,
-              rotationX: -5
+              rotationX: -5,
             },
-            { 
-              opacity: 1, 
-              y: 0, 
+            {
+              opacity: 1,
+              y: 0,
               scale: 1,
               rotationX: 0,
               duration: 0.4,
               delay: index * 0.05,
-              ease: 'power2.out'
+              ease: 'power2.out',
             }
           );
         });
 
-        // Animate column headers with task counts
         const columnHeaders = document.querySelectorAll(`.${styles.columnHeader}`);
         columnHeaders.forEach((header) => {
           const taskCount = header.querySelector(`.${styles.taskCount}`);
@@ -426,17 +946,16 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
             gsap.fromTo(
               taskCount,
               { scale: 1.2, backgroundColor: '#e6f4ff' },
-              { 
-                scale: 1, 
+              {
+                scale: 1,
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 duration: 0.3,
-                ease: 'power2.out'
+                ease: 'power2.out',
               }
             );
           }
         });
       }, 0);
-
     }, [memoizedFilteredTasks, userId]);
 
     useEffect(() => {
@@ -460,7 +979,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       if (isPriorityDropdownOpen && priorityItems) {
         gsap.fromTo(
           priorityItems,
-          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 0, y: -16, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
       }
@@ -471,7 +990,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       if (isClientDropdownOpen && clientItems) {
         gsap.fromTo(
           clientItems,
-          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 0, y: -16, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
       }
@@ -482,7 +1001,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       if (isUserDropdownOpen && userItems) {
         gsap.fromTo(
           userItems,
-          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 0, y: -16, scale: 0.95 },
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
         );
         console.log('[TasksKanban] User dropdown animated');
@@ -538,8 +1057,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
     const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      
-      // Animate filter change
+
       const filterIcon = e.currentTarget.querySelector('img');
       if (filterIcon) {
         gsap.to(filterIcon, {
@@ -548,18 +1066,17 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           duration: 0.3,
           ease: 'power2.out',
           yoyo: true,
-          repeat: 1
+          repeat: 1,
         });
       }
-      
+
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
     };
 
     const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
-      
-      // Animate filter change
+
       const filterIcon = e.currentTarget.querySelector('img');
       if (filterIcon) {
         gsap.to(filterIcon, {
@@ -568,116 +1085,299 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           duration: 0.3,
           ease: 'power2.out',
           yoyo: true,
-          repeat: 1
+          repeat: 1,
         });
       }
-      
+
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
     };
 
-    const handleDragEnd = async (result: DropResult) => {
-      const { destination, source, draggableId } = result;
+    const handleDragStart = (event: DragStartEvent) => {
+      const task = filteredTasks.find((t) => t.id === event.active.id);
+      if (!task) return;
 
-      if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
-        console.log('[TasksKanban] Drag cancelled: No valid destination or same position', {
-          draggableId,
-          source: source.droppableId,
-          destination: destination?.droppableId,
-        });
-        return;
-      }
-
-      if (!isAdmin) {
-        console.warn('[TasksKanban] Non-admin attempted to drag task:', { userId, draggableId });
-        alert('Solo los administradores pueden mover tareas.');
-        return;
-      }
-
-      const sourceStatus = statusColumns.find((status) => status.id === source.droppableId)?.title;
-      const destStatus = statusColumns.find((status) => status.id === destination.droppableId)?.title;
-
-      if (!sourceStatus || !destStatus) {
-        console.error('[TasksKanban] Invalid status mapping:', {
-          sourceStatus,
-          destStatus,
-          sourceId: source.droppableId,
-          destId: destination.droppableId,
-        });
-        return;
-      }
-
-      const task = filteredTasks.find((t) => t.id === draggableId);
-      if (!task) {
-        console.error('[TasksKanban] Task not found:', { draggableId });
-        return;
-      }
-
-      try {
-        // Optimistic UI update
-        setTasks((prev) =>
-          prev.map((t) => (t.id === task.id ? { ...t, status: destStatus } : t))
-        );
-
-        // Animate the task card
-        const taskElement = document.querySelector(`[data-rfd-draggable-id="${draggableId}"]`);
+      setActiveTask(task);
+      
+      // Add visual feedback for touch devices
+      if (isTouchDevice) {
+        const taskElement = document.querySelector(`[data-dnd-id="${event.active.id}"]`);
         if (taskElement) {
           gsap.to(taskElement, {
             scale: 1.05,
-            backgroundColor: '#e6f4ff',
+            boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)',
             duration: 0.2,
             ease: 'power2.out',
-            yoyo: true,
-            repeat: 1,
           });
         }
-
-        // Update Firestore
-        await updateDoc(doc(db, 'tasks', task.id), { status: destStatus });
-        
-        // Actualizar la actividad de la tarea
-        await updateTaskActivity(task.id, 'status_change');
-        
-        console.log('[TasksKanban] Task moved successfully:', {
-          taskId: task.id,
-          taskName: task.name,
-          fromStatus: sourceStatus,
-          toStatus: destStatus,
-        });
-
-        // Notify involved users
-        const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-        if (task.CreatedBy) recipients.add(task.CreatedBy);
-        recipients.delete(userId);
-        for (const recipientId of Array.from(recipients)) {
-          await addDoc(collection(db, 'notifications'), {
-            userId: userId,
-            taskId: task.id,
-            message: `${user?.firstName || 'Usuario'} cambió el estado de la tarea ${task.name} a ${destStatus}`,
-            timestamp: Timestamp.now(),
-            read: false,
-            recipientId,
-          });
-        }
-      } catch (error) {
-        console.error('[TasksKanban] Error moving task:', {
-          taskId: task.id,
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-        });
-        // Revert optimistic update
-        setTasks((prev) =>
-          prev.map((t) => (t.id === task.id ? { ...t, status: sourceStatus } : t))
-        );
-        alert('Error al mover la tarea. Por favor, intenta de nuevo.');
+      }
+      
+      const rect = document.querySelector(`[data-dnd-id="${event.active.id}"]`)?.getBoundingClientRect();
+      if (rect) {
+        startDragDebug(event.active.id.toString(), rect.left + rect.width / 2, rect.top + rect.height / 2);
       }
     };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+      console.log('[TasksKanban] handleDragEnd called with:', {
+        activeId: event.active.id,
+        overId: event.over?.id,
+        isAdmin,
+        userId
+      });
+
+      stopDragDebug();
+      setActiveTask(null);
+
+      if (!isAdmin) {
+        console.warn('[TasksKanban] Non-admin attempted to drag task:', { userId, draggableId: event.active.id });
+        return;
+      }
+
+      if (!event.over) {
+        console.log('[TasksKanban] Task dropped outside valid drop zone:', event.active.id);
+        return;
+      }
+
+      const task = filteredTasks.find((t) => t.id === event.active.id);
+      if (!task) {
+        console.error('[TasksKanban] Task not found:', { draggableId: event.active.id });
+        return;
+      }
+
+      console.log('[TasksKanban] Found task:', {
+        id: task.id,
+        name: task.name,
+        status: task.status
+      });
+
+      // AGGRESSIVE SOLUTION: Direct mapping from drop target ID to status
+      const dropTargetToStatus: { [key: string]: string } = {
+        'por-iniciar': 'Por Iniciar',
+        'diseno': 'Diseño',
+        'desarrollo': 'Desarrollo',
+        'en-proceso': 'En Proceso',
+        'finalizado': 'Finalizado',
+        'backlog': 'Backlog',
+        'cancelado': 'Cancelado',
+      };
+
+      let targetColumnId = event.over.id.toString();
+      
+      // If the drop target is a task ID (not a column ID), find its parent column
+      if (!dropTargetToStatus[targetColumnId]) {
+        console.log('[TasksKanban] Drop target is not a column, looking for parent column:', targetColumnId);
+        
+        // Find which column contains this task
+        const targetTask = filteredTasks.find(t => t.id === targetColumnId);
+        if (targetTask) {
+          const normalizedTargetStatus = normalizeStatus(targetTask.status);
+          const targetColumn = statusColumns.find(col => col.title === normalizedTargetStatus);
+          if (targetColumn) {
+            targetColumnId = targetColumn.id;
+            console.log('[TasksKanban] Found parent column for task:', targetColumnId);
+          }
+        }
+      }
+
+      const newStatus = dropTargetToStatus[targetColumnId];
+      
+      console.log('[TasksKanban] Aggressive mapping result:', {
+        originalDropTargetId: event.over.id,
+        resolvedColumnId: targetColumnId,
+        newStatus,
+        currentTaskStatus: task.status,
+        willUpdate: newStatus && newStatus !== task.status
+      });
+
+      if (!newStatus) {
+        console.error('[TasksKanban] Unknown drop target after resolution:', {
+          originalId: event.over.id,
+          resolvedColumnId: targetColumnId,
+          availableColumns: Object.keys(dropTargetToStatus)
+        });
+        return;
+      }
+
+      if (newStatus === task.status) {
+        console.log('[TasksKanban] Task dropped in same status, no update needed');
+          return;
+        }
+
+      try {
+        const taskElement = document.querySelector(`[data-dnd-id="${event.active.id}"]`);
+        if (taskElement) {
+          gsap.to(taskElement, {
+            scale: 1,
+            rotation: 0,
+            duration: 0.2,
+            ease: 'power2.out',
+          });
+        }
+
+        console.log('[TasksKanban] Updating task status from', task.status, 'to', newStatus);
+
+        const taskRef = doc(db, 'tasks', event.active.id.toString());
+        await updateDoc(taskRef, {
+          status: newStatus,
+          lastActivity: new Date().toISOString(),
+        });
+
+        // Actualizar actividad y notificar
+        await updateTaskActivity(event.active.id.toString(), 'status_change');
+
+        // Enviar notificaciones a los usuarios involucrados
+        const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+        if (task.CreatedBy) recipients.add(task.CreatedBy);
+        recipients.delete(userId); // Excluir al usuario que realiza la acción
+        const now = Timestamp.now();
+        for (const recipientId of recipients) {
+          await addDoc(collection(db, 'notifications'), {
+            userId, // ID del usuario que realiza la acción
+            taskId: task.id,
+            message: `Usuario cambió el estado de la tarea "${task.name}" a "${newStatus}"`,
+            timestamp: now,
+            read: false,
+            recipientId, // ID del usuario que recibe la notificación
+            type: 'task_status_changed',
+          });
+          console.log('[TasksKanban] Sent status change notification to:', recipientId);
+        }
+
+        console.log('[TasksKanban] Task status updated successfully:', {
+          taskId: event.active.id,
+          fromStatus: task.status,
+          toStatus: newStatus,
+        });
+
+        if (taskElement) {
+          gsap.fromTo(
+            taskElement,
+            {
+              scale: 1.05,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+            },
+            {
+              scale: 1,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              duration: 0.3,
+              ease: 'power2.out',
+            }
+          );
+        }
+
+        const animateEmptyColumns = () => {
+          const columns = document.querySelectorAll(`.${styles.kanbanColumn}`);
+          columns.forEach((column) => {
+            const taskList = column.querySelector(`.${styles.taskList}`);
+            if (taskList && taskList.children.length === 0) {
+              gsap.fromTo(
+                taskList,
+                { opacity: 0.5, scale: 0.95 },
+                { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }
+              );
+            }
+          });
+        };
+
+        setTimeout(animateEmptyColumns, 100);
+      } catch (error) {
+        console.error('[TasksKanban] Error updating task status:', error);
+
+        const taskElement = document.querySelector(`[data-dnd-id="${event.active.id}"]`);
+        if (taskElement) {
+          gsap.to(taskElement, {
+            x: 0,
+            y: 0,
+            scale: 1,
+            rotation: 0,
+            duration: 0.3,
+            ease: 'power2.out',
+          });
+        }
+      }
+    };
+
+    const handleArchiveTask = async (task: Task) => {
+      try {
+        // Guardar en undo stack
+        const undoItem = {
+          task: { ...task },
+          action: 'archive' as const,
+          timestamp: Date.now()
+        };
+        setUndoStack(prev => [...prev, undoItem]);
+        setShowUndo(true);
+
+        // Limpiar timeout anterior
+        if (undoTimeoutRef.current) {
+          clearTimeout(undoTimeoutRef.current);
+        }
+
+        // Configurar timeout para limpiar undo
+        undoTimeoutRef.current = setTimeout(() => {
+          setShowUndo(false);
+          setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+        }, 3000);
+
+        // Actualizar estado local optimísticamente
+        setTasks((prevTasks) => 
+          prevTasks.map((t) => 
+            t.id === task.id 
+              ? { ...t, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }
+              : t
+          )
+        );
+        
+        // Ejecutar la función de archivo
+        await archiveTask(task.id, userId, isAdmin, task);
+        console.log('[TasksKanban] Task archived successfully:', task.id);
+      } catch (error) {
+        // Revertir el cambio si hay error
+        setTasks((prevTasks) => 
+          prevTasks.map((t) => 
+            t.id === task.id 
+              ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
+              : t
+          )
+        );
+        console.error('[TasksKanban] Error archiving task:', error);
+      }
+    };
+
+    // Función para deshacer
+    const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
+      try {
+        if (undoItem.action === 'archive') {
+          // Desarchivar la tarea
+          await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
+          setTasks((prevTasks) => 
+            prevTasks.map((t) => 
+              t.id === undoItem.task.id 
+                ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
+                : t
+            )
+          );
+        }
+        
+        // Remover del undo stack
+        setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+        setShowUndo(false);
+        
+        if (undoTimeoutRef.current) {
+          clearTimeout(undoTimeoutRef.current);
+        }
+      } catch (error) {
+        console.error('[TasksKanban] Error undoing action:', error);
+      }
+    }, [userId, isAdmin]);
 
     const groupedTasks = useMemo(() => {
       const groups: { [key: string]: Task[] } = {};
       statusColumns.forEach((status) => {
-        groups[status.id] = filteredTasks.filter((task) => task.status === status.title);
+        groups[status.id] = filteredTasks.filter((task) => normalizeStatus(task.status) === status.title);
       });
-      
+
       console.log('[TasksKanban] Tasks grouped by status:', {
         groups: Object.keys(groups).map((statusId) => ({
           status: statusColumns.find((s) => s.id === statusId)?.title,
@@ -685,11 +1385,12 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           taskIds: groups[statusId].map((t) => t.id),
           assignedToUser: groups[statusId].filter((t) => t.AssignedTo.includes(userId)).map((t) => t.id),
         })),
+        allTaskStatuses: [...new Set(filteredTasks.map(t => t.status))],
+        normalizedStatuses: [...new Set(filteredTasks.map(t => normalizeStatus(t.status)))]
       });
       return groups;
     }, [filteredTasks, userId, statusColumns]);
 
-    // Handle animations for empty columns
     useEffect(() => {
       const animateEmptyColumns = () => {
         statusColumns.forEach((status) => {
@@ -697,21 +1398,21 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           if (columnElement) {
             const taskList = columnElement.querySelector(`.${styles.taskList}`);
             const taskCount = groupedTasks[status.id]?.length || 0;
-            
+
             if (taskList) {
               if (taskCount === 0) {
                 gsap.to(taskList, {
                   opacity: 0.5,
                   scale: 0.98,
                   duration: 0.3,
-                  ease: 'power2.out'
+                  ease: 'power2.out',
                 });
               } else {
                 gsap.to(taskList, {
                   opacity: 1,
                   scale: 1,
                   duration: 0.3,
-                  ease: 'power2.out'
+                  ease: 'power2.out',
                 });
               }
             }
@@ -719,22 +1420,18 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         });
       };
 
-      // Use requestAnimationFrame to ensure DOM is ready
       requestAnimationFrame(animateEmptyColumns);
     }, [groupedTasks, statusColumns]);
 
-    // Setup de tasks con cache optimizado
     useEffect(() => {
       if (!user?.id) return;
 
       const cacheKey = `tasks_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
+
       const existingListener = tasksKanbanCache.listeners.get(cacheKey);
-      
+
       if (existingListener?.tasks) {
         console.log('[TasksKanban] Reusing existing tasks listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
         if (tasksKanbanCache.tasks.has(cacheKey)) {
           const cachedData = tasksKanbanCache.tasks.get(cacheKey)!.data;
           tasksRef.current = cachedData;
@@ -743,8 +1440,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         }
         return;
       }
-      
-      // Verificar cache primero
+
       if (isCacheValid(cacheKey, tasksKanbanCache.tasks)) {
         const cachedData = tasksKanbanCache.tasks.get(cacheKey)!.data;
         tasksRef.current = cachedData;
@@ -769,28 +1465,30 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
             description: doc.data().description || '',
             status: doc.data().status || '',
             priority: doc.data().priority || '',
-            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
+            startDate: safeTimestampToISOOrNull(doc.data().startDate),
+            endDate: safeTimestampToISOOrNull(doc.data().endDate),
             LeadedBy: doc.data().LeadedBy || [],
             AssignedTo: doc.data().AssignedTo || [],
-            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            createdAt: safeTimestampToISO(doc.data().createdAt),
             CreatedBy: doc.data().CreatedBy || '',
-            lastActivity: doc.data().lastActivity?.toDate().toISOString() || doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt) || new Date().toISOString(),
             hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
             lastViewedBy: doc.data().lastViewedBy || {},
+            archived: doc.data().archived || false,
+            archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
+            archivedBy: doc.data().archivedBy || '',
           }));
 
           console.log('[TasksKanban] Tasks onSnapshot update:', tasksData.length);
-          
+
           tasksRef.current = tasksData;
           setTasks(tasksData);
-          
-          // Actualizar cache
+
           tasksKanbanCache.tasks.set(cacheKey, {
             data: tasksData,
             timestamp: Date.now(),
           });
-          
+
           setIsLoadingTasks(false);
         },
         (error) => {
@@ -800,30 +1498,24 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         }
       );
 
-      // Guardar el listener en el cache global
       tasksKanbanCache.listeners.set(cacheKey, {
         tasks: unsubscribeTasks,
         clients: existingListener?.clients || null,
         users: existingListener?.users || null,
       });
 
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-      };
+      return () => {};
     }, [user?.id, isCacheValid]);
 
-    // Setup de clients con cache optimizado
     useEffect(() => {
       if (!user?.id) return;
 
       const cacheKey = `clients_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
+
       const existingListener = tasksKanbanCache.listeners.get(cacheKey);
-      
+
       if (existingListener?.clients) {
         console.log('[TasksKanban] Reusing existing clients listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
         if (tasksKanbanCache.clients.has(cacheKey)) {
           const cachedData = tasksKanbanCache.clients.get(cacheKey)!.data;
           clientsRef.current = cachedData;
@@ -832,8 +1524,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         }
         return;
       }
-      
-      // Verificar cache primero
+
       if (isCacheValid(cacheKey, tasksKanbanCache.clients)) {
         const cachedData = tasksKanbanCache.clients.get(cacheKey)!.data;
         clientsRef.current = cachedData;
@@ -857,16 +1548,15 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           }));
 
           console.log('[TasksKanban] Clients onSnapshot update:', clientsData.length);
-          
+
           clientsRef.current = clientsData;
           setClients(clientsData);
-          
-          // Actualizar cache
+
           tasksKanbanCache.clients.set(cacheKey, {
             data: clientsData,
             timestamp: Date.now(),
           });
-          
+
           setIsLoadingClients(false);
         },
         (error) => {
@@ -876,30 +1566,24 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         }
       );
 
-      // Guardar el listener en el cache global
       tasksKanbanCache.listeners.set(cacheKey, {
         tasks: existingListener?.tasks || null,
         clients: unsubscribeClients,
         users: existingListener?.users || null,
       });
 
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-      };
+      return () => {};
     }, [user?.id, isCacheValid]);
 
-    // Setup de users con cache optimizado
     useEffect(() => {
       if (!user?.id) return;
 
       const cacheKey = `users_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
+
       const existingListener = tasksKanbanCache.listeners.get(cacheKey);
-      
+
       if (existingListener?.users) {
         console.log('[TasksKanban] Reusing existing users listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
         if (tasksKanbanCache.users.has(cacheKey)) {
           const cachedData = tasksKanbanCache.users.get(cacheKey)!.data;
           usersRef.current = cachedData;
@@ -908,8 +1592,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         }
         return;
       }
-      
-      // Verificar cache primero
+
       if (isCacheValid(cacheKey, tasksKanbanCache.users)) {
         const cachedData = tasksKanbanCache.users.get(cacheKey)!.data;
         usersRef.current = cachedData;
@@ -922,14 +1605,13 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       console.log('[TasksKanban] Setting up new users onSnapshot listener');
       setIsLoadingUsers(true);
 
-      // Usar la misma lógica de fetch que MembersTable
       const fetchUsers = async () => {
         try {
           const response = await fetch('/api/users');
           if (!response.ok) {
             throw new Error(`Failed to fetch users: ${response.status}`);
           }
-          
+
           const clerkUsers: {
             id: string;
             imageUrl?: string;
@@ -960,16 +1642,14 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
               }
             }),
           );
-          
+
           usersRef.current = usersData;
           setUsers(usersData);
-          
-          // Actualizar cache
+
           tasksKanbanCache.users.set(cacheKey, {
             data: usersData,
             timestamp: Date.now(),
           });
-          
         } catch (error) {
           console.error('[TasksKanban] Error fetching users:', error);
           setUsers([]);
@@ -980,19 +1660,28 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
       fetchUsers();
 
-      // Guardar el listener en el cache global (para este caso, no hay onSnapshot)
       tasksKanbanCache.listeners.set(cacheKey, {
         tasks: existingListener?.tasks || null,
         clients: existingListener?.clients || null,
-        users: null, // No hay listener para users, solo fetch
+        users: null,
       });
 
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-      };
+      return () => {};
     }, [user?.id, isCacheValid]);
 
-    // Handle loading state
+    // Cleanup all table listeners when component unmounts
+    useEffect(() => {
+      return () => {
+        console.log('[TasksKanban] Cleaning up all table listeners on unmount');
+        cleanupTasksKanbanListeners();
+        
+        // Cleanup undo timeout
+        if (undoTimeoutRef.current) {
+          clearTimeout(undoTimeoutRef.current);
+        }
+      };
+    }, []);
+
     if (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers) {
       return <SkeletonLoader type="kanban" rows={6} />;
     }
@@ -1002,7 +1691,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         <div className={styles.swiperContainer}>
           <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
         </div>
-        <div className={styles.header} style={{margin: '20px 0px'}}>
+        <div className={styles.header} style={{ margin: '20px 0px' }}>
           <div className={styles.searchWrapper}>
             <input
               type="text"
@@ -1011,17 +1700,16 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
               onChange={(e) => {
                 const newValue = e.target.value;
                 setSearchQuery(newValue);
-                
-                // Animate search input when typing
+
                 const searchInput = e.currentTarget;
                 gsap.to(searchInput, {
                   scale: 1.02,
                   duration: 0.2,
                   ease: 'power2.out',
                   yoyo: true,
-                  repeat: 1
+                  repeat: 1,
                 });
-                
+
                 console.log('[TasksKanban] Search query updated:', newValue);
               }}
               className={styles.searchInput}
@@ -1072,24 +1760,41 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsPriorityDropdownOpen((prev) => !prev);
+                      setIsPriorityDropdownOpen((prev) => {
+                        if (!prev) {
+                          setIsClientDropdownOpen(false);
+                          setIsUserDropdownOpen(false);
+                        }
+                        return !prev;
+                      });
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
                     <span>{priorityFilter || 'Prioridad'}</span>
                   </div>
                   {isPriorityDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {['Alta', 'Media', 'Baja', ''].map((priority) => (
-                        <div
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {['Alta', 'Media', 'Baja', ''].map((priority, index) => (
+                          <motion.div
                           key={priority || 'all'}
                           className={styles.dropdownItem}
                           onClick={(e) => handlePrioritySelect(priority, e)}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
                         >
                           {priority || 'Todos'}
-                        </div>
+                          </motion.div>
                       ))}
-                    </div>
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </div>
               </div>
@@ -1102,24 +1807,41 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsClientDropdownOpen((prev) => !prev);
+                      setIsClientDropdownOpen((prev) => {
+                        if (!prev) {
+                          setIsPriorityDropdownOpen(false);
+                          setIsUserDropdownOpen(false);
+                        }
+                        return !prev;
+                      });
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
                     <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                   </div>
                   {isClientDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {[{ id: '', name: 'Todos' }, ...clients].map((client) => (
-                        <div
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {[{ id: '', name: 'Todos' }, ...clients].map((client, index) => (
+                          <motion.div
                           key={client.id || 'all'}
                           className={styles.dropdownItem}
                           onClick={(e) => handleClientSelect(client.id, e)}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
                         >
                           {client.name}
-                        </div>
+                          </motion.div>
                       ))}
-                    </div>
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </div>
               </div>
@@ -1133,48 +1855,71 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                       className={styles.dropdownTrigger}
                       onClick={(e) => {
                         animateClick(e.currentTarget);
-                        setIsUserDropdownOpen((prev) => !prev);
+                        setIsUserDropdownOpen((prev) => {
+                          if (!prev) {
+                            setIsPriorityDropdownOpen(false);
+                            setIsClientDropdownOpen(false);
+                          }
+                          return !prev;
+                        });
                         console.log('[TasksKanban] User dropdown toggled');
                       }}
                     >
                       <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
                       <span>
-                        {userFilter === '' 
-                          ? 'Todos' 
-                          : userFilter === 'me' 
-                          ? 'Mis tareas' 
-                          : users.find(u => u.id === userFilter)?.fullName || 'Usuario'}
+                        {userFilter === ''
+                          ? 'Todos'
+                          : userFilter === 'me'
+                          ? 'Mis tareas'
+                          : users.find((u) => u.id === userFilter)?.fullName || 'Usuario'}
                       </span>
                     </div>
                     {isUserDropdownOpen && (
-                      <div className={styles.dropdownItems}>
-                        <div
+                      <AnimatePresence>
+                        <motion.div 
+                          className={styles.dropdownItems}
+                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                        >
+                          <motion.div
                           className={styles.dropdownItem}
-                          style={{fontWeight: userFilter === '' ? 700 : 400}}
+                          style={{ fontWeight: userFilter === '' ? 700 : 400 }}
                           onClick={() => handleUserFilter('')}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: 0 * 0.05 }}
                         >
                           Todos
-                        </div>
-                        <div
+                          </motion.div>
+                          <motion.div
                           className={styles.dropdownItem}
-                          style={{fontWeight: userFilter === 'me' ? 700 : 400}}
+                          style={{ fontWeight: userFilter === 'me' ? 700 : 400 }}
                           onClick={() => handleUserFilter('me')}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: 1 * 0.05 }}
                         >
                           Mis tareas
-                        </div>
+                          </motion.div>
                         {users
                           .filter((u) => u.id !== userId)
-                          .map((u) => (
-                            <div
+                            .map((u, index) => (
+                              <motion.div
                               key={u.id}
                               className={styles.dropdownItem}
-                              style={{fontWeight: userFilter === u.id ? 700 : 400}}
+                              style={{ fontWeight: userFilter === u.id ? 700 : 400 }}
                               onClick={() => handleUserFilter(u.id)}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
                             >
                               {u.fullName}
-                            </div>
+                              </motion.div>
                           ))}
-                      </div>
+                        </motion.div>
+                      </AnimatePresence>
                     )}
                   </div>
                 </div>
@@ -1196,137 +1941,191 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
             </div>
           </div>
         </div>
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
           <div className={styles.kanbanBoard}>
             {statusColumns.map((column) => (
-              <Droppable droppableId={column.id} key={column.id}>
-                {(provided, snapshot) => (
-                  <div
-                    className={`${styles.kanbanColumn} ${snapshot.isDraggingOver ? styles.draggingOver : ''}`}
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    data-status={column.id}
-                  >
-                    <div className={styles.columnHeader}>
-                      <h2 className={styles.columnTitle}>{column.title}</h2>
-                      <span className={styles.taskCount}>
-                        {groupedTasks[column.id]?.length || 0}
-                      </span>
-                    </div>
-                    <div className={styles.taskList}>
-                      {groupedTasks[column.id]?.map((task, index) => (
-                        <Draggable
-                          key={task.id}
-                          draggableId={task.id}
-                          index={index}
-                          isDragDisabled={!isAdmin} // Dragging reserved for admins
-                        >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`${styles.taskCard} ${snapshot.isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
-                              onClick={() => {
-                                onChatSidebarOpen(task);
-                                console.log('[TasksKanban] Task card clicked, opening chat for task:', task.id);
-                              }}
-                              style={{
-                                ...provided.draggableProps.style,
-                                cursor: isAdmin ? 'grab' : 'pointer',
-                                touchAction: isAdmin ? 'none' : 'auto', // Enable touch dragging for admins
-                              }}
-                            >
-                              <div className={styles.taskHeader}>
-                                <span className={styles.taskName}>{task.name}</span>
-                                {(isAdmin || task.CreatedBy === userId) && (
-                                  <ActionMenu
-                                    task={task}
-                                    userId={userId}
-                                    isOpen={actionMenuOpenId === task.id}
-                                    onOpen={() => {
-                                      setActionMenuOpenId(task.id);
-                                      console.log('[TasksKanban] Action menu opened for task:', task.id);
-                                    }}
-                                    onEdit={() => {
-                                      onEditTaskOpen(task.id);
-                                      console.log('[TasksKanban] Edit task requested:', task.id);
-                                    }}
-                                    onDelete={() => {
-                                      onDeleteTaskOpen(task.id);
-                                      console.log('[TasksKanban] Delete task requested:', task.id);
-                                    }}
-                                    onArchive={() => {
-                                      // TODO: Implement archive functionality
-                                      console.log('[TasksKanban] Archive task requested:', task.id);
-                                    }}
-                                    animateClick={animateClick}
-                                    actionMenuRef={actionMenuRef}
-                                    actionButtonRef={(el) => {
-                                      if (el) {
-                                        actionButtonRefs.current.set(task.id, el);
-                                      } else {
-                                        actionButtonRefs.current.delete(task.id);
-                                      }
-                                    }}
-                                  />
-                                )}
-                              </div>
-                              {isAdmin && isTouchDevice && (
-                                <div className={styles.touchDragIndicator}>
-                                  <span>👆 Arrastra para mover</span>
-                                </div>
-                              )}
-                              <div className={styles.taskDetails}>
-                                <div className={styles.clientInfo}>
-                                  {clients.find((c) => c.id === task.clientId) ? (
-                                    <Image
-                                      style={{ borderRadius: '999px' }}
-                                      src={clients.find((c) => c.id === task.clientId)?.imageUrl || '/empty-image.png'}
-                                      alt={clients.find((c) => c.id === task.clientId)?.name || 'Client Image'}
-                                      width={24}
-                                      height={24}
-                                      className={styles.clientImage}
-                                      onError={(e) => {
-                                        e.currentTarget.src = '/empty-image.png';
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className={styles.noClient}>Sin cuenta</span>
-                                  )}
-                                </div>
-                                <div className={styles.priorityWrapper}>
-                                  <Image
-                                    src={
-                                      task.priority === 'Alta'
-                                        ? '/arrow-up.svg'
-                                        : task.priority === 'Media'
-                                        ? '/arrow-right.svg'
-                                        : '/arrow-down.svg'
-                                    }
-                                    alt={task.priority}
-                                    width={16}
-                                    height={16}
-                                  />
-                                  <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
-                                </div>
-                                <AvatarGroup assignedUserIds={task.AssignedTo} users={users} currentUserId={userId} />
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
+              <DroppableColumn
+                key={column.id}
+                id={column.id}
+                className={`${styles.kanbanColumn} ${groupedTasks[column.id]?.length ? '' : styles.empty}`}
+              >
+                <div className={styles.columnHeader}>
+                  <h2 className={styles.columnTitle}>{column.title}</h2>
+                  <span className={styles.taskCount}>{groupedTasks[column.id]?.length || 0}</span>
+                </div>
+                <SortableContext
+                  id={column.id}
+                  items={groupedTasks[column.id]?.map((task) => task.id) || []}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className={styles.taskList}>
+                    {groupedTasks[column.id]?.map((task) => (
+                      <SortableItem
+                        key={task.id}
+                        id={task.id}
+                        task={task}
+                        onChatSidebarOpen={onChatSidebarOpen}
+                        isAdmin={isAdmin}
+                        userId={userId}
+                        setActionMenuOpenId={setActionMenuOpenId}
+                        actionMenuOpenId={actionMenuOpenId}
+                        onEditTaskOpen={onEditTaskOpen}
+                        onDeleteTaskOpen={onDeleteTaskOpen}
+                        onArchiveTask={handleArchiveTask}
+                        animateClick={animateClick}
+                        actionButtonRefs={actionButtonRefs}
+                        actionMenuRef={actionMenuRef}
+                        isTouchDevice={isTouchDevice}
+                        clients={clients}
+                        users={users}
+                        getUnreadCount={getUnreadCount}
+                        markAsViewed={markAsViewed}
+                      />
+                    ))}
                   </div>
-                )}
-              </Droppable>
+                </SortableContext>
+              </DroppableColumn>
             ))}
           </div>
-        </DragDropContext>
+          <DragOverlay>
+            {activeTask ? (
+              <div
+                className={`${styles.taskCard} ${styles.dragging}`}
+                style={{
+                  zIndex: 10000,
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                  cursor: 'grabbing',
+                }}
+              >
+                <div className={styles.taskHeader}>
+                  <span className={styles.taskName}>{activeTask.name}</span>
+                </div>
+                {isAdmin && isTouchDevice && (
+                  <div className={styles.touchDragIndicator}>
+                    <span>👆 Arrastra para mover</span>
+                  </div>
+                )}
+                <div className={styles.taskDetails}>
+                  <div className={styles.taskDetailsRow}>
+                    <div className={styles.taskDetailsLeft}>
+                      <div className={styles.clientInfo}>
+                        {clients.find((c) => c.id === activeTask.clientId) ? (
+                          <Image
+                            style={{ borderRadius: '999px' }}
+                            src={clients.find((c) => c.id === activeTask.clientId)?.imageUrl || '/empty-image.png'}
+                            alt={clients.find((c) => c.id === activeTask.clientId)?.name || 'Client Image'}
+                            width={24}
+                            height={24}
+                            className={styles.clientImage}
+                          />
+                        ) : (
+                          <span className={styles.noClient}>Sin cuenta</span>
+                        )}
+                      </div>
+                      <div className={styles.priorityWrapper}>
+                        <Image
+                          src={
+                            activeTask.priority === 'Alta'
+                              ? '/arrow-up.svg'
+                              : activeTask.priority === 'Media'
+                              ? '/arrow-right.svg'
+                              : '/arrow-down.svg'
+                          }
+                          alt={activeTask.priority}
+                          width={16}
+                          height={16}
+                        />
+                        <span className={styles[`priority-${activeTask.priority}`]}>{activeTask.priority}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <AvatarGroup assignedUserIds={activeTask.AssignedTo} users={users} currentUserId={userId} />
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+        <DebugOverlay debugInfo={debugInfo} />
+        
+        {/* Undo notification */}
+        <AnimatePresence>
+          {showUndo && undoStack.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              style={{
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                fontSize: '14px',
+                fontWeight: 500,
+                minWidth: '280px',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  animation: 'pulse 2s infinite'
+                }} />
+                <span>Tarea archivada</span>
+              </div>
+              <button
+                onClick={() => {
+                  const lastUndoItem = undoStack[undoStack.length - 1];
+                  if (lastUndoItem) {
+                    handleUndo(lastUndoItem);
+                  }
+                }}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                Deshacer
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
-  },
+  }
 );
 
 TasksKanban.displayName = 'TasksKanban';

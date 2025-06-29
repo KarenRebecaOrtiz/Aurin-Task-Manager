@@ -1,165 +1,136 @@
 @use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/components' as *;
+
 .tableContainer {
   width: 100%;
   display: block;
   flex-direction: column;
-  gap: 16px;
+  gap: $spacing-lg;
 }
 
 /* ESTADOS VACÍOS */
 .emptyStateTitle {
-  padding-top: 20px;
-  color: #3f3f46;
-  font-size: 20px;
-  font-family: $font-family-primary;
-  font-weight: 600;
-  margin-bottom: 8px;
-  text-align: center;
-}
-
-:global(body.dark) .emptyStateTitle {
-  color: #ffffffbb;
+  @include typography-title($text-xl, $font-weight-semibold, $color-text-primary, center);
+  padding-top: $spacing-xl;
+  margin-bottom: $spacing-sm;
+  
+  @include dark-mode {
+    color: rgba(255, 255, 255, 0.733);
+  }
 }
 
 .emptyStateSubtitle {
-  color: #6b7280;
-  font-size: 16px;
-  font-family: $font-family-primary;
-  font-weight: 400;
-  text-align: center;
-}
-
-:global(body.dark) .emptyStateSubtitle {
-  color: #ffffffbb;
+  @include typography-subtitle($text-base, $font-weight-normal, $color-text-secondary, center);
+  
+  @include dark-mode {
+    color: rgba(255, 255, 255, 0.733);
+  }
 }
 
 .emptyState {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 40px 0px;
-  align-items: center;
+  @include flex-column-center;
+  padding: $spacing-4xl 0px;
+  gap: $spacing-2xl;
 }
 
 /* TABLA */
 .table {
-  background: #F7F9FA;
-  border-radius: 16px;
-  padding: 16px;
-
-  box-shadow:
-    inset -2px -2px 4px rgba(255, 255, 255, 0.8),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.04),
-    0 4px 6px rgba(0, 0, 0, 0.03);
-}
-
-:global(body.dark) .table {
-  background: #1c1c1e;
-  box-shadow: none;
+  background: $color-bg-light;
+  border-radius: $radius-2xl;
+  padding: $spacing-lg;
+  @include neomorphic-shadow(light);
+  
+  @include dark-mode {
+    background: $color-bg-dark;
+    box-shadow: none;
+  }
 }
 
 /* CABECERA */
 .header {
-  display: flex;
-  border-bottom: 1px solid #e4e4e7;
-}
-
-:global(body.dark) .header {
-  border-bottom: 1px solid #444;
+  @include flex-center;
+  border-bottom: 1px solid $color-border-light;
+  
+  @include dark-mode {
+    border-bottom: 1px solid $color-border-dark;
+  }
 }
 
 .headerCell {
-  padding: 12px 24px;
-  color: #3f3f46;
-  font-size: 11px;
-  font-family: $font-family-primary;
-  font-weight: 600;
+  padding: $spacing-md $spacing-2xl;
+  @include typography(11px, $font-weight-semibold, $color-text-primary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
+  justify-content: start;
   gap: 10px;
   user-select: none;
-}
-
-.headerCell.sortable {
-  cursor: pointer;
-}
-
-:global(body.dark) .headerCell {
-  color: #a1a1aa;
+  
+  &.sortable {
+    cursor: pointer;
+  }
+  
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
 }
 
 /* FILAS */
-/* Table.module.scss */
 .row {
-  display: flex;
+  @include flex-center;
   align-items: stretch;
   gap: 0;
-  border-radius: 16px;
+  border-radius: $radius-2xl;
   position: relative;
   z-index: 0;
   cursor: pointer;
   margin: 10px 10px 0px 0px;
+  @include glassmorphism(rgba(255, 255, 255, 0.08));
+  @include neomorphic-shadow(light);
+  transition: $transition-base;
 
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-
-  box-shadow:
-    -4px -4px 6px rgba(255, 255, 255, 0.4),
-    4px 4px 10px rgba(0, 0, 0, 0.04);
-
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.4s ease,
-    background 0.4s ease;
+  /* Hover mejorado */
+  &:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+  }
+  
+  /* 🌑 Modo oscuro */
+  @include dark-mode {
+    background: $color-bg-dark;
+    border: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    
+    &:hover {
+      background: $zinc-800;
+      @include neomorphic-shadow(dark);
+      transform: translateY(-3px);
+    }
+  }
 }
-
-/* Hover mejorado */
-.row:hover {
-  transform: translateY(-3px);
-  background: rgba(255, 255, 255, 0.12);
-
-  box-shadow:none;
-}
-
-/* 🌑 Modo oscuro */
-:global(body.dark) .row {
-  background:#1c1c1e;
-  border-color:none;
-  border: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-
-  box-shadow:none;
-}
-
-/* Hover oscuro */
-:global(body.dark) .row:hover {
-  background: #27272a;
-  box-shadow:
-    -6px -6px 10px rgba(0, 0, 0, 0.05),
-    6px 6px 10px rgba(255, 255, 255, 0.003);
-  transform: translateY(-3px);
-}
-
 
 /* CELDAS */
 .cell {
-  padding: 14px 24px;
-  color: #18181b;
-  font-size: 14px;
-  font-family: $font-family-primary;
-  font-weight: 400;
+  padding: $spacing-md $spacing-2xl;
+  @include typography($text-sm, $font-weight-normal, $color-text-primary);
+  line-height: $leading-normal;
   display: flex;
   align-items: center;
-  line-height: 1.5;
-}
-
-:global(body.dark) .cell {
-  color: #d1d1d1;
+  justify-content: start;
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+  
+  /* Quitar padding en mobile */
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 }
 
 /* ACCIONES */
@@ -168,111 +139,84 @@
 }
 
 .actionButton {
+  @include button-base($height: auto, $padding: $spacing-sm, $radius: $radius-sm);
   background: none;
   border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.actionButton:hover {
-  background-color: #f0f0f0;
-}
-
-:global(body.dark) .actionButton:hover {
-  background-color: #272727;
-}
-
-:global(body.dark) .actionContainer{
-  filter: invert(100%) brightness(100%);
-}
-
-.actionButton img {
-  transition: filter 0.3s ease;
-}
-
-:global(body.dark) .actionButton img {
-  filter: invert(1) grayscale(1) brightness(1.5);
+  
+  &:hover {
+    background-color: $zinc-100;
+  }
+  
+  @include dark-mode {
+    &:hover {
+      background-color: $zinc-800;
+    }
+    
+    img {
+      @include image-filter-dark;
+    }
+  }
 }
 
 /* IMÁGENES */
 .TasksTable_clientImage__aZq2W {
-  border-radius: 999px;
-  box-shadow:
-    -2px -2px 4px rgba(255, 255, 255, 0.6),
-    2px 2px 6px rgba(0, 0, 0, 0.08);
+  border-radius: $radius-full;
+  @include neomorphic-shadow(light);
 }
 
 /* RESPONSIVE */
 .hideOnMobile {
-  @media (max-width: 768px) {
-    display: none;
-  }
+  @include hide-on-mobile;
 }
 
 /* PAGINACIÓN */
 .pagination {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 8px;
+  @include flex-center;
+  gap: $spacing-sm;
+  padding: $spacing-lg $spacing-sm;
   justify-content: flex-end;
 }
 
 .paginationButton {
   width: 32px;
   height: 32px;
-  padding: 8px;
-  background: #F7F9FA;
-  border-radius: 10px;
+  padding: $spacing-sm;
+  background: $color-bg-light;
+  border-radius: $radius-lg;
   border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @include flex-center;
   cursor: pointer;
-
-  box-shadow:
-    inset -2px -2px 4px rgba(255, 255, 255, 0.7),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-}
-
-.paginationButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.paginationButton:not(:disabled):hover {
-  background: #e6e8ea;
-}
-
-:global(body.dark) .paginationButton {
-  background: #0d0d0d;
-  box-shadow:
-    inset -2px -2px 4px rgba(0, 0, 0, 0.5),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.06);
-}
-
-:global(body.dark) .paginationButton:not(:disabled):hover {
-  background: #1f1f1f;
-}
-
-:global(body.dark) .paginationButton img {
-  filter: invert(1) grayscale(1) brightness(1.5);
+  @include neomorphic-inset(light);
+  transition: $transition-fast;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  &:not(:disabled):hover {
+    background: #e6e8ea;
+  }
+  
+  @include dark-mode {
+    background: $black;
+    @include neomorphic-inset(dark);
+    
+    &:not(:disabled):hover {
+      background: $zinc-900;
+    }
+    
+    img {
+      @include image-filter-dark;
+    }
+  }
 }
 
 .pageInfo {
-  color: #3f3f46;
-  font-size: 14px;
-  font-family: $font-family-primary;
-  font-weight: 500;
-  margin: 0 8px;
-}
-
-:global(body.dark) .pageInfo {
-  color: #a1a1aa;
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  margin: 0 $spacing-sm;
+  
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
 }

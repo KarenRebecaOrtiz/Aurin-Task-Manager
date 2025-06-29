@@ -1,4 +1,10 @@
 @use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 TASKS PAGE - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
+
 .container {
   padding: 1.3rem 0px;
   max-width: 1200px;
@@ -6,7 +12,7 @@
   z-index: 1;
 
   &.dark {
-    background: #1c1c1e;
+    background: $color-bg-dark;
   }
 }
 
@@ -15,17 +21,17 @@
 }
 
 .content {
-  color: #0D0D0D;
-  font-size: 16px;
+  color: $color-text-primary;
+  font-size: $text-base;
   font-family: $font-family-primary;
-  font-weight: 400;
+  font-weight: $font-weight-normal;
 
   &.dark {
-    color: #D1D1D1;
+    color: $color-text-dark-primary;
   }
 }
 
-.internal{
+.internal {
   height: 2.75rem;
   width: 2.75rem;
 }
@@ -39,8 +45,8 @@
   height: 100px;
   background: linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.8) 0%, // Blanco semi-opaco en la parte superior
-    rgba(255, 255, 255, 0) 100% // Transparente hacia abajo
+    rgba($white, 0.8) 0%, // Blanco semi-opaco en la parte superior
+    rgba($white, 0) 100% // Transparente hacia abajo
   );
   pointer-events: none; // Permite clics a través del viñetado
   z-index: 10; // Asegura que esté por encima del contenido, pero debajo de popups
@@ -48,11 +54,11 @@
 
 :global(.dark) .vignetteBottom,  
 :global(.dark) .vignetteTop {
-      background: linear-gradient(
-        to bottom,
-        rgba(2, 2, 2, 0.087) 0%, // Blanco semi-opaco en la parte superior
-        rgba(255, 255, 255, 0) 100% // Transparente hacia abajo
-      );
+  background: linear-gradient(
+    to bottom,
+    rgba($color-bg-dark, 0.087) 0%, // Negro semi-opaco en la parte superior
+    rgba($white, 0) 100% // Transparente hacia abajo
+  );
 }
 
 // Viñetado inferior
@@ -64,12 +70,13 @@
   height: 100px; // Ajusta la altura según el efecto deseado
   background: linear-gradient(
     to top,
-    rgba(255, 255, 255, 0.8) 0%, // Blanco semi-opaco en la parte inferior
-    rgba(255, 255, 255, 0) 100% // Transparente hacia arriba
+    rgba($white, 0.8) 0%, // Blanco semi-opaco en la parte inferior
+    rgba($white, 0) 100% // Transparente hacia arriba
   );
   pointer-events: none; // Permite clics a través del viñetado
   z-index: 10; // Asegura que esté por encima del contenido, pero debajo de popups
 }
+
 .cursorIcon {
   width: 24px;
   height: 24px;
@@ -78,9 +85,9 @@
 
 .cursorFollowContent {
   background-color: #d3e048;
-  color: #202020;
+  color: $color-text-primary;
   padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 14px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  border-radius: $radius-sm;
+  font-size: $text-sm;
+  box-shadow: $shadow-simple-light;
 }

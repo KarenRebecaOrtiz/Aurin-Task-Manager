@@ -5,6 +5,7 @@ import { useUser } from "@clerk/nextjs";
 import { doc, collection, setDoc, addDoc, onSnapshot } from "firebase/firestore";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
@@ -1065,7 +1066,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                             className={styles.dropdownTrigger}
                             onClick={(e) => {
                               animateClick(e.currentTarget);
-                              setIsProjectDropdownOpen(!isProjectDropdownOpen);
+                              setIsProjectDropdownOpen((prev) => {
+                                if (!prev) {
+                                  setIsStatusDropdownOpen(false);
+                                  setIsPriorityDropdownOpen(false);
+                                  setIsClientDropdownOpen(false);
+                                  setIsLeaderDropdownOpen(false);
+                                  setIsCollaboratorDropdownOpen(false);
+                                }
+                                return !prev;
+                              });
                             }}
                           >
                             <span>{form.watch("clientInfo.project") || "Seleccionar una Carpeta"}</span>
@@ -1073,43 +1083,57 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           </div>
                           {isProjectDropdownOpen &&
                             createPortal(
-                              <div
-                                className={styles.dropdownItems}
-                                style={{
-                                  top: projectDropdownPosition?.top,
-                                  left: projectDropdownPosition?.left,
-                                  position: "absolute",
-                                  zIndex: 150000,
-                                  width: projectDropdownRef.current?.offsetWidth,
-                                }}
-                                ref={projectDropdownPopperRef}
-                              >
-                                {(() => {
-                                  const selectedClient = clients.find(
-                                    (c) => c.id === form.getValues("clientInfo.clientId")
-                                  );
-                                  if (!selectedClient || !selectedClient.projects.length) {
-                                    return (
-                                      <div className={styles.emptyState}>
-                                        <span>
-                                          {isAdmin
-                                            ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
-                                            : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."}
-                                        </span>
-                                      </div>
+                              <AnimatePresence>
+                                <motion.div
+                                  className={styles.dropdownItems}
+                                  style={{
+                                    top: projectDropdownPosition?.top,
+                                    left: projectDropdownPosition?.left,
+                                    position: "absolute",
+                                    zIndex: 150000,
+                                    width: projectDropdownRef.current?.offsetWidth,
+                                  }}
+                                  ref={projectDropdownPopperRef}
+                                  initial={{ opacity: 0, y: -16 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: -16 }}
+                                  transition={{ duration: 0.2, ease: "easeOut" }}
+                                >
+                                  {(() => {
+                                    const selectedClient = clients.find(
+                                      (c) => c.id === form.getValues("clientInfo.clientId")
                                     );
-                                  }
-                                  return selectedClient.projects.map((project, index) => (
-                                    <div
-                                      key={`${project}-${index}`}
-                                      className={styles.dropdownItem}
-                                      onClick={(e) => handleProjectSelect(project, e)}
-                                    >
-                                      {project}
-                                    </div>
-                                  ));
-                                })()}
-                              </div>,
+                                    if (!selectedClient || !selectedClient.projects.length) {
+                                      return (
+                                        <motion.div 
+                                          className={styles.emptyState}
+                                          initial={{ opacity: 0 }}
+                                          animate={{ opacity: 1 }}
+                                          transition={{ duration: 0.2 }}
+                                        >
+                                          <span>
+                                            {isAdmin
+                                              ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
+                                              : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."}
+                                          </span>
+                                        </motion.div>
+                                      );
+                                    }
+                                    return selectedClient.projects.map((project, index) => (
+                                      <motion.div
+                                        key={`${project}-${index}`}
+                                        className={styles.dropdownItem}
+                                        onClick={(e) => handleProjectSelect(project, e)}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                                      >
+                                        {project}
+                                      </motion.div>
+                                    ));
+                                  })()}
+                                </motion.div>
+                              </AnimatePresence>,
                               document.body,
                             )}
                         </div>
@@ -1549,7 +1573,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 className={styles.dropdownTrigger}
                                 onClick={(e) => {
                                   animateClick(e.currentTarget);
-                                  setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                                  setIsStatusDropdownOpen((prev) => {
+                                    if (!prev) {
+                                      setIsProjectDropdownOpen(false);
+                                      setIsPriorityDropdownOpen(false);
+                                      setIsClientDropdownOpen(false);
+                                      setIsLeaderDropdownOpen(false);
+                                      setIsCollaboratorDropdownOpen(false);
+                                    }
+                                    return !prev;
+                                  });
                                 }}
                               >
                                 <span>{form.watch("basicInfo.status") || "Seleccionar"}</span>
@@ -1557,27 +1590,36 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               </div>
                               {isStatusDropdownOpen &&
                                 createPortal(
-                                  <div
-                                    className={styles.dropdownItems}
-                                    style={{
-                                      top: statusDropdownPosition?.top,
-                                      left: statusDropdownPosition?.left,
-                                      position: "absolute",
-                                      zIndex: 150000,
-                                      width: statusDropdownRef.current?.offsetWidth,
-                                    }}
-                                    ref={statusDropdownPopperRef}
-                                  >
-                                    {["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"].map((status) => (
-                                      <div
-                                        key={status}
-                                        className={styles.dropdownItem}
-                                        onClick={(e) => handleStatusSelect(status, e)}
-                                      >
-                                        {status}
-                                      </div>
-                                    ))}
-                                  </div>,
+                                  <AnimatePresence>
+                                    <motion.div
+                                      className={styles.dropdownItems}
+                                      style={{
+                                        top: statusDropdownPosition?.top,
+                                        left: statusDropdownPosition?.left,
+                                        position: "absolute",
+                                        zIndex: 150000,
+                                        width: statusDropdownRef.current?.offsetWidth,
+                                      }}
+                                      ref={statusDropdownPopperRef}
+                                      initial={{ opacity: 0, y: -16 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -16 }}
+                                      transition={{ duration: 0.2, ease: "easeOut" }}
+                                    >
+                                      {["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"].map((status, index) => (
+                                        <motion.div
+                                          key={status}
+                                          className={styles.dropdownItem}
+                                          onClick={(e) => handleStatusSelect(status, e)}
+                                          initial={{ opacity: 0, x: -20 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          transition={{ duration: 0.2, delay: index * 0.05 }}
+                                        >
+                                          {status}
+                                        </motion.div>
+                                      ))}
+                                    </motion.div>
+                                  </AnimatePresence>,
                                   document.body,
                                 )}
                             </div>
@@ -1594,7 +1636,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 className={styles.dropdownTrigger}
                                 onClick={(e) => {
                                   animateClick(e.currentTarget);
-                                  setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                                  setIsPriorityDropdownOpen((prev) => {
+                                    if (!prev) {
+                                      setIsProjectDropdownOpen(false);
+                                      setIsStatusDropdownOpen(false);
+                                      setIsClientDropdownOpen(false);
+                                      setIsLeaderDropdownOpen(false);
+                                      setIsCollaboratorDropdownOpen(false);
+                                    }
+                                    return !prev;
+                                  });
                                 }}
                               >
                                 <span>{form.watch("basicInfo.priority") || "Seleccionar"}</span>
@@ -1602,27 +1653,36 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               </div>
                               {isPriorityDropdownOpen &&
                                 createPortal(
-                                  <div
-                                    className={styles.dropdownItems}
-                                    style={{
-                                      top: priorityDropdownPosition?.top,
-                                      left: priorityDropdownPosition?.left,
-                                      position: "absolute",
-                                      zIndex: 150000,
-                                      width: priorityDropdownRef.current?.offsetWidth,
-                                    }}
-                                    ref={priorityDropdownPopperRef}
-                                  >
-                                    {["Baja", "Media", "Alta"].map((priority) => (
-                                      <div
-                                        key={priority}
-                                        className={styles.dropdownItem}
-                                        onClick={(e) => handlePrioritySelect(priority, e)}
-                                      >
-                                        {priority}
-                                      </div>
-                                    ))}
-                                  </div>,
+                                  <AnimatePresence>
+                                    <motion.div
+                                      className={styles.dropdownItems}
+                                      style={{
+                                        top: priorityDropdownPosition?.top,
+                                        left: priorityDropdownPosition?.left,
+                                        position: "absolute",
+                                        zIndex: 150000,
+                                        width: priorityDropdownRef.current?.offsetWidth,
+                                      }}
+                                      ref={priorityDropdownPopperRef}
+                                      initial={{ opacity: 0, y: -16 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -16 }}
+                                      transition={{ duration: 0.2, ease: "easeOut" }}
+                                    >
+                                      {["Baja", "Media", "Alta"].map((priority, index) => (
+                                        <motion.div
+                                          key={priority}
+                                          className={styles.dropdownItem}
+                                          onClick={(e) => handlePrioritySelect(priority, e)}
+                                          initial={{ opacity: 0, x: -20 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          transition={{ duration: 0.2, delay: index * 0.05 }}
+                                        >
+                                          {priority}
+                                        </motion.div>
+                                      ))}
+                                    </motion.div>
+                                  </AnimatePresence>,
                                   document.body,
                                 )}
                             </div>

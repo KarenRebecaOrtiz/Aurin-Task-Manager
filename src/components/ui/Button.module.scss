@@ -1,46 +1,51 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/utils' as *;
+
+// ==============================================================
+// 🔮 BUTTON - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
+
 .button {
-  padding: 6px 12px;
+  @include button-base($height: auto, $padding: 6px 12px, $radius: 2px);
   background-color: transparent;
-  border-radius: 2px;
   border: none;
   cursor: pointer;
-  font-family: 'Urbanist', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: #0D0D0D;
+  font-family: $font-family-primary;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
   transition: background-color 0.2s ease;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow:
-      -4px -4px 10px #ffffff,
-      4px 4px 10px rgba(0, 0, 0, 0.12);
+    box-shadow: $shadow-neomorphic-light;
   }
 
   &:active {
     transform: translateY(0px);
-    box-shadow:
-      inset -2px -2px 6px #ffffff,
-      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.05);
   }
 
   &.theme-toggler {
     padding: 0;
     width: 21px;
     height: 21px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    @include flex-center;
     background: none;
   }
 
   &.dark {
-    color: #FFFFFF;
+    color: $white;
+    
     &.active {
-      background-color: #0D0D0D;
+      background-color: $bg-dark;
     }
+    
     &:hover {
-      background-color: #0D0D0D;
+      background-color: $bg-dark;
     }
   }
 }

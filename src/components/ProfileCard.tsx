@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import Table from './Table';
+import TeamsTable from './TeamsTable';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
 import styles from './ProfileCard.module.scss';
@@ -94,15 +94,6 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
       opacity: 1, 
       x: 0,
       transition: { duration: 0.3 }
-    }
-  };
-
-  const tableVariants = {
-    hidden: { opacity: 0, scale: 0.98 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { duration: 0.4 }
     }
   };
 
@@ -285,36 +276,6 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
   const avatarUrl = imageUrl || profile.profilePhoto || '';
   const coverPhotoUrl = profile.coverPhoto || '/empty-cover.png';
 
-  const teamTableColumns = [
-    {
-      key: 'profilePhoto',
-      label: 'Foto',
-      width: '100px',
-      mobileVisible: true,
-      render: (member: User) => (
-        <Image
-          src={member.profilePhoto || ''}
-          alt={member.fullName}
-          width={40}
-          height={40}
-          className={styles.teamAvatar}
-        />
-      ),
-    },
-    {
-      key: 'fullName',
-      label: 'Nombre',
-      width: 'auto',
-      mobileVisible: true,
-    },
-    {
-      key: 'role',
-      label: 'Rol',
-      width: 'auto',
-      mobileVisible: true,
-    },
-  ];
-
   return (
     <AnimatePresence>
       {isVisible && (
@@ -379,7 +340,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                 <motion.section className={styles.section} variants={sectionVariants}>
                   <h2 className={styles.sectionTitle}>Información General</h2>
                   <div className={styles.sectionContent}>
-                    <motion.div className={styles.fieldGroup} variants={fieldVariants}>
+                    <motion.div className={styles.fieldGroupRow} variants={fieldVariants}>
                       <div className={styles.frame239182}>
                         <div className={styles.label}>Nombre Completo</div>
                         <div className={styles.input}>{profile.fullName || 'No especificado'}</div>
@@ -389,7 +350,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                         <div className={styles.input}>{profile.role || 'No especificado'}</div>
                       </div>
                     </motion.div>
-                    <motion.div className={styles.fieldGroup} variants={fieldVariants}>
+                    <motion.div className={styles.fieldGroupRow} variants={fieldVariants}>
                       <div className={styles.frame239182}>
                         <div className={styles.label}>Acerca de ti</div>
                         <div className={styles.input}>{profile.description || 'No especificado'}</div>
@@ -442,11 +403,12 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                 </motion.section>
                 <motion.section className={styles.section} variants={sectionVariants}>
                   <h2 className={styles.sectionTitle}>Stack Tecnológico</h2>
-                  <div className={styles.sectionContent}>
-                    <motion.div className={styles.fieldGroup} variants={fieldVariants}>
                       <div className={styles.stackDescription}>
                         Tecnologías y herramientas que domina el usuario.
                       </div>
+                  <div className={styles.sectionContentNoPadding}>
+                    <motion.div className={styles.fieldGroup} variants={fieldVariants}>
+
                       <div className={styles.ProfileCardTags}>
                         {profile.stack && profile.stack.length > 0 ? (
                           profile.stack.map((tool, index) => (
@@ -465,33 +427,16 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                   <h2 className={styles.sectionTitle}>Equipos de Trabajo</h2>
                   <div className={styles.sectionContent}>
                     <div className={styles.teamsDescription}>
-                      Equipos a los que pertenece el usuario y sus miembros.
+                      Equipos a los que pertenece el usuario.
                     </div>
                     {profile.teams && profile.teams.length > 0 ? (
-                      profile.teams.map((team) => (
-                        <motion.div key={team} className={styles.teamTableContainer} variants={tableVariants}>
-                          <div className={styles.teamHeader}>
-                            <h3 className={styles.teamHeading}>{team}</h3>
-                            <div className={styles.teamMemberCount}>
-                              {teamMembers[team]?.length || 0} miembro{(teamMembers[team]?.length || 0) !== 1 ? 's' : ''}
-                            </div>
-                          </div>
-                          <p className={styles.teamSubheading}>
-                            Otros miembros del equipo {team}
-                          </p>
-                          {teamMembers[team] && teamMembers[team].length > 0 ? (
-                            <Table
-                              data={teamMembers[team]}
-                              columns={teamTableColumns}
-                              itemsPerPage={5}
-                            />
-                          ) : (
-                            <div className={styles.noTeamMembers}>
-                              No hay otros miembros visibles en este equipo
-                            </div>
-                          )}
-                        </motion.div>
-                      ))
+                      <TeamsTable
+                        teams={profile.teams.map(teamName => ({
+                          name: teamName,
+                          members: teamMembers[teamName] || []
+                        }))}
+                        currentUserId={currentUser?.id}
+                      />
                     ) : (
                       <div className={styles.noDataMessage}>No pertenece a ningún equipo</div>
                     )}

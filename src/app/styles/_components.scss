@@ -1,0 +1,1263 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// ==============================================================
+// 🔮 SHARED TABLE COMPONENTS
+// =================================================================
+
+// ==============================================================
+// 🔮 SEARCH INPUT
+// =================================================================
+.searchInput {
+  @include input-glassmorphic;
+  
+  @include responsive(lg) {
+    height: 44px;
+    padding: $spacing-lg $spacing-md;
+    font-size: 13px;
+  }
+  
+  @include responsive(sm) {
+    height: 40px;
+    padding: $spacing-lg $spacing-md;
+    font-size: 12px;
+    min-width: 150px;
+  }
+
+  @include dark-mode {
+    background: $color-bg-glass-dark;
+    border-color: rgba(224, 224, 224, 0.202);
+    box-shadow: none;
+    color: $white !important;
+  }
+}
+
+// ==============================================================
+// 🔮 SEARCH WRAPPER
+// =================================================================
+.searchWrapper {
+  @include flex-center;
+  flex: 1;
+  
+  @include responsive(md) {
+    width: 100%;
+  }
+}
+
+// ==============================================================
+// 🔮 BUTTONS
+// =================================================================
+.createButton {
+  @include button-primary;
+  
+  @include dark-mode {
+    color: $black;
+    background-color: $color-btn-primary-dark;
+    border-color: none;
+    box-shadow: none;
+  }
+}
+
+.inviteButton {
+  @include button-primary;
+}
+
+.submitButton {
+  @include button-primary($color-btn-primary, $white, $color-btn-primary-hover);
+  width: 100%;
+  
+  @include dark-mode {
+    background: $color-bg-dark-tertiary;
+    border-color: $color-bg-dark-tertiary;
+    color: $color-text-dark-primary;
+    
+    &:hover {
+      background: darken($color-bg-dark-tertiary, 10%);
+    }
+  }
+}
+
+.cancelButton {
+  @include button-base;
+  background: transparent;
+  border: 1px solid $zinc-500;
+  color: $zinc-500;
+  width: 100%;
+  
+  &:hover {
+    border-color: $zinc-800;
+    color: $zinc-800;
+  }
+  
+  &:disabled {
+    border-color: $color-text-dark-muted;
+    color: $color-text-dark-muted;
+    cursor: not-allowed;
+  }
+  
+  @include dark-mode {
+    border: 1px solid $color-border-dark;
+    color: $color-text-dark-secondary;
+    
+    &:hover {
+      border-color: $color-text-dark-secondary;
+      color: $color-text-dark-primary;
+    }
+  }
+}
+
+.deleteConfirmButton {
+  @include button-danger;
+  padding: $spacing-sm $spacing-lg;
+  
+  @include dark-mode {
+    &:disabled {
+      background: $zinc-500;
+    }
+  }
+}
+
+.deleteCancelButton {
+  @include button-base;
+  border: 1px solid $color-border-light;
+  background: $white;
+  color: $color-text-primary;
+  
+  &:hover {
+    background: $zinc-100;
+  }
+  
+  @include dark-mode {
+    border-color: $color-border-dark-secondary;
+    background: $color-bg-dark-tertiary;
+    color: $color-text-dark-primary;
+    
+    &:hover {
+      background: $color-border-dark-secondary;
+    }
+  }
+}
+
+// ==============================================================
+// 🔮 ACTION BUTTONS
+// =================================================================
+.actionContainer {
+  position: relative;
+  @include flex-center;
+}
+
+.actionButton {
+  @include button-base($height: auto, $padding: $spacing-xs);
+  background: none;
+  border: none;
+  
+  img {
+    transition: filter 0.3s ease;
+  }
+  
+  @include dark-mode {
+    img {
+      @include image-filter-dark;
+    }
+  }
+}
+
+// ==============================================================
+// 🔮 DROPDOWNS
+// =================================================================
+.dropdown {
+  @include dropdown-base;
+  
+  @include dark-mode {
+    background: $color-bg-dark-secondary;
+    box-shadow: $shadow-neomorphic-dark;
+  }
+}
+
+.dropdownItem {
+  @include dropdown-item-base;
+  
+  @include dark-mode {
+    border-color: $color-border-dark;
+    color: $color-text-dark-primary;
+    
+    &:hover {
+      background: $color-bg-dark-tertiary;
+    }
+    
+    > span {
+      color: $color-text-dark-primary;
+    }
+    
+    img {
+      @include image-filter-dark;
+    }
+  }
+}
+
+.dropdownHeader {
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-light;
+  @include flex-center;
+  
+  @include dark-mode {
+    border-color: $color-border-dark;
+  }
+}
+
+.dropdownTitle {
+  @include typography($text-sm, $font-weight-semibold, $color-text-primary);
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+// ==============================================================
+// 🔮 POPUPS
+// =================================================================
+.popupOverlay {
+  @include popup-overlay;
+}
+
+.deletePopupOverlay {
+  @include popup-overlay;
+}
+
+.popup {
+  @include popup-base;
+  
+  @include dark-mode {
+    background: $color-bg-dark-secondary;
+    box-shadow: $shadow-popup-dark;
+  }
+}
+
+.deletePopup {
+  @include popup-base($max-width: 400px, $padding: $spacing-2xl);
+  margin: auto;
+  
+  @include dark-mode {
+    background: $color-bg-dark-tertiary;
+    box-shadow: $shadow-neomorphic-dark;
+  }
+}
+
+.popupContent {
+  @include popup-content;
+}
+
+.deletePopupContent {
+  @include flex-column;
+  gap: $spacing-lg;
+}
+
+.popupTitle {
+  @include typography-title($text-base, $font-weight-bold, $color-text-primary, center);
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+.popupSubtitle {
+  @include typography-subtitle($text-sm, $font-weight-normal, $color-text-secondary, center);
+  
+  strong {
+    font-weight: $font-weight-bold;
+  }
+  
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
+}
+
+.deletePopupTitle {
+  @include typography-title($text-lg, $font-weight-semibold, $color-text-primary, left);
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+.deletePopupDescription {
+  @include typography-subtitle($text-sm, $font-weight-normal, $color-text-secondary, left);
+  
+  @include dark-mode {
+    color: $color-text-dark-muted;
+  }
+}
+
+.deletePopupText {
+  @include flex-column;
+  gap: $spacing-sm;
+}
+
+.deletePopupActions {
+  @include flex-between;
+  gap: $spacing-md;
+  justify-content: flex-end;
+}
+
+// ==============================================================
+// 🔮 FORM FIELDS
+// =================================================================
+.field {
+  @include flex-column;
+  gap: $spacing-md;
+  width: 100%;
+  max-width: 320px;
+}
+
+.fieldDescription {
+  @include typography($text-sm, $font-weight-normal, $color-text-primary);
+  opacity: 0.7;
+  
+  strong {
+    font-weight: $font-weight-bold;
+  }
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+.label {
+  @include typography($text-sm, $font-weight-bold, $color-text-primary);
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+.required {
+  color: $color-error;
+}
+
+.input {
+  @include input-base($height: 40px, $padding: $spacing-md $spacing-md, $radius: $radius-sm);
+  background: $white;
+  box-shadow: $shadow-simple-light;
+  border: 1px solid $color-border-light;
+  color: $color-text-primary;
+  
+  &:focus {
+    border-color: $color-border-focus;
+    box-shadow: 0px 0px 0px 4px rgba(59, 130, 246, 0.1);
+    outline: none;
+  }
+  
+  &::placeholder {
+    color: rgba(12.75, 12.75, 12.75, 0.6);
+  }
+  
+  @include dark-mode {
+    background: $color-bg-dark-tertiary;
+    border-color: $color-border-dark;
+    color: $color-text-dark-primary;
+    
+    &::placeholder {
+      color: $color-text-dark-secondary;
+    }
+  }
+}
+
+.deleteConfirmInput {
+  @include input-base($height: 40px, $padding: $spacing-sm $spacing-md, $radius: $radius-sm);
+  border: 1px solid $color-border-light;
+  background: $white;
+  color: $color-text-primary;
+  
+  &:focus {
+    outline: none;
+    border-color: $color-border-focus;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+  
+  @include dark-mode {
+    border-color: $color-border-dark-secondary;
+    background: $color-bg-dark-tertiary;
+    color: $color-text-dark-primary;
+  }
+}
+
+// ==============================================================
+// 🔮 PROFILE IMAGES
+// =================================================================
+.profileImage {
+  @include profile-image;
+  
+  @include dark-mode {
+    border-color: $color-border-dark-secondary;
+  }
+}
+
+.avatarImage {
+  @include profile-image;
+}
+
+.avatar {
+  cursor: pointer;
+  border: solid 1px $color-border-light;
+  border-radius: $radius-full;
+}
+
+// ==============================================================
+// 🔮 EMPTY STATES
+// =================================================================
+.emptyState {
+  @include flex-column-center;
+  padding: $spacing-4xl 0px;
+  gap: $spacing-2xl;
+}
+
+.emptyStateTitle {
+  @include typography-title($text-xl, $font-weight-semibold, $color-text-primary, center);
+  padding-top: $spacing-xl;
+  margin-bottom: $spacing-sm;
+  
+  @include dark-mode {
+    color: rgba(255, 255, 255, 0.733);
+  }
+}
+
+.emptyStateSubtitle {
+  @include typography-subtitle($text-base, $font-weight-normal, $color-text-secondary, center);
+  
+  @include dark-mode {
+    color: rgba(255, 255, 255, 0.733);
+  }
+}
+
+.emptyContent {
+  @include flex-column-center;
+  height: 489px;
+}
+
+.emptyText {
+  text-align: center;
+  @include flex-column;
+  gap: $spacing-sm;
+  
+  h2 {
+    @include typography($text-sm, $font-weight-bold, $color-text-primary, center);
+    
+    @include dark-mode {
+      color: $color-text-dark-primary;
+    }
+  }
+  
+  p {
+    @include typography($text-sm, $font-weight-normal, $color-text-primary, center);
+    
+    @include dark-mode {
+      color: $color-text-dark-primary;
+    }
+  }
+}
+
+// ==============================================================
+// 🔮 LOADERS
+// =================================================================
+.loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  @include flex-center;
+  z-index: 1000;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid $white;
+  border-top: 4px solid $color-info;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// ==============================================================
+// 🔮 STATUS INDICATORS
+// =================================================================
+.status {
+  display: inline-block;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-xl;
+  background-color: $zinc-200;
+  color: $zinc-900;
+  font-size: $text-sm;
+}
+
+.updateDot {
+  width: 8px;
+  height: 8px;
+  background: $color-success;
+  border-radius: 50%;
+  flex-shrink: 0;
+  @include pulse;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  
+  @include dark-mode {
+    background: $color-success-light;
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
+  }
+}
+
+.updateIndicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: $color-success;
+    border-radius: 50%;
+    @include pulse;
+  }
+}
+
+// ==============================================================
+// 🔮 TOOLTIPS
+// =================================================================
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 41, 59, 0.95);
+  color: $white;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-sm;
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  transition: opacity 0.18s cubic-bezier(.4, 0, .2, 1);
+}
+
+.buttonWithTooltip {
+  position: relative;
+  display: inline-block;
+  
+  &:hover .tooltip,
+  &:focus .tooltip {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// ==============================================================
+// 🔮 UTILITY CLASSES
+// =================================================================
+.hideOnMobile {
+  @include hide-on-mobile;
+}
+
+.closeButton {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: $spacing-sm;
+  
+  img {
+    @include dark-mode {
+      @include image-filter-dark;
+    }
+  }
+}
+
+// ==============================================================
+// 🔮 DELETE TEXT STYLES
+// =================================================================
+.deleteText {
+  color: $color-error !important;
+  font-weight: $font-weight-semibold;
+  
+  @include dark-mode {
+    color: lighten($color-error, 10%) !important;
+  }
+}
+
+// ==============================================================
+// 🔮 PROJECT FIELD STYLES
+// =================================================================
+.projectField {
+  @include flex-column;
+  gap: $spacing-lg;
+}
+
+.projectInputWrapper {
+  @include flex-center;
+  gap: $spacing-md;
+}
+
+.addProjectButton {
+  margin-bottom: $spacing-md;
+  width: 32px;
+  height: 32px;
+  padding: $spacing-sm;
+  background: $white;
+  box-shadow: $shadow-simple-light;
+  border-radius: $radius-sm;
+  border: 1px solid $color-border-light;
+  color: rgba(12.75, 12.75, 12.75, 0.6);
+  @include typography($text-sm, $font-weight-normal);
+  @include flex-center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background: #F7F7F7;
+  }
+  
+  @include dark-mode {
+    background: $color-bg-dark-tertiary;
+    border-color: $color-border-dark;
+    color: $color-text-dark-primary;
+    
+    &:hover {
+      background: lighten($color-bg-dark-tertiary, 5%);
+    }
+  }
+}
+
+.deleteProjectButton {
+  width: 32px;
+  height: 32px;
+  padding: $spacing-sm;
+  background: $white;
+  box-shadow: $shadow-simple-light;
+  border-radius: $radius-sm;
+  border: 1px solid $color-error;
+  @include flex-center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background: #FEF2F2;
+  }
+  
+  img {
+    @include dark-mode {
+      @include image-filter-dark;
+    }
+  }
+  
+  @include dark-mode {
+    background: $color-bg-dark-tertiary;
+    border-color: lighten($color-error, 10%);
+    
+    &:hover {
+      background: darken($color-bg-dark-tertiary, 5%);
+    }
+  }
+}
+
+.deleteConfirm {
+  padding: $spacing-xl $spacing-lg;
+  background: $black;
+  border-radius: $radius-sm;
+  @include flex-column;
+  gap: $spacing-lg;
+  
+  img {
+    @include dark-mode {
+      filter: brightness(0.9) contrast(1.1);
+    }
+  }
+}
+
+.deleteConfirmHeader {
+  @include flex-center;
+  gap: $spacing-md;
+  
+  h3 {
+    @include typography($text-sm, $font-weight-bold, $zinc-500);
+  }
+}
+
+.deleteConfirm p {
+  @include typography($text-sm, $font-weight-normal, $zinc-600);
+}
+
+.trashWhite {
+  filter: brightness(100%) invert(100%);
+}
+
+// ==============================================================
+// 🔮 SIDEBAR COMPONENTS
+// =================================================================
+
+.sidebarCloseButton {
+  background: $color-btn-sidebar-button-bg;
+  border: none;
+  padding: $spacing-sm;
+  border-radius: $radius-full;
+  cursor: pointer;
+  box-shadow: -3px -3px 6px #fff, 3px 3px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: inset -2px -2px 4px #fff, inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  @include dark-mode {
+    background: $color-btn-sidebar-button-bg-dark;
+    box-shadow: -3px -3px 6px rgba(255, 255, 255, 0.05), 3px 3px 6px rgba(0, 0, 0, 0.3);
+    
+    &:hover {
+      box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.05), inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+.sidebarSubmitButton {
+  @include button-primary($color-btn-sidebar-primary, $white, $color-btn-sidebar-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  position: relative;
+  
+  &.saving {
+    background: $color-text-muted;
+    cursor: not-allowed;
+  }
+  
+  @include dark-mode {
+    background: $color-info;
+    color: $color-text-dark-primary;
+  }
+}
+
+.sidebarCancelButton {
+  @include button-sidebar($color-btn-sidebar-cancel, $color-sidebar-text-primary);
+  
+  @include dark-mode {
+    background: $color-btn-sidebar-cancel-dark;
+    color: $color-text-dark-primary;
+  }
+}
+
+.sidebarDeleteButton {
+  @include button-danger($color-sidebar-error, $white, $color-sidebar-error);
+  
+  @include dark-mode {
+    background: $color-sidebar-error-dark;
+  }
+}
+
+.sidebarDeleteConfirmButton {
+  @include button-danger($color-sidebar-error, $white, $color-sidebar-error);
+  
+  @include dark-mode {
+    background: $color-sidebar-error-dark;
+  }
+}
+
+.sidebarCancelDeleteConfirmButton {
+  @include button-sidebar($color-btn-sidebar-cancel, $color-sidebar-text-primary);
+  
+  @include dark-mode {
+    background: $color-btn-sidebar-cancel-dark;
+    color: $color-text-dark-primary;
+  }
+}
+
+.sidebarAddProjectButton {
+  @include button-sidebar($color-btn-sidebar-button-bg, $color-sidebar-text-primary);
+  
+  @include dark-mode {
+    background: $color-btn-sidebar-button-bg-dark;
+    color: $color-text-dark-primary;
+  }
+}
+
+.sidebarInput {
+  @include input-sidebar;
+}
+
+.sidebarDeleteConfirmInput {
+  @include input-sidebar;
+}
+
+.sidebarDeleteConfirm {
+  background: $color-sidebar-error-light;
+  padding: $spacing-md;
+  border-radius: $radius-xl;
+  border: 1px solid $color-sidebar-error-border;
+  @include neomorphic-inset(light);
+  @include flex-column;
+  gap: 15px;
+  
+  @include dark-mode {
+    background: darken($color-bg-dark-tertiary, 5%);
+    border-color: lighten($color-error, 10%);
+  }
+}
+
+.sidebarDeleteConfirmHeader {
+  @include flex-column;
+  gap: $spacing-xs;
+  align-items: start;
+  
+  h3, p {
+    @include typography($text-sm, $font-weight-normal, $color-sidebar-error);
+    
+    @include dark-mode {
+      color: $color-sidebar-error-dark;
+    }
+  }
+}
+
+.sidebarAvatar {
+  cursor: pointer;
+  width: 109px;
+  height: 109px;
+  border-radius: $radius-full;
+  overflow: hidden;
+  margin-bottom: $spacing-lg;
+  box-shadow: -4px -4px 8px #fff, 4px 4px 8px rgba(0, 0, 0, 0.1);
+  
+  @include responsive(sm) {
+    width: 80px;
+    height: 80px;
+    margin-bottom: $spacing-md;
+  }
+}
+
+.sidebarPreviewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.sidebarAvatar:hover .sidebarPreviewImage {
+  transform: scale(1.08);
+}
+
+.sidebarButtonLoader {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid $white;
+  border-radius: $radius-full;
+  animation: spin 1s linear infinite;
+}
+
+.sidebarActions {
+  @include flex-column;
+  gap: $spacing-md;
+  width: 100%;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: $spacing-2xl;
+  
+  @include responsive(sm) {
+    gap: $spacing-sm;
+    margin-top: $spacing-lg;
+  }
+}
+
+// ==============================================================
+// 🔮 SWIPER/CAROUSEL COMPONENTS
+// =================================================================
+
+.swiperContainer {
+  @include swiper-container;
+  @include swiper-container-responsive;
+}
+
+.swiperTrack {
+  @include swiper-track;
+}
+
+.swiperSlide {
+  @include swiper-slide;
+}
+
+// ==============================================================
+// 🔮 USER CARD COMPONENTS
+// =================================================================
+
+.userCard {
+  @include user-card-base;
+  @include user-card-responsive;
+}
+
+.userCardInfo {
+  @include flex-center;
+  flex-direction: row;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.userCardText {
+  @include flex-column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.userCardTitle {
+  @include card-title-responsive;
+}
+
+.userCardStatus {
+  @include card-status-responsive;
+}
+
+// ==============================================================
+// 🔮 AVATAR COMPONENTS
+// =================================================================
+
+.avatarWrapper {
+  @include avatar-wrapper;
+}
+
+.userAvatar {
+  @include user-avatar;
+}
+
+.avatarImage {
+  @include profile-image;
+  width: 100%;
+  height: 100%;
+}
+
+// ==============================================================
+// 🔮 TOOLTIP COMPONENTS
+// =================================================================
+
+.tooltip {
+  @include tooltip-base;
+}
+
+.tooltipContainer {
+  position: relative;
+  display: inline-block;
+}
+
+// ==============================================================
+// 🔮 STATUS RING COMPONENTS
+// =================================================================
+
+.statusRing {
+  @include status-ring;
+}
+
+// ==============================================================
+// 🔮 VIGNETTE COMPONENTS
+// =================================================================
+
+.vignetteLeft {
+  @include vignette-base(left);
+}
+
+.vignetteRight {
+  @include vignette-base(right);
+}
+
+// ==============================================================
+// 🔮 LOADING STATES
+// =================================================================
+
+.loading {
+  text-align: center;
+  padding: $spacing-2xl;
+  @include typography($text-base, $font-weight-normal, $color-text-primary, center);
+}
+
+.loader {
+  @include typography($text-sm, $font-weight-normal, $color-text-primary, center);
+  @include pulse;
+}
+
+// ==============================================================
+// 🔮 PROFILE CARD COMPONENTS
+// =================================================================
+
+.profileCardOverlay {
+  @include profile-card-overlay;
+}
+
+.profileCardContainer {
+  @include profile-card-container;
+  @include profile-card-scrollbar;
+}
+
+.profileCardHeader {
+  @include profile-card-header;
+}
+
+.profileCardAvatar {
+  @include profile-card-avatar;
+}
+
+.profileCardName {
+  @include profile-card-name;
+}
+
+.profileCardEmail {
+  @include profile-card-email;
+}
+
+.profileCardCloseButton {
+  @include profile-card-close-button;
+}
+
+.profileCardSectionTitle {
+  @include profile-card-section-title;
+}
+
+.profileCardSectionContent {
+  @include profile-card-section-content;
+}
+
+.profileCardInput {
+  @include profile-card-input;
+}
+
+.profileCardTag {
+  @include profile-card-tag;
+}
+
+.profileCardButton {
+  @include profile-card-button;
+}
+
+.profileCardFieldGroup {
+  @include profile-card-field-group;
+}
+
+.profileCardFieldGroupRow {
+  @include profile-card-field-group-row;
+}
+
+.profileCardField {
+  @include flex-column;
+  gap: $spacing-sm;
+  flex: 1;
+}
+
+.profileCardLabel {
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
+  margin-bottom: 5px;
+
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $text-base;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $text-base;
+  }
+}
+
+.profileCardDescription {
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
+  margin-bottom: 10px;
+
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $text-base;
+  }
+}
+
+.profileCardTeamHeader {
+  @include flex-center;
+  gap: $spacing-sm;
+}
+
+.profileCardTeamHeading {
+  @include typography($text-lg, $font-weight-semibold, $color-text-primary, left);
+  margin-bottom: 5px;
+
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $text-xl;
+  }
+}
+
+.profileCardTeamSubheading {
+  @include typography($text-xs, $font-weight-normal, $color-text-secondary, left);
+  margin-bottom: 10px;
+
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $text-sm;
+  }
+}
+
+.profileCardTeamAvatar {
+  border-radius: $radius-full;
+  object-fit: cover;
+}
+
+.profileCardPortfolioLink {
+  color: $color-info;
+  @include typography($text-xs, $font-weight-medium);
+  text-decoration: underline;
+  word-break: break-all;
+
+  &:hover {
+    color: darken($color-info, 10%);
+  }
+
+  @include dark-mode {
+    color: lighten($color-info, 20%);
+    &:hover {
+      color: $color-info;
+    }
+  }
+
+  @media (min-width: 768px) {
+    font-size: $text-sm;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $text-base;
+  }
+}
+
+.profileCardTags {
+  @include flex-center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.profileCardContent {
+  padding: $profile-card-padding;
+
+  @media (min-width: 768px) {
+    padding: $profile-card-padding-md;
+  }
+
+  @media (min-width: 1024px) {
+    padding: $profile-card-padding-lg;
+  }
+}
+
+.profileCardSection {
+  margin-bottom: 30px;
+}
+
+.profileCardInfo {
+  @include flex-center;
+  gap: $spacing-lg;
+
+  @media (min-width: 768px) {
+    padding: $spacing-lg 50px;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-lg;
+    padding: $spacing-lg $spacing-lg;
+  }
+}
+
+.profileCardPhotoContainer {
+  position: relative;
+}
+
+.profileCardText {
+  @include flex-column;
+  gap: 5px;
+}
+
+// ==============================================================
+// 🔮 CRYSTALLIZED TAGS EXAMPLES
+// =================================================================
+
+.crystallizedTagBlue {
+  @include crystallized-tag($color-info, 0.1);
+}
+
+.crystallizedTagGreen {
+  @include crystallized-tag($color-success, 0.1);
+}
+
+.crystallizedTagPurple {
+  @include crystallized-tag($purple-500, 0.1);
+}
+
+.crystallizedTagOrange {
+  @include crystallized-tag($orange-500, 0.1);
+}
+
+.crystallizedTagPink {
+  @include crystallized-tag($pink-500, 0.1);
+}
+
+// ==============================================================
+// 🔮 DIGITAL CLOCK COMPONENTS
+// =================================================================
+
+.digitalClockContainer {
+  @include digital-clock-container;
+  @include digital-clock-transition;
+
+  &.visible {
+    @include digital-clock-visible;
+  }
+
+  &.hidden {
+    @include digital-clock-hidden;
+  }
+}
+
+.digitalClockText {
+  @include digital-clock-text;
+}
+
+// ==============================================================
+// 🔮 CRYSTALLIZED SCROLLBAR COMPONENTS
+// =================================================================
+
+.crystallizedScrollbar {
+  @include crystallized-scrollbar;
+}
+
+.crystallizedScrollbarHorizontal {
+  @include crystallized-scrollbar-horizontal;
+}
+
+.crystallizedScrollbarThin {
+  @include crystallized-scrollbar(4px);
+}
+
+.crystallizedScrollbarWide {
+  @include crystallized-scrollbar(8px);
+} 

@@ -1,13 +1,16 @@
-@import "@/app/styles/_variables.scss";
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 ONBOARDING STEPPER - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
 
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(255, 255, 255, 0.117);
-  display: flex;
+  background: rgba($white, 0.117);
+  @include flex-center;
   backdrop-filter: blur(2px);
-  justify-content: center;
-  align-items: center;
   z-index: 10001;
 }
 
@@ -15,25 +18,23 @@
   @include neu-surface($white, 8, 24px);
   max-width: 800px;
   width: 90%;
-  padding: 24px;
-  font-family: "Urbanist", sans-serif;
+  padding: $spacing-lg;
+  font-family: $font-family-primary;
   position: relative;
   overflow: hidden; /* Ensure animations don't overflow */
 }
 
 .frame2147225879 {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 16px;
+  @include flex-column;
+  gap: $spacing-lg;
+  padding: $spacing-md;
 }
 
 .card {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
+  padding: $spacing-lg;
+  @include flex-column;
   align-items: center;
-  gap: 16px;
+  gap: $spacing-md;
   text-align: center;
   will-change: transform, opacity; /* Optimize GSAP animations */
 }
@@ -42,22 +43,19 @@
 .actualizaYComenta,
 .registraTuTiempo,
 .conectaConTuEquipo {
-  font-size: 20px;
-  font-weight: 700;
-  color: $primary;
+  @include typography($text-xl, $font-weight-bold, $primary, center);
 }
 
 .puedesCrearTareas,
 .cadaTareaTiene,
 .quieresSaber,
 .desdeElPanel {
-  font-size: 14px;
-  color: $zinc-800;
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary, center);
   line-height: 1.5;
 }
 
 .bold {
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
 }
 
 // Define the SVG filter
@@ -74,34 +72,32 @@
 }
 
 .error {
-  color: $red-500;
-  font-size: 14px;
-  text-align: center;
-  margin-top: 16px;
+  @include typography($text-sm, $font-weight-normal, $color-error, center);
+  margin-top: $spacing-md;
 }
 
 @media (max-width: 767px) {
   .frame2147225831 {
     width: 95%;
-    padding: 16px;
+    padding: $spacing-md;
   }
 
   .card {
-    padding: 16px;
+    padding: $spacing-md;
   }
 
   .creaYAsignaTareas,
   .actualizaYComenta,
   .registraTuTiempo,
   .conectaConTuEquipo {
-    font-size: 18px;
+    font-size: $text-lg;
   }
 
   .puedesCrearTareas,
   .cadaTareaTiene,
   .quieresSaber,
   .desdeElPanel {
-    font-size: 12px;
+    font-size: $text-xs;
   }
 
   .stepImage {

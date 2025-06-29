@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, memo, forwardRef, Dispatch, u
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
-import { Timestamp, doc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, doc, setDoc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -22,6 +22,7 @@ import { updateTaskActivity } from '@/lib/taskUtils';
 import { useMessagePagination } from '@/hooks/useMessagePagination';
 import { useMessageActions } from '@/hooks/useMessageActions';
 import { useMessageDrag } from '@/hooks/useMessageDrag';
+import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 
 interface Message {
   id: string;
@@ -117,10 +118,8 @@ const MessageItem = memo(
       const actionMenuRef = useRef<HTMLDivElement>(null);
       const messageRef = useRef<HTMLDivElement>(null);
 
-      // GSAP animations for action menu
       useEffect(() => {
         if (actionMenuOpenId === message.id && actionMenuRef.current) {
-          // Animate in
           gsap.fromTo(
             actionMenuRef.current,
             { 
@@ -138,7 +137,6 @@ const MessageItem = memo(
             }
           );
         } else if (actionMenuRef.current) {
-          // Animate out
           gsap.to(actionMenuRef.current, {
             opacity: 0,
             y: -10,
@@ -149,23 +147,40 @@ const MessageItem = memo(
         }
       }, [actionMenuOpenId, message.id]);
 
-      // Animación de fade in para nuevos chunks
       useEffect(() => {
-        if (isNewChunk && messageRef.current && !isLoadingChunk) { // Solo animar cuando no está cargando
+        if (isNewChunk && messageRef.current && !isLoadingChunk) {
           gsap.fromTo(
             messageRef.current,
             { 
               opacity: 0, 
-              y: -20,
-              scale: 0.98
+              y: -30,
+              scale: 0.95,
+              rotationX: -5,
+              filter: 'blur(2px)'
             },
             { 
               opacity: 1, 
               y: 0, 
-              scale: 1,
-              duration: 0.4, 
+              scale: 1, 
+              rotationX: 0, 
+              filter: 'blur(0px)',
+              duration: 0.6, 
               ease: 'power2.out',
-              delay: 0.1
+              delay: 0.2
+            }
+          );
+          gsap.fromTo(
+            messageRef.current,
+            {
+              boxShadow: '0 0 0 rgba(59, 130, 246, 0)',
+            },
+            {
+              boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)',
+              duration: 0.8,
+              ease: 'power2.out',
+              delay: 0.3,
+              yoyo: true,
+              repeat: 1
             }
           );
         }
@@ -174,7 +189,6 @@ const MessageItem = memo(
       const renderMessageContent = useCallback(() => {
         const contentElements = [];
 
-        // 1. Si hay cita (replyTo), agregarla PRIMERO
         if (message.replyTo) {
           contentElements.push(
             <div key="reply" className={styles.replyIndicator}>
@@ -245,7 +259,6 @@ const MessageItem = memo(
           );
         }
 
-        // 2. Si hay imagen, agregarla SEGUNDO
         if (message.imageUrl) {
           contentElements.push(
             <div key="image" className={styles.imageWrapper}>
@@ -291,7 +304,6 @@ const MessageItem = memo(
           );
         }
 
-        // Si hay archivo de audio, agregarlo
         if (message.fileUrl && message.fileType?.startsWith('audio/')) {
           contentElements.push(
             <div key="audio" className={styles.file}>
@@ -307,7 +319,6 @@ const MessageItem = memo(
           );
         }
 
-        // Si hay archivo (no imagen, no audio), agregarlo
         if (message.fileUrl && !message.imageUrl && !message.fileType?.startsWith('audio/')) {
           contentElements.push(
             <div key="file" className={styles.file}>
@@ -319,9 +330,7 @@ const MessageItem = memo(
           );
         }
 
-        // Si hay texto, agregarlo
         if (message.text) {
-          // Configure sanitize-html to allow Tiptap's common HTML tags and attributes
           const sanitizeOptions = {
             allowedTags: [
               'p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'code', 'span', 'div'
@@ -330,7 +339,6 @@ const MessageItem = memo(
               '*': ['style', 'class']
             },
             transformTags: {
-              // Apply consistent styling for Tiptap tags
               'strong': (tagName: string, attribs: Record<string, string>) => ({
                 tagName,
                 attribs: {
@@ -376,7 +384,6 @@ const MessageItem = memo(
             }
           };
 
-          // Sanitize the HTML content
           const sanitizedHtml = sanitizeHtml(message.text, sanitizeOptions);
 
           contentElements.push(
@@ -388,17 +395,14 @@ const MessageItem = memo(
           );
         }
 
-        // Si no hay ningún contenido, retornar null
         if (contentElements.length === 0) {
           return null;
         }
 
-        // Si solo hay un elemento, retornarlo directamente
         if (contentElements.length === 1) {
           return contentElements[0];
         }
 
-        // Si hay múltiples elementos, retornarlos en un contenedor
         return (
           <div className={styles.messageContentWrapper}>
             {contentElements}
@@ -409,7 +413,6 @@ const MessageItem = memo(
       return (
         <div
           ref={(el) => {
-            // Combinar refs
             if (typeof ref === 'function') {
               ref(el);
             } else if (ref) {
@@ -493,10 +496,8 @@ const MessageItem = memo(
                           <div
                             className={styles.actionDropdownItem}
                             onClick={() => {
-                              // Copy message text
                               const textToCopy = message.text || '';
                               navigator.clipboard.writeText(textToCopy).catch(() => {
-                                // Fallback for older browsers
                                 const textArea = document.createElement('textarea');
                                 textArea.value = textToCopy;
                                 document.body.appendChild(textArea);
@@ -514,7 +515,6 @@ const MessageItem = memo(
                           <div
                             className={styles.actionDropdownItem}
                             onClick={() => {
-                              // Download file
                               if (message.imageUrl || message.fileUrl) {
                                 const link = document.createElement('a');
                                 link.href = message.imageUrl || message.fileUrl || '';
@@ -587,8 +587,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const { isAdmin, isLoading } = useAuth();
   const { encryptMessage, decryptMessage } = useEncryption();
+  const { markAsViewed } = useTaskNotifications();
   
-  // Estados de UI
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
@@ -598,12 +598,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
-  const [hasInteracted, setHasInteracted] = useState(false);
   const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [task] = useState(initialTask);
+  const [task, setTask] = useState(initialTask);
   const [activeCardDropdown, setActiveCardDropdown] = useState<'status' | 'team' | 'hours' | null>(null);
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [isSummarizeDropdownOpen, setIsSummarizeDropdownOpen] = useState(false);
@@ -611,10 +610,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
   const [isLoadingChunk, setIsLoadingChunk] = useState(false);
+  const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
 
-  // Refs
   const lastMessageRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const taskMenuRef = useRef<HTMLDivElement>(null);
   const deletePopupRef = useRef<HTMLDivElement>(null);
@@ -623,11 +621,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const teamDropdownRef = useRef<HTMLDivElement>(null);
   const timerPanelRef = useRef<HTMLDivElement>(null);
   const summarizeDropdownRef = useRef<HTMLDivElement>(null);
-  const prevMessagesRef = useRef<Message[]>([]);
   const chatRef = useRef<HTMLDivElement>(null);
   const [isRestoringTimer] = useState(false);
 
-  // Hooks optimizados
   const {
     messages,
     isLoading: isLoadingMessages,
@@ -638,11 +634,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     updateOptimisticMessage,
   } = useMessagePagination({
     taskId: task.id,
-    pageSize: 10, // Optimizado de 5 a 10 para mejor rendimiento
+    pageSize: 10,
     decryptMessage,
   });
 
-  // Hook para drag de mensajes y reply
   const {
     isDraggingMessage,
     draggedMessageId,
@@ -658,15 +653,66 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     },
   });
 
-  // Función para cargar más mensajes (sin preservación de scroll)
-  const handleLoadMoreMessages = useCallback(() => {
+  // Real-time listener for task updates
+  useEffect(() => {
+    if (!isOpen || !task.id) return;
+
+    const taskRef = doc(db, 'tasks', task.id);
+    const unsubscribe = onSnapshot(taskRef, (doc) => {
+      if (doc.exists()) {
+        const taskData = doc.data();
+        setTask(prevTask => ({
+          ...prevTask,
+          status: taskData.status || prevTask.status,
+          name: taskData.name || prevTask.name,
+          description: taskData.description || prevTask.description,
+          priority: taskData.priority || prevTask.priority,
+          startDate: taskData.startDate || prevTask.startDate,
+          endDate: taskData.endDate || prevTask.endDate,
+          LeadedBy: taskData.LeadedBy || prevTask.LeadedBy,
+          AssignedTo: taskData.AssignedTo || prevTask.AssignedTo,
+          CreatedBy: taskData.CreatedBy || prevTask.CreatedBy,
+        }));
+        console.log('[ChatSidebar] Task updated from Firestore:', taskData);
+      } else {
+        console.warn('[ChatSidebar] Task document does not exist:', task.id);
+      }
+    }, (error) => {
+      console.error('[ChatSidebar] Error listening to task updates:', error);
+    });
+
+    return () => {
+      console.log('[ChatSidebar] Cleaning up task listener');
+      unsubscribe();
+    };
+  }, [isOpen, task.id]);
+
+  const handleLoadMoreMessages = useCallback(async () => {
     if (hasMore && !isLoadingMore && !isLoadingChunk) {
       setIsLoadingChunk(true);
-      loadMoreMessages().finally(() => {
+      
+      const currentMessageCount = messages.length;
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      try {
+        await loadMoreMessages();
+        
+        setTimeout(() => {
+          const newMessages = messages.slice(currentMessageCount);
+          const newMessageIds = new Set(newMessages.map(msg => msg.id));
+          setNewChunkMessageIds(newMessageIds);
+          
+          setTimeout(() => {
+            setNewChunkMessageIds(new Set());
+          }, 3000);
+        }, 100);
+        
+      } finally {
         setIsLoadingChunk(false);
-      });
+      }
     }
-  }, [hasMore, isLoadingMore, isLoadingChunk, loadMoreMessages]);
+  }, [hasMore, isLoadingMore, isLoadingChunk, loadMoreMessages, messages]);
 
   const {
     isSending,
@@ -683,7 +729,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     updateOptimisticMessage,
   });
 
-  // Computed values
   const isCreator = useMemo(() => user?.id === task.CreatedBy, [user?.id, task.CreatedBy]);
   const isInvolved = useMemo(() => 
     user?.id &&
@@ -693,10 +738,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const canViewTeamAndHours = useMemo(() => isInvolved || isAdmin, [isInvolved, isAdmin]);
   const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
 
-  // Función para detectar si es móvil
   const isMobile = () => window.innerWidth < 768;
 
-  // Función para bloquear/desbloquear scroll del body
   const toggleBodyScroll = (disable: boolean) => {
     if (typeof document !== 'undefined') {
       if (disable) {
@@ -720,7 +763,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  // Efectos de UI y animaciones
   useEffect(() => {
     toggleBodyScroll(isOpen);
     return () => {
@@ -742,7 +784,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, [isTimerRunning]);
 
-  // Efecto para animaciones del sidebar
   useEffect(() => {
     if (sidebarRef.current) {
       const mobile = isMobile();
@@ -764,7 +805,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   }, [isOpen, onClose]);
 
-  // Efecto para cerrar dropdowns al hacer scroll
   useEffect(() => {
     const handleScroll = () => {
       setActionMenuOpenId(null);
@@ -782,7 +822,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, []);
 
-  // Efecto para click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node) && isOpen) {
@@ -853,7 +892,41 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     isDetailsDropdownOpen,
   ]);
 
-  // Handlers
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      // Mark messages as read
+      const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
+      if (unreadMessages.length > 0) {
+        markMessagesAsRead(unreadMessages.map((msg) => msg.id)).catch((error) => {
+          console.error('[ChatSidebar] Error marking messages as read:', error);
+        });
+      }
+      
+      // Mark task-related notifications as read
+      const notificationsQuery = query(
+        collection(db, 'notifications'),
+        where('taskId', '==', task.id),
+        where('recipientId', '==', user.id),
+        where('read', '==', false)
+      );
+      getDocs(notificationsQuery).then((snapshot) => {
+        const updatePromises = snapshot.docs.map((notifDoc) =>
+          updateDoc(doc(db, 'notifications', notifDoc.id), { read: true })
+        );
+        Promise.all(updatePromises).catch((error) => {
+          console.error('[ChatSidebar] Error marking notifications as read:', error);
+        });
+      }).catch((error) => {
+        console.error('[ChatSidebar] Error querying notifications:', error);
+      });
+
+      // Mark task as viewed
+      markAsViewed(task.id).catch((error) => {
+        console.error('[ChatSidebar] Error marking task as viewed:', error);
+      });
+    }
+  }, [isOpen, messages, user?.id, markMessagesAsRead, task.id, markAsViewed]);
+
   const handleClick = (element: HTMLElement) => {
     gsap.to(element, {
       scale: 0.95,
@@ -865,33 +938,70 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     });
   };
 
-  const handleStatusChange = async (status: string) => {
+  const handleStatusChange = useCallback(async (status: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('[ChatSidebar] handleStatusChange called:', {
+      status,
+      isCreator,
+      isAdmin,
+      userId: user?.id,
+      taskId: task.id,
+      currentStatus: task.status
+    });
+
     if (!isCreator && !isAdmin) {
+      console.warn('[ChatSidebar] User not authorized to change status:', {
+        userId: user?.id,
+        isCreator,
+        isAdmin
+      });
       return;
     }
+
+    if (!user?.id) {
+      console.error('[ChatSidebar] No user ID available');
+      return;
+    }
+
     try {
+      // Update local state for immediate UI feedback
+      setTask(prevTask => ({ ...prevTask, status }));
+      setActiveCardDropdown(null); // Close dropdown immediately
+      
+      console.log('[ChatSidebar] Updating task status in Firestore...');
       await updateDoc(doc(db, 'tasks', task.id), {
         status,
+        lastActivity: serverTimestamp(),
       });
+      
       await updateTaskActivity(task.id, 'status_change');
       
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
-      recipients.delete(user?.id || '');
-      for (const recipientId of Array.from(recipients)) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user?.id,
+      recipients.delete(user.id);
+      
+      const notificationPromises = Array.from(recipients).map(recipientId =>
+        addDoc(collection(db, 'notifications'), {
+          userId: user.id,
           taskId: task.id,
-          message: `${user?.firstName || 'Usuario'} cambió el estado de la tarea ${task.name} a ${status}`,
+          message: `${user.firstName || 'Usuario'} cambió el estado de la tarea "${task.name}" a "${status}"`,
           timestamp: Timestamp.now(),
           read: false,
           recipientId,
-        });
-      }
+          type: 'task_status_changed',
+        })
+      );
+      
+      await Promise.all(notificationPromises);
+      console.log('[ChatSidebar] Task status updated successfully:', status);
+      
     } catch (error) {
-      console.error('Error updating task status', error);
+      console.error('[ChatSidebar] Error updating task status:', error);
+      // Revert local state if Firestore update fails
+      setTask(prevTask => ({ ...prevTask, status: initialTask.status }));
+      alert(`Error al cambiar el estado: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
-  };
+  }, [user?.id, user?.firstName, task.id, task.status, task.AssignedTo, task.LeadedBy, task.CreatedBy, task.name, initialTask.status, isCreator, isAdmin]);
 
   const handleDeleteTask = async () => {
     if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
@@ -918,7 +1028,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   ) => {
     if (!user?.id) return;
     
-    // Incluir información de reply si existe
     const messageWithReply = {
       ...messageData,
       senderId: user.id,
@@ -933,7 +1042,30 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     
     await sendMessage(messageWithReply, isAudio, audioUrl, duration);
     
-    // Limpiar el estado de reply después de enviar
+    const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+    if (task.CreatedBy) recipients.add(task.CreatedBy);
+    recipients.delete(user.id);
+    
+    const notificationText = messageData.text
+      ? `${user.firstName || 'Usuario'} escribió en "${task.name}": ${
+          messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text
+        }`
+      : `${user.firstName || 'Usuario'} compartió un archivo en "${task.name}"`;
+    
+    for (const recipientId of recipients) {
+      await addDoc(collection(db, 'notifications'), {
+        userId: user.id,
+        taskId: task.id,
+        message: notificationText,
+        timestamp: Timestamp.now(),
+        read: false,
+        recipientId,
+        type: 'group_message',
+      });
+    }
+    
+    await updateTaskActivity(task.id, 'message');
+    
     setReplyingTo(null);
   };
 
@@ -943,7 +1075,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       return;
     }
     
-    // Si se proporciona newText, es desde el input principal
     if (newText) {
       if (!newText.trim()) {
         alert('El mensaje no puede estar vacío.');
@@ -960,7 +1091,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       return;
     }
     
-    // Si no se proporciona newText, es desde el menú de acciones (modo legacy)
     if (!editingText.trim()) {
       alert('El mensaje no puede estar vacío.');
       return;
@@ -1003,7 +1133,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     const wasRunning = isTimerRunning;
     
     setIsTimerRunning((prev) => !prev);
-    setHasInteracted(true);
 
     const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
     if (wasRunning && timerSeconds > 0) {
@@ -1069,7 +1198,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setDateInput(new Date());
       setCommentInput('');
       setIsTimerPanelOpen(false);
-      setHasInteracted(true);
     } catch (error) {
       console.error('Error adding time entry', error);
       alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
@@ -1346,46 +1474,6 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
     setReplyingTo(null);
   }, []);
 
-  // Efecto para marcar mensajes como leídos
-  useEffect(() => {
-    if (isOpen && user?.id) {
-      setHasInteracted(true);
-      const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
-      if (unreadMessages.length > 0) {
-        markMessagesAsRead(unreadMessages.map(msg => msg.id));
-      }
-    }
-  }, [isOpen, messages, user?.id, markMessagesAsRead]);
-
-  // Efecto para sonido de notificaciones
-  useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio('/NotificationSound.mp3');
-    }
-    const newUnreadMessages = messages.filter(
-      (msg) =>
-        !msg.read &&
-        !msg.isPending &&
-        !prevMessagesRef.current.some(
-          (prev) => prev.id === msg.id && prev.text === msg.text && prev.senderId === msg.senderId,
-        ),
-    );
-    if (newUnreadMessages.length > 0 && user?.id && hasInteracted) {
-      const latestMessage = newUnreadMessages[newUnreadMessages.length - 1];
-      if (latestMessage.senderId !== user.id) {
-        audioRef.current.play().catch((error) => {
-          console.error('Error playing notification sound', error);
-        });
-      }
-    }
-    prevMessagesRef.current = messages;
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
-  }, [messages, user?.id, hasInteracted]);
-
   if (isLoading) {
     return <Loader />;
   }
@@ -1421,7 +1509,10 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             <button
               type="button"
               className={`${styles.imageButton} ${styles.tooltip} ${styles.summarizeButton} ${isGeneratingSummary ? 'processing' : ''}`}
-              onClick={() => setIsSummarizeDropdownOpen((prev) => !prev)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSummarizeDropdownOpen((prev) => !prev);
+              }}
               disabled={isGeneratingSummary || messages.length === 0}
               aria-label="Generar resumen de actividad"
               title="Generar resumen de actividad 📊"
@@ -1435,7 +1526,11 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
               />
             </button>
             {isSummarizeDropdownOpen && (
-              <div className={styles.dropdownMenu} role="menu">
+              <div
+                className={styles.dropdownMenu}
+                role="menu"
+                onClick={e => e.stopPropagation()}
+              >
                 <button
                   type="button"
                   className={styles.dropdownItem}
@@ -1497,6 +1592,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         <div 
           className={styles.headerSection}
           onClick={(e) => {
+            e.stopPropagation();
             handleClick(e.currentTarget);
             setIsDetailsDropdownOpen(!isDetailsDropdownOpen);
           }}
@@ -1516,7 +1612,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           {isDetailsDropdownOpen && (
             <motion.div
               className={styles.details}
-              key="details-dropdown"
+              key={`details-${task.id}`}
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -1525,7 +1621,8 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             >
               <div
                 className={`${styles.card} ${isCreator || isAdmin ? styles.statusCard : ''}`}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (isCreator || isAdmin) {
                     setActiveCardDropdown(activeCardDropdown === 'status' ? null : 'status');
                   }
@@ -1534,13 +1631,17 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                 <div className={styles.cardLabel}>Estado de la tarea:</div>
                 <div className={styles.cardValue}>{task.status}</div>
                 {activeCardDropdown === 'status' && (isCreator || isAdmin) && (
-                  <div ref={statusDropdownRef} className={styles.cardDropdown}>
+                  <div
+                    ref={statusDropdownRef}
+                    className={styles.cardDropdown}
+                    onClick={e => e.stopPropagation()}
+                  >
                     {statusOptions.map((status) => (
-                      <div key={status} className={styles.cardDropdownItem} onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatusChange(status);
-                        setActiveCardDropdown(null);
-                      }}>
+                      <div
+                        key={status}
+                        className={styles.cardDropdownItem}
+                        onClick={(e) => handleStatusChange(status, e)}
+                      >
                         {status}
                       </div>
                     ))}
@@ -1549,7 +1650,8 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
               </div>
               <div
                 className={styles.card}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (canViewTeamAndHours) {
                     setActiveCardDropdown(activeCardDropdown === 'team' ? null : 'team');
                   }
@@ -1559,7 +1661,11 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                 <div className={styles.cardLabel}>Equipo:</div>
                 <div className={styles.cardValue}>{teamUsers.length} miembro(s)</div>
                 {activeCardDropdown === 'team' && (
-                  <div ref={teamDropdownRef} className={styles.cardDropdown}>
+                  <div
+                    ref={teamDropdownRef}
+                    className={styles.cardDropdown}
+                    onClick={e => e.stopPropagation()}
+                  >
                     {teamUsers.length > 0 ? (
                       teamUsers.map((u) => (
                         <div key={u.id} className={styles.cardDropdownItem}>
@@ -1580,7 +1686,10 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                   </div>
                 )}
               </div>
-              <div className={styles.card}>
+              <div
+                className={styles.card}
+                onClick={e => e.stopPropagation()}
+              >
                 <div className={styles.cardLabel}>Fecha:</div>
                 <div className={styles.cardValue}>
                   {formatDate(task.startDate)} - {formatDate(task.endDate)}
@@ -1588,7 +1697,8 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
               </div>
               <div
                 className={styles.cardFullWidth}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (canViewTeamAndHours) {
                     setActiveCardDropdown(activeCardDropdown === 'hours' ? null : 'hours');
                   }
@@ -1598,7 +1708,11 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                 <div className={styles.cardLabel}>Tiempo registrado:</div>
                 <div className={styles.cardValue}>{totalHours}</div>
                 {activeCardDropdown === 'hours' && (
-                  <div ref={hoursDropdownRef} className={styles.cardDropdown}>
+                  <div
+                    ref={hoursDropdownRef}
+                    className={styles.cardDropdown}
+                    onClick={e => e.stopPropagation()}
+                  >
                     {hoursByUser.length > 0 ? (
                       hoursByUser.map((u) => (
                         <div key={u.id} className={styles.cardDropdownItem}>
@@ -1633,32 +1747,22 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
         
-        {/* 
-          Scroll inverso optimizado:
-          - flexDirection: column-reverse: Los mensajes más recientes aparecen abajo
-          - inverse={true}: InfiniteScroll carga mensajes antiguos al hacer scroll hacia arriba
-          - scrollThreshold="200px": Carga nuevos chunks cuando el usuario está a 200px del tope
-          - Preservación de scroll: Mantiene la posición del usuario al cargar chunks
-          - pageSize: 10: Carga 10 mensajes por chunk para mejor rendimiento
-        */}
         <InfiniteScroll
           dataLength={messages.length}
           next={handleLoadMoreMessages}
           hasMore={hasMore}
           loader={
             <div className={styles.chunkLoader}>
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
-                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75" />
-              </svg>
-              <span>Cargando mensajes...</span>
+              <div className={styles.loader}>
+                <div className={styles.circle}></div>
+              </div>
             </div>
           }
           endMessage={<div className={styles.noMessages}>No hay más mensajes.</div>}
-          style={{ display: 'flex', flexDirection: 'column-reverse', overflow: 'visible' }}
+          style={{ display: 'flex', flexDirection: 'column-reverse', overflowY: 'auto' }}
           scrollableTarget="chat-container"
           inverse={true}
-          scrollThreshold="200px"
+          scrollThreshold="50px"
         >
           {messages.map((message, index) => (
             <MessageItem
@@ -1680,7 +1784,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
               dragOffset={dragOffset}
               onMessageDragStart={handleMessageDragStart}
               ref={index === messages.length - 1 ? lastMessageRef : null}
-              isNewChunk={false}
+              isNewChunk={newChunkMessageIds.has(message.id)}
               isLoadingChunk={isLoadingChunk}
             />
           ))}
@@ -1692,7 +1796,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         userFirstName={user?.firstName}
         onSendMessage={handleSendMessage}
         isSending={isSending}
-        setIsSending={() => {}} // No longer needed
+        setIsSending={() => {}}
         timerSeconds={timerSeconds}
         isTimerRunning={isTimerRunning}
         onToggleTimer={toggleTimer}

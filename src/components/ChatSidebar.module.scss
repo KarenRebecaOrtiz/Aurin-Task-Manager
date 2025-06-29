@@ -234,26 +234,180 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.05);
-  font-size: 14px;
-  color: #666;
-  gap: 8px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  position: sticky;
-  top: 0; /* Fijar el loader en la parte superior */
+  padding: 20px;
+  position: relative;
   z-index: 10;
+  transform: scale(0.5);
+}
+
+.chunkLoaderContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.chunkLoaderSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader {
+  border: 5px solid transparent;
+  border-bottom: 5px solid #d3e048;
+  padding: 1em;
+  border-radius: 50%;
+  rotate: 180deg;
+  animation-name: loader;
+  animation-duration: 0.9s;
+  animation-timing-function: cubic-bezier(0.17, 0.67, 0.83, 0.67);
+  animation-iteration-count: infinite;
+  animation-delay: 0.1s;
+  animation-fill-mode: forwards;
+}
+
+.circle {
+  border-radius: 0.25em;
+  width: 1em;
+  height: 1em;
+  background-color: #d3e048;
+  animation-name: circle;
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.17, 0.67, 0.83, 0.67);
+  animation-iteration-count: infinite;
+  animation-delay: 0.1s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes loader {
+  0% {
+    rotate: 180deg;
+  }
+  100% {
+    rotate: -180deg;
+  }
+}
+
+@keyframes circle {
+  0% {
+    scale: 1;
+  }
+  25% {
+    scale: 1.1;
+  }
+  50% {
+    scale: 2.5;
+  }
+  75% {
+    scale: 1.1;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+.chunkLoaderText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.chunkLoaderMainText {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  font-family: $font-family-primary;
+}
+
+.chunkLoaderSubText {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: $font-family-primary;
+  opacity: 0.8;
+}
+
+.chunkLoaderProgress {
+  width: 100%;
+  height: 4px;
+  background: rgba(211, 224, 72, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.chunkLoaderProgressBar {
+  height: 100%;
+  background: linear-gradient(90deg, #d3e048, #b8d43a);
+  border-radius: 2px;
+  animation: chunkLoaderProgress 2s ease-in-out infinite;
+  position: relative;
   
-  svg {
-    width: 20px;
-    height: 20px;
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: chunkLoaderShimmer 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes chunkLoaderFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chunkLoaderProgress {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes chunkLoaderShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
 
 :global(body.dark) .chunkLoader {
-  background: rgba(255, 255, 255, 0.05);
-  color: #a1a1aa;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+:global(body.dark) .chunkLoaderMainText {
+  color: #f9fafb;
+}
+
+:global(body.dark) .chunkLoaderSubText {
+  color: #9ca3af;
+}
+
+:global(body.dark) .chunkLoaderProgress {
+  background: rgba(211, 224, 72, 0.2);
 }
 
 .message {
@@ -2457,3 +2611,18 @@
     background-color: rgba(255, 255, 255, 0.15);
   }
 }
+
+.noMessages {
+  text-align: center;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 20px 0px;
+  color: #6b7280;
+  font-family: $font-family-primary;
+  font-size: 14px;
+}
+
+:global(body.dark) .noMessages {
+  color: #9ca3af;
+}
+

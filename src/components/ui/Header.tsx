@@ -84,7 +84,6 @@ interface HeaderProps {
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
-  onDeleteNotification: (notificationId: string) => void;
   onLimitNotifications: (notifications: Notification[]) => void;
   onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
 }
@@ -95,7 +94,6 @@ const Header: React.FC<HeaderProps> = ({
   users,
   notifications,
   onNotificationClick,
-  onDeleteNotification,
   onLimitNotifications,
   onChangeContainer,
 }) => {
@@ -564,10 +562,6 @@ const Header: React.FC<HeaderProps> = ({
     onNotificationClick(notification);
   }, [onNotificationClick]);
 
-  const handleDeleteNotification = useCallback((notificationId: string) => {
-    onDeleteNotification(notificationId);
-  }, [onDeleteNotification]);
-
   const handleCloseNotifications = useCallback(() => {
     setIsNotificationsOpen(false);
   }, []);
@@ -700,11 +694,9 @@ const Header: React.FC<HeaderProps> = ({
           <NotificationDropdown
             isVisible={isNotificationsVisible}
             isOpen={isNotificationsOpen}
-            notifications={notifications}
             users={users}
             dropdownPosition={dropdownPosition}
             onNotificationClick={handleNotificationClick}
-            onDeleteNotification={handleDeleteNotification}
             onClose={handleCloseNotifications}
           />
         </div>

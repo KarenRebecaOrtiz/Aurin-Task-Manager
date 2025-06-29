@@ -5,8 +5,10 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import { gsap } from 'gsap';
-import styles from './Header.module.scss';
+import styles from './NotificationDropdown.module.scss';
 import React from 'react';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 
 interface Notification {
   id: string;
@@ -23,24 +25,23 @@ interface Notification {
 interface NotificationDropdownProps {
   isVisible: boolean;
   isOpen: boolean;
-  notifications: Notification[];
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
   dropdownPosition: { top: number; right: number };
   onNotificationClick: (notification: Notification) => void;
-  onDeleteNotification: (notificationId: string) => void;
   onClose: () => void;
 }
 
 export default React.memo(function NotificationDropdown({
   isVisible,
   isOpen,
-  notifications,
   users,
   dropdownPosition,
   onNotificationClick,
-  onDeleteNotification,
   onClose,
 }: NotificationDropdownProps) {
+  const { notifications, markNotificationAsRead, deleteNotification, isLoading, error } = useNotifications();
+  const { markAsViewed } = useTaskNotifications();
+  
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollPositionRef = useRef<number>(0);
@@ -54,6 +55,19 @@ export default React.memo(function NotificationDropdown({
   const [swipeStartX, setSwipeStartX] = useState<number>(0);
   const [swipeCurrentX, setSwipeCurrentX] = useState<number>(0);
   const [isSwiping, setIsSwiping] = useState(false);
+
+  const handleNotificationClick = useCallback(async (notification: Notification) => {
+    if (notification.taskId && ['task_deleted', 'task_archived', 'task_unarchived', 'task_status_changed', 'group_message'].includes(notification.type || '')) {
+      await markAsViewed(notification.taskId);
+    }
+    await markNotificationAsRead(notification.id);
+    onNotificationClick(notification);
+    onClose();
+  }, [markAsViewed, markNotificationAsRead, onNotificationClick, onClose]);
+
+  const handleDeleteNotification = useCallback(async (notificationId: string) => {
+    await deleteNotification(notificationId);
+  }, [deleteNotification]);
 
   // Detectar si estamos en móvil
   useEffect(() => {
@@ -122,7 +136,7 @@ export default React.memo(function NotificationDropdown({
     
     if (swipeDistance > threshold) {
       // Swipe completado - eliminar notificación directamente
-      onDeleteNotification(swipedNotificationId);
+      handleDeleteNotification(swipedNotificationId);
     }
     
     // Resetear estados
@@ -130,7 +144,7 @@ export default React.memo(function NotificationDropdown({
     setSwipedNotificationId(null);
     setSwipeStartX(0);
     setSwipeCurrentX(0);
-  }, [isSwiping, swipedNotificationId, swipeStartX, swipeCurrentX, onDeleteNotification]);
+  }, [isSwiping, swipedNotificationId, swipeStartX, swipeCurrentX, handleDeleteNotification]);
 
   // Memoizar el cálculo de tiempo relativo para evitar recálculos innecesarios
   const formatRelativeTime = useCallback((timestamp: Timestamp) => {
@@ -277,69 +291,52 @@ export default React.memo(function NotificationDropdown({
   if (isMobile) {
     return createPortal(
       <>
-        {/* Overlay de fondo */}
-        <div 
-          className={styles.mobileOverlay}
-          onClick={onClose}
-        />
-        
-        {/* Modal de notificaciones */}
+        <div className={styles.dropdownOverlay} onClick={onClose} />
         <div
           ref={(el) => {
             notificationsRef.current = el;
             scrollContainerRef.current = el;
           }}
-          className={styles.mobileNotificationModal}
-          style={{
-            transform: `translateY(${dragOffset}px)`,
-          }}
+          className={styles.dropdown}
+          style={{ transform: `translateY(${dragOffset}px)` }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           data-notification-dropdown
         >
-          {/* Header del modal con drag indicator */}
-          <div className={styles.mobileModalHeader}>
-            <div className={styles.dragIndicator} />
-            <h3 className={styles.modalTitle}>Notificaciones</h3>
-            <button 
-              className={styles.closeButton}
-              onClick={onClose}
-              aria-label="Cerrar notificaciones"
-            >
-              <Image
-                src="/x.svg"
-                alt="Cerrar"
-                width={20}
-                height={20}
-              />
+          <div className={styles.header}>
+            <div className={styles.dragBar} />
+            <div className={styles.title}>Notificaciones</div>
+            <button className={styles.closeButton} onClick={onClose} aria-label="Cerrar notificaciones">
+              <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
             </button>
           </div>
-
-          {/* Contenido de notificaciones */}
-          <div className={styles.mobileModalContent}>
-            {processedNotifications.length === 0 ? (
+          <div className={styles.scrollContainer}>
+            {isLoading ? (
+              <div className={styles.loadingState}>
+                <div className={styles.spinner}></div>
+                <span>Cargando notificaciones...</span>
+              </div>
+            ) : error ? (
+              <div className={styles.errorState}>
+                <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
+                <span>{error}</span>
+              </div>
+            ) : processedNotifications.length === 0 ? (
               <div className={styles.emptyState}>
-                <Image
-                  src="/EmptyNotification.svg"
-                  alt="Sin notificaciones"
-                  width={60}
-                  height={60}
-                />
+                <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={60} height={60} />
                 <span>No hay notificaciones nuevas por ahora...</span>
               </div>
             ) : (
               processedNotifications.map((n) => {
                 const swipeDistance = swipedNotificationId === n.id ? swipeStartX - swipeCurrentX : 0;
-                const itemStyle = swipedNotificationId === n.id 
-                  ? { transform: `translateX(-${Math.max(0, swipeDistance)}px)` }
-                  : undefined;
-                
+                const itemStyle = swipedNotificationId === n.id ? { transform: `translateX(-${Math.max(0, swipeDistance)}px)` } : undefined;
                 return (
                   <div
                     key={n.id}
-                    className={`${styles.mobileNotificationItem} ${n.read ? styles.read : ''} ${isSwiping && swipedNotificationId === n.id ? styles.swiping : ''}`}
+                    className={`${styles.notificationItem} ${!n.read ? styles.unread : ''} ${isSwiping && swipedNotificationId === n.id ? styles.swiping : ''}`}
                     style={itemStyle}
+                    data-type={n.type}
                     onMouseDown={(e) => handleSwipeStart(e, n.id)}
                     onMouseMove={handleSwipeMove}
                     onMouseUp={handleSwipeEnd}
@@ -348,49 +345,19 @@ export default React.memo(function NotificationDropdown({
                     onTouchMove={handleSwipeMove}
                     onTouchEnd={handleSwipeEnd}
                   >
-                    <div className={styles.notificationContent}>
-                      <div className={styles.notificationLeft}>
-                        <Image
-                          src={n.senderInfo.imageUrl}
-                          alt={n.senderInfo.name}
-                          width={40}
-                          height={40}
-                          className={styles.notificationAvatar}
-                        />
-                      </div>
-                      <div className={styles.notificationRight}>
-                        <div className={styles.notificationTextWrap}>
-                          <span
-                            className={styles.notificationTextContent}
-                            onClick={() => {
-                              onNotificationClick(n);
-                              onClose();
-                            }}
-                            dangerouslySetInnerHTML={{ __html: processNotificationText(truncateText(n.message, 120)) }}
-                          />
-                          <span className={styles.notificationTime}>
-                            {n.relativeTime}
-                          </span>
-                        </div>
-                        <div className={styles.notificationButtonWrap}>
-                          <button
-                            className={styles.notificationPrimaryCta}
-                            onClick={() => {
-                              onNotificationClick(n);
-                              onClose();
-                            }}
-                          >
-                            Ver Evento
-                          </button>
-                          <button
-                            className={styles.notificationSecondaryCta}
-                            onClick={() => onDeleteNotification(n.id)}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
+                    <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} />
+                    <div className={styles.content}>
+                      <span
+                        className={styles.message}
+                        onClick={() => {
+                          handleNotificationClick(n);
+                          onClose();
+                        }}
+                        dangerouslySetInnerHTML={{ __html: processNotificationText(truncateText(n.message, 120)) }}
+                      />
+                      <span className={styles.time}>{n.relativeTime}</span>
                     </div>
+                    <button className={styles.deleteButton} onClick={() => handleDeleteNotification(n.id)}>×</button>
                   </div>
                 );
               })
@@ -409,81 +376,68 @@ export default React.memo(function NotificationDropdown({
         notificationsRef.current = el;
         scrollContainerRef.current = el;
       }}
-      className={styles.notificationDropdown}
+      className={styles.dropdown}
       style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
       data-notification-dropdown
     >
-      {processedNotifications.length === 0 ? (
-        <div className={styles.notificationItem}>
-          <span>No hay notificaciones nuevas por ahora...</span>
-        </div>
-      ) : (
-        processedNotifications.map((n) => {
-          const swipeDistance = swipedNotificationId === n.id ? swipeStartX - swipeCurrentX : 0;
-          const itemStyle = swipedNotificationId === n.id 
-            ? { transform: `translateX(-${Math.max(0, swipeDistance)}px)` }
-            : undefined;
-          
-          return (
-            <div
-              key={n.id}
-              className={`${styles.notificationItem} ${n.read ? styles.read : ''} ${isSwiping && swipedNotificationId === n.id ? styles.swiping : ''}`}
-              style={itemStyle}
-              onMouseDown={(e) => handleSwipeStart(e, n.id)}
-              onMouseMove={handleSwipeMove}
-              onMouseUp={handleSwipeEnd}
-              onMouseLeave={handleSwipeEnd}
-              onTouchStart={(e) => handleSwipeStart(e, n.id)}
-              onTouchMove={handleSwipeMove}
-              onTouchEnd={handleSwipeEnd}
-            >
-              <div className={styles.notificationContent}>
-                <div className={styles.notificationLeft}>
-                  <Image
-                    src={n.senderInfo.imageUrl}
-                    alt={n.senderInfo.name}
-                    width={40}
-                    height={40}
-                    className={styles.notificationAvatar}
+      <div className={styles.header}>
+        <div className={styles.title}>Notificaciones</div>
+        <button className={styles.closeButton} onClick={onClose} aria-label="Cerrar notificaciones">
+          <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
+        </button>
+      </div>
+      <div className={styles.scrollContainer}>
+        {isLoading ? (
+          <div className={styles.loadingState}>
+            <div className={styles.spinner}></div>
+            <span>Cargando notificaciones...</span>
+          </div>
+        ) : error ? (
+          <div className={styles.errorState}>
+            <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
+            <span>{error}</span>
+          </div>
+        ) : processedNotifications.length === 0 ? (
+          <div className={styles.emptyState}>
+            <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={60} height={60} />
+            <span>No hay notificaciones nuevas por ahora...</span>
+          </div>
+        ) : (
+          processedNotifications.map((n) => {
+            const swipeDistance = swipedNotificationId === n.id ? swipeStartX - swipeCurrentX : 0;
+            const itemStyle = swipedNotificationId === n.id ? { transform: `translateX(-${Math.max(0, swipeDistance)}px)` } : undefined;
+            return (
+              <div
+                key={n.id}
+                className={`${styles.notificationItem} ${!n.read ? styles.unread : ''} ${isSwiping && swipedNotificationId === n.id ? styles.swiping : ''}`}
+                style={itemStyle}
+                data-type={n.type}
+                onMouseDown={(e) => handleSwipeStart(e, n.id)}
+                onMouseMove={handleSwipeMove}
+                onMouseUp={handleSwipeEnd}
+                onMouseLeave={handleSwipeEnd}
+                onTouchStart={(e) => handleSwipeStart(e, n.id)}
+                onTouchMove={handleSwipeMove}
+                onTouchEnd={handleSwipeEnd}
+              >
+                <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} />
+                <div className={styles.content}>
+                  <span
+                    className={styles.message}
+                    onClick={() => {
+                      handleNotificationClick(n);
+                      onClose();
+                    }}
+                    dangerouslySetInnerHTML={{ __html: processNotificationText(truncateText(n.message, 100)) }}
                   />
+                  <span className={styles.time}>{n.relativeTime}</span>
                 </div>
-                <div className={styles.notificationRight}>
-                  <div className={styles.notificationTextWrap}>
-                    <span
-                      className={styles.notificationTextContent}
-                      onClick={() => {
-                        onNotificationClick(n);
-                        onClose();
-                      }}
-                      dangerouslySetInnerHTML={{ __html: processNotificationText(truncateText(n.message, 100)) }}
-                    />
-                    <span className={styles.notificationTime}>
-                      {n.relativeTime}
-                    </span>
-                  </div>
-                  <div className={styles.notificationButtonWrap}>
-                    <button
-                      className={styles.notificationPrimaryCta}
-                      onClick={() => {
-                        onNotificationClick(n);
-                        onClose();
-                      }}
-                    >
-                      Ver Evento
-                    </button>
-                    <button
-                      className={styles.notificationSecondaryCta}
-                      onClick={() => onDeleteNotification(n.id)}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
+                <button className={styles.deleteButton} onClick={() => handleDeleteNotification(n.id)}>×</button>
               </div>
-            </div>
-          );
-        })
-      )}
+            );
+          })
+        )}
+      </div>
     </div>,
     document.body,
   );
@@ -492,13 +446,8 @@ export default React.memo(function NotificationDropdown({
   return (
     prevProps.isVisible === nextProps.isVisible &&
     prevProps.isOpen === nextProps.isOpen &&
-    prevProps.notifications.length === nextProps.notifications.length &&
     prevProps.users.length === nextProps.users.length &&
     prevProps.dropdownPosition.top === nextProps.dropdownPosition.top &&
-    prevProps.dropdownPosition.right === nextProps.dropdownPosition.right &&
-    // Verificar si el estado read de las notificaciones ha cambiado
-    prevProps.notifications.every((prevNotif, index) => 
-      nextProps.notifications[index] && prevNotif.read === nextProps.notifications[index].read
-    )
+    prevProps.dropdownPosition.right === nextProps.dropdownPosition.right
   );
 });

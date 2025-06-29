@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, onSnapshot, query, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import UserAvatar from '@/components/ui/UserAvatar';
+import { useMessageNotifications } from '@/hooks/useMessageNotifications';
+import NotificationDot from '@/components/ui/NotificationDot';
 
 interface User {
   id: string;
@@ -36,7 +38,6 @@ interface Task {
 }
 
 interface MembersTableProps {
-  onInviteSidebarOpen: () => void;
   onMessageSidebarOpen: (user: User) => void;
 }
 
@@ -72,6 +73,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
   ({ onMessageSidebarOpen }) => {
     const { user } = useUser();
     const { isLoading } = useAuth();
+    const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
     
     // Estados optimizados con refs para evitar re-renders
     const usersRef = useRef<User[]>([]);
@@ -470,8 +472,23 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         {
           key: 'fullName',
           label: 'Nombre',
-          width: '60%',
+          width: '50%',
           mobileVisible: true,
+        },
+        {
+          key: 'messageNotifications',
+          label: '',
+          width: '10%',
+          mobileVisible: false,
+          render: (user: User) => {
+            const unreadCount = getUnreadCountForUser(user.id);
+            console.log('[MembersTable] User:', user.id, 'Unread messages:', unreadCount);
+            return (
+              <div className={styles.notificationDotWrapper}>
+                <NotificationDot count={unreadCount} />
+              </div>
+            );
+          },
         },
         {
           key: 'role',
@@ -498,7 +515,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           ),
         },
       ],
-      [activeProjectsCount],
+      [activeProjectsCount, getUnreadCountForUser],
     );
 
     // Handle loading state
@@ -538,11 +555,31 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSort={handleSort}
-          onRowClick={(u: User, columnKey: string) =>
-            ['imageUrl', 'fullName', 'role', 'activeProjects', 'status'].includes(columnKey) &&
-            u.id !== user?.id &&
-            onMessageSidebarOpen(u)
-          }
+          onRowClick={async (u: User, columnKey: string) => {
+            if (['imageUrl', 'fullName', 'role', 'activeProjects', 'status', 'messageNotifications'].includes(columnKey) &&
+                u.id !== user?.id) {
+              // Marcar la conversación como leída antes de abrir el sidebar
+              const unreadCount = getUnreadCountForUser(u.id);
+              if (unreadCount > 0) {
+                // Buscar la conversación y marcarla como leída
+                const conversationsQuery = query(
+                  collection(db, 'conversations'),
+                  where('participants', 'array-contains', user?.id),
+                  where('participants', 'array-contains', u.id)
+                );
+                try {
+                  const conversationsSnapshot = await getDocs(conversationsQuery);
+                  if (!conversationsSnapshot.empty) {
+                    const conversationId = conversationsSnapshot.docs[0].id;
+                    await markConversationAsRead(conversationId);
+                  }
+                } catch (error) {
+                  console.error('[MembersTable] Error marking conversation as read:', error);
+                }
+              }
+              onMessageSidebarOpen(u);
+            }
+          }}
           emptyStateType="members"
         />
       </div>

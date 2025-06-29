@@ -1,21 +1,29 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/utils' as *;
+
+// ==============================================================
+// 🔮 MARQUEE - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
+
 .marquee {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  background-color: #d3df48;
-  color: #000000;
-  font-family: 'Urbanist', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  padding: 10px 20px;
+  background-color: #d3e048;
+  color: $color-text-primary;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-semibold;
+  font-size: $text-base;
+  padding: $spacing-sm $spacing-lg;
   z-index: 100000;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   white-space: nowrap;
   overflow: hidden;
 
   @media (max-width: 768px) {
-    font-size: 0.9rem;
+    font-size: $text-sm;
     padding: 8px 15px;
   }
 }
@@ -23,8 +31,7 @@
 .marqueeInner {
   -webkit-font-smoothing: antialiased;
   width: fit-content;
-  display: flex;
-  flex: auto;
+  @include flex-center;
   flex-direction: row;
 }
 
@@ -35,9 +42,9 @@
 }
 
 .adviceItem {
-  margin-right: 10px;
+  margin-right: $spacing-sm;
 }
 
 .bullet {
-  margin: 0 10px;
+  margin: 0 $spacing-sm;
 }

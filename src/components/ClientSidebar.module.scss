@@ -1,308 +1,215 @@
 /* ──────────────────────────────────────────────────────────
-   ClientSidebar.module.scss — actualizado con animaciones
+   ClientSidebar.module.scss 
 ────────────────────────────────────────────────────────── */
 
-.container {
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 400px;
-  height: 100vh;
-  border-radius: 24px 0 0 24px;
-  background: #f6f6f6;
-  backdrop-filter: blur(10px);
-  display: flex;
-  flex-direction: column;
-  z-index: 1000;
-  transform: translateX(100%);
-  transition: transform 0.4s ease, box-shadow 0.3s ease;
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.7),
-    6px 6px 12px rgba(0, 0, 0, 0.05);
-}
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/components' as *;
 
-.open {
-  transform: translateX(0);
+.container {
+  @include sidebar-container(400px);
 }
 
 .content {
-  flex: 1;
-  padding: 32px 28px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  @include sidebar-content;
 }
 
 .header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  justify-content: start;
-  padding-bottom: 16px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid #e5e7eb;
+  @include sidebar-header;
 }
 
 .closeButton {
-  background: #f1f5f9;
-  border: none;
-  padding: 8px;
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: -3px -3px 6px #fff, 3px 3px 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.closeButton:hover {
-  transform: scale(1.1);
-  box-shadow: inset -2px -2px 4px #fff, inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  @extend .sidebarCloseButton;
 }
 
 .title {
-  font-size: 22px;
-  font-weight: 600;
-  color: #1b2734;
-  text-align: left;
+  @include typography($text-xl, $font-weight-semibold, $color-sidebar-text-primary, left);
+  
+  @include responsive(sm) {
+    font-size: $text-lg;
+  }
 }
 
 .subtitle {
-  font-size: 15px;
-  color: #6b7280;
-  margin-bottom: 20px;
-  text-align: left;
+  @include typography(15px, $font-weight-normal, $color-sidebar-text-secondary, left);
+  margin-bottom: $spacing-xl;
+  
+  @include responsive(sm) {
+    font-size: 13px;
+    margin-bottom: $spacing-md;
+  }
 }
 
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  @include flex-column;
+  gap: $spacing-2xl;
+  
+  @include responsive(sm) {
+    gap: $spacing-lg;
+  }
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
+  @extend .field;
   align-items: center;
-  gap: 8px;
+  
+  @include responsive(sm) {
+    gap: $spacing-xs;
+  }
 }
 
 .label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1b2734;
+  @extend .label;
+  
+  @include responsive(sm) {
+    font-size: 13px;
+  }
 }
 
 .required {
-  color: #ef4444;
+  color: $color-error;
 }
 
 .fieldDescription {
-  font-size: 14px;
-  color: #6b7280;
+  @extend .fieldDescription;
   text-align: center;
   margin-bottom: 5px;
+  
+  @include responsive(sm) {
+    font-size: $text-xs;
+  }
 }
 
-/* ─── Avatar + Hover Scale ─────────────────────────────── */
 .avatar {
-  cursor: pointer;
-  width: 109px;
-  height: 109px;
-  border-radius: 50%;
-  overflow: hidden;
-  margin-bottom: 16px;
-  box-shadow: -4px -4px 8px #fff, 4px 4px 8px rgba(0, 0, 0, 0.1);
+  @extend .sidebarAvatar;
 }
 
 .previewImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.avatar:hover .previewImage {
-  transform: scale(1.08);
+  @extend .sidebarPreviewImage;
 }
 
 .projectField {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  @extend .projectField;
+  
+  @include responsive(sm) {
+    gap: $spacing-sm;
+  }
 }
 
 .projectInputWrapper {
-  display: flex;
-  width: 100%;
-  gap: 8px;
-}
-
-.deleteProjectButton,
-.addProjectButton,
-.deleteConfirmButton,
-.cancelDeleteConfirmButton,
-.submitButton,
-.cancelButton {
-  padding: 10px 16px;
-  font-size: 14px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: -3px -3px 6px #fff, 3px 3px 6px rgba(0, 0, 0, 0.1);
+  @extend .projectInputWrapper;
+  
+  @include responsive(sm) {
+    gap: $spacing-xs;
+  }
 }
 
 .addProjectButton {
-  background: #f1f5f9;
-  color: #1b2734;
+  @extend .sidebarAddProjectButton;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
-.addProjectButton:hover,
-.cancelButton:hover,
-.cancelDeleteConfirmButton:hover {
-  background: #e5e7eb;
-  box-shadow: inset -2px -2px 5px #fff, inset 2px 2px 5px rgba(0, 0, 0, 0.05);
+.deleteProjectButton {
+  @extend .sidebarDeleteButton;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
-.deleteProjectButton,
 .deleteConfirmButton {
-  background: #b91c1c;
-  color: #fff;
+  @extend .sidebarDeleteConfirmButton;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
 .cancelDeleteConfirmButton {
-  background: #f9fafb;
-  color: #1b2734;
-}
-
-.deleteConfirmButton:disabled,
-.submitButton:disabled,
-.cancelButton:disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
-  cursor: not-allowed;
+  @extend .sidebarCancelDeleteConfirmButton;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
 .submitButton {
-  background: #191919;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.submitButton:disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.submitButton.saving {
-  background: #6b7280;
-  cursor: not-allowed;
-}
-
-.buttonLoader {
-  width: 16px;
-  height: 16px;
-  border: 2px solid transparent;
-  border-top: 2px solid #ffffff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  @extend .sidebarSubmitButton;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
 .cancelButton {
-  background: #f9fafb;
-  color: #1b2734;
+  @extend .sidebarCancelButton;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
-/* ─── Delete-Confirm Container ─────────────────────────── */
+.buttonLoader {
+  @extend .sidebarButtonLoader;
+}
+
 .deleteConfirm {
-  background: #fef2f2;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #fecaca;
-  box-shadow: inset -2px -2px 4px #fff, inset 2px 2px 4px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  @extend .sidebarDeleteConfirm;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm;
+    gap: $spacing-sm;
+  }
 }
 
 .deleteConfirmHeader {
-  display: flex;
-  flex-direction: row;
-  gap: 5px;
-  align-items: start;
+  @extend .sidebarDeleteConfirmHeader;
+  
+  h3, p {
+    @include responsive(sm) {
+      font-size: 13px;
+    }
+  }
 }
 
-.deleteConfirmHeader h3,
-.deleteConfirm p {
-  font-size: 14px;
-  color: #b91c1c;
+.input {
+  @extend .sidebarInput;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
-.input,
 .deleteConfirmInput {
-  padding: 12px 16px;
-  border: none;
-  border-radius: 14px;
-  font-size: 14px;
-  width: 100% !important;
-  color: #1b2734;
-  background: #f5f5f5;
-  box-shadow:
-    -3px -3px 6px #ffffff,
-    3px 3px 6px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease, background 0.3s ease;
-}
-
-.input:focus,
-.deleteConfirmInput:focus {
-  outline: none;
-  background: #efefef;
-  box-shadow:
-    inset -2px -2px 5px rgba(255, 255, 255, 0.3),
-    inset 2px 2px 5px rgba(0, 0, 0, 0.05);
+  @extend .sidebarDeleteConfirmInput;
+  
+  @include responsive(sm) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 13px;
+  }
 }
 
 .actions {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  margin-top: 24px;
+  @extend .sidebarActions;
 }
 
 .loader {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  @extend .loader;
   height: 100%;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #2563eb;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  @extend .spinner;
 }
 
 /* 🌙 Dark Mode */

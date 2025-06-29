@@ -1,0 +1,51 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.notificationDot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-weight: bold;
+  color: white;
+  z-index: 10;
+  user-select: none;
+  background-color: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  font-size: 11px;
+}
+
+.ping {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(248, 113, 113, 0.75);
+  z-index: -1;
+  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.number {
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+  text-align: center;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+// Modo oscuro
+:global(body.dark) .notificationDot {
+  background-color: #f87171;
+  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.4);
+} 

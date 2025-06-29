@@ -1,18 +1,23 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 CURSOR - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
+
 .demoContainer {
     max-width: 400px;
     height: 400px;
     width: 100%;
-    border-radius: 12px;
-    background-color: #f5f5f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border-radius: $radius-lg;
+    background-color: $color-bg-light;
+    @include flex-center;
   }
   
   .demoText {
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     font-style: italic;
-    color: #6b7280;
+    color: $color-text-secondary;
   }
   
   .cursor {
@@ -25,7 +30,7 @@
   .cursorIcon {
     width: 24px;
     height: 24px;
-    color: #000000;
+    color: #d3e048;
   }
   
   .cursorFollow {
@@ -36,14 +41,14 @@
   }
   
   .cursorFollowContent {
-    background-color: #0c0c0c;
-    color: #ffffff;
+    background-color: #d3e048;
+    color: $color-text-primary;
     padding: 4px 8px;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
     font-family: inherit;
-    border-radius: 6px;
-    font-size: 14px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: $radius-sm;
+    font-size: $text-sm;
+    box-shadow: $shadow-simple-light;
     max-width: 150px; 
     white-space: nowrap;
     overflow: hidden; 

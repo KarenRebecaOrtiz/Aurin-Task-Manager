@@ -109,11 +109,11 @@ export default function ClientClock() {
   const formattedTime = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   return (
-    <div ref={clockRef} className={`${styles.DigitalClock_clockContainer__UUU_I} ${styles.visible}`}>
-      <div className={styles.DigitalClock_clockText}>{date}</div>
-      <div className={styles.DigitalClock_clockText}>{location}</div>
-      <div className={styles.DigitalClock_clockText}>{temperature}</div>
-      <div className={styles.DigitalClock_clockText}>{formattedTime}</div>
+    <div ref={clockRef} className={`${styles.clockContainer} ${styles.visible}`}>
+      <div className={styles.clockText}>{date}</div>
+      <div className={styles.clockText}>{location}</div>
+      <div className={styles.clockText}>{temperature}</div>
+      <div className={styles.clockText}>{formattedTime}</div>
     </div>
   );
 }

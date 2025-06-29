@@ -34,9 +34,7 @@ import EditTask from '@/components/EditTask';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
 import ClientSidebar from '@/components/ClientSidebar';
-import InviteSidebar from '@/components/InviteSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
-import ProfileSidebar from '@/components/ProfileSidebar';
 import ProfileCard from '@/components/ProfileCard';
 import ConfigPage from '@/components/ConfigPage';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
@@ -110,7 +108,7 @@ interface Notification {
 
 interface Sidebar {
   id: string;
-  type: 'message' | 'chat' | 'client-sidebar' | 'invite-sidebar';
+  type: 'message' | 'chat' | 'client-sidebar';
   data?: User | Task | { client?: Client };
 }
 
@@ -125,7 +123,6 @@ function TasksPageContent() {
   const [taskView, setTaskView] = useState<TaskView>('table');
   const [isArchiveTableOpen, setIsArchiveTableOpen] = useState<boolean>(false);
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState<string | null>(null);
-  const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState<string | null>(null);
   const [openSidebars, setOpenSidebars] = useState<Sidebar[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -205,14 +202,6 @@ function TasksPageContent() {
     const currentState = { sidebar: 'chat', task: task.id, container: selectedContainer };
     window.history.pushState(currentState, '', window.location.pathname);
   }, [selectedContainer]);
-
-  const handleInviteSidebarOpen = useCallback(() => {
-    setOpenSidebars((prev) => [
-      ...prev,
-      { id: uuidv4(), type: 'invite-sidebar' },
-    ]);
-    console.log('[TasksPage] Opened invite sidebar');
-  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -417,27 +406,6 @@ function TasksPageContent() {
     );
 
     return unsubscribe;
-  }, [user?.id]);
-
-  const handleDeleteNotification = useCallback(async (notificationId: string) => {
-    if (!user?.id) {
-      console.warn('No user ID, skipping notification deletion');
-      return;
-    }
-
-    try {
-      console.log('Deleting notification:', { notificationId, userId: user.id });
-      await deleteDoc(doc(db, 'notifications', notificationId));
-      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
-      console.log('Notification deleted successfully:', notificationId);
-    } catch (error) {
-      console.error('Error deleting notification:', {
-        error: error instanceof Error ? error.message : JSON.stringify(error),
-        notificationId,
-        userId: user.id,
-      });
-      alert('Error al eliminar la notificación');
-    }
   }, [user?.id]);
 
   const handleLimitNotifications = useCallback(async (currentNotifications: Notification[]) => {
@@ -967,7 +935,6 @@ function TasksPageContent() {
           users={memoizedUsers}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
-          onDeleteNotification={handleDeleteNotification}
           onLimitNotifications={handleLimitNotifications}
           onChangeContainer={handleContainerChange}
         />
@@ -1043,7 +1010,6 @@ function TasksPageContent() {
           )}
           {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
             <MembersTable
-              onInviteSidebarOpen={handleInviteSidebarOpen}
               onMessageSidebarOpen={handleMessageSidebarOpen}
             />
           )}
@@ -1076,7 +1042,6 @@ function TasksPageContent() {
               onHasUnsavedChanges={setHasUnsavedChanges}
               onCreateClientOpen={handleCreateClientOpen}
               onEditClientOpen={handleEditClientOpen}
-              onInviteSidebarOpen={handleInviteSidebarOpen}
               onShowSuccessAlert={handleShowSuccessAlert}
               onShowFailAlert={handleShowFailAlert}
             />
@@ -1163,12 +1128,11 @@ function TasksPageContent() {
           </div>
         </div>
       )}
-      {isProfileSidebarOpen && (
-        <ProfileSidebar
-          isOpen={!!isProfileSidebarOpen}
-          onClose={() => setIsProfileSidebarOpen(null)}
-          userId={isProfileSidebarOpen}
-          users={memoizedUsers}
+      {selectedProfileUser && (
+        <ProfileCard
+          userId={selectedProfileUser.id}
+          imageUrl={selectedProfileUser.imageUrl}
+          onClose={handleCloseProfile}
         />
       )}
       <AISidebar isOpen={false} onClose={() => {}} />
@@ -1231,24 +1195,8 @@ function TasksPageContent() {
             />
           );
         }
-        if (sidebar.type === 'invite-sidebar') {
-          return (
-            <InviteSidebar
-              key={sidebar.id}
-              isOpen={true}
-              onClose={() => handleCloseSidebar(sidebar.id)}
-            />
-          );
-        }
         return null;
       })}
-      {selectedProfileUser && (
-        <ProfileCard
-          userId={selectedProfileUser.id}
-          imageUrl={selectedProfileUser.imageUrl}
-          onClose={handleCloseProfile}
-        />
-      )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
       <Dock />

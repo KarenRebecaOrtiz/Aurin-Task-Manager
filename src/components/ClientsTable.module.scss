@@ -1,18 +1,20 @@
 @use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/components' as *;
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
+// Override font family for this specific table
+$font-family-table: "Urbanist", sans-serif;
+
 .container {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+  @include flex-column;
+  gap: $spacing-2xl;
 }
 
 .header {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
+  width: 100%;
+  @include flex-between;
+  gap: $spacing-lg;
 }
 
 .searchWrapper {
@@ -138,64 +140,20 @@
   
 
 .createButtonWrapper {
-    display: flex;
-    align-items: center;
+  @include flex-center;
 }
 
 .createButton {
-   
-  height: 48px;
-  padding: 8px 16px;
-  background: #0A0A0A;
-  border-radius: 10px;
-
-  color: #FFFFFF;
-  font-size: 14px;
-  font-family: $font-family-primary;
-  font-weight: 500;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  cursor: pointer;
-  box-shadow:
-    inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.4);
-
-  transition:
-    background-color 0.2s ease,
-    box-shadow 0.3s ease,
-    transform 0.3s ease;
-
-  &:hover {
-    background: #121212;
+  @include button-primary;
+  
+  @include dark-mode {
+    background: $color-btn-primary-dark;
+    color: $black;
     box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.6),
-      0 4px 8px rgba(0, 0, 0, 0.5);
-    transform: translateY(-1px);
+      inset -2px -2px 4px rgba(0, 0, 0, 0.05),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.4),
+      0 2px 4px rgba(0, 0, 0, 0.1);
   }
-
-  &:active {
-    background: #0A0A0A;
-    transform: scale(0.97);
-    box-shadow:
-      inset 1px 1px 4px rgba(0, 0, 0, 0.6),
-      inset -1px -1px 4px rgba(255, 255, 255, 0.05);
-  }
-}
-
-/* 🌙 Dark Mode inverso */
-:global(body.dark) .createButton {
-  background: #FFFFFF;
-  color: #000000;
-  box-shadow:
-    inset -2px -2px 4px rgba(0, 0, 0, 0.05),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .emptyState {
@@ -301,36 +259,29 @@
 }
 
 .popupContent {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
+  @include flex-column-center;
+  gap: $spacing-lg;
+  width: 100%;
 }
 
 .popupTitle {
-    text-align: center;
-    color: #0D0D0D;
-    font-size: 16px;
-  font-family: "Urbanist", sans-serif;
-    font-weight: 700;
-}
-:global(body.dark) .popupTitle {
-    color: #D1D1D1;
+  @include typography-title($text-base, $font-weight-bold, $color-text-primary, center);
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
 }
 
 .popupSubtitle {
-    text-align: center;
-    color: #737373;
-    font-size: 14px;
-  font-family: "Urbanist", sans-serif;
-    font-weight: 400;
-}
-.popupSubtitle strong {
-    font-weight: 700;
-}
-:global(body.dark) .popupSubtitle {
-    color: #A1A1AA;
+  @include typography-subtitle($text-sm, $font-weight-normal, $color-text-secondary, center);
+  
+  strong {
+    font-weight: $font-weight-bold;
+  }
+  
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
 }
 
 .avatar {

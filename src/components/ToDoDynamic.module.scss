@@ -1,93 +1,58 @@
-$di-background: #000000;
-$di-text: #ffffff;
-$di-accent: #0070f3;
-$di-collapsed-width: 240px;
-$di-collapsed-height: 40px;
-$di-expanded-width: 360px;
-$di-border-radius: 32px;
-$di-expanded-radius: 28px;
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 DYNAMIC ISLAND TODO - STANDARDIZED STYLES
+// =================================================================
 
 .dynamicIslandTodo {
   position: fixed;
   left: 50%;
-  border-radius: 16px!important;
+  border-radius: $radius-2xl !important;
   top: 40px;
   transform: translateX(-50%);
   opacity: 0.8;
   z-index: 50;
-
-  /* Crystallized Styling */
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: $spacing-sm;
+  @include flex-center;
   border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
   background: rgba(241, 245, 249, 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.9),
-    6px 6px 12px rgba(0, 0, 0, 0.08),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
-    inset 4px 4px 8px rgba(209, 217, 230, 0.3);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
-    background 0.3s ease,
-    border-color 0.3s ease;
+  @include neomorphic-shadow(light);
+  transition: $transition-base;
 
   &:hover {
     transform: translateY(-2px) scale(1.02);
     background: rgba(241, 245, 249, 0.85);
     border-color: rgba(255, 255, 255, 0.4);
-    box-shadow:
-      -4px -4px 10px rgba(255, 255, 255, 0.95),
-      4px 4px 10px rgba(0, 0, 0, 0.12),
-      inset -6px -6px 12px rgba(255, 255, 255, 0.6),
-      inset 6px 6px 12px rgba(209, 217, 230, 0.4);
+    @include neomorphic-shadow-hover(light);
   }
 
   &:active {
     transform: translateY(0);
     background: rgba(241, 245, 249, 0.6);
     border-color: rgba(255, 255, 255, 0.15);
-    box-shadow:
-      inset -2px -2px 6px rgba(255, 255, 255, 0.4),
-      inset 2px 2px 6px rgba(209, 217, 230, 0.2),
-      -2px -2px 6px rgba(255, 255, 255, 0.85),
-      2px 2px 6px rgba(0, 0, 0, 0.06);
+    @include neomorphic-inset(light);
   }
 
-  /* Dark Mode */
-  :global(.dark) & {
+  @include dark-mode {
     background: rgba(30, 30, 30, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      6px 6px 12px rgba(0, 0, 0, 0.5),
-      -6px -6px 12px rgba(255, 255, 255, 0.05),
-      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-      inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+    @include neomorphic-shadow(dark);
 
     &:hover {
       transform: translateY(-2px) scale(1.02);
       background: rgba(30, 30, 30, 0.85);
       border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:
-        4px 4px 10px rgba(0, 0, 0, 0.6),
-        -4px -4px 10px rgba(255, 255, 255, 0.03),
-        inset -6px -6px 12px rgba(0, 0, 0, 0.45),
-        inset 6px 6px 12px rgba(255, 255, 255, 0.04);
+      @include neomorphic-shadow-hover(dark);
     }
 
     &:active {
       background: rgba(30, 30, 30, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      box-shadow:
-        inset 2px 2px 6px rgba(0, 0, 0, 0.35),
-        inset -2px -2px 6px rgba(255, 255, 255, 0.02),
-        2px 2px 6px rgba(0, 0, 0, 0.45),
-        -2px -2px 6px rgba(255, 255, 255, 0.04);
+      @include neomorphic-inset(dark);
     }
 
     .inputIcon,
@@ -105,72 +70,65 @@ $di-expanded-radius: 28px;
 }
 
 .header {
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: $spacing-sm;
+  @include flex-center;
   height: 100%;
 }
 
 .counters {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @include flex-center;
+  gap: $spacing-sm;
   height: 100%;
 }
 
 .remainingCount,
 .completedCount {
-  border-radius: 9999px;
+  border-radius: $radius-full;
   width: 24px;
   height: 24px;
   min-width: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 500;
+  @include flex-center;
+  @include typography($text-xs, $font-weight-medium);
 }
 
 .remainingCount {
-  background-color: #0a0a0a;
-  color: #f5f5f5;
+  background-color: $color-btn-primary;
+  color: $white;
 }
 
 .completedCount {
-  background-color: #6b7280;
-  color: #ffffff;
+  background-color: $zinc-500;
+  color: $white;
 }
 
 .expandedContent {
-  padding: 16px;
+  padding: $spacing-lg;
 }
 
 .inputContainer {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
+  @include flex-center;
+  margin-bottom: $spacing-lg;
 }
 
 .inputWrapper {
   position: relative;
   flex-grow: 1;
-  margin-right: 8px;
+  margin-right: $spacing-sm;
 }
 
 .input {
   width: 100%;
   background-color: transparent;
-  color: #242424;
-  padding: 10px 10px 10px 34px;
-  border-radius: 12px;
+  color: $color-text-primary;
+  padding: $spacing-md $spacing-md $spacing-md 34px;
+  border-radius: $radius-xl;
   height: 40px;
   transition: border-color 0.2s;
-  font-size: 14px;
+  @include typography($text-sm, $font-weight-normal);
   backdrop-filter: blur(4px);
 
   &::placeholder {
-    color: #6b7280;
+    color: $color-text-muted;
   }
 
   &:focus {
@@ -181,30 +139,28 @@ $di-expanded-radius: 28px;
 
 .inputIcon {
   position: absolute;
-  left: 12px;
+  left: $spacing-md;
   top: 50%;
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: #232323;
+  color: $color-text-primary;
 }
 
 .addButton {
   background-color: rgba(252, 252, 252, 0.688);
-  color: #9ca3af;
+  color: $color-text-muted;
   border: white solid 1px;
-  padding: 0 12px;
+  padding: 0 $spacing-md;
   height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: $radius-xl;
+  @include flex-center;
   transition: all 0.15s ease-in-out;
   backdrop-filter: blur(4px);
 
   &:hover {
     background-color: rgba(223, 223, 223, 0.8);
-    color: #1e1e1e;
+    color: $color-text-primary;
     border-color: rgba(255, 255, 255, 0.4);
   }
 }
@@ -230,51 +186,46 @@ $di-expanded-radius: 28px;
 }
 
 .todoItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  @include flex-between;
+  margin-bottom: $spacing-sm;
 }
 
 .todoText {
   flex-grow: 1;
-  font-size: 14px;
+  @include typography($text-sm, $font-weight-normal);
 
   &.active {
-    color: #363636;
+    color: $color-text-primary;
   }
 
   &.completed {
-    color: #6b7280;
+    color: $color-text-muted;
     text-decoration: line-through;
-    text-decoration-color: #6b7280;
+    text-decoration-color: $color-text-muted;
   }
 }
 
 .todoActions {
-  display: flex;
-  align-items: center;
+  @include flex-center;
   background-color: rgba(242, 242, 242, 0.8);
-  border-radius: 8px;
+  border-radius: $radius-sm;
   backdrop-filter: blur(4px);
 }
 
 .actionButton {
   background-color: rgba(252, 252, 252, 0.688);
-  color: #9ca3af;
+  color: $color-text-muted;
   border: white solid 1px;
-  padding: 0 12px;
+  padding: 0 $spacing-md;
   height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: $radius-xl;
+  @include flex-center;
   transition: all 0.15s ease-in-out;
   backdrop-filter: blur(4px);
 
   &:hover {
     background-color: rgba(223, 223, 223, 0.8);
-    color: #1e1e1e;
+    color: $color-text-primary;
     border-color: rgba(255, 255, 255, 0.4);
   }
 }
@@ -285,7 +236,7 @@ $di-expanded-radius: 28px;
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-@media (max-width: 640px) {
+@include responsive(sm) {
   .dynamicIslandTodo {
     --di-collapsed-width: 200px;
     --di-expanded-width: 90vw;

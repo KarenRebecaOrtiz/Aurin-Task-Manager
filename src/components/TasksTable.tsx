@@ -14,7 +14,9 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
-import { getLastActivityTimestamp, hasUnreadUpdates, markTaskAsViewed, archiveTask } from '@/lib/taskUtils';
+import { getLastActivityTimestamp, archiveTask } from '@/lib/taskUtils';
+import { useTaskNotifications } from '@/hooks/useTaskNotifications';
+import NotificationDot from '@/components/ui/NotificationDot';
 
 interface Client {
   id: string;
@@ -52,6 +54,107 @@ interface Task {
 }
 
 type TaskView = 'table' | 'kanban';
+
+// Type for Firestore timestamp
+interface FirestoreTimestamp {
+  toDate(): Date;
+}
+
+// Type guard for Firestore timestamp
+const isFirestoreTimestamp = (timestamp: unknown): timestamp is FirestoreTimestamp => {
+  return timestamp !== null && 
+         typeof timestamp === 'object' && 
+         'toDate' in timestamp && 
+         typeof (timestamp as FirestoreTimestamp).toDate === 'function';
+};
+
+// Helper function to safely convert Firestore timestamp or string to ISO string
+const safeTimestampToISO = (timestamp: unknown): string => {
+  if (!timestamp) return new Date().toISOString();
+  
+  // If it's already a string, return it
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  
+  // If it's a Firestore timestamp, convert it
+  if (isFirestoreTimestamp(timestamp)) {
+    return timestamp.toDate().toISOString();
+  }
+  
+  // If it's a Date object, convert it
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  
+  // Fallback to current date
+  return new Date().toISOString();
+};
+
+// Helper function to safely convert Firestore timestamp or string to ISO string or null
+const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
+  if (!timestamp) return null;
+  
+  // If it's already a string, return it
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  
+  // If it's a Firestore timestamp, convert it
+  if (isFirestoreTimestamp(timestamp)) {
+    return timestamp.toDate().toISOString();
+  }
+  
+  // If it's a Date object, convert it
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  
+  // Fallback to null
+  return null;
+};
+
+// Helper function to normalize status values (same as TasksKanban)
+const normalizeStatus = (status: string): string => {
+  if (!status) return 'Por Iniciar'; // Default for empty/null status
+  
+  const normalized = status.trim();
+  
+  // Handle common variations
+  const statusMap: { [key: string]: string } = {
+    'por iniciar': 'Por Iniciar',
+    'por-iniciar': 'Por Iniciar',
+    'pendiente': 'Por Iniciar',
+    'pending': 'Por Iniciar',
+    'to do': 'Por Iniciar',
+    'todo': 'Por Iniciar',
+    'diseno': 'Diseño',
+    'diseño': 'Diseño',
+    'design': 'Diseño',
+    'desarrollo': 'Desarrollo',
+    'development': 'Desarrollo',
+    'dev': 'Desarrollo',
+    'en proceso': 'En Proceso',
+    'en-proceso': 'En Proceso',
+    'in progress': 'En Proceso',
+    'progreso': 'En Proceso',
+    'finalizado': 'Finalizado',
+    'finalizada': 'Finalizado',
+    'completed': 'Finalizado',
+    'completado': 'Finalizado',
+    'completada': 'Finalizado',
+    'done': 'Finalizado',
+    'terminado': 'Finalizado',
+    'terminada': 'Finalizado',
+    'finished': 'Finalizado',
+    'backlog': 'Backlog',
+    'cancelado': 'Cancelado',
+    'cancelada': 'Cancelado',
+    'cancelled': 'Cancelado',
+  };
+  
+  return statusMap[normalized.toLowerCase()] || normalized;
+};
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
@@ -256,6 +359,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return (now - cached.timestamp) < PERSISTENT_CACHE_DURATION;
     }, []);
 
+    // Usar el hook de notificaciones simplificado
+    const { getUnreadCount, markAsViewed } = useTaskNotifications();
+
     // Setup de tasks con cache optimizado
     useEffect(() => {
       if (!user?.id) return;
@@ -318,21 +424,26 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             description: doc.data().description || '',
             status: doc.data().status || '',
             priority: doc.data().priority || '',
-            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
+            startDate: safeTimestampToISOOrNull(doc.data().startDate),
+            endDate: safeTimestampToISOOrNull(doc.data().endDate),
             LeadedBy: doc.data().LeadedBy || [],
             AssignedTo: doc.data().AssignedTo || [],
-            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            createdAt: safeTimestampToISO(doc.data().createdAt),
             CreatedBy: doc.data().CreatedBy || '',
-            lastActivity: doc.data().lastActivity?.toDate().toISOString() || doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
+            lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt) || new Date().toISOString(),
             hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
             lastViewedBy: doc.data().lastViewedBy || {},
             archived: doc.data().archived || false,
-            archivedAt: doc.data().archivedAt?.toDate().toISOString(),
+            archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
             archivedBy: doc.data().archivedBy || '',
           }));
 
-          console.log('[TasksTable] Tasks onSnapshot update:', tasksData.length);
+          console.log('[TasksTable] Tasks onSnapshot update:', {
+            count: tasksData.length,
+            taskIds: tasksData.map(t => t.id),
+            statuses: [...new Set(tasksData.map(t => t.status))],
+            normalizedStatuses: [...new Set(tasksData.map(t => normalizeStatus(t.status)))]
+          });
           
           tasksRef.current = tasksData;
           setTasks(tasksData);
@@ -665,10 +776,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     // Función para manejar el clic en una fila de tarea
     const handleTaskRowClick = async (task: Task) => {
-      // Marcar la tarea como vista
-      if (userId) {
-        await markTaskAsViewed(task.id, userId);
-      }
+      // Marcar la tarea como vista usando el nuevo sistema
+      await markAsViewed(task.id);
       
       // Abrir el chat de la tarea
       onChatSidebarOpen(task);
@@ -794,10 +903,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             : clientB.localeCompare(clientA);
         });
       } else if (sortKey === 'status') {
-        const statusOrder = ['En Proceso', 'Backlog', 'Por Iniciar', 'Finalizado', 'Cancelado'];
+        const statusOrder = ['Por Iniciar', 'Diseño', 'Desarrollo', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelado'];
         sorted.sort((a, b) => {
-          const indexA = statusOrder.indexOf(a.status);
-          const indexB = statusOrder.indexOf(b.status);
+          const indexA = statusOrder.indexOf(normalizeStatus(a.status));
+          const indexB = statusOrder.indexOf(normalizeStatus(b.status));
           return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
         });
       } else if (sortKey === 'priority') {
@@ -890,13 +999,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'clientId',
         label: 'Cuenta',
-        width: '10%',
-        mobileVisible: false,
+        width: '20%',
+        mobileVisible: true,
       },
       {
         key: 'name',
         label: 'Tarea',
-        width: '70%', 
+        width: '60%', 
+        mobileVisible: true,
+      },
+      {
+        key: 'notificationDot',
+        label: '',
+        width: '20%',
         mobileVisible: true,
       },
       {
@@ -920,7 +1035,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       {
         key: 'action',
         label: 'Acciones',
-        width: '20%',
+        width: '10%',
         mobileVisible: false,
       },
     ];
@@ -958,20 +1073,23 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            const hasUpdates = hasUnreadUpdates(task, userId);
-            console.log('[TasksTable] Rendering name column:', {
-              taskId: task.id,
-              taskName: task.name,
-              hasUpdates,
-            });
             return (
               <div className={styles.taskNameWrapper}>
                 <span className={styles.taskName}>{task.name}</span>
-                {hasUpdates && (
-                  <div className={styles.updateIndicator}>
-                    <div className={styles.updateDot}></div>
-                  </div>
-                )}
+              </div>
+            );
+          },
+        };
+      }
+      if (col.key === 'notificationDot') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            const updateCount = getUnreadCount(task);
+            console.log('[TasksTable] Task:', task.id, 'Count:', updateCount, 'HasUpdates:', task.hasUnreadUpdates);
+            return (
+              <div className={styles.notificationDotWrapper}>
+                <NotificationDot count={updateCount} />
               </div>
             );
           },
@@ -994,29 +1112,31 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
+            const normalizedStatus = normalizeStatus(task.status);
+            let icon = '/timer.svg';
+            if (normalizedStatus === 'En Proceso') icon = '/timer.svg';
+            else if (normalizedStatus === 'Backlog') icon = '/circle-help.svg';
+            else if (normalizedStatus === 'Por Iniciar') icon = '/circle.svg';
+            else if (normalizedStatus === 'Cancelado') icon = '/circle-x.svg';
+            else if (normalizedStatus === 'Diseño') icon = '/pencil.svg';
+            else if (normalizedStatus === 'Desarrollo') icon = '/square-code.svg';
+            else if (normalizedStatus === 'Finalizado') icon = '/circle-check.svg';
+            
             console.log('[TasksTable] Rendering status column:', {
               taskId: task.id,
-              status: task.status,
+              originalStatus: task.status,
+              normalizedStatus: normalizedStatus,
             });
+            
             return (
               <div className={styles.statusWrapper}>
                 <Image
-                  src={
-                    task.status === 'En Proceso'
-                      ? '/timer.svg'
-                      : task.status === 'Backlog'
-                      ? '/circle-help.svg'
-                      : task.status === 'Por Iniciar'
-                      ? '/circle.svg'
-                      : task.status === 'Cancelado'
-                      ? '/circle-x.svg'
-                      : '/timer.svg'
-                  }
-                  alt={task.status}
+                  src={icon}
+                  alt={normalizedStatus}
                   width={16}
                   height={16}
                 />
-                <span className={styles[`status-${task.status.replace(' ', '-')}`]}>{task.status}</span>
+                <span className={styles[`status-${normalizedStatus.replace(/\s/g, '-')}`]}>{normalizedStatus}</span>
               </div>
             );
           },
@@ -1442,7 +1562,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             </div>
             <div className={styles.buttonWithTooltip}>
               <button
-                className={`${styles.viewButton} ${styles.hideOnMobile}`}
+                className={styles.viewButton}
                 onClick={(e) => {
                   animateClick(e.currentTarget);
                   onArchiveTableOpen();
@@ -1482,7 +1602,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsPriorityDropdownOpen((prev) => !prev);
+                      setIsPriorityDropdownOpen((prev) => {
+                        if (!prev) {
+                          setIsClientDropdownOpen(false);
+                          setIsUserDropdownOpen(false);
+                        }
+                        return !prev;
+                      });
                       console.log('[TasksTable] Priority dropdown toggled');
                     }}
                   >
@@ -1490,17 +1616,28 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     <span>{priorityFilter || 'Prioridad'}</span>
                   </div>
                   {isPriorityDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {['Alta', 'Media', 'Baja', ''].map((priority) => (
-                        <div
-                          key={priority || 'all'}
-                          className={styles.dropdownItem}
-                          onClick={(e) => handlePrioritySelect(priority, e)}
-                        >
-                          {priority || 'Todos'}
-                        </div>
-                      ))}
-                    </div>
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {['Alta', 'Media', 'Baja', ''].map((priority, index) => (
+                          <motion.div
+                            key={priority || 'all'}
+                            className={styles.dropdownItem}
+                            onClick={(e) => handlePrioritySelect(priority, e)}
+                            initial={{ opacity: 0, y: -16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                          >
+                            {priority || 'Todos'}
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </div>
               </div>
@@ -1513,7 +1650,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsClientDropdownOpen((prev) => !prev);
+                      setIsClientDropdownOpen((prev) => {
+                        if (!prev) {
+                          setIsPriorityDropdownOpen(false);
+                          setIsUserDropdownOpen(false);
+                        }
+                        return !prev;
+                      });
                       console.log('[TasksTable] Client dropdown toggled');
                     }}
                   >
@@ -1521,17 +1664,28 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                   </div>
                   {isClientDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {[{ id: '', name: 'Todos' }, ...clients].map((client) => (
-                        <div
-                          key={client.id || 'all'}
-                          className={styles.dropdownItem}
-                          onClick={(e) => handleClientSelect(client.id, e)}
-                        >
-                          {client.name}
-                        </div>
-                      ))}
-                    </div>
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {[{ id: '', name: 'Todos' }, ...clients].map((client, index) => (
+                          <motion.div
+                            key={client.id || 'all'}
+                            className={styles.dropdownItem}
+                            onClick={(e) => handleClientSelect(client.id, e)}
+                            initial={{ opacity: 0, y: -16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                          >
+                            {client.name}
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </div>
               </div>
@@ -1546,7 +1700,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                       className={styles.dropdownTrigger}
                       onClick={(e) => {
                         animateClick(e.currentTarget);
-                        setIsUserDropdownOpen((prev) => !prev);
+                        setIsUserDropdownOpen((prev) => {
+                          if (!prev) {
+                            setIsPriorityDropdownOpen(false);
+                            setIsClientDropdownOpen(false);
+                          }
+                          return !prev;
+                        });
                         console.log('[TasksTable] User dropdown toggled');
                       }}
                     >
@@ -1560,34 +1720,51 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                       </span>
                     </div>
                     {isUserDropdownOpen && (
-                      <div className={styles.dropdownItems}>
-                        <div
-                          className={styles.dropdownItem}
-                          style={{fontWeight: userFilter === '' ? 700 : 400}}
-                          onClick={() => handleUserFilter('')}
+                      <AnimatePresence>
+                        <motion.div 
+                          className={styles.dropdownItems}
+                          initial={{ opacity: 0, y: -16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -16 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
                         >
-                          Todos
-                        </div>
-                        <div
-                          className={styles.dropdownItem}
-                          style={{fontWeight: userFilter === 'me' ? 700 : 400}}
-                          onClick={() => handleUserFilter('me')}
-                        >
-                          Mis tareas
-                        </div>
-                        {users
-                          .filter((u) => u.id !== userId)
-                          .map((u) => (
-                            <div
-                              key={u.id}
-                              className={styles.dropdownItem}
-                              style={{fontWeight: userFilter === u.id ? 700 : 400}}
-                              onClick={() => handleUserFilter(u.id)}
-                            >
-                              {u.fullName}
-                            </div>
-                          ))}
-                      </div>
+                          <motion.div
+                            className={styles.dropdownItem}
+                            style={{fontWeight: userFilter === '' ? 700 : 400}}
+                            onClick={() => handleUserFilter('')}
+                            initial={{ opacity: 0, y: -16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: 0 * 0.05 }}
+                          >
+                            Todos
+                          </motion.div>
+                          <motion.div
+                            className={styles.dropdownItem}
+                            style={{fontWeight: userFilter === 'me' ? 700 : 400}}
+                            onClick={() => handleUserFilter('me')}
+                            initial={{ opacity: 0, y: -16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: 1 * 0.05 }}
+                          >
+                            Mis tareas
+                          </motion.div>
+                          {users
+                            .filter((u) => u.id !== userId)
+                            .map((u, index) => (
+                              <motion.div
+                                key={u.id}
+                                className={styles.dropdownItem}
+                                style={{fontWeight: userFilter === u.id ? 700 : 400}}
+                                onClick={() => handleUserFilter(u.id)}
+                                initial={{ opacity: 0, y: -16 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
+                              >
+                                {u.fullName}
+                              </motion.div>
+                            ))}
+                        </motion.div>
+                      </AnimatePresence>
                     )}
                   </div>
                 </div>

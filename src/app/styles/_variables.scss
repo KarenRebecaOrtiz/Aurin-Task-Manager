@@ -2,6 +2,7 @@
 
 // Typography
 $font-family-primary: var(--font-urbanist), 'Urbanist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+$font-family-table: $font-family-primary !default; // Variable para tablas específicas
 $font-weight-light: 300;
 $font-weight-normal: 400;
 $font-weight-medium: 500;
@@ -29,23 +30,175 @@ $leading-normal: 1.5;
 $leading-relaxed: 1.625;
 $leading-loose: 2;
 
-// Color Palette
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-2xl: 24px;
+$spacing-3xl: 32px;
+$spacing-4xl: 40px;
+
+// Border Radii
+$radius-xs: 4px;
+$radius-sm: 6px;
+$radius-md: 8px;
+$radius-lg: 10px;
+$radius-xl: 12px;
+$radius-2xl: 16px;
+$radius-full: 9999px;
+
+// Color Palette - Light Mode
 $white: #FFFFFF;
 $zinc-50: #F9FAFB;
 $zinc-100: #F4F4F5;
 $zinc-200: #E4E4E7;
 $zinc-300: #D4D4D8;
+$zinc-400: #A1A1AA;
 $zinc-500: #71717A;
+$zinc-600: #52525B;
+$zinc-700: #3F3F46;
 $zinc-800: #27272A;
 $zinc-900: #18181B;
 $zinc-950: #09090B;
 $black: #000000;
-$text-light: #1A1A1A;
-$text-dark: #D1D1D1;
-$primary: #164C22;
-$red-500: #EF4444;
+
+// Additional color variables
+$primary: #3B82F6;
 $blue-500: #3B82F6;
-$green-500: #10B981;
+$red-500: #EF4444;
+$green-500: #22C55E;
+$yellow-500: #EAB308;
+$purple-500: #A855F7;
+$pink-500: #EC4899;
+$indigo-500: #6366F1;
+$emerald-500: #10B981;
+$orange-500: #F97316;
+$teal-500: #14B8A6;
+$cyan-500: #06B6D4;
+$lime-500: #84CC16;
+$rose-500: #F43F5E;
+$violet-500: #8B5CF6;
+$fuchsia-500: #D946EF;
+$amber-500: #F59E0B;
+$sky-500: #0EA5E9;
+$slate-500: #64748B;
+$gray-500: #6B7280;
+$neutral-500: #737373;
+$stone-500: #78716C;
+
+// Table-specific colors - Light Mode
+$color-text-primary: #0D0D0D;
+$color-text-secondary: #64748b;
+$color-text-muted: #6b7280;
+$color-text-light: #1A1A1A;
+$color-bg-light: #F7F9FA;
+$color-bg-glass: rgba(241, 245, 249, 0.8);
+$color-bg-glass-hover: rgba(241, 245, 249, 0.85);
+$color-bg-glass-focus: rgba(255, 255, 255, 0.9);
+$color-border-light: #e4e4e7;
+$color-border-subtle: rgba(255, 255, 255, 0.2);
+$color-border-focus: #3b82f6;
+
+// Table-specific colors - Dark Mode
+$color-text-dark-primary: #D1D1D1;
+$color-text-dark-secondary: #A1A1AA;
+$color-text-dark-muted: #9ca3af;
+$color-bg-dark: #1c1c1e;
+$color-bg-dark-secondary: #2D2D2D;
+$color-bg-dark-tertiary: #374151;
+$color-bg-glass-dark: rgba(39, 39, 42, 0.8);
+$color-bg-glass-dark-hover: rgba(39, 39, 42, 0.85);
+$color-border-dark: #555555;
+$color-border-dark-secondary: #4b5563;
+
+// Button colors
+$color-btn-primary: #0A0A0A;
+$color-btn-primary-hover: #121212;
+$color-btn-primary-dark: #FFFFFF;
+$color-btn-primary-dark-hover: #F3F4F6;
+$color-btn-danger: #dc2626;
+$color-btn-danger-hover: #b91c1c;
+
+// Status colors
+$color-success: #22c55e;
+$color-success-light: #10B981;
+$color-warning: #f59e0b;
+$color-error: #EF4444;
+$color-info: #3B82F6;
+
+// Additional colors for components
+$color-text-muted: #6b7280;
+$color-text-light: #1A1A1A;
+$color-bg-glass-hover: rgba(241, 245, 249, 0.85);
+$color-bg-glass-focus: rgba(255, 255, 255, 0.9);
+$color-border-subtle: rgba(255, 255, 255, 0.2);
+$color-border-focus: #3b82f6;
+$color-bg-glass-dark: rgba(39, 39, 42, 0.8);
+$color-bg-glass-dark-hover: rgba(39, 39, 42, 0.85);
+$color-border-dark-secondary: #4b5563;
+
+// Sidebar-specific colors
+$color-sidebar-bg: #f6f6f6;
+$color-sidebar-bg-dark: #1f1f20;
+$color-sidebar-input-bg: #f5f5f5;
+$color-sidebar-input-bg-dark: #2c2c2f;
+$color-sidebar-text-primary: #1b2734;
+$color-sidebar-text-secondary: #6b7280;
+$color-sidebar-error: #b91c1c;
+$color-sidebar-error-dark: #c91111;
+$color-sidebar-error-light: #fef2f2;
+$color-sidebar-error-border: #fecaca;
+$color-btn-sidebar-primary: #191919;
+$color-btn-sidebar-cancel: #f9fafb;
+$color-btn-sidebar-cancel-dark: #3c3c3d;
+$color-btn-sidebar-button-bg: #f1f5f9;
+$color-btn-sidebar-button-bg-dark: #374151;
+
+// Shadows
+$shadow-neomorphic-light: 
+  -8px -8px 16px rgba(255, 255, 255, 0.8),
+  8px 8px 16px rgba(0, 0, 0, 0.05),
+  inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+  inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+
+$shadow-neomorphic-light-hover: 
+  -6px -6px 12px rgba(255, 255, 255, 0.9),
+  6px 6px 12px rgba(0, 0, 0, 0.08),
+  inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+  inset 2px 2px 6px rgba(209, 217, 230, 0.3);
+
+$shadow-neomorphic-dark: 
+  inset -4px -4px 8px rgba(0, 0, 0, 0.7),
+  inset 4px 4px 8px rgba(255, 255, 255, 0.03),
+  -8px -8px 16px rgba(0, 0, 0, 0.5),
+  8px 8px 16px rgba(255, 255, 255, 0.02);
+
+$shadow-simple-light: 0px 1px 3px rgba(0, 0, 0, 0.1);
+$shadow-simple-dark: 0px 1px 3px rgba(0, 0, 0, 0.25);
+$shadow-popup-light: 0px 8px 60px rgba(0, 0, 0, 0.08);
+$shadow-popup-dark: 0px 8px 60px rgba(0, 0, 0, 0.3);
+
+// Transitions
+$transition-base: all 0.3s ease;
+$transition-fast: all 0.2s ease;
+$transition-slow: all 0.4s ease;
+
+// Z-index layers
+$z-dropdown: 1100;
+$z-popup: 2000;
+$z-overlay: 9999;
+$z-tooltip: 100;
+$z-vignette: 10;
+$z-avatar: 2;
+$z-status-ring: 1;
+
+// Breakpoints
+$breakpoint-sm: 768px;
+$breakpoint-md: 819px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1200px;
 
 // Neumorphic Mixins
 @mixin neu-surface($bg: $white, $intensity: 8, $radius: 18px) {
@@ -63,3 +216,193 @@ $green-500: #10B981;
     inset -#{$intensity}px -#{$intensity}px #{2*$intensity}px lighten($bg, 4%),
     inset #{$intensity}px #{$intensity}px #{2*$intensity}px rgba(0, 0, 0, 0.05);
 }
+
+// ==============================================================
+// 🔮 SWIPER/CAROUSEL VARIABLES
+// =================================================================
+$swiper-padding-y: $spacing-xl;
+$swiper-track-padding: $spacing-4xl;
+$swiper-slide-transition: $transition-base;
+
+// ==============================================================
+// 🔮 USER CARD VARIABLES
+// =================================================================
+$card-base-width: 10vw;
+$card-min-width: 140px;
+$card-padding: $spacing-xs;
+$card-border-radius: $radius-xl;
+$card-background: rgba(241, 245, 249, 0.7);
+$card-background-hover: rgba(241, 245, 249, 0.85);
+$card-background-active: rgba(241, 245, 249, 0.6);
+$card-border-color: rgba(255, 255, 255, 0.2);
+$card-border-color-hover: rgba(255, 255, 255, 0.4);
+$card-border-color-active: rgba(255, 255, 255, 0.15);
+$card-blur: 6px;
+$card-transform-hover: translateY(-2px) scale(1.02);
+$card-transform-active: scale(0.98);
+
+// ==============================================================
+// 🔮 AVATAR VARIABLES
+// =================================================================
+$avatar-size: 46px;
+$avatar-hover-scale: 1.1;
+$avatar-active-scale: 0.95;
+$avatar-focus-outline: 2px solid $color-success;
+$avatar-focus-offset: 2px;
+
+// ==============================================================
+// 🔮 TOOLTIP VARIABLES
+// =================================================================
+$tooltip-background: $zinc-800;
+$tooltip-color: $white;
+$tooltip-padding: $spacing-xs $spacing-sm;
+$tooltip-border-radius: $radius-xs;
+$tooltip-font-size: $text-xs;
+$tooltip-font-weight: $font-weight-normal;
+$tooltip-z-index: $z-tooltip;
+$tooltip-transition: $transition-fast;
+$tooltip-arrow-size: 4px;
+
+// ==============================================================
+// 🔮 STATUS RING VARIABLES
+// =================================================================
+$status-ring-size: 48px;
+$status-ring-border: 2px solid $color-success;
+$status-ring-transition: border-color 0.2s;
+
+// ==============================================================
+// 🔮 VIGNETTE VARIABLES
+// =================================================================
+$vignette-base-width: 60px;
+$vignette-md-width: 80px;
+$vignette-lg-width: 100px;
+$vignette-xl-width: 120px;
+$vignette-light-gradient: linear-gradient(to right, #f2f5f8 0%, rgba(242, 245, 248, 0.8) 30%, rgba(242, 245, 248, 0.4) 60%, transparent 100%);
+$vignette-dark-gradient: linear-gradient(to right, #1a1a1a 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
+
+// ==============================================================
+// 🔮 RESPONSIVE CONTAINER VARIABLES
+// =================================================================
+$container-max-width-sm: 60vw;
+$container-max-width-md: 85vw;
+$container-max-width-lg: 80vw;
+$container-max-width-xl: 75vw;
+$container-max-width-2xl: 50vw;
+
+// ==============================================================
+// 🔮 CARD TEXT VARIABLES
+// =================================================================
+$card-title-line-height-sm: 1.2rem;
+$card-title-line-height-md: 1.3rem;
+$card-status-line-height: 1rem;
+
+// ==============================================================
+// 🔮 PROFILE CARD VARIABLES
+// =================================================================
+$profile-card-overlay-bg: rgba(215, 215, 215, 0.047);
+$profile-card-overlay-bg-dark: rgba(0, 0, 0, 0.7);
+$profile-card-overlay-blur: 2px;
+$profile-card-overlay-z-index: 1000;
+
+$profile-card-bg: rgba(241, 245, 249, 0.937);
+$profile-card-bg-dark: rgb(12, 12, 12);
+$profile-card-border: rgba(255, 255, 255, 0.2);
+$profile-card-border-dark: rgba(255, 255, 255, 0.1);
+$profile-card-border-radius: 16px;
+$profile-card-blur: 8px;
+$profile-card-max-width: 90%;
+$profile-card-max-width-md: 600px;
+$profile-card-max-width-lg: 800px;
+$profile-card-padding: 20px;
+$profile-card-padding-md: 24px;
+$profile-card-padding-lg: 28px;
+$profile-card-gap: 24px;
+$profile-card-gap-md: 28px;
+$profile-card-gap-lg: 32px;
+
+$profile-card-header-height: 150px;
+$profile-card-header-height-md: 180px;
+$profile-card-header-height-lg: 200px;
+
+$profile-card-avatar-size: 94px;
+$profile-card-avatar-size-md: 110px;
+$profile-card-avatar-size-lg: 120px;
+
+$profile-card-name-size: 24px;
+$profile-card-name-size-md: 28px;
+$profile-card-name-size-lg: 32px;
+
+$profile-card-email-size: 14px;
+$profile-card-email-size-md: 16px;
+
+$profile-card-section-title-size: 20px;
+$profile-card-section-title-size-md: 22px;
+$profile-card-section-title-size-lg: 24px;
+
+$profile-card-section-content-bg: rgba(241, 245, 249, 0.5);
+$profile-card-section-content-bg-dark: rgb(18, 18, 19);
+$profile-card-section-content-radius: 12px;
+$profile-card-section-content-padding: 15px;
+$profile-card-section-content-padding-md: 20px;
+
+$profile-card-input-bg: rgba(241, 245, 249, 0.7);
+$profile-card-input-bg-dark: rgb(24, 24, 24);
+$profile-card-input-border: rgba(255, 255, 255, 0.2);
+$profile-card-input-border-dark: rgba(255, 255, 255, 0.1);
+$profile-card-input-radius: 12px;
+$profile-card-input-padding: 10px;
+$profile-card-input-padding-md: 12px;
+
+$profile-card-tag-bg: rgba(241, 245, 249, 0.7);
+$profile-card-tag-bg-dark: rgba(30, 30, 30, 0.7);
+$profile-card-tag-border: rgba(255, 255, 255, 0.2);
+$profile-card-tag-border-dark: rgba(255, 255, 255, 0.1);
+$profile-card-tag-radius: 12px;
+$profile-card-tag-padding: 0.6em 0.9em;
+$profile-card-tag-padding-md: 0.8em 1em;
+$profile-card-tag-padding-lg: 0.9em 1.2em;
+$profile-card-tag-size: 12px;
+$profile-card-tag-size-md: 14px;
+$profile-card-tag-size-lg: 16px;
+
+$profile-card-button-bg: rgba(9, 9, 11, 0.7);
+$profile-card-button-bg-dark: rgba(26, 26, 26, 0.7);
+$profile-card-button-bg-hover: rgba(9, 9, 11, 0.85);
+$profile-card-button-radius: 12px;
+$profile-card-button-padding: 10px 20px;
+$profile-card-button-size: 14px;
+$profile-card-button-size-md: 16px;
+$profile-card-button-size-lg: 18px;
+
+$profile-card-close-button-size: 16px;
+$profile-card-close-button-size-md: 18px;
+$profile-card-close-button-size-lg: 20px;
+$profile-card-close-button-padding: 4px;
+$profile-card-close-button-padding-md: 6px;
+$profile-card-close-button-padding-lg: 8px;
+
+// ==============================================================
+// 🔮 DIGITAL CLOCK VARIABLES
+// =================================================================
+$digital-clock-bg: rgba(255, 255, 255, 0.05);
+$digital-clock-bg-dark: rgba(0, 0, 0, 0.3);
+$digital-clock-border: rgba(255, 255, 255, 0.2);
+$digital-clock-border-dark: rgba(255, 255, 255, 0.1);
+$digital-clock-radius: 28px;
+$digital-clock-padding: 10px 20px;
+$digital-clock-padding-md: 12px 24px;
+$digital-clock-padding-lg: 14px 28px;
+$digital-clock-blur: 2px;
+$digital-clock-shadow: 0px 6px 24px rgba(0, 0, 0, 0.2);
+$digital-clock-shadow-dark: 0px 6px 24px rgba(0, 0, 0, 0.4);
+$digital-clock-z-index: 10000;
+
+$digital-clock-text-size: 14px;
+$digital-clock-text-size-md: 16px;
+$digital-clock-text-size-lg: 18px;
+$digital-clock-text-color: $color-text-primary;
+$digital-clock-text-color-dark: $color-text-dark-primary;
+$digital-clock-text-weight: $font-weight-semibold;
+
+$digital-clock-glow: rgba(255, 255, 255, 0.62);
+$digital-clock-glow-dark: rgba(255, 255, 255, 0.1);

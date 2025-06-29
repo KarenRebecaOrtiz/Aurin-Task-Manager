@@ -1,29 +1,31 @@
-@import "@/app/styles/_variables.scss";
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 FAIL ALERT - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
 
 .notifications-container {
+  @include flex-column;
   width: 330px;
   height: auto;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  gap: $spacing-md;
+  font-size: $text-sm;
+  line-height: $leading-tight;
 }
 
 .card {
+  @include flex-center;
   width: 330px;
   height: 80px;
-  border-radius: 8px;
+  border-radius: $radius-md;
   box-sizing: border-box;
-  padding: 10px 15px;
-  background-color: #ffffff;
-  box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+  padding: $spacing-sm $spacing-md;
+  background-color: $white;
+  box-shadow: $shadow-simple-light;
   position: relative;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 15px;
+  gap: $spacing-md;
 }
 
 .wave {
@@ -32,16 +34,14 @@
   left: -31px;
   top: 32px;
   width: 80px;
-  fill: #ef44443a;
+  fill: rgba($color-error, 0.23);
 }
 
 .icon-container {
+  @include flex-center;
   width: 35px;
   height: 35px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #ef444448;
+  background-color: rgba($color-error, 0.28);
   border-radius: 50%;
   margin-left: 8px;
 }
@@ -49,12 +49,11 @@
 .icon {
   width: 17px;
   height: 17px;
-  color: #dc2626;
+  color: $color-error;
 }
 
 .message-text-container {
-  display: flex;
-  flex-direction: column;
+  @include flex-column;
   justify-content: center;
   align-items: flex-start;
   flex-grow: 1;
@@ -67,30 +66,25 @@
 }
 
 .message-text {
-  color: #dc2626;
-  font-size: 17px;
-  font-weight: bold;
+  @include typography($text-lg, $font-weight-bold, $color-error, left);
 }
 
 .sub-text {
-  font-size: 14px;
-  color: #555;
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
 }
 
 .error-details {
-  font-size: 12px;
-  color: #991b1b;
+  @include typography($text-xs, $font-weight-normal, $red-500, left);
   margin-top: 2px;
 }
 
 .audio-error {
-  color: #dc2626;
-  font-size: 11px;
+  @include typography($text-xs, $font-weight-normal, $color-error, left);
   margin-top: 4px;
 }
 
 .button-container {
-  display: flex;
+  @include flex-center;
   margin-top: 0.875rem;
   margin-bottom: -0.375rem;
   margin-left: -0.5rem;
@@ -99,32 +93,30 @@
 }
 
 .action-button {
-  padding: 0.375rem 0.5rem;
-  background-color: #fef2f2;
-  color: #991b1b; // rgb(153, 27, 27)
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: bold;
-  border-radius: 0.375rem;
+  @include button-base($height: auto, $padding: 0.375rem 0.5rem, $radius: $radius-sm);
+  background-color: $zinc-100;
+  color: $red-500;
+  font-size: $text-sm;
+  line-height: $leading-tight;
+  font-weight: $font-weight-bold;
   border: none;
   cursor: pointer;
 
   &:hover {
-    background-color: #fee2e2;
+    background-color: $zinc-200;
   }
 }
 
 .dismiss-button {
-  padding: 0.375rem 0.5rem;
-  background-color: #fef2f2;
-  color: #991b1b; // rgb(153, 27, 27)
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  border-radius: 0.375rem;
+  @include button-base($height: auto, $padding: 0.375rem 0.5rem, $radius: $radius-sm);
+  background-color: $zinc-100;
+  color: $red-500;
+  font-size: $text-sm;
+  line-height: $leading-tight;
   border: none;
   cursor: pointer;
 
   &:hover {
-    background-color: #fee2e2;
+    background-color: $zinc-200;
   }
 }

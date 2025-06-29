@@ -1,147 +1,102 @@
-/* Delete popup styles - matching TasksTable exactly */
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 DELETE POPUP - STANDARDIZED STYLES
+// =================================================================
+
 .deletePopupOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: 100vh;
-  backdrop-filter: blur(4px);
-  background: rgba(255, 255, 255, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  overflow: hidden; /* Prevent scrolling */
+  @include popup-overlay;
 }
 
 .deletePopup {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 24px;
-  max-width: 400px;
-  width: 90%;
+  @include popup-base(400px, $spacing-2xl);
   margin: auto;
-  box-shadow:
-    -8px -8px 16px rgba(255, 255, 255, 0.8),
-    8px 8px 16px rgba(0, 0, 0, 0.05),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
-    inset 4px 4px 8px rgba(209, 217, 230, 0.3);
-}
-
-.dark .deletePopup {
-  background: #374151;
-  box-shadow:
-    inset -4px -4px 8px rgba(0, 0, 0, 0.7),
-    inset 4px 4px 8px rgba(255, 255, 255, 0.03),
-    -8px -8px 16px rgba(0, 0, 0, 0.5),
-    8px 8px 16px rgba(255, 255, 255, 0.02);
+  
+  @include dark-mode {
+    background: $color-bg-dark-secondary;
+    box-shadow: $shadow-neomorphic-dark;
+  }
 }
 
 .deletePopupContent {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  @include popup-content;
 }
 
 .deletePopupText {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @include flex-column;
+  gap: $spacing-sm;
 }
 
 .deletePopupTitle {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.dark .deletePopupTitle {
-  color: #e5e7eb;
+  @include typography($text-lg, $font-weight-semibold, $color-text-primary, left);
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
 }
 
 .deletePopupDescription {
-  font-size: 14px;
-  color: #64748b;
-}
-
-.dark .deletePopupDescription {
-  color: #9ca3af;
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
+  
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
 }
 
 .deleteConfirmInput {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 14px;
-  background: #ffffff;
-  color: #1e293b;
-}
-
-.deleteConfirmInput:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-.dark .deleteConfirmInput {
-  border-color: #4b5563;
-  background: #374151;
-  color: #e5e7eb;
+  @include input-base($height: 40px, $padding: $spacing-sm $spacing-md, $radius: $radius-sm);
+  border: 1px solid $color-border-light;
+  background: $white;
+  color: $color-text-primary;
+  
+  &:focus {
+    outline: none;
+    border-color: $color-border-focus;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+  
+  @include dark-mode {
+    border-color: $color-border-dark-secondary;
+    background: $color-bg-dark-tertiary;
+    color: $color-text-dark-primary;
+  }
 }
 
 .deletePopupActions {
-  display: flex;
-  gap: 12px;
+  @include flex-between;
+  gap: $spacing-md;
   justify-content: flex-end;
 }
 
 .deleteConfirmButton {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  background: #dc2626;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s ease;
-}
-
-.deleteConfirmButton:disabled {
-  background: #d1d5db;
-  cursor: not-allowed;
-}
-
-.deleteConfirmButton:hover:not(:disabled) {
-  background: #b91c1c;
-}
-
-.dark .deleteConfirmButton:disabled {
-  background: #6b7280;
+  @include button-danger($color-btn-danger, $white, $color-btn-danger-hover);
+  padding: $spacing-sm $spacing-lg;
+  
+  @include dark-mode {
+    &:disabled {
+      background: $zinc-500;
+    }
+  }
 }
 
 .deleteCancelButton {
-  padding: 8px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #1e293b;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s ease;
-}
-
-.deleteCancelButton:hover {
-  background: #f1f5f9;
-}
-
-.dark .deleteCancelButton {
-  border-color: #4b5563;
-  background: #374151;
-  color: #e5e7eb;
-}
-
-.dark .deleteCancelButton:hover {
-  background: #4b5563;
+  @include button-base($height: auto, $padding: $spacing-sm $spacing-lg, $radius: $radius-sm);
+  border: 1px solid $color-border-light;
+  background: $white;
+  color: $color-text-primary;
+  
+  &:hover {
+    background: $zinc-100;
+  }
+  
+  @include dark-mode {
+    border-color: $color-border-dark-secondary;
+    background: $color-bg-dark-tertiary;
+    color: $color-text-dark-primary;
+    
+    &:hover {
+      background: $color-border-dark-secondary;
+    }
+  }
 }

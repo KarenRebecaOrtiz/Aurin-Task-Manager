@@ -1,11 +1,17 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 TOOLBAR CONTAINER - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
+
 .toolbarContainer {
     position: fixed;
-    bottom: 2rem;
+    bottom: $spacing-xl;
     left: 50%;
     transform: translateX(-50%) scale(0.8);
     z-index: 9999;
-    display: flex;
-    flex-direction: column;
+    @include flex-column;
     align-items: center;
     pointer-events: none;
   
@@ -20,7 +26,7 @@
   
   .componentWrapper {
     position: relative;
-    display: flex;
+    @include flex-center;
     width: 300px; // Match ToDoDynamic's max width
     height: 40px; // Match collapsed height
     overflow: hidden;
@@ -42,7 +48,7 @@
   }
   
   .indicator {
-    display: flex;
+    @include flex-center;
     gap: 6px;
     margin-top: 8px;
   }
@@ -50,19 +56,19 @@
   .dot {
     width: 6px;
     height: 6px;
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba($white, 0.3);
     border-radius: 50%;
     transition: background-color 0.3s ease;
   }
   
   .activeDot {
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba($white, 0.8);
   }
   
   :global(.dark) .dot {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba($white, 0.2);
   }
   
   :global(.dark) .activeDot {
-    background-color: rgba(255, 255, 255, 0.6);
+    background-color: rgba($white, 0.6);
   }

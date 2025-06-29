@@ -1,3 +1,10 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 LOADER - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
+
 .main {
     position: relative;
     width: 100%;
@@ -5,13 +12,13 @@
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-    font-family: "Gilroy-Medium", sans-serif;
+    font-family: $font-family-primary;
   }
   
   .black {
     width: 100%;
     height: 100vh;
-    background-color: #161616;
+    background-color: $color-bg-dark;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
@@ -20,7 +27,7 @@
   .green {
     width: 100%;
     height: 0;
-    background-color: #14cf93;
+    background-color: $color-success;
     position: absolute;
     bottom: 0;
     padding: 0;
@@ -31,7 +38,7 @@
   .white {
     width: 100%;
     height: 0;
-    background-color: #fcfaf8;
+    background-color: $color-bg-light;
     position: absolute;
     bottom: 0;
     padding: 0;
@@ -42,9 +49,8 @@
   .reveal_p {
     overflow: hidden;
     text-align: center;
-    color: white;
-    font-size: 18px;
-    font-weight: 400;
+    color: $white;
+    @include typography($text-lg, $font-weight-normal, $white, center);
     text-transform: uppercase;
     padding: 0;
     margin: 0;
@@ -54,7 +60,7 @@
   .reveal_h1 {
     overflow: hidden;
     text-align: center;
-    color: white;
+    color: $white;
     position: absolute;
     top: 50%;
     left: 50%;

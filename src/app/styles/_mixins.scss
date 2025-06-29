@@ -1,0 +1,1601 @@
+@use 'variables' as *;
+
+// ==============================================================
+// 🔮 TYPOGRAPHY MIXINS
+// =================================================================
+
+@mixin typography($size: $text-sm, $weight: $font-weight-normal, $color: $color-text-primary, $align: left, $family: $font-family-table) {
+  font-family: $family;
+  font-size: $size;
+  font-weight: $weight;
+  color: $color;
+  text-align: $align;
+  line-height: $leading-normal;
+}
+
+@mixin typography-title($size: $text-base, $weight: $font-weight-bold, $color: $color-text-primary, $align: center) {
+  @include typography($size, $weight, $color, $align);
+}
+
+@mixin typography-subtitle($size: $text-sm, $weight: $font-weight-normal, $color: $color-text-secondary, $align: center) {
+  @include typography($size, $weight, $color, $align);
+}
+
+// ==============================================================
+// 🔮 LAYOUT MIXINS
+// =================================================================
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin flex-column-center {
+  @include flex-column;
+  align-items: center;
+  justify-content: center;
+}
+
+// ==============================================================
+// 🔮 GLASSMORPHISM MIXINS
+// =================================================================
+
+@mixin glassmorphism($bg: $color-bg-glass, $border: $color-border-subtle, $blur: 8px) {
+  background: $bg;
+  border: 1px solid $border;
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+}
+
+@mixin glassmorphism-hover($bg: $color-bg-glass-hover, $border: rgba(255, 255, 255, 0.4)) {
+  background: $bg;
+  border-color: $border;
+  transform: translateY(-1px) scale(1.01);
+}
+
+@mixin glassmorphism-focus($bg: $color-bg-glass-focus, $border: $color-border-focus) {
+  outline: none;
+  background: $bg;
+  border-color: $border;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+// ==============================================================
+// 🔮 NEOMORPHIC SHADOW MIXINS
+// =================================================================
+
+@mixin neomorphic-shadow($mode: light) {
+  @if $mode == light {
+    box-shadow: $shadow-neomorphic-light;
+  } @else {
+    box-shadow: $shadow-neomorphic-dark;
+  }
+}
+
+@mixin neomorphic-shadow-hover($mode: light) {
+  @if $mode == light {
+    box-shadow: $shadow-neomorphic-light-hover;
+  } @else {
+    box-shadow: $shadow-neomorphic-dark;
+  }
+}
+
+@mixin neomorphic-inset($mode: light) {
+  @if $mode == light {
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  } @else {
+    box-shadow:
+      inset -2px -2px 4px rgba(0, 0, 0, 0.3),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.02);
+  }
+}
+
+// ==============================================================
+// 🔮 BUTTON MIXINS
+// =================================================================
+
+@mixin button-base($height: 48px, $padding: $spacing-sm $spacing-lg, $radius: $radius-lg) {
+  height: $height;
+  padding: $padding;
+  border-radius: $radius;
+  border: none;
+  cursor: pointer;
+  @include flex-center;
+  gap: $spacing-xs;
+  transition: $transition-fast;
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+}
+
+@mixin button-primary($bg: $color-btn-primary, $color: $white, $hover-bg: $color-btn-primary-hover) {
+  @include button-base;
+  background: $bg;
+  color: $color;
+  box-shadow: $shadow-simple-light;
+
+  &:hover {
+    background: $hover-bg;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  &:active {
+    transform: scale(0.97);
+    box-shadow:
+      inset 1px 1px 4px rgba(0, 0, 0, 0.6),
+      inset -1px -1px 4px rgba(255, 255, 255, 0.05);
+  }
+}
+
+@mixin button-secondary($bg: $color-bg-glass, $color: $color-text-primary) {
+  @include button-base;
+  @include glassmorphism($bg);
+  @include neomorphic-shadow(light);
+  color: $color;
+
+  &:hover {
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  &:active {
+    transform: scale(0.97);
+    @include neomorphic-inset(light);
+  }
+}
+
+@mixin button-danger($bg: $color-btn-danger, $color: $white, $hover-bg: $color-btn-danger-hover) {
+  @include button-base;
+  background: $bg;
+  color: $color;
+  transition: background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: $hover-bg;
+  }
+
+  &:disabled {
+    background: $zinc-300;
+    cursor: not-allowed;
+  }
+}
+
+// ==============================================================
+// 🔮 INPUT MIXINS
+// =================================================================
+
+@mixin input-base($height: 48px, $padding: $spacing-xl $spacing-lg, $radius: $radius-lg) {
+  width: 100%;
+  min-width: 200px;
+  height: $height;
+  padding: $padding;
+  border-radius: $radius;
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  transition: $transition-base;
+  border: 1px solid transparent;
+
+  &::placeholder {
+    color: #A0A0A0;
+    font-weight: $font-weight-normal;
+  }
+}
+
+@mixin input-glassmorphic($bg: $color-bg-glass, $border: $color-border-subtle) {
+  @include input-base;
+  @include glassmorphism($bg, $border);
+  @include neomorphic-shadow(light);
+  color: $color-text-primary;
+
+  &:hover {
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  &:focus {
+    @include glassmorphism-focus;
+    @include neomorphic-inset(light);
+  }
+
+  &:active {
+    transform: scale(0.98);
+    @include neomorphic-inset(light);
+  }
+}
+
+// ==============================================================
+// 🔮 POPUP MIXINS
+// =================================================================
+
+@mixin popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.5);
+  @include flex-center;
+  z-index: $z-overlay;
+  overflow: hidden;
+}
+
+@mixin popup-base($max-width: 480px, $padding: $spacing-4xl $spacing-2xl) {
+  position: relative;
+  padding: $padding;
+  background: $white;
+  border-radius: $radius-xl;
+  @include flex-column-center;
+  gap: $spacing-2xl;
+  max-width: $max-width;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: $shadow-popup-light;
+}
+
+@mixin popup-content {
+  @include flex-column-center;
+  gap: $spacing-lg;
+  width: 100%;
+}
+
+// ==============================================================
+// 🔮 DROPDOWN MIXINS
+// =================================================================
+
+@mixin dropdown-base($min-width: 200px) {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: $white;
+  border-radius: $radius-2xl;
+  border: none;
+  @include flex-column;
+  z-index: $z-dropdown;
+  min-width: $min-width;
+  padding: $spacing-lg 0;
+  box-shadow: $shadow-neomorphic-light;
+}
+
+@mixin dropdown-item-base {
+  padding: $spacing-md $spacing-xl;
+  @include flex-center;
+  gap: $spacing-md;
+  cursor: pointer;
+  transition: $transition-fast;
+  border-bottom: 1px solid $color-border-light;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #F7F7F7;
+  }
+
+  > span {
+    @include typography($text-sm, $font-weight-normal, $color-text-primary);
+  }
+}
+
+// ==============================================================
+// 🔮 DARK MODE MIXIN
+// =================================================================
+
+@mixin dark-mode {
+  :global(body.dark) & {
+    @content;
+  }
+}
+
+// ==============================================================
+// 🔮 RESPONSIVE MIXINS
+// =================================================================
+
+@mixin responsive($breakpoint) {
+  @if $breakpoint == sm {
+    @media (max-width: $breakpoint-sm) { @content; }
+  } @else if $breakpoint == md {
+    @media (max-width: $breakpoint-md) { @content; }
+  } @else if $breakpoint == lg {
+    @media (max-width: $breakpoint-lg) { @content; }
+  } @else if $breakpoint == xl {
+    @media (max-width: $breakpoint-xl) { @content; }
+  }
+}
+
+// ==============================================================
+// 🔮 ANIMATION MIXINS
+// =================================================================
+
+@mixin fade-in($duration: 0.3s) {
+  animation: fadeIn $duration ease-in-out;
+}
+
+@mixin slide-up($duration: 0.3s) {
+  animation: slideUp $duration ease-out;
+}
+
+@mixin pulse($color: $color-success) {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.7;
+    transform: scale(0.8);
+  }
+  75% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
+// ==============================================================
+// 🔮 UTILITY MIXINS
+// =================================================================
+
+@mixin hide-on-mobile {
+  @include responsive(sm) {
+    display: none !important;
+  }
+}
+
+@mixin image-filter-dark {
+  filter: invert(1) grayscale(1) brightness(1.5);
+}
+
+@mixin profile-image {
+  border-radius: $radius-full;
+  object-fit: cover;
+  border: 2px solid $color-border-light;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+// ==============================================================
+// 🔮 SIDEBAR MIXINS
+// =================================================================
+
+@mixin sidebar-container($width: 400px) {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: $width;
+  height: 100vh;
+  border-radius: 24px 0 0 24px;
+  background: $color-sidebar-bg;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  transform: translateX(100%);
+  transition: transform 0.4s ease, box-shadow 0.3s ease;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.7),
+    6px 6px 12px rgba(0, 0, 0, 0.05);
+  
+  &.open {
+    transform: translateX(0);
+  }
+  
+  @include dark-mode {
+    background: $color-sidebar-bg-dark;
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.05),
+      6px 6px 12px rgba(0, 0, 0, 0.4);
+  }
+  
+  @include responsive(sm) {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 80vh;
+    border-radius: 24px 24px 0 0;
+    transform: translateY(100%);
+    
+    &.open {
+      transform: translateY(0);
+    }
+  }
+}
+
+@mixin sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xl;
+  justify-content: start;
+  padding-bottom: $spacing-lg;
+  margin-bottom: $spacing-2xl;
+  border-bottom: 1px solid $color-border-light;
+  
+  @include responsive(sm) {
+    gap: $spacing-md;
+    padding-bottom: $spacing-md;
+    margin-bottom: $spacing-lg;
+  }
+}
+
+@mixin sidebar-content {
+  flex: 1;
+  padding: $spacing-3xl $spacing-2xl;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2xl;
+  
+  @include responsive(sm) {
+    padding: $spacing-lg;
+    gap: $spacing-lg;
+  }
+}
+
+@mixin button-sidebar($bg: $color-btn-sidebar-button-bg, $color: $color-sidebar-text-primary) {
+  @include button-base($height: auto, $padding: $spacing-sm $spacing-lg, $radius: $radius-lg);
+  background: $bg;
+  color: $color;
+  @include neomorphic-shadow(light);
+  
+  &:hover {
+    background: $zinc-200;
+    @include neomorphic-inset(light);
+  }
+  
+  @include dark-mode {
+    background: $color-btn-sidebar-button-bg-dark;
+    color: $color-text-dark-primary;
+    
+    &:hover {
+      background: $color-bg-dark-tertiary;
+      @include neomorphic-inset(dark);
+    }
+  }
+}
+
+@mixin input-sidebar {
+  padding: $spacing-md $spacing-lg;
+  border: none;
+  border-radius: 14px;
+  font-size: $text-sm;
+  width: 100% !important;
+  color: $color-sidebar-text-primary;
+  background: $color-sidebar-input-bg;
+  box-shadow:
+    -3px -3px 6px #ffffff,
+    3px 3px 6px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease, background 0.3s ease;
+  
+  &:focus {
+    outline: none;
+    background: #efefef;
+    box-shadow:
+      inset -2px -2px 5px rgba(255, 255, 255, 0.3),
+      inset 2px 2px 5px rgba(0, 0, 0, 0.05);
+  }
+  
+  @include dark-mode {
+    background: $color-sidebar-input-bg-dark;
+    color: $color-text-dark-primary;
+    box-shadow: -3px -3px 6px rgba(255, 255, 255, 0.02), 3px 3px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+// ==============================================================
+// 🔮 MENUBAR MIXINS
+// =================================================================
+
+@mixin menubar-base {
+  position: relative;
+  z-index: 10;
+  padding: $spacing-xs;
+  @include flex-center;
+  max-width: 250px;
+  border-radius: $radius-sm;
+  margin-top: $spacing-xl;
+  @include glassmorphism(rgba(255, 255, 255, 0.346), #e4e4e72c, 12px);
+  
+  @include responsive(md) {
+    width: 100%;
+    justify-content: space-evenly;
+  }
+  
+  @include dark-mode {
+    background: $color-sidebar-bg-dark;
+    border-color: $color-border-dark;
+  }
+}
+
+@mixin menubar-item($bg: transparent, $color: $zinc-950) {
+  @include button-base($height: auto, $padding: $spacing-sm $spacing-md, $radius: 2px);
+  background-color: $bg;
+  color: $color;
+  transition: $transition-base;
+  
+  &.active {
+    position: relative;
+    background: rgba(241, 245, 249, 0.55);
+    color: $zinc-950;
+    border-radius: $radius-sm;
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    @include neomorphic-shadow(light);
+    
+    /* subtle inner highlight for glass glint */
+    &:after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      pointer-events: none;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 60%);
+      mix-blend-mode: screen;
+    }
+  }
+  
+  @include dark-mode {
+    background-color: transparent;
+    color: $white;
+    
+    &.active {
+      background: rgba(32, 32, 32, 0.55);
+      color: $color-text-dark-primary;
+      @include neomorphic-shadow(dark);
+    }
+    
+    &:hover {
+      @include neomorphic-shadow-hover(dark);
+    }
+  }
+}
+
+@mixin indicator-base {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: $radius-xl;
+  width: 0;
+  height: 0;
+  background: rgba(241, 245, 249, 0.55);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  @include neomorphic-shadow(light);
+  transition: box-shadow 0.3s ease;
+  
+  /* glint */
+  &:after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 60%);
+    mix-blend-mode: screen;
+    pointer-events: none;
+  }
+  
+  @include dark-mode {
+    background: rgba(32, 32, 32, 0.55);
+    @include neomorphic-shadow(dark);
+  }
+}
+
+// ==============================================================
+// 🔮 SWIPER/CAROUSEL MIXINS
+// =================================================================
+
+@mixin swiper-container {
+  padding: $spacing-xl 0;
+  overflow-x: hidden;
+  margin: 0 auto;
+  position: relative;
+}
+
+@mixin swiper-track {
+  padding: $spacing-4xl 0px;
+  overflow: visible !important;
+  overflow-x: hidden !important;
+}
+
+@mixin swiper-slide {
+  @include flex-center;
+  text-align: center;
+  width: auto !important;
+  height: auto;
+}
+
+// ==============================================================
+// 🔮 USER CARD MIXINS
+// =================================================================
+
+@mixin user-card-base($width: 10vw, $min-width: 140px) {
+  width: $width;
+  min-width: $min-width;
+  height: auto;
+  padding: $spacing-xs;
+  margin: 0 auto;
+  overflow: visible;
+  border-radius: $radius-xl;
+  background: rgba(241, 245, 249, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  @include neomorphic-shadow(light);
+  transition: $transition-base;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    @include neomorphic-shadow-hover(light);
+  }
+
+  &[role="button"]:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    @include neomorphic-inset(light);
+  }
+
+  @include dark-mode {
+    background: $color-bg-dark-secondary;
+    border: none;
+    box-shadow: none;
+    color: $white;
+
+    &:hover {
+      background: $color-bg-dark-tertiary;
+      border: none;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: none;
+    }
+
+    &[role="button"]:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      transform: scale(0.98);
+      @include neomorphic-inset(dark);
+    }
+  }
+}
+
+@mixin user-card-responsive {
+  @include responsive(sm) {
+    width: 35vw;
+    min-width: 160px;
+    padding: 0.6rem;
+  }
+
+  @media (min-width: 481px) and (max-width: 520px) {
+    width: 32vw;
+    min-width: 170px;
+    padding: 0.7rem;
+  }
+
+  @media (min-width: 521px) and (max-width: 668px) {
+    width: 30vw;
+    min-width: 180px;
+    padding: 0.75rem;
+  }
+
+  @media (min-width: 669px) and (max-width: 769px) {
+    width: 28vw;
+    min-width: 190px;
+    padding: 0.8rem;
+  }
+
+  @media (min-width: 770px) and (max-width: 968px) {
+    width: 28vw;
+    min-width: 200px;
+    padding: 0.9rem;
+  }
+
+  @media (min-width: 969px) and (max-width: 1024px) {
+    width: 22vw;
+    min-width: 210px;
+    padding: $spacing-md;
+  }
+
+  @media (min-width: 1025px) and (max-width: 1200px) {
+    width: 20vw;
+    min-width: 220px;
+  }
+
+  @media (min-width: 1201px) and (max-width: 1500px) {
+    width: 18vw;
+    min-width: 230px;
+  }
+
+  @media (min-width: 1501px) and (max-width: 1800px) {
+    width: 16vw;
+    min-width: 240px;
+  }
+
+  @media (min-width: 1801px) {
+    width: 14vw;
+    min-width: 250px;
+  }
+}
+
+// ==============================================================
+// 🔮 AVATAR MIXINS
+// =================================================================
+
+@mixin user-avatar($size: 46px) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: $size;
+  height: $size;
+  z-index: 2;
+  border-radius: $radius-full;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: $transition-fast;
+  position: relative;
+  z-index: 2;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:focus {
+    outline: 2px solid $color-success;
+    outline-offset: 2px;
+  }
+}
+
+@mixin avatar-wrapper($size: 46px) {
+  position: relative;
+  display: inline-block;
+  width: $size;
+  height: $size;
+
+  &:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+}
+
+// ==============================================================
+// 🔮 TOOLTIP MIXINS
+// =================================================================
+
+@mixin tooltip-base {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: $zinc-800;
+  color: $white;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-xs;
+  @include typography($text-xs, $font-weight-normal);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: $transition-fast;
+  pointer-events: none;
+  z-index: 10;
+
+  &:after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: $zinc-800;
+  }
+}
+
+// ==============================================================
+// 🔮 STATUS RING MIXINS
+// =================================================================
+
+@mixin status-ring($size: 48px, $color: $color-success) {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: $size;
+  height: $size;
+  transform: translate(-50%, -50%);
+  border: 2px solid $color;
+  border-radius: $radius-full;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 1;
+  transition: border-color 0.2s;
+}
+
+// ==============================================================
+// 🔮 VIGNETTE MIXINS
+// =================================================================
+
+@mixin vignette-base($position: left, $base-width: 60px) {
+  position: absolute;
+  top: 0;
+  #{$position}: 0;
+  width: $base-width;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  
+  @if $position == left {
+    background: linear-gradient(to right, #f2f5f8 0%, rgba(242, 245, 248, 0.8) 30%, rgba(242, 245, 248, 0.4) 60%, transparent 100%);
+  } @else {
+    background: linear-gradient(to left, #f2f5f8 0%, rgba(242, 245, 248, 0.8) 30%, rgba(242, 245, 248, 0.4) 60%, transparent 100%);
+  }
+  
+  @include dark-mode {
+    @if $position == left {
+      background: linear-gradient(to right, #1a1a1a 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
+    } @else {
+      background: linear-gradient(to left, #1a1a1a 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
+    }
+  }
+  
+  @media (min-width: 768px) {
+    width: $base-width + 20px;
+  }
+  
+  @media (min-width: 1024px) {
+    width: $base-width + 40px;
+  }
+  
+  @media (min-width: 1200px) {
+    width: $base-width + 60px;
+  }
+}
+
+// ==============================================================
+// 🔮 RESPONSIVE CONTAINER MIXINS
+// =================================================================
+
+@mixin swiper-container-responsive {
+  @include responsive(sm) {
+    max-width: 60vw;
+  }
+
+  @media (min-width: 481px) and (max-width: 520px) {
+    max-width: 85vw;
+  }
+
+  @media (min-width: 521px) and (max-width: 668px) {
+    max-width: 80vw;
+  }
+
+  @media (min-width: 669px) and (max-width: 769px) {
+    max-width: 75vw;
+  }
+
+  @media (min-width: 770px) and (max-width: 968px) {
+    max-width: 85vw;
+  }
+
+  @media (min-width: 969px) and (max-width: 1024px) {
+    max-width: 85vw;
+  }
+
+  @media (min-width: 1025px) and (max-width: 1200px) {
+    max-width: 85vw;
+  }
+
+  @media (min-width: 1201px) and (max-width: 1500px) {
+    max-width: 85vw;
+  }
+
+  @media (min-width: 1501px) and (max-width: 1800px) {
+    max-width: 60vw;
+  }
+
+  @media (min-width: 1801px) {
+    max-width: 50vw;
+  }
+}
+
+// ==============================================================
+// 🔮 CARD TEXT MIXINS
+// =================================================================
+
+@mixin card-title-responsive {
+  @include typography($text-sm, $font-weight-semibold, $color-text-primary, left);
+  line-height: 1.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+
+  @media (min-width: 480px) {
+    @include typography($text-sm, $font-weight-semibold, $color-text-primary, left);
+    line-height: 1.3rem;
+  }
+
+  @media (min-width: 768px) {
+    @include typography($text-base, $font-weight-semibold, $color-text-primary, left);
+  }
+
+  @include dark-mode {
+    color: $white !important;
+  }
+}
+
+@mixin card-status-responsive {
+  @include typography($text-xs, $font-weight-medium, $color-text-secondary, left);
+  line-height: 1rem;
+
+  @media (min-width: 480px) {
+    @include typography($text-sm, $font-weight-medium, $color-text-secondary, left);
+  }
+
+  @media (min-width: 768px) {
+    @include typography($text-sm, $font-weight-medium, $color-text-secondary, left);
+  }
+}
+
+// ==============================================================
+// 🔮 PROFILE CARD MIXINS
+// =================================================================
+
+@mixin profile-card-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: $profile-card-overlay-bg;
+  backdrop-filter: blur($profile-card-overlay-blur);
+  -webkit-backdrop-filter: blur($profile-card-overlay-blur);
+  @include flex-center;
+  z-index: $profile-card-overlay-z-index;
+  transition: background 0.3s ease;
+
+  @include dark-mode {
+    background: $profile-card-overlay-bg-dark;
+  }
+}
+
+@mixin profile-card-container {
+  width: 100%;
+  max-width: $profile-card-max-width;
+  margin: 0 auto;
+  padding: $profile-card-padding;
+  background: $profile-card-bg;
+  border-radius: $profile-card-border-radius;
+  backdrop-filter: blur($profile-card-blur);
+  -webkit-backdrop-filter: blur($profile-card-blur);
+  border: 1px solid $profile-card-border;
+  @include neomorphic-shadow(light);
+  @include flex-column;
+  gap: $profile-card-gap;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  @include dark-mode {
+    background: $profile-card-bg-dark;
+    border-color: $profile-card-border-dark;
+    @include neomorphic-shadow(dark);
+  }
+
+  @media (min-width: 768px) {
+    max-width: $profile-card-max-width-md;
+    padding: $profile-card-padding-md;
+    gap: $profile-card-gap-md;
+  }
+
+  @media (min-width: 1024px) {
+    max-width: $profile-card-max-width-lg;
+    padding: $profile-card-padding-lg;
+    gap: $profile-card-gap-lg;
+  }
+}
+
+@mixin profile-card-scrollbar {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 0.7);
+    border-radius: 8px;
+    box-shadow:
+      -1px -1px 2px rgba(255, 255, 255, 0.5),
+      1px 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  @include dark-mode {
+    &::-webkit-scrollbar-thumb {
+      background: rgba(75, 85, 99, 0.7);
+      box-shadow:
+        -1px -1px 2px rgba(60, 60, 60, 0.8),
+        1px 1px 2px rgba(0, 0, 0, 0.4);
+    }
+  }
+}
+
+@mixin profile-card-header {
+  width: 100%;
+  height: $profile-card-header-height;
+  border-radius: $profile-card-border-radius $profile-card-border-radius 0 0;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+
+  &[data-empty="true"] {
+    background-image:
+      linear-gradient(220deg, #d3e048 1%, transparent),
+      linear-gradient(220deg, #ecf86e 50%, transparent);
+    background-size: 2em 2em;
+    animation: moveBackground 10s linear infinite;
+  }
+
+  @keyframes moveBackground {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 2em 2em;
+    }
+  }
+
+  @include dark-mode {
+    filter: brightness(0.8);
+  }
+
+  @media (min-width: 768px) {
+    height: $profile-card-header-height-md;
+  }
+
+  @media (min-width: 1024px) {
+    height: $profile-card-header-height-lg;
+  }
+}
+
+@mixin profile-card-avatar {
+  width: $profile-card-avatar-size;
+  height: $profile-card-avatar-size;
+  border-radius: $radius-full;
+  object-fit: cover;
+  border: 1px solid $profile-card-border;
+  @include neomorphic-shadow(light);
+
+  @include dark-mode {
+    border-color: $profile-card-border-dark;
+    @include neomorphic-shadow(dark);
+  }
+
+  @media (min-width: 768px) {
+    width: $profile-card-avatar-size-md;
+    height: $profile-card-avatar-size-md;
+  }
+
+  @media (min-width: 1024px) {
+    width: $profile-card-avatar-size-lg;
+    height: $profile-card-avatar-size-lg;
+  }
+}
+
+@mixin profile-card-name {
+  @include typography($profile-card-name-size, $font-weight-semibold, $color-text-primary, left);
+
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $profile-card-name-size-md;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $profile-card-name-size-lg;
+  }
+}
+
+@mixin profile-card-email {
+  @include typography($profile-card-email-size, $font-weight-normal, $color-text-secondary, left);
+
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $profile-card-email-size-md;
+  }
+}
+
+@mixin profile-card-close-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: $profile-card-close-button-size;
+  cursor: pointer;
+  color: $color-text-secondary;
+  z-index: 1200;
+  padding: $profile-card-close-button-padding;
+
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $profile-card-close-button-size-md;
+    padding: $profile-card-close-button-padding-md;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $profile-card-close-button-size-lg;
+    top: 10px;
+    right: 10px;
+  }
+}
+
+@mixin profile-card-section-title {
+  @include typography($profile-card-section-title-size, $font-weight-semibold, $color-text-primary, left);
+  margin-bottom: 5px;
+
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $profile-card-section-title-size-md;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $profile-card-section-title-size-lg;
+  }
+}
+
+@mixin profile-card-section-content {
+  background: $profile-card-section-content-bg;
+  border-radius: $profile-card-section-content-radius;
+  box-shadow: none;
+
+  @include dark-mode {
+    background: $profile-card-section-content-bg-dark;
+    box-shadow: none;
+  }
+
+  @media (min-width: 768px) {
+    padding: $profile-card-section-content-padding-md;
+  }
+}
+
+@mixin profile-card-input {
+  width: 100%;
+  padding: $profile-card-input-padding;
+  border-radius: $profile-card-input-radius;
+  border: 1px solid $profile-card-input-border;
+  background: $profile-card-input-bg;
+  @include typography($text-sm, $font-weight-normal, $color-text-primary);
+  @include neomorphic-inset(light);
+
+  @include dark-mode {
+    background: $profile-card-input-bg-dark;
+    border-color: $profile-card-input-border-dark;
+    color: $color-text-dark-primary;
+    @include neomorphic-inset(dark);
+  }
+
+  @media (min-width: 768px) {
+    padding: $profile-card-input-padding-md;
+    font-size: $text-base;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $text-base;
+  }
+}
+
+@mixin profile-card-tag {
+  padding: $profile-card-tag-padding;
+  font-size: $profile-card-tag-size;
+  font-weight: $font-weight-medium;
+  background: $profile-card-tag-bg;
+  border: 1px solid $profile-card-tag-border;
+  border-radius: $profile-card-tag-radius;
+  color: $color-text-primary;
+  backdrop-filter: blur($profile-card-blur);
+  -webkit-backdrop-filter: blur($profile-card-blur);
+  @include flex-center;
+  @include neomorphic-shadow(light);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+
+  @include dark-mode {
+    background: $profile-card-tag-bg-dark;
+    border-color: $profile-card-tag-border-dark;
+    color: $color-text-dark-primary;
+    @include neomorphic-shadow(dark);
+  }
+
+  @media (min-width: 768px) {
+    font-size: $profile-card-tag-size-md;
+    padding: $profile-card-tag-padding-md;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $profile-card-tag-size-lg;
+    padding: $profile-card-tag-padding-lg;
+  }
+}
+
+@mixin profile-card-button {
+  padding: $profile-card-button-padding;
+  border-radius: $profile-card-button-radius;
+  border: none;
+  cursor: pointer;
+  @include typography($profile-card-button-size, $font-weight-medium, $white);
+  background: $profile-card-button-bg;
+  @include neomorphic-shadow(light);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+
+  @include dark-mode {
+    background: $profile-card-button-bg-dark;
+    @include neomorphic-shadow(dark);
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    background: $profile-card-button-bg-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  @media (min-width: 768px) {
+    font-size: $profile-card-button-size-md;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $profile-card-button-size-lg;
+  }
+}
+
+@mixin profile-card-field-group {
+  @include flex-between;
+  gap: $spacing-lg;
+  flex-direction: column;
+  margin-bottom: 15px;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+}
+
+@mixin profile-card-field-group-row {
+  @include flex-between;
+  gap: $spacing-lg;
+  margin-bottom: 15px;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+}
+
+// ==============================================================
+// 🔮 CRYSTALLIZED TAG MIXINS
+// =================================================================
+
+@mixin crystallized-tag($color: $color-info, $intensity: 0.1, $fixed-size: false) {
+  padding: $profile-card-tag-padding;
+  font-size: $profile-card-tag-size;
+  font-weight: $font-weight-medium;
+  background: rgba($color, $intensity);
+  border: 1px solid rgba($color, $intensity * 3);
+  border-radius: $profile-card-tag-radius;
+  color: $color;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  @include flex-center;
+  @include neomorphic-shadow(light);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+
+  /* Efecto cristalizado interno */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Contenido del tag */
+  > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba($color, $intensity * 1.5);
+    border-color: rgba($color, $intensity * 5);
+    @include neomorphic-shadow-hover(light);
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.8),
+      4px 4px 8px rgba($color, $intensity * 2),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.3),
+      inset 2px 2px 4px rgba($color, $intensity);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+    @include neomorphic-inset(light);
+  }
+
+  @include dark-mode {
+    background: rgba($color, $intensity * 1.5);
+    border-color: rgba($color, $intensity * 4);
+    color: lighten($color, 20%);
+    @include neomorphic-shadow(dark);
+
+    &::before {
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0.02) 100%
+      );
+    }
+
+    &:hover {
+      background: rgba($color, $intensity * 2.5);
+      border-color: rgba($color, $intensity * 6);
+      @include neomorphic-shadow-hover(dark);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.05),
+        4px 4px 8px rgba($color, $intensity * 3),
+        inset -2px -2px 4px rgba(0, 0, 0, 0.3),
+        inset 2px 2px 4px rgba($color, $intensity);
+    }
+
+    &:active {
+      @include neomorphic-inset(dark);
+    }
+  }
+
+  @if not $fixed-size {
+    @media (min-width: 768px) {
+      font-size: $profile-card-tag-size-md;
+      padding: $profile-card-tag-padding-md;
+    }
+
+    @media (min-width: 1024px) {
+      font-size: $profile-card-tag-size-lg;
+      padding: $profile-card-tag-padding-lg;
+    }
+  }
+}
+
+// ==============================================================
+// 🔮 DIGITAL CLOCK MIXINS
+// =================================================================
+
+@mixin digital-clock-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: auto;
+  height: auto;
+  border-radius: $digital-clock-radius;
+  cursor: move;
+  isolation: isolate;
+  touch-action: none;
+  box-shadow: $digital-clock-shadow;
+  z-index: $digital-clock-z-index;
+  @include flex-center;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  padding: $digital-clock-padding;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-light;
+  position: relative;
+
+  /* Liquid Glass styles */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: $digital-clock-radius;
+    box-shadow: inset 0 0 25px -10px $digital-clock-glow;
+    background-color: $digital-clock-bg;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: $digital-clock-radius;
+    backdrop-filter: blur($digital-clock-blur);
+    -webkit-backdrop-filter: blur($digital-clock-blur);
+  }
+
+  @include dark-mode {
+    box-shadow: $digital-clock-shadow-dark;
+    
+    &::before {
+      box-shadow: inset 0 0 25px -10px $digital-clock-glow-dark;
+      background-color: $digital-clock-bg-dark;
+    }
+  }
+
+  @media (min-width: 768px) {
+    padding: $digital-clock-padding-md;
+  }
+
+  @media (min-width: 1024px) {
+    padding: $digital-clock-padding-lg;
+  }
+}
+
+@mixin digital-clock-text {
+  @include typography($digital-clock-text-size, $digital-clock-text-weight, $digital-clock-text-color);
+  position: relative;
+  z-index: 1;
+
+  @include dark-mode {
+    color: $digital-clock-text-color-dark;
+  }
+
+  @media (min-width: 768px) {
+    font-size: $digital-clock-text-size-md;
+  }
+
+  @media (min-width: 1024px) {
+    font-size: $digital-clock-text-size-lg;
+  }
+}
+
+@mixin digital-clock-visible {
+  transform: translateX(-50%) translateY(0) !important;
+  opacity: 1;
+  visibility: visible;
+}
+
+@mixin digital-clock-hidden {
+  transform: translateX(-50%) translateY(100%) !important;
+  opacity: 0;
+  visibility: hidden;
+}
+
+@mixin digital-clock-transition {
+  transition: transform 0.5s ease, opacity 0.5s ease, visibility 0s linear 0.5s;
+}
+
+// ==============================================================
+// 🔮 CRYSTALLIZED SCROLLBAR MIXINS
+// =================================================================
+
+@mixin crystallized-scrollbar($width: 6px, $track-bg: transparent) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(209, 213, 219, 0.7) $track-bg;
+
+  &::-webkit-scrollbar {
+    width: $width;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $track-bg;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 0.7);
+    border-radius: 12px;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  @include dark-mode {
+    scrollbar-color: rgba(75, 85, 99, 0.7) $track-bg;
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(75, 85, 99, 0.7);
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+@mixin crystallized-scrollbar-horizontal($height: 6px, $track-bg: transparent) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(209, 213, 219, 0.7) $track-bg;
+
+  &::-webkit-scrollbar {
+    height: $height;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $track-bg;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 0.7);
+    border-radius: 12px;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  @include dark-mode {
+    scrollbar-color: rgba(75, 85, 99, 0.7) $track-bg;
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(75, 85, 99, 0.7);
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  }
+} 

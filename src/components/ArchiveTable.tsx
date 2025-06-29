@@ -13,7 +13,7 @@ import styles from './TasksTable.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
-import { hasUnreadUpdates, markTaskAsViewed, unarchiveTask, archiveTask } from '@/lib/taskUtils';
+import { hasUnreadUpdates, markTaskAsViewed, unarchiveTask, archiveTask, getUnreadCount } from '@/lib/taskUtils';
 
 interface Client {
   id: string;
@@ -821,17 +821,22 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           ...col,
           render: (task: Task) => {
             const hasUpdates = hasUnreadUpdates(task, userId);
+            const updateCount = getUnreadCount(task, userId);
             console.log('[ArchiveTable] Rendering name column:', {
               taskId: task.id,
               taskName: task.name,
               hasUpdates,
+              updateCount,
             });
             return (
               <div className={styles.taskNameWrapper}>
                 <span className={styles.taskName}>{task.name}</span>
-                {hasUpdates && (
+                {hasUpdates && updateCount > 0 && (
                   <div className={styles.updateIndicator}>
-                    <div className={styles.updateDot}></div>
+                    <div className={styles.updateDotRed}>
+                      <span className={styles.updateDotPing}></span>
+                      <span className={styles.updateDotNumber}>{updateCount}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1133,7 +1138,13 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsPriorityDropdownOpen((prev) => !prev);
+                      setIsPriorityDropdownOpen((prev) => {
+                        if (!prev) {
+                          setIsClientDropdownOpen(false);
+                          setIsUserDropdownOpen(false);
+                        }
+                        return !prev;
+                      });
                       console.log('[ArchiveTable] Priority dropdown toggled');
                     }}
                   >
@@ -1141,17 +1152,28 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                     <span>{priorityFilter || 'Prioridad'}</span>
                   </div>
                   {isPriorityDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {['Alta', 'Media', 'Baja', ''].map((priority) => (
-                        <div
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {['Alta', 'Media', 'Baja', ''].map((priority, index) => (
+                          <motion.div
                           key={priority || 'all'}
                           className={styles.dropdownItem}
                           onClick={(e) => handlePrioritySelect(priority, e)}
+                            initial={{ opacity: 0, y: -16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
                         >
                           {priority || 'Todos'}
-                        </div>
+                          </motion.div>
                       ))}
-                    </div>
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </div>
               </div>
@@ -1164,7 +1186,13 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsClientDropdownOpen((prev) => !prev);
+                      setIsClientDropdownOpen((prev) => {
+                        if (!prev) {
+                          setIsPriorityDropdownOpen(false);
+                          setIsUserDropdownOpen(false);
+                        }
+                        return !prev;
+                      });
                       console.log('[ArchiveTable] Client dropdown toggled');
                     }}
                   >
@@ -1172,17 +1200,28 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                     <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                   </div>
                   {isClientDropdownOpen && (
-                    <div className={styles.dropdownItems}>
-                      {[{ id: '', name: 'Todos' }, ...clients].map((client) => (
-                        <div
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {[{ id: '', name: 'Todos' }, ...clients].map((client, index) => (
+                          <motion.div
                           key={client.id || 'all'}
                           className={styles.dropdownItem}
                           onClick={(e) => handleClientSelect(client.id, e)}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
                         >
                           {client.name}
-                        </div>
+                          </motion.div>
                       ))}
-                    </div>
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </div>
               </div>
@@ -1197,7 +1236,13 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                       className={styles.dropdownTrigger}
                       onClick={(e) => {
                         animateClick(e.currentTarget);
-                        setIsUserDropdownOpen((prev) => !prev);
+                        setIsUserDropdownOpen((prev) => {
+                          if (!prev) {
+                            setIsPriorityDropdownOpen(false);
+                            setIsClientDropdownOpen(false);
+                          }
+                          return !prev;
+                        });
                         console.log('[ArchiveTable] User dropdown toggled');
                       }}
                     >
@@ -1211,34 +1256,51 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                       </span>
                     </div>
                     {isUserDropdownOpen && (
-                      <div className={styles.dropdownItems}>
-                        <div
+                      <AnimatePresence>
+                        <motion.div 
+                          className={styles.dropdownItems}
+                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                        >
+                          <motion.div
                           className={styles.dropdownItem}
                           style={{fontWeight: userFilter === '' ? 700 : 400}}
                           onClick={() => handleUserFilter('')}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: 0 * 0.05 }}
                         >
                           Todos
-                        </div>
-                        <div
+                          </motion.div>
+                          <motion.div
                           className={styles.dropdownItem}
                           style={{fontWeight: userFilter === 'me' ? 700 : 400}}
                           onClick={() => handleUserFilter('me')}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: 1 * 0.05 }}
                         >
                           Mis tareas
-                        </div>
+                          </motion.div>
                         {users
                           .filter((u) => u.id !== userId)
-                          .map((u) => (
-                            <div
+                            .map((u, index) => (
+                              <motion.div
                               key={u.id}
                               className={styles.dropdownItem}
                               style={{fontWeight: userFilter === u.id ? 700 : 400}}
                               onClick={() => handleUserFilter(u.id)}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
                             >
                               {u.fullName}
-                            </div>
+                              </motion.div>
                           ))}
-                      </div>
+                        </motion.div>
+                      </AnimatePresence>
                     )}
                   </div>
                 </div>

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/lib/firebase';
 import ConfigDropdown from './ui/ConfigDropdown';
 import StackInput from './ui/StackInput';
-import Table from './Table';
+import TeamsTable from './TeamsTable';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { gsap } from 'gsap';
 import styles from './ConfigPage.module.scss';
@@ -999,37 +999,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
 
   const isOwnProfile = currentUser.id === userId;
 
-  // Define columns for the Table component
-  const teamTableColumns = [
-    {
-      key: 'profilePhoto',
-      label: 'Foto',
-      width: '100px',
-      mobileVisible: true,
-      render: (member: User) => (
-        <Image
-          src={member.profilePhoto || ''}
-          alt={member.fullName}
-          width={40}
-          height={40}
-          className={styles.teamAvatar}
-        />
-      ),
-    },
-    {
-      key: 'fullName',
-      label: 'Nombre',
-      width: 'auto',
-      mobileVisible: true,
-    },
-    {
-      key: 'role',
-      label: 'Rol',
-      width: 'auto',
-      mobileVisible: true,
-    },
-  ];
-
   return (
     <>
       <div className={styles.frame239189}>
@@ -1307,58 +1276,23 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
               
               <AnimatePresence mode="wait">
                 {formData.teams && formData.teams.length > 0 ? (
-                  formData.teams.map((team) => (
-                    <motion.div 
-                      key={team} 
-                      className={styles.teamTableContainer}
-                      variants={tableVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      layout
-                    >
-                      <div className={styles.teamHeader}>
-                        <h3 className={styles.teamHeading}>{team}</h3>
-                        <div className={styles.teamMemberCount}>
-                          {teamMembers[team]?.length || 0} miembro{(teamMembers[team]?.length || 0) !== 1 ? 's' : ''}
-                        </div>
-                        {isOwnProfile && isEditing && (
-                          <button
-                            className={styles.removeTeamButton}
-                            onClick={() => handleRemoveTeam(team)}
-                            title="Eliminar equipo"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                      <p className={styles.teamSubheading}>
-                        Miembros del equipo {team}
-                      </p>
-                      {teamMembers[team] && teamMembers[team].length > 0 ? (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.2, duration: 0.4 }}
-                        >
-                          <Table
-                            data={teamMembers[team]}
-                            columns={teamTableColumns}
-                            itemsPerPage={5}
-                          />
-                        </motion.div>
-                      ) : (
-                        <motion.div 
-                          className={styles.noTeamMembers}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.3 }}
-                        >
-                          No hay miembros en este equipo
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  ))
+                  <motion.div
+                    variants={tableVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    layout
+                  >
+                    <TeamsTable
+                      teams={formData.teams.map(teamName => ({
+                        name: teamName,
+                        members: teamMembers[teamName] || []
+                      }))}
+                      currentUserId={currentUser?.id}
+                      isEditing={isOwnProfile && isEditing}
+                      onRemoveTeam={isOwnProfile && isEditing ? handleRemoveTeam : undefined}
+                    />
+                  </motion.div>
                 ) : (
                   <motion.div 
                     className={styles.noDataMessage}

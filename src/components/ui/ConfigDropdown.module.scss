@@ -10,8 +10,9 @@
 }
 
 .trigger {
-  width: 200px; // Adjustable based on context
+  width: auto; 
   height: 50px;
+  gap: 10px;
   padding: 0 16px;
   border-radius: 16px;
   display: flex;

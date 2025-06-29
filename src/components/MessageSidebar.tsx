@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
-import { Timestamp, collection, doc, onSnapshot, addDoc, query, orderBy, serverTimestamp, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { Timestamp, collection, doc, onSnapshot, addDoc, query, orderBy, serverTimestamp, setDoc, deleteDoc, getDoc, where, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
@@ -210,6 +210,25 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose, actionMenuOpenId]);
+
+  // Efecto para marcar notificaciones como leídas cuando se abre el sidebar
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      // Mark private message notifications as read
+      const notificationsQuery = query(
+        collection(db, 'notifications'),
+        where('conversationId', '==', conversationId),
+        where('recipientId', '==', user.id),
+        where('read', '==', false)
+      );
+      getDocs(notificationsQuery).then((snapshot) => {
+        const updatePromises = snapshot.docs.map((notifDoc) =>
+          updateDoc(doc(db, 'notifications', notifDoc.id), { read: true })
+        );
+        Promise.all(updatePromises);
+      });
+    }
+  }, [isOpen, user?.id, conversationId]);
 
   // GSAP animations for action menu
   useEffect(() => {

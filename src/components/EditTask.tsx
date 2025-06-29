@@ -116,7 +116,6 @@ interface EditTaskProps {
   onHasUnsavedChanges: (hasChanges: boolean) => void;
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
-  onInviteSidebarOpen: () => void;
   onClientAlertChange?: (alert: { type: "success" | "fail"; message?: string; error?: string } | null) => void;
   onShowSuccessAlert?: (message: string) => void;
   onShowFailAlert?: (message: string, error?: string) => void;
@@ -129,7 +128,6 @@ const EditTask: React.FC<EditTaskProps> = ({
   onHasUnsavedChanges,
   onCreateClientOpen,
   onEditClientOpen,
-  onInviteSidebarOpen,
   onClientAlertChange,
   onShowSuccessAlert,
   onShowFailAlert,
@@ -1691,7 +1689,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                               className={styles.addButton}
                               onClick={(e) => {
                                 animateClick(e.currentTarget);
-                                onInviteSidebarOpen();
+                                onEditClientOpen(clients.find(c => c.id === form.getValues("clientInfo.clientId")) || { id: "", name: "", imageUrl: "", projects: [], createdBy: "" });
                               }}
                             >
                               + Invitar Colaborador
@@ -1790,7 +1788,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                               className={styles.addButton}
                               onClick={(e) => {
                                 animateClick(e.currentTarget);
-                                onInviteSidebarOpen();
+                                onEditClientOpen(clients.find(c => c.id === form.getValues("clientInfo.clientId")) || { id: "", name: "", imageUrl: "", projects: [], createdBy: "" });
                               }}
                             >
                               + Invitar Colaborador

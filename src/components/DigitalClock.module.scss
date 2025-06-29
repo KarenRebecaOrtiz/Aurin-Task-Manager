@@ -1,5 +1,27 @@
 @use '@/app/styles/variables' as *;
-/* src/components/DigitalClock.module.css */
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 DIGITAL CLOCK - OPTIMIZED WITH NEW MIXINS & COMPONENTS
+// =================================================================
+
+.clockContainer {
+  @include digital-clock-container;
+  @include digital-clock-transition;
+
+  &.visible {
+    @include digital-clock-visible;
+  }
+
+  &.hidden {
+    @include digital-clock-hidden;
+  }
+}
+
+.clockText {
+  @include digital-clock-text;
+}
+
 .DigitalClock_clockContainer__UUU_I {
     position: fixed !important; /* Fijar posición */
     top: 0 !important; /* Parte superior */
