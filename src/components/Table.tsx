@@ -14,6 +14,7 @@ interface Column<T> {
   label: string;
   width: string;
   mobileVisible?: boolean;
+  mobileWidth?: string;
   render?: (item: T) => React.ReactNode;
 }
 
@@ -32,6 +33,7 @@ interface TableProps<T extends HasId> {
 const Table = memo(
   <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick, getRowClassName, emptyStateType }: TableProps<T>) => {
     const [currentPage, setCurrentPage] = useState(1);
+    const [isMobile, setIsMobile] = useState(false);
     const tableRef = useRef<HTMLDivElement>(null);
 
     const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
@@ -59,6 +61,25 @@ const Table = memo(
         };
       }
     }, [paginatedData]);
+
+    // Detect mobile screen size
+    useEffect(() => {
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth <= 768);
+      };
+      
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      
+      return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const getColumnWidth = (column: Column<T>) => {
+      if (isMobile && column.mobileWidth) {
+        return column.mobileWidth;
+      }
+      return column.width;
+    };
 
     const handleSort = useCallback((key: string) => {
       if (
@@ -155,7 +176,7 @@ const Table = memo(
                 className={`${styles.headerCell} ${
                   column.key !== 'action' && !column.render ? styles.sortable : ''
                 } ${!column.mobileVisible ? styles.hideOnMobile : ''}`}
-                style={{ width: column.width }}
+                style={{ width: getColumnWidth(column) }}
                 onClick={() => handleSort(column.key)}
                 role={column.key !== 'action' && !column.render ? 'button' : undefined}
                 tabIndex={column.key !== 'action' && !column.render ? 0 : undefined}
@@ -181,7 +202,7 @@ const Table = memo(
                     className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
                       column.key === 'action' ? styles.actionCell : styles.clickableCell
                     }`}
-                    style={{ width: column.width }}
+                    style={{ width: getColumnWidth(column) }}
                     onClick={(e) => handleCellClick(item, column, e)}
                   >
                     {column.render

@@ -1000,7 +1000,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         key: 'clientId',
         label: 'Cuenta',
         width: '20%',
-        mobileVisible: true,
+        mobileVisible: false,
       },
       {
         key: 'name',
@@ -1783,7 +1783,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 }}
               >
                 <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
-                Crear Tarea
+                <span className={styles.createButtonText}>Crear Tarea</span>
               </button>
               <span className={styles.tooltip}>Crear Nueva Tarea</span>
             </div>

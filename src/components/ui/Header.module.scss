@@ -21,6 +21,11 @@
   }
   .typewriterWrapper {
     display: inline-block;
+    
+    /* Centrar solo en mobile */
+    @media (max-width: 768px) {
+      text-align: center;
+    }
   }
 
   .superiorHeader{
@@ -836,7 +841,7 @@
       height: 64px!important;
     }
     .superiorHeader{
-      width: 100%;
+      width: 60%;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -861,6 +866,25 @@
       display: block;
       visibility: visible;
       opacity: 1;
+    }
+  }
+
+  /* Mostrar AvatarMobile en pantallas menores a 480px */
+  @media screen and (max-width: 480px) {
+    .superiorHeader{
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: row;
+      gap: 5px;
+    }
+  }
+
+  /* Ocultar ClockOfficeStatuHidden en pantallas menores a 920px */
+  @media screen and (max-width: 919px) {
+    .ClockOfficeStatuHidden {
+      display: none !important;
     }
   }
   

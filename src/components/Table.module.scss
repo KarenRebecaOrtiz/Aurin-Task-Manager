@@ -112,6 +112,11 @@
       transform: translateY(-3px);
     }
   }
+  
+  /* Mobile padding */
+  @media (max-width: 768px) {
+    padding: 20px;
+  }
 }
 
 /* CELDAS */
@@ -167,6 +172,40 @@
 /* RESPONSIVE */
 .hideOnMobile {
   @include hide-on-mobile;
+}
+
+/* Mobile-specific styles for ClientsTable */
+@media (max-width: 768px) {
+  .header {
+    .headerCell {
+      padding: $spacing-sm $spacing-md;
+      font-size: 12px;
+      
+      /* Ensure proper alignment for mobile */
+      &:first-child {
+        text-align: left;
+      }
+      
+      &:last-child {
+        text-align: right;
+      }
+    }
+  }
+  
+  .row {
+    .cell {
+      padding: $spacing-sm $spacing-md;
+      
+      /* Ensure proper alignment for mobile */
+      &:first-child {
+        text-align: left;
+      }
+      
+      &:last-child {
+        text-align: right;
+      }
+    }
+  }
 }
 
 /* PAGINACIÓN */

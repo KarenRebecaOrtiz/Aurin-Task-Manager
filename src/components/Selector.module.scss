@@ -172,11 +172,26 @@
 // =================================================================
 .menubar {
   @include menubar-base;
+  
+  /* Centrar en mobile */
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin: 0 auto;
+  }
 }
 
 .wrapper {
   padding-left: $spacing-xs;
   display: inline-flex;
+  
+  /* Centrar en mobile */
+  @media (max-width: 768px) {
+    padding-left: 0;
+    justify-content: center;
+  }
 }
 
 .menuItem {

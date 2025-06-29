@@ -646,3 +646,16 @@
     width: 100%;
     height: 100%;
 }
+
+/* Mobile-specific styling for table columns */
+@media (max-width: 768px) {
+    /* Add gap between image and name columns */
+    .Table_cell__dP6Xg:first-child {
+        margin-right: 20px;
+    }
+    
+    /* Ensure proper spacing for mobile layout */
+    .Table_row__ah8hJ {
+        gap: 0;
+    }
+}

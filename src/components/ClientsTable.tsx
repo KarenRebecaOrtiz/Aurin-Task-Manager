@@ -236,8 +236,9 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         {
           key: 'name',
           label: 'Cuentas',
-          width: '50%',
+          width: '80%',
           mobileVisible: true,
+          mobileWidth: '50%',
         },
         {
           key: 'projectCount',
@@ -248,8 +249,9 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         {
           key: 'action',
           label: 'Acciones',
-          width: '10%',
-          mobileVisible: false,
+          width: '20%',
+          mobileVisible: true,
+          mobileWidth: '50%',
         },
       ],
       [],
@@ -333,9 +335,9 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     // Handle loading state - mostrar loader mientras cargan los datos
     if (isLoading || isDataLoading) {
       return (
-        <div className={styles.container}>
-          <div className={styles.header}>
-            <div className={styles.searchWrapper}>
+        <div className={`${styles.container} ${styles.mobileContainer}`}>
+          <div className={`${styles.header} ${styles.mobileHeader}`}>
+            <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>
               <input
                 type="text"
                 placeholder="Buscar Cuentas"
@@ -445,11 +447,11 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     }
 
     return (
-      <div className={styles.container}>
+      <div className={`${styles.container} ${styles.mobileContainer}`}>
         {clients.length === 0 && !searchQuery ? (
           <div className={styles.emptyState}>
-            <div className={styles.header}>
-              <div className={styles.searchWrapper}>
+            <div className={`${styles.header} ${styles.mobileHeader}`}>
+              <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>
                 <input
                   type="text"
                   placeholder="Buscar Cuentas"
@@ -559,8 +561,8 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           </div>
         ) : (
           <>
-            <div className={styles.header}>
-              <div className={styles.searchWrapper}>
+            <div className={`${styles.header} ${styles.mobileHeader}`}>
+              <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>
                 <input
                   type="text"
                   placeholder="Buscar Cuentas"

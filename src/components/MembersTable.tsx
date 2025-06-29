@@ -457,7 +457,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         {
           key: 'imageUrl',
           label: '',
-          width: '10%',
+          width: '20%',
           mobileVisible: true,
           render: (user: User) => (
             <UserAvatar
@@ -472,7 +472,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         {
           key: 'fullName',
           label: 'Nombre',
-          width: '50%',
+          width: '80%',
           mobileVisible: true,
         },
         {

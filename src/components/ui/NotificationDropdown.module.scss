@@ -16,6 +16,14 @@
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   @include flex-center;
+  
+  @media (max-width: 768px) {
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
 }
 
 .dropdown {
@@ -84,9 +92,18 @@
   }
 
   @media (max-width: 768px) {
-    width: 280px;
-    max-height: 300px;
-    padding: 8px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    transform: none;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -98,6 +115,22 @@
   background: transparent;
   @include dark-mode {
     border-bottom: 1px solid $color-border-dark;
+  }
+  
+  @media (max-width: 768px) {
+    padding: $spacing-xl $spacing-2xl $spacing-lg $spacing-2xl;
+    background: rgba(241, 245, 249, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    
+    @include dark-mode {
+      background: rgba(39, 39, 42, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
   }
 }
 
@@ -130,6 +163,12 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  
+  @media (max-width: 768px) {
+    max-height: none;
+    flex: 1;
+    padding: $spacing-lg $spacing-2xl;
+  }
 }
 
 .notificationItem {
@@ -274,7 +313,14 @@
   }
 
   @media (max-width: 768px) {
-    min-height: 60px;
+    min-height: 80px;
+    padding: $spacing-xl;
+    margin-bottom: $spacing-md;
+    border-radius: $radius-xl;
+    
+    &:last-child {
+      margin-bottom: $spacing-2xl;
+    }
   }
 }
 
@@ -371,6 +417,17 @@
   margin: $spacing-md auto $spacing-lg auto;
   @include dark-mode {
     background: $zinc-700;
+  }
+  
+  @media (max-width: 768px) {
+    width: 60px;
+    height: 6px;
+    margin: 0 auto $spacing-xl auto;
+    background: rgba(156, 163, 175, 0.6);
+    
+    @include dark-mode {
+      background: rgba(75, 85, 99, 0.6);
+    }
   }
 }
 

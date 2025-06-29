@@ -89,9 +89,13 @@ export const useMessageNotifications = () => {
       }
 
       // Ordenar por último mensaje (más reciente primero)
-      const sortedNotifications = notifications.sort((a, b) => 
-        b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis()
-      );
+      const sortedNotifications = notifications.sort((a, b) => {
+        // Verificar que ambos lastMessageTime existan antes de llamar toMillis()
+        if (!a.lastMessageTime || !b.lastMessageTime) {
+          return 0; // Si alguno no existe, mantener el orden original
+        }
+        return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
+      });
 
       setMessageNotifications(sortedNotifications);
       setIsLoading(false);
