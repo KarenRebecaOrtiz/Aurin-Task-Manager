@@ -289,6 +289,9 @@ interface TasksTableProps {
   onViewChange: (view: TaskView) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onArchiveTableOpen: () => void;
+  externalTasks?: Task[];
+  externalClients?: Client[];
+  externalUsers?: User[];
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(
@@ -301,6 +304,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     onViewChange,
     onDeleteTaskOpen,
     onArchiveTableOpen,
+    externalTasks,
+    externalClients,
+    externalUsers,
   }) => {
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth();
@@ -341,6 +347,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
+    // Use external data if provided, otherwise use internal state
+    const effectiveTasks = externalTasks || tasks;
+    const effectiveClients = externalClients || clients;
+    const effectiveUsers = externalUsers || users;
+
     // Función para verificar cache válido - estabilizada
     const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number; isLoading: boolean }>) => {
       const cached = cacheMap.get(cacheKey);
@@ -364,7 +375,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     // Setup de tasks con cache optimizado
     useEffect(() => {
-      if (!user?.id) return;
+      if (!user?.id || externalTasks) return;
 
       const cacheKey = `tasks_${user.id}`;
       
@@ -480,11 +491,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return () => {
         // No limpiar el listener aquí, solo marcar como no disponible para este componente
       };
-    }, [user?.id, isCacheValid, isPersistentCacheValid]);
+    }, [user?.id, isCacheValid, isPersistentCacheValid, externalTasks]);
 
     // Setup de clients con cache optimizado
     useEffect(() => {
-      if (!user?.id) return;
+      if (!user?.id || externalClients) return;
 
       const cacheKey = `clients_${user.id}`;
       
@@ -579,11 +590,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return () => {
         // No limpiar el listener aquí, solo marcar como no disponible para este componente
       };
-    }, [user?.id, isCacheValid, isPersistentCacheValid]);
+    }, [user?.id, isCacheValid, isPersistentCacheValid, externalClients]);
 
     // Setup de users con cache optimizado (usar la misma lógica que MembersTable)
     useEffect(() => {
-      if (!user?.id) return;
+      if (!user?.id || externalUsers) return;
 
       const cacheKey = `users_${user.id}`;
       
@@ -706,15 +717,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return () => {
         // No limpiar el listener aquí, solo marcar como no disponible para este componente
       };
-    }, [user?.id, isCacheValid, isPersistentCacheValid]);
+    }, [user?.id, isCacheValid, isPersistentCacheValid, externalUsers]);
 
     useEffect(() => {
-      setFilteredTasks(tasks);
+      setFilteredTasks(effectiveTasks);
       console.log('[TasksTable] Initialized filteredTasks:', {
-        totalTasks: tasks.length,
-        taskIds: tasks.map((t) => t.id),
+        totalTasks: effectiveTasks.length,
+        taskIds: effectiveTasks.map((t) => t.id),
       });
-    }, [tasks]);
+    }, [effectiveTasks]);
 
     const getInvolvedUserIds = useCallback((task: Task) => {
       const ids = new Set<string>();
@@ -746,7 +757,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     }, []);
 
     const memoizedFilteredTasks = useMemo(() => {
-      const filtered = tasks.filter((task) => {
+      const filtered = effectiveTasks.filter((task) => {
         // Excluir tareas archivadas
         if (task.archived) {
           return false;
@@ -764,7 +775,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         return matchesSearch && matchesPriority && matchesClient && matchesUser;
       });
       return filtered;
-    }, [tasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
+    }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
@@ -896,8 +907,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         });
       } else if (sortKey === 'clientId') {
         sorted.sort((a, b) => {
-          const clientA = clients.find((c) => c.id === a.clientId)?.name || '';
-          const clientB = clients.find((c) => c.id === b.clientId)?.name || '';
+          const clientA = effectiveClients.find((c) => c.id === a.clientId)?.name || '';
+          const clientB = effectiveClients.find((c) => c.id === b.clientId)?.name || '';
           return sortDirection === 'asc'
             ? clientA.localeCompare(clientB)
             : clientB.localeCompare(clientA);
@@ -936,7 +947,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         sortDirection,
       });
       return sorted;
-    }, [filteredTasks, sortKey, sortDirection, clients]);
+    }, [filteredTasks, sortKey, sortDirection, effectiveClients]);
 
     const animateClick = (element: HTMLElement) => {
       gsap.to(element, {
@@ -1045,7 +1056,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            const client = clients.find((c) => c.id === task.clientId);
+            const client = effectiveClients.find((c) => c.id === task.clientId);
             console.log('[TasksTable] Rendering client column:', {
               taskId: task.id,
               clientId: task.clientId,
@@ -1104,7 +1115,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
               assignedUserIds: task.AssignedTo,
               currentUserId: userId,
             });
-            return <AvatarGroup assignedUserIds={task.AssignedTo} users={users} currentUserId={userId} />;
+            return <AvatarGroup assignedUserIds={task.AssignedTo} users={effectiveUsers} currentUserId={userId} />;
           },
         };
       }
@@ -1118,8 +1129,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             else if (normalizedStatus === 'Backlog') icon = '/circle-help.svg';
             else if (normalizedStatus === 'Por Iniciar') icon = '/circle.svg';
             else if (normalizedStatus === 'Cancelado') icon = '/circle-x.svg';
-            else if (normalizedStatus === 'Diseño') icon = '/pencil.svg';
-            else if (normalizedStatus === 'Desarrollo') icon = '/square-code.svg';
+            else if (normalizedStatus === 'Diseño') icon = '/pencil-ruler.svg';
+            else if (normalizedStatus === 'Desarrollo') icon = '/code-xml.svg';
             else if (normalizedStatus === 'Finalizado') icon = '/circle-check.svg';
             
             console.log('[TasksTable] Rendering status column:', {
@@ -1135,6 +1146,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   alt={normalizedStatus}
                   width={16}
                   height={16}
+                  style={{ opacity: 0.7 }}
                 />
                 <span className={styles[`status-${normalizedStatus.replace(/\s/g, '-')}`]}>{normalizedStatus}</span>
               </div>
@@ -1339,7 +1351,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     // Guardar cache persistente cuando los datos cambien
     useEffect(() => {
-      if (tasks.length > 0 || clients.length > 0 || users.length > 0) {
+      if (externalTasks && externalClients && externalUsers) return;
+      
+      if (effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0) {
         // Guardar cache persistente cada 30 segundos si hay datos
         const saveInterval = setInterval(() => {
           savePersistentCache();
@@ -1347,7 +1361,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
         return () => clearInterval(saveInterval);
       }
-    }, [tasks.length, clients.length, users.length]);
+    }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length]);
 
     // Cleanup all table listeners when component unmounts
     useEffect(() => {
@@ -1364,12 +1378,17 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     // Handle loading state - más inteligente
     const shouldShowLoader = useMemo(() => {
+      // Si hay datos externos, no mostrar loader
+      if (externalTasks && externalClients && externalUsers) {
+        return false;
+      }
+      
       // Si hay datos en caché, no mostrar loader
-      const hasCachedData = tasks.length > 0 || clients.length > 0 || users.length > 0;
+      const hasCachedData = effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0;
       
       // Solo mostrar loader si no hay datos y realmente está cargando
       return !hasCachedData && (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers);
-    }, [tasks.length, clients.length, users.length, isLoading, isLoadingTasks, isLoadingClients, isLoadingUsers]);
+    }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoading, isLoadingTasks, isLoadingClients, isLoadingUsers]);
 
     if (shouldShowLoader) {
       return (
@@ -1661,7 +1680,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
-                    <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
+                    <span>{effectiveClients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                   </div>
                   {isClientDropdownOpen && (
                     <AnimatePresence>
@@ -1672,7 +1691,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                         exit={{ opacity: 0, y: -16 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
                       >
-                        {[{ id: '', name: 'Todos' }, ...clients].map((client, index) => (
+                        {[{ id: '', name: 'Todos' }, ...effectiveClients].map((client, index) => (
                           <motion.div
                             key={client.id || 'all'}
                             className={styles.dropdownItem}
@@ -1716,7 +1735,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                           ? 'Todos' 
                           : userFilter === 'me' 
                           ? 'Mis tareas' 
-                          : users.find(u => u.id === userFilter)?.fullName || 'Usuario'}
+                          : effectiveUsers.find(u => u.id === userFilter)?.fullName || 'Usuario'}
                       </span>
                     </div>
                     {isUserDropdownOpen && (
@@ -1748,7 +1767,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                           >
                             Mis tareas
                           </motion.div>
-                          {users
+                          {effectiveUsers
                             .filter((u) => u.id !== userId)
                             .map((u, index) => (
                               <motion.div

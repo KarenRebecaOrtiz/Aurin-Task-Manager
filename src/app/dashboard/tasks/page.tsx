@@ -971,6 +971,9 @@ function TasksPageContent() {
                     setIsDeletePopupOpen(true);
                   }}
                   onArchiveTableOpen={handleArchiveTableOpen}
+                  externalTasks={tasks}
+                  externalClients={clients}
+                  externalUsers={users}
                 />
               )}
               {taskView === 'table' && isArchiveTableOpen && (
