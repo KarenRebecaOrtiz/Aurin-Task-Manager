@@ -345,7 +345,7 @@ export default React.memo(function NotificationDropdown({
                     onTouchMove={handleSwipeMove}
                     onTouchEnd={handleSwipeEnd}
                   >
-                    <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} />
+                    <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
                     <div className={styles.content}>
                       <span
                         className={styles.message}
@@ -420,7 +420,7 @@ export default React.memo(function NotificationDropdown({
                 onTouchMove={handleSwipeMove}
                 onTouchEnd={handleSwipeEnd}
               >
-                <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} />
+                <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
                 <div className={styles.content}>
                   <span
                     className={styles.message}

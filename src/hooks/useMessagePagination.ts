@@ -1,5 +1,16 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { collection, query, orderBy, limit, startAfter, getDocs, onSnapshot, Timestamp, DocumentSnapshot } from 'firebase/firestore';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  limit, 
+  startAfter, 
+  getDocs, 
+  onSnapshot, 
+  DocumentSnapshot, 
+  Timestamp, 
+  where
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Message {
@@ -8,6 +19,7 @@ interface Message {
   senderName: string;
   text: string | null;
   timestamp: Timestamp | Date | null;
+  lastModified?: Timestamp | Date | null;
   read: boolean;
   hours?: number;
   imageUrl?: string | null;
@@ -27,25 +39,160 @@ interface Message {
 }
 
 interface MessageCache {
-  [taskId: string]: {
     messages: Message[];
     lastDoc: DocumentSnapshot | null;
     hasMore: boolean;
     isLoading: boolean;
     lastFetch: number;
-  };
+  lastRealtimeUpdate: number;
+  isFullyLoaded: boolean;
 }
 
 interface UseMessagePaginationProps {
   taskId: string;
   pageSize?: number;
-  cacheTimeout?: number; // en milisegundos
+  cacheTimeout?: number;
   decryptMessage: (text: string) => string;
 }
 
-const MESSAGE_CACHE: MessageCache = {};
-const DEFAULT_PAGE_SIZE = 5;
-const DEFAULT_CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+const MESSAGE_CACHE: { [taskId: string]: MessageCache } = {};
+const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_CACHE_TIMEOUT = 30 * 60 * 1000; // 30 minutos
+const LOCAL_STORAGE_PREFIX = 'task_messages_';
+const LAST_MODIFIED_PREFIX = 'lastModified_';
+
+// Protecciones contra llamadas excesivas - RELAJADAS PARA SOLUCIONAR PROBLEMA
+const FIREBASE_CALL_LIMITS = {
+  MAX_CALLS_PER_MINUTE: 1000, // Mucho más permisivo
+  MIN_INTERVAL_BETWEEN_CALLS: 5, // Intervalo mínimo muy pequeño  
+  MAX_MESSAGES_PER_REQUEST: 50,
+  MAX_CACHE_SIZE: 1000, // Máximo 1000 mensajes en cache
+};
+
+// Contador global más inteligente para llamadas a Firestore
+let globalCallTimestamps: number[] = [];
+
+// Función mejorada para verificar límites de llamadas a Firestore - TEMPORALMENTE MUY PERMISIVA
+const checkFirebaseCallLimits = (): boolean => {
+  const now = Date.now();
+  
+  // Limpiar timestamps antiguos (más de 1 minuto)
+  globalCallTimestamps = globalCallTimestamps.filter(timestamp => 
+    (now - timestamp) < 60000
+  );
+  
+  // TEMPORALMENTE: Permitir todas las llamadas para solucionar el problema de mensajes
+  // Solo bloquear si hay demasiadas llamadas realmente excesivas (>500 por minuto)
+  if (globalCallTimestamps.length >= 500) {
+    console.warn('[MessagePagination] ⚠️ Límite extremo de llamadas excedido (>500/min), usando cache');
+    return false;
+  }
+  
+  // Incrementar contador
+  globalCallTimestamps.push(now);
+  
+  // Siempre permitir para solucionar el problema
+  return true;
+};
+
+// Función para serializar timestamps para localStorage
+const serializeTimestamp = (timestamp: Timestamp | Date | null): string | null => {
+  if (!timestamp) return null;
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toDate().toISOString();
+  }
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  return null;
+};
+
+// Función para deserializar timestamps desde localStorage
+// const deserializeTimestamp = (timestampStr: string | null): Date | null => {
+//   if (!timestampStr) return null;
+//   try {
+//     return new Date(timestampStr);
+//   } catch {
+//     return null;
+//   }
+// };
+
+// Función para guardar mensajes en localStorage
+const saveMessagesToLocalStorage = (taskId: string, messages: Message[]) => {
+  if (typeof window === 'undefined') return; // Solo en cliente
+  
+  try {
+    const serializedMessages = messages.map(msg => ({
+      ...msg,
+      timestamp: serializeTimestamp(msg.timestamp),
+      lastModified: serializeTimestamp(msg.lastModified),
+    }));
+    safeLocalStorage.setItem(`${LOCAL_STORAGE_PREFIX}${taskId}`, JSON.stringify(serializedMessages));
+  } catch (error) {
+    console.warn('[MessagePagination] Error saving to localStorage:', error);
+  }
+};
+
+// Función para cargar mensajes desde localStorage
+// const loadMessagesFromLocalStorage = (taskId: string): Message[] => {
+//   try {
+//     const stored = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}${taskId}`);
+//     if (!stored) return [];
+//     
+//     const parsed = JSON.parse(stored);
+//     return parsed.map((msg: { timestamp: string | null; lastModified?: string | null }) => ({
+//       ...msg,
+//       timestamp: deserializeTimestamp(msg.timestamp),
+//       lastModified: deserializeTimestamp(msg.lastModified),
+//     }));
+//   } catch (error) {
+//     console.warn('[MessagePagination] Error loading from localStorage:', error);
+//     return [];
+//   }
+// };
+
+// Helper para operaciones de localStorage seguras
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silently fail if localStorage is not available
+    }
+  },
+  removeItem: (key: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Silently fail if localStorage is not available
+    }
+  }
+};
+
+// Función para limpiar cache expirado
+const cleanupExpiredCache = () => {
+  if (typeof window === 'undefined') return; // Solo en cliente
+  
+  const now = Date.now();
+  Object.keys(MESSAGE_CACHE).forEach(taskId => {
+    const cache = MESSAGE_CACHE[taskId];
+    if (now - cache.lastFetch > DEFAULT_CACHE_TIMEOUT) {
+      delete MESSAGE_CACHE[taskId];
+      safeLocalStorage.removeItem(`${LOCAL_STORAGE_PREFIX}${taskId}`);
+      safeLocalStorage.removeItem(`${LAST_MODIFIED_PREFIX}${taskId}`);
+    }
+  });
+};
 
 export const useMessagePagination = ({
   taskId,
@@ -55,29 +202,13 @@ export const useMessagePagination = ({
 }: UseMessagePaginationProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [, setLastModified] = useState<Date | null>(null);
   
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const messagesRef = useRef<Message[]>([]);
-
-  // Actualizar la referencia de mensajes cuando cambien
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  // Función para limpiar cache expirado
-  const cleanupExpiredCache = useCallback(() => {
-    const now = Date.now();
-    Object.keys(MESSAGE_CACHE).forEach(taskId => {
-      const cache = MESSAGE_CACHE[taskId];
-      if (now - cache.lastFetch > cacheTimeout) {
-        delete MESSAGE_CACHE[taskId];
-      }
-    });
-  }, [cacheTimeout]);
 
   // Función para obtener mensajes del cache
   const getCachedMessages = useCallback((taskId: string): Message[] => {
@@ -89,17 +220,93 @@ export const useMessagePagination = ({
   }, [cacheTimeout]);
 
   // Función para guardar mensajes en cache
-  const setCachedMessages = useCallback((taskId: string, messages: Message[], lastDoc: DocumentSnapshot | null, hasMore: boolean) => {
+  const setCachedMessages = useCallback((taskId: string, messages: Message[], lastDoc: DocumentSnapshot | null, hasMore: boolean, isFullyLoaded: boolean = false) => {
+    // Limitar el tamaño del cache para proteger la memoria
+    if (messages.length > FIREBASE_CALL_LIMITS.MAX_CACHE_SIZE) {
+      console.warn('[MessagePagination] Cache size limit exceeded, truncating messages');
+      messages = messages.slice(0, FIREBASE_CALL_LIMITS.MAX_CACHE_SIZE);
+    }
+    
     MESSAGE_CACHE[taskId] = {
       messages,
       lastDoc,
       hasMore,
       isLoading: false,
       lastFetch: Date.now(),
+      lastRealtimeUpdate: Date.now(),
+      isFullyLoaded,
     };
+    
+    // Guardar en localStorage
+    saveMessagesToLocalStorage(taskId, messages);
+    safeLocalStorage.setItem(`${LOCAL_STORAGE_PREFIX}${taskId}_lastAccess`, Date.now().toString());
   }, []);
 
-  // Función para cargar mensajes iniciales (más recientes)
+  // Función para validar cache contra servidor
+  const validateCache = useCallback(async (lastCachedModified: string) => {
+    if (!taskId) return;
+    
+    try {
+      const lastModifiedDate = new Date(lastCachedModified);
+      const updateQuery = query(
+        collection(db, `tasks/${taskId}/messages`),
+        where('lastModified', '>', Timestamp.fromDate(lastModifiedDate)),
+        orderBy('lastModified', 'desc')
+      );
+      
+             const snapshot = await getDocs(updateQuery);
+       const updatedMessages: Message[] = snapshot.docs.map(doc => {
+         const data = doc.data();
+         return {
+           id: doc.id,
+           senderId: data.senderId,
+           senderName: data.senderName,
+           text: data.text ? decryptMessage(data.text) : data.text,
+           timestamp: data.timestamp,
+           lastModified: data.lastModified || data.timestamp,
+           read: data.read || false,
+           hours: data.hours,
+           imageUrl: data.imageUrl || null,
+           fileUrl: data.fileUrl || null,
+           fileName: data.fileName || null,
+           fileType: data.fileType || null,
+           filePath: data.filePath || null,
+           clientId: doc.id,
+           isPending: false,
+           hasError: false,
+           replyTo: data.replyTo || null,
+         };
+       });
+
+       if (updatedMessages.length > 0) {
+         setMessages(prev => {
+           const existingIds = new Set(prev.map(m => m.id));
+           const newMessages = updatedMessages.filter(m => !existingIds.has(m.id));
+           const merged = [...prev, ...newMessages].sort((a, b) => {
+             const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+             const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
+             return bTime - aTime;
+           });
+           setCachedMessages(taskId, merged, lastDocRef.current, hasMore);
+           return merged;
+         });
+
+         const mostRecent = updatedMessages.reduce((latest, msg) => {
+           const msgTime = msg.lastModified instanceof Timestamp ? msg.lastModified.toDate() : new Date(msg.lastModified);
+           return !latest || msgTime > latest ? msgTime : latest;
+         }, null as Date | null);
+         
+         if (mostRecent) {
+           setLastModified(mostRecent);
+           safeLocalStorage.setItem(`${LAST_MODIFIED_PREFIX}${taskId}`, mostRecent.toISOString());
+         }
+       }
+    } catch (error) {
+      console.error('[MessagePagination] Error validating cache:', error);
+    }
+  }, [taskId, decryptMessage, setCachedMessages, hasMore]);
+
+  // Función para cargar mensajes iniciales
   const loadInitialMessages = useCallback(async () => {
     if (!taskId) return;
 
@@ -107,43 +314,48 @@ export const useMessagePagination = ({
     setError(null);
 
     try {
-      // Limpiar cache expirado
       cleanupExpiredCache();
 
-      // Intentar cargar desde cache primero
+      // Intentar cargar desde cache local primero
       const cachedMessages = getCachedMessages(taskId);
       if (cachedMessages.length > 0) {
+        console.log('[MessagePagination] Loading from cache:', cachedMessages.length, 'messages');
         setMessages(cachedMessages);
         setIsLoading(false);
+        
+        // Validar cache contra servidor en background
+        const lastCachedModified = safeLocalStorage.getItem(`${LAST_MODIFIED_PREFIX}${taskId}`);
+        if (lastCachedModified) {
+          setTimeout(() => validateCache(lastCachedModified), 1000);
+        }
         return;
       }
 
-      // Cargar mensajes más recientes desde Firestore
+      // Verificar límites antes de llamar a Firestore
+      if (!checkFirebaseCallLimits()) {
+        console.warn('[MessagePagination] Límite de llamadas excedido, usando cache local');
+        setError('Demasiadas solicitudes. Usando datos en cache.');
+        return;
+      }
+
+      // Cargar mensajes desde Firestore si no hay cache local
       const messagesQuery = query(
         collection(db, `tasks/${taskId}/messages`),
         orderBy('timestamp', 'desc'),
-        limit(pageSize)
+        limit(Math.min(pageSize, FIREBASE_CALL_LIMITS.MAX_MESSAGES_PER_REQUEST))
       );
 
       const snapshot = await getDocs(messagesQuery);
-      const newMessages: Message[] = [];
 
-      snapshot.forEach((doc) => {
+      const newMessages: Message[] = snapshot.docs.map(doc => {
         const data = doc.data();
-        if (!data.timestamp) {
-          console.warn(`Mensaje con ID ${doc.id} tiene timestamp inválido: ${data.timestamp}`);
-          return;
-        }
-
-        // Descifrar el texto del mensaje
-        const decryptedText = data.text ? decryptMessage(data.text) : data.text;
-
-        newMessages.push({
+        return {
           id: doc.id,
           senderId: data.senderId,
           senderName: data.senderName,
-          text: decryptedText,
+          text: data.text ? decryptMessage(data.text) : data.text,
           timestamp: data.timestamp,
+          lastModified: data.lastModified || data.timestamp,
           read: data.read || false,
           hours: data.hours,
           imageUrl: data.imageUrl || null,
@@ -155,70 +367,75 @@ export const useMessagePagination = ({
           isPending: false,
           hasError: false,
           replyTo: data.replyTo || null,
-        });
+        };
       });
 
-      // Ordenar mensajes por timestamp (más recientes primero para column-reverse)
-      const sortedMessages = newMessages.sort((a, b) => {
-        const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : a.timestamp?.getTime() || 0;
-        const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : b.timestamp?.getTime() || 0;
-        return bTime - aTime; // Invertir el orden para column-reverse
-      });
+      // Actualizar lastModified
+      const mostRecent = newMessages.reduce((latest, msg) => {
+        const msgTime = msg.lastModified instanceof Timestamp ? msg.lastModified.toDate() : new Date(msg.lastModified);
+        return !latest || msgTime > latest ? msgTime : latest;
+      }, null as Date | null);
+      
+      if (mostRecent) {
+        setLastModified(mostRecent);
+        safeLocalStorage.setItem(`${LAST_MODIFIED_PREFIX}${taskId}`, mostRecent.toISOString());
+      }
 
-      // Filtrar mensajes duplicados
-      const uniqueMessages = sortedMessages.filter((msg, index, self) => 
-        index === self.findIndex(m => m.id === msg.id)
-      );
+      setMessages(newMessages.sort((a, b) => {
+        const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+        const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
+        return bTime - aTime;
+      }));
 
-      setMessages(uniqueMessages);
       setHasMore(snapshot.docs.length === pageSize);
       lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
+      setCachedMessages(taskId, newMessages, lastDocRef.current, snapshot.docs.length === pageSize);
 
-      // Guardar en cache
-      setCachedMessages(taskId, uniqueMessages, lastDocRef.current, snapshot.docs.length === pageSize);
+      console.log('[MessagePagination] Loaded from server:', newMessages.length, 'messages');
 
     } catch (err) {
-      console.error('Error loading initial messages:', err);
+      console.error('[MessagePagination] Error loading initial messages:', err);
       setError('Error al cargar los mensajes');
     } finally {
       setIsLoading(false);
     }
-  }, [taskId, pageSize, decryptMessage, cleanupExpiredCache, getCachedMessages, setCachedMessages]);
+  }, [taskId, pageSize, decryptMessage, getCachedMessages, setCachedMessages, validateCache]);
 
-  // Función para cargar más mensajes (más antiguos)
+  // Función para cargar más mensajes
   const loadMoreMessages = useCallback(async () => {
-    if (!taskId || !hasMore || isLoadingMore || !lastDocRef.current) return Promise.resolve();
+    if (!taskId || !hasMore || isLoadingMore || !lastDocRef.current) return;
 
     setIsLoadingMore(true);
     setError(null);
 
     try {
+      // Verificar límites antes de llamar a Firestore
+      if (!checkFirebaseCallLimits()) {
+        console.warn('[MessagePagination] Límite de llamadas excedido en loadMoreMessages');
+        setError('Demasiadas solicitudes. Intenta más tarde.');
+        return;
+      }
+
       const messagesQuery = query(
         collection(db, `tasks/${taskId}/messages`),
         orderBy('timestamp', 'desc'),
         startAfter(lastDocRef.current),
-        limit(pageSize)
+        limit(Math.min(pageSize, FIREBASE_CALL_LIMITS.MAX_MESSAGES_PER_REQUEST))
       );
+      // NO filtrar por lastModified en pagination - usar solo timestamp para evitar errores
+      // Los mensajes antiguos pueden no tener el campo lastModified
 
       const snapshot = await getDocs(messagesQuery);
-      const newMessages: Message[] = [];
 
-      snapshot.forEach((doc) => {
+      const newMessages: Message[] = snapshot.docs.map(doc => {
         const data = doc.data();
-        if (!data.timestamp) {
-          console.warn(`Mensaje con ID ${doc.id} tiene timestamp inválido: ${data.timestamp}`);
-          return;
-        }
-
-        // Descifrar el texto del mensaje
-        const decryptedText = data.text ? decryptMessage(data.text) : data.text;
-
-        newMessages.push({
+        return {
           id: doc.id,
           senderId: data.senderId,
           senderName: data.senderName,
-          text: decryptedText,
+          text: data.text ? decryptMessage(data.text) : data.text,
           timestamp: data.timestamp,
+          lastModified: data.lastModified || data.timestamp,
           read: data.read || false,
           hours: data.hours,
           imageUrl: data.imageUrl || null,
@@ -230,46 +447,39 @@ export const useMessagePagination = ({
           isPending: false,
           hasError: false,
           replyTo: data.replyTo || null,
-        });
+        };
       });
 
-      // Ordenar mensajes por timestamp (más recientes primero para column-reverse)
-      const sortedNewMessages = newMessages.sort((a, b) => {
-        const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : a.timestamp?.getTime() || 0;
-        const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : b.timestamp?.getTime() || 0;
-        return bTime - aTime; // Invertir el orden para column-reverse
-      });
-
-      // Agregar nuevos mensajes al final (son más antiguos) para column-reverse
-      setMessages((prev) => {
-        // Filtrar mensajes duplicados basándose en el ID
-        const existingIds = new Set(prev.map(msg => msg.id));
-        const uniqueNewMessages = sortedNewMessages.filter(msg => !existingIds.has(msg.id));
-        const updatedMessages = [...prev, ...uniqueNewMessages];
-        
-        // Ordenar por timestamp para mantener consistencia
-        return updatedMessages.sort((a, b) => {
-          const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : a.timestamp?.getTime() || 0;
-          const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : b.timestamp?.getTime() || 0;
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.id));
+        const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id));
+        const updated = [...prev, ...uniqueNewMessages].sort((a, b) => {
+          const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+          const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
           return bTime - aTime;
         });
+        setCachedMessages(taskId, updated, snapshot.docs[snapshot.docs.length - 1] || null, snapshot.docs.length === pageSize);
+        return updated;
       });
       
-      // Actualizar hasMore correctamente
-      const hasMoreMessages = snapshot.docs.length === pageSize;
-      setHasMore(hasMoreMessages);
+      setHasMore(snapshot.docs.length === pageSize);
       lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
 
-      // Actualizar cache con los mensajes actualizados
-      const currentMessages = messagesRef.current;
-      setCachedMessages(taskId, currentMessages, lastDocRef.current, hasMoreMessages);
-
-      console.log(`Loaded ${newMessages.length} more messages, hasMore: ${hasMoreMessages}`);
-      return Promise.resolve();
+      const mostRecent = newMessages.reduce((latest, msg) => {
+        const msgTime = msg.lastModified instanceof Timestamp ? msg.lastModified.toDate() : new Date(msg.lastModified);
+        return !latest || msgTime > latest ? msgTime : latest;
+      }, null as Date | null);
+      
+      if (mostRecent) {
+        setLastModified(mostRecent);
+        safeLocalStorage.setItem(`${LAST_MODIFIED_PREFIX}${taskId}`, mostRecent.toISOString());
+      }
+      
+      console.log('[MessagePagination] Loaded more messages:', newMessages.length);
+      
     } catch (err) {
-      console.error('Error loading more messages:', err);
+      console.error('[MessagePagination] Error loading more messages:', err);
       setError('Error al cargar más mensajes');
-      return Promise.reject(err);
     } finally {
       setIsLoadingMore(false);
     }
@@ -279,40 +489,50 @@ export const useMessagePagination = ({
   const setupRealtimeListener = useCallback(() => {
     if (!taskId) return;
 
+    // Verificar límites antes de configurar listener
+    if (!checkFirebaseCallLimits()) {
+      console.warn('[MessagePagination] Límite de llamadas excedido al configurar listener');
+      return;
+    }
+
     // Limpiar listener anterior
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
 
-    const realtimeQuery = query(
+    const lastModified = safeLocalStorage.getItem(`${LAST_MODIFIED_PREFIX}${taskId}`);
+    let realtimeQuery = query(
       collection(db, `tasks/${taskId}/messages`),
       orderBy('timestamp', 'desc'),
-      limit(10) // Solo los 10 más recientes
+      limit(10) // Solo los 10 más recientes para reducir tráfico
     );
+    
+    // Filtrar por lastModified si existe
+    if (lastModified) {
+      realtimeQuery = query(
+        collection(db, `tasks/${taskId}/messages`),
+        where('lastModified', '>', Timestamp.fromDate(new Date(lastModified))),
+        orderBy('lastModified', 'desc'),
+        limit(10)
+      );
+    }
 
-    const unsubscribe = onSnapshot(
-      realtimeQuery,
-      (snapshot) => {
+    const unsubscribe = onSnapshot(realtimeQuery, (snapshot) => {
         const changes = snapshot.docChanges();
         if (changes.length > 0) {
-          // Usar debounce para prevenir saltos de scroll
+        // Debounce para evitar múltiples actualizaciones
           setTimeout(() => {
-            const newMessages: Message[] = [];
-            const updatedMessages: Message[] = [];
-
-            changes.forEach((change) => {
+          const newMessages: Message[] = changes
+            .filter(change => change.type === 'added' || change.type === 'modified')
+            .map(change => {
               const data = change.doc.data();
-              if (!data.timestamp) return;
-
-              // Descifrar el texto del mensaje
-              const decryptedText = data.text ? decryptMessage(data.text) : data.text;
-
-              const message: Message = {
+              return {
                 id: change.doc.id,
                 senderId: data.senderId,
                 senderName: data.senderName,
-                text: decryptedText,
+                text: data.text ? decryptMessage(data.text) : data.text,
                 timestamp: data.timestamp,
+                lastModified: data.lastModified || data.timestamp,
                 read: data.read || false,
                 hours: data.hours,
                 imageUrl: data.imageUrl || null,
@@ -325,139 +545,113 @@ export const useMessagePagination = ({
                 hasError: false,
                 replyTo: data.replyTo || null,
               };
-
-              if (change.type === 'added') {
-                // Verificar si es un mensaje nuevo comparando con los mensajes actuales
-                const currentMessages = messagesRef.current;
-                const lastMessage = currentMessages[currentMessages.length - 1];
-                
-                if (lastMessage?.timestamp) {
-                  const lastMessageTime = lastMessage.timestamp instanceof Timestamp 
-                    ? lastMessage.timestamp.toDate().getTime() 
-                    : lastMessage.timestamp?.getTime() || 0;
-                  const newMessageTime = data.timestamp instanceof Timestamp 
-                    ? data.timestamp.toDate().getTime() 
-                    : data.timestamp?.getTime() || 0;
-
-                  if (newMessageTime > lastMessageTime) {
-                    newMessages.push(message);
-                  }
-                } else {
-                  // Si no hay mensajes previos, agregar el nuevo
-                  newMessages.push(message);
-                }
-              } else if (change.type === 'modified') {
-                updatedMessages.push(message);
-              }
             });
 
-            // Actualizar mensajes solo si hay cambios
-            if (newMessages.length > 0 || updatedMessages.length > 0) {
               setMessages(prev => {
-                let updated = [...prev];
+            const existingIds = new Set(prev.map(m => m.id));
+            const updated = [...prev, ...newMessages.filter(m => !existingIds.has(m.id))].sort(
+              (a, b) => {
+                const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+                const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
+                return bTime - aTime;
+              }
+            );
+            setCachedMessages(taskId, updated, lastDocRef.current, hasMore);
+            return updated;
+          });
 
-                // Agregar nuevos mensajes al final, evitando duplicados
-                if (newMessages.length > 0) {
-                  const existingIds = new Set(updated.map(msg => msg.id));
-                  const uniqueNewMessages = newMessages.filter(msg => !existingIds.has(msg.id));
-                  updated = [...updated, ...uniqueNewMessages];
-                }
-
-                // Actualizar mensajes modificados
-                if (updatedMessages.length > 0) {
-                  updatedMessages.forEach(updatedMsg => {
-                    const index = updated.findIndex(msg => msg.id === updatedMsg.id);
-                    if (index !== -1) {
-                      updated[index] = updatedMsg;
-                    }
-                  });
-                }
-
-                // Ordenar por timestamp para mantener consistencia
-                return updated.sort((a, b) => {
-                  const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : a.timestamp?.getTime() || 0;
-                  const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : b.timestamp?.getTime() || 0;
-                  return bTime - aTime;
-                });
-              });
-            }
-          }, 100); // Debounce de 100ms para prevenir saltos de scroll
+          const mostRecent = newMessages.reduce((latest, msg) => {
+            const msgTime = msg.lastModified instanceof Timestamp ? msg.lastModified.toDate() : new Date(msg.lastModified);
+            return !latest || msgTime > latest ? msgTime : latest;
+          }, null as Date | null);
+          
+          if (mostRecent) {
+            setLastModified(mostRecent);
+            safeLocalStorage.setItem(`${LAST_MODIFIED_PREFIX}${taskId}`, mostRecent.toISOString());
         }
-      },
-      (err) => {
-        console.error('Error in realtime listener:', err);
-        setError('Error en la conexión en tiempo real');
+        }, 100);
       }
-    );
+    }, (error) => {
+      console.error('[MessagePagination] Error in realtime listener:', error);
+        setError('Error en la conexión en tiempo real');
+    });
 
     unsubscribeRef.current = unsubscribe;
-  }, [taskId, decryptMessage]);
+  }, [taskId, decryptMessage, setCachedMessages, hasMore]);
 
-  // Función para agregar mensaje optimista
+  // Función para añadir mensaje optimista
   const addOptimisticMessage = useCallback((message: Message) => {
-    setMessages(prev => [...prev, message]);
+    setMessages(prev => [message, ...prev]);
   }, []);
 
   // Función para actualizar mensaje optimista
-  const updateOptimisticMessage = useCallback((messageId: string, updates: Partial<Message>) => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === messageId ? { ...msg, ...updates } : msg
-      )
-    );
+  const updateOptimisticMessage = useCallback((clientId: string, updates: Partial<Message>) => {
+    setMessages(prev => prev.map(msg => 
+      msg.clientId === clientId ? { ...msg, ...updates } : msg
+    ));
   }, []);
 
-  // Función para remover mensaje optimista
-  const removeOptimisticMessage = useCallback((messageId: string) => {
-    setMessages(prev => prev.filter(msg => msg.id !== messageId));
-  }, []);
-
-  // Función para limpiar cache de una tarea específica
-  const clearTaskCache = useCallback((taskId: string) => {
-    delete MESSAGE_CACHE[taskId];
-  }, []);
-
-  // Función para limpiar todo el cache
-  const clearAllCache = useCallback(() => {
-    Object.keys(MESSAGE_CACHE).forEach(key => {
-      delete MESSAGE_CACHE[key];
-    });
-  }, []);
-
-  // Efecto para cargar mensajes iniciales
+  // Efecto principal que maneja tanto la carga inicial como el listener en tiempo real
   useEffect(() => {
-    if (taskId) {
-      loadInitialMessages();
-    }
-  }, [taskId, loadInitialMessages]);
+    if (!taskId) return;
 
-  // Efecto para configurar listener en tiempo real
-  useEffect(() => {
-    if (taskId) {
+    let isMounted = true;
+    const effectId = `${taskId}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log('[MessagePagination] Starting effect for task:', taskId, 'Effect ID:', effectId);
+    
+    // Función para inicializar datos
+    const initializeMessages = async () => {
+      // Verificar si ya existe cache y usarlo
+      const cachedMessages = getCachedMessages(taskId);
+      if (cachedMessages.length > 0 && isMounted) {
+        console.log('[MessagePagination] Using cached messages:', cachedMessages.length, 'Effect ID:', effectId);
+        setMessages(cachedMessages);
+        setIsLoading(false);
+
+        // Solo configurar listener si hay cache, no cargar datos frescos
+        setTimeout(() => {
+          if (isMounted) {
+            console.log('[MessagePagination] Setting up realtime listener from cache, Effect ID:', effectId);
+            setupRealtimeListener();
+          }
+        }, 300);
+        return;
+      }
+
+      // Solo cargar datos frescos si no hay cache y respeta límites
+      if (isMounted && checkFirebaseCallLimits()) {
+        console.log('[MessagePagination] Loading fresh messages, Effect ID:', effectId);
+        await loadInitialMessages();
+        
+        // Configurar listener después de cargar datos iniciales
+        if (isMounted) {
+          setTimeout(() => {
+            if (isMounted) {
+              console.log('[MessagePagination] Setting up realtime listener after fresh load, Effect ID:', effectId);
       setupRealtimeListener();
     }
-
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
+          }, 200);
+        }
+      } else {
+        console.log('[MessagePagination] Skipping fresh load due to rate limits, Effect ID:', effectId);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
-  }, [taskId, setupRealtimeListener]);
 
-  // Memoizar estadísticas de mensajes
-  const messageStats = useMemo(() => {
-    const totalMessages = messages.length;
-    const unreadMessages = messages.filter(msg => !msg.read).length;
-    const timeMessages = messages.filter(msg => typeof msg.hours === 'number' && msg.hours > 0);
-    const fileMessages = messages.filter(msg => msg.imageUrl || msg.fileUrl);
-    
-    return {
-      totalMessages,
-      unreadMessages,
-      timeMessages: timeMessages.length,
-      fileMessages: fileMessages.length,
+    initializeMessages();
+
+    return () => {
+      console.log('[MessagePagination] Cleaning up effect, Effect ID:', effectId);
+      isMounted = false;
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
     };
-  }, [messages]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]); // Solo depende de taskId para evitar re-ejecuciones
 
   return {
     messages,
@@ -465,13 +659,8 @@ export const useMessagePagination = ({
     isLoadingMore,
     hasMore,
     error,
-    messageStats,
     loadMoreMessages,
     addOptimisticMessage,
     updateOptimisticMessage,
-    removeOptimisticMessage,
-    clearTaskCache,
-    clearAllCache,
-    refreshMessages: loadInitialMessages,
   };
 }; 

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import styles from './ClientSidebar.module.scss';
 import { memo } from 'react';
 import SuccessAlert from './SuccessAlert';
@@ -42,16 +43,14 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { isAdmin, isLoading } = useAuth();
     const { user } = useUser();
-    const [localIsLoading, setLocalIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [failMessage, setFailMessage] = useState<{ message: string; error: string } | null>(null);
-
     const [form, setForm] = useState({
-      id: initialForm?.id,
+      id: initialForm?.id || '',
       name: initialForm?.name || '',
       imageFile: initialForm?.imageFile || null,
-      imagePreview: initialForm?.imagePreview || 'https://storage.googleapis.com/aurin-plattform/assets/empty-image.png',
+      imagePreview: initialForm?.imagePreview || '',
       projects: initialForm?.projects || [''],
       deleteProjectIndex: initialForm?.deleteProjectIndex || null,
       deleteConfirm: initialForm?.deleteConfirm || '',
@@ -82,13 +81,10 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
     // Handle loading state
     useEffect(() => {
       if (isOpen) {
-        setLocalIsLoading(true);
-        const timer = setTimeout(() => {
-          if (!isClientLoading) {
-            setLocalIsLoading(false);
-          }
-        }, 300);
-        return () => clearTimeout(timer);
+        // Only show loader if isClientLoading is true
+        setIsSaving(isClientLoading);
+      } else {
+        setIsSaving(false);
       }
     }, [isOpen, isClientLoading]);
 
@@ -292,9 +288,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
     };
 
     return (
-      <AnimatePresence mode="wait">
-        {isOpen && (
-          <>
+      <>
+        {isOpen && createPortal(
+          <AnimatePresence mode="wait">
             {/* Backdrop */}
             <motion.div
               className={styles.backdrop}
@@ -323,12 +319,12 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                 }
               }}
             >
-              {(localIsLoading || isClientLoading) && (
+              {isClientLoading && (
                 <div className={styles.loader}>
                   <div className={styles.spinner}></div>
                 </div>
               )}
-              {!localIsLoading && !isClientLoading && (
+              {!isClientLoading && (
                 <div className={styles.content}>
                   <div className={styles.header} style={{ alignItems: 'start' }}>
                     <button
@@ -521,9 +517,10 @@ const ClientSidebar: React.FC<ClientSidebarProps> = memo(
                 />
               )}
             </motion.div>
-          </>
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
+      </>
     );
   },
 );

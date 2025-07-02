@@ -6,7 +6,20 @@
 // =================================================================
 
 .deletePopupOverlay {
-  @include popup-overlay;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  background: rgb(0 0 0 / 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
 }
 
 .deletePopup {
@@ -45,21 +58,53 @@
 }
 
 .deleteConfirmInput {
-  @include input-base($height: 40px, $padding: $spacing-sm $spacing-md, $radius: $radius-sm);
+  width: 100%;
+  padding: 12px 16px;
   border: 1px solid $color-border-light;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-normal;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   background: $white;
   color: $color-text-primary;
+  
+  &::placeholder {
+    color: $color-text-muted;
+  }
   
   &:focus {
     outline: none;
     border-color: $color-border-focus;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: rgba(0, 0, 0, 0.05);
   }
   
   @include dark-mode {
-    border-color: $color-border-dark-secondary;
-    background: $color-bg-dark-tertiary;
-    color: $color-text-dark-primary;
+    background: #383838;
+    border: none;
+    color: #D1D1D1;
+    
+    &::placeholder {
+      color: $color-text-dark-secondary;
+    }
+    
+    &:focus {
+      outline: none;
+      border: none;
+      box-shadow: none;
+      transform: none;
+    }
+    
+    &:disabled {
+      background: rgba(255, 255, 255, 0.05);
+    }
   }
 }
 
@@ -70,10 +115,42 @@
 }
 
 .deleteConfirmButton {
-  @include button-danger($color-btn-danger, $white, $color-btn-danger-hover);
-  padding: $spacing-sm $spacing-lg;
+  background: linear-gradient(135deg, $primary 0%, #2563eb 100%);
+  color: $white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
   
   @include dark-mode {
+    background: linear-gradient(135deg, #374151 0%, rgb(34.375, 40.625, 50.625) 100%);
+    color: #D1D1D1;
+    
+    &:hover:not(:disabled) {
+      box-shadow: none;
+    }
+    
     &:disabled {
       background: $zinc-500;
     }
@@ -81,22 +158,38 @@
 }
 
 .deleteCancelButton {
-  @include button-base($height: auto, $padding: $spacing-sm $spacing-lg, $radius: $radius-sm);
-  border: 1px solid $color-border-light;
-  background: $white;
-  color: $color-text-primary;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-medium;
+  color: $primary;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   
-  &:hover {
-    background: $zinc-100;
+  &:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+  
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
   
   @include dark-mode {
-    border-color: $color-border-dark-secondary;
-    background: $color-bg-dark-tertiary;
-    color: $color-text-dark-primary;
+    background: rgb(43, 43, 43);
+    border-color: rgb(255, 255, 255, 0%);
+    color: rgb(255, 255, 255);
     
-    &:hover {
-      background: $color-border-dark-secondary;
+    &:hover:not(:disabled) {
+      background: rgb(53, 53, 53);
     }
   }
 }

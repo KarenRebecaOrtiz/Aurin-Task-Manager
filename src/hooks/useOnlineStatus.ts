@@ -47,7 +47,7 @@ export const useOnlineStatus = () => {
           lastOnlineAt: new Date().toISOString()
         }).catch(console.error);
       }
-    }, 120000); // Cada 2 minutos (en lugar de 30 segundos)
+    }, 300000); // Cada 5 minutos para reducir llamadas a Firestore
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);

@@ -1,7 +1,8 @@
 import { db } from './firebase';
-import { collection, getDocs, query, deleteDoc, doc, addDoc, where, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, deleteDoc, doc, addDoc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
 
 interface Task {
+  id: string;
   AssignedTo: string[];
   LeadedBy: string[];
   CreatedBy?: string;
@@ -18,17 +19,193 @@ interface TaskWithActivity {
   lastViewedBy?: { [userId: string]: Timestamp | string };
 }
 
-// Función para actualizar la actividad de una tarea
+// Cache para debouncing de actualizaciones de actividad
+const activityUpdateCache = new Map<string, { timeout: NodeJS.Timeout; lastUpdate: number }>();
+const ACTIVITY_DEBOUNCE_DELAY = 5000; // 5 segundos
+
+// Función para actualizar la actividad de una tarea con debouncing
 export async function updateTaskActivity(taskId: string, activityType: 'message' | 'status_change' | 'edit' | 'time_entry') {
   try {
+    // Limpiar timeout anterior si existe
+    if (activityUpdateCache.has(taskId)) {
+      clearTimeout(activityUpdateCache.get(taskId)!.timeout);
+    }
+
+    // Crear nuevo timeout para debouncing
+    const timeout = setTimeout(async () => {
+      try {
+        const now = Timestamp.now();
+        await updateDoc(doc(db, 'tasks', taskId), {
+          lastActivity: now,
+          hasUnreadUpdates: true,
+        });
+        console.log('[taskUtils] Task activity updated:', { taskId, activityType, timestamp: now });
+        
+        // Limpiar del cache después de la actualización
+        activityUpdateCache.delete(taskId);
+      } catch (error) {
+        console.error('[taskUtils] Error updating task activity:', error);
+        activityUpdateCache.delete(taskId);
+      }
+    }, ACTIVITY_DEBOUNCE_DELAY);
+
+    // Guardar en cache
+    activityUpdateCache.set(taskId, { timeout, lastUpdate: Date.now() });
+  } catch (error) {
+    console.error('[taskUtils] Error setting up activity update:', error);
+  }
+}
+
+// Función para forzar actualización inmediata (para casos críticos)
+export async function forceUpdateTaskActivity(taskId: string, activityType: 'message' | 'status_change' | 'edit' | 'time_entry') {
+  try {
+    // Limpiar timeout si existe
+    if (activityUpdateCache.has(taskId)) {
+      clearTimeout(activityUpdateCache.get(taskId)!.timeout);
+      activityUpdateCache.delete(taskId);
+    }
+
     const now = Timestamp.now();
     await updateDoc(doc(db, 'tasks', taskId), {
       lastActivity: now,
       hasUnreadUpdates: true,
     });
-    console.log('[taskUtils] Task activity updated:', { taskId, activityType, timestamp: now });
+    console.log('[taskUtils] Task activity force updated:', { taskId, activityType, timestamp: now });
   } catch (error) {
-    console.error('[taskUtils] Error updating task activity:', error);
+    console.error('[taskUtils] Error force updating task activity:', error);
+  }
+}
+
+// Función para limpiar cache de actividad (útil para testing)
+export function clearActivityCache() {
+  activityUpdateCache.forEach(({ timeout }) => clearTimeout(timeout));
+  activityUpdateCache.clear();
+}
+
+// Función para obtener estadísticas de cache
+export function getActivityCacheStats() {
+  return {
+    pendingUpdates: activityUpdateCache.size,
+    cacheEntries: Array.from(activityUpdateCache.entries()).map(([taskId, { lastUpdate }]) => ({
+      taskId,
+      lastUpdate: new Date(lastUpdate),
+      timeSinceUpdate: Date.now() - lastUpdate,
+    })),
+  };
+}
+
+// Función para archivar tareas con batching
+export async function archiveTasks(tasks: Task[], userId: string, isAdmin: boolean) {
+  try {
+    const batch = writeBatch(db);
+    const now = Timestamp.now();
+    
+    tasks.forEach(task => {
+      if (isAdmin || task.CreatedBy === userId) {
+        const taskRef = doc(db, 'tasks', task.id);
+        batch.update(taskRef, {
+          archived: true,
+          archivedAt: now,
+          archivedBy: userId,
+        });
+      }
+    });
+    
+    await batch.commit();
+    console.log(`[taskUtils] Archived ${tasks.length} tasks successfully`);
+  } catch (error) {
+    console.error('[taskUtils] Error archiving tasks:', error);
+    throw error;
+  }
+}
+
+// Función para desarchivar tareas con batching
+export async function unarchiveTasks(tasks: Task[], userId: string, isAdmin: boolean) {
+  try {
+    const batch = writeBatch(db);
+    
+    tasks.forEach(task => {
+      if (isAdmin || task.CreatedBy === userId) {
+        const taskRef = doc(db, 'tasks', task.id);
+        batch.update(taskRef, {
+          archived: false,
+          archivedAt: null,
+          archivedBy: null,
+        });
+      }
+    });
+    
+    await batch.commit();
+    console.log(`[taskUtils] Unarchived ${tasks.length} tasks successfully`);
+  } catch (error) {
+    console.error('[taskUtils] Error unarchiving tasks:', error);
+    throw error;
+  }
+}
+
+// Función para eliminar tareas con batching
+export async function deleteTasks(tasks: Task[], userId: string, isAdmin: boolean) {
+  try {
+    const batch = writeBatch(db);
+    
+    tasks.forEach(task => {
+      if (isAdmin || task.CreatedBy === userId) {
+        const taskRef = doc(db, 'tasks', task.id);
+        batch.delete(taskRef);
+      }
+    });
+    
+    await batch.commit();
+    console.log(`[taskUtils] Deleted ${tasks.length} tasks successfully`);
+  } catch (error) {
+    console.error('[taskUtils] Error deleting tasks:', error);
+    throw error;
+  }
+}
+
+// Función para crear notificaciones en batch
+export async function createBatchNotifications(notifications: Array<{
+  userId: string;
+  taskId: string;
+  message: string;
+  recipientId: string;
+  type: string;
+}>) {
+  try {
+    const batch = writeBatch(db);
+    
+    notifications.forEach(notification => {
+      const notifRef = doc(collection(db, 'notifications'));
+      batch.set(notifRef, {
+        ...notification,
+        timestamp: Timestamp.now(),
+        read: false,
+      });
+    });
+    
+    await batch.commit();
+    console.log(`[taskUtils] Created ${notifications.length} notifications in batch`);
+  } catch (error) {
+    console.error('[taskUtils] Error creating batch notifications:', error);
+    throw error;
+  }
+}
+
+// Función para marcar notificaciones como leídas en batch
+export async function markNotificationsAsRead(notificationIds: string[]) {
+  try {
+    const batch = writeBatch(db);
+    
+    notificationIds.forEach(notifId => {
+      const notifRef = doc(db, 'notifications', notifId);
+      batch.update(notifRef, { read: true });
+    });
+    
+    await batch.commit();
+    console.log(`[taskUtils] Marked ${notificationIds.length} notifications as read`);
+  } catch (error) {
+    console.error('[taskUtils] Error marking notifications as read:', error);
+    throw error;
   }
 }
 

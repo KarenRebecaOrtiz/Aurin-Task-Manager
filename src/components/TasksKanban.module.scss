@@ -14,15 +14,17 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   @include neomorphic-shadow(light);
+  border-radius: 16px 26px 0px 0px;
+
   font-family: $font-family-primary;
   @include flex-column;
   gap: $spacing-lg;
   min-height: calc(100vh - 200px);
 
   @include dark-mode {
-    background: $color-bg-glass-dark;
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    background: $color-bg-dark;
+    border: none;
+    box-shadow: none;
   }
 }
 
@@ -74,18 +76,24 @@
   }
 
   @include dark-mode {
-    background: $color-bg-glass-dark;
-    color: $color-text-dark-primary;
-    border-color: rgba(255, 255, 255, 0.1);
+    background: #27272a;
+    border-color: none;
+    border: none;
+    box-shadow: none;
+    color: white !important;
 
     &::placeholder {
-      color: $color-text-dark-muted;
+      color: #efefef;
     }
 
     &:hover {
-      background: $color-bg-glass-dark-hover;
+      background: rgba(39, 39, 42, 0.85);
       border-color: rgba(255, 255, 255, 0.2);
-      @include neomorphic-shadow-hover(dark);
+      box-shadow:
+        -6px -6px 10px rgba(0, 0, 0, 0.7),
+        6px 6px 10px rgba(255, 255, 255, 0.04),
+        inset -2px -2px 6px rgba(0, 0, 0, 0.8),
+        inset 2px 2px 6px rgba(255, 255, 255, 0.05);
     }
 
     &:focus {
@@ -100,7 +108,11 @@
     &:active {
       background: rgba(39, 39, 42, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      @include neomorphic-inset(dark);
+      box-shadow:
+        inset -4px -4px 6px rgba(0, 0, 0, 0.75),
+        inset 4px 4px 6px rgba(255, 255, 255, 0.02),
+        -2px -2px 4px rgba(0, 0, 0, 0.6),
+        2px 2px 4px rgba(255, 255, 255, 0.01);
     }
   }
 
@@ -139,66 +151,26 @@
 .filterButton,
 .createButton,
 .viewButton {
-  @include button-base($height: 48px, $padding: $spacing-sm $spacing-lg, $radius: $radius-lg);
-  @include glassmorphism($color-bg-glass, $color-border-subtle);
-  @include neomorphic-shadow(light);
-  border: 1px solid $color-border-subtle;
-  cursor: pointer;
-  gap: $spacing-sm;
-  color: $color-text-primary;
-  font-size: $text-sm;
-  font-family: $font-family-primary;
-  font-weight: $font-weight-medium;
-
-  &:hover {
-    @include glassmorphism-hover;
-    @include neomorphic-shadow-hover(light);
-    transform: translateY(-1px) scale(1.01);
-  }
-
-  &:active {
-    transform: scale(0.98);
-    @include neomorphic-inset(light);
-  }
-
-  img {
-    transition: filter 0.3s ease;
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
-  }
-
-  @include dark-mode {
-    background: $color-bg-glass-dark;
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
-    color: $color-text-dark-primary;
-
-    img {
-      filter: invert(1) grayscale(1) brightness(1.4) drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
-    }
-
-    &:hover {
-      background: $color-bg-glass-dark-hover;
-      border-color: rgba(255, 255, 255, 0.2);
-      @include neomorphic-shadow-hover(dark);
-    }
-
-    &:active {
-      @include neomorphic-inset(dark);
-    }
-  }
-
+  @include button-secondary;
+  
   @include responsive(lg) {
     height: 44px;
-    padding: 7px 14px;
+    padding: 7px $spacing-md;
     font-size: 13px;
     gap: $spacing-sm;
   }
-
+  
   @include responsive(sm) {
     height: 40px;
-    padding: 6px 12px;
+    padding: 6px $spacing-md;
     font-size: 12px;
     gap: 6px;
+  }
+  
+  @include dark-mode {
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
   }
 }
 
@@ -213,21 +185,31 @@
       background: $color-btn-primary-dark-hover;
     }
 
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    span {
+      display: none;
+    }
+    
     img {
-      filter: invert(1) grayscale(1) brightness(1.5);
+      margin: 0;
     }
   }
 }
 
 .viewButton {
   @include dark-mode {
-    color: $white;
-    background-color: $black;
-    border-color: rgb(57, 57, 57);
+    background: $zinc-800;
+    border: none;
     box-shadow: none;
-
-    img {
-      filter: invert(100) brightness(100);
+    color: $white !important;
+    
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
     }
   }
 }
@@ -283,25 +265,14 @@
   }
 
   @include dark-mode {
-    background: $color-bg-glass-dark;
-    color: $color-text-dark-primary;
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
-
-    img {
-      filter: invert(1) grayscale(1) brightness(1.4) drop-shadow(0 0 4px rgba(255, 255, 255, 0.1));
-    }
-
-    &:hover {
-      background: $color-bg-glass-dark-hover;
-      border-color: rgba(255, 255, 255, 0.2);
-      @include neomorphic-shadow-hover(dark);
-    }
-
-    &:active {
-      background: rgba(39, 39, 42, 0.6);
-      border-color: rgba(255, 255, 255, 0.05);
-      @include neomorphic-inset(dark);
+    background: $zinc-800;
+    border: none;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.532);
+    
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+      margin-right: 5px;
     }
   }
 
@@ -333,8 +304,9 @@
   border: 1px solid $color-border-subtle;
 
   @include dark-mode {
-    background: $color-bg-glass-dark;
-    @include neomorphic-shadow(dark);
+    background: $zinc-800;
+    border: none;
+    box-shadow: none !important;
   }
 
   @include responsive(lg) {
@@ -379,21 +351,23 @@
   }
 
   @include dark-mode {
-    background: $color-bg-glass-dark;
-    color: $color-text-dark-primary;
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    background: transparent;
+    border: none;
+    box-shadow: none !important;
+    color: rgba(255, 255, 255, 0.532);
+    transition: all 0.3s ease;
 
     &:hover {
-      background: $color-bg-glass-dark-hover;
-      border-color: rgba(255, 255, 255, 0.2);
-      @include neomorphic-shadow-hover(dark);
+      background: $zinc-700;
+      transform: translateY(-2px) scale(1.02);
+      border: none;
+      box-shadow: none !important;
     }
 
     &:active {
-      background: rgba(39, 39, 42, 0.6);
-      border-color: rgba(255, 255, 255, 0.05);
-      @include neomorphic-inset(dark);
+      background: $zinc-600;
+      border: none;
+      box-shadow: none !important;
     }
   }
 
@@ -466,9 +440,9 @@
   }
 
   @include dark-mode {
-    background: rgba(39, 39, 42, 0.7);
+    background: $color-bg-glass-dark;
     border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    box-shadow: none !important;
 
     &::-webkit-scrollbar-thumb {
       background: rgba(75, 85, 99, 0.7);
@@ -484,9 +458,9 @@
     @include neomorphic-shadow-hover(light);
 
     @include dark-mode {
-      background: rgba(39, 39, 42, 0.85);
+      background: $color-bg-glass-dark-hover;
       border-color: rgba(59, 130, 246, 0.5);
-      @include neomorphic-shadow-hover(dark);
+      box-shadow: none !important;
     }
   }
 
@@ -506,8 +480,8 @@
   border-top-right-radius: $radius-lg;
 
   @include dark-mode {
-    border-bottom-color: #4b5563;
-    background: #374151;
+    border-bottom-color: $color-border-dark-secondary;
+    background: $color-bg-dark-secondary;
   }
 }
 
@@ -578,10 +552,10 @@
   }
 
   @include dark-mode {
-    background: rgba(39, 39, 42, 0.7);
+    background: $color-bg-glass-dark;
     color: $color-text-dark-primary;
     border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    box-shadow: none !important;
 
     &::before {
       background: linear-gradient(
@@ -593,18 +567,13 @@
     }
 
     &:hover {
-      background: rgba(39, 39, 42, 0.85);
+      background: $color-bg-glass-dark-hover;
       border-color: rgba(255, 255, 255, 0.2);
-      @include neomorphic-shadow-hover(dark);
-      box-shadow:
-        -4px -4px 8px rgba(255, 255, 255, 0.05),
-        4px 4px 8px rgba(0, 0, 0, 0.3),
-        inset -2px -2px 4px rgba(0, 0, 0, 0.3),
-        inset 2px 2px 4px rgba(255, 255, 255, 0.02);
+      box-shadow: none !important;
     }
 
     &:active {
-      @include neomorphic-inset(dark);
+      box-shadow: none !important;
     }
   }
 }
@@ -618,6 +587,10 @@
   max-height: calc(100vh - 300px);
   background-color: #f6f8facf;
   @include crystallized-scrollbar;
+  
+  @include dark-mode {
+    background-color: rgba(39, 39, 42, 0.3);
+  }
 }
 
 // ==============================================================
@@ -671,26 +644,26 @@
   }
 
   @include dark-mode {
-    background: rgba(39, 39, 42, 0.7);
+    background: $color-bg-glass-dark;
     border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    box-shadow: none !important;
 
     &.dragging {
-      background: rgba(39, 39, 42, 0.85);
+      background: $color-bg-glass-dark-hover;
       border-color: rgba(59, 130, 246, 0.5);
-      @include neomorphic-shadow-hover(dark);
+      box-shadow: none !important;
     }
 
     &:hover {
       background: $color-bg-glass-dark-hover;
       border-color: rgba(255, 255, 255, 0.2);
-      @include neomorphic-shadow-hover(dark);
+      box-shadow: none !important;
     }
 
     &:active {
       background: rgba(39, 39, 42, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      @include neomorphic-inset(dark);
+      box-shadow: none !important;
     }
   }
 }
@@ -706,7 +679,7 @@
 
   @include dark-mode {
     &:active {
-      @include neomorphic-shadow-hover(dark);
+      box-shadow: none !important;
     }
   }
 }
@@ -762,6 +735,12 @@
 .priorityWrapper {
   @include flex-center;
   gap: $spacing-xs;
+  
+  @include dark-mode {
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
+  }
 }
 
 .priority-Alta {

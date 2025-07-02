@@ -104,11 +104,11 @@
     border: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    box-shadow: none;
+    box-shadow: none !important;
     
     &:hover {
       background: $zinc-800;
-      @include neomorphic-shadow(dark);
+      box-shadow: none !important;
       transform: translateY(-3px);
     }
   }
@@ -130,6 +130,10 @@
   
   @include dark-mode {
     color: $color-text-dark-primary;
+    
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
   }
   
   /* Quitar padding en mobile */
@@ -167,6 +171,10 @@
 .TasksTable_clientImage__aZq2W {
   border-radius: $radius-full;
   @include neomorphic-shadow(light);
+  
+  @include dark-mode {
+    box-shadow: none !important;
+  }
 }
 
 /* RESPONSIVE */

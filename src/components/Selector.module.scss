@@ -173,6 +173,12 @@
 .menubar {
   @include menubar-base;
   
+  @include dark-mode {
+    background: $zinc-800;
+    border: none;
+    box-shadow: none;
+  }
+  
   /* Centrar en mobile */
   @media (max-width: 768px) {
     display: flex;
@@ -196,6 +202,31 @@
 
 .menuItem {
   @include menubar-item;
+  
+  @include dark-mode {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.532);
+    border: none;
+    box-shadow: none;
+    transition: all 0.3s ease;
+    
+    &.active {
+      background: $zinc-700;
+      color: rgba(255, 255, 255, 0.9);
+      border: none;
+      box-shadow: none;
+      
+      &:after {
+        display: none;
+      }
+    }
+    
+    &:hover {
+      background: $zinc-700;
+      border: none;
+      box-shadow: none;
+    }
+  }
 }
 
 .text {
@@ -207,4 +238,14 @@
 // =================================================================
 .indicator {
   @include indicator-base;
+  
+  @include dark-mode {
+    background: $zinc-700;
+    border: none;
+    box-shadow: none;
+    
+    &:after {
+      display: none;
+    }
+  }
 }

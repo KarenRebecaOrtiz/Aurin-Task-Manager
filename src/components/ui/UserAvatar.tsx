@@ -51,8 +51,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     return () => unsubscribe();
   }, [userId]);
 
-  // Use provided imageUrl as fallback
-  const finalImageUrl = userImageUrl || imageUrl;
+  // Use provided imageUrl as priority, then Firestore image as fallback
+  const finalImageUrl = imageUrl || userImageUrl;
   const statusColor = statusColors[status as keyof typeof statusColors] || statusColors['Disponible'];
   const displayName = userName || 'U';
 
@@ -80,6 +80,9 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
           width={dimensions.width}
           height={dimensions.height}
           className={styles.avatarImage}
+          onError={(e) => {
+            e.currentTarget.src = '/empty-image.png';
+          }}
         />
       ) : (
         <div className={styles.avatarPlaceholder}>

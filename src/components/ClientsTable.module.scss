@@ -8,6 +8,8 @@ $font-family-table: "Urbanist", sans-serif;
 
 .container {
   @include flex-column;
+  border-radius: 16px 26px 0px 0px;
+
   gap: $spacing-2xl;
 }
 
@@ -132,12 +134,44 @@ $font-family-table: "Urbanist", sans-serif;
   }
 
   :global(body.dark) .searchInput  {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: rgba(224, 224, 224, 0.202);
-    box-shadow:none;
-    color: white!important;
+    background: #27272a;
+    border: none;
+    box-shadow: none;
+    color: white !important;
+
+    &::placeholder {
+      color: #efefef;
+    }
+
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -6px -6px 10px rgba(0, 0, 0, 0.7),
+        6px 6px 10px rgba(255, 255, 255, 0.04),
+        inset -2px -2px 6px rgba(0, 0, 0, 0.8),
+        inset 2px 2px 6px rgba(255, 255, 255, 0.05);
+    }
+
+    &:focus {
+      background: rgba(39, 39, 42, 0.9);
+      border-color: #60a5fa;
+      box-shadow:
+        inset -4px -4px 4px rgba(0, 0, 0, 0.7),
+        inset 2px 2px 6px rgba(255, 255, 255, 0.08),
+        0 0 0 4px rgba(59, 130, 246, 0.3);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -4px -4px 6px rgba(0, 0, 0, 0.75),
+        inset 4px 4px 6px rgba(255, 255, 255, 0.02),
+        -2px -2px 4px rgba(0, 0, 0, 0.6),
+        2px 2px 4px rgba(255, 255, 255, 0.01);
+    }
   }
-  
 
 .createButtonWrapper {
   @include flex-center;
@@ -149,10 +183,14 @@ $font-family-table: "Urbanist", sans-serif;
   @include dark-mode {
     background: $color-btn-primary-dark;
     color: $black;
-    box-shadow:
-      inset -2px -2px 4px rgba(0, 0, 0, 0.05),
-      inset 2px 2px 6px rgba(255, 255, 255, 0.4),
-      0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      background: $color-btn-primary-dark-hover;
+    }
+
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
   }
 }
 

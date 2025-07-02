@@ -790,14 +790,27 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const handleLoadMoreMessages = useCallback(async () => {
     if (hasMore && !isLoadingMore && !isLoadingChunk) {
-      setIsLoadingChunk(true);
-      
-      const currentMessageCount = messages.length;
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Solo mostrar loader si la carga va a tomar tiempo
+      const startTime = Date.now();
       
       try {
+        const currentMessageCount = messages.length;
+        
+        // Mostrar loader solo después de 300ms si la carga está tomando tiempo
+        const loaderTimeout = setTimeout(() => {
+          setIsLoadingChunk(true);
+        }, 300);
+        
         await loadMoreMessages();
+        
+        // Limpiar el timeout si la carga fue rápida
+        clearTimeout(loaderTimeout);
+        
+        // Si el loader se mostró, mantenerlo por al menos 500ms para suavidad visual
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime > 300) {
+          await new Promise(resolve => setTimeout(resolve, Math.max(0, 500 - elapsedTime)));
+        }
         
         setTimeout(() => {
           const newMessages = messages.slice(currentMessageCount);
@@ -806,7 +819,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           
           setTimeout(() => {
             setNewChunkMessageIds(new Set());
-          }, 3000);
+          }, 2000); // Reducido de 3000 a 2000ms
         }, 100);
         
       } finally {
@@ -1387,10 +1400,48 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
+  // 🛑 FINALIZAR TIMER (nueva función para cuando se quiere enviar el tiempo)
+  const finalizeTimer = async () => {
+    if (!user?.id || !task.id || timerSeconds === 0) return;
+    
+    const hours = timerSeconds / 3600;
+    const displayHours = Math.floor(timerSeconds / 3600);
+    const displayMinutes = Math.floor((timerSeconds % 3600) / 60);
+    const timeEntry = `${displayHours}h ${displayMinutes}m`;
+    const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
+
+    console.log('[ChatSidebar] 🛑 Finalizando timer:', {
+      totalSeconds: timerSeconds,
+      hours,
+      timeEntry
+    });
+
+    try {
+      // Enviar mensaje de tiempo
+      await sendTimeMessage(user.id, user.firstName || 'Usuario', hours, timeEntry);
+      
+      // Limpiar timer en Firestore
+      await setDoc(timerDocRef, {
+        userId: user.id,
+        isRunning: false,
+        startTime: null,
+        accumulatedSeconds: 0,
+        lastFinalized: serverTimestamp(),
+      });
+      
+      // Limpiar estado local
+      setIsTimerRunning(false);
+      setTimerSeconds(0);
+      
+      console.log('[ChatSidebar] ✅ Timer finalizado y tiempo registrado:', timeEntry);
+    } catch (error) {
+      console.error('[ChatSidebar] ❌ Error finalizando timer:', error);
+    }
+  };
 
   const toggleTimerPanel = () => {
     setIsTimerPanelOpen(prev => !prev);
-    console.log('[ChatSidebar] Timer panel toggled');
+    console.log("[ChatSidebar] Timer panel toggled");
   };
 
   const handleAddTimeEntry = async (time?: string, date?: Date, comment?: string) => {
@@ -1953,38 +2004,47 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                   </div>
                 )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-      <div className={styles.chat} ref={chatRef} id="chat-container">
-        {isLoadingMessages && (
-          <div className={styles.loader}>
-            <div className={styles.spinner} />
-          </div>
-        )}
-        {!isLoadingMessages && messages.length === 0 && (
-          <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
-        )}
-        
         <InfiniteScroll
           dataLength={messages.length}
           next={handleLoadMoreMessages}
           hasMore={hasMore}
           loader={
-            <div className={styles.chunkLoader}>
-              <div className={styles.loader}></div>
-            </div>
+            isLoadingChunk ? (
+              <div className={styles.subtleLoader}>
+                <div className={styles.newLoader}></div>
+              </div>
+            ) : null
           }
           endMessage={<div className={styles.noMessages}>No hay más mensajes.</div>}
+          style={{ 
+            display: "flex", 
+            flexDirection: "column-reverse", 
+            overflowY: "auto",
+            overflowAnchor: "none" // Evita que los mensajes se "fijen" al scrollear
+          }}
+          scrollableTarget="chat-container"
+          inverse={true}
+          scrollThreshold="100px"
+          thresholdType="pixel"
+        >        <InfiniteScroll
+          dataLength={messages.length}
+          next={handleLoadMoreMessages}
+          hasMore={hasMore}
+          loader={
+            isLoadingChunk ? (
+              <div className={styles.subtleLoader}>
+                <div className={styles.newLoader}></div>
+              </div>
+            ) : null
+          }          endMessage={<div className={styles.noMessages}>No hay más mensajes.</div>}
           style={{ display: 'flex', flexDirection: 'column-reverse', overflowY: 'auto' }}
           scrollableTarget="chat-container"
           inverse={true}
           scrollThreshold="50px"
         >
-                    {messages.map((message, index) => (
+          {messages.map((message, index) => (
                 <MessageItem
-                  key={`${message.id}-${index}`}
+                  key={message.id}
                   message={message}
                   users={users}
                   userId={user?.id}
@@ -2001,9 +2061,9 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                   draggedMessageId={draggedMessageId}
                   dragOffset={dragOffset}
                   onMessageDragStart={handleMessageDragStart}
-                  ref={index === messages.length - 1 ? lastMessageRef : null}
-                  isNewChunk={newChunkMessageIds.has(message.id)}
-                  isLoadingChunk={isLoadingChunk}
+              ref={index === messages.length - 1 ? lastMessageRef : null}
+              isNewChunk={newChunkMessageIds.has(message.id)}
+              isLoadingChunk={isLoadingChunk}
                 />
           ))}
         </InfiniteScroll>
@@ -2017,9 +2077,9 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         setIsSending={() => {}}
         timerSeconds={timerSeconds}
         isTimerRunning={isTimerRunning}
+        onFinalizeTimer={finalizeTimer}
         onToggleTimer={toggleTimer}
-        onToggleTimerPanel={toggleTimerPanel}
-        isTimerPanelOpen={isTimerPanelOpen}
+        onToggleTimerPanel={toggleTimerPanel}        isTimerPanelOpen={isTimerPanelOpen}
         setIsTimerPanelOpen={setIsTimerPanelOpen}
         containerRef={sidebarRef}
         timerPanelRef={timerPanelRef}

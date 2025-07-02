@@ -1,40 +1,120 @@
-// src/app/styles/_base.scss
-@use './variables' as *;
+@use "sass:color";
+@use "./variables" as *;
+@use "./mixins" as *;
 
+// Base Styles
 html, body {
   font-family: $font-family-primary;
   font-weight: $font-weight-normal;
   font-size: $text-base;
   line-height: $leading-normal;
-  background: var(--background);
-  color: var(--foreground);
+  background: $color-bg-light;
+  color: $color-text-primary;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  @include dark-mode {
+    background: $color-bg-dark;
+    color: $color-text-dark-primary;
+  }
 }
 
 // Typography utility classes
-.text-xs { font-size: $text-xs; }
-.text-sm { font-size: $text-sm; }
-.text-base { font-size: $text-base; }
-.text-lg { font-size: $text-lg; }
-.text-xl { font-size: $text-xl; }
-.text-2xl { font-size: $text-2xl; }
-.text-3xl { font-size: $text-3xl; }
-.text-4xl { font-size: $text-4xl; }
-.text-5xl { font-size: $text-5xl; }
-.text-6xl { font-size: $text-6xl; }
+.text-xs {
+  font-size: $text-xs;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-sm {
+  font-size: $text-sm;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-base {
+  font-size: $text-base;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-lg {
+  font-size: $text-lg;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-xl {
+  font-size: $text-xl;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-2xl {
+  font-size: $text-2xl;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-3xl {
+  font-size: $text-3xl;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-4xl {
+  font-size: $text-4xl;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-5xl {
+  font-size: $text-5xl;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+.text-6xl {
+  font-size: $text-6xl;
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
 
-.font-light { font-weight: $font-weight-light; }
-.font-normal { font-weight: $font-weight-normal; }
-.font-medium { font-weight: $font-weight-medium; }
-.font-semibold { font-weight: $font-weight-semibold; }
-.font-bold { font-weight: $font-weight-bold; }
-.font-extrabold { font-weight: $font-weight-extrabold; }
+.font-light {
+  font-weight: $font-weight-light;
+}
+.font-normal {
+  font-weight: $font-weight-normal;
+}
+.font-medium {
+  font-weight: $font-weight-medium;
+}
+.font-semibold {
+  font-weight: $font-weight-semibold;
+}
+.font-bold {
+  font-weight: $font-weight-bold;
+}
+.font-extrabold {
+  font-weight: $font-weight-extrabold;
+}
 
-.leading-none { line-height: $leading-none; }
-.leading-tight { line-height: $leading-tight; }
-.leading-snug { line-height: $leading-snug; }
-.leading-normal { line-height: $leading-normal; }
-.leading-relaxed { line-height: $leading-relaxed; }
-.leading-loose { line-height: $leading-loose; }
+.leading-none {
+  line-height: $leading-none;
+}
+.leading-tight {
+  line-height: $leading-tight;
+}
+.leading-snug {
+  line-height: $leading-snug;
+}
+.leading-normal {
+  line-height: $leading-normal;
+}
+.leading-relaxed {
+  line-height: $leading-relaxed;
+}
+.leading-loose {
+  line-height: $leading-loose;
+}

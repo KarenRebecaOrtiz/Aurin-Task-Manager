@@ -8,6 +8,7 @@
   @include neomorphic-shadow(light);
   font-family: $font-family-table;
   display: block;
+  border-radius: 16px 26px 0px 0px;
   flex-direction: column;
   gap: $spacing-lg;
   min-height: calc(100vh - 200px);
@@ -247,8 +248,8 @@
   }
   
   @include dark-mode {
-    img {
-      @include image-filter-dark;
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
     }
   }
 }
@@ -259,6 +260,10 @@
     border: none;
     box-shadow: none;
     color: $white !important;
+    
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
   }
 }
 
@@ -273,8 +278,8 @@
       background: $color-btn-primary-dark-hover;
     }
 
-    img {
-      filter: invert(1) grayscale(1) brightness(1.5);
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
     }
   }
   
@@ -337,8 +342,8 @@
     box-shadow: none;
     color: rgba(255, 255, 255, 0.532);
     
-    img {
-      filter: invert(80) brightness(80);
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
       margin-right: 5px;
     }
   }
@@ -374,9 +379,9 @@
   @include crystallized-scrollbar;
   
   @include dark-mode {
-    background: rgba(39, 39, 42, 0.8);
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    background: $zinc-800;
+    border: none;
+    box-shadow: none !important;
   }
   
   @include responsive(lg) {
@@ -415,20 +420,21 @@
   }
   
   @include dark-mode {
-    background: rgba(39, 39, 42, 0.8);
-    color: $color-text-dark-primary;
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.532);
+    border: none;
+    box-shadow: none !important;
+    transition: all 0.3s ease;
     
     &:hover {
-      @include glassmorphism-hover(rgba(39, 39, 42, 0.85), rgba(255, 255, 255, 0.2));
-      @include neomorphic-shadow-hover(dark);
+      background: $zinc-700;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: none;
     }
     
     &:active {
-      background: rgba(39, 39, 42, 0.6);
-      border-color: rgba(255, 255, 255, 0.05);
-      @include neomorphic-inset(dark);
+      background: $zinc-600;
+      box-shadow: none;
     }
   }
   
@@ -702,17 +708,33 @@
 .priorityWrapper {
   @include flex-center;
   gap: 6px;
+  
+  @include dark-mode {
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
+  }
 }
 
 .statusWrapper {
   @include flex-center;
   gap: 6px;
+  
+  @include dark-mode {
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
+  }
 }
 
 .priority-Alta,
 .priority-Media,
 .priority-Baja {
   color: $color-text-primary;
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
 }
 
 .deletePopupOverlay {

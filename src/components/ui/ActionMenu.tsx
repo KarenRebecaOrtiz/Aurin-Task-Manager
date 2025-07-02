@@ -83,12 +83,15 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
 
     console.log('[ActionMenu] Rendering for task:', {
       taskId: task.id,
+      taskName: task.name,
       userId,
       isAdmin,
       isCreator,
       canEditOrDelete,
       isOpen,
       dropdownPosition,
+      hasOnArchive: !!onArchive,
+      taskArchived: task.archived
     });
 
     return (
@@ -105,6 +108,14 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                 });
               }}
               onClick={(e) => {
+                console.log('⚡ [DEBUG] ActionMenu button clicked (three dots):', {
+                  taskId: task.id,
+                  taskName: task.name,
+                  canEditOrDelete,
+                  isAdmin,
+                  isCreator,
+                  userId
+                });
                 e.stopPropagation(); // Prevent event from bubbling up to parent card
                 if (canEditOrDelete) {
                   onOpen();
@@ -131,7 +142,13 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
               )}
             </button>
             {isOpen && canEditOrDelete && (() => {
-              console.log('[ActionMenu] Rendering dropdown items');
+              console.log('[ActionMenu] Rendering dropdown items', {
+                taskId: task.id,
+                taskName: task.name,
+                hasOnArchive: !!onArchive,
+                onArchiveType: typeof onArchive,
+                taskArchived: task.archived
+              });
               return createPortal(
                 <div 
                   ref={actionMenuRef} 
@@ -160,32 +177,51 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                     <Image src="/pencil.svg" alt="Editar" width={18} height={18} style={{ width: 'auto', height: 'auto' }} />
                     <span className={styles.tooltip}>Editar Tarea</span>
                 </div>
-                  {onArchive && (
-                <div
-                  className={styles.dropdownItem}
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent event from bubbling up to parent card
-                        animateClick(e.currentTarget);
-                        onArchive();
-                        console.log('[ActionMenu] Archive clicked for task:', task.id, { isAdmin, isCreator });
-                      }}
-                      title={task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}
-                    >
-                      <Image 
-                        src="/archive.svg" 
-                        alt={task.archived ? "Desarchivar" : "Archivar"} 
-                        width={10} 
-                        height={10} 
-                        style={{ 
-                          width: 'auto', 
-                          height: 'auto',
-                          transform: 'scale(0.02)',
-                          opacity: 0.8 
-                        }} 
-                      />
-                      <span className={styles.tooltip}>{task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}</span>
-                    </div>
-                  )}
+                  {onArchive && (() => {
+                    console.log('🎯 [DEBUG] ActionMenu Archive button rendering:', {
+                      taskId: task.id,
+                      taskName: task.name,
+                      hasOnArchive: !!onArchive,
+                      taskArchived: task.archived,
+                      buttonText: task.archived ? "Desarchivar Tarea" : "Archivar Tarea"
+                    });
+                    
+                    return (
+                      <div
+                        className={styles.dropdownItem}
+                        onClick={(e) => {
+                          console.log('🔥 [DEBUG] ActionMenu Archive button CLICKED!:', {
+                            taskId: task.id,
+                            taskName: task.name,
+                            taskArchived: task.archived,
+                            userId,
+                            isAdmin,
+                            isCreator,
+                            event: 'click detected'
+                          });
+                          e.stopPropagation(); // Prevent event from bubbling up to parent card
+                          animateClick(e.currentTarget);
+                          console.log('🎬 [DEBUG] About to call onArchive function...');
+                          onArchive();
+                          console.log('[ActionMenu] Archive clicked for task:', task.id, { isAdmin, isCreator });
+                        }}
+                        title={task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}
+                      >
+                        <Image 
+                          src="/archive.svg" 
+                          alt={task.archived ? "Desarchivar" : "Archivar"} 
+                          width={11} 
+                          height={11} 
+                          style={{ 
+                            width: 'auto', 
+                            height: 'auto',
+                            opacity: 0.8 
+                          }} 
+                        />
+                        <span className={styles.tooltip}>{task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}</span>
+                      </div>
+                    );
+                  })()}
                   <div
                     className={`${styles.dropdownItem} ${styles.deleteItem}`}
                   onClick={(e) => {

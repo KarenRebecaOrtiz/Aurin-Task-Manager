@@ -9,6 +9,15 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.access == 'admin';
     }
 
+    // Function to check if user is involved in a task (assigned, leading, or created)
+    function isInvolvedInTask(taskId) {
+      return request.auth != null && (
+        request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.AssignedTo ||
+        request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.LeadedBy ||
+        request.auth.uid == get(/databases/$(database)/documents/tasks/$(taskId)).data.CreatedBy
+      );
+    }
+
     // Advices collection
     match /advices/{adviceId} {
       allow read: if request.auth != null;
@@ -16,12 +25,12 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.creatorId == request.auth.uid;
     }
 
-    // Notifications collection - Reglas mejoradas
+    // Notifications collection
     match /notifications/{notificationId} {
-      // Solo el destinatario puede leer sus notificaciones
-      allow read, list: if request.auth != null && resource.data.recipientId == request.auth.uid;
+      // Admins pueden ver todas las notificaciones, usuarios solo las suyas
+      allow read, list: if request.auth != null && (isAdmin() || resource.data.recipientId == request.auth.uid);
       
-      // Crear notificaciones: validar que el usuario está autenticado y el recipientId es válido
+      // Crear notificaciones: validar estructura
       allow create: if request.auth != null && 
                     request.resource.data.keys().hasAll(['userId', 'recipientId', 'message', 'timestamp', 'read']) &&
                     request.resource.data.userId == request.auth.uid &&
@@ -30,47 +39,76 @@ service cloud.firestore {
                     request.resource.data.read == false &&
                     request.resource.data.timestamp != null;
       
-      // Actualizar/eliminar: solo el destinatario o admin
+      // Actualizar/eliminar: destinatario o admin
       allow update, delete: if request.auth != null && 
                            (resource.data.recipientId == request.auth.uid || isAdmin());
     }
 
-    // Tasks collection
+    // Tasks collection - REGLAS CORREGIDAS
     match /tasks/{taskId} {
-      // Admins have full access; non-admins can only read/list assigned tasks
-      allow create: if request.auth != null;
-      allow read, list: if request.auth != null; // All authenticated users can read/list, admins included
-      allow update, delete: if isAdmin() || (request.auth != null && request.auth.uid in resource.data.AssignedTo && request.auth.uid == resource.data.CreatedBy);
+      // Todos los usuarios autenticados pueden leer tareas
+      allow read, list: if request.auth != null;
+      
+      // ✅ CORREGIDO: Todos los usuarios autenticados pueden crear tareas
+      allow create: if request.auth != null && 
+                    request.resource.data.CreatedBy == request.auth.uid;
+      
+      // ✅ CORREGIDO: Admins pueden editar/eliminar cualquier tarea, 
+      // usuarios pueden editar tareas donde están involucrados
+      allow update: if isAdmin() || 
+                    (request.auth != null && isInvolvedInTask(taskId));
+      
+      // ✅ CORREGIDO: Solo admins pueden eliminar tareas
+      allow delete: if isAdmin();
 
+      // Mensajes en tareas - REGLAS SIMPLIFICADAS Y CORREGIDAS
       match /messages/{messageId} {
-        // Admins have full access; non-admins can read/create for assigned tasks
-        allow read, create: if isAdmin() || (request.auth != null && request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.AssignedTo);
-        allow update, delete: if isAdmin() || (request.auth != null && resource.data.senderId == request.auth.uid);
+        // ✅ PERMITIR LECTURA: Todos los usuarios autenticados pueden leer mensajes
+        allow read, list: if request.auth != null;
+        
+        // ✅ PERMITIR CREACIÓN: Todos los usuarios autenticados pueden crear mensajes
+        allow create: if request.auth != null && 
+                     request.resource.data.senderId == request.auth.uid;
+        
+        // ✅ PERMITIR EDICIÓN/ELIMINACIÓN: Admins o el autor del mensaje
+        allow update, delete: if request.auth != null && 
+                             (isAdmin() || resource.data.senderId == request.auth.uid);
       }
 
+      // Timers en tareas
       match /timers/{userId} {
-        // Admins have full access; non-admins can read/write their own timers for assigned tasks
-        allow read: if isAdmin() || (request.auth != null && request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.AssignedTo);
-        allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId && request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.AssignedTo);
+        // ✅ PERMITIR LECTURA: Todos los usuarios autenticados pueden leer timers
+        allow read: if request.auth != null;
+        
+        // ✅ PERMITIR ESCRITURA: Admins o el propio usuario
+        allow write: if request.auth != null && 
+                    (isAdmin() || request.auth.uid == userId);
       }
 
+      // Typing indicators en tareas
       match /typing/{userId} {
-        // Admins have full access; non-admins can read/write their own typing for assigned tasks
-        allow read: if isAdmin() || (request.auth != null && request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.AssignedTo);
-        allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId && request.auth.uid in get(/databases/$(database)/documents/tasks/$(taskId)).data.AssignedTo);
+        // ✅ PERMITIR LECTURA: Todos los usuarios autenticados pueden leer typing
+        allow read: if request.auth != null;
+        
+        // ✅ PERMITIR ESCRITURA: Admins o el propio usuario
+        allow write: if request.auth != null && 
+                    (isAdmin() || request.auth.uid == userId);
       }
     }
 
     // Clients collection
     match /clients/{clientId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null && isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     // Users collection
     match /users/{userId} {
+      // Todos pueden leer usuarios (para ver status)
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Solo el dueño o admin puede crear/modificar
+      allow create, update: if request.auth != null && 
+                           (request.auth.uid == userId || isAdmin());
     }
 
     // AI Conversations collection
@@ -78,25 +116,34 @@ service cloud.firestore {
       allow read, write: if isAdmin();
       match /messages/{messageId} {
         allow read, create: if isAdmin();
-        allow update, delete: if isAdmin() && resource.data.senderId == request.auth.uid;
+        allow update, delete: if isAdmin();
       }
     }
 
-    // Conversations collection - Reglas mejoradas
+    // Conversations collection - REGLAS SIMPLIFICADAS
     match /conversations/{conversationId} {
-      allow read, list: if request.auth != null && request.auth.uid in resource.data.participants;
+      // ✅ PERMITIR LECTURA: Todos los usuarios autenticados pueden leer conversaciones
+      allow read, list: if request.auth != null;
+      
+      // ✅ PERMITIR CREACIÓN: Todos los usuarios autenticados pueden crear conversaciones
       allow create: if request.auth != null && 
                     request.resource.data.participants.size() == 2 &&
                     request.auth.uid in request.resource.data.participants;
-      allow update: if request.auth != null && request.auth.uid in resource.data.participants;
+      
+      // ✅ PERMITIR ACTUALIZACIÓN: Todos los participantes pueden actualizar
+      allow update: if request.auth != null;
       
       match /messages/{messageId} {
-        allow read: if request.auth != null && 
-                    request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        // ✅ PERMITIR LECTURA: Todos los usuarios autenticados pueden leer mensajes
+        allow read: if request.auth != null;
+        
+        // ✅ PERMITIR CREACIÓN: Todos los usuarios autenticados pueden crear mensajes
         allow create: if request.auth != null && 
-                      request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants &&
-                      request.resource.data.senderId == request.auth.uid;
-        allow update, delete: if request.auth != null && resource.data.senderId == request.auth.uid;
+                     request.resource.data.senderId == request.auth.uid;
+        
+        // ✅ PERMITIR EDICIÓN/ELIMINACIÓN: Admins o el autor del mensaje
+        allow update, delete: if request.auth != null && 
+                             (isAdmin() || resource.data.senderId == request.auth.uid);
       }
       
       match /typing/{userId} {

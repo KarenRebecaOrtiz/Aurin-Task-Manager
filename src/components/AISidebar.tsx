@@ -704,7 +704,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
                     ))}
                 </div>
                 {m.imageUrl && (
-                  <Image src={m.imageUrl} alt="Adjunto" width={200} height={200} className={styles.image} />
+                  <Image src={m.imageUrl} alt="Adjunto" width={200} height={200} className={styles.image} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
                 )}
                 {m.fileUrl && (
                   <div className={styles.file}>

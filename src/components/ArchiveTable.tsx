@@ -5,15 +5,13 @@ import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { collection, onSnapshot, query, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
-import { hasUnreadUpdates, markTaskAsViewed, unarchiveTask, archiveTask, getUnreadCount } from '@/lib/taskUtils';
+import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
 
 interface Client {
   id: string;
@@ -58,43 +56,35 @@ interface AvatarGroupProps {
   currentUserId: string;
 }
 
-// Cache global persistente para ArchiveTable
-const archiveTableCache = {
-  tasks: new Map<string, { data: Task[]; timestamp: number }>(),
-  clients: new Map<string, { data: Client[]; timestamp: number }>(),
-  users: new Map<string, { data: User[]; timestamp: number }>(),
-  listeners: new Map<string, { tasks: (() => void) | null; clients: (() => void) | null; users: (() => void) | null }>(),
-  persistentCache: {
-    tasks: new Map<string, { data: Task[]; timestamp: number }>(),
-    clients: new Map<string, { data: Client[]; timestamp: number }>(),
-    users: new Map<string, { data: User[]; timestamp: number }>(),
-  }
-};
-
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
-const PERSISTENT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
-
-// Función para limpiar listeners de ArchiveTable
-export const cleanupArchiveTableListeners = () => {
-  console.log('[ArchiveTable] Cleaning up all listeners');
-  archiveTableCache.listeners.forEach((listener) => {
-    if (listener.tasks) listener.tasks();
-    if (listener.clients) listener.clients();
-    if (listener.users) listener.users();
-  });
-  archiveTableCache.listeners.clear();
-  archiveTableCache.tasks.clear();
-  archiveTableCache.clients.clear();
-  archiveTableCache.users.clear();
-};
-
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, currentUserId }) => {
+  console.log('[ArchiveTable AvatarGroup] Received data:', {
+    assignedUserIds,
+    usersCount: users.length,
+    currentUserId,
+    usersData: users.map(u => ({
+      id: u.id,
+      fullName: u.fullName,
+      imageUrl: u.imageUrl,
+      hasImageUrl: !!u.imageUrl
+    }))
+  });
+
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
       console.warn('[AvatarGroup] Users prop is not an array:', users);
       return [];
     }
     const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id)).slice(0, 5);
+    console.log('[ArchiveTable AvatarGroup] Matched users:', {
+      assignedUserIds,
+      matchedUsersCount: matchedUsers.length,
+      matchedUsers: matchedUsers.map(u => ({
+        id: u.id,
+        fullName: u.fullName,
+        imageUrl: u.imageUrl,
+        clerkImageUrl: `https://img.clerk.com/${u.id}`
+      }))
+    });
     return matchedUsers.sort((a, b) => {
       if (a.id === currentUserId) return -1;
       if (b.id === currentUserId) return 1;
@@ -109,13 +99,19 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
           <div key={user.id} className={avatarStyles.avatar}>
             <span className={avatarStyles.avatarName}>{user.fullName}</span>
             <Image
-              src={user.imageUrl}
+              src={user.imageUrl || `https://img.clerk.com/${user.id}`}
               alt={`${user.fullName}'s avatar`}
               width={40}
               height={40}
               className={avatarStyles.avatarImage}
               onError={(e) => {
-                e.currentTarget.src = '';
+                // Si falló la imagen de Firestore, intentar Clerk
+                if (e.currentTarget.src === user.imageUrl) {
+                  e.currentTarget.src = `https://img.clerk.com/${user.id}`;
+                } else {
+                  // Si falló Clerk, usar imagen por defecto
+                  e.currentTarget.src = '/empty-image.png';
+                }
               }}
             />
           </div>
@@ -133,6 +129,12 @@ interface ArchiveTableProps {
   onDeleteTaskOpen: (taskId: string) => void;
   onClose: () => void;
   onChatSidebarOpen: (task: Task) => void;
+  onTaskArchive?: (task: Task, action: 'archive' | 'unarchive') => Promise<boolean>;
+  externalTasks?: Task[];
+  externalClients?: Client[];
+  externalUsers?: User[];
+  onTaskUpdate?: (task: Task) => void;
+  onDataRefresh?: () => void;
 }
 
 const ArchiveTable: React.FC<ArchiveTableProps> = memo(
@@ -142,18 +144,16 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     onDeleteTaskOpen,
     onClose,
     onChatSidebarOpen,
+    onTaskArchive,
+    externalTasks,
+    externalClients,
+    externalUsers,
+    onTaskUpdate,
+    onDataRefresh,
   }) => {
     const { user } = useUser();
     const { isAdmin } = useAuth();
     
-    // Estados optimizados con refs para evitar re-renders
-    const tasksRef = useRef<Task[]>([]);
-    const clientsRef = useRef<Client[]>([]);
-    const usersRef = useRef<User[]>([]);
-    
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
     const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
     const [sortKey, setSortKey] = useState<string>('archivedAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -164,9 +164,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
     const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
-    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
-    const [isLoadingClients, setIsLoadingClients] = useState(true);
-    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
@@ -182,417 +179,97 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    // Función para verificar cache válido
-    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
-      const cached = cacheMap.get(cacheKey);
-      if (!cached) return false;
+    // PRIORIDAD: Usar datos externos siempre que estén disponibles
+    const effectiveTasks = externalTasks || [];
+    const effectiveClients = externalClients || [];
+    const effectiveUsers = externalUsers || [];
+
+    console.log('[ArchiveTable] Data usage check:', {
+      hasExternalTasks: !!externalTasks,
+      hasExternalClients: !!externalClients,
+      hasExternalUsers: !!externalUsers,
+      effectiveTasksCount: effectiveTasks.length,
+      archivedTasksCount: effectiveTasks.filter(t => t.archived === true).length,
+      externalUsersCount: externalUsers?.length || 0,
+      });
+
+    // CRÍTICO: Actualizar inmediatamente cuando cambien los datos externos
+    useEffect(() => {
+      if (externalTasks && externalTasks.length > 0) {
+        console.log('[ArchiveTable] External tasks updated, count:', externalTasks.length);
+        const archivedCount = externalTasks.filter(t => t.archived === true).length;
+        console.log('[ArchiveTable] Archived tasks in external data:', archivedCount);
+      }
+    }, [externalTasks]);
+
+    useEffect(() => {
+      if (externalClients && externalClients.length > 0) {
+        console.log('[ArchiveTable] External clients updated, count:', externalClients.length);
+        }
+    }, [externalClients]);
+
+    useEffect(() => {
+      if (externalUsers && externalUsers.length > 0) {
+        console.log('[ArchiveTable] External users updated, count:', externalUsers.length);
+      }
+    }, [externalUsers]);
+
+    // CRÍTICO: ArchiveTable SIEMPRE filtra tareas NO archivadas (archived: false)
+    const archivedTasks = useMemo(() => {
+      const archived = effectiveTasks.filter(task => {
+        const isArchived = Boolean(task.archived);
+        if (!isArchived) {
+          console.log('[ArchiveTable] EXCLUDING non-archived task:', {
+            taskId: task.id,
+            taskName: task.name,
+            archived: task.archived
+          });
+        }
+        return isArchived; // Solo mostrar tareas ARCHIVADAS
+      });
       
-      const now = Date.now();
-      return (now - cached.timestamp) < CACHE_DURATION;
+      console.log('[ArchiveTable] Archive filtering results (ARCHIVED only):', {
+        totalTasks: effectiveTasks.length,
+        archivedTasksCount: archived.length,
+        nonArchivedTasksCount: effectiveTasks.filter(t => !Boolean(t.archived)).length,
+        archivedTaskIds: archived.map(t => t.id),
+        nonArchivedTaskIds: effectiveTasks.filter(t => !Boolean(t.archived)).map(t => t.id)
+      });
+      return archived;
+    }, [effectiveTasks]);
+
+    // Helper function to get involved user IDs
+    const getInvolvedUserIds = useCallback((task: Task) => {
+      const ids = new Set<string>();
+      if (task.CreatedBy) ids.add(task.CreatedBy);
+      if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
+      if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
+      return Array.from(ids);
     }, []);
 
-    // Función para verificar cache persistente válido
-    const isPersistentCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
-      const cached = cacheMap.get(cacheKey);
-      if (!cached) return false;
-      
-      const now = Date.now();
-      return (now - cached.timestamp) < PERSISTENT_CACHE_DURATION;
-    }, []);
-
-    // Setup de tasks archivadas con cache optimizado
-    useEffect(() => {
-      if (!user?.id) return;
-
-      const cacheKey = `archived_tasks_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = archiveTableCache.listeners.get(cacheKey);
-      
-      if (existingListener?.tasks) {
-        console.log('[ArchiveTable] Reusing existing tasks listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (archiveTableCache.tasks.has(cacheKey)) {
-          const cachedData = archiveTableCache.tasks.get(cacheKey)!.data;
-          tasksRef.current = cachedData;
-          setTasks([...cachedData]);
-          setIsLoadingTasks(false);
-          console.log('[ArchiveTable] Using cached tasks data, loading set to false');
-        } else {
-          console.log('[ArchiveTable] No cached tasks data, but listener exists, setting loading to false');
-          setIsLoadingTasks(false);
-        }
-        return;
-      }
-      
-      // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, archiveTableCache.persistentCache.tasks)) {
-        const cachedData = archiveTableCache.persistentCache.tasks.get(cacheKey)!.data;
-        tasksRef.current = cachedData;
-        setTasks(cachedData);
-        setIsLoadingTasks(false);
-        console.log('[ArchiveTable] Using persistent cached tasks:', cachedData.length);
-        
-        // Restaurar en cache principal
-        archiveTableCache.tasks.set(cacheKey, {
-          data: cachedData,
-          timestamp: Date.now(),
-        });
-      }
-      
-      // Verificar cache principal
-      if (isCacheValid(cacheKey, archiveTableCache.tasks)) {
-        const cachedData = archiveTableCache.tasks.get(cacheKey)!.data;
-        tasksRef.current = cachedData;
-        setTasks(cachedData);
-        setIsLoadingTasks(false);
-        console.log('[ArchiveTable] Using cached tasks on remount:', cachedData.length);
-        return;
-      }
-
-      console.log('[ArchiveTable] Setting up new tasks listener');
-      setIsLoadingTasks(true);
-
-      // Usar el mismo método que TasksTable
-      const tasksQuery = query(collection(db, 'tasks'));
-      const unsubscribeTasks = onSnapshot(
-        tasksQuery,
-        (snapshot) => {
-          const tasksData: Task[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            clientId: doc.data().clientId || '',
-            project: doc.data().project || '',
-            name: doc.data().name || '',
-            description: doc.data().description || '',
-            status: doc.data().status || '',
-            priority: doc.data().priority || '',
-            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
-            LeadedBy: doc.data().LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
-            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-            CreatedBy: doc.data().CreatedBy || '',
-            lastActivity: doc.data().lastActivity?.toDate().toISOString() || doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-            hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
-            lastViewedBy: doc.data().lastViewedBy || {},
-            archived: doc.data().archived || false,
-            archivedAt: doc.data().archivedAt?.toDate().toISOString(),
-            archivedBy: doc.data().archivedBy || '',
-          }));
-
-          // Filtrar solo tareas archivadas
-          const archivedTasks = tasksData.filter(task => task.archived);
-
-          console.log('[ArchiveTable] Tasks onSnapshot update:', archivedTasks.length);
-          
-          tasksRef.current = archivedTasks;
-          setTasks(archivedTasks);
-          
-          // Actualizar cache
-          archiveTableCache.tasks.set(cacheKey, {
-            data: archivedTasks,
-            timestamp: Date.now(),
-          });
-          
-          // Actualizar cache persistente
-          archiveTableCache.persistentCache.tasks.set(cacheKey, {
-            data: archivedTasks,
-            timestamp: Date.now(),
-          });
-          
-          setIsLoadingTasks(false);
-        },
-        (error) => {
-          console.error('[ArchiveTable] Error in tasks onSnapshot:', error);
-          setTasks([]);
-          setIsLoadingTasks(false);
-        }
-      );
-
-      // Guardar el listener en el cache global
-      archiveTableCache.listeners.set(cacheKey, {
-        tasks: unsubscribeTasks,
-        clients: existingListener?.clients || null,
-        users: existingListener?.users || null,
-      });
-
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-      };
-    }, [user?.id, isCacheValid, isPersistentCacheValid]);
-
-    // Setup de clients con cache optimizado
-    useEffect(() => {
-      if (!user?.id) return;
-
-      const cacheKey = `clients_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = archiveTableCache.listeners.get(cacheKey);
-      
-      if (existingListener?.clients) {
-        console.log('[ArchiveTable] Reusing existing clients listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (archiveTableCache.clients.has(cacheKey)) {
-          const cachedData = archiveTableCache.clients.get(cacheKey)!.data;
-          clientsRef.current = cachedData;
-          setClients(cachedData);
-          setIsLoadingClients(false);
-          console.log('[ArchiveTable] Using cached clients data, loading set to false');
-        } else {
-          console.log('[ArchiveTable] No cached clients data, but listener exists, setting loading to false');
-          setIsLoadingClients(false);
-        }
-        return;
-      }
-      
-      // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, archiveTableCache.persistentCache.clients)) {
-        const cachedData = archiveTableCache.persistentCache.clients.get(cacheKey)!.data;
-        clientsRef.current = cachedData;
-        setClients(cachedData);
-        setIsLoadingClients(false);
-        console.log('[ArchiveTable] Using persistent cached clients:', cachedData.length);
-        
-        // Restaurar en cache principal
-        archiveTableCache.clients.set(cacheKey, {
-          data: cachedData,
-          timestamp: Date.now(),
-        });
-      }
-      
-      // Verificar cache principal
-      if (isCacheValid(cacheKey, archiveTableCache.clients)) {
-        const cachedData = archiveTableCache.clients.get(cacheKey)!.data;
-        clientsRef.current = cachedData;
-        setClients(cachedData);
-        setIsLoadingClients(false);
-        console.log('[ArchiveTable] Using cached clients on remount:', cachedData.length);
-        return;
-      }
-
-      console.log('[ArchiveTable] Setting up new clients listener');
-      setIsLoadingClients(true);
-
-      // Usar el mismo método que TasksTable
-      const clientsQuery = query(collection(db, 'clients'));
-      const unsubscribeClients = onSnapshot(
-        clientsQuery,
-        (snapshot) => {
-          const clientsData: Client[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            name: doc.data().name || '',
-            imageUrl: doc.data().imageUrl || '/empty-image.png',
-          }));
-
-          console.log('[ArchiveTable] Clients onSnapshot update:', clientsData.length);
-          
-          clientsRef.current = clientsData;
-          setClients(clientsData);
-          
-          // Actualizar cache
-          archiveTableCache.clients.set(cacheKey, {
-            data: clientsData,
-            timestamp: Date.now(),
-          });
-          
-          // Actualizar cache persistente
-          archiveTableCache.persistentCache.clients.set(cacheKey, {
-            data: clientsData,
-            timestamp: Date.now(),
-          });
-          
-          setIsLoadingClients(false);
-        },
-        (error) => {
-          console.error('[ArchiveTable] Error in clients onSnapshot:', error);
-          setClients([]);
-          setIsLoadingClients(false);
-        }
-      );
-
-      // Guardar el listener en el cache global
-      archiveTableCache.listeners.set(cacheKey, {
-        tasks: existingListener?.tasks || null,
-        clients: unsubscribeClients,
-        users: existingListener?.users || null,
-      });
-
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-      };
-    }, [user?.id, isCacheValid, isPersistentCacheValid]);
-
-    // Setup de users con cache optimizado
-    useEffect(() => {
-      if (!user?.id) return;
-
-      const cacheKey = `users_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = archiveTableCache.listeners.get(cacheKey);
-      
-      if (existingListener?.users) {
-        console.log('[ArchiveTable] Reusing existing users listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (archiveTableCache.users.has(cacheKey)) {
-          const cachedData = archiveTableCache.users.get(cacheKey)!.data;
-          usersRef.current = cachedData;
-          setUsers(cachedData);
-          setIsLoadingUsers(false);
-          console.log('[ArchiveTable] Using cached users data, loading set to false');
-        } else {
-          console.log('[ArchiveTable] No cached users data, but listener exists, setting loading to false');
-          setIsLoadingUsers(false);
-        }
-        return;
-      }
-      
-      // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, archiveTableCache.persistentCache.users)) {
-        const cachedData = archiveTableCache.persistentCache.users.get(cacheKey)!.data;
-        usersRef.current = cachedData;
-        setUsers(cachedData);
-        setIsLoadingUsers(false);
-        console.log('[ArchiveTable] Using persistent cached users:', cachedData.length);
-        
-        // Restaurar en cache principal
-        archiveTableCache.users.set(cacheKey, {
-          data: cachedData,
-          timestamp: Date.now(),
-        });
-      }
-      
-      // Verificar cache principal
-      if (isCacheValid(cacheKey, archiveTableCache.users)) {
-        const cachedData = archiveTableCache.users.get(cacheKey)!.data;
-        usersRef.current = cachedData;
-        setUsers(cachedData);
-        setIsLoadingUsers(false);
-        console.log('[ArchiveTable] Using cached users on remount:', cachedData.length);
-        return;
-      }
-
-      console.log('[ArchiveTable] Setting up new users fetch');
-      setIsLoadingUsers(true);
-
-      // Usar la misma lógica de fetch que TasksTable
-      const fetchUsers = async () => {
-        try {
-          const response = await fetch('/api/users');
-          if (!response.ok) {
-            throw new Error(`Failed to fetch users: ${response.status}`);
-          }
-          
-          const clerkUsers: {
-            id: string;
-            imageUrl?: string;
-            firstName?: string;
-            lastName?: string;
-            publicMetadata: { role?: string; description?: string };
-          }[] = await response.json();
-
-          const usersData: User[] = await Promise.all(
-            clerkUsers.map(async (clerkUser) => {
-              try {
-                const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-                return {
-                  id: clerkUser.id,
-                  imageUrl: clerkUser.imageUrl || '',
-                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                  role: userDoc.exists() && userDoc.data().role
-                    ? userDoc.data().role
-                    : (clerkUser.publicMetadata.role || 'Sin rol'),
-                };
-              } catch {
-                return {
-                  id: clerkUser.id,
-                  imageUrl: clerkUser.imageUrl || '',
-                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                  role: clerkUser.publicMetadata.role || 'Sin rol',
-                };
-              }
-            }),
-          );
-          
-          usersRef.current = usersData;
-          setUsers(usersData);
-          
-          // Actualizar cache
-          archiveTableCache.users.set(cacheKey, {
-            data: usersData,
-            timestamp: Date.now(),
-          });
-          
-          // Actualizar cache persistente
-          archiveTableCache.persistentCache.users.set(cacheKey, {
-            data: usersData,
-            timestamp: Date.now(),
-          });
-          
-        } catch (error) {
-          console.error('[ArchiveTable] Error fetching users:', error);
-          setUsers([]);
-        } finally {
-          setIsLoadingUsers(false);
-        }
-      };
-
-      fetchUsers();
-
-      // Guardar el listener en el cache global (para este caso, no hay onSnapshot)
-      archiveTableCache.listeners.set(cacheKey, {
-        tasks: existingListener?.tasks || null,
-        clients: existingListener?.clients || null,
-        users: null, // No hay listener para users, solo fetch
-      });
-
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-      };
-    }, [user?.id, isCacheValid, isPersistentCacheValid]);
-
-    // Filtrar tareas basado en búsqueda y filtros
-    useEffect(() => {
-      let filtered = tasks;
-
-      // Filtro de búsqueda
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        filtered = filtered.filter(
-          (task: Task) =>
-            task.name.toLowerCase().includes(query) ||
-            task.description.toLowerCase().includes(query) ||
-            task.project.toLowerCase().includes(query) ||
-            clients.find((c: Client) => c.id === task.clientId)?.name.toLowerCase().includes(query)
-        );
-      }
-
-      // Filtro de prioridad
-      if (priorityFilter) {
-        filtered = filtered.filter((task) => task.priority === priorityFilter);
-      }
-
-      // Filtro de cliente
-      if (clientFilter) {
-        filtered = filtered.filter((task) => task.clientId === clientFilter);
-      }
-
-      // Filtro de usuario
-      if (userFilter) {
-        const getInvolvedUserIds = (task: Task) => {
-          return [...task.LeadedBy, ...task.AssignedTo];
-        };
-
+    const memoizedFilteredTasks = useMemo(() => {
+      const filtered = archivedTasks.filter((task) => {
+        const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+        const matchesClient = !clientFilter || task.clientId === clientFilter;
+        let matchesUser = true;
         if (userFilter === 'me') {
-          filtered = filtered.filter((task) => getInvolvedUserIds(task).includes(userId));
-        } else {
-          filtered = filtered.filter((task) => getInvolvedUserIds(task).includes(userFilter));
+          matchesUser = getInvolvedUserIds(task).includes(userId);
+        } else if (userFilter && userFilter !== 'me') {
+          matchesUser = getInvolvedUserIds(task).includes(userFilter);
         }
-      }
+        return matchesSearch && matchesPriority && matchesClient && matchesUser;
+      });
+      return filtered;
+    }, [archivedTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
 
-      setFilteredTasks(filtered);
-    }, [tasks, searchQuery, priorityFilter, clientFilter, userFilter, clients, userId]);
+    useEffect(() => {
+      setFilteredTasks(memoizedFilteredTasks);
+      console.log('[ArchiveTable] Updated filteredTasks:', {
+        filteredCount: memoizedFilteredTasks.length,
+        filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
+      });
+    }, [memoizedFilteredTasks]);
 
     const handleUserFilter = (id: string) => {
       setUserFilter(id);
@@ -601,33 +278,80 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     // Función para obtener el nombre del cliente
     const getClientName = useCallback((clientId: string) => {
-      const client = clients.find((c) => c.id === clientId);
+      const client = effectiveClients.find((c) => c.id === clientId);
       return client?.name || 'Cliente no encontrado';
-    }, [clients]);
+    }, [effectiveClients]);
 
-    // Handler reforzado para desarchivar
+    // Handler reforzado para desarchivar - MEJORADO para sincronización inmediata
     const handleUnarchiveTask = useCallback(async (task: Task) => {
       if (!isAdmin) {
         console.warn('[ArchiveTable] Unarchive intentado por usuario no admin');
         return;
       }
       try {
-        await unarchiveTask(task.id, userId, isAdmin, task);
+        // Guardar en undo stack ANTES de desarchivar
+        const undoItem = {
+          task: { ...task },
+          action: 'unarchive' as const,
+          timestamp: Date.now()
+        };
+        setUndoStack(prev => [...prev, undoItem]);
+        setShowUndo(true);
+
+        // Limpiar timeout anterior
+        if (undoTimeoutRef.current) {
+          clearTimeout(undoTimeoutRef.current);
+        }
+
+        // Configurar timeout para limpiar undo
+        undoTimeoutRef.current = setTimeout(() => {
+          setShowUndo(false);
+          setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+        }, 3000);
+        
+        // **CRÍTICO: Usar la función centralizada del padre**
+        if (onTaskArchive) {
+          console.log('[ArchiveTable] Unarchiving task via central handler:', task.id);
+          const success = await onTaskArchive(task, 'unarchive');
+          if (success) {
+            console.log('[ArchiveTable] Task unarchived successfully via central handler:', task.id);
+            // No necesitamos onTaskUpdate ni onDataRefresh aquí
+            // porque la función onTaskArchive del padre ya se encarga
+            // de actualizar el estado global y el onSnapshot lo reflejará.
+          } else {
+            console.error('[ArchiveTable] Failed to unarchive task via central handler');
+            // Revertir el estado optimista local si el padre reporta fallo
+            setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+            setShowUndo(false);
+          }
+        } else {
+          console.error('[ArchiveTable] onTaskArchive prop is not provided to ArchiveTable');
+          // Revertir el estado optimista si no hay manejador
+          setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+          setShowUndo(false);
+        }
       } catch (error) {
         console.error('[ArchiveTable] Error unarchiving task:', error);
-        throw error; // Re-lanzar el error para que onArchive lo maneje
+        
+        // En caso de error, trigger refresh para obtener estado actual
+        if (onDataRefresh) {
+          onDataRefresh();
+        }
+        throw error;
       }
-    }, [userId, isAdmin]);
+    }, [userId, isAdmin, onTaskUpdate, onDataRefresh]);
 
-    // Función para deshacer
+    // Función para deshacer - SIMPLIFICADA para usar función centralizada
     const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
       try {
-        if (undoItem.action === 'unarchive') {
-          // Volver a archivar la tarea (deshacer el desarchivo)
-          await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
-          setTasks((prevTasks) => 
-            [...prevTasks, { ...undoItem.task, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }]
-          );
+        if (undoItem.action === 'unarchive' && onTaskArchive) {
+          console.log('[ArchiveTable] Undoing unarchive action (re-archiving task):', undoItem.task.id);
+          const success = await onTaskArchive(undoItem.task, 'archive'); // Llama al padre para archivar de nuevo
+          if (!success) {
+            console.error('[ArchiveTable] Failed to re-archive task via central handler');
+            return;
+          }
+          console.log('[ArchiveTable] Task re-archived successfully (undo unarchive):', undoItem.task.id);
         }
         
         // Remover del undo stack
@@ -637,10 +361,12 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         if (undoTimeoutRef.current) {
           clearTimeout(undoTimeoutRef.current);
         }
+        
+        console.log('[ArchiveTable] Undo action completed successfully');
       } catch (error) {
         console.error('[ArchiveTable] Error undoing action:', error);
       }
-    }, [userId, isAdmin]);
+    }, [onTaskArchive]); // Dependencia clave: onTaskArchive
 
     // Ordenar tareas
     const sortedTasks = useMemo(() => {
@@ -689,9 +415,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     const handleTaskRowClick = async (task: Task) => {
       // Marcar la tarea como vista
-      if (userId) {
         await markTaskAsViewed(task.id, userId);
-      }
       
       // Abrir el chat de la tarea
       onChatSidebarOpen(task);
@@ -792,7 +516,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            const client = clients.find((c) => c.id === task.clientId);
+            const client = effectiveClients.find((c) => c.id === task.clientId);
             console.log('[ArchiveTable] Rendering client column:', {
               taskId: task.id,
               clientId: task.clientId,
@@ -848,12 +572,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            console.log('[ArchiveTable] Rendering assignedTo column:', {
-              taskId: task.id,
-              assignedUserIds: task.AssignedTo,
-              currentUserId: userId,
-            });
-            return <AvatarGroup assignedUserIds={task.AssignedTo} users={users} currentUserId={userId} />;
+            return <AvatarGroup assignedUserIds={task.AssignedTo} users={effectiveUsers} currentUserId={userId} />;
           },
         };
       }
@@ -861,10 +580,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            console.log('[ArchiveTable] Rendering archivedAt column:', {
-              taskId: task.id,
-              archivedAt: task.archivedAt,
-            });
             return (
               <div className={styles.archivedAtWrapper}>
                 {task.archivedAt ? (
@@ -928,19 +643,12 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                         setShowUndo(false);
                         setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
                       }, 3000);
-
-                      // Actualizar estado local optimísticamente
-                      setTasks((prevTasks) =>
-                        prevTasks.filter((t) => t.id !== task.id)
-                      );
                       
                       // Ejecutar la función de desarchivo
                       await handleUnarchiveTask(task);
                       setActionMenuOpenId(null);
                       console.log('[ArchiveTable] Task unarchived successfully:', task.id);
                     } catch (error) {
-                      // Revertir el cambio si hay error
-                      setTasks((prevTasks) => [...prevTasks, { ...task, archived: true }]);
                       console.error('[ArchiveTable] Error unarchiving task:', error);
                     }
                   }}
@@ -975,10 +683,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       };
     }, []);
 
-    // Loading state
-    console.log('[ArchiveTable] Loading states:', { isLoadingTasks, isLoadingClients, isLoadingUsers });
-    if (isLoadingTasks || isLoadingClients || isLoadingUsers) {
-      console.log('[ArchiveTable] Showing skeleton loader');
+    // Loading state - show table immediately if external data is available
+    if (!externalTasks || !externalClients || !externalUsers) {
+      console.log('[ArchiveTable] Showing skeleton loader - waiting for external data');
       return (
         <div className={styles.container}>
           <SkeletonLoader type="tasks" />
@@ -986,7 +693,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       );
     }
 
-    console.log('[ArchiveTable] Showing table with', sortedTasks.length, 'tasks');
+    console.log('[ArchiveTable] Showing table with', sortedTasks.length, 'archived tasks');
     return (
       <motion.div 
         className={styles.container}
@@ -1007,6 +714,42 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         `}</style>
         <div className={styles.header} style={{margin:'30px 0px'}}>
           <div className={styles.searchWrapper}>
+            <div className={styles.buttonWithTooltip}>
+              <button
+                className={`${styles.viewButton} ${styles.hideOnMobile}`}
+                onClick={(e) => {
+                  animateClick(e.currentTarget);
+                  onViewChange('table');
+                  onClose();
+                  console.log('[ArchiveTable] Returning to Tasks Table');
+                }}
+              >
+                <Image
+                  src="/arrow-left.svg"
+                  draggable="false"
+                  alt="Volver a tareas"
+                  width={20}
+                  height={20}
+                  style={{
+                    marginLeft: '5px',
+                    transition: 'transform 0.3s ease, filter 0.3s ease',
+                    filter:
+                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.filter =
+                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.filter =
+                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                  }}
+                />
+              </button>
+              <span className={styles.tooltip}>Volver a Tareas</span>
+            </div>
             <input
               type="text"
               placeholder="Buscar tareas archivadas..."
@@ -1096,42 +839,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           </div>
           <div className={styles.filtersWrapper}>
             <div className={styles.buttonWithTooltip}>
-              <button
-                className={`${styles.viewButton} ${styles.hideOnMobile}`}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  onViewChange('table');
-                  onClose();
-                  console.log('[ArchiveTable] Returning to Tasks Table');
-                }}
-              >
-                <Image
-                  src="/arrow-left.svg"
-                  draggable="false"
-                  alt="Volver a tareas"
-                  width={20}
-                  height={20}
-                  style={{
-                    marginLeft: '5px',
-                    transition: 'transform 0.3s ease, filter 0.3s ease',
-                    filter:
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                  }}
-                />
-              </button>
-              <span className={styles.tooltip}>Volver a Tareas</span>
-            </div>
-            <div className={styles.buttonWithTooltip}>
               <div className={styles.filter}>
                 <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
                   <div
@@ -1197,7 +904,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
-                    <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
+                    <span>{effectiveClients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
                   </div>
                   {isClientDropdownOpen && (
                     <AnimatePresence>
@@ -1208,7 +915,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                         exit={{ opacity: 0, y: -16 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
                       >
-                        {[{ id: '', name: 'Todos' }, ...clients].map((client, index) => (
+                        {[{ id: '', name: 'Todos' }, ...effectiveClients].map((client, index) => (
                           <motion.div
                           key={client.id || 'all'}
                           className={styles.dropdownItem}
@@ -1252,7 +959,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                           ? 'Todos' 
                           : userFilter === 'me' 
                           ? 'Mis tareas' 
-                          : users.find(u => u.id === userFilter)?.fullName || 'Usuario'}
+                          : effectiveUsers.find(u => u.id === userFilter)?.fullName || 'Usuario'}
                       </span>
                     </div>
                     {isUserDropdownOpen && (
@@ -1284,7 +991,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                         >
                           Mis tareas
                           </motion.div>
-                        {users
+                        {effectiveUsers
                           .filter((u) => u.id !== userId)
                             .map((u, index) => (
                               <motion.div

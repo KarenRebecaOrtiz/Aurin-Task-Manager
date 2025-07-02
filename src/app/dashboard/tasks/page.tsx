@@ -3,21 +3,17 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import {
-  doc,
   collection,
+  doc,
   setDoc,
   deleteDoc,
   getDocs,
-  getDoc,
   onSnapshot,
   query,
-  where,
   updateDoc,
-  orderBy,
-  limit,
   addDoc,
+  Timestamp,
 } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
 import { gsap } from 'gsap';
 import Header from '@/components/ui/Header';
 import Marquee from '@/components/ui/Marquee';
@@ -28,17 +24,18 @@ import MembersTable, { cleanupMembersTableListeners } from '@/components/Members
 import ClientsTable, { cleanupClientsTableListeners } from '@/components/ClientsTable';
 import TasksTable, { cleanupTasksTableListeners } from '@/components/TasksTable';
 import TasksKanban, { cleanupTasksKanbanListeners } from '@/components/TasksKanban';
-import ArchiveTable, { cleanupArchiveTableListeners } from '@/components/ArchiveTable';
+import ArchiveTable from '@/components/ArchiveTable';
 import CreateTask from '@/components/CreateTask';
 import EditTask from '@/components/EditTask';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
-import ClientSidebar from '@/components/ClientSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
 import ProfileCard from '@/components/ProfileCard';
 import ConfigPage from '@/components/ConfigPage';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
 import { db } from '@/lib/firebase';
+import { invalidateClientsCache } from '@/lib/cache-utils';
+import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
 import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,6 +47,7 @@ import ToDoDynamic from '@/components/ToDoDynamic';
 import DeletePopup from '@/components/DeletePopup';
 import FailAlert from '@/components/FailAlert';
 import SuccessAlert from '@/components/SuccessAlert';
+import ClientOverlay from '@/components/ClientOverlay';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -92,6 +90,9 @@ interface Task {
   lastActivity?: string;
   hasUnreadUpdates?: boolean;
   lastViewedBy?: { [userId: string]: string };
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 interface Notification {
@@ -115,10 +116,158 @@ interface Sidebar {
 // Orden de los contenedores (fuera del componente para evitar recreación en cada render)
 const containerOrder: SelectorContainer[] = ['tareas', 'cuentas', 'miembros'];
 
+// Configuración optimizada para manejo centralizado de datos - TEMPORALMENTE RELAJADA
+const DATA_FETCH_LIMITS = {
+  MAX_FETCHES_PER_MINUTE: 1000, // Mucho más permisivo para solucionar problema de mensajes
+  MIN_INTERVAL_BETWEEN_FETCHES: 5, // Reducido a 5ms
+  CACHE_DURATION: 10 * 60 * 1000, // 10 minutos de cache
+  PERSISTENT_CACHE_DURATION: 30 * 60 * 1000, // 30 minutos en localStorage
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 1000,
+};
+
+// Cache global centralizado para toda la aplicación
+const globalAppCache = {
+  tasks: new Map<string, { data: Task[]; timestamp: number; lastModified?: string }>(),
+  clients: new Map<string, { data: Client[]; timestamp: number; lastModified?: string }>(),
+  users: new Map<string, { data: User[]; timestamp: number; lastModified?: string }>(),
+  notifications: new Map<string, { data: Notification[]; timestamp: number; lastModified?: string }>(),
+  listeners: new Map<string, { 
+    tasks: (() => void) | null; 
+    clients: (() => void) | null; 
+    users: (() => void) | null;
+    notifications: (() => void) | null;
+  }>(),
+  // Cache persistente en localStorage
+  persistentCache: {
+    tasks: new Map<string, { data: Task[]; timestamp: number; lastModified?: string }>(),
+    clients: new Map<string, { data: Client[]; timestamp: number; lastModified?: string }>(),
+    users: new Map<string, { data: User[]; timestamp: number; lastModified?: string }>(),
+    notifications: new Map<string, { data: Notification[]; timestamp: number; lastModified?: string }>(),
+  }
+};
+
+
+
+
+
+// Función para cargar cache persistente desde localStorage
+const loadPersistentCache = () => {
+  if (typeof window === 'undefined') return; // Solo en cliente
+  
+  try {
+    const stored = localStorage.getItem('globalAppCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const now = Date.now();
+      
+      Object.keys(parsed).forEach(dataType => {
+        if (parsed[dataType] && typeof parsed[dataType] === 'object') {
+          Object.keys(parsed[dataType]).forEach(cacheKey => {
+            const item = parsed[dataType][cacheKey];
+            if (item && (now - item.timestamp) < DATA_FETCH_LIMITS.PERSISTENT_CACHE_DURATION) {
+              globalAppCache.persistentCache[dataType as keyof typeof globalAppCache.persistentCache].set(cacheKey, item);
+            }
+          });
+        }
+      });
+      console.log('[TasksPage] Persistent cache loaded from localStorage');
+    }
+  } catch (error) {
+    console.warn('[TasksPage] Error loading persistent cache:', error);
+  }
+};
+
+// Función para guardar cache persistente en localStorage
+const savePersistentCache = () => {
+  if (typeof window === 'undefined') return; // Solo en cliente
+  
+  try {
+    const toStore: Record<string, Record<string, { data: (Task | Client | User | Notification)[]; timestamp: number; lastModified?: string }>> = {};
+    Object.keys(globalAppCache.persistentCache).forEach(dataType => {
+      toStore[dataType] = {};
+      globalAppCache.persistentCache[dataType as keyof typeof globalAppCache.persistentCache].forEach((value, cacheKey) => {
+        toStore[dataType][cacheKey] = value;
+      });
+    });
+    localStorage.setItem('globalAppCache', JSON.stringify(toStore));
+  } catch (error) {
+    console.warn('[TasksPage] Error saving persistent cache:', error);
+  }
+};
+
+// Función para limpiar listeners globales
+const cleanupGlobalAppListeners = () => {
+  console.log('[TasksPage] Cleaning up all global listeners');
+  globalAppCache.listeners.forEach((listener) => {
+    if (listener.tasks) listener.tasks();
+    if (listener.clients) listener.clients();
+    if (listener.users) listener.users();
+    if (listener.notifications) listener.notifications();
+  });
+  globalAppCache.listeners.clear();
+  globalAppCache.tasks.clear();
+  globalAppCache.clients.clear();
+  globalAppCache.users.clear();
+  globalAppCache.notifications.clear();
+  
+  // Guardar cache persistente antes de limpiar
+  savePersistentCache();
+};
+
+// Cargar cache persistente al inicializar
+loadPersistentCache();
+
+// Helper function to safely convert Firestore timestamp or string to ISO string
+const safeTimestampToISO = (timestamp: unknown): string => {
+  if (!timestamp) return new Date().toISOString();
+  
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
+    return (timestamp as { toDate(): Date }).toDate().toISOString();
+  }
+  
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  
+  return new Date().toISOString();
+};
+
+// Helper function to safely convert Firestore timestamp or string to ISO string or null
+const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
+  if (!timestamp) return null;
+  
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
+    return (timestamp as { toDate(): Date }).toDate().toISOString();
+  }
+  
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  
+  return null;
+};
+
+// Cache key function
+function getCacheKey(type: 'tasks' | 'clients' | 'users', userId: string) {
+  return `tasksPageCache_${type}_${userId}`;
+}
+
 // Separate component to handle auth context
 function TasksPageContent() {
   const { user } = useUser();
-  const { isAdmin, isLoading, error } = useAuth(); // Use AuthContext
+  const { isAdmin, isLoading, error } = useAuth();
+  
+  // **NUEVO: Timestamp para rastrear la última actualización local**
+  const localTaskUpdateTimestamp = useRef<number>(0); // Use AuthContext
   const [selectedContainer, setSelectedContainer] = useState<Container>('tareas');
   const [taskView, setTaskView] = useState<TaskView>('table');
   const [isArchiveTableOpen, setIsArchiveTableOpen] = useState<boolean>(false);
@@ -142,6 +291,9 @@ function TasksPageContent() {
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState<boolean>(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'task' | 'client'; id: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  // Add ClientSidebar states
+  const [isClientSidebarOpen, setIsClientSidebarOpen] = useState<boolean>(false);
+  const [clientSidebarData, setClientSidebarData] = useState<{ isEdit: boolean; client?: Client } | null>(null);
   // Add alert states
   const [showSuccessAlert, setShowSuccessAlert] = useState<boolean>(false);
   const [showFailAlert, setShowFailAlert] = useState<boolean>(false);
@@ -153,6 +305,11 @@ function TasksPageContent() {
   const selectorRef = useRef<HTMLDivElement>(null);
   const deletePopupRef = useRef<HTMLDivElement>(null);
   const confirmExitPopupRef = useRef<HTMLDivElement>(null);
+
+  // Refs for data tracking
+  const tasksRef = useRef<Task[]>([]);
+  const clientsRef = useRef<Client[]>([]);
+  const usersRef = useRef<User[]>([]);
 
   const memoizedUsers = useMemo(() => users, [users]);
   const memoizedOpenSidebars = useMemo(() => openSidebars, [openSidebars]);
@@ -174,7 +331,6 @@ function TasksPageContent() {
       cleanupClientsTableListeners();
       cleanupTasksTableListeners();
       cleanupTasksKanbanListeners();
-      cleanupArchiveTableListeners();
     };
   }, []);
 
@@ -203,249 +359,209 @@ function TasksPageContent() {
     window.history.pushState(currentState, '', window.location.pathname);
   }, [selectedContainer]);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      console.log('[TasksPage] Fetching users...');
-      const response = await fetch('/api/users');
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('[TasksPage] API error fetching users:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData.error,
-        });
-        
-        if (response.status === 401) {
-          console.warn('[TasksPage] Unauthorized access to users API');
-          // Handle unauthorized access - user might need to re-authenticate
-          setUsers([]);
-          return;
+
+
+  // Setup principal con priorización de carga - SIMPLIFICADO
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const cacheKey = getCacheKey('tasks', user.id);
+    console.log('[TasksPage] Setting up data for user:', { userId: user.id, isAdmin });
+
+    // INMEDIATO: Cargar desde cache persistente si existe
+    if (globalAppCache.persistentCache.tasks.has(cacheKey)) {
+      const cachedTasks = globalAppCache.persistentCache.tasks.get(cacheKey)!.data;
+      setTasks(cachedTasks);
+      setShowLoader(false); // Mostrar UI inmediatamente
+      console.log('[TasksPage] IMMEDIATE: Loaded tasks from persistent cache:', cachedTasks.length);
+    }
+    
+    if (globalAppCache.persistentCache.clients.has(cacheKey)) {
+      const cachedClients = globalAppCache.persistentCache.clients.get(cacheKey)!.data;
+      setClients(cachedClients);
+      console.log('[TasksPage] IMMEDIATE: Loaded clients from persistent cache:', cachedClients.length);
+    }
+    
+    if (globalAppCache.persistentCache.users.has(cacheKey)) {
+      const cachedUsers = globalAppCache.persistentCache.users.get(cacheKey)!.data;
+      setUsers(cachedUsers);
+      console.log('[TasksPage] IMMEDIATE: Loaded users from persistent cache:', cachedUsers.length);
         }
-        
-        throw new Error(`Failed to fetch users: ${errorData.error || response.statusText}`);
-      }
-      
-      const clerkUsers: {
-        id: string;
-        imageUrl?: string;
-        firstName?: string;
-        lastName?: string;
-        publicMetadata: { role?: string; description?: string };
-      }[] = await response.json();
 
-      console.log('[TasksPage] Successfully fetched Clerk users:', {
-        count: clerkUsers.length,
-        userIds: clerkUsers.map(u => u.id),
+    // Configurar listeners para actualizaciones en tiempo real
+        const tasksQuery = query(collection(db, 'tasks'));
+    const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+            // **ELIMINADA LA LÓGICA DE SALTO TEMPORAL**
+            // El onSnapshot SIEMPRE es la fuente de verdad
+            console.log('[TasksPage:onSnapshot] Processing snapshot update - ALWAYS applying as source of truth');
+            
+            // Crear mapa de tareas actuales para comparación inteligente
+            const currentTasksMap = new Map(tasksRef.current.map(task => [task.id, task]));
+            let shouldUpdateState = false;
+
+            let tasksData: Task[] = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              clientId: doc.data().clientId || '',
+              project: doc.data().project || '',
+              name: doc.data().name || '',
+              description: doc.data().description || '',
+              status: doc.data().status || '',
+              priority: doc.data().priority || '',
+        startDate: safeTimestampToISOOrNull(doc.data().startDate),
+        endDate: safeTimestampToISOOrNull(doc.data().endDate),
+              LeadedBy: doc.data().LeadedBy || [],
+              AssignedTo: doc.data().AssignedTo || [],
+        createdAt: safeTimestampToISO(doc.data().createdAt),
+              CreatedBy: doc.data().CreatedBy || '',
+        lastActivity: safeTimestampToISO(doc.data().lastActivity) || new Date().toISOString(),
+              hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
+              lastViewedBy: doc.data().lastViewedBy || {},
+        archived: doc.data().archived || false,
+        archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
+        archivedBy: doc.data().archivedBy || '',
+            }));
+
+            // Verificar cambios significativos, especialmente en 'archived'
+            for (const snapshotTask of tasksData) {
+              const currentTask = currentTasksMap.get(snapshotTask.id);
+              const isArchivedChanged = currentTask ? currentTask.archived !== snapshotTask.archived : false;
+              
+              if (isArchivedChanged || !currentTask) {
+                shouldUpdateState = true;
+                console.log('[TasksPage:onSnapshot] Significant change detected:', {
+                  taskId: snapshotTask.id,
+                  taskName: snapshotTask.name,
+                  currentArchived: currentTask?.archived,
+                  snapshotArchived: snapshotTask.archived,
+                  isNew: !currentTask
+                });
+              }
+            }
+            
+            // Optimización: solo actualizar si hay cambios significativos
+            if (!shouldUpdateState && tasksData.length === tasksRef.current.length) {
+              console.log('[TasksPage:onSnapshot] No significant changes detected, skipping state update');
+              return;
+            }
+
+            console.log('[TasksPage:onSnapshot] Received snapshot update. Total tasks:', tasksData.length);
+            console.log('[TasksPage:onSnapshot] Archived tasks in snapshot:', tasksData.filter(t => Boolean(t.archived)).map(t => ({id: t.id, name: t.name})));
+            console.log('[TasksPage:onSnapshot] Non-archived tasks in snapshot:', tasksData.filter(t => !Boolean(t.archived)).map(t => ({id: t.id, name: t.name})));
+
+            if (!isAdmin) {
+              tasksData = tasksData.filter(
+                (task) =>
+                  task.AssignedTo.includes(user.id) ||
+                  task.LeadedBy.includes(user.id) ||
+                  task.CreatedBy === user.id,
+              );
+            }
+
+      // CRÍTICO: Actualizar estado global inmediatamente para reflejar cambios de archivo
+      setTasks(tasksData);
+      tasksRef.current = tasksData;
+      setShowLoader(false);
+
+      console.log('[TasksPage:onSnapshot] Tasks state updated from snapshot. Current state:', tasksData.map(t => ({ id: t.id, archived: t.archived, name: t.name })));
+      
+      // Actualizar cache global
+      globalAppCache.tasks.set(cacheKey, { data: tasksData, timestamp: Date.now() });
+      globalAppCache.persistentCache.tasks.set(cacheKey, { data: tasksData, timestamp: Date.now() });
+      
+      // Log detallado para debugging de archivo
+      const archivedCount = tasksData.filter(t => Boolean(t.archived)).length;
+      const nonArchivedCount = tasksData.filter(t => !Boolean(t.archived)).length;
+      
+      console.log('[TasksPage] Tasks updated via onSnapshot:', {
+              totalTasks: tasksData.length,
+        archivedTasks: archivedCount,
+        nonArchivedTasks: nonArchivedCount,
+        archivedTaskIds: tasksData.filter(t => Boolean(t.archived)).map(t => t.id),
+        nonArchivedTaskIds: tasksData.filter(t => !Boolean(t.archived)).map(t => t.id)
       });
-
-      const usersData: User[] = await Promise.all(
-        clerkUsers.map(async (clerkUser) => {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-            const status = userDoc.exists() ? userDoc.data().status || 'Disponible' : 'Disponible';
-            return {
-              id: clerkUser.id,
-              imageUrl: clerkUser.imageUrl,
-              fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-              role: userDoc.exists() && userDoc.data().role
-                ? userDoc.data().role
-                : (clerkUser.publicMetadata.role || 'Sin rol'),
-              description: clerkUser.publicMetadata.description || 'Sin descripción',
-              status,
-            };
-          } catch (docError) {
-            console.warn('[TasksPage] Error fetching user document:', {
-              userId: clerkUser.id,
-              error: docError instanceof Error ? docError.message : 'Unknown error',
-            });
-            // Return user data without Firestore status if document fetch fails
-            return {
-              id: clerkUser.id,
-              imageUrl: clerkUser.imageUrl,
-              fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-              role: clerkUser.publicMetadata.role || 'Sin rol',
-              description: clerkUser.publicMetadata.description || 'Sin descripción',
-              status: 'Disponible',
-            };
-          }
-        }),
-      );
       
-      console.log('[TasksPage] Successfully processed users data:', {
-        count: usersData.length,
-        processedUserIds: usersData.map(u => u.id),
-      });
-      
-      setUsers(usersData);
-    } catch (error) {
-      console.error('[TasksPage] Error in fetchUsers:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      setUsers([]);
-      
-      // Don't show alert for authentication errors, just log them
-      if (error instanceof Error && !error.message.includes('Unauthorized')) {
-        console.warn('[TasksPage] Non-auth error fetching users, users list will be empty');
-      }
-    }
-  }, []);
+      // Guardar cache persistente inmediatamente
+      savePersistentCache();
+    });
 
-  const fetchClients = useCallback(async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'clients'));
-      const clientsData: Client[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name || '',
-        imageUrl: doc.data().imageUrl || '',
-        projectCount: doc.data().projectCount || 0,
-        projects: doc.data().projects || [],
-        createdBy: doc.data().createdBy || '',
-        createdAt: doc.data().createdAt || new Date().toISOString(),
-      }));
-      setClients(clientsData);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-      setClients([]);
-    }
-  }, []);
-
-  const fetchTasks = useCallback(() => {
-    if (!user?.id) {
-      console.warn('[TasksPage] No user ID, skipping tasks fetch');
-      return () => {};
-    }
-
-    console.log('[TasksPage] Setting up tasks listener for user:', { userId: user.id, isAdmin });
-    const tasksQuery = query(collection(db, 'tasks'));
-    const unsubscribe = onSnapshot(
-      tasksQuery,
-      (snapshot) => {
-        let tasksData: Task[] = snapshot.docs.map((doc) => ({
+    // Fetch clients y users en background
+    const fetchClientsAndUsers = async () => {
+      try {
+        // Fetch clients
+        const clientsSnapshot = await getDocs(collection(db, 'clients'));
+        const clientsData: Client[] = clientsSnapshot.docs.map((doc) => ({
           id: doc.id,
-          clientId: doc.data().clientId || '',
-          project: doc.data().project || '',
           name: doc.data().name || '',
-          description: doc.data().description || '',
-          status: doc.data().status || '',
-          priority: doc.data().priority || '',
-          startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-          endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
-          LeadedBy: doc.data().LeadedBy || [],
-          AssignedTo: doc.data().AssignedTo || [],
-          createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-          CreatedBy: doc.data().CreatedBy || '',
-          lastActivity: doc.data().lastActivity?.toDate?.()?.toISOString() || doc.data().lastActivity || null,
-          hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
-          lastViewedBy: doc.data().lastViewedBy || {},
+          imageUrl: doc.data().imageUrl || '',
+          projectCount: doc.data().projectCount || 0,
+          projects: doc.data().projects || [],
+          createdBy: doc.data().createdBy || '',
+          createdAt: doc.data().createdAt || new Date().toISOString(),
         }));
+        
+        setClients(clientsData);
+        globalAppCache.clients.set(cacheKey, { data: clientsData, timestamp: Date.now() });
+        globalAppCache.persistentCache.clients.set(cacheKey, { data: clientsData, timestamp: Date.now() });
 
-        if (!isAdmin) {
-          tasksData = tasksData.filter(
-            (task) =>
-              task.AssignedTo.includes(user.id) ||
-              task.LeadedBy.includes(user.id) ||
-              task.CreatedBy === user.id,
-          );
+        // Fetch users
+        const response = await fetch('/api/users');
+        if (response.ok) {
+          const clerkUsers = await response.json();
+          const clerkImageMap = new Map();
+                     clerkUsers.forEach((clerkUser: { id: string; imageUrl?: string }) => {
+            if (clerkUser.imageUrl) {
+              clerkImageMap.set(clerkUser.id, clerkUser.imageUrl);
+            }
+          });
+
+          const usersSnapshot = await getDocs(collection(db, 'users'));
+          const usersData: User[] = usersSnapshot.docs.map((doc) => {
+            const userData = doc.data();
+            return {
+              id: doc.id,
+              imageUrl: userData.imageUrl || clerkImageMap.get(doc.id) || '', // Firestore first, then Clerk
+              fullName: userData.fullName || userData.name || 'Sin nombre',
+              role: userData.role || 'Sin rol',
+              description: userData.description || '',
+              status: userData.status || 'active',
+            };
+          });
+
+          setUsers(usersData);
+          globalAppCache.users.set(cacheKey, { data: usersData, timestamp: Date.now() });
+          globalAppCache.persistentCache.users.set(cacheKey, { data: usersData, timestamp: Date.now() });
         }
+      } catch (error) {
+        console.warn('[TasksPage] Background fetch error:', error);
+      }
+    };
 
-        console.log('[TasksPage] Tasks updated:', {
-          totalTasks: tasksData.length,
-          taskIds: tasksData.map((t) => t.id),
-          userId: user.id,
-          isAdmin,
-        });
-        setTasks(tasksData);
-      },
-      (error) => {
-        console.error('[TasksPage] Error listening to tasks:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          userId: user?.id,
-        });
-        setTasks([]);
-      },
-    );
+    // Ejecutar fetch en background
+    fetchClientsAndUsers();
 
-    return unsubscribe;
+    return () => {
+      unsubscribeTasks();
+      };
   }, [user?.id, isAdmin]);
 
-  const fetchNotifications = useCallback(() => {
-    if (!user?.id) {
-      console.warn('No user ID, skipping notifications fetch');
-      return () => {};
-    }
-
-    console.log('Setting up notifications listener for user:', user.id);
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      where('recipientId', '==', user.id),
-      orderBy('timestamp', 'desc'),
-      limit(20),
-    );
-    const unsubscribe = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const notificationsData: Notification[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          userId: doc.data().userId || '',
-          message: doc.data().message || null,
-          timestamp: doc.data().timestamp || null,
-          read: doc.data().read || false,
-          recipientId: doc.data().recipientId || '',
-          conversationId: doc.data().conversationId,
-          taskId: doc.data().taskId,
-          type: doc.data().type,
-        }));
-        console.log('Notifications fetched:', notificationsData.length);
-        setNotifications(notificationsData);
-      },
-      (err) => {
-        console.error('Error fetching notifications:', err);
-      },
-    );
-
-    return unsubscribe;
-  }, [user?.id]);
-
-  const handleLimitNotifications = useCallback(async (currentNotifications: Notification[]) => {
-    if (!user?.id || currentNotifications.length <= 20) return;
-
-    try {
-      const sortedNotifications = [...currentNotifications].sort(
-        (a, b) => a.timestamp!.toMillis() - b.timestamp!.toMillis(),
-      );
-      const notificationsToDelete = sortedNotifications.slice(0, currentNotifications.length - 20);
-
-      const deletePromises = notificationsToDelete.map((notification) =>
-        deleteDoc(doc(db, 'notifications', notification.id)),
-      );
-      await Promise.all(deletePromises);
-
-      const updatedNotifications = sortedNotifications.slice(-20);
-      setNotifications(updatedNotifications);
-      console.log('Notifications limited:', updatedNotifications.length);
-    } catch (error) {
-      console.error('Error limiting notifications:', {
-        error: error instanceof Error ? error.message : JSON.stringify(error),
-        userId: user.id,
-      });
-    }
-  }, [user?.id]);
-
+  // Guardar cache persistente cada 30 segundos si hay datos
   useEffect(() => {
-    if (user?.id) {
-      fetchUsers();
-      fetchClients();
-      const unsubscribeTasks = fetchTasks();
-      const unsubscribeNotifications = fetchNotifications();
-      return () => {
-        if (unsubscribeTasks) unsubscribeTasks();
-        if (unsubscribeNotifications) unsubscribeNotifications();
-        console.log('[TasksPage] Cleanup: Unsubscribed from tasks and notifications listeners');
-      };
+    if (tasks.length > 0 || clients.length > 0 || users.length > 0 || notifications.length > 0) {
+      const saveInterval = setInterval(() => {
+        savePersistentCache();
+      }, 30000);
+
+      return () => clearInterval(saveInterval);
     }
-  }, [fetchUsers, fetchClients, fetchTasks, fetchNotifications, user?.id]);
+  }, [tasks.length, clients.length, users.length, notifications.length]);
+
+  // Cleanup all global listeners when component unmounts
+  useEffect(() => {
+      return () => {
+      console.log('[TasksPage] Cleaning up global listeners on unmount');
+      cleanupGlobalAppListeners();
+      };
+  }, []);
 
   useEffect(() => {
     const currentHeaderRef = headerRef.current;
@@ -525,7 +641,11 @@ function TasksPageContent() {
             ? prev.map((c) => (c.id === form.id ? clientData : c))
             : [...prev, clientData],
         );
-        setOpenSidebars((prev) => prev.filter((sidebar) => sidebar.type !== 'client-sidebar'));
+        setIsClientSidebarOpen(false);
+        setClientSidebarData(null);
+
+        // Invalidar cache después de cualquier operación de cliente
+        invalidateClientsCache();
       } catch (error) {
         console.error('Error saving client:', error);
         alert('Error al guardar la cuenta.');
@@ -537,17 +657,18 @@ function TasksPageContent() {
   );
 
   const handleCreateClientOpen = useCallback(() => {
-    setOpenSidebars((prev) => [
-      ...prev,
-      { id: uuidv4(), type: 'client-sidebar', data: {} },
-    ]);
+    setClientSidebarData({ isEdit: false });
+    setIsClientSidebarOpen(true);
   }, []);
 
   const handleEditClientOpen = useCallback((client: Client) => {
-    setOpenSidebars((prev) => [
-      ...prev,
-      { id: uuidv4(), type: 'client-sidebar', data: { client } },
-    ]);
+    setClientSidebarData({ isEdit: true, client });
+    setIsClientSidebarOpen(true);
+  }, []);
+
+  const handleClientSidebarClose = useCallback(() => {
+    setIsClientSidebarOpen(false);
+    setClientSidebarData(null);
   }, []);
 
   const handleDeleteClientOpen = useCallback((clientId: string) => {
@@ -913,6 +1034,275 @@ function TasksPageContent() {
     setTaskView(view);
   }, []);
 
+  const handleArchiveTableTaskUpdate = useCallback((task: Task) => {
+    console.log('[TasksPage] Received task update from ArchiveTable:', {
+      taskId: task.id,
+      taskName: task.name,
+      archived: task.archived,
+      archivedAt: task.archivedAt,
+      archivedBy: task.archivedBy
+    });
+    
+    // CRÍTICO: Actualizar estado global inmediatamente
+    setTasks(prevTasks => {
+      const updatedTasks = prevTasks.map(t => t.id === task.id ? task : t);
+      
+      // Log para debugging
+      const archivedCount = updatedTasks.filter(t => Boolean(t.archived)).length;
+      const nonArchivedCount = updatedTasks.filter(t => !Boolean(t.archived)).length;
+      
+      console.log('[TasksPage] Tasks state updated after ArchiveTable change:', {
+        totalTasks: updatedTasks.length,
+        archivedTasks: archivedCount,
+        nonArchivedTasks: nonArchivedCount,
+        updatedTask: {
+          id: task.id,
+          archived: task.archived
+        }
+      });
+      
+      return updatedTasks;
+    });
+    
+    // Update refs inmediatamente
+    tasksRef.current = tasksRef.current.map(t => t.id === task.id ? task : t);
+    
+    // Update global cache inmediatamente
+    globalAppCache.tasks.set(getCacheKey('tasks', user?.id || ''), {
+      data: tasksRef.current,
+      timestamp: Date.now(),
+    });
+    
+    globalAppCache.persistentCache.tasks.set(getCacheKey('tasks', user?.id || ''), {
+      data: tasksRef.current,
+      timestamp: Date.now(),
+    });
+    
+    // Save to persistent cache inmediatamente
+    savePersistentCache();
+  }, [user?.id]);
+
+  const handleDataRefresh = useCallback(async () => {
+    console.log('[TasksPage] Data refresh requested from ArchiveTable');
+    
+    if (!user?.id) return;
+    
+    try {
+      // Force re-fetch from Firestore to get latest data
+      const tasksQuery = query(collection(db, 'tasks'));
+      const tasksSnapshot = await getDocs(tasksQuery);
+      
+      const freshTasks: Task[] = tasksSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        clientId: doc.data().clientId || '',
+        project: doc.data().project || '',
+        name: doc.data().name || '',
+        description: doc.data().description || '',
+        status: doc.data().status || '',
+        priority: doc.data().priority || '',
+        startDate: safeTimestampToISOOrNull(doc.data().startDate),
+        endDate: safeTimestampToISOOrNull(doc.data().endDate),
+        LeadedBy: doc.data().LeadedBy || [],
+        AssignedTo: doc.data().AssignedTo || [],
+        createdAt: safeTimestampToISO(doc.data().createdAt),
+        CreatedBy: doc.data().CreatedBy || '',
+        lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt) || new Date().toISOString(),
+        hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
+        lastViewedBy: doc.data().lastViewedBy || {},
+        archived: doc.data().archived || false,
+        archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
+        archivedBy: doc.data().archivedBy || '',
+      }));
+      
+      console.log('[TasksPage] Fresh data fetched:', {
+        totalTasks: freshTasks.length,
+        archivedTasks: freshTasks.filter(t => t.archived).length,
+        nonArchivedTasks: freshTasks.filter(t => !t.archived).length
+      });
+      
+      // Update all state and refs
+      setTasks(freshTasks);
+      tasksRef.current = freshTasks;
+      
+      // Update global cache
+      globalAppCache.tasks.set(getCacheKey('tasks', user.id), {
+        data: freshTasks,
+        timestamp: Date.now(),
+      });
+      
+      // Save to persistent cache
+      savePersistentCache();
+      
+    } catch (error) {
+      console.error('[TasksPage] Error refreshing data:', error);
+      // Fallback to current data
+      setTasks([...tasksRef.current]);
+      setClients([...clientsRef.current]);
+      setUsers([...usersRef.current]);
+    }
+  }, [user?.id]);
+
+  // Cache update handlers from child components
+  const handleMembersTableCacheUpdate = useCallback((users: User[], tasks: Task[]) => {
+    console.log('[TasksPage] Received cache update from MembersTable:', { 
+      usersCount: users.length, 
+      tasksCount: tasks.length 
+    });
+    
+    // Update global cache with data from MembersTable
+    if (users.length > 0) {
+      setUsers(users);
+      usersRef.current = users;
+      
+      // Update global app cache
+      globalAppCache.users.set(getCacheKey('users', user?.id || ''), {
+        data: users,
+        timestamp: Date.now(),
+      });
+    }
+    
+    if (tasks.length > 0) {
+      setTasks(tasks);
+      tasksRef.current = tasks;
+      
+      // Update global app cache
+      globalAppCache.tasks.set(getCacheKey('tasks', user?.id || ''), {
+        data: tasks,
+        timestamp: Date.now(),
+      });
+    }
+  }, [user?.id]);
+
+  const handleClientsTableCacheUpdate = useCallback((clients: Client[]) => {
+    console.log('[TasksPage] Received cache update from ClientsTable:', { 
+      clientsCount: clients.length 
+    });
+    
+    // Update global cache with data from ClientsTable
+    if (clients.length > 0) {
+      setClients(clients);
+      clientsRef.current = clients;
+      
+      // Update global app cache
+      globalAppCache.clients.set(getCacheKey('clients', user?.id || ''), {
+        data: clients,
+        timestamp: Date.now(),
+      });
+    }
+  }, [user?.id]);
+
+  // FUNCIÓN PARA INVALIDAR CACHE DE TAREAS
+
+
+  // NUEVA FUNCIÓN CENTRALIZADA PARA ARCHIVADO - MEJORADA
+  const handleTaskArchive = useCallback(async (task: Task, action: 'archive' | 'unarchive') => {
+    if (!user?.id) {
+      console.error('[TasksPage] No user ID available for archive action');
+      return false;
+    }
+
+    try {
+      console.log(`[TasksPage] ${action === 'archive' ? 'Archiving' : 'Unarchiving'} task:`, {
+        taskId: task.id,
+        taskName: task.name,
+        currentArchived: task.archived,
+        beforeUpdate_tasksState: tasks.map(t => ({ id: t.id, archived: t.archived, name: t.name }))
+      });
+
+      // 1. Actualizar estado local INMEDIATAMENTE (optimistic update)
+      const updatedTask = {
+        ...task,
+        archived: action === 'archive',
+        archivedAt: action === 'archive' ? new Date().toISOString() : undefined,
+        archivedBy: action === 'archive' ? user.id : undefined
+      };
+
+      console.log('[TasksPage:handleTaskArchive] Before setTasks - Task ID:', task.id, 'Current archived:', task.archived);
+      
+      // Actualizar estado global inmediatamente
+      setTasks(prevTasks => {
+        const newTasks = prevTasks.map(t => {
+          if (t.id === task.id) {
+            console.log('[TasksPage:handleTaskArchive] Applying optimistic update to state:', updatedTask);
+            return updatedTask;
+          }
+          return t;
+        });
+        console.log('[TasksPage:handleTaskArchive] New tasks state (optimistic):', newTasks.map(t => ({ id: t.id, archived: t.archived, name: t.name })));
+        return newTasks;
+      });
+      
+      // Actualizar ref para mantener consistencia
+      tasksRef.current = tasksRef.current.map(t => 
+        t.id === task.id ? updatedTask : t
+      );
+      console.log('[TasksPage:handleTaskArchive] tasksRef.current after optimistic update:', tasksRef.current.map(t => ({ id: t.id, archived: t.archived, name: t.name })));
+
+      // Actualizar timestamp de la última actualización local
+      localTaskUpdateTimestamp.current = Date.now();
+      
+      // Actualizar cache global
+      const cacheKey = getCacheKey('tasks', user.id);
+      globalAppCache.tasks.set(cacheKey, {
+        data: tasksRef.current,
+        timestamp: Date.now(),
+      });
+
+      // Actualizar cache persistente
+      globalAppCache.persistentCache.tasks.set(cacheKey, {
+        data: tasksRef.current,
+        timestamp: Date.now(),
+      });
+
+      // 2. Actualizar Firestore en background
+      if (action === 'archive') {
+        await archiveTask(task.id, user.id, isAdmin, task);
+      } else {
+        await unarchiveTask(task.id, user.id, isAdmin, task);
+      }
+
+      console.log(`[TasksPage] Task ${action}d successfully in Firestore:`, {
+        taskId: task.id,
+        newArchived: updatedTask.archived,
+        globalCacheUpdated: true,
+        firestoreUpdated: true,
+        finalTasksStateRef: tasksRef.current.map(t => ({ id: t.id, archived: t.archived, name: t.name }))
+      });
+
+      // No es necesario llamar a handleDataRefresh() o invalidateTasksCache() aquí
+      // porque el onSnapshot se encargará de la sincronización final con la BD.
+      // La actualización optimista ya hizo que la UI refleje el cambio.
+
+      return true;
+    } catch (error) {
+      console.error(`[TasksPage] Error ${action}ing task:`, error);
+      
+      // Revertir cambios optimísticos en caso de error
+      setTasks(prevTasks => 
+        prevTasks.map(t => t.id === task.id ? task : t)
+      );
+      
+      tasksRef.current = tasksRef.current.map(t => 
+        t.id === task.id ? task : t
+      );
+
+      // Revertir cache también
+      const cacheKey = getCacheKey('tasks', user.id);
+      globalAppCache.tasks.set(cacheKey, {
+        data: tasksRef.current,
+        timestamp: Date.now(),
+      });
+
+      return false;
+    } finally {
+      // Guardar cache persistente siempre al final de una acción importante
+      const cacheKey = getCacheKey('tasks', user.id);
+      globalAppCache.tasks.set(cacheKey, { data: tasksRef.current, timestamp: Date.now() });
+      globalAppCache.persistentCache.tasks.set(cacheKey, { data: tasksRef.current, timestamp: Date.now() });
+      savePersistentCache();
+    }
+  }, [user?.id, isAdmin, tasks]); // Se añade `tasks` a las dependencias para logs precisos
+
   // Handle loading and error states
   if (isLoading) {
     return <Loader />;
@@ -935,7 +1325,7 @@ function TasksPageContent() {
           users={memoizedUsers}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
-          onLimitNotifications={handleLimitNotifications}
+          onLimitNotifications={() => {}}
           onChangeContainer={handleContainerChange}
         />
       </div>
@@ -953,9 +1343,9 @@ function TasksPageContent() {
       </div>
       <CursorProvider>
         <div ref={contentRef} className={styles.content}>
-          {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && (
+          {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && !isArchiveTableOpen && (
             <>
-              {taskView === 'table' && !isArchiveTableOpen && (
+              {taskView === 'table' && (
                 <TasksTable
                   onNewTaskOpen={() => setIsCreateTaskOpen(true)}
                   onEditTaskOpen={(taskId) => {
@@ -971,20 +1361,12 @@ function TasksPageContent() {
                     setIsDeletePopupOpen(true);
                   }}
                   onArchiveTableOpen={handleArchiveTableOpen}
-                  externalTasks={tasks}
+                  externalTasks={tasks.filter(task => !task.archived)}
                   externalClients={clients}
                   externalUsers={users}
                 />
               )}
-              {taskView === 'table' && isArchiveTableOpen && (
-                <ArchiveTable
-                  onEditTaskOpen={handleArchiveTableEditTask}
-                  onViewChange={handleArchiveTableViewChange}
-                  onDeleteTaskOpen={handleArchiveTableDeleteTask}
-                  onClose={handleArchiveTableClose}
-                  onChatSidebarOpen={handleChatSidebarOpen}
-                />
-              )}
+              
               {taskView === 'kanban' && (
                 <TasksKanban
                   onNewTaskOpen={() => setIsCreateTaskOpen(true)}
@@ -1000,22 +1382,48 @@ function TasksPageContent() {
                     setDeleteTarget({ type: 'task', id: taskId });
                     setIsDeletePopupOpen(true);
                   }}
+                  onArchiveTableOpen={handleArchiveTableOpen}
+                  externalTasks={tasks.filter(task => !task.archived)}
+                  externalClients={clients}
+                  externalUsers={users}
                 />
               )}
             </>
           )}
+
+          {selectedContainer === 'tareas' && isArchiveTableOpen && (
+            <ArchiveTable
+              onEditTaskOpen={handleArchiveTableEditTask}
+              onViewChange={handleArchiveTableViewChange}
+              onDeleteTaskOpen={handleArchiveTableDeleteTask}
+              onClose={handleArchiveTableClose}
+              onChatSidebarOpen={handleChatSidebarOpen}
+              onTaskArchive={handleTaskArchive}
+              externalTasks={tasks.filter(task => task.archived)}
+              externalClients={clients}
+              externalUsers={usersRef.current}
+              onTaskUpdate={handleArchiveTableTaskUpdate}
+              onDataRefresh={handleDataRefresh}
+            />
+          )}
+
           {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
             <ClientsTable
               onCreateOpen={handleCreateClientOpen}
               onEditOpen={handleEditClientOpen}
               onDeleteOpen={handleDeleteClientOpen}
+              externalClients={clients.length > 0 ? clients : undefined}
+              onCacheUpdate={handleClientsTableCacheUpdate}
             />
           )}
+
           {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
             <MembersTable
               onMessageSidebarOpen={handleMessageSidebarOpen}
+              onCacheUpdate={handleMembersTableCacheUpdate}
             />
           )}
+
           {selectedContainer === 'config' && !isCreateTaskOpen && !isEditTaskOpen && (
             <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')}
               onShowSuccessAlert={handleShowSuccessAlert}
@@ -1084,11 +1492,17 @@ function TasksPageContent() {
                   try {
                     await deleteDoc(doc(db, 'clients', isDeleteClientOpen));
                     setClients((prev) => prev.filter((c) => c.id !== isDeleteClientOpen));
+                    
+                    // Invalidar cache después de eliminar cliente
+                    invalidateClientsCache();
+                    
                     setIsDeleteClientOpen(null);
                     setDeleteConfirm('');
+                    
+                    handleShowSuccessAlert('Cliente eliminado exitosamente.');
                   } catch (error) {
                     console.error('Error deleting client:', error);
-                    alert('Error al eliminar la cuenta');
+                    handleShowFailAlert('Error al eliminar la cuenta', error.message);
                   }
                 }
               }}
@@ -1164,40 +1578,6 @@ function TasksPageContent() {
             />
           );
         }
-        if (sidebar.type === 'client-sidebar') {
-          return (
-            <ClientSidebar
-              key={sidebar.id}
-              isOpen={true}
-              isEdit={!!(sidebar.data as { client?: Client })?.client}
-              initialForm={
-                (sidebar.data as { client?: Client })?.client
-                  ? {
-                      id: (sidebar.data as { client?: Client }).client!.id,
-                      name: (sidebar.data as { client?: Client }).client!.name,
-                      imageFile: null,
-                      imagePreview: (sidebar.data as { client?: Client }).client!.imageUrl,
-                      projects: (sidebar.data as { client?: Client }).client!.projects.length
-                        ? (sidebar.data as { client?: Client }).client!.projects
-                        : [''],
-                      deleteProjectIndex: null,
-                      deleteConfirm: '',
-                    }
-                  : {
-                      name: '',
-                      imageFile: null,
-                      imagePreview: '',
-                      projects: [''],
-                      deleteProjectIndex: null,
-                      deleteConfirm: '',
-                    }
-              }
-              onFormSubmit={handleClientSubmit}
-              onClose={() => handleCloseSidebar(sidebar.id)}
-              isClientLoading={isClientLoading}
-            />
-          );
-        }
         return null;
       })}
       <div className={styles.vignetteTop} />
@@ -1206,6 +1586,39 @@ function TasksPageContent() {
       <ToDoDynamic/>
       <Footer />
       {memoizedDeletePopup}
+      
+      {/* ClientSidebar */}
+      {isClientSidebarOpen && clientSidebarData && (
+        <ClientOverlay
+          isOpen={isClientSidebarOpen}
+          isEdit={clientSidebarData.isEdit}
+          initialForm={
+            clientSidebarData.isEdit && clientSidebarData.client
+              ? {
+                  id: clientSidebarData.client.id,
+                  name: clientSidebarData.client.name,
+                  imageFile: null,
+                  imagePreview: clientSidebarData.client.imageUrl,
+                  projects: clientSidebarData.client.projects.length
+                    ? clientSidebarData.client.projects
+                    : [''],
+                  deleteProjectIndex: null,
+                  deleteConfirm: '',
+                }
+              : {
+                  name: '',
+                  imageFile: null,
+                  imagePreview: '',
+                  projects: [''],
+                  deleteProjectIndex: null,
+                  deleteConfirm: '',
+                }
+          }
+          onFormSubmit={handleClientSubmit}
+          onClose={handleClientSidebarClose}
+          isClientLoading={isClientLoading}
+        />
+      )}
       
       {/* Alert Components */}
       {showSuccessAlert && (

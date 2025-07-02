@@ -181,6 +181,8 @@ const PERSISTENT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
 
 // Función para cargar cache persistente desde localStorage
 const loadPersistentCache = () => {
+  if (typeof window === 'undefined') return; // Solo en cliente
+  
   try {
     const stored = localStorage.getItem('tasksTableCache');
     if (stored) {
@@ -207,6 +209,8 @@ const loadPersistentCache = () => {
 
 // Función para guardar cache persistente en localStorage
 const savePersistentCache = () => {
+  if (typeof window === 'undefined') return; // Solo en cliente
+  
   try {
     const toStore: Record<string, Record<string, { data: Task[] | Client[] | User[]; timestamp: number }>> = {};
     Object.keys(tasksTableCache.persistentCache).forEach(key => {
@@ -262,13 +266,13 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
           <div key={user.id} className={avatarStyles.avatar}>
             <span className={avatarStyles.avatarName}>{user.fullName}</span>
             <Image
-              src={user.imageUrl}
+              src={user.imageUrl || '/empty-image.png'}
               alt={`${user.fullName}'s avatar`}
               width={40}
               height={40}
               className={avatarStyles.avatarImage}
               onError={(e) => {
-                e.currentTarget.src = '';
+                e.currentTarget.src = '/empty-image.png';
               }}
             />
           </div>
@@ -316,6 +320,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const clientsRef = useRef<Client[]>([]);
     const usersRef = useRef<User[]>([]);
     
+    // Estados locales - solo se usan si no hay externalTasks
     const [tasks, setTasks] = useState<Task[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -347,10 +352,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    // Use external data if provided, otherwise use internal state
-    const effectiveTasks = externalTasks || tasks;
-    const effectiveClients = externalClients || clients;
-    const effectiveUsers = externalUsers || users;
+    // PRIORIZAR external data para asegurar sincronización con TasksPage
+    const effectiveTasks = externalTasks ?? tasks;
+    const effectiveClients = externalClients ?? clients;
+    const effectiveUsers = externalUsers ?? users;
 
     // Función para verificar cache válido - estabilizada
     const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number; isLoading: boolean }>) => {
@@ -592,34 +597,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       };
     }, [user?.id, isCacheValid, isPersistentCacheValid, externalClients]);
 
-    // Setup de users con cache optimizado (usar la misma lógica que MembersTable)
+    // Setup de users con cache optimizado (NO BLOQUEAR renderización)
     useEffect(() => {
       if (!user?.id || externalUsers) return;
 
       const cacheKey = `users_${user.id}`;
       
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = tasksTableCache.listeners.get(cacheKey);
-      
-      if (existingListener?.users) {
-        console.log('[TasksTable] Reusing existing users listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (tasksTableCache.users.has(cacheKey)) {
-          const cachedData = tasksTableCache.users.get(cacheKey)!.data;
-          usersRef.current = cachedData;
-          setUsers(cachedData);
-          setIsLoadingUsers(false);
-        }
-        return;
-      }
-      
-      // Verificar cache persistente primero (más rápido)
+      // PRIORIDAD 1: Verificar cache persistente INMEDIATAMENTE
       if (isPersistentCacheValid(cacheKey, tasksTableCache.persistentCache.users)) {
         const cachedData = tasksTableCache.persistentCache.users.get(cacheKey)!.data;
         usersRef.current = cachedData;
         setUsers(cachedData);
         setIsLoadingUsers(false);
-        console.log('[TasksTable] Using persistent cached users:', cachedData.length);
+        console.log('[TasksTable] Using persistent cached users (IMMEDIATE):', cachedData.length);
         
         // Restaurar en cache principal
         tasksTableCache.users.set(cacheKey, {
@@ -627,20 +617,27 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           timestamp: Date.now(),
           isLoading: false,
         });
+        
+        // Continuar con fetch en background para actualizar
       }
       
-      // Verificar cache principal
+      // PRIORIDAD 2: Verificar cache principal
       if (isCacheValid(cacheKey, tasksTableCache.users)) {
         const cachedData = tasksTableCache.users.get(cacheKey)!.data;
         usersRef.current = cachedData;
         setUsers(cachedData);
         setIsLoadingUsers(false);
-        console.log('[TasksTable] Using cached users on remount:', cachedData.length);
-        return;
+        console.log('[TasksTable] Using main cached users:', cachedData.length);
+        return; // No necesita fetch si cache es válido
       }
 
-      console.log('[TasksTable] Setting up new users fetch');
-      setIsLoadingUsers(true);
+      // PRIORIDAD 3: Fetch async SIN bloquear (background)
+      console.log('[TasksTable] Starting background users fetch');
+      
+      // NO setear loading aquí - usar datos de cache mientras tanto
+      if (usersRef.current.length === 0) {
+        setIsLoadingUsers(true);
+      }
 
       // Usar la misma lógica de fetch que MembersTable
       const fetchUsers = async () => {
@@ -697,22 +694,27 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             timestamp: Date.now(),
           });
           
+          // Guardar inmediatamente en localStorage
+          savePersistentCache();
+          
+          console.log('[TasksTable] Users fetched and cached:', {
+            total: usersData.length,
+            withImages: usersData.filter(u => u.imageUrl).length,
+            withoutImages: usersData.filter(u => !u.imageUrl).length
+          });
         } catch (error) {
           console.error('[TasksTable] Error fetching users:', error);
-          setUsers([]);
+          // NO limpiar usuarios existentes en caso de error
+          if (usersRef.current.length === 0) {
+            setUsers([]);
+          }
         } finally {
           setIsLoadingUsers(false);
         }
       };
 
+      // Ejecutar fetch de forma async sin bloquear
       fetchUsers();
-
-      // Guardar el listener en el cache global (para este caso, no hay onSnapshot)
-      tasksTableCache.listeners.set(cacheKey, {
-        tasks: existingListener?.tasks || null,
-        clients: existingListener?.clients || null,
-        users: null, // No hay listener para users, solo fetch
-      });
 
       return () => {
         // No limpiar el listener aquí, solo marcar como no disponible para este componente
@@ -720,12 +722,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     }, [user?.id, isCacheValid, isPersistentCacheValid, externalUsers]);
 
     useEffect(() => {
-      setFilteredTasks(effectiveTasks);
-      console.log('[TasksTable] Initialized filteredTasks:', {
-        totalTasks: effectiveTasks.length,
-        taskIds: effectiveTasks.map((t) => t.id),
-      });
-    }, [effectiveTasks]);
+      // Solo actualizar si hay cambio real en los datos
+      if (JSON.stringify(filteredTasks.map(t => t.id)) !== JSON.stringify(effectiveTasks.map(t => t.id))) {
+        setFilteredTasks(effectiveTasks);
+        console.log('[TasksTable] Initialized filteredTasks:', {
+          totalTasks: effectiveTasks.length,
+          taskIds: effectiveTasks.map((t) => t.id),
+        });
+      }
+    }, [effectiveTasks, filteredTasks]);
 
     const getInvolvedUserIds = useCallback((task: Task) => {
       const ids = new Set<string>();
@@ -758,7 +763,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     const memoizedFilteredTasks = useMemo(() => {
       const filtered = effectiveTasks.filter((task) => {
-        // Excluir tareas archivadas
+        // Excluir tareas archivadas (redundante ahora que TasksPage filtra)
         if (task.archived) {
           return false;
         }
@@ -772,8 +777,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         } else if (userFilter && userFilter !== 'me') {
           matchesUser = getInvolvedUserIds(task).includes(userFilter);
         }
+
         return matchesSearch && matchesPriority && matchesClient && matchesUser;
       });
+
       return filtered;
     }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
 
@@ -1186,13 +1193,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            // Solo admins pueden ver el ActionMenu en TasksTable
             if (isAdmin) {
-              console.log('[TasksTable] Rendering action column:', {
-                taskId: task.id,
-                taskName: task.name,
-                isAdmin,
-              });
               return (
                 <ActionMenu
                   task={task}
@@ -1200,17 +1201,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   isOpen={actionMenuOpenId === task.id}
                   onOpen={() => {
                     setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id);
-                    console.log('[TasksTable] Action menu toggled for task:', task.id);
                   }}
                   onEdit={() => {
                     onEditTaskOpen(task.id);
                     setActionMenuOpenId(null);
-                    console.log('[TasksTable] Edit action triggered for task:', task.id);
                   }}
                   onDelete={() => {
                     onDeleteTaskOpen(task.id);
                     setActionMenuOpenId(null);
-                    console.log('[TasksTable] Delete action triggered for task:', task.id);
                   }}
                   onArchive={async () => {
                     try {
@@ -1233,30 +1231,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                         setShowUndo(false);
                         setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
                       }, 3000);
-
-                      // Actualizar estado local optimísticamente
-                      setTasks((prevTasks) => 
-                        prevTasks.map((t) => 
-                          t.id === task.id 
-                            ? { ...t, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }
-                            : t
-                        )
-                      );
                       
                       // Ejecutar la función de archivo
                       await archiveTask(task.id, userId, isAdmin, task);
                       setActionMenuOpenId(null);
-                      console.log('[TasksTable] Task archived successfully:', task.id);
                     } catch (error) {
-                      // Revertir el cambio si hay error
-                      setTasks((prevTasks) => 
-                        prevTasks.map((t) => 
-                          t.id === task.id 
-                            ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
-                            : t
-                        )
-                      );
-                      console.error('[TasksTable] Error archiving task:', error);
+                      console.error('Error archiving task:', error);
                     }
                   }}
                   animateClick={animateClick}
@@ -1264,14 +1244,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                   actionButtonRef={(el) => {
                     if (el) {
                       actionButtonRefs.current.set(task.id, el);
-                      console.log('[TasksTable] Action button ref set for task:', task.id);
                     } else {
                       actionButtonRefs.current.delete(task.id);
-                      console.log('[TasksTable] Action button ref removed for task:', task.id);
                     }
                   }}
                 />
               );
+            } else {
+              console.log('❌ [DEBUG] Not rendering action menu - user is not admin:', {
+                taskId: task.id,
+                isAdmin,
+                userId
+              });
             }
             return null;
           },
@@ -1324,17 +1308,24 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
     // Función para deshacer
     const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
+      if (!undoItem || !userId || !isAdmin) {
+        console.error('Cannot undo: missing required data');
+        return;
+      }
+
       try {
         if (undoItem.action === 'archive') {
           // Desarchivar la tarea
           await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
-          setTasks((prevTasks) => 
-            prevTasks.map((t) => 
+          
+          // Actualizar estado local
+          setTasks((prevTasks) => {
+            return prevTasks.map((t) => 
               t.id === undoItem.task.id 
                 ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
                 : t
-            )
-          );
+            );
+          });
         }
         
         // Remover del undo stack
@@ -1345,7 +1336,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           clearTimeout(undoTimeoutRef.current);
         }
       } catch (error) {
-        console.error('[TasksTable] Error undoing action:', error);
+        console.error('Error in undo process:', error);
       }
     }, [userId, isAdmin]);
 
@@ -1376,19 +1367,33 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       };
     }, []);
 
-    // Handle loading state - más inteligente
+    // Handle loading state - PRIORIZADO para mostrar TasksTable inmediatamente
     const shouldShowLoader = useMemo(() => {
-      // Si hay datos externos, no mostrar loader
+      // Si hay datos externos, nunca mostrar loader
       if (externalTasks && externalClients && externalUsers) {
         return false;
       }
       
-      // Si hay datos en caché, no mostrar loader
-      const hasCachedData = effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0;
+      // Si hay CUALQUIER dato en caché (tareas, clientes o usuarios), mostrar tabla
+      const hasAnyData = effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0;
       
-      // Solo mostrar loader si no hay datos y realmente está cargando
-      return !hasCachedData && (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers);
-    }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoading, isLoadingTasks, isLoadingClients, isLoadingUsers]);
+      // Solo mostrar loader si NO hay ningún dato Y está cargando tareas (lo más importante)
+      const isReallyLoading = !hasAnyData && isLoadingTasks;
+      
+      console.log('[TasksTable] Loading state decision:', {
+        hasExternalData: !!(externalTasks && externalClients && externalUsers),
+        hasAnyData,
+        isLoadingTasks,
+        isLoadingClients,
+        isLoadingUsers,
+        shouldShow: isReallyLoading,
+        tasksCount: effectiveTasks.length,
+        clientsCount: effectiveClients.length,
+        usersCount: effectiveUsers.length
+      });
+      
+      return isReallyLoading;
+    }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoadingTasks]);
 
     if (shouldShowLoader) {
       return (
@@ -1863,7 +1868,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 <span>Tarea archivada</span>
               </div>
               <button
-                onClick={() => handleUndo(undoStack[undoStack.length - 1])}
+                onClick={() => {
+                  handleUndo(undoStack[undoStack.length - 1]);
+                }}
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   border: 'none',

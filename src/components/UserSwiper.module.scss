@@ -101,11 +101,19 @@
   text-align: center;
   padding: $spacing-2xl;
   @include typography($text-base, $font-weight-normal, $color-text-primary, center);
+  
+  @include dark-mode {
+    @include typography($text-base, $font-weight-normal, $color-text-dark-primary, center);
+  }
 }
 
 .loader {
   @include typography($text-sm, $font-weight-normal, $color-text-primary, center);
   @include pulse;
+  
+  @include dark-mode {
+    @include typography($text-sm, $font-weight-normal, $color-text-dark-primary, center);
+  }
 }
 
 // ==============================================================

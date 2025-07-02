@@ -223,3 +223,7 @@
     justify-content: center;
   }
 }
+
+:global(body.dark) .wizardButton img[src*=".svg"] {
+  filter: invert(1) grayscale(1) brightness(1.5) !important;
+}

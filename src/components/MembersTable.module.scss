@@ -6,6 +6,8 @@
 .container {
     @include flex-column;
     gap: $spacing-2xl;
+    border-radius: 16px 26px 0px 0px;
+
 }
 
 .header {
@@ -608,33 +610,25 @@
     }
 
     @include dark-mode {
-        background: rgba(39, 39, 42, 0.7);
-        color: $color-text-dark-primary;
-        border-color: rgba(255, 255, 255, 0.1);
-        @include neomorphic-shadow(dark);
+        background: $zinc-800;
+        color: rgba(255, 255, 255, 0.532);
+        border: none;
+        box-shadow: none;
 
         &::before {
-            background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.1) 0%,
-                rgba(255, 255, 255, 0.05) 50%,
-                rgba(255, 255, 255, 0.02) 100%
-            );
+            display: none;
         }
 
         &:hover {
-            background: rgba(39, 39, 42, 0.85);
-            border-color: rgba(255, 255, 255, 0.2);
-            @include neomorphic-shadow-hover(dark);
-            box-shadow:
-                -4px -4px 8px rgba(255, 255, 255, 0.05),
-                4px 4px 8px rgba(0, 0, 0, 0.3),
-                inset -2px -2px 4px rgba(0, 0, 0, 0.3),
-                inset 2px 2px 4px rgba(255, 255, 255, 0.02);
+            background: $zinc-700;
+            border: none;
+            box-shadow: none;
         }
 
         &:active {
-            @include neomorphic-inset(dark);
+            background: $zinc-600;
+            border: none;
+            box-shadow: none;
         }
     }
 }

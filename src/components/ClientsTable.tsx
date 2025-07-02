@@ -30,6 +30,42 @@ const clientsTableCache = {
 
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 
+// Cache utilities
+function getCacheKey(type: 'clients', userId: string) {
+  return `clientsTableCache_${type}_${userId}`;
+}
+
+function saveClientsCache(userId: string, data: Client[]) {
+  try {
+    const cacheKey = getCacheKey('clients', userId);
+    const cacheData = { data, timestamp: Date.now() };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData, null, 2));
+    console.log('[ClientsTable] Clients cache saved:', data.length);
+  } catch (error) {
+    console.error('[ClientsTable] Error saving clients cache:', error);
+  }
+}
+
+function loadClientsCache(userId: string): Client[] | null {
+  try {
+    const cacheKey = getCacheKey('clients', userId);
+    const cached = localStorage.getItem(cacheKey);
+    if (!cached) return null;
+    
+    const parsed = JSON.parse(cached);
+    const now = Date.now();
+    if (!parsed.data || !parsed.timestamp || (now - parsed.timestamp) > CACHE_DURATION) {
+      return null;
+    }
+    
+    console.log('[ClientsTable] Clients cache loaded:', parsed.data.length);
+    return parsed.data;
+  } catch (error) {
+    console.error('[ClientsTable] Error loading clients cache:', error);
+    return null;
+  }
+}
+
 // Función para limpiar listeners de ClientsTable
 export const cleanupClientsTableListeners = () => {
   console.log('[ClientsTable] Cleaning up all listeners');
@@ -44,10 +80,12 @@ interface ClientsTableProps {
   onCreateOpen: () => void;
   onEditOpen: (client: Client) => void;
   onDeleteOpen: (clientId: string) => void;
+  externalClients?: Client[];
+  onCacheUpdate?: (clients: Client[]) => void;
 }
 
 const ClientsTable: React.FC<ClientsTableProps> = memo(
-  ({ onCreateOpen, onEditOpen, onDeleteOpen }) => {
+  ({ onCreateOpen, onEditOpen, onDeleteOpen, externalClients, onCacheUpdate }) => {
     console.log('ClientsTable rendered');
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
@@ -67,43 +105,46 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    // Función para verificar cache válido
-    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Client[]; timestamp: number }>) => {
-      const cached = cacheMap.get(cacheKey);
-      if (!cached) return false;
-      
-      const now = Date.now();
-      return (now - cached.timestamp) < CACHE_DURATION;
-    }, []);
+    // Use external data if provided, otherwise use internal state
+    const effectiveClients = externalClients || clients;
 
-    // Setup de clients con cache optimizado
+    // Setup de clients con cache optimizado - siempre cargar internamente
     useEffect(() => {
       if (!user?.id) return;
 
       const cacheKey = `clients_${user.id}`;
       
-      // Verificar si ya existe un listener para este usuario
+      // Verificar cache persistente primero
+      const cached = loadClientsCache(user.id);
+      if (cached) {
+        clientsRef.current = cached;
+        setClients(cached);
+        setIsDataLoading(false);
+        console.log('[ClientsTable] Using cached clients:', cached.length);
+        
+        // Pasar datos al cache global
+        if (onCacheUpdate) {
+          onCacheUpdate(cached);
+        }
+        return;
+      }
+
+      // Verificar si ya existe un listener
       const existingListener = clientsTableCache.listeners.get(cacheKey);
       
       if (existingListener?.clients) {
         console.log('[ClientsTable] Reusing existing clients listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
         if (clientsTableCache.clients.has(cacheKey)) {
           const cachedData = clientsTableCache.clients.get(cacheKey)!.data;
           clientsRef.current = cachedData;
           setClients(cachedData);
           setIsDataLoading(false);
+          
+          // Pasar datos al cache global
+          if (onCacheUpdate) {
+            onCacheUpdate(cachedData);
+          }
         }
-        return;
-      }
-      
-      // Verificar cache primero
-      if (isCacheValid(cacheKey, clientsTableCache.clients)) {
-        const cachedData = clientsTableCache.clients.get(cacheKey)!.data;
-        clientsRef.current = cachedData;
-        setClients(cachedData);
-        setIsDataLoading(false);
-        console.log('[ClientsTable] Using cached clients on remount:', cachedData.length);
         return;
       }
 
@@ -114,28 +155,34 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       const unsubscribeClients = onSnapshot(
         clientsQuery,
         (snapshot) => {
-          const clientsData: Client[] = snapshot.docs
-            .map((doc) => ({
+          const clientsData: Client[] = snapshot.docs.map((doc) => ({
               id: doc.id,
               name: doc.data().name || '',
               imageUrl: doc.data().imageUrl || '/empty-image.png',
-              projectCount: doc.data().projectCount || 0,
+            projectCount: doc.data().projects?.length || 0,
               projects: doc.data().projects || [],
               createdBy: doc.data().createdBy || '',
-              createdAt: doc.data().createdAt || new Date().toISOString(),
-            }))
-            .filter((client) => client.name && client.createdBy);
+            createdAt: doc.data().createdAt || '',
+          }));
           
           console.log('[ClientsTable] Clients onSnapshot update:', clientsData.length);
           
           clientsRef.current = clientsData;
           setClients(clientsData);
           
+          // Guardar en cache local
+          saveClientsCache(user.id, clientsData);
+          
           // Actualizar cache
           clientsTableCache.clients.set(cacheKey, {
             data: clientsData,
             timestamp: Date.now(),
           });
+          
+          // Pasar datos al cache global
+          if (onCacheUpdate) {
+            onCacheUpdate(clientsData);
+          }
           
           setIsDataLoading(false);
         },
@@ -152,17 +199,17 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       });
 
       return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+        // No limpiar el listener aquí
       };
-    }, [user?.id, isCacheValid]);
+    }, [user?.id, onCacheUpdate]);
 
     const memoizedFilteredClients = useMemo(() => {
-      return clients.filter((client) =>
+      return effectiveClients.filter((client) =>
         client.name && typeof client.name === 'string'
           ? client.name.toLowerCase().includes(searchQuery.toLowerCase())
           : false,
       );
-    }, [searchQuery, clients]);
+    }, [searchQuery, effectiveClients]);
 
     useEffect(() => {
       setFilteredClients(memoizedFilteredClients);
@@ -448,7 +495,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
 
     return (
       <div className={`${styles.container} ${styles.mobileContainer}`}>
-        {clients.length === 0 && !searchQuery ? (
+        {effectiveClients.length === 0 && !searchQuery ? (
           <div className={styles.emptyState}>
             <div className={`${styles.header} ${styles.mobileHeader}`}>
               <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>

@@ -1,10 +1,14 @@
 'use client';
 
+// PRIORIDAD DE DATOS:
+// 1. Clerk: imageUrl, firstName, lastName (datos primarios de usuario)
+// 2. Firestore: status (estado en línea) y role (rol del usuario) únicamente
+
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Splide from '@splidejs/splide';
 import '@splidejs/splide/css/core';
-import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, query, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './UserSwiper.module.scss';
 import UserAvatar from './ui/UserAvatar';
@@ -37,8 +41,8 @@ const statusColors = {
   'Fuera': '#616161',
 };
 
-const CACHE_KEY = 'cached_users';
-const CACHE_DURATION = 24 * 60 * 60 * 1000;
+const CACHE_KEY = 'cached_clerk_users';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas - cache más largo para datos de Clerk
 
 const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwiperProps) => {
   const { user, isLoaded } = useUser();
@@ -48,7 +52,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   const splideInstance = useRef<Splide | null>(null);
 
   useEffect(() => {
-    let unsubscribe = () => {};
+    const unsubscribe = () => {};
 
     const getCachedUsers = (): ClerkUser[] | null => {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -83,54 +87,57 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
           });
         }
 
+        // PRIORIZAR datos de Clerk completamente
+        console.log('[UserSwiper] Fetching users: ALL data from Clerk API, minimal Firestore for status only');
+        
+        // 1. Obtener TODOS los datos de Clerk (imageUrl, firstName, lastName)
         const response = await fetch('/api/users');
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch users');
-        }
-        const clerkUsers: ClerkUser[] = await response.json();
+        if (!response.ok) throw new Error('Failed to fetch users from Clerk');
+        
+        const clerkUsers: {
+          id: string;
+          imageUrl?: string;
+          firstName?: string;
+          lastName?: string;
+          publicMetadata: { role?: string };
+        }[] = await response.json();
 
-        const updatedUsers = clerkUsers
-          .filter((u) => u.id !== user?.id)
-          .map((user) => ({
-            ...user,
-            status: 'Disponible',
-          }));
-        setUsers(updatedUsers);
-        setCachedUsers(updatedUsers);
-        setIsLoading(false);
-
-        const usersRef = collection(db, 'users');
-        unsubscribe = onSnapshot(
-          usersRef,
-          (snapshot) => {
-            const statusMap: { [id: string]: string } = {};
-            
-            snapshot.forEach((doc) => {
-              const data = doc.data();
-              const firestoreStatus = data.status || 'Disponible';
-              statusMap[doc.id] = firestoreStatus;
-            });
-            
-            setUsers((prevUsers) => {
-              const newUsers = prevUsers
-                .map((user) => ({
-                  ...user,
-                  status: statusMap[user.id] || 'Disponible',
-                }));
-              setCachedUsers(newUsers);
-              return newUsers;
-            });
-          },
-          (error) => {
-            console.error('[UserSwiper] Firestore listener error:', error);
+        // 2. Crear un mapa de status de Firestore (solo para status, lo demás de Clerk)
+        const usersQuery = query(collection(db, 'users'));
+        const firestoreSnapshot = await getDocs(usersQuery);
+        const firestoreStatusMap = new Map<string, string>();
+        
+        firestoreSnapshot.docs.forEach(doc => {
+          const userData = doc.data();
+          if (userData.status) {
+            firestoreStatusMap.set(doc.id, userData.status);
           }
-        );
+        });
+        
+        // 3. Combinar: CLERK data + Firestore status únicamente
+        const finalUsers: ClerkUser[] = clerkUsers
+          .map((clerkUser) => ({
+            id: clerkUser.id,
+            imageUrl: clerkUser.imageUrl || '', // PRIORIDAD: Clerk imageUrl
+            firstName: clerkUser.firstName || '', // PRIORIDAD: Clerk firstName  
+            lastName: clerkUser.lastName || '', // PRIORIDAD: Clerk lastName
+            status: firestoreStatusMap.get(clerkUser.id) || 'Disponible', // Solo status de Firestore
+          }))
+          .filter((u) => u.id !== user?.id);
 
-        console.log('[UserSwiper] Users fetched:', { count: updatedUsers.length });
+        setUsers(finalUsers);
+        setCachedUsers(finalUsers);
+
+        console.log('[UserSwiper] Users fetched and cached:', {
+          total: finalUsers.length,
+          withImages: finalUsers.filter(u => u.imageUrl).length,
+          withoutImages: finalUsers.filter(u => !u.imageUrl).length,
+          dataSource: 'Clerk (imageUrl, firstName, lastName) + Firestore (status only)'
+        });
       } catch (error) {
         console.error('[UserSwiper] Error fetching users:', error);
         setUsers([]);
+      } finally {
         setIsLoading(false);
       }
     };
@@ -182,29 +189,32 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
       return;
     }
 
+    // PRIORIZAR datos de Clerk - solo obtener role de Firestore si es necesario
+    const userForChat: User = {
+      id: clerkUser.id,
+      imageUrl: clerkUser.imageUrl || '', // PRIORIDAD: Clerk imageUrl
+      fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre', // PRIORIDAD: Clerk names
+      role: 'Miembro', // Default role, se puede obtener de Firestore si es crítico
+    };
+
+    // Solo obtener role de Firestore si es absolutamente necesario
     try {
       const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-      const role = userDoc.exists() ? userDoc.data().role || 'Miembro' : 'Miembro';
-
-      const userForChat: User = {
-        id: clerkUser.id,
-        imageUrl: clerkUser.imageUrl || '',
-        fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-        role,
-      };
-
-      onMessageSidebarOpen(userForChat);
-      console.log('[UserSwiper] Opened MessageSidebar for user:', userForChat);
+      if (userDoc.exists() && userDoc.data().role) {
+        userForChat.role = userDoc.data().role;
+      }
     } catch (error) {
-      console.error('[UserSwiper] Error fetching user role:', error);
-      const userForChat: User = {
-        id: clerkUser.id,
-        imageUrl: clerkUser.imageUrl || '',
-        fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-        role: 'Miembro',
-      };
-      onMessageSidebarOpen(userForChat);
+      console.warn('[UserSwiper] Could not fetch role from Firestore, using default:', error);
+      // userForChat.role ya está configurado como 'Miembro'
     }
+
+    onMessageSidebarOpen(userForChat);
+    console.log('[UserSwiper] Opened MessageSidebar for user:', {
+      userId: userForChat.id,
+      fullName: userForChat.fullName,
+      role: userForChat.role,
+      dataSource: 'Clerk (imageUrl, names) + Firestore (role)',
+    });
   };
 
   const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, clerkUser: ClerkUser) => {
@@ -220,7 +230,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
       e.stopPropagation();
       onOpenProfile({
         id: user.id,
-        imageUrl: user.imageUrl || '',
+        imageUrl: user.imageUrl || '', // Usar imageUrl del usuario (ya viene de Clerk)
       });
     }
   };
@@ -271,7 +281,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                           e.stopPropagation();
                           onOpenProfile({
                             id: user.id,
-                            imageUrl: user.imageUrl || '',
+                            imageUrl: user.imageUrl || '', // Usar imageUrl del usuario (ya viene de Clerk)
                           });
                         }}
                         onKeyDown={(e) => handleAvatarKeyDown(e, user)}

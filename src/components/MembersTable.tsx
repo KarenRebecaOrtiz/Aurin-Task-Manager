@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, onSnapshot, query, doc, getDoc, getDocs, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
@@ -39,23 +39,110 @@ interface Task {
 
 interface MembersTableProps {
   onMessageSidebarOpen: (user: User) => void;
+  externalUsers?: User[];
+  externalTasks?: Task[];
+  onCacheUpdate?: (users: User[], tasks: Task[]) => void;
 }
 
-// Cache global persistente FUERA del componente para que sobreviva a unmounts/remounts
-const globalCache = {
+// Cache global persistente para MembersTable
+const membersTableCache = {
   users: new Map<string, { data: User[]; timestamp: number }>(),
   tasks: new Map<string, { data: Task[]; timestamp: number }>(),
-  lastFetch: new Map<string, number>(),
   listeners: new Map<string, { users: (() => void) | null; tasks: (() => void) | null }>(),
 };
 
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
-const FETCH_COOLDOWN = 30 * 1000; // 30 segundos entre fetches
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
+
+function getCacheKey(type: 'users' | 'tasks', userId: string) {
+  return `members_${type}_${userId}`;
+}
+
+function saveUsersCache(userId: string, data: User[]) {
+  const key = getCacheKey('users', userId);
+  const value = JSON.stringify({ data, timestamp: Date.now() });
+  try {
+    localStorage.setItem(key, value);
+    membersTableCache.users.set(key, { data, timestamp: Date.now() });
+    console.log(`[MembersTable] [CACHE] Saved users to localStorage (${data.length})`);
+  } catch (e) {
+    console.warn(`[MembersTable] [CACHE] Error saving users to localStorage`, e);
+  }
+}
+
+function loadUsersCache(userId: string): User[] | null {
+  const key = getCacheKey('users', userId);
+  if (membersTableCache.users.has(key)) {
+    const cached = membersTableCache.users.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log(`[MembersTable] [CACHE] Using in-memory users cache (${cached.data.length})`);
+      return cached.data;
+    }
+  }
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Date.now() - parsed.timestamp < CACHE_DURATION) {
+        membersTableCache.users.set(key, { data: parsed.data, timestamp: parsed.timestamp });
+        console.log(`[MembersTable] [CACHE] Using localStorage users cache (${parsed.data.length})`);
+        return parsed.data;
+      } else {
+        localStorage.removeItem(key);
+        membersTableCache.users.delete(key);
+        console.log(`[MembersTable] [CACHE] Expired users cache removed`);
+      }
+    }
+  } catch (e) {
+    console.warn(`[MembersTable] [CACHE] Error loading users from localStorage`, e);
+  }
+  return null;
+}
+
+function saveTasksCache(userId: string, data: Task[]) {
+  const key = getCacheKey('tasks', userId);
+  const value = JSON.stringify({ data, timestamp: Date.now() });
+  try {
+    localStorage.setItem(key, value);
+    membersTableCache.tasks.set(key, { data, timestamp: Date.now() });
+    console.log(`[MembersTable] [CACHE] Saved tasks to localStorage (${data.length})`);
+  } catch (e) {
+    console.warn(`[MembersTable] [CACHE] Error saving tasks to localStorage`, e);
+  }
+}
+
+function loadTasksCache(userId: string): Task[] | null {
+  const key = getCacheKey('tasks', userId);
+  if (membersTableCache.tasks.has(key)) {
+    const cached = membersTableCache.tasks.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log(`[MembersTable] [CACHE] Using in-memory tasks cache (${cached.data.length})`);
+      return cached.data;
+    }
+  }
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Date.now() - parsed.timestamp < CACHE_DURATION) {
+        membersTableCache.tasks.set(key, { data: parsed.data, timestamp: parsed.timestamp });
+        console.log(`[MembersTable] [CACHE] Using localStorage tasks cache (${parsed.data.length})`);
+        return parsed.data;
+      } else {
+        localStorage.removeItem(key);
+        membersTableCache.tasks.delete(key);
+        console.log(`[MembersTable] [CACHE] Expired tasks cache removed`);
+      }
+    }
+  } catch (e) {
+    console.warn(`[MembersTable] [CACHE] Error loading tasks from localStorage`, e);
+  }
+  return null;
+}
 
 // Función para limpiar listeners cuando sea necesario (ej: logout)
 export const cleanupMembersTableListeners = () => {
   console.log('[MembersTable] Cleaning up all listeners');
-  globalCache.listeners.forEach((listener) => {
+  membersTableCache.listeners.forEach((listener) => {
     if (listener.users) {
       listener.users();
     }
@@ -63,14 +150,13 @@ export const cleanupMembersTableListeners = () => {
       listener.tasks();
     }
   });
-  globalCache.listeners.clear();
-  globalCache.users.clear();
-  globalCache.tasks.clear();
-  globalCache.lastFetch.clear();
+  membersTableCache.listeners.clear();
+  membersTableCache.users.clear();
+  membersTableCache.tasks.clear();
 };
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ onMessageSidebarOpen }) => {
+  ({ onMessageSidebarOpen, externalUsers, externalTasks, onCacheUpdate }) => {
     const { user } = useUser();
     const { isLoading } = useAuth();
     const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
@@ -87,270 +173,137 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     
-    // Refs para controlar suscripciones y evitar múltiples listeners
-    const usersUnsubscribeRef = useRef<(() => void) | null>(null);
-    const tasksUnsubscribeRef = useRef<(() => void) | null>(null);
-    const isInitializedRef = useRef(false);
-    const fetchInProgressRef = useRef(false);
-
-    // Función para verificar cache válido
-    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: User[] | Task[]; timestamp: number }>) => {
-      const cached = cacheMap.get(cacheKey);
-      if (!cached) return false;
-      
-      const now = Date.now();
-      return (now - cached.timestamp) < CACHE_DURATION;
-    }, []);
-
-    // Función para verificar si podemos hacer fetch (cooldown)
-    const canFetch = useCallback((cacheKey: string) => {
-      const lastFetch = globalCache.lastFetch.get(cacheKey) || 0;
-      const now = Date.now();
-      return (now - lastFetch) > FETCH_COOLDOWN;
-    }, []);
-
-    // Fetch de usuarios optimizado con cache
-    const fetchUsers = useCallback(async () => {
-      if (!user?.id || fetchInProgressRef.current) return;
-      
-      const cacheKey = `users_${user.id}`;
-      
-      // Verificar cache primero
-      if (isCacheValid(cacheKey, globalCache.users)) {
-        const cachedData = globalCache.users.get(cacheKey)!.data;
-        usersRef.current = cachedData;
-        setUsers(cachedData);
+    // Use external data if provided, otherwise use internal state
+    const effectiveUsers = externalUsers || users;
+    const effectiveTasks = externalTasks || tasks;
+    
+    // Setup inicial de usuarios usando API (igual que en tasks/page.tsx)
+    useEffect(() => {
+      if (!user?.id) {
         setIsLoadingUsers(false);
         return;
       }
-
-      // Verificar cooldown
-      if (!canFetch(cacheKey)) {
-        console.log('[MembersTable] Fetch cooldown active, using existing data');
+      
+      // Intentar hidratar desde cache
+      const cached = loadUsersCache(user.id);
+      if (cached) {
+        usersRef.current = cached;
+        setUsers([...cached]);
+        setIsLoadingUsers(false);
+        console.log('[MembersTable] Using cached users:', cached.length);
+        
+        // Pasar datos al cache global
+        if (onCacheUpdate) {
+          onCacheUpdate(cached, tasksRef.current);
+        }
         return;
       }
-
-      fetchInProgressRef.current = true;
-      globalCache.lastFetch.set(cacheKey, Date.now());
       
-      try {
-        console.log('[MembersTable] Fetching users from API...');
-        const response = await fetch('/api/users');
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch users: ${response.status}`);
-        }
-        
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string; description?: string };
-        }[] = await response.json();
-
-        // Obtener datos de Firestore solo para usuarios que no están en cache
-        const usersData: User[] = await Promise.all(
-          clerkUsers.map(async (clerkUser) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-              const status = userDoc.exists() ? userDoc.data().status || 'Disponible' : 'Disponible';
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: userDoc.exists() && userDoc.data().role
-                  ? userDoc.data().role
-                  : (clerkUser.publicMetadata.role || 'Sin rol'),
-                description: clerkUser.publicMetadata.description || 'Sin descripción',
-                status,
-              };
-            } catch {
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: clerkUser.publicMetadata.role || 'Sin rol',
-                description: clerkUser.publicMetadata.description || 'Sin descripción',
-                status: 'Disponible',
-              };
+      // Si no hay cache válido, fetch desde API
+      setIsLoadingUsers(true);
+      
+      const fetchUsers = async () => {
+        try {
+          console.log('[MembersTable] Fetching users: imageUrl from Clerk API, other data from Firestore');
+          
+          // 1. Obtener imageUrl de Clerk
+          const response = await fetch('/api/users');
+          if (!response.ok) throw new Error('Failed to fetch users from Clerk');
+          
+          const clerkUsers: {
+            id: string;
+            imageUrl?: string;
+            firstName?: string;
+            lastName?: string;
+            publicMetadata: { role?: string };
+          }[] = await response.json();
+          
+          // Crear un mapa de imageUrls de Clerk
+          const clerkImageMap = new Map<string, string>();
+          clerkUsers.forEach(clerkUser => {
+            if (clerkUser.imageUrl) {
+              clerkImageMap.set(clerkUser.id, clerkUser.imageUrl);
             }
-          }),
-        );
-        
-        // Actualizar cache global
-        globalCache.users.set(cacheKey, {
-          data: usersData,
-          timestamp: Date.now(),
-        });
-        
-        usersRef.current = usersData;
-        setUsers(usersData);
-        
-      } catch (error) {
-        console.error('[MembersTable] Error fetching users:', error);
-        // Usar datos existentes si hay error
-        if (usersRef.current.length > 0) {
-          setUsers(usersRef.current);
-        } else {
+          });
+          
+          // 2. Obtener todos los demás datos de Firestore
+          const usersQuery = query(collection(db, 'users'));
+          const firestoreSnapshot = await getDocs(usersQuery);
+          
+          const usersData: User[] = firestoreSnapshot.docs.map((doc) => {
+            const userData = doc.data();
+            return {
+              id: doc.id,
+              imageUrl: userData.imageUrl || clerkImageMap.get(doc.id) || '', // Firestore first, then Clerk
+              fullName: userData.fullName || userData.name || 'Sin nombre', // de Firestore
+              role: userData.role || 'Sin rol', // de Firestore
+              description: userData.description || '', // de Firestore
+              status: userData.status || 'offline', // de Firestore
+            };
+          });
+          
+          setUsers(usersData);
+          saveUsersCache(user.id, usersData);
+          
+          // También obtener datos de tareas si es necesario
+          const tasksQuery = query(collection(db, 'tasks'));
+          const tasksSnapshot = await getDocs(tasksQuery);
+          const tasksData: Task[] = tasksSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            clientId: doc.data().clientId || '',
+            project: doc.data().project || '',
+            name: doc.data().name || '',
+            description: doc.data().description || '',
+            status: doc.data().status || '',
+            priority: doc.data().priority || '',
+            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
+            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
+            LeadedBy: doc.data().LeadedBy || [],
+            AssignedTo: doc.data().AssignedTo || [],
+            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate().toISOString() : new Date().toISOString(),
+            CreatedBy: doc.data().CreatedBy || '',
+          }));
+          
+          setTasks(tasksData);
+          saveTasksCache(user.id, tasksData);
+          
+          // Pasar datos al cache global
+          if (onCacheUpdate) {
+            onCacheUpdate(usersData, tasksData);
+          }
+          
+          console.log('[MembersTable] Users and tasks fetched and cached:', {
+            users: usersData.length,
+            usersWithImages: usersData.filter(u => u.imageUrl).length,
+            tasks: tasksData.length
+          });
+        } catch (error) {
+          console.error('[MembersTable] Error fetching users:', error);
           setUsers([]);
-        }
-      } finally {
-        setIsLoadingUsers(false);
-        fetchInProgressRef.current = false;
-      }
-    }, [user?.id, isCacheValid, canFetch]);
-
-    // Setup inicial de usuarios (solo una vez)
-    useEffect(() => {
-      if (!user?.id) return;
-      
-      const cacheKey = `users_${user.id}`;
-      
-      // Si ya tenemos datos válidos en cache, usarlos inmediatamente
-      if (isCacheValid(cacheKey, globalCache.users)) {
-        const cachedData = globalCache.users.get(cacheKey)!.data;
-        usersRef.current = cachedData;
-        setUsers(cachedData);
-        setIsLoadingUsers(false);
-        console.log('[MembersTable] Using cached users on remount:', cachedData.length);
-        return;
-      }
-
-      // Si no hay cache válido, hacer fetch
-      if (!isInitializedRef.current) {
-        isInitializedRef.current = true;
-        fetchUsers();
-      }
-    }, [user?.id, fetchUsers, isCacheValid]);
-
-    // Setup de onSnapshot para usuarios (reutilizar listeners existentes)
-    useEffect(() => {
-      if (!user?.id) return;
-
-      const cacheKey = `users_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = globalCache.listeners.get(cacheKey);
-      
-      if (existingListener?.users) {
-        console.log('[MembersTable] Reusing existing users listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (globalCache.users.has(cacheKey)) {
-          const cachedData = globalCache.users.get(cacheKey)!.data;
-          usersRef.current = cachedData;
-          setUsers(cachedData);
+          setTasks([]);
+        } finally {
           setIsLoadingUsers(false);
         }
-        return;
-      }
-
-      console.log('[MembersTable] Setting up new users onSnapshot listener');
-      
-      const usersQuery = query(collection(db, 'users'));
-      const unsubscribeUsers = onSnapshot(
-        usersQuery,
-        (snapshot) => {
-          console.log('[MembersTable] Users onSnapshot update:', snapshot.docChanges().length);
-          
-          // Solo actualizar si hay cambios reales
-          const changes = snapshot.docChanges();
-          if (changes.length === 0) return;
-          
-          setUsers(prevUsers => {
-            const updatedUsers = [...prevUsers];
-            let hasChanges = false;
-            
-            changes.forEach((change) => {
-              const userData = change.doc.data();
-              const userIndex = updatedUsers.findIndex(u => u.id === change.doc.id);
-              
-              if (change.type === 'modified' && userIndex !== -1) {
-                // Solo actualizar campos específicos
-                const currentUser = updatedUsers[userIndex];
-                const updatedUser = {
-                  ...currentUser,
-                  role: userData.role || currentUser.role,
-                  status: userData.status || currentUser.status,
-                  description: userData.description || currentUser.description,
-                };
-                
-                // Solo actualizar si realmente cambió
-                if (JSON.stringify(currentUser) !== JSON.stringify(updatedUser)) {
-                  updatedUsers[userIndex] = updatedUser;
-                  hasChanges = true;
-                }
-              } else if (change.type === 'removed' && userIndex !== -1) {
-                updatedUsers.splice(userIndex, 1);
-                hasChanges = true;
-              }
-            });
-            
-            if (hasChanges) {
-              usersRef.current = updatedUsers;
-              // Actualizar cache
-              globalCache.users.set(cacheKey, {
-                data: updatedUsers,
-                timestamp: Date.now(),
-              });
-            }
-            
-            return hasChanges ? updatedUsers : prevUsers;
-          });
-        },
-        (error) => {
-          console.error('[MembersTable] Error in users onSnapshot:', error);
-        }
-      );
-
-      // Guardar el listener en el cache global
-      globalCache.listeners.set(cacheKey, {
-        users: unsubscribeUsers,
-        tasks: existingListener?.tasks || null,
-      });
-
-      usersUnsubscribeRef.current = unsubscribeUsers;
-
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-        usersUnsubscribeRef.current = null;
       };
-    }, [user?.id]);
+
+      fetchUsers();
+    }, [user?.id, onCacheUpdate]);
 
     // Setup de tareas con cache optimizado (reutilizar listeners existentes)
     useEffect(() => {
-      if (!user?.id) return;
-
-      const cacheKey = `tasks_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = globalCache.listeners.get(cacheKey);
-      
-      if (existingListener?.tasks) {
-        console.log('[MembersTable] Reusing existing tasks listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (globalCache.tasks.has(cacheKey)) {
-          const cachedData = globalCache.tasks.get(cacheKey)!.data;
-          tasksRef.current = cachedData;
-          setTasks(cachedData);
-          setIsLoadingTasks(false);
-        }
-        return;
-      }
-      
-      // Verificar cache primero
-      if (isCacheValid(cacheKey, globalCache.tasks)) {
-        const cachedData = globalCache.tasks.get(cacheKey)!.data;
-        tasksRef.current = cachedData;
-        setTasks(cachedData);
+      if (!user?.id || externalTasks) return;
+      const cacheKey = getCacheKey('tasks', user.id);
+      // Intentar hidratar desde cache
+      const cached = loadTasksCache(user.id);
+      if (cached) {
+        tasksRef.current = cached;
+        setTasks([...cached]);
         setIsLoadingTasks(false);
-        console.log('[MembersTable] Using cached tasks on remount:', cachedData.length);
+        // No montar listener hasta que expire el cache
         return;
       }
-
-      console.log('[MembersTable] Setting up new tasks onSnapshot listener');
+      // Si no hay cache válido, montar listener
       setIsLoadingTasks(true);
-
       const tasksQuery = query(collection(db, 'tasks'));
       const unsubscribeTasks = onSnapshot(
         tasksQuery,
@@ -370,18 +323,9 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
             CreatedBy: doc.data().CreatedBy || '',
           }));
-
-          console.log('[MembersTable] Tasks onSnapshot update:', tasksData.length);
-          
           tasksRef.current = tasksData;
           setTasks(tasksData);
-          
-          // Actualizar cache
-          globalCache.tasks.set(cacheKey, {
-            data: tasksData,
-            timestamp: Date.now(),
-          });
-          
+          saveTasksCache(user.id, tasksData);
           setIsLoadingTasks(false);
         },
         (error) => {
@@ -390,28 +334,20 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           setIsLoadingTasks(false);
         }
       );
-
-      // Guardar el listener en el cache global
-      globalCache.listeners.set(cacheKey, {
-        users: existingListener?.users || null,
+      membersTableCache.listeners.set(cacheKey, {
+        users: null,
         tasks: unsubscribeTasks,
       });
-
-      tasksUnsubscribeRef.current = unsubscribeTasks;
-
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-        tasksUnsubscribeRef.current = null;
-      };
-    }, [user?.id, isCacheValid]);
+      return () => {};
+    }, [user?.id, externalTasks]);
 
     // Calcular proyectos activos por usuario (memoizado)
     const activeProjectsCount = useMemo(() => {
       const validStatuses = ['En Proceso', 'Diseño', 'Desarrollo'];
       const counts: { [userId: string]: number } = {};
 
-      users.forEach((u) => {
-        counts[u.id] = tasks.filter(
+      effectiveUsers.forEach((u) => {
+        counts[u.id] = effectiveTasks.filter(
           (task) =>
             validStatuses.includes(task.status) &&
             (task.AssignedTo.includes(u.id) || task.LeadedBy.includes(u.id)),
@@ -419,17 +355,17 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       });
 
       return counts;
-    }, [users, tasks]);
+    }, [effectiveUsers, effectiveTasks]);
 
     // Filtrar y ordenar usuarios (memoizado)
     const memoizedFilteredUsers = useMemo(() => {
-      const currentUser = users.find((u) => u.id === user?.id);
-      const otherUsers = users.filter((u) => u.id !== user?.id);
+      const currentUser = effectiveUsers.find((u) => u.id === user?.id);
+      const otherUsers = effectiveUsers.filter((u) => u.id !== user?.id);
       const sortedUsers = [...otherUsers].sort((a, b) =>
         a.fullName.toLowerCase().localeCompare(b.fullName.toLowerCase()),
       );
       return currentUser ? [{ ...currentUser, fullName: `${currentUser.fullName} (Tú)` }, ...sortedUsers] : sortedUsers;
-    }, [users, user?.id]);
+    }, [effectiveUsers, user?.id]);
 
     // Aplicar filtro de búsqueda (memoizado)
     useEffect(() => {
