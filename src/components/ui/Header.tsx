@@ -11,6 +11,7 @@ import { Timestamp } from 'firebase/firestore';
 import AvatarDropdown from '../AvatarDropdown';
 import NotificationDropdown from './NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/hooks/useTheme';
 
 // Coordenadas de la oficina y radio
 const OFFICE_LOCATION = {
@@ -99,6 +100,7 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { user, isLoaded } = useUser();
   const { isAdmin } = useAuth();
+  const { isDarkMode } = useTheme();
   const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
 
   /* ────────────────────────────────────────────
@@ -574,22 +576,49 @@ const Header: React.FC<HeaderProps> = ({
   ──────────────────────────────────────────── */
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
-      <div className={styles.lefContainer}>
-        <div className={styles.AvatarMobile}>
-          <AvatarDropdown onChangeContainer={onChangeContainer} />
+      <div className={styles.logoAndWelcomeContainer}>
+        <div className={styles.logoContainer}>
+          <Image
+            src={isDarkMode ? '/logoDark.svg' : '/logoLight.svg'}
+            alt="Logo"
+            width={180}
+            height={68}
+            style={{
+              transition: 'all 0.3s ease',
+              filter: isDarkMode 
+                ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))' 
+                : 'drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3))'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.filter = isDarkMode 
+                ? 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) brightness(1.1)' 
+                : 'drop-shadow(0 6px 12px rgba(255, 255, 255, 0.5)) brightness(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = isDarkMode 
+                ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))' 
+                : 'drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3))';
+            }}
+          />
         </div>
-        <div className={styles.frame14}>
-          <div className={styles.title}>
-            <div ref={welcomeRef} className={styles.welcome} />
+        <div className={styles.lefContainer}style={{justifyContent: 'start'}}>
+          <div className={styles.AvatarMobile}>
+            <AvatarDropdown onChangeContainer={onChangeContainer} />
           </div>
-          <div className={styles.text}>
-            <div className={styles.subtitle}>{getSubtitle()}</div>
-            <AdviceInput isAdmin={isAdmin} />
+          <div className={styles.frame14}>
+            <div className={styles.title}>
+              <div ref={welcomeRef} className={styles.welcome} />
+            </div>
+            <div className={styles.text}>
+              <div className={styles.subtitle}>{getSubtitle()}</div>
+              <AdviceInput isAdmin={isAdmin} />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className={styles.superiorHeader}>        <div className={styles.Clock}>
+      <div className={styles.superiorHeader}>
+        <div className={styles.Clock}>
           <div
             style={{ fontSize: '10px', fontFamily: 'Inconsolata, monospace' }}
             className="ClockDate"

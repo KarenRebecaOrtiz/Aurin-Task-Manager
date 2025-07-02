@@ -84,23 +84,24 @@ export const cleanupTasksKanbanListeners = () => {
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
+  leadedByUserIds?: string[];
   users: User[];
   currentUserId: string;
 }
 
-const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, currentUserId }) => {
+const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds = [], users, currentUserId }) => {
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
       console.warn('[AvatarGroup] Users prop is not an array:', users);
       return [];
     }
-    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id)).slice(0, 5);
+    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id)).slice(0, 5);
     return matchedUsers.sort((a, b) => {
       if (a.id === currentUserId) return -1;
       if (b.id === currentUserId) return 1;
       return 0;
     });
-  }, [assignedUserIds, users, currentUserId]);
+  }, [assignedUserIds, leadedByUserIds, users, currentUserId]);
 
   return (
     <div className={avatarStyles.avatarGroup}>
@@ -300,7 +301,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             </div>
           </div>
         </div>
-        <AvatarGroup assignedUserIds={task.AssignedTo} users={users} currentUserId={userId} />
+        <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={users} currentUserId={userId} />
       </div>
     </div>
   );
@@ -377,6 +378,354 @@ const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
   
   // Fallback to null
   return null;
+};
+
+interface TasksKanbanHeaderProps {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  onViewChange: (view: TaskView) => void;
+  onArchiveTableOpen: () => void;
+  onNewTaskOpen: () => void;
+  priorityFilter: string;
+  clientFilter: string;
+  userFilter: string;
+  clients: Client[];
+  users: User[];
+  userId: string;
+  isAdmin: boolean;
+  isPriorityDropdownOpen: boolean;
+  isClientDropdownOpen: boolean;
+  isUserDropdownOpen: boolean;
+  setIsPriorityDropdownOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  setIsClientDropdownOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  setIsUserDropdownOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  priorityDropdownRef: React.RefObject<HTMLDivElement>;
+  clientDropdownRef: React.RefObject<HTMLDivElement>;
+  userDropdownRef: React.RefObject<HTMLDivElement>;
+  handlePrioritySelect: (priority: string, e: React.MouseEvent<HTMLDivElement>) => void;
+  handleClientSelect: (clientId: string, e: React.MouseEvent<HTMLDivElement>) => void;
+  handleUserFilter: (id: string) => void;
+  animateClick: (element: HTMLElement) => void;
+  handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+}
+
+const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
+  searchQuery,
+  setSearchQuery,
+  onViewChange,
+  onArchiveTableOpen,
+  onNewTaskOpen,
+  priorityFilter,
+  clientFilter,
+  userFilter,
+  clients,
+  users,
+  userId,
+  isAdmin,
+  isPriorityDropdownOpen,
+  isClientDropdownOpen,
+  isUserDropdownOpen,
+  setIsPriorityDropdownOpen,
+  setIsClientDropdownOpen,
+  setIsUserDropdownOpen,
+  priorityDropdownRef,
+  clientDropdownRef,
+  userDropdownRef,
+  handlePrioritySelect,
+  handleClientSelect,
+  handleUserFilter,
+  animateClick,
+  handleInputKeyDown,
+}) => {
+  return (
+    <div className={styles.header} style={{ margin: '20px 0px' }}>
+      <div className={styles.searchWrapper}>
+        <input
+          type="text"
+          placeholder="Buscar Tareas"
+          value={searchQuery}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setSearchQuery(newValue);
+
+            const searchInput = e.currentTarget;
+            gsap.to(searchInput, {
+              scale: 1.02,
+              duration: 0.2,
+              ease: 'power2.out',
+              yoyo: true,
+              repeat: 1,
+            });
+
+            console.log('[TasksKanban] Search query updated:', newValue);
+          }}
+          className={styles.searchInput}
+          aria-label="Buscar tareas"
+          onKeyDown={handleInputKeyDown}
+        />
+      </div>
+
+      <div className={styles.filtersWrapper}>
+        <div className={styles.buttonWithTooltip}>
+          <button
+            className={styles.viewButton}
+            onClick={(e) => {
+              animateClick(e.currentTarget);
+              onViewChange('table');
+            }}
+          >
+            <Image
+              src="/table.svg"
+              alt="table"
+              draggable="false"
+              width={20}
+              height={20}
+              style={{
+                marginLeft: '5px',
+                transition: 'transform 0.3s ease, filter 0.3s ease',
+                filter:
+                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.filter =
+                  'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.81)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.filter =
+                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+              }}
+            />
+          </button>
+          <span className={styles.tooltip}>Vista Tabla</span>
+        </div>
+        <div className={styles.buttonWithTooltip}>
+          <button
+            className={styles.viewButton}
+            onClick={(e) => {
+              animateClick(e.currentTarget);
+              onArchiveTableOpen();
+              console.log('[TasksKanban] Opening Archive Table');
+            }}
+          >
+            <Image
+              src="/archive.svg"
+              draggable="false"
+              alt="archivo"
+              width={20}
+              height={20}
+              style={{
+                marginLeft: '5px',
+                transition: 'transform 0.3s ease, filter 0.3s ease',
+                filter:
+                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.filter =
+                  'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.filter =
+                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+              }}
+            />
+          </button>
+          <span className={styles.tooltip}>Archivo</span>
+        </div>
+        <div className={styles.buttonWithTooltip}>
+          <div className={styles.filter}>
+            <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
+              <div
+                className={styles.dropdownTrigger}
+                onClick={(e) => {
+                  animateClick(e.currentTarget);
+                  setIsPriorityDropdownOpen((prev: boolean) => {
+                    if (!prev) {
+                      setIsClientDropdownOpen(false);
+                      setIsUserDropdownOpen(false);
+                    }
+                    return !prev;
+                  });
+                }}
+              >
+                <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
+                <span>{priorityFilter || 'Prioridad'}</span>
+              </div>
+              {isPriorityDropdownOpen && (
+                <AnimatePresence>
+                  <motion.div 
+                    className={styles.dropdownItems}
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                  >
+                    {['Alta', 'Media', 'Baja', ''].map((priority, index) => (
+                      <motion.div
+                      key={priority || 'all'}
+                      className={styles.dropdownItem}
+                      onClick={(e) => handlePrioritySelect(priority, e)}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                    >
+                      {priority || 'Todos'}
+                      </motion.div>
+                  ))}
+                  </motion.div>
+                </AnimatePresence>
+              )}
+            </div>
+          </div>
+          <span className={styles.tooltip}>Filtrar por Prioridad</span>
+        </div>
+        <div className={styles.buttonWithTooltip}>
+          <div className={styles.filter}>
+            <div className={styles.dropdownContainer} ref={clientDropdownRef}>
+              <div
+                className={styles.dropdownTrigger}
+                onClick={(e) => {
+                  animateClick(e.currentTarget);
+                  setIsClientDropdownOpen((prev) => {
+                    if (!prev) {
+                      setIsPriorityDropdownOpen(false);
+                      setIsUserDropdownOpen(false);
+                    }
+                    return !prev;
+                  });
+                }}
+              >
+                <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
+                <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
+              </div>
+              {isClientDropdownOpen && (
+                <AnimatePresence>
+                  <motion.div 
+                    className={styles.dropdownItems}
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                  >
+                    {[{ id: '', name: 'Todos' }, ...clients].map((client, index) => (
+                      <motion.div
+                      key={client.id || 'all'}
+                      className={styles.dropdownItem}
+                      onClick={(e) => handleClientSelect(client.id, e)}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                    >
+                      {client.name}
+                      </motion.div>
+                  ))}
+                  </motion.div>
+                </AnimatePresence>
+              )}
+            </div>
+          </div>
+          <span className={styles.tooltip}>Filtrar por Cuenta</span>
+        </div>
+        {isAdmin && (
+          <>
+            <div className={styles.buttonWithTooltip}>
+              <div className={styles.filter}>
+                <div className={styles.dropdownContainer} ref={userDropdownRef}>
+                  <div
+                    className={styles.dropdownTrigger}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      setIsUserDropdownOpen((prev) => {
+                        if (!prev) {
+                          setIsPriorityDropdownOpen(false);
+                          setIsClientDropdownOpen(false);
+                        }
+                        return !prev;
+                      });
+                      console.log('[TasksKanban] User dropdown toggled');
+                    }}
+                  >
+                    <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
+                    <span>
+                      {userFilter === ''
+                        ? 'Todos'
+                        : userFilter === 'me'
+                        ? 'Mis tareas'
+                        : users.find((u) => u.id === userFilter)?.fullName || 'Usuario'}
+                    </span>
+                  </div>
+                  {isUserDropdownOpen && (
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        <motion.div
+                          className={styles.dropdownItem}
+                          style={{ fontWeight: userFilter === '' ? 700 : 400 }}
+                          onClick={() => handleUserFilter('')}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.2, delay: 0 * 0.05 }}
+                        >
+                          Todos
+                        </motion.div>
+                        <motion.div
+                          className={styles.dropdownItem}
+                          style={{ fontWeight: userFilter === 'me' ? 700 : 400 }}
+                          onClick={() => handleUserFilter('me')}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.2, delay: 1 * 0.05 }}
+                        >
+                          Mis tareas
+                        </motion.div>
+                        {users
+                          .filter((u) => u.id !== userId)
+                          .map((u, index) => (
+                            <motion.div
+                              key={u.id}
+                              className={styles.dropdownItem}
+                              style={{ fontWeight: userFilter === u.id ? 700 : 400 }}
+                              onClick={() => handleUserFilter(u.id)}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
+                            >
+                              {u.fullName}
+                            </motion.div>
+                          ))}
+                      </motion.div>
+                    </AnimatePresence>
+                  )}
+                </div>
+              </div>
+              <span className={styles.tooltip}>Filtrar por Usuario</span>
+            </div>
+            <div className={styles.buttonWithTooltip}>
+              <button
+                className={styles.createButton}
+                onClick={(e) => {
+                  animateClick(e.currentTarget);
+                  onNewTaskOpen();
+                }}
+              >
+                <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
+                Crear Tarea
+              </button>
+              <span className={styles.tooltip}>Crear Nueva Tarea</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 };
 
 const TasksKanban: React.FC<TasksKanbanProps> = memo(
@@ -1317,291 +1666,34 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         <div className={styles.swiperContainer}>
           <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
         </div>
-        <div className={styles.header} style={{ margin: '20px 0px' }}>
-          <div className={styles.searchWrapper}>
-            <input
-              type="text"
-              placeholder="Buscar Tareas"
-              value={searchQuery}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setSearchQuery(newValue);
-
-                const searchInput = e.currentTarget;
-                gsap.to(searchInput, {
-                  scale: 1.02,
-                  duration: 0.2,
-                  ease: 'power2.out',
-                  yoyo: true,
-                  repeat: 1,
-                });
-
-                console.log('[TasksKanban] Search query updated:', newValue);
-              }}
-              className={styles.searchInput}
-              aria-label="Buscar tareas"
-              onKeyDown={handleInputKeyDown}
-            />
-          </div>
-
-          <div className={styles.filtersWrapper}>
-            <div className={styles.buttonWithTooltip}>
-              <button
-                className={styles.viewButton}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  onViewChange('table');
-                }}
-              >
-                <Image
-                  src="/table.svg"
-                  alt="table"
-                  draggable="false"
-                  width={20}
-                  height={20}
-                  style={{
-                    marginLeft: '5px',
-                    transition: 'transform 0.3s ease, filter 0.3s ease',
-                    filter:
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.81)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                  }}
-                />
-              </button>
-              <span className={styles.tooltip}>Vista Tabla</span>
-            </div>
-            <div className={styles.buttonWithTooltip}>
-              <button
-                className={styles.viewButton}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  onArchiveTableOpen();
-                  console.log('[TasksKanban] Opening Archive Table');
-                }}
-              >
-                <Image
-                  src="/archive.svg"
-                  draggable="false"
-                  alt="archivo"
-                  width={20}
-                  height={20}
-                  style={{
-                    marginLeft: '5px',
-                    transition: 'transform 0.3s ease, filter 0.3s ease',
-                    filter:
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                  }}
-                />
-              </button>
-              <span className={styles.tooltip}>Archivo</span>
-            </div>
-            <div className={styles.buttonWithTooltip}>
-              <div className={styles.filter}>
-                <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
-                  <div
-                    className={styles.dropdownTrigger}
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      setIsPriorityDropdownOpen((prev) => {
-                        if (!prev) {
-                          setIsClientDropdownOpen(false);
-                          setIsUserDropdownOpen(false);
-                        }
-                        return !prev;
-                      });
-                    }}
-                  >
-                    <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
-                    <span>{priorityFilter || 'Prioridad'}</span>
-                  </div>
-                  {isPriorityDropdownOpen && (
-                    <AnimatePresence>
-                      <motion.div 
-                        className={styles.dropdownItems}
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                      >
-                        {['Alta', 'Media', 'Baja', ''].map((priority, index) => (
-                          <motion.div
-                          key={priority || 'all'}
-                          className={styles.dropdownItem}
-                          onClick={(e) => handlePrioritySelect(priority, e)}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: index * 0.05 }}
-                        >
-                          {priority || 'Todos'}
-                          </motion.div>
-                      ))}
-                      </motion.div>
-                    </AnimatePresence>
-                  )}
-                </div>
-              </div>
-              <span className={styles.tooltip}>Filtrar por Prioridad</span>
-            </div>
-            <div className={styles.buttonWithTooltip}>
-              <div className={styles.filter}>
-                <div className={styles.dropdownContainer} ref={clientDropdownRef}>
-                  <div
-                    className={styles.dropdownTrigger}
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      setIsClientDropdownOpen((prev) => {
-                        if (!prev) {
-                          setIsPriorityDropdownOpen(false);
-                          setIsUserDropdownOpen(false);
-                        }
-                        return !prev;
-                      });
-                    }}
-                  >
-                    <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
-                    <span>{clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
-                  </div>
-                  {isClientDropdownOpen && (
-                    <AnimatePresence>
-                      <motion.div 
-                        className={styles.dropdownItems}
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                      >
-                        {[{ id: '', name: 'Todos' }, ...clients].map((client, index) => (
-                          <motion.div
-                          key={client.id || 'all'}
-                          className={styles.dropdownItem}
-                          onClick={(e) => handleClientSelect(client.id, e)}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: index * 0.05 }}
-                        >
-                          {client.name}
-                          </motion.div>
-                      ))}
-                      </motion.div>
-                    </AnimatePresence>
-                  )}
-                </div>
-              </div>
-              <span className={styles.tooltip}>Filtrar por Cuenta</span>
-            </div>
-            {isAdmin && (
-              <div className={styles.buttonWithTooltip}>
-                <div className={styles.filter}>
-                  <div className={styles.dropdownContainer} ref={userDropdownRef}>
-                    <div
-                      className={styles.dropdownTrigger}
-                      onClick={(e) => {
-                        animateClick(e.currentTarget);
-                        setIsUserDropdownOpen((prev) => {
-                          if (!prev) {
-                            setIsPriorityDropdownOpen(false);
-                            setIsClientDropdownOpen(false);
-                          }
-                          return !prev;
-                        });
-                        console.log('[TasksKanban] User dropdown toggled');
-                      }}
-                    >
-                      <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
-                      <span>
-                        {userFilter === ''
-                          ? 'Todos'
-                          : userFilter === 'me'
-                          ? 'Mis tareas'
-                          : users.find((u) => u.id === userFilter)?.fullName || 'Usuario'}
-                      </span>
-                    </div>
-                    {isUserDropdownOpen && (
-                      <AnimatePresence>
-                        <motion.div 
-                          className={styles.dropdownItems}
-                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
-                        >
-                          <motion.div
-                          className={styles.dropdownItem}
-                          style={{ fontWeight: userFilter === '' ? 700 : 400 }}
-                          onClick={() => handleUserFilter('')}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: 0 * 0.05 }}
-                        >
-                          Todos
-                          </motion.div>
-                          <motion.div
-                          className={styles.dropdownItem}
-                          style={{ fontWeight: userFilter === 'me' ? 700 : 400 }}
-                          onClick={() => handleUserFilter('me')}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: 1 * 0.05 }}
-                        >
-                          Mis tareas
-                          </motion.div>
-                        {users
-                          .filter((u) => u.id !== userId)
-                            .map((u, index) => (
-                              <motion.div
-                              key={u.id}
-                              className={styles.dropdownItem}
-                              style={{ fontWeight: userFilter === u.id ? 700 : 400 }}
-                              onClick={() => handleUserFilter(u.id)}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
-                            >
-                              {u.fullName}
-                              </motion.div>
-                          ))}
-                        </motion.div>
-                      </AnimatePresence>
-                    )}
-                  </div>
-                </div>
-                <span className={styles.tooltip}>Filtrar por Usuario</span>
-              </div>
-            )}
-            <div className={styles.buttonWithTooltip}>
-              <button
-                className={styles.createButton}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
-                  onNewTaskOpen();
-                }}
-              >
-                <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
-                Crear Tarea
-              </button>
-              <span className={styles.tooltip}>Crear Nueva Tarea</span>
-            </div>
-          </div>
-        </div>
+        <TasksKanbanHeader
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onViewChange={onViewChange}
+          onArchiveTableOpen={onArchiveTableOpen}
+          onNewTaskOpen={onNewTaskOpen}
+          priorityFilter={priorityFilter}
+          clientFilter={clientFilter}
+          userFilter={userFilter}
+          clients={clients}
+          users={users}
+          userId={userId}
+          isAdmin={isAdmin}
+          isPriorityDropdownOpen={isPriorityDropdownOpen}
+          isClientDropdownOpen={isClientDropdownOpen}
+          isUserDropdownOpen={isUserDropdownOpen}
+          setIsPriorityDropdownOpen={setIsPriorityDropdownOpen}
+          setIsClientDropdownOpen={setIsClientDropdownOpen}
+          setIsUserDropdownOpen={setIsUserDropdownOpen}
+          priorityDropdownRef={priorityDropdownRef}
+          clientDropdownRef={clientDropdownRef}
+          userDropdownRef={userDropdownRef}
+          handlePrioritySelect={handlePrioritySelect}
+          handleClientSelect={handleClientSelect}
+          handleUserFilter={handleUserFilter}
+          animateClick={animateClick}
+          handleInputKeyDown={handleInputKeyDown}
+        />
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -1705,7 +1797,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                       </div>
                     </div>
                   </div>
-                  <AvatarGroup assignedUserIds={activeTask.AssignedTo} users={effectiveUsers} currentUserId={userId} />
+                  <AvatarGroup assignedUserIds={activeTask.AssignedTo} leadedByUserIds={activeTask.LeadedBy} users={effectiveUsers} currentUserId={userId} />
                 </div>
               </div>
             ) : null}

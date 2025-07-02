@@ -956,3 +956,78 @@ $zinc-600: #52525b;
     padding: 12px;
   }
 }
+
+// 23. CUSTOM CHECKBOX
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  height: 24px;
+  width: 24px;
+  box-shadow: -2px -2px 4px rgba(255,255,255,0.5),
+  2px 2px 4px rgba(0,0,70,0.12);
+  border-radius: 50%;
+  border: 2px solid #ececec;
+  outline: none;
+  display: inline-block;
+  position: relative;
+  transition: .3s;
+  margin-right: 8px;
+
+  :global(body.dark) & {
+    box-shadow: -2px -2px 4px rgba(255,255,255,0.1),
+    2px 2px 4px rgba(0,0,0,0.3);
+    border: 2px solid #2a2a2a;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 10px;
+    border: solid transparent;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -60%) rotate(45deg);
+    transition: .3s;
+  }
+
+  &:checked {
+    box-shadow: -2px -2px 4px rgba(255,255,255,0.5),
+    2px 2px 4px rgba(70,70,70,0.12),
+    inset -2px -2px 4px rgba(255,255,255,0.5),
+    inset 2px 2px 4px rgba(70,70,70,0.12);
+    transition: .3s;
+
+    :global(body.dark) & {
+      box-shadow: -2px -2px 4px rgba(255,255,255,0.1),
+      2px 2px 4px rgba(0,0,0,0.3),
+      inset -2px -2px 4px rgba(255,255,255,0.1),
+      inset 2px 2px 4px rgba(0,0,0,0.3);
+    }
+  }
+
+  &:checked::after {
+    border: solid #15e38a;
+    border-width: 0 2px 2px 0;
+  }
+}
+
+.checkboxLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: $black;
+  cursor: pointer;
+
+  :global(body.dark) & {
+    color: $white;
+  }
+}

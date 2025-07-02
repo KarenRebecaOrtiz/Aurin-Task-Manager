@@ -215,7 +215,9 @@ const ActionMenu: React.FC<ActionMenuProps> = memo(
                           style={{ 
                             width: 'auto', 
                             height: 'auto',
-                            opacity: 0.8 
+                            transform: 'scale(0.02)',
+                            opacity: 0.8,
+                            transition: 'transform 0.2s ease-in-out'
                           }} 
                         />
                         <span className={styles.tooltip}>{task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}</span>

@@ -7,19 +7,24 @@ import styles from "./AvatarGroup.module.scss";
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
+  leadedByUserIds?: string[];
   users: User[];
 }
 
-const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users }) => {
+const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds = [], users }) => {
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
       console.warn("[AvatarGroup] Users prop is not an array:", users);
       return [];
     }
+    
+    // Combinar asignados y responsables, eliminando duplicados
+    const allUserIds = [...new Set([...assignedUserIds, ...leadedByUserIds])];
+    
     return users
-      .filter((user) => assignedUserIds.includes(user.id))
+      .filter((user) => allUserIds.includes(user.id))
       .slice(0, 5);
-  }, [assignedUserIds, users]);
+  }, [assignedUserIds, leadedByUserIds, users]);
 
   return (
     <div className={styles.avatarGroup}>

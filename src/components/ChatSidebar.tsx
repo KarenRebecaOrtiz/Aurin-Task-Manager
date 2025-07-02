@@ -117,6 +117,23 @@ const MessageItem = memo(
       const actionMenuRef = useRef<HTMLDivElement>(null);
       const messageRef = useRef<HTMLDivElement>(null);
 
+      // Función para copiar mensaje al portapapeles
+      const handleCopyMessage = useCallback(async (messageText: string) => {
+        try {
+          await navigator.clipboard.writeText(messageText);
+          console.log('[MessageItem] Mensaje copiado al portapapeles');
+        } catch (error) {
+          console.error('[MessageItem] Error copiando mensaje:', error);
+          // Fallback para navegadores más antiguos
+          const textArea = document.createElement('textarea');
+          textArea.value = messageText;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+      }, []);
+
       useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
           if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
@@ -156,15 +173,24 @@ const MessageItem = memo(
         }
       }, [isNewChunk, isLoadingChunk]);
 
+      const formatTimeToHHMMSS = useCallback((hours: number): string => {
+        const totalSeconds = Math.round(hours * 3600);
+        const hh = Math.floor(totalSeconds / 3600);
+        const mm = Math.floor((totalSeconds % 3600) / 60);
+        
+        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+      }, []);
+
       const renderMessageContent = useCallback(() => {
         const contentElements: React.ReactNode[] = [];
         
         // Si es un mensaje de tiempo, solo mostrar el componente de tiempo
         if (message.hours) {
+          const formattedTime = formatTimeToHHMMSS(message.hours);
           contentElements.push(
             <div key="time" className={styles.timeMessage}>
               <Image src="/Clock.svg" alt="Tiempo" width={16} height={16} />
-              <span>{message.hours} horas registradas</span>
+              <span>{formattedTime}</span>
             </div>
           );
           return contentElements;
@@ -173,27 +199,29 @@ const MessageItem = memo(
         // Si hay un mensaje al que se está respondiendo, mostrar la vista previa
         if (message.replyTo) {
           contentElements.push(
-            <div key="reply" className={styles.replyPreview}>
-              <div className={styles.replyHeader}>
-                <span>Respondiendo a {message.replyTo.senderName}</span>
-              </div>
+            <div key="reply" className={styles.replyContainer}>
               <div className={styles.replyContent}>
-                {message.replyTo.imageUrl && (
-                  <Image
-                    src={message.replyTo.imageUrl}
-                    alt="Imagen de respuesta"
-                    width={40}
-                    height={40}
-                    className={styles.replyImage}
-                    onError={(e) => { e.currentTarget.src = '/empty-image.png'; }}
-                  />
-                )}
-                {message.replyTo.text && (
-                  <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.replyTo.text.length > 50 ? `${message.replyTo.text.substring(0, 50)}...` : message.replyTo.text) }} />
-                )}
-                {!message.replyTo.text && !message.replyTo.imageUrl && (
-                  <span className={styles.replyText}>Mensaje</span>
-                )}
+                <div className={styles.replyHeader}>
+                  <span className={styles.replyLabel}>Respondiendo a {message.replyTo.senderName}</span>
+                </div>
+                <div className={styles.replyPreview}>
+                  {message.replyTo.imageUrl && (
+                    <Image
+                      src={message.replyTo.imageUrl}
+                      alt="Imagen de respuesta"
+                      width={40}
+                      height={40}
+                      className={styles.replyImage}
+                      onError={(e) => { e.currentTarget.src = '/empty-image.png'; }}
+                    />
+                  )}
+                  {message.replyTo.text && (
+                    <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.replyTo.text.length > 50 ? `${message.replyTo.text.substring(0, 50)}...` : message.replyTo.text) }} />
+                  )}
+                  {!message.replyTo.text && !message.replyTo.imageUrl && (
+                    <span className={styles.replyText}>Mensaje</span>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -233,7 +261,7 @@ const MessageItem = memo(
         }
 
         return contentElements;
-      }, [message, setImagePreviewSrc, styles]);
+      }, [message, setImagePreviewSrc, styles, formatTimeToHHMMSS]);
 
       // Si es un pill de fecha, renderizar un diseño especial
       if (message.isDatePill) {
@@ -293,7 +321,7 @@ const MessageItem = memo(
                     timeZone: 'America/Mexico_City',
                   })}
                 </span>
-                {userId === message.senderId && !message.isPending && (
+                {!message.isPending && (
                   <div className={styles.actionContainer}>
                     <button
                       className={styles.actionButton}
@@ -307,6 +335,17 @@ const MessageItem = memo(
                     {actionMenuOpenId === message.id && (
                       <div className={styles.actionDropdown} ref={actionMenuRef}>
                         <div className={styles.actionDropdownContent}>
+                          {/* Opción de copiar disponible para todos los mensajes */}
+                          <div
+                            className={styles.actionDropdownItem}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyMessage(message.text || '');
+                              setActionMenuOpenId(null);
+                            }}
+                          >
+                            Copiar
+                          </div>
                           {/* Solo mostrar opciones de editar y eliminar si el mensaje es del usuario actual */}
                           {message.senderId === userId && (
                             <>
@@ -664,43 +703,23 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, [isOpen]);
 
-  // 🕒 TIMER ACTIVO - Actualizar cada segundo y sincronizar con Firestore
+  // 🕒 TIMER ACTIVO - Actualizar cada segundo
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
-    
     if (isTimerRunning && !isRestoringTimer) {
-      // Actualizar contador local cada segundo
+      // Actualizar contador local cada segundo de forma lineal
       interval = setInterval(() => {
-        setTimerSeconds((prev) => {
-          const newSeconds = prev + 1;
-          
-          // Auto-sincronizar cada 30 segundos sin dependencia externa
-          if (newSeconds % 30 === 0 && user?.id && task.id) {
-            const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
-            updateDoc(timerDocRef, {
-              lastSync: serverTimestamp(),
-              accumulatedSeconds: newSeconds,
-            }).then(() => {
-              console.log("[ChatSidebar] 🔄 Timer auto-sincronizado:", newSeconds);
-            }).catch((error) => {
-              console.error("[ChatSidebar] ❌ Error auto-sincronizando timer:", error);
-            });
-          }
-          
-          return newSeconds;
-        });
+        setTimerSeconds((prev) => prev + 1);
       }, 1000);
     }
-      
     
     return () => {
       if (interval) clearInterval(interval);
-      
     };
-  }, [isTimerRunning, isRestoringTimer, user?.id, task.id]);
+  }, [isTimerRunning, isRestoringTimer]);
 
-  // 📡 LISTENER EN TIEMPO REAL PARA TIMER - Detectar cambios de otros usuarios
+  // 📡 LISTENER EN TIEMPO REAL PARA TIMER - Solo para cambios de estado (iniciar/pausar)
   useEffect(() => {
     if (!isOpen || !user?.id || !task.id) return;
 
@@ -712,24 +731,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         const timerData = doc.data();
         console.log("[ChatSidebar] 🔄 Cambio detectado en timer remoto:", timerData);
         
-        // Solo actualizar si el cambio viene de otro lugar (lastSync reciente)
-        const lastSync = timerData.lastSync?.toDate();
-        const now = new Date();
-        const timeDiff = lastSync ? (now.getTime() - lastSync.getTime()) / 1000 : 999;
-        
-        if (timeDiff < 60) { // Cambio reciente (menos de 1 minuto)
-          if (timerData.isRunning && timerData.startTime) {
-            // Timer activo desde otro dispositivo
-            const startTime = timerData.startTime.toDate();
-            const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-            const totalSeconds = (timerData.accumulatedSeconds || 0) + elapsedSeconds;
-            
-            console.log("[ChatSidebar] 🔄 Sincronizando timer activo desde remoto:", totalSeconds);
+        // Solo sincronizar cambios de estado, no el tiempo transcurrido
+        if (timerData.isRunning !== isTimerRunning) {
+          if (timerData.isRunning) {
+            // Timer iniciado desde otro dispositivo
+            console.log("[ChatSidebar] 🔄 Timer iniciado desde remoto");
             setIsTimerRunning(true);
-            setTimerSeconds(totalSeconds);
-          } else if (!timerData.isRunning) {
+            setTimerSeconds(timerData.accumulatedSeconds || 0);
+          } else {
             // Timer pausado desde otro dispositivo
-            console.log("[ChatSidebar] 🔄 Sincronizando timer pausado desde remoto:", timerData.accumulatedSeconds);
+            console.log("[ChatSidebar] 🔄 Timer pausado desde remoto");
             setIsTimerRunning(false);
             setTimerSeconds(timerData.accumulatedSeconds || 0);
           }
@@ -743,7 +754,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       console.log("[ChatSidebar] 🔌 Desconectando listener de timer...");
       unsubscribe();
     };
-  }, [isOpen, user?.id, task.id, isRestoringTimer]);
+  }, [isOpen, isRestoringTimer, isTimerRunning, user?.id, task.id]);
+
   useEffect(() => {
     if (sidebarRef.current) {
       const mobile = isMobile();
@@ -1093,14 +1105,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
     try {
       await deleteMessage(messageId);
-      setActionMenuOpenId(null);
+      console.log('[ChatSidebar] Mensaje eliminado:', messageId);
     } catch (error) {
-      console.error('Error deleting message:', error);
+      console.error('[ChatSidebar] Error eliminando mensaje:', error);
     }
-  };
+  }, [deleteMessage]);
 
   const toggleTimer = async (_e: React.MouseEvent) => {
     if (!user?.id || !task.id) {
@@ -1284,13 +1296,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const totalHours = useMemo(() => {
     const timeMessages = messages.filter((msg) => typeof msg.hours === 'number' && msg.hours > 0);
-    let totalMinutes = 0;
+    let totalSeconds = 0;
     timeMessages.forEach((msg) => {
-      totalMinutes += msg.hours! * 60;
+      totalSeconds += Math.round(msg.hours! * 3600);
     });
-    const totalHours = Math.floor(totalMinutes / 60);
-    const remainingMinutes = Math.round(totalMinutes % 60);
-    return `${totalHours}h ${remainingMinutes}m`;
+    const hh = Math.floor(totalSeconds / 3600);
+    const mm = Math.floor((totalSeconds % 3600) / 60);
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   }, [messages]);
 
   const hoursByUser = useMemo(() => {
@@ -1309,14 +1321,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         firstName: 'Desconocido',
         imageUrl: '/default-image.png',
       };
-      const totalMinutes = hoursMap[userId] * 60;
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = Math.round(totalMinutes % 60);
+      const totalSeconds = Math.round(hoursMap[userId] * 3600);
+      const hh = Math.floor(totalSeconds / 3600);
+      const mm = Math.floor((totalSeconds % 3600) / 60);
       return {
         id: userId,
         firstName: u.firstName || u.fullName.split(' ')[0],
         imageUrl: u.imageUrl,
-        hours: `${hours}:${minutes.toString().padStart(2, '0')}`,
+        hours: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
       };
     });
   }, [messages, users]);
@@ -1833,7 +1845,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         >
           {messages.map((message) => (
             <MessageItem
-              key={message.id}
+              key={message.clientId}
               message={message}
               users={users}
               userId={user?.id}

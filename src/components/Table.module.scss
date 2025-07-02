@@ -126,6 +126,7 @@
   line-height: $leading-normal;
   display: flex;
   align-items: center;
+  max-width: 250px!important;
   justify-content: start;
   
   @include dark-mode {

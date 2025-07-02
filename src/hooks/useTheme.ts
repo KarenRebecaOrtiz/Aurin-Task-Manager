@@ -6,30 +6,35 @@ export const useTheme = () => {
   useEffect(() => {
     // Función para detectar el tema actual
     const detectTheme = () => {
-      const isDark = document.body.classList.contains('dark');
+      const savedTheme = localStorage.getItem('theme');
+      const isDark = savedTheme === 'dark' || document.body.classList.contains('dark');
       setIsDarkMode(isDark);
     };
 
     // Detectar tema inicial
     detectTheme();
 
-    // Observer para detectar cambios en la clase del body
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-          detectTheme();
-        }
-      });
+    // Escuchar cambios en localStorage
+    const handleStorageChange = () => {
+      detectTheme();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // También escuchar cambios en el DOM
+    const observer = new MutationObserver(() => {
+      detectTheme();
     });
 
-    // Observar cambios en el body
     observer.observe(document.body, {
       attributes: true,
       attributeFilter: ['class']
     });
 
-    // Cleanup
-    return () => observer.disconnect();
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      observer.disconnect();
+    };
   }, []);
 
   return { isDarkMode };

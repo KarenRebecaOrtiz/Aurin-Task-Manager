@@ -52,13 +52,15 @@ type TaskView = 'table' | 'kanban';
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
+  leadedByUserIds?: string[];
   users: User[];
   currentUserId: string;
 }
 
-const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, currentUserId }) => {
+const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds = [], users, currentUserId }) => {
   console.log('[ArchiveTable AvatarGroup] Received data:', {
     assignedUserIds,
+    leadedByUserIds,
     usersCount: users.length,
     currentUserId,
     usersData: users.map(u => ({
@@ -74,9 +76,10 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
       console.warn('[AvatarGroup] Users prop is not an array:', users);
       return [];
     }
-    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id)).slice(0, 5);
+    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id)).slice(0, 5);
     console.log('[ArchiveTable AvatarGroup] Matched users:', {
       assignedUserIds,
+      leadedByUserIds,
       matchedUsersCount: matchedUsers.length,
       matchedUsers: matchedUsers.map(u => ({
         id: u.id,
@@ -90,7 +93,7 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, curre
       if (b.id === currentUserId) return 1;
       return 0;
     });
-  }, [assignedUserIds, users, currentUserId]);
+  }, [assignedUserIds, leadedByUserIds, users, currentUserId]);
 
   return (
     <div className={avatarStyles.avatarGroup}>
@@ -282,12 +285,13 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       return client?.name || 'Cliente no encontrado';
     }, [effectiveClients]);
 
-    // Handler reforzado para desarchivar - MEJORADO para sincronización inmediata
+    // Handler reforzado para desarchivar - MEJORADO para actualización optimista
     const handleUnarchiveTask = useCallback(async (task: Task) => {
       if (!isAdmin) {
         console.warn('[ArchiveTable] Unarchive intentado por usuario no admin');
         return;
       }
+
       try {
         // Guardar en undo stack ANTES de desarchivar
         const undoItem = {
@@ -295,6 +299,10 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           action: 'unarchive' as const,
           timestamp: Date.now()
         };
+        
+        // Actualización optimista del estado local
+        setFilteredTasks(prev => prev.filter(t => t.id !== task.id));
+        
         setUndoStack(prev => [...prev, undoItem]);
         setShowUndo(true);
 
@@ -309,64 +317,68 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
         }, 3000);
         
-        // **CRÍTICO: Usar la función centralizada del padre**
+        // Ejecutar la acción en segundo plano
         if (onTaskArchive) {
           console.log('[ArchiveTable] Unarchiving task via central handler:', task.id);
-          const success = await onTaskArchive(task, 'unarchive');
-          if (success) {
-            console.log('[ArchiveTable] Task unarchived successfully via central handler:', task.id);
-            // No necesitamos onTaskUpdate ni onDataRefresh aquí
-            // porque la función onTaskArchive del padre ya se encarga
-            // de actualizar el estado global y el onSnapshot lo reflejará.
-          } else {
-            console.error('[ArchiveTable] Failed to unarchive task via central handler');
-            // Revertir el estado optimista local si el padre reporta fallo
+          onTaskArchive(task, 'unarchive').catch(error => {
+            // Si falla, revertir la actualización optimista
+            console.error('[ArchiveTable] Failed to unarchive task:', error);
+            setFilteredTasks(prev => [...prev, task]);
             setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
             setShowUndo(false);
-          }
-        } else {
-          console.error('[ArchiveTable] onTaskArchive prop is not provided to ArchiveTable');
-          // Revertir el estado optimista si no hay manejador
-          setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
-          setShowUndo(false);
+          });
         }
       } catch (error) {
         console.error('[ArchiveTable] Error unarchiving task:', error);
-        
-        // En caso de error, trigger refresh para obtener estado actual
         if (onDataRefresh) {
           onDataRefresh();
         }
-        throw error;
       }
     }, [isAdmin, onDataRefresh, onTaskArchive]);
 
-    // Función para deshacer - SIMPLIFICADA para usar función centralizada
+    // Función para deshacer - MEJORADA con actualización optimista
     const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
       try {
-        if (undoItem.action === 'unarchive' && onTaskArchive) {
-          console.log('[ArchiveTable] Undoing unarchive action (re-archiving task):', undoItem.task.id);
-          const success = await onTaskArchive(undoItem.task, 'archive'); // Llama al padre para archivar de nuevo
-          if (!success) {
-            console.error('[ArchiveTable] Failed to re-archive task via central handler');
-            return;
+        if (onTaskArchive) {
+          console.log('[ArchiveTable] Undoing action:', {
+            action: undoItem.action,
+            taskId: undoItem.task.id,
+            taskName: undoItem.task.name
+          });
+          
+          // Actualización optimista del estado local
+          if (undoItem.action === 'unarchive') {
+            // Si estamos deshaciendo un desarchivado, volvemos a mostrar la tarea
+            setFilteredTasks(prev => [...prev, undoItem.task]);
+          } else {
+            // Si estamos deshaciendo un archivado, quitamos la tarea
+            setFilteredTasks(prev => prev.filter(t => t.id !== undoItem.task.id));
           }
-          console.log('[ArchiveTable] Task re-archived successfully (undo unarchive):', undoItem.task.id);
+          
+          // Remover del undo stack inmediatamente
+          setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+          setShowUndo(false);
+          
+          if (undoTimeoutRef.current) {
+            clearTimeout(undoTimeoutRef.current);
+          }
+          
+          // Ejecutar la acción en segundo plano
+          const targetAction = undoItem.action === 'unarchive' ? 'archive' : 'unarchive';
+          onTaskArchive(undoItem.task, targetAction).catch(error => {
+            // Si falla, revertir la actualización optimista
+            console.error('[ArchiveTable] Failed to undo action:', error);
+            if (undoItem.action === 'unarchive') {
+              setFilteredTasks(prev => prev.filter(t => t.id !== undoItem.task.id));
+            } else {
+              setFilteredTasks(prev => [...prev, undoItem.task]);
+            }
+          });
         }
-        
-        // Remover del undo stack
-        setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
-        setShowUndo(false);
-        
-        if (undoTimeoutRef.current) {
-          clearTimeout(undoTimeoutRef.current);
-        }
-        
-        console.log('[ArchiveTable] Undo action completed successfully');
       } catch (error) {
         console.error('[ArchiveTable] Error undoing action:', error);
       }
-    }, [onTaskArchive]); // Dependencia clave: onTaskArchive
+    }, [onTaskArchive]);
 
     // Ordenar tareas
     const sortedTasks = useMemo(() => {
@@ -488,7 +500,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       {
         key: 'name',
         label: 'Tarea',
-        width: '50%', 
+        width: '25%', 
         mobileVisible: true,
       },
       {
@@ -572,7 +584,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            return <AvatarGroup assignedUserIds={task.AssignedTo} users={effectiveUsers} currentUserId={userId} />;
+            return <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={effectiveUsers} currentUserId={userId} />;
           },
         };
       }
@@ -1067,7 +1079,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   borderRadius: '50%',
                   animation: 'pulse 2s infinite'
                 }} />
-                <span>Tarea desarchivada</span>
+                <span>
+                  {undoStack[undoStack.length - 1]?.action === 'unarchive' 
+                    ? 'Tarea desarchivada' 
+                    : 'Tarea archivada'}
+                </span>
               </div>
               <button
                 onClick={() => handleUndo(undoStack[undoStack.length - 1])}

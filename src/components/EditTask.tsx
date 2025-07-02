@@ -22,6 +22,7 @@ import { updateTaskActivity } from '@/lib/taskUtils';
 import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { motion, AnimatePresence } from "framer-motion";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -51,7 +52,8 @@ interface User {
   role: string;
 }
 
-const formSchema = z.object({
+// Esquema base sin validación condicional
+const baseFormSchema = z.object({
   clientInfo: z.object({
     clientId: z.string().min(1, { message: "Selecciona una cuenta*" }),
     project: z.string().min(1, { message: "Selecciona una carpeta*" }),
@@ -69,11 +71,27 @@ const formSchema = z.object({
   }),
   teamInfo: z.object({
     LeadedBy: z.array(z.string()).min(1, { message: "Selecciona al menos un líder*" }),
-    AssignedTo: z.array(z.string()).min(1, { message: "Selecciona al menos un colaborador*" }),
+    AssignedTo: z.array(z.string()).optional(),
   }),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+// Función para crear esquema dinámico basado en includeMembers
+const createFormSchema = (includeMembers: boolean) => {
+  return baseFormSchema.refine(
+    (data) => {
+      if (includeMembers) {
+        return data.teamInfo.AssignedTo && data.teamInfo.AssignedTo.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Debes seleccionar al menos un colaborador cuando incluyes miembros",
+      path: ["teamInfo", "AssignedTo"],
+    }
+  );
+};
+
+type FormValues = z.infer<typeof baseFormSchema>;
 
 const defaultValues: FormValues = {
   clientInfo: {
@@ -161,6 +179,7 @@ const EditTask: React.FC<EditTaskProps> = ({
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [includeMembers, setIncludeMembers] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -180,7 +199,7 @@ const EditTask: React.FC<EditTaskProps> = ({
   const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(createFormSchema(includeMembers)),
     defaultValues,
     mode: "onChange",
   });
@@ -198,6 +217,12 @@ const EditTask: React.FC<EditTaskProps> = ({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Update resolver when includeMembers changes
+  useEffect(() => {
+    form.clearErrors();
+    form.trigger();
+  }, [includeMembers, form]);
 
   // Track unsaved changes
   const defaultValuesRef = useRef(defaultValues);
@@ -725,6 +750,7 @@ const EditTask: React.FC<EditTaskProps> = ({
         ...values.clientInfo,
         ...values.basicInfo,
         ...values.teamInfo,
+        AssignedTo: includeMembers ? values.teamInfo.AssignedTo || [] : [],
         CreatedBy: user.id,
         createdAt: Timestamp.fromDate(new Date()),
       };
@@ -734,7 +760,7 @@ const EditTask: React.FC<EditTaskProps> = ({
       // Actualizar la actividad de la tarea
       await updateTaskActivity(taskId, 'edit');
 
-      const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...values.teamInfo.AssignedTo]);
+      const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
       recipients.delete(user.id);
       for (const recipientId of Array.from(recipients)) {
         await addDoc(collection(db, "notifications"), {
@@ -773,6 +799,9 @@ const EditTask: React.FC<EditTaskProps> = ({
           setShowSuccessAlert(false);
         }
       }, 2000);
+
+      // Inicializar el estado includeMembers basado en si la tarea tiene miembros asignados
+      setIncludeMembers((taskData.AssignedTo && taskData.AssignedTo.length > 0) || false);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Error desconocido al actualizar la tarea.";
       console.error("Error updating task:", errorMessage);
@@ -821,6 +850,23 @@ const EditTask: React.FC<EditTaskProps> = ({
   };
 
   const validateStep = async (fields: (keyof FormValues | string)[]) => {
+    // Validación especial para el paso 2 (equipo)
+    if (fields.includes('teamInfo.AssignedTo') && includeMembers) {
+      const assignedTo = form.getValues('teamInfo.AssignedTo');
+      if (!assignedTo || assignedTo.length === 0) {
+        form.setError('teamInfo.AssignedTo', {
+          type: 'manual',
+          message: 'Selecciona al menos un colaborador*'
+        });
+        toast({
+          title: "⚠️ Campos Requeridos",
+          description: "Hay algunos campos obligatorios que necesitan ser completados. Revisa los campos marcados en rojo y completa la información faltante.",
+          variant: "error",
+        });
+        return false;
+      }
+    }
+    
     const result = await form.trigger(fields as (keyof FormValues)[]);
     if (!result) {
       toast({
@@ -1029,6 +1075,9 @@ const EditTask: React.FC<EditTaskProps> = ({
         },
       };
       form.reset(formValues);
+
+      // Inicializar el estado includeMembers basado en si la tarea tiene miembros asignados
+      setIncludeMembers((taskData.AssignedTo && taskData.AssignedTo.length > 0) || false);
     } catch (error) {
       console.error('[EditTask] Error fetching task:', error);
       router.push('/dashboard/tasks');
@@ -1697,105 +1746,132 @@ const EditTask: React.FC<EditTaskProps> = ({
                           </div>
                         )}
                       </div>
+                      
+                      {/* Checkbox para incluir miembros */}
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Colaboradores*</label>
-                        <div className={styles.sectionSubtitle}>
-                          Agrega a los miembros del equipo que trabajarán en la tarea.
+                        <div className={styles.checkboxContainer}>
+                          <input
+                            type="checkbox"
+                            id="includeMembers"
+                            checked={includeMembers}
+                            onChange={(e) => setIncludeMembers(e.target.checked)}
+                            className={styles.checkbox}
+                          />
+                          <label htmlFor="includeMembers" className={styles.checkboxLabel}>
+                            ¿Deseas agregar miembros a esta tarea?
+                          </label>
                         </div>
-                        <input
-                          className={styles.input}
-                          value={searchCollaborator}
-                          onChange={(e) => {
-                            setSearchCollaborator(e.target.value);
-                          }}
-                          onFocus={() => {
-                            setIsCollaboratorDropdownOpen(true);
-                          }}
-                          onBlur={() => {
-                            setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
-                          }}
-                          placeholder="Ej: John Doe"
-                          ref={collaboratorInputRef}
-                          onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchCollaborator, searchCollaborator, setIsCollaboratorDropdownOpen)}
-                          onCopy={e => e.stopPropagation()}
-                          onPaste={e => e.stopPropagation()}
-                          onCut={e => e.stopPropagation()}
-                          onSelect={e => e.stopPropagation()}
-                        />
-                        {isCollaboratorDropdownOpen &&
-                          createPortal(
-                            <div
-                              className={styles.dropdown}
-                              style={{
-                                top: collaboratorDropdownPosition?.top,
-                                left: collaboratorDropdownPosition?.left,
-                                position: "absolute",
-                                zIndex: 150000,
-                                width: collaboratorInputRef.current?.offsetWidth,
-                              }}
-                              ref={collaboratorDropdownPopperRef}
-                            >
-                              {filteredCollaborators.length ? (
-                                filteredCollaborators.map((u) => (
-                                  <div
-                                    key={u.id}
-                                    className={`${styles.dropdownItem} ${
-                                      currentLeadedBy.includes(u.id) ? styles.disabled : ""
-                                    }`}
-                                    onClick={(e) => {
-                                      if (!currentLeadedBy.includes(u.id)) {
-                                        handleCollaboratorSelect(u.id, e);
-                                      }
-                                    }}
-                                  >
-                                    {u.fullName} ({u.role}){" "}
-                                    {watchedAssignedTo.includes(u.id) && "(Seleccionado)"}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className={styles.emptyState}>
-                                  <span>
-                                    {isAdmin
-                                      ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                      : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
-                                  </span>
-                                </div>
-                              )}
-                            </div>,
-                            document.body,
-                          )}
-                        <div className={styles.tags}>
-                          {watchedAssignedTo.map((userId) => {
-                            const collaborator = users.find((u) => u.id === userId);
-                            return collaborator ? (
-                              <div key={userId} className={styles.tag}>
-                                {collaborator.fullName}
-                                <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                        {form.formState.errors.teamInfo?.AssignedTo && (
-                          <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
-                        )}
-                        {isAdmin && (
-                          <div className={styles.addButtonWrapper}>
-                            <div className={styles.addButtonText}>
-                              ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
-                            </div>
-                            <button
-                              type="button"
-                              className={styles.addButton}
-                              onClick={(e) => {
-                                animateClick(e.currentTarget);
-                                onEditClientOpen(clients.find(c => c.id === form.getValues("clientInfo.clientId")) || { id: "", name: "", imageUrl: "", projects: [], createdBy: "" });
-                              }}
-                            >
-                              + Invitar Colaborador
-                            </button>
-                          </div>
-                        )}
                       </div>
+                      
+                      <AnimatePresence>
+                        {includeMembers && (
+                          <motion.div 
+                            className={styles.formGroup}
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: "auto", scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                          >
+                            <label className={styles.label}>Colaboradores*</label>
+                            <div className={styles.sectionSubtitle}>
+                              Agrega a los miembros del equipo que trabajarán en la tarea.
+                            </div>
+                            <input
+                              className={styles.input}
+                              value={searchCollaborator}
+                              onChange={(e) => {
+                                setSearchCollaborator(e.target.value);
+                              }}
+                              onFocus={() => {
+                                setIsCollaboratorDropdownOpen(true);
+                              }}
+                              onBlur={() => {
+                                setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
+                              }}
+                              placeholder="Ej: John Doe"
+                              ref={collaboratorInputRef}
+                              onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchCollaborator, searchCollaborator, setIsCollaboratorDropdownOpen)}
+                              onCopy={e => e.stopPropagation()}
+                              onPaste={e => e.stopPropagation()}
+                              onCut={e => e.stopPropagation()}
+                              onSelect={e => e.stopPropagation()}
+                            />
+                            {isCollaboratorDropdownOpen &&
+                              createPortal(
+                                <div
+                                  className={styles.dropdown}
+                                  style={{
+                                    top: collaboratorDropdownPosition?.top,
+                                    left: collaboratorDropdownPosition?.left,
+                                    position: "absolute",
+                                    zIndex: 150000,
+                                    width: collaboratorInputRef.current?.offsetWidth,
+                                  }}
+                                  ref={collaboratorDropdownPopperRef}
+                                >
+                                  {filteredCollaborators.length ? (
+                                    filteredCollaborators.map((u) => (
+                                      <div
+                                        key={u.id}
+                                        className={`${styles.dropdownItem} ${
+                                          currentLeadedBy.includes(u.id) ? styles.disabled : ""
+                                        }`}
+                                        onClick={(e) => {
+                                          if (!currentLeadedBy.includes(u.id)) {
+                                            handleCollaboratorSelect(u.id, e);
+                                          }
+                                        }}
+                                      >
+                                        {u.fullName} ({u.role}){" "}
+                                        {watchedAssignedTo.includes(u.id) && "(Seleccionado)"}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className={styles.emptyState}>
+                                      <span>
+                                        {isAdmin
+                                          ? "No hay coincidencias. Invita a nuevos colaboradores."
+                                          : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>,
+                                document.body,
+                              )}
+                            <div className={styles.tags}>
+                              {watchedAssignedTo.map((userId) => {
+                                const collaborator = users.find((u) => u.id === userId);
+                                return collaborator ? (
+                                  <div key={userId} className={styles.tag}>
+                                    {collaborator.fullName}
+                                    <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
+                                  </div>
+                                ) : null;
+                              })}
+                            </div>
+                            {form.formState.errors.teamInfo?.AssignedTo && (
+                              <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
+                            )}
+                            {isAdmin && (
+                              <div className={styles.addButtonWrapper}>
+                                <div className={styles.addButtonText}>
+                                  ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
+                                </div>
+                                <button
+                                  type="button"
+                                  className={styles.addButton}
+                                  onClick={(e) => {
+                                    animateClick(e.currentTarget);
+                                    onEditClientOpen(clients.find(c => c.id === form.getValues("clientInfo.clientId")) || { id: "", name: "", imageUrl: "", projects: [], createdBy: "" });
+                                  }}
+                                >
+                                  + Invitar Colaborador
+                                </button>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </WizardStep>
                   <WizardActions onComplete={() => form.handleSubmit(onSubmit)()} />
@@ -1814,4 +1890,4 @@ const EditTask: React.FC<EditTaskProps> = ({
   );
 };
 
-export default EditTask;
+export default EditTask; 

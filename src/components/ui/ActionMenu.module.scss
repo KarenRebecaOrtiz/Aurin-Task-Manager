@@ -194,10 +194,10 @@
   /* ——— Layout y dimensiones ——— */
   width: 48px;
   height: 48px;
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
   justify-content: center;
-    cursor: pointer;
+  cursor: pointer;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -236,6 +236,11 @@
       visibility: visible;
       opacity: 1;
     }
+
+    /* Transformar el icono en hover */
+    img {
+      transform: scale(1.1);
+    }
   }
 
   /* ——— Active: Presionado ——— */
@@ -248,6 +253,10 @@
       inset 1px 1px 3px rgba(209, 217, 230, 0.1),
       -1px -1px 3px rgba(255, 255, 255, 0.6),
       1px 1px 3px rgba(0, 0, 0, 0.04);
+    
+    img {
+      transform: scale(0.9);
+    }
   }
 
   /* ——— Modo oscuro ——— */

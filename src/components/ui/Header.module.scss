@@ -19,6 +19,40 @@
       padding: $spacing-sm 0;
     }
   }
+
+  .logoAndWelcomeContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: $spacing-lg;
+    flex: 1;
+
+    @include responsive(sm) {
+      flex-direction: column;
+      align-items: center;
+      gap: $spacing-sm;
+    }
+  }
+
+  .logoContainer {
+    position: static;
+    z-index: 10;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: start;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+
+    @include responsive(sm) {
+      position: relative;
+      margin-bottom: $spacing-sm;
+      order: -1; // Asegura que el logo aparezca primero en mobile
+    }
+  }
   .typewriterWrapper {
     display: inline-block;
     
@@ -152,6 +186,7 @@
     @include flex-center;
     align-items: flex-start;
     gap: $spacing-sm;
+    flex: 1;
   
     @include responsive(sm) {
       flex-direction: column;

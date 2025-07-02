@@ -116,14 +116,9 @@ interface Sidebar {
 // Orden de los contenedores (fuera del componente para evitar recreación en cada render)
 const containerOrder: SelectorContainer[] = ['tareas', 'cuentas', 'miembros'];
 
-// Configuración optimizada para manejo centralizado de datos - TEMPORALMENTE RELAJADA
+// Constants
 const DATA_FETCH_LIMITS = {
-  MAX_FETCHES_PER_MINUTE: 1000, // Mucho más permisivo para solucionar problema de mensajes
-  MIN_INTERVAL_BETWEEN_FETCHES: 5, // Reducido a 5ms
-  CACHE_DURATION: 10 * 60 * 1000, // 10 minutos de cache
-  PERSISTENT_CACHE_DURATION: 30 * 60 * 1000, // 30 minutos en localStorage
-  MAX_RETRIES: 3,
-  RETRY_DELAY: 1000,
+  PERSISTENT_CACHE_DURATION: 24 * 60 * 60 * 1000, // 24 hours
 };
 
 // Cache global centralizado para toda la aplicación
@@ -147,38 +142,49 @@ const globalAppCache = {
   }
 };
 
-
-
-
-
-// Función para cargar cache persistente desde localStorage
-const loadPersistentCache = () => {
-  if (typeof window === 'undefined') return; // Solo en cliente
+// Helper functions
+const safeTimestampToISO = (timestamp: unknown): string => {
+  if (!timestamp) return new Date().toISOString();
   
-  try {
-    const stored = localStorage.getItem('globalAppCache');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const now = Date.now();
-      
-      Object.keys(parsed).forEach(dataType => {
-        if (parsed[dataType] && typeof parsed[dataType] === 'object') {
-          Object.keys(parsed[dataType]).forEach(cacheKey => {
-            const item = parsed[dataType][cacheKey];
-            if (item && (now - item.timestamp) < DATA_FETCH_LIMITS.PERSISTENT_CACHE_DURATION) {
-              globalAppCache.persistentCache[dataType as keyof typeof globalAppCache.persistentCache].set(cacheKey, item);
-            }
-          });
-        }
-      });
-      console.log('[TasksPage] Persistent cache loaded from localStorage');
-    }
-  } catch (error) {
-    console.warn('[TasksPage] Error loading persistent cache:', error);
+  if (typeof timestamp === 'string') {
+    return timestamp;
   }
+  
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
+    return (timestamp as { toDate(): Date }).toDate().toISOString();
+  }
+  
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+  }
+  
+  return new Date().toISOString();
 };
 
-// Función para guardar cache persistente en localStorage
+const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
+  if (!timestamp) return null;
+  
+  if (typeof timestamp === 'string') {
+    return timestamp;
+  }
+  
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
+    return (timestamp as { toDate(): Date }).toDate().toISOString();
+        }
+  
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString();
+    }
+  
+  return null;
+};
+
+// Cache key function
+function getCacheKey(type: 'tasks' | 'clients' | 'users', userId: string) {
+  return `tasksPageCache_${type}_${userId}`;
+  }
+
+// Función para guardar cache persistente
 const savePersistentCache = () => {
   if (typeof window === 'undefined') return; // Solo en cliente
   
@@ -215,56 +221,97 @@ const cleanupGlobalAppListeners = () => {
   savePersistentCache();
 };
 
+// Función para cargar cache persistente desde localStorage
+const loadPersistentCache = () => {
+  if (typeof window === 'undefined') return; // Solo en cliente
+  
+  try {
+    const stored = localStorage.getItem('globalAppCache');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const now = Date.now();
+      
+      Object.keys(parsed).forEach(dataType => {
+        if (parsed[dataType] && typeof parsed[dataType] === 'object') {
+          Object.keys(parsed[dataType]).forEach(cacheKey => {
+            const item = parsed[dataType][cacheKey];
+            if (item && (now - item.timestamp) < DATA_FETCH_LIMITS.PERSISTENT_CACHE_DURATION) {
+              globalAppCache.persistentCache[dataType as keyof typeof globalAppCache.persistentCache].set(cacheKey, item);
+            }
+          });
+        }
+      });
+      console.log('[TasksPage] Persistent cache loaded from localStorage');
+    }
+  } catch (error) {
+    console.warn('[TasksPage] Error loading persistent cache:', error);
+  }
+};
+
 // Cargar cache persistente al inicializar
 loadPersistentCache();
 
-// Helper function to safely convert Firestore timestamp or string to ISO string
-const safeTimestampToISO = (timestamp: unknown): string => {
-  if (!timestamp) return new Date().toISOString();
-  
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
-  
-  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
-    return (timestamp as { toDate(): Date }).toDate().toISOString();
-  }
-  
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
-  return new Date().toISOString();
-};
-
-// Helper function to safely convert Firestore timestamp or string to ISO string or null
-const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
-  if (!timestamp) return null;
-  
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
-  
-  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
-    return (timestamp as { toDate(): Date }).toDate().toISOString();
-  }
-  
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
-  return null;
-};
-
-// Cache key function
-function getCacheKey(type: 'tasks' | 'clients' | 'users', userId: string) {
-  return `tasksPageCache_${type}_${userId}`;
-}
-
-// Separate component to handle auth context
 function TasksPageContent() {
   const { user } = useUser();
   const { isAdmin, isLoading, error } = useAuth();
+  
+  // Referencias para timeouts
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const failTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Estado para alertas
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showFailAlert, setShowFailAlert] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [failMessage, setFailMessage] = useState('');
+  const [failErrorMessage, setFailErrorMessage] = useState("");
+
+  // Handler para alertas
+  const handleShowSuccessAlert = useCallback((message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessAlert(true);
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+  }
+    successTimeoutRef.current = setTimeout(() => {
+      setShowSuccessAlert(false);
+    }, 3000);
+  }, []);
+
+  const handleShowFailAlert = useCallback((message: string, error?: string) => {
+    setFailMessage(message);
+    setFailErrorMessage(error || '');
+    setShowFailAlert(true);
+    if (failTimeoutRef.current) {
+      clearTimeout(failTimeoutRef.current);
+  }
+    failTimeoutRef.current = setTimeout(() => {
+      setShowFailAlert(false);
+    }, 3000);
+  }, []);
+
+  // Handler para alertas de cliente
+  const handleClientAlertChange = useCallback((alert: { type: "success" | "fail"; message?: string; error?: string } | null) => {
+    if (alert) {
+      if (alert.type === "success") {
+        handleShowSuccessAlert(alert.message || "Operación exitosa");
+      } else {
+        handleShowFailAlert(alert.message || "Error", alert.error);
+      }
+    }
+  }, [handleShowSuccessAlert, handleShowFailAlert]);
+
+  // Cleanup effect for timeouts
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      if (failTimeoutRef.current) {
+        clearTimeout(failTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // **NUEVO: Timestamp para rastrear la última actualización local**
   const localTaskUpdateTimestamp = useRef<number>(0); // Use AuthContext
@@ -282,7 +329,6 @@ function TasksPageContent() {
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isConfirmExitOpen, setIsConfirmExitOpen] = useState<boolean>(false);
-  const [pendingContainer, setPendingContainer] = useState<Container | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string>('');
   const [isClientLoading, setIsClientLoading] = useState<boolean>(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState<{ id: string; imageUrl: string } | null>(null);
@@ -294,12 +340,6 @@ function TasksPageContent() {
   // Add ClientSidebar states
   const [isClientSidebarOpen, setIsClientSidebarOpen] = useState<boolean>(false);
   const [clientSidebarData, setClientSidebarData] = useState<{ isEdit: boolean; client?: Client } | null>(null);
-  // Add alert states
-  const [showSuccessAlert, setShowSuccessAlert] = useState<boolean>(false);
-  const [showFailAlert, setShowFailAlert] = useState<boolean>(false);
-  const [successMessage, setSuccessMessage] = useState<string>('');
-  const [failMessage, setFailMessage] = useState<string>('');
-  const [failErrorMessage, setFailErrorMessage] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -313,6 +353,9 @@ function TasksPageContent() {
 
   const memoizedUsers = useMemo(() => users, [users]);
   const memoizedOpenSidebars = useMemo(() => openSidebars, [openSidebars]);
+
+  // Agregar estado para rastrear la fuente de la edición
+  const [editSource, setEditSource] = useState<'archive' | 'tasks' | null>(null);
 
   useEffect(() => {
     // Hide loader after 3.5 seconds (duration of all animations)
@@ -358,8 +401,6 @@ function TasksPageContent() {
     const currentState = { sidebar: 'chat', task: task.id, container: selectedContainer };
     window.history.pushState(currentState, '', window.location.pathname);
   }, [selectedContainer]);
-
-
 
   // Setup principal con priorización de carga - SIMPLIFICADO
   useEffect(() => {
@@ -842,7 +883,6 @@ function TasksPageContent() {
     (newContainer: Container) => {
       console.log('[TasksPage] handleContainerChange called with:', newContainer);
       if ((isCreateTaskOpen || isEditTaskOpen) && hasUnsavedChanges && selectedContainer !== newContainer) {
-        setPendingContainer(newContainer);
         setIsConfirmExitOpen(true);
       } else {
         setSelectedContainer(newContainer);
@@ -856,22 +896,19 @@ function TasksPageContent() {
   );
 
   const handleConfirmExit = useCallback(() => {
-    if (pendingContainer) {
-      setSelectedContainer(pendingContainer);
-      setIsCreateTaskOpen(false);
-      setIsEditTaskOpen(false);
-      setEditTaskId(null);
       setIsConfirmExitOpen(false);
-      setPendingContainer(null);
       setHasUnsavedChanges(false);
-      console.log('[TasksPage] Confirmed exit to container:', pendingContainer);
+    
+    if (editSource === 'archive') {
+      setIsArchiveTableOpen(true);
     }
-  }, [pendingContainer]);
+    setIsEditTaskOpen(false);
+    setEditTaskId(null);
+    setEditSource(null);
+  }, [editSource]);
 
   const handleCancelExit = useCallback(() => {
     setIsConfirmExitOpen(false);
-    setPendingContainer(null);
-    console.log('[TasksPage] Cancelled exit');
   }, []);
 
   const handleOpenProfile = useCallback((user: { id: string; imageUrl: string }) => {
@@ -981,19 +1018,6 @@ function TasksPageContent() {
   }, [memoizedOpenSidebars.length, selectedContainer, handleContainerChange, isArchiveTableOpen]);
 
   // Alert handlers
-  const handleShowSuccessAlert = useCallback((message: string) => {
-    setSuccessMessage(message);
-    setShowSuccessAlert(true);
-    setShowFailAlert(false);
-  }, []);
-
-  const handleShowFailAlert = useCallback((message: string, error?: string) => {
-    setFailMessage(message);
-    setFailErrorMessage(error || '');
-    setShowFailAlert(true);
-    setShowSuccessAlert(false);
-  }, []);
-
   const handleCloseSuccessAlert = useCallback(() => {
     setShowSuccessAlert(false);
     setSuccessMessage('');
@@ -1019,11 +1043,44 @@ function TasksPageContent() {
     console.log('[TasksPage] Closing Archive Table');
   }, []);
 
-  // Funciones optimizadas para ArchiveTable props
+  // Handler para abrir EditTask desde ArchiveTable
   const handleArchiveTableEditTask = useCallback((taskId: string) => {
+    setEditSource('archive');
     setEditTaskId(taskId);
     setIsEditTaskOpen(true);
   }, []);
+
+  // Handler para abrir EditTask desde TasksTable
+  const handleTasksTableEditTask = useCallback((taskId: string) => {
+    setEditSource('tasks');
+    setEditTaskId(taskId);
+    setIsEditTaskOpen(true);
+  }, []);
+
+  // Efecto para manejar la navegación del navegador
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // Si hay cambios sin guardar
+      if (hasUnsavedChanges && isEditTaskOpen) {
+        event.preventDefault();
+        setIsConfirmExitOpen(true);
+        return;
+      }
+
+      // Si no hay cambios sin guardar, manejar la navegación
+      if (isEditTaskOpen) {
+        if (editSource === 'archive') {
+          setIsArchiveTableOpen(true);
+        }
+        setIsEditTaskOpen(false);
+        setEditTaskId(null);
+        setEditSource(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [hasUnsavedChanges, isEditTaskOpen, editSource]);
 
   const handleArchiveTableDeleteTask = useCallback((taskId: string) => {
     setDeleteTarget({ type: 'task', id: taskId });
@@ -1348,10 +1405,7 @@ function TasksPageContent() {
               {taskView === 'table' && (
                 <TasksTable
                   onNewTaskOpen={() => setIsCreateTaskOpen(true)}
-                  onEditTaskOpen={(taskId) => {
-                    setEditTaskId(taskId);
-                    setIsEditTaskOpen(true);
-                  }}
+                  onEditTaskOpen={handleTasksTableEditTask}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
                   onOpenProfile={handleOpenProfile}
@@ -1370,10 +1424,7 @@ function TasksPageContent() {
               {taskView === 'kanban' && (
                 <TasksKanban
                   onNewTaskOpen={() => setIsCreateTaskOpen(true)}
-                  onEditTaskOpen={(taskId) => {
-                    setEditTaskId(taskId);
-                    setIsEditTaskOpen(true);
-                  }}
+                  onEditTaskOpen={handleTasksTableEditTask}
                   onChatSidebarOpen={handleChatSidebarOpen}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
                   onOpenProfile={handleOpenProfile}
@@ -1391,7 +1442,7 @@ function TasksPageContent() {
             </>
           )}
 
-          {selectedContainer === 'tareas' && isArchiveTableOpen && (
+          {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && isArchiveTableOpen && (
             <ArchiveTable
               onEditTaskOpen={handleArchiveTableEditTask}
               onViewChange={handleArchiveTableViewChange}
@@ -1430,18 +1481,8 @@ function TasksPageContent() {
               onShowFailAlert={handleShowFailAlert}
             />
           )}
-          {isCreateTaskOpen && (
-            <CreateTask
-              isOpen={isCreateTaskOpen}
-              onToggle={handleCreateTaskToggle}
-              onHasUnsavedChanges={setHasUnsavedChanges}
-              onCreateClientOpen={handleCreateClientOpen}
-              onEditClientOpen={handleEditClientOpen}
-              onTaskCreated={() => setIsCreateTaskOpen(false)}
-              onShowSuccessAlert={handleShowSuccessAlert}
-              onShowFailAlert={handleShowFailAlert}
-            />
-          )}
+
+          {/* Mover EditTask y CreateTask fuera de las condiciones de contenedor para que siempre se muestren como overlay */}
           {isEditTaskOpen && editTaskId && (
             <EditTask
               isOpen={isEditTaskOpen}
@@ -1453,6 +1494,20 @@ function TasksPageContent() {
               onHasUnsavedChanges={setHasUnsavedChanges}
               onCreateClientOpen={handleCreateClientOpen}
               onEditClientOpen={handleEditClientOpen}
+              onClientAlertChange={handleClientAlertChange}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
+            />
+          )}
+
+          {isCreateTaskOpen && (
+            <CreateTask
+              isOpen={isCreateTaskOpen}
+              onToggle={handleCreateTaskToggle}
+              onHasUnsavedChanges={setHasUnsavedChanges}
+              onCreateClientOpen={handleCreateClientOpen}
+              onEditClientOpen={handleEditClientOpen}
+              onTaskCreated={() => setIsCreateTaskOpen(false)}
               onShowSuccessAlert={handleShowSuccessAlert}
               onShowFailAlert={handleShowFailAlert}
             />

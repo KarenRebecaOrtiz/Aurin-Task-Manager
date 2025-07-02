@@ -222,7 +222,15 @@ const insertDatePills = (messages: Message[]): Message[] => {
   const result: Message[] = [];
   let currentDate: string | null = null;
 
-  messages.forEach((message) => {
+  // Los mensajes están ordenados de más recientes a más antiguos
+  // Necesitamos procesarlos en orden cronológico para insertar los date pills correctamente
+  const sortedMessages = [...messages].sort((a, b) => {
+    const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+    const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
+    return aTime - bTime; // Orden ascendente para procesar cronológicamente
+  });
+
+  sortedMessages.forEach((message) => {
     // Si el mensaje ya es un pill de fecha, lo ignoramos
     if (message.isDatePill) return;
 
@@ -258,7 +266,12 @@ const insertDatePills = (messages: Message[]): Message[] => {
     result.push(message);
   });
 
-  return result;
+  // Volver a ordenar en orden descendente (más recientes primero)
+  return result.sort((a, b) => {
+    const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+    const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
+    return bTime - aTime; // Orden descendente
+  });
 };
 
 export const useMessagePagination = ({
@@ -431,7 +444,7 @@ export const useMessagePagination = ({
           fileName: data.fileName || null,
           fileType: data.fileType || null,
           filePath: data.filePath || null,
-          clientId: doc.id,
+          clientId: `${doc.id}-${Date.now()}-${Math.random()}`,
           isPending: false,
           hasError: false,
           replyTo: data.replyTo || null,
@@ -533,7 +546,7 @@ export const useMessagePagination = ({
           fileName: data.fileName || null,
           fileType: data.fileType || null,
           filePath: data.filePath || null,
-          clientId: doc.id,
+          clientId: `${doc.id}-${Date.now()}-${Math.random()}`,
           isPending: false,
           hasError: false,
           replyTo: data.replyTo || null,
@@ -642,7 +655,7 @@ export const useMessagePagination = ({
                 fileName: data.fileName || null,
                 fileType: data.fileType || null,
                 filePath: data.filePath || null,
-                clientId: change.doc.id,
+                clientId: `${change.doc.id}-${Date.now()}-${Math.random()}`,
                 isPending: false,
                 hasError: false,
                 replyTo: data.replyTo || null,

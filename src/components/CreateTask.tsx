@@ -51,7 +51,8 @@ interface User {
   role: string;
 }
 
-const formSchema = z.object({
+// Esquema base sin validación condicional
+const baseFormSchema = z.object({
   clientInfo: z.object({
     clientId: z.string().min(1, { message: "Selecciona una cuenta*" }),
     project: z.string().min(1, { message: "Selecciona una carpeta*" }),
@@ -69,11 +70,27 @@ const formSchema = z.object({
   }),
   teamInfo: z.object({
     LeadedBy: z.array(z.string()).min(1, { message: "Selecciona al menos un líder*" }),
-    AssignedTo: z.array(z.string()).min(1, { message: "Selecciona al menos un colaborador*" }),
+    AssignedTo: z.array(z.string()).optional(),
   }),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+// Función para crear esquema dinámico basado en includeMembers
+const createFormSchema = (includeMembers: boolean) => {
+  return baseFormSchema.refine(
+    (data) => {
+      if (includeMembers) {
+        return data.teamInfo.AssignedTo && data.teamInfo.AssignedTo.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Debes seleccionar al menos un colaborador cuando incluyes miembros",
+      path: ["teamInfo", "AssignedTo"],
+    }
+  );
+};
+
+type FormValues = z.infer<typeof baseFormSchema>;
 
 const defaultValues: FormValues = {
   clientInfo: {
@@ -160,6 +177,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [includeMembers, setIncludeMembers] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -179,7 +197,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(createFormSchema(includeMembers)),
     defaultValues,
     mode: "onChange",
   });
@@ -197,6 +215,12 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Update resolver when includeMembers changes
+  useEffect(() => {
+    form.clearErrors();
+    form.trigger();
+  }, [includeMembers, form]);
 
   // Removed local isAdmin fetch useEffect
 
@@ -744,6 +768,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         ...values.clientInfo,
         ...values.basicInfo,
         ...values.teamInfo,
+        AssignedTo: includeMembers ? values.teamInfo.AssignedTo || [] : [],
         CreatedBy: user.id,
         createdAt: Timestamp.fromDate(new Date()),
         id: taskId,
@@ -753,7 +778,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       // Actualizar la actividad de la tarea (aunque sea nueva, establece la actividad inicial)
       await updateTaskActivity(taskId, 'edit');
 
-      const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...values.teamInfo.AssignedTo]);
+      const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
       recipients.delete(user.id);
       for (const recipientId of Array.from(recipients)) {
         await addDoc(collection(db, "notifications"), {
@@ -829,6 +854,23 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   };
 
   const validateStep = async (fields: (keyof FormValues | string)[]) => {
+    // Validación especial para el paso 2 (equipo)
+    if (fields.includes('teamInfo.AssignedTo') && includeMembers) {
+      const assignedTo = form.getValues('teamInfo.AssignedTo');
+      if (!assignedTo || assignedTo.length === 0) {
+        form.setError('teamInfo.AssignedTo', {
+          type: 'manual',
+          message: 'Selecciona al menos un colaborador*'
+        });
+        toast({
+          title: "⚠️ Campos Requeridos",
+          description: "Hay algunos campos obligatorios que necesitan ser completados. Revisa los campos marcados en rojo y completa la información faltante.",
+          variant: "error",
+        });
+        return false;
+      }
+    }
+    
     const result = await form.trigger(fields as (keyof FormValues)[]);
     if (!result) {
       toast({
@@ -1845,160 +1887,179 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
                         )}
                       </div>
+                      
+                      {/* Checkbox para incluir miembros */}
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Colaboradores*</label>
-                        <div className={styles.sectionSubtitle}>
-                          Agrega a los miembros del equipo que trabajarán en la tarea.
+                        <div className={styles.checkboxContainer}>
+                          <input
+                            type="checkbox"
+                            id="includeMembers"
+                            checked={includeMembers}
+                            onChange={(e) => setIncludeMembers(e.target.checked)}
+                            className={styles.checkbox}
+                          />
+                          <label htmlFor="includeMembers" className={styles.checkboxLabel}>
+                            ¿Deseas agregar miembros a esta tarea?
+                          </label>
                         </div>
-                        <input
-                          className={styles.input}
-                          value={searchCollaborator}
-                          onChange={(e) => {
-                            setSearchCollaborator(e.target.value);
-                            setIsCollaboratorDropdownOpen(e.target.value.trim() !== "");
-                          }}
-                          onBlur={() => {
-                            setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
-                          }}
-                          placeholder="Ej: John Doe"
-                          ref={collaboratorInputRef}
-                          onKeyDown={(e) => {
-                            if (e.ctrlKey || e.metaKey) {
-                              switch (e.key.toLowerCase()) {
-                                case 'a':
-                                  e.preventDefault();
-                                  e.currentTarget.select();
-                                  break;
-                                case 'c':
-                                  e.preventDefault();
-                                  const selection = window.getSelection();
-                                  if (selection && selection.toString().length > 0) {
-                                    navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                      const textArea = document.createElement('textarea');
-                                      textArea.value = selection.toString();
-                                      document.body.appendChild(textArea);
-                                      textArea.select();
-                                      document.execCommand('copy');
-                                      document.body.removeChild(textArea);
-                                    });
-                                  }
-                                  break;
-                                case 'v':
-                                  e.preventDefault();
-                                  const targetV = e.currentTarget as HTMLInputElement | null;
-                                  navigator.clipboard.readText().then(text => {
-                                    if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                                      const start = targetV.selectionStart;
-                                      const end = targetV.selectionEnd;
-                                      const newValue = searchCollaborator.substring(0, start) + text + searchCollaborator.substring(end);
-                                      setSearchCollaborator(newValue);
-                                      setIsCollaboratorDropdownOpen(text.trim() !== "");
-                                      setTimeout(() => {
-                                        targetV.setSelectionRange(start + text.length, start + text.length);
-                                      }, 0);
-                                    } else {
-                                      setSearchCollaborator(searchCollaborator + text);
+                      </div>
+                      
+                      {includeMembers && (
+                        <div className={styles.formGroup}>
+                          <label className={styles.label}>Colaboradores*</label>
+                          <div className={styles.sectionSubtitle}>
+                            Agrega a los miembros del equipo que trabajarán en la tarea.
+                          </div>
+                          <input
+                            className={styles.input}
+                            value={searchCollaborator}
+                            onChange={(e) => {
+                              setSearchCollaborator(e.target.value);
+                              setIsCollaboratorDropdownOpen(e.target.value.trim() !== "");
+                            }}
+                            onBlur={() => {
+                              setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
+                            }}
+                            placeholder="Ej: John Doe"
+                            ref={collaboratorInputRef}
+                            onKeyDown={(e) => {
+                              if (e.ctrlKey || e.metaKey) {
+                                switch (e.key.toLowerCase()) {
+                                  case 'a':
+                                    e.preventDefault();
+                                    e.currentTarget.select();
+                                    break;
+                                  case 'c':
+                                    e.preventDefault();
+                                    const selection = window.getSelection();
+                                    if (selection && selection.toString().length > 0) {
+                                      navigator.clipboard.writeText(selection.toString()).catch(() => {
+                                        const textArea = document.createElement('textarea');
+                                        textArea.value = selection.toString();
+                                        document.body.appendChild(textArea);
+                                        textArea.select();
+                                        document.execCommand('copy');
+                                        document.body.removeChild(textArea);
+                                      });
                                     }
-                                  }).catch(() => {
-                                    document.execCommand('paste');
-                                  });
-                                  break;
-                                case 'x':
-                                  e.preventDefault();
-                                  const cutSelection = window.getSelection();
-                                  if (cutSelection && cutSelection.toString().length > 0) {
-                                    navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                      const targetX = e.currentTarget as HTMLInputElement | null;
-                                      if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                        const start = targetX.selectionStart;
-                                        const end = targetX.selectionEnd;
-                                        const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
+                                    break;
+                                  case 'v':
+                                    e.preventDefault();
+                                    const targetV = e.currentTarget as HTMLInputElement | null;
+                                    navigator.clipboard.readText().then(text => {
+                                      if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                                        const start = targetV.selectionStart;
+                                        const end = targetV.selectionEnd;
+                                        const newValue = searchCollaborator.substring(0, start) + text + searchCollaborator.substring(end);
                                         setSearchCollaborator(newValue);
-                                        setIsCollaboratorDropdownOpen(newValue.trim() !== "");
+                                        setIsCollaboratorDropdownOpen(text.trim() !== "");
+                                        setTimeout(() => {
+                                          targetV.setSelectionRange(start + text.length, start + text.length);
+                                        }, 0);
                                       } else {
-                                        setSearchCollaborator('');
+                                        setSearchCollaborator(searchCollaborator + text);
                                       }
                                     }).catch(() => {
-                                      const textArea = document.createElement('textarea');
-                                      textArea.value = cutSelection.toString();
-                                      document.body.appendChild(textArea);
-                                      textArea.select();
-                                      document.execCommand('copy');
-                                      document.body.removeChild(textArea);
-                                      const targetX2 = e.currentTarget as HTMLInputElement | null;
-                                      if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
-                                        const start = targetX2.selectionStart;
-                                        const end = targetX2.selectionEnd;
-                                        const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
-                                        setSearchCollaborator(newValue);
-                                        setIsCollaboratorDropdownOpen(newValue.trim() !== "");
-                                      } else {
-                                        setSearchCollaborator('');
-                                      }
+                                      document.execCommand('paste');
                                     });
-                                  }
-                                  break;
+                                    break;
+                                  case 'x':
+                                    e.preventDefault();
+                                    const cutSelection = window.getSelection();
+                                    if (cutSelection && cutSelection.toString().length > 0) {
+                                      navigator.clipboard.writeText(cutSelection.toString()).then(() => {
+                                        const targetX = e.currentTarget as HTMLInputElement | null;
+                                        if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                                          const start = targetX.selectionStart;
+                                          const end = targetX.selectionEnd;
+                                          const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
+                                          setSearchCollaborator(newValue);
+                                          setIsCollaboratorDropdownOpen(newValue.trim() !== "");
+                                        } else {
+                                          setSearchCollaborator('');
+                                        }
+                                      }).catch(() => {
+                                        const textArea = document.createElement('textarea');
+                                        textArea.value = cutSelection.toString();
+                                        document.body.appendChild(textArea);
+                                        textArea.select();
+                                        document.execCommand('copy');
+                                        document.body.removeChild(textArea);
+                                        const targetX2 = e.currentTarget as HTMLInputElement | null;
+                                        if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
+                                          const start = targetX2.selectionStart;
+                                          const end = targetX2.selectionEnd;
+                                          const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
+                                          setSearchCollaborator(newValue);
+                                          setIsCollaboratorDropdownOpen(newValue.trim() !== "");
+                                        } else {
+                                          setSearchCollaborator('');
+                                        }
+                                      });
+                                    }
+                                    break;
+                                }
                               }
-                            }
-                          }}
-                        />
-                        {isCollaboratorDropdownOpen &&
-                          createPortal(
-                            <div
-                              className={styles.dropdown}
-                              style={{
-                                top: collaboratorDropdownPosition?.top,
-                                left: collaboratorDropdownPosition?.left,
-                                position: "absolute",
-                                zIndex: 150000,
-                                width: collaboratorInputRef.current?.offsetWidth,
-                              }}
-                              ref={collaboratorDropdownPopperRef}
-                            >
-                              {filteredCollaborators.length ? (
-                                filteredCollaborators.map((u) => (
-                                  <div
-                                    key={u.id}
-                                    className={`${styles.dropdownItem} ${
-                                      form.getValues("teamInfo.LeadedBy").includes(u.id) ? styles.disabled : ""
-                                    }`}
-                                    onClick={(e) => {
-                                      if (!form.getValues("teamInfo.LeadedBy").includes(u.id)) {
-                                        handleCollaboratorSelect(u.id, e);
-                                      }
-                                    }}
-                                  >
-                                    {u.fullName} ({u.role}){" "}
-                                    {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
+                            }}
+                          />
+                          {isCollaboratorDropdownOpen &&
+                            createPortal(
+                              <div
+                                className={styles.dropdown}
+                                style={{
+                                  top: collaboratorDropdownPosition?.top,
+                                  left: collaboratorDropdownPosition?.left,
+                                  position: "absolute",
+                                  zIndex: 150000,
+                                  width: collaboratorInputRef.current?.offsetWidth,
+                                }}
+                                ref={collaboratorDropdownPopperRef}
+                              >
+                                {filteredCollaborators.length ? (
+                                  filteredCollaborators.map((u) => (
+                                    <div
+                                      key={u.id}
+                                      className={`${styles.dropdownItem} ${
+                                        form.getValues("teamInfo.LeadedBy").includes(u.id) ? styles.disabled : ""
+                                      }`}
+                                      onClick={(e) => {
+                                        if (!form.getValues("teamInfo.LeadedBy").includes(u.id)) {
+                                          handleCollaboratorSelect(u.id, e);
+                                        }
+                                      }}
+                                    >
+                                      {u.fullName} ({u.role}){" "}
+                                      {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className={styles.emptyState}>
+                                    <span>
+                                      {isAdmin
+                                        ? "No hay coincidencias. Invita a nuevos colaboradores."
+                                        : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
+                                    </span>
                                   </div>
-                                ))
-                              ) : (
-                                <div className={styles.emptyState}>
-                                  <span>
-                                    {isAdmin
-                                      ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                      : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
-                                  </span>
+                                )}
+                              </div>,
+                              document.body,
+                            )}
+                          <div className={styles.tags}>
+                            {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").map((userId) => {
+                              const collaborator = users.find((u) => u.id === userId);
+                              return collaborator ? (
+                                <div key={userId} className={styles.tag}>
+                                  {collaborator.fullName}
+                                  <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
                                 </div>
-                              )}
-                            </div>,
-                            document.body,
+                              ) : null;
+                            })}
+                          </div>
+                          {form.formState.errors.teamInfo?.AssignedTo && (
+                            <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
                           )}
-                        <div className={styles.tags}>
-                          {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").map((userId) => {
-                            const collaborator = users.find((u) => u.id === userId);
-                            return collaborator ? (
-                              <div key={userId} className={styles.tag}>
-                                {collaborator.fullName}
-                                <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
-                              </div>
-                            ) : null;
-                          })}
                         </div>
-                        {form.formState.errors.teamInfo?.AssignedTo && (
-                          <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </WizardStep>
                   <WizardActions onComplete={() => form.handleSubmit(onSubmit)()} />

@@ -158,6 +158,7 @@ const normalizeStatus = (status: string): string => {
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
+  leadedByUserIds: string[];
   users: User[];
   currentUserId: string;
 }
@@ -245,19 +246,19 @@ export const cleanupTasksTableListeners = () => {
   savePersistentCache();
 };
 
-const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, users, currentUserId }) => {
+const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds, users, currentUserId }) => {
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
       console.warn('[AvatarGroup] Users prop is not an array:', users);
       return [];
     }
-    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id)).slice(0, 5);
+    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id)).slice(0, 5);
     return matchedUsers.sort((a, b) => {
       if (a.id === currentUserId) return -1;
       if (b.id === currentUserId) return 1;
       return 0;
     });
-  }, [assignedUserIds, users, currentUserId]);
+  }, [assignedUserIds, leadedByUserIds, users, currentUserId]);
 
   return (
     <div className={avatarStyles.avatarGroup}>
@@ -1120,9 +1121,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             console.log('[TasksTable] Rendering assignedTo column:', {
               taskId: task.id,
               assignedUserIds: task.AssignedTo,
+              leadedByUserIds: task.LeadedBy,
               currentUserId: userId,
             });
-            return <AvatarGroup assignedUserIds={task.AssignedTo} users={effectiveUsers} currentUserId={userId} />;
+            return <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={effectiveUsers} currentUserId={userId} />;
           },
         };
       }

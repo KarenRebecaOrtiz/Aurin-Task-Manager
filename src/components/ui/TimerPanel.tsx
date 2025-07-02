@@ -160,11 +160,6 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
     }
   }, [form]);
 
-  const handleCommentChange = useCallback((value: string) => {
-    console.log('[TimerPanel:HandleCommentChange] Comment changed');
-    form.setValue('comment', value, { shouldValidate: true });
-  }, [form]);
-
   const handleCancelClick = useCallback(() => {
     console.log('[TimerPanel:HandleCancelClick] 🔴 Cancel clicked');
     setHasFormBeenInitialized(false);
@@ -181,9 +176,6 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
         break;
       case 1:
         fieldsToValidate = ['date'];
-        break;
-      case 2:
-        fieldsToValidate = ['comment'];
         break;
       default:
         return true;
@@ -207,11 +199,24 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
     });
 
     try {
-      // Call onAddTimeEntry with the current form values directly
+      // Validar todos los campos antes de enviar
+      const isValid = await form.trigger();
+      if (!isValid) {
+        console.log('[TimerPanel:HandleSubmit] ❌ Form validation failed');
+        return;
+      }
+
+      // Call onAddTimeEntry with the current form values
       await onAddTimeEntry(values.time, values.date, values.comment);
       console.log('[TimerPanel:HandleSubmit] ✅ Time entry added successfully');
       
-      // Close the panel automatically after successful submission
+      // Reset form and close panel
+      form.reset({
+        time: '00:00',
+        date: new Date(),
+        comment: ''
+      });
+      setHasFormBeenInitialized(false);
       onCancel();
     } catch (error) {
       console.error('[TimerPanel:HandleSubmit] ❌ Error adding time entry:', error);
@@ -237,7 +242,7 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
       id="timerPanel"
     >
       <div className={styles.timerPanelContent}>
-        <Wizard totalSteps={3}>
+        <Wizard totalSteps={2}>
           {/* Header with progress */}
           <div style={{ 
             display: 'flex', 
@@ -456,273 +461,6 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
                   </span>
                 </div>
               )}
-            </div>
-          </WizardStep>
-
-          {/* Step 3: Comment Input */}
-          <WizardStep step={2} validator={() => validateStep(2)}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
-                💭 Comentario
-              </h4>
-              <p style={{ fontSize: '16px', color: '#71717A', margin: 0 }}>
-                Añade detalles sobre el trabajo realizado (opcional)
-              </p>
-            </div>
-            <div className={styles.timerCard}>
-              <label htmlFor="timer-comment-input" style={{ fontSize: '16px', marginBottom: '8px', display: 'block' }}>
-                Comentario:
-              </label>
-              <Controller
-                name="comment"
-                control={form.control}
-                render={({ field }) => (
-                  <textarea
-                    id="timer-comment-input"
-                    placeholder="Añadir comentario sobre el trabajo realizado..."
-                    value={field.value || ''}
-                    onChange={(e) => {
-                      field.onChange(e.target.value);
-                      handleCommentChange(e.target.value);
-                    }}
-                    className={styles.timerCommentInput}
-                    rows={3}
-                    style={{ width: '100%', resize: 'vertical', minHeight: '80px' }}
-                    onKeyDown={(e) => {
-                      if (e.ctrlKey || e.metaKey) {
-                        switch (e.key.toLowerCase()) {
-                          case 'a':
-                            e.preventDefault();
-                            e.currentTarget.select();
-                            break;
-                          case 'c':
-                            e.preventDefault();
-                            const selection = window.getSelection();
-                            if (selection && selection.toString().length > 0) {
-                              navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                // Fallback for older browsers
-                                const textArea = document.createElement('textarea');
-                                textArea.value = selection.toString();
-                                document.body.appendChild(textArea);
-                                textArea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textArea);
-                              });
-                            }
-                            break;
-                          case 'v':
-                            e.preventDefault();
-                            navigator.clipboard.readText().then(text => {
-                              const target = e.currentTarget;
-                              const start = target.selectionStart;
-                              const end = target.selectionEnd;
-                              const currentValue = field.value || '';
-                              const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
-                              field.onChange(newValue);
-                              handleCommentChange(newValue);
-                              // Set cursor position after paste
-                              setTimeout(() => {
-                                target.setSelectionRange(start + text.length, start + text.length);
-                              }, 0);
-                            }).catch(() => {
-                              // Fallback for older browsers or when clipboard access is denied
-                              document.execCommand('paste');
-                            });
-                            break;
-                          case 'x':
-                            e.preventDefault();
-                            const cutSelection = window.getSelection();
-                            if (cutSelection && cutSelection.toString().length > 0) {
-                              navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                const target = e.currentTarget;
-                                const start = target.selectionStart;
-                                const end = target.selectionEnd;
-                                const currentValue = field.value || '';
-                                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
-                                field.onChange(newValue);
-                                handleCommentChange(newValue);
-                              }).catch(() => {
-                                // Fallback for older browsers
-                                const textArea = document.createElement('textarea');
-                                textArea.value = cutSelection.toString();
-                                document.body.appendChild(textArea);
-                                textArea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textArea);
-                                const target = e.currentTarget;
-                                const start = target.selectionStart;
-                                const end = target.selectionEnd;
-                                const currentValue = field.value || '';
-                                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
-                                field.onChange(newValue);
-                                handleCommentChange(newValue);
-                              });
-                            }
-                            break;
-                        }
-                      }
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      
-                      const selection = window.getSelection();
-                      const hasSelection = selection && selection.toString().length > 0;
-                      
-                      const menu = document.createElement('div');
-                      menu.className = 'context-menu';
-                      menu.style.cssText = `
-                        position: fixed;
-                        top: ${e.clientY}px;
-                        left: ${e.clientX}px;
-                        background: white;
-                        border: 1px solid #ccc;
-                        border-radius: 4px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        z-index: 1000;
-                        font-family: 'Inter Tight', sans-serif;
-                        font-size: 14px;
-                        min-width: 150px;
-                      `;
-
-                      const menuItems = [
-                        { label: 'Deshacer', action: () => document.execCommand('undo'), shortcut: 'Ctrl+Z' },
-                        { label: 'Rehacer', action: () => document.execCommand('redo'), shortcut: 'Ctrl+Y' },
-                        { type: 'separator' },
-                        { 
-                          label: 'Cortar', 
-                          action: async () => {
-                            if (hasSelection) {
-                              try {
-                                await navigator.clipboard.writeText(selection.toString());
-                                document.execCommand('delete');
-                              } catch {
-                                // Fallback for older browsers
-                                const textArea = document.createElement('textarea');
-                                textArea.value = selection.toString();
-                                document.body.appendChild(textArea);
-                                textArea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textArea);
-                                document.execCommand('delete');
-                              }
-                            }
-                          }, 
-                          shortcut: 'Ctrl+X', 
-                          disabled: !hasSelection 
-                        },
-                        { 
-                          label: 'Copiar', 
-                          action: async () => {
-                            if (hasSelection) {
-                              try {
-                                await navigator.clipboard.writeText(selection.toString());
-                              } catch {
-                                // Fallback for older browsers
-                                const textArea = document.createElement('textarea');
-                                textArea.value = selection.toString();
-                                document.body.appendChild(textArea);
-                                textArea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textArea);
-                              }
-                            }
-                          }, 
-                          shortcut: 'Ctrl+C', 
-                          disabled: !hasSelection 
-                        },
-                        { 
-                          label: 'Pegar', 
-                          action: async () => {
-                            try {
-                              const text = await navigator.clipboard.readText();
-                              document.execCommand('insertText', false, text);
-                            } catch {
-                              // Fallback for older browsers
-                              document.execCommand('paste');
-                            }
-                          }, 
-                          shortcut: 'Ctrl+V'
-                        },
-                        { type: 'separator' },
-                        { 
-                          label: 'Seleccionar Todo', 
-                          action: () => {
-                            const target = e.currentTarget;
-                            target.select();
-                          }, 
-                          shortcut: 'Ctrl+A'
-                        },
-                        { 
-                          label: 'Eliminar', 
-                          action: () => {
-                            if (hasSelection) {
-                              document.execCommand('delete');
-                            }
-                          }, 
-                          shortcut: 'Delete', 
-                          disabled: !hasSelection 
-                        }
-                      ];
-
-                      menuItems.forEach((item) => {
-                        if (item.type === 'separator') {
-                          const separator = document.createElement('hr');
-                          separator.style.cssText = 'margin: 4px 0; border: none; border-top: 1px solid #eee;';
-                          menu.appendChild(separator);
-                          return;
-                        }
-
-                        const menuItem = document.createElement('div');
-                        menuItem.style.cssText = `
-                          padding: 8px 12px;
-                          cursor: pointer;
-                          display: flex;
-                          justify-content: space-between;
-                          align-items: center;
-                          ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
-                        `;
-                        menuItem.innerHTML = `
-                          <span>${item.label}</span>
-                          <span style="color: #666; font-size: 12px;">${item.shortcut}</span>
-                        `;
-                        
-                        if (!item.disabled) {
-                          menuItem.addEventListener('click', () => {
-                            item.action();
-                            document.body.removeChild(menu);
-                          });
-                          
-                          menuItem.addEventListener('mouseenter', () => {
-                            menuItem.style.backgroundColor = '#f5f5f5';
-                          });
-                          menuItem.addEventListener('mouseleave', () => {
-                            menuItem.style.backgroundColor = 'transparent';
-                          });
-                        }
-                        
-                        menu.appendChild(menuItem);
-                      });
-
-                      document.body.appendChild(menu);
-
-                      // Close menu when clicking outside
-                      const closeMenu = () => {
-                        if (document.body.contains(menu)) {
-                          document.body.removeChild(menu);
-                        }
-                        document.removeEventListener('click', closeMenu);
-                      };
-                      
-                      setTimeout(() => {
-                        document.addEventListener('click', closeMenu);
-                      }, 0);
-                    }}
-                  />
-                )}
-              />
-              <div className={styles.timerTotal} style={{ marginTop: '16px', textAlign: 'center' }}>
-                Has invertido: <strong>{totalHours}</strong> en esta tarea.
-              </div>
             </div>
           </WizardStep>
 

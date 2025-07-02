@@ -83,7 +83,7 @@ const Footer: React.FC = () => {
     <footer className={styles.footer}>
       <div className={styles.info}>
         <p>
-          Hecho con cariño para facilitarte el día <span>· v1.0.0 💛</span>
+          Hecho con cariño para facilitarte el día <span>· v1.1.0 💛</span>
         </p>
       </div>
       <form className={styles.feedbackForm} onSubmit={handleSubmit}>
