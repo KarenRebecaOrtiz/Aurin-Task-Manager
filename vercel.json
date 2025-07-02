@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/auto-detect-inactive",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/reset-status",
       "schedule": "0 0 * * *"
     }
   ]
-} 
+}
