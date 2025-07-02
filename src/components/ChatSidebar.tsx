@@ -47,6 +47,7 @@ interface Message {
     text: string | null;
     imageUrl?: string | null;
   } | null;
+  isDatePill?: boolean;
 }
 
 interface ChatSidebarProps {
@@ -92,8 +93,8 @@ interface MessageItemProps {
 
 const MessageItem = memo(
   forwardRef<HTMLDivElement, MessageItemProps>(
-    (
-      {
+    (props, ref) => {
+      const {
         message,
         users,
         userId,
@@ -111,37 +112,31 @@ const MessageItem = memo(
         onMessageDragStart,
         isNewChunk,
         isLoadingChunk,
-      },
-      ref,
-    ) => {
+      } = props;
+
       const actionMenuRef = useRef<HTMLDivElement>(null);
       const messageRef = useRef<HTMLDivElement>(null);
+
+      useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+            setActionMenuOpenId(null);
+          }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }, [setActionMenuOpenId]);
 
       useEffect(() => {
         if (actionMenuOpenId === message.id && actionMenuRef.current) {
           gsap.fromTo(
             actionMenuRef.current,
-            { 
-              opacity: 0, 
-              y: -10, 
-              scale: 0.95,
-              transformOrigin: 'top right'
-            },
-            { 
-            opacity: 1, 
-            y: 0, 
-            scale: 1,
-              duration: 0.2, 
-              ease: 'power2.out' 
-            }
+            { opacity: 0, y: -10, scale: 0.95, transformOrigin: 'top right' },
+            { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
           );
         } else if (actionMenuRef.current) {
           gsap.to(actionMenuRef.current, {
-            opacity: 0, 
-            y: -10, 
-            scale: 0.95,
-            duration: 0.15,
-            ease: 'power2.in'
+            opacity: 0, y: -10, scale: 0.95, duration: 0.15, ease: 'power2.in'
           });
         }
       }, [actionMenuOpenId, message.id]);
@@ -150,100 +145,53 @@ const MessageItem = memo(
         if (isNewChunk && messageRef.current && !isLoadingChunk) {
           gsap.fromTo(
             messageRef.current,
-            { 
-              opacity: 0, 
-              y: -30,
-              scale: 0.95,
-              rotationX: -5,
-              filter: 'blur(2px)'
-            },
-            { 
-              opacity: 1, 
-              y: 0, 
-              scale: 1, 
-              rotationX: 0, 
-              filter: 'blur(0px)',
-              duration: 0.6, 
-              ease: 'power2.out',
-              delay: 0.2
-            }
+            { opacity: 0, y: -30, scale: 0.95, rotationX: -5, filter: 'blur(2px)' },
+            { opacity: 1, y: 0, scale: 1, rotationX: 0, filter: 'blur(0px)', duration: 0.6, ease: 'power2.out', delay: 0.2 }
           );
           gsap.fromTo(
             messageRef.current,
-            {
-              boxShadow: '0 0 0 rgba(59, 130, 246, 0)',
-            },
-            {
-              boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)',
-              duration: 0.8,
-              ease: 'power2.out',
-              delay: 0.3,
-              yoyo: true,
-              repeat: 1
-            }
+            { boxShadow: '0 0 0 rgba(59, 130, 246, 0)' },
+            { boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)', duration: 0.8, ease: 'power2.out', delay: 0.3, yoyo: true, repeat: 1 }
           );
         }
       }, [isNewChunk, isLoadingChunk]);
 
       const renderMessageContent = useCallback(() => {
         const contentElements: React.ReactNode[] = [];
-
+        
         // Si es un mensaje de tiempo, solo mostrar el componente de tiempo
-        if (message.hours && typeof message.hours === 'number' && message.hours > 0) {
-          const totalMinutes = Math.round(message.hours * 60);
-          const displayHours = Math.floor(totalMinutes / 60);
-          const displayMinutes = totalMinutes % 60;
-          const timeDisplay = displayHours > 0 
-            ? `${displayHours}h ${displayMinutes}m`
-            : `${displayMinutes}m`;
-          
-          console.log('[MessageItem] 🕒 Renderizando mensaje de tiempo:', {
-            messageId: message.id,
-            hours: message.hours,
-            totalMinutes,
-            displayHours,
-            displayMinutes,
-            timeDisplay
-          });
-          
-          return (
+        if (message.hours) {
+          contentElements.push(
             <div key="time" className={styles.timeMessage}>
-              <div className={styles.timeIcon}>
-                <Image src="/timer.svg" alt="Tiempo" width={16} height={16} />
-              </div>
-              <div className={styles.timeContent}>
-                <span className={styles.timeText}>Registró <strong>{timeDisplay}</strong> de tiempo en la tarea</span>
-                {message.dateString && (
-                  <span className={styles.timeDate}>({message.dateString})</span>
-                )}
-              </div>
+              <Image src="/Clock.svg" alt="Tiempo" width={16} height={16} />
+              <span>{message.hours} horas registradas</span>
             </div>
           );
+          return contentElements;
         }
 
-        // Para mensajes que no son de tiempo, proceder con la lógica normal
+        // Si hay un mensaje al que se está respondiendo, mostrar la vista previa
         if (message.replyTo) {
           contentElements.push(
             <div key="reply" className={styles.replyPreview}>
               <div className={styles.replyHeader}>
-                <span className={styles.replyLabel}>Respondiendo a {message.replyTo.senderName}</span>
+                <span>Respondiendo a {message.replyTo.senderName}</span>
               </div>
               <div className={styles.replyContent}>
                 {message.replyTo.imageUrl && (
-                  <Image src={message.replyTo.imageUrl} alt="Imagen" width={40} height={40} className={styles.replyImage} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
+                  <Image
+                    src={message.replyTo.imageUrl}
+                    alt="Imagen de respuesta"
+                    width={40}
+                    height={40}
+                    className={styles.replyImage}
+                    onError={(e) => { e.currentTarget.src = '/empty-image.png'; }}
+                  />
                 )}
-                {message.replyTo.text && message.replyTo.text.includes('entrada de tiempo de') ? (
-                  <div className={styles.timeMessage}>
-                    <div className={styles.timeIcon}>
-                      <Image src="/timer.svg" alt="Tiempo" width={16} height={16} />
-                    </div>
-                    <div className={styles.timeContent}>
-                      <span className={styles.timeText}>{message.replyTo.text}</span>
-                    </div>
-                  </div>
-                ) : message.replyTo.text ? (
-                  <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.replyTo.text.length > 50 ? `${message.replyTo.text.substring(0, 50)}...` : message.replyTo.text, { allowedTags: ['strong', 'em', 'u', 'code'], allowedAttributes: { '*': ['style', 'class'] }, transformTags: { 'strong': (_, attribs) => ({ tagName: 'strong', attribs: { ...attribs, style: `font-weight: bold; ${attribs.style || ''}` } }), 'em': (_, attribs) => ({ tagName: 'em', attribs: { ...attribs, style: `font-style: italic; ${attribs.style || ''}` } }), 'u': (_, attribs) => ({ tagName: 'u', attribs: { ...attribs, style: `text-decoration: underline; ${attribs.style || ''}` } }), 'code': (_, attribs) => ({ tagName: 'code', attribs: { ...attribs, style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}` } }) } }) }} />
-                ) : !message.replyTo.imageUrl && (
+                {message.replyTo.text && (
+                  <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.replyTo.text.length > 50 ? `${message.replyTo.text.substring(0, 50)}...` : message.replyTo.text) }} />
+                )}
+                {!message.replyTo.text && !message.replyTo.imageUrl && (
                   <span className={styles.replyText}>Mensaje</span>
                 )}
               </div>
@@ -253,44 +201,48 @@ const MessageItem = memo(
 
         if (message.text) {
           contentElements.push(
-            <div key="text" className={styles.messageText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.text, { allowedTags: ['strong', 'em', 'u', 'code'], allowedAttributes: { '*': ['style', 'class'] }, transformTags: { 'strong': (_, attribs) => ({ tagName: 'strong', attribs: { ...attribs, style: `font-weight: bold; ${attribs.style || ''}` } }), 'em': (_, attribs) => ({ tagName: 'em', attribs: { ...attribs, style: `font-style: italic; ${attribs.style || ''}` } }), 'u': (_, attribs) => ({ tagName: 'u', attribs: { ...attribs, style: `text-decoration: underline; ${attribs.style || ''}` } }), 'code': (_, attribs) => ({ tagName: 'code', attribs: { ...attribs, style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}` } }) } }) }} />
+            <div key="text" className={styles.messageText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.text) }} />
           );
         }
 
         if (message.imageUrl) {
           contentElements.push(
             <div key="image" className={styles.imageContainer}>
-              <Image src={message.imageUrl} alt="Imagen" width={200} height={200} className={styles.messageImage} onClick={() => setImagePreviewSrc(message.imageUrl)} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
+              <Image
+                src={message.imageUrl}
+                alt="Imagen"
+                width={200}
+                height={200}
+                className={styles.messageImage}
+                onClick={() => setImagePreviewSrc(message.imageUrl)}
+                onError={(e) => { e.currentTarget.src = '/empty-image.png'; }}
+              />
             </div>
           );
         }
 
-        if (message.fileUrl && !message.fileType?.startsWith('image/') && !message.fileType?.startsWith('audio/')) {
+        if (message.fileUrl && !message.fileType?.startsWith('image/')) {
           contentElements.push(
             <div key="file" className={styles.file}>
               <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className={styles.fileName}>{message.fileName || 'Archivo'}</a>
-            </div>
-          );
-        }
-
-        if (message.fileUrl && message.fileType?.startsWith('audio/')) {
-          contentElements.push(
-            <div key="audio" className={styles.file}>
-              <audio controls src={message.fileUrl} className="max-w-xs">
-                Tu navegador no soporta el elemento de audio.
-              </audio>
-              {message.hours && (
-                <span className={styles.timestamp}>
-                  {Math.floor((message.hours * 3600) / 60)}:{((message.hours * 3600) % 60).toString().padStart(2, '0')}
-                </span>
-              )}
+              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className={styles.fileName}>
+                {message.fileName || 'Archivo'}
+              </a>
             </div>
           );
         }
 
         return contentElements;
       }, [message, setImagePreviewSrc, styles]);
+
+      // Si es un pill de fecha, renderizar un diseño especial
+      if (message.isDatePill) {
+        return (
+          <div className={styles.datePill}>
+            <span className={styles.datePillText}>{message.text}</span>
+          </div>
+        );
+      }
 
       return (
         <div
@@ -345,7 +297,10 @@ const MessageItem = memo(
                   <div className={styles.actionContainer}>
                     <button
                       className={styles.actionButton}
-                      onClick={() => setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id);
+                      }}
                     >
                       <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
                     </button>
@@ -358,7 +313,8 @@ const MessageItem = memo(
                               {!message.hours && (
                                 <div
                                   className={styles.actionDropdownItem}
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setEditingMessageId(message.id);
                                     setEditingText(message.text || '');
                                     setActionMenuOpenId(null);
@@ -369,7 +325,8 @@ const MessageItem = memo(
                               )}
                               <div
                                 className={styles.actionDropdownItem}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleDeleteMessage(message.id);
                                   setActionMenuOpenId(null);
                                 }}
@@ -381,7 +338,8 @@ const MessageItem = memo(
                           {(message.imageUrl || message.fileUrl) && (
                             <div
                               className={styles.actionDropdownItem}
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (message.imageUrl || message.fileUrl) {
                                   const link = document.createElement('a');
                                   link.href = message.imageUrl || message.fileUrl || '';
@@ -1594,10 +1552,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
   }
 
   return (
-    <div
-      className={`${styles.container} ${isOpen ? styles.open : ''}`}
-      ref={sidebarRef}
-    >
+    <div className={`${styles.container} ${isOpen ? styles.open : ''}`} ref={sidebarRef}>
       <div className={styles.header}>
         <div className={styles.controls}>
           <div
@@ -1861,7 +1816,6 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         {!isLoadingMessages && messages.length === 0 && (
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
-        
         <InfiniteScroll
           dataLength={messages.length}
           next={handleLoadMoreMessages}
@@ -1877,28 +1831,28 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           inverse={true}
           scrollThreshold="50px"
         >
-                    {messages.map((message, index) => (
-                <MessageItem
-                  key={`${message.id}-${index}`}
-                  message={message}
-                  users={users}
-                  userId={user?.id}
-                  styles={styles}
-                  setActionMenuOpenId={setActionMenuOpenId}
-                  actionMenuOpenId={actionMenuOpenId}
-                  setEditingMessageId={setEditingMessageId}
-                  setEditingText={setEditingText}
-                  handleDeleteMessage={handleDeleteMessage}
-                  setImagePreviewSrc={setImagePreviewSrc}
-                  editingMessageId={editingMessageId}
-                  isDraggingMessage={isDraggingMessage}
-                  draggedMessageId={draggedMessageId}
-                  dragOffset={dragOffset}
-                                    onMessageDragStart={handleMessageDragStart}
-                  ref={index === messages.length - 1 ? lastMessageRef : null}
-                  isNewChunk={newChunkMessageIds.has(message.id)}
-                  isLoadingChunk={isLoadingChunk}
-                />
+          {messages.map((message) => (
+            <MessageItem
+              key={message.id}
+              message={message}
+              users={users}
+              userId={user?.id}
+              styles={styles}
+              setActionMenuOpenId={setActionMenuOpenId}
+              actionMenuOpenId={actionMenuOpenId}
+              setEditingMessageId={setEditingMessageId}
+              setEditingText={setEditingText}
+              handleDeleteMessage={handleDeleteMessage}
+              setImagePreviewSrc={setImagePreviewSrc}
+              editingMessageId={editingMessageId}
+              isDraggingMessage={isDraggingMessage}
+              draggedMessageId={draggedMessageId}
+              dragOffset={dragOffset}
+              onMessageDragStart={handleMessageDragStart}
+              isNewChunk={newChunkMessageIds.has(message.id)}
+              isLoadingChunk={isLoadingChunk}
+              ref={message.id === messages[messages.length - 1]?.id ? lastMessageRef : null}
+            />
           ))}
         </InfiniteScroll>
       </div>

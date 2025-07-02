@@ -61,4 +61,5 @@ export interface Message {
     text: string | null;
     imageUrl?: string | null;
   } | null;
+  isDatePill?: boolean; // Indicates if this message is a date separator pill
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   collection, 
   query, 
@@ -36,6 +36,7 @@ interface Message {
     text: string | null;
     imageUrl?: string | null;
   } | null;
+  isDatePill?: boolean;
 }
 
 interface MessageCache {
@@ -194,13 +195,80 @@ const cleanupExpiredCache = () => {
   });
 };
 
+// Función para formatear la fecha en español
+const formatDateForPill = (date: Date) => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return 'Hoy';
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return 'Ayer';
+  } else {
+    return date.toLocaleDateString('es-MX', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+    });
+  }
+};
+
+// Función para insertar pills de fecha entre los mensajes
+const insertDatePills = (messages: Message[]): Message[] => {
+  if (!messages.length) return [];
+
+  const result: Message[] = [];
+  let currentDate: string | null = null;
+
+  messages.forEach((message) => {
+    // Si el mensaje ya es un pill de fecha, lo ignoramos
+    if (message.isDatePill) return;
+
+    // Si no tiene timestamp, solo lo agregamos
+    if (!message.timestamp) {
+      result.push(message);
+      return;
+    }
+
+    const messageDate = message.timestamp instanceof Timestamp 
+      ? message.timestamp.toDate() 
+      : message.timestamp instanceof Date 
+        ? message.timestamp 
+        : new Date();
+    
+    const dateString = messageDate.toDateString();
+
+    if (dateString !== currentDate) {
+      currentDate = dateString;
+      // Crear un mensaje tipo pill para la fecha usando solo la fecha como ID
+      result.push({
+        id: `date-${dateString}`,
+        senderId: 'system',
+        senderName: 'system',
+        text: formatDateForPill(messageDate),
+        timestamp: message.timestamp,
+        read: true,
+        clientId: `date-${dateString}`,
+        isDatePill: true,
+      });
+    }
+
+    result.push(message);
+  });
+
+  return result;
+};
+
 export const useMessagePagination = ({
   taskId,
   pageSize = DEFAULT_PAGE_SIZE,
   cacheTimeout = DEFAULT_CACHE_TIMEOUT,
   decryptMessage,
 }: UseMessagePaginationProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [internalMessages, setInternalMessages] = useState<Message[]>([]);
+  const messages = useMemo(() => insertDatePills(internalMessages), [internalMessages]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -279,7 +347,7 @@ export const useMessagePagination = ({
        });
 
        if (updatedMessages.length > 0) {
-         setMessages(prev => {
+         setInternalMessages(prev => {
            const existingIds = new Set(prev.map(m => m.id));
            const newMessages = updatedMessages.filter(m => !existingIds.has(m.id));
            const merged = [...prev, ...newMessages].sort((a, b) => {
@@ -320,7 +388,7 @@ export const useMessagePagination = ({
       const cachedMessages = getCachedMessages(taskId);
       if (cachedMessages.length > 0) {
         console.log('[MessagePagination] Loading from cache:', cachedMessages.length, 'messages');
-        setMessages(cachedMessages);
+        setInternalMessages(cachedMessages);
         setIsLoading(false);
         
         // Validar cache contra servidor en background
@@ -403,7 +471,7 @@ export const useMessagePagination = ({
         safeLocalStorage.setItem(`${LAST_MODIFIED_PREFIX}${taskId}`, mostRecent.toISOString());
       }
 
-      setMessages(newMessages.sort((a, b) => {
+      setInternalMessages(newMessages.sort((a, b) => {
         const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
         const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
         return bTime - aTime;
@@ -472,7 +540,7 @@ export const useMessagePagination = ({
         };
       });
 
-      setMessages(prev => {
+      setInternalMessages(prev => {
         const existingIds = new Set(prev.map(m => m.id));
         const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id));
         const updated = [...prev, ...uniqueNewMessages].sort((a, b) => {
@@ -586,7 +654,7 @@ export const useMessagePagination = ({
             .filter(change => change.type === 'removed')
             .map(change => change.doc.id);
 
-          setMessages(prev => {
+          setInternalMessages(prev => {
             // Crear un mapa de mensajes existentes para fácil acceso
             const messageMap = new Map(prev.map(m => [m.id, m]));
             
@@ -645,12 +713,12 @@ export const useMessagePagination = ({
 
   // Función para añadir mensaje optimista
   const addOptimisticMessage = useCallback((message: Message) => {
-    setMessages(prev => [message, ...prev]);
+    setInternalMessages(prev => [message, ...prev]);
   }, []);
 
   // Función para actualizar mensaje optimista
   const updateOptimisticMessage = useCallback((clientId: string, updates: Partial<Message>) => {
-    setMessages(prev => prev.map(msg => 
+    setInternalMessages(prev => prev.map(msg => 
       msg.clientId === clientId ? { ...msg, ...updates } : msg
     ));
   }, []);
@@ -687,7 +755,7 @@ export const useMessagePagination = ({
       const cachedMessages = getCachedMessages(taskId);
       if (cachedMessages.length > 0 && isMounted) {
         console.log('[MessagePagination] Using cached messages:', cachedMessages.length, 'Effect ID:', effectId);
-        setMessages(cachedMessages);
+        setInternalMessages(cachedMessages);
         setIsLoading(false);
 
         // Solo configurar listener si hay cache, no cargar datos frescos

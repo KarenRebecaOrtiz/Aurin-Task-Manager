@@ -2785,22 +2785,21 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 16px 0 8px 0;
-  padding: 0 16px;
-  
+  padding: 4px 0;
+  margin: 16px 0;
+  pointer-events: none;
+
   .datePillText {
-    background: rgba(0, 0, 0, 0.08);
-    color: rgba(0, 0, 0, 0.6);
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
     font-size: 12px;
     font-weight: 500;
-    padding: 6px 12px;
-    border-radius: 12px;
+    color: rgba(0, 0, 0, 0.7);
     text-align: center;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    text-transform: capitalize;
-    letter-spacing: 0.3px;
+    user-select: none;
   }
 }
 
