@@ -2945,3 +2945,20 @@
 :global(body.dark) .timeDate {
   color: #94a3b8;
 }
+
+.messageImage {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: scale(1.02);
+  }
+}

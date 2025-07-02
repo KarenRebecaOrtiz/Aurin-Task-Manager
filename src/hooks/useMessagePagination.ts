@@ -349,7 +349,7 @@ export const useMessagePagination = ({
 
       const newMessages: Message[] = snapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        const message = {
           id: doc.id,
           senderId: data.senderId,
           senderName: data.senderName,
@@ -368,6 +368,28 @@ export const useMessagePagination = ({
           hasError: false,
           replyTo: data.replyTo || null,
         };
+        
+        // Log específico para mensajes con tiempo
+        if (data.hours && typeof data.hours === 'number' && data.hours > 0) {
+          console.log('[useMessagePagination] 🕒 Mensaje con tiempo detectado en loadInitialMessages:', {
+            id: doc.id,
+            hours: data.hours,
+            senderName: data.senderName,
+            timestamp: data.timestamp,
+            originalText: data.text,
+            decryptedText: data.text ? decryptMessage(data.text) : null
+          });
+        }
+        
+        return message;
+      });
+
+      // Contar mensajes con tiempo
+      const timeMessages = newMessages.filter(msg => msg.hours && typeof msg.hours === 'number' && msg.hours > 0);
+      console.log('[useMessagePagination] 📊 Resumen de carga inicial:', {
+        totalMessages: newMessages.length,
+        timeMessages: timeMessages.length,
+        timeMessageIds: timeMessages.map(msg => ({ id: msg.id, hours: msg.hours }))
       });
 
       // Actualizar lastModified
@@ -500,32 +522,44 @@ export const useMessagePagination = ({
       unsubscribeRef.current();
     }
 
-    const lastModified = safeLocalStorage.getItem(`${LAST_MODIFIED_PREFIX}${taskId}`);
-    let realtimeQuery = query(
+    // Configurar query para capturar TODOS los mensajes recientes
+    // Usar timestamp descendente para obtener los más nuevos primero
+    const realtimeQuery = query(
       collection(db, `tasks/${taskId}/messages`),
       orderBy('timestamp', 'desc'),
-      limit(10) // Solo los 10 más recientes para reducir tráfico
+      limit(50) // Límite alto para asegurar que capturamos todos los mensajes
     );
     
-    // Filtrar por lastModified si existe
-    if (lastModified) {
-      realtimeQuery = query(
-        collection(db, `tasks/${taskId}/messages`),
-        where('lastModified', '>', Timestamp.fromDate(new Date(lastModified))),
-        orderBy('lastModified', 'desc'),
-        limit(10)
-      );
-    }
+    console.log('[useMessagePagination] 🔧 Configurando listener en tiempo real:', {
+      taskId,
+      queryLimit: 50,
+      collection: `tasks/${taskId}/messages`
+    });
 
     const unsubscribe = onSnapshot(realtimeQuery, (snapshot) => {
-        const changes = snapshot.docChanges();
-        if (changes.length > 0) {
+      const changes = snapshot.docChanges();
+      console.log('[useMessagePagination] 👂 Listener detectó cambios:', {
+        changesLength: changes.length,
+        taskId,
+        changeTypes: changes.map(c => ({ type: c.type, id: c.doc.id }))
+      });
+      
+      if (changes.length > 0) {
         // Debounce para evitar múltiples actualizaciones
-          setTimeout(() => {
+        setTimeout(() => {
+          // Procesar mensajes añadidos o modificados
           const newMessages: Message[] = changes
             .filter(change => change.type === 'added' || change.type === 'modified')
             .map(change => {
               const data = change.doc.data();
+              console.log('[useMessagePagination] 📝 Procesando mensaje:', {
+                id: change.doc.id,
+                type: change.type,
+                text: data.text ? '(encrypted)' : null,
+                timestamp: data.timestamp,
+                lastModified: data.lastModified
+              });
+              
               return {
                 id: change.doc.id,
                 senderId: data.senderId,
@@ -547,15 +581,45 @@ export const useMessagePagination = ({
               };
             });
 
-              setMessages(prev => {
-            const existingIds = new Set(prev.map(m => m.id));
-            const updated = [...prev, ...newMessages.filter(m => !existingIds.has(m.id))].sort(
-              (a, b) => {
-                const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
-                const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
-                return bTime - aTime;
+          // Obtener IDs de mensajes eliminados
+          const deletedMessageIds = changes
+            .filter(change => change.type === 'removed')
+            .map(change => change.doc.id);
+
+          setMessages(prev => {
+            // Crear un mapa de mensajes existentes para fácil acceso
+            const messageMap = new Map(prev.map(m => [m.id, m]));
+            
+            // Procesar cada nuevo mensaje
+            newMessages.forEach(newMsg => {
+              const change = changes.find(c => c.doc.id === newMsg.id);
+              if (change?.type === 'modified') {
+                // Si es una modificación, actualizar el mensaje existente
+                messageMap.set(newMsg.id, newMsg);
+              } else if (change?.type === 'added' && !messageMap.has(newMsg.id)) {
+                // Si es un mensaje nuevo y no existe, agregarlo
+                messageMap.set(newMsg.id, newMsg);
               }
-            );
+            });
+            
+            // Eliminar mensajes que fueron eliminados
+            deletedMessageIds.forEach(id => messageMap.delete(id));
+            
+            // Convertir el mapa de vuelta a array y ordenar
+            const updated = Array.from(messageMap.values()).sort((a, b) => {
+              const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
+              const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
+              return bTime - aTime;
+            });
+            
+            console.log('[useMessagePagination] 🔄 Actualizando mensajes en estado:', {
+              previousCount: prev.length,
+              newMessagesCount: newMessages.length,
+              modifiedCount: newMessages.filter(m => messageMap.has(m.id)).length,
+              deletedCount: deletedMessageIds.length,
+              finalCount: updated.length
+            });
+            
             setCachedMessages(taskId, updated, lastDocRef.current, hasMore);
             return updated;
           });
@@ -568,12 +632,12 @@ export const useMessagePagination = ({
           if (mostRecent) {
             setLastModified(mostRecent);
             safeLocalStorage.setItem(`${LAST_MODIFIED_PREFIX}${taskId}`, mostRecent.toISOString());
-        }
+          }
         }, 100);
       }
     }, (error) => {
       console.error('[MessagePagination] Error in realtime listener:', error);
-        setError('Error en la conexión en tiempo real');
+      setError('Error en la conexión en tiempo real');
     });
 
     unsubscribeRef.current = unsubscribe;
@@ -590,6 +654,24 @@ export const useMessagePagination = ({
       msg.clientId === clientId ? { ...msg, ...updates } : msg
     ));
   }, []);
+
+  // WORKAROUND: Listener para forzar refetch de mensajes
+  useEffect(() => {
+    const handleForceRefresh = (event: CustomEvent) => {
+      if (event.detail.taskId === taskId) {
+        console.log('[useMessagePagination] 🔄 Forzando refetch por evento:', event.detail);
+        // Limpiar cache y forzar recarga
+        delete MESSAGE_CACHE[taskId];
+        safeLocalStorage.removeItem(`${LOCAL_STORAGE_PREFIX}${taskId}`);
+        loadInitialMessages();
+      }
+    };
+
+    window.addEventListener('forceMessageRefresh', handleForceRefresh as EventListener);
+    return () => {
+      window.removeEventListener('forceMessageRefresh', handleForceRefresh as EventListener);
+    };
+  }, [taskId, loadInitialMessages]);
 
   // Efecto principal que maneja tanto la carga inicial como el listener en tiempo real
   useEffect(() => {

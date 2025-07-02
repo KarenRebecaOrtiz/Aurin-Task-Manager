@@ -639,9 +639,30 @@ export default function InputChat({
             <div className={styles.timerContainer} style={{ width: '100%' }}>
               <button 
                 className={styles.playStopButton} 
-                onClick={onToggleTimer} 
-                onDoubleClick={async () => {
+                onClick={(e) => {
+                  // Prevenir conflicto con doble click
+                  if (e.currentTarget && e.currentTarget.dataset) {
+                    e.currentTarget.dataset.clickTimeout = setTimeout(() => {
+                      onToggleTimer(e);
+                      if (e.currentTarget && e.currentTarget.dataset) {
+                        delete e.currentTarget.dataset.clickTimeout;
+                      }
+                    }, 250).toString();
+                  }
+                }}
+                onDoubleClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  // Cancelar el click simple si existe
+                  if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.clickTimeout) {
+                    clearTimeout(parseInt(e.currentTarget.dataset.clickTimeout));
+                    delete e.currentTarget.dataset.clickTimeout;
+                  }
+                  
+                  // Ejecutar finalizeTimer solo si hay tiempo acumulado
                   if (timerSeconds > 0 && onFinalizeTimer) {
+                    console.log('[InputChat] 🎯 Doble click detectado - finalizando timer:', timerSeconds);
                     await onFinalizeTimer();
                   }
                 }}

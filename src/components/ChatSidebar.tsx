@@ -80,7 +80,6 @@ interface MessageItemProps {
   setEditingMessageId: Dispatch<React.SetStateAction<string | null>>;
   setEditingText: Dispatch<React.SetStateAction<string>>;
   handleDeleteMessage: (messageId: string) => Promise<void>;
-  handleResendMessage: (message: Message) => Promise<void>;
   setImagePreviewSrc: Dispatch<React.SetStateAction<string | null>>;
   editingMessageId: string | null;
   isDraggingMessage: boolean;
@@ -104,7 +103,6 @@ const MessageItem = memo(
         setEditingMessageId,
         setEditingText,
         handleDeleteMessage,
-        handleResendMessage,
         setImagePreviewSrc,
         editingMessageId,
         isDraggingMessage,
@@ -188,119 +186,90 @@ const MessageItem = memo(
       }, [isNewChunk, isLoadingChunk]);
 
       const renderMessageContent = useCallback(() => {
-        const contentElements = [];
+        const contentElements: React.ReactNode[] = [];
 
-        if (message.replyTo) {
-          contentElements.push(
-            <div key="reply" className={styles.replyIndicator}>
-              <div className={styles.replyContent}>
-                <div className={styles.replyHeader}>
-                  <span className={styles.replyLabel}>Respondiendo a {message.replyTo.senderName}</span>
-                </div>
-                <div className={styles.replyPreview}>
-                  {message.replyTo.imageUrl && (
-                    <Image
-                      src={message.replyTo.imageUrl}
-                      alt="Imagen"
-                      width={24}
-                      height={24}
-                      className={styles.replyImage}
-                      draggable="false"
-                    />
-                  )}
-                  {message.replyTo.text && (
-                    <span 
-                      className={styles.replyText}
-                      dangerouslySetInnerHTML={{ 
-                        __html: sanitizeHtml(message.replyTo.text, {
-                          allowedTags: ['strong', 'em', 'u', 'code'],
-                          allowedAttributes: {
-                            '*': ['style', 'class']
-                          },
-                          transformTags: {
-                            'strong': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `font-weight: bold; ${attribs.style || ''}`
-                              }
-                            }),
-                            'em': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `font-style: italic; ${attribs.style || ''}`
-                              }
-                            }),
-                            'u': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `text-decoration: underline; ${attribs.style || ''}`
-                              }
-                            }),
-                            'code': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}`
-                              }
-                            })
-                          }
-                        })
-                      }}
-                    />
-                  )}
-                  {!message.replyTo.text && !message.replyTo.imageUrl && (
-                    <span className={styles.replyText}>Mensaje</span>
-                  )}
-                </div>
+        // Si es un mensaje de tiempo, solo mostrar el componente de tiempo
+        if (message.hours && typeof message.hours === 'number' && message.hours > 0) {
+          const totalMinutes = Math.round(message.hours * 60);
+          const displayHours = Math.floor(totalMinutes / 60);
+          const displayMinutes = totalMinutes % 60;
+          const timeDisplay = displayHours > 0 
+            ? `${displayHours}h ${displayMinutes}m`
+            : `${displayMinutes}m`;
+          
+          console.log('[MessageItem] 🕒 Renderizando mensaje de tiempo:', {
+            messageId: message.id,
+            hours: message.hours,
+            totalMinutes,
+            displayHours,
+            displayMinutes,
+            timeDisplay
+          });
+          
+          return (
+            <div key="time" className={styles.timeMessage}>
+              <div className={styles.timeIcon}>
+                <Image src="/timer.svg" alt="Tiempo" width={16} height={16} />
+              </div>
+              <div className={styles.timeContent}>
+                <span className={styles.timeText}>Registró <strong>{timeDisplay}</strong> de tiempo en la tarea</span>
+                {message.dateString && (
+                  <span className={styles.timeDate}>({message.dateString})</span>
+                )}
               </div>
             </div>
           );
         }
 
+        // Para mensajes que no son de tiempo, proceder con la lógica normal
+        if (message.replyTo) {
+          contentElements.push(
+            <div key="reply" className={styles.replyPreview}>
+              <div className={styles.replyHeader}>
+                <span className={styles.replyLabel}>Respondiendo a {message.replyTo.senderName}</span>
+              </div>
+              <div className={styles.replyContent}>
+                {message.replyTo.imageUrl && (
+                  <Image src={message.replyTo.imageUrl} alt="Imagen" width={40} height={40} className={styles.replyImage} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
+                )}
+                {message.replyTo.text && message.replyTo.text.includes('entrada de tiempo de') ? (
+                  <div className={styles.timeMessage}>
+                    <div className={styles.timeIcon}>
+                      <Image src="/timer.svg" alt="Tiempo" width={16} height={16} />
+                    </div>
+                    <div className={styles.timeContent}>
+                      <span className={styles.timeText}>{message.replyTo.text}</span>
+                    </div>
+                  </div>
+                ) : message.replyTo.text ? (
+                  <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.replyTo.text.length > 50 ? `${message.replyTo.text.substring(0, 50)}...` : message.replyTo.text, { allowedTags: ['strong', 'em', 'u', 'code'], allowedAttributes: { '*': ['style', 'class'] }, transformTags: { 'strong': (_, attribs) => ({ tagName: 'strong', attribs: { ...attribs, style: `font-weight: bold; ${attribs.style || ''}` } }), 'em': (_, attribs) => ({ tagName: 'em', attribs: { ...attribs, style: `font-style: italic; ${attribs.style || ''}` } }), 'u': (_, attribs) => ({ tagName: 'u', attribs: { ...attribs, style: `text-decoration: underline; ${attribs.style || ''}` } }), 'code': (_, attribs) => ({ tagName: 'code', attribs: { ...attribs, style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}` } }) } }) }} />
+                ) : !message.replyTo.imageUrl && (
+                  <span className={styles.replyText}>Mensaje</span>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        if (message.text) {
+          contentElements.push(
+            <div key="text" className={styles.messageText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.text, { allowedTags: ['strong', 'em', 'u', 'code'], allowedAttributes: { '*': ['style', 'class'] }, transformTags: { 'strong': (_, attribs) => ({ tagName: 'strong', attribs: { ...attribs, style: `font-weight: bold; ${attribs.style || ''}` } }), 'em': (_, attribs) => ({ tagName: 'em', attribs: { ...attribs, style: `font-style: italic; ${attribs.style || ''}` } }), 'u': (_, attribs) => ({ tagName: 'u', attribs: { ...attribs, style: `text-decoration: underline; ${attribs.style || ''}` } }), 'code': (_, attribs) => ({ tagName: 'code', attribs: { ...attribs, style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}` } }) } }) }} />
+          );
+        }
+
         if (message.imageUrl) {
           contentElements.push(
-            <div key="image" className={styles.imageWrapper}>
-              <Image
-                src={message.imageUrl}
-                alt={message.fileName || 'Imagen'}
-                width={0}
-                height={0}
-                sizes="100vw"
-                className={`${styles.image} ${message.isPending ? styles.pendingImage : ''}`}
-                onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
-                onError={() => console.warn('Image load failed', message.imageUrl)}
-                draggable="false"
-                style={{
-                  width: 'auto',
-                  height: 'auto',
-                  maxWidth: '100%',
-                  maxHeight: '300px',
-                  objectFit: 'contain'
-                }}
-              />
-              {message.isPending && (
-                <div className={styles.imageLoader}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" className="animate-spin">
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      className="opacity-25"
-                    />
-                    <path
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      className="opacity-75"
-                    />
-                  </svg>
-                </div>
-              )}
+            <div key="image" className={styles.imageContainer}>
+              <Image src={message.imageUrl} alt="Imagen" width={200} height={200} className={styles.messageImage} onClick={() => setImagePreviewSrc(message.imageUrl)} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
+            </div>
+          );
+        }
+
+        if (message.fileUrl && !message.fileType?.startsWith('image/') && !message.fileType?.startsWith('audio/')) {
+          contentElements.push(
+            <div key="file" className={styles.file}>
+              <Image src="/file.svg" alt="Archivo" width={16} height={16} />
+              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className={styles.fileName}>{message.fileName || 'Archivo'}</a>
             </div>
           );
         }
@@ -320,118 +289,7 @@ const MessageItem = memo(
           );
         }
 
-
-        // 🕒 MENSAJE DE TIEMPO - Mostrar log de tiempo registrado
-        if (message.hours && typeof message.hours === 'number' && message.hours > 0) {
-          const totalMinutes = Math.round(message.hours * 60);
-          const displayHours = Math.floor(totalMinutes / 60);
-          const displayMinutes = totalMinutes % 60;
-          const timeDisplay = displayHours > 0 
-            ? `${displayHours}h ${displayMinutes}m`
-            : `${displayMinutes}m`;
-          
-          contentElements.push(
-            <div key="time" className={styles.timeMessage}>
-              <div className={styles.timeIcon}>
-                <Image src="/timer.svg" alt="Tiempo" width={16} height={16} />
-              </div>
-              <div className={styles.timeContent}>
-                <span className={styles.timeText}>Registró <strong>{timeDisplay}</strong> de tiempo en la tarea</span>
-                {message.dateString && (
-                  <span className={styles.timeDate}>({message.dateString})</span>
-                )}
-              </div>
-            </div>
-          );
-        }        if (message.fileUrl && !message.imageUrl && !message.fileType?.startsWith('audio/')) {
-          contentElements.push(
-            <div key="file" className={styles.file}>
-              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
-                <Image src="/file.svg" alt="Archivo" width={16} height={16} />
-                <span>{message.fileName}</span>
-              </a>
-            </div>
-          );
-        }
-
-        if (message.text) {
-          const sanitizeOptions = {
-            allowedTags: [
-              'p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'code', 'span', 'div'
-            ],
-            allowedAttributes: {
-              '*': ['style', 'class']
-            },
-            transformTags: {
-              'strong': (tagName: string, attribs: Record<string, string>) => ({
-                tagName,
-                attribs: {
-                  ...attribs,
-                  style: `font-weight: bold; ${attribs.style || ''}`
-                }
-              }),
-              'em': (tagName: string, attribs: Record<string, string>) => ({
-                tagName,
-                attribs: {
-                  ...attribs,
-                  style: `font-style: italic; ${attribs.style || ''}`
-                }
-              }),
-              'u': (tagName: string, attribs: Record<string, string>) => ({
-                tagName,
-                attribs: {
-                  ...attribs,
-                  style: `text-decoration: underline; ${attribs.style || ''}`
-                }
-              }),
-              'code': (tagName: string, attribs: Record<string, string>) => ({
-                tagName,
-                attribs: {
-                  ...attribs,
-                  style: `font-family: monospace; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; ${attribs.style || ''}`
-                }
-              }),
-              'ul': (tagName: string, attribs: Record<string, string>) => ({
-                tagName,
-                attribs: {
-                  ...attribs,
-                  class: `list-disc pl-5 ${attribs.class || ''}`
-                }
-              }),
-              'ol': (tagName: string, attribs: Record<string, string>) => ({
-                tagName,
-                attribs: {
-                  ...attribs,
-                  class: `list-decimal pl-5 ${attribs.class || ''}`
-                }
-              })
-            }
-          };
-
-          const sanitizedHtml = sanitizeHtml(message.text, sanitizeOptions);
-
-          contentElements.push(
-            <div 
-              key="text"
-              className={styles.messageText}
-              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-            />
-          );
-        }
-
-        if (contentElements.length === 0) {
-          return null;
-        }
-
-        if (contentElements.length === 1) {
-          return contentElements[0];
-        }
-
-        return (
-          <div className={styles.messageContentWrapper}>
-            {contentElements}
-          </div>
-        );
+        return contentElements;
       }, [message, setImagePreviewSrc, styles]);
 
       return (
@@ -492,76 +350,53 @@ const MessageItem = memo(
                       <Image src="/elipsis.svg" alt="Opciones" width={16} height={16} />
                     </button>
                     {actionMenuOpenId === message.id && (
-                      <div ref={actionMenuRef} className={styles.actionDropdown}>
-                        {!message.hours && !message.hasError && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              setEditingMessageId(message.id);
-                              setEditingText(message.text || '');
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Editar
-                          </div>
-                        )}
-                        {message.hasError && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              handleResendMessage(message);
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Reintentar Envío
-                          </div>
-                        )}
-                        {message.text && message.text.trim() && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              const textToCopy = message.text || '';
-                              navigator.clipboard.writeText(textToCopy).catch(() => {
-                                const textArea = document.createElement('textarea');
-                                textArea.value = textToCopy;
-                                document.body.appendChild(textArea);
-                                textArea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textArea);
-                              });
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Copiar
-                          </div>
-                        )}
-                        {(message.imageUrl || message.fileUrl) && (
-                          <div
-                            className={styles.actionDropdownItem}
-                            onClick={() => {
-                              if (message.imageUrl || message.fileUrl) {
-                                const link = document.createElement('a');
-                                link.href = message.imageUrl || message.fileUrl || '';
-                                link.download = message.fileName || 'archivo';
-                                link.target = '_blank';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                              }
-                              setActionMenuOpenId(null);
-                            }}
-                          >
-                            Descargar Archivo
-                          </div>
-                        )}
-                        <div
-                          className={styles.actionDropdownItem}
-                          onClick={() => {
-                            handleDeleteMessage(message.id);
-                            setActionMenuOpenId(null);
-                          }}
-                        >
-                          Eliminar
+                      <div className={styles.actionDropdown} ref={actionMenuRef}>
+                        <div className={styles.actionDropdownContent}>
+                          {/* Solo mostrar opciones de editar y eliminar si el mensaje es del usuario actual */}
+                          {message.senderId === userId && (
+                            <>
+                              {!message.hours && (
+                                <div
+                                  className={styles.actionDropdownItem}
+                                  onClick={() => {
+                                    setEditingMessageId(message.id);
+                                    setEditingText(message.text || '');
+                                    setActionMenuOpenId(null);
+                                  }}
+                                >
+                                  Editar
+                                </div>
+                              )}
+                              <div
+                                className={styles.actionDropdownItem}
+                                onClick={() => {
+                                  handleDeleteMessage(message.id);
+                                  setActionMenuOpenId(null);
+                                }}
+                              >
+                                Eliminar
+                              </div>
+                            </>
+                          )}
+                          {(message.imageUrl || message.fileUrl) && (
+                            <div
+                              className={styles.actionDropdownItem}
+                              onClick={() => {
+                                if (message.imageUrl || message.fileUrl) {
+                                  const link = document.createElement('a');
+                                  link.href = message.imageUrl || message.fileUrl || '';
+                                  link.download = message.fileName || 'archivo';
+                                  link.target = '_blank';
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                }
+                                setActionMenuOpenId(null);
+                              }}
+                            >
+                              Descargar Archivo
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -820,7 +655,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     sendMessage,
     editMessage,
     deleteMessage,
-    resendMessage,
     sendTimeMessage,
   } = useMessageActions({
     task,
@@ -1310,15 +1144,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   };
 
-  const handleResendMessage = async (message: Message) => {
-    try {
-      await resendMessage(message);
-    } catch (error) {
-      console.error('Error resending message:', error);
-      alert('Error al reenviar el mensaje');
-    }
-  };
-
   const toggleTimer = async (_e: React.MouseEvent) => {
     if (!user?.id || !task.id) {
       console.error('[ChatSidebar:ToggleTimer] Missing user ID or task ID:', { userId: user?.id, taskId: task.id });
@@ -1395,7 +1220,30 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   // 🛑 FINALIZAR TIMER (función para cuando se quiere enviar el tiempo con doble click)
   const finalizeTimer = async () => {
-    if (!user?.id || !task.id || timerSeconds === 0) return;
+    console.log('[ChatSidebar] 🎯 Iniciando finalizeTimer:', {
+      userId: user?.id,
+      taskId: task.id,
+      timerSeconds,
+      isTimerRunning,
+      hasUser: !!user?.id,
+      hasTask: !!task.id,
+      hasTime: timerSeconds > 0
+    });
+    
+    if (!user?.id) {
+      console.warn('[ChatSidebar] ❌ No hay usuario autenticado');
+      return;
+    }
+    
+    if (!task.id) {
+      console.warn('[ChatSidebar] ❌ No hay task ID');
+      return;
+    }
+    
+    if (timerSeconds === 0) {
+      console.warn('[ChatSidebar] ❌ No hay tiempo para registrar (timerSeconds = 0)');
+      return;
+    }
     
     const hours = timerSeconds / 3600;
     const displayHours = Math.floor(timerSeconds / 3600);
@@ -1403,17 +1251,22 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     const timeEntry = `${displayHours}h ${displayMinutes}m`;
     const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
 
-    console.log("^[[ChatSidebar^]] 🛑 Finalizando timer con doble click:", {
+    console.log('[ChatSidebar] 🛑 Finalizando timer con doble click:', {
       totalSeconds: timerSeconds,
       hours,
-      timeEntry
+      timeEntry,
+      displayHours,
+      displayMinutes
     });
 
     try {
       // Enviar mensaje de tiempo
+      console.log('[ChatSidebar] 📤 Enviando mensaje de tiempo...');
       await sendTimeMessage(user.id, user.firstName || "Usuario", hours, timeEntry);
+      console.log('[ChatSidebar] ✅ Mensaje de tiempo enviado correctamente');
       
       // Limpiar timer en Firestore
+      console.log('[ChatSidebar] 🧹 Limpiando timer en Firestore...');
       await setDoc(timerDocRef, {
         userId: user.id,
         isRunning: false,
@@ -1421,14 +1274,18 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         accumulatedSeconds: 0,
         lastFinalized: serverTimestamp(),
       });
+      console.log('[ChatSidebar] ✅ Timer limpiado en Firestore');
       
       // Limpiar estado local
+      console.log('[ChatSidebar] 🧹 Limpiando estado local...');
       setIsTimerRunning(false);
       setTimerSeconds(0);
       
-      console.log("^[[ChatSidebar^]] ✅ Timer finalizado y tiempo registrado:", timeEntry);
+      console.log('[ChatSidebar] 🎉 Timer finalizado y tiempo registrado exitosamente:', timeEntry);
     } catch (error) {
-      console.error("^[[ChatSidebar^]] ❌ Error finalizando timer:", error);
+      console.error('[ChatSidebar] ❌ Error finalizando timer:', error);
+      // No revertir el estado local para permitir reintento
+      alert(`Error al registrar el tiempo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
   const handleAddTimeEntry = async (time?: string, date?: Date, comment?: string) => {
@@ -2032,7 +1889,6 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                   setEditingMessageId={setEditingMessageId}
                   setEditingText={setEditingText}
                   handleDeleteMessage={handleDeleteMessage}
-                  handleResendMessage={handleResendMessage}
                   setImagePreviewSrc={setImagePreviewSrc}
                   editingMessageId={editingMessageId}
                   isDraggingMessage={isDraggingMessage}
