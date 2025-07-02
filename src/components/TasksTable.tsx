@@ -1393,7 +1393,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       });
       
       return isReallyLoading;
-    }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoadingTasks]);
+    }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoadingTasks, isLoadingClients, isLoadingUsers]);
 
     if (shouldShowLoader) {
       return (

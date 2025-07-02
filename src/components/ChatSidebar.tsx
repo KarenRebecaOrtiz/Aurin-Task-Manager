@@ -1393,6 +1393,44 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     console.log('[ChatSidebar] Timer panel toggled');
   };
 
+  // 🛑 FINALIZAR TIMER (función para cuando se quiere enviar el tiempo con doble click)
+  const finalizeTimer = async () => {
+    if (!user?.id || !task.id || timerSeconds === 0) return;
+    
+    const hours = timerSeconds / 3600;
+    const displayHours = Math.floor(timerSeconds / 3600);
+    const displayMinutes = Math.floor((timerSeconds % 3600) / 60);
+    const timeEntry = `${displayHours}h ${displayMinutes}m`;
+    const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
+
+    console.log("^[[ChatSidebar^]] 🛑 Finalizando timer con doble click:", {
+      totalSeconds: timerSeconds,
+      hours,
+      timeEntry
+    });
+
+    try {
+      // Enviar mensaje de tiempo
+      await sendTimeMessage(user.id, user.firstName || "Usuario", hours, timeEntry);
+      
+      // Limpiar timer en Firestore
+      await setDoc(timerDocRef, {
+        userId: user.id,
+        isRunning: false,
+        startTime: null,
+        accumulatedSeconds: 0,
+        lastFinalized: serverTimestamp(),
+      });
+      
+      // Limpiar estado local
+      setIsTimerRunning(false);
+      setTimerSeconds(0);
+      
+      console.log("^[[ChatSidebar^]] ✅ Timer finalizado y tiempo registrado:", timeEntry);
+    } catch (error) {
+      console.error("^[[ChatSidebar^]] ❌ Error finalizando timer:", error);
+    }
+  };
   const handleAddTimeEntry = async (time?: string, date?: Date, comment?: string) => {
     if (!user?.id) {
       alert('No se puede añadir la entrada de tiempo: usuario no autenticado.');
@@ -2000,7 +2038,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                   isDraggingMessage={isDraggingMessage}
                   draggedMessageId={draggedMessageId}
                   dragOffset={dragOffset}
-                  onMessageDragStart={handleMessageDragStart}
+                                    onMessageDragStart={handleMessageDragStart}
                   ref={index === messages.length - 1 ? lastMessageRef : null}
                   isNewChunk={newChunkMessageIds.has(message.id)}
                   isLoadingChunk={isLoadingChunk}
@@ -2018,6 +2056,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         timerSeconds={timerSeconds}
         isTimerRunning={isTimerRunning}
         onToggleTimer={toggleTimer}
+        onFinalizeTimer={finalizeTimer}
         onToggleTimerPanel={toggleTimerPanel}
         isTimerPanelOpen={isTimerPanelOpen}
         setIsTimerPanelOpen={setIsTimerPanelOpen}

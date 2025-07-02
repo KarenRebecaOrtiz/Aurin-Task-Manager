@@ -148,7 +148,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     externalTasks,
     externalClients,
     externalUsers,
-    onTaskUpdate,
+    onTaskUpdate: _onTaskUpdate, // eslint-disable-line @typescript-eslint/no-unused-vars
     onDataRefresh,
   }) => {
     const { user } = useUser();
@@ -180,9 +180,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     const userId = useMemo(() => user?.id || '', [user]);
 
     // PRIORIDAD: Usar datos externos siempre que estén disponibles
-    const effectiveTasks = externalTasks || [];
-    const effectiveClients = externalClients || [];
-    const effectiveUsers = externalUsers || [];
+    const effectiveTasks = useMemo(() => externalTasks || [], [externalTasks]);
+    const effectiveClients = useMemo(() => externalClients || [], [externalClients]);
+    const effectiveUsers = useMemo(() => externalUsers || [], [externalUsers]);
 
     console.log('[ArchiveTable] Data usage check:', {
       hasExternalTasks: !!externalTasks,
@@ -339,7 +339,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         }
         throw error;
       }
-    }, [userId, isAdmin, onTaskUpdate, onDataRefresh]);
+    }, [isAdmin, onDataRefresh, onTaskArchive]);
 
     // Función para deshacer - SIMPLIFICADA para usar función centralizada
     const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
