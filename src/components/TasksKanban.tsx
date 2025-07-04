@@ -753,8 +753,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const [clients, setClients] = useState<Client[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [priorityFilter] = useState<string>('');
-    const [clientFilter] = useState<string>('');
+    const [priorityFilter, setPriorityFilter] = useState<string>('');
+    const [clientFilter, setClientFilter] = useState<string>('');
     const [userFilter, setUserFilter] = useState<string>('');
     const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
     const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
@@ -1039,6 +1039,17 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         return Array.from(ids);
       };
 
+      console.log('[TasksKanban] Filtering tasks with:', {
+        totalTasks: effectiveTasks.length,
+        searchQuery,
+        priorityFilter,
+        clientFilter,
+        userFilter,
+        userId,
+        isAdmin,
+        isLoading
+      });
+
       // Debug: verificar status de admin
       console.log('[TasksKanban] Admin status check:', {
         isAdmin,
@@ -1102,13 +1113,32 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
         let matchesUser = true;
+        
         if (userFilter === 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userId);
+          const involvedUserIds = getInvolvedUserIds(task);
+          matchesUser = involvedUserIds.includes(userId);
         } else if (userFilter && userFilter !== 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userFilter);
+          const involvedUserIds = getInvolvedUserIds(task);
+          matchesUser = involvedUserIds.includes(userFilter);
         }
         
-        return matchesSearch && matchesPriority && matchesClient && matchesUser;
+        const passesFilters = matchesSearch && matchesPriority && matchesClient && matchesUser;
+        
+        console.log('[TasksKanban] Task filter check:', {
+          taskId: task.id,
+          taskName: task.name,
+          matchesSearch,
+          matchesPriority,
+          matchesClient,
+          matchesUser,
+          passesFilters,
+          searchQuery,
+          priorityFilter,
+          clientFilter,
+          userFilter,
+        });
+        
+        return passesFilters;
       });
 
       console.log('[TasksKanban] Final filtered tasks (NON-ARCHIVED only):', {
@@ -1136,6 +1166,12 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         filteredCount: finalFilteredTasks.length,
         filteredTaskIds: finalFilteredTasks.map((t) => t.id),
         assignedToUser: finalFilteredTasks.filter((t) => t.AssignedTo.includes(userId)).map((t) => t.id),
+        currentFilters: {
+          searchQuery,
+          priorityFilter,
+          clientFilter,
+          userFilter
+        }
       });
 
       setTimeout(() => {
@@ -1499,7 +1535,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         });
       }
       
-      // Note: setPriorityFilter is removed since priorityFilter is read-only now
+      console.log('[TasksKanban] Priority filter selected:', priority);
+      setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
     };
 
@@ -1519,7 +1556,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         });
       }
       
-      // Note: setClientFilter is removed since clientFilter is read-only now
+      console.log('[TasksKanban] Client filter selected:', clientId);
+      setClientFilter(clientId);
       setIsClientDropdownOpen(false);
     };
 

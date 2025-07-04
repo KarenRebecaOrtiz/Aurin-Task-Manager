@@ -358,6 +358,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const effectiveClients = externalClients ?? clients;
     const effectiveUsers = externalUsers ?? users;
 
+    // Usar un ref para trackear los IDs de tareas en lugar del array completo
+    const effectiveTasksIds = useMemo(() => effectiveTasks.map(t => t.id).join(','), [effectiveTasks]);
+
     // Función para verificar cache válido - estabilizada
     const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number; isLoading: boolean }>) => {
       const cached = cacheMap.get(cacheKey);
@@ -723,15 +726,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     }, [user?.id, isCacheValid, isPersistentCacheValid, externalUsers]);
 
     useEffect(() => {
-      // Solo actualizar si hay cambio real en los datos
-      if (JSON.stringify(filteredTasks.map(t => t.id)) !== JSON.stringify(effectiveTasks.map(t => t.id))) {
-        setFilteredTasks(effectiveTasks);
-        console.log('[TasksTable] Initialized filteredTasks:', {
-          totalTasks: effectiveTasks.length,
-          taskIds: effectiveTasks.map((t) => t.id),
-        });
-      }
-    }, [effectiveTasks, filteredTasks]);
+      // Inicializar filteredTasks directamente con effectiveTasks
+      // NO comparar con JSON.stringify ya que esto interfiere con los filtros
+      setFilteredTasks(effectiveTasks);
+    }, [effectiveTasksIds]); // Usar string de IDs en lugar del array completo
 
     const getInvolvedUserIds = useCallback((task: Task) => {
       const ids = new Set<string>();
@@ -769,14 +767,23 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           return false;
         }
         
-        const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
+        // Filtro de búsqueda
+        const matchesSearch = !searchQuery || task.name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // Filtro de prioridad
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+        
+        // Filtro de cliente
         const matchesClient = !clientFilter || task.clientId === clientFilter;
+        
+        // Filtro de usuario
         let matchesUser = true;
         if (userFilter === 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userId);
+          const involvedUserIds = getInvolvedUserIds(task);
+          matchesUser = involvedUserIds.includes(userId);
         } else if (userFilter && userFilter !== 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userFilter);
+          const involvedUserIds = getInvolvedUserIds(task);
+          matchesUser = involvedUserIds.includes(userFilter);
         }
 
         return matchesSearch && matchesPriority && matchesClient && matchesUser;
@@ -785,13 +792,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       return filtered;
     }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
 
+    // Crear un ID estable para las tareas filtradas
+    const filteredTasksIds = useMemo(() => memoizedFilteredTasks.map(t => t.id).join(','), [memoizedFilteredTasks]);
+    
+    // Usar ref para evitar problemas de dependencias
+    const memoizedFilteredTasksRef = useRef(memoizedFilteredTasks);
+    memoizedFilteredTasksRef.current = memoizedFilteredTasks;
+
     useEffect(() => {
-      setFilteredTasks(memoizedFilteredTasks);
-      console.log('[TasksTable] Updated filteredTasks:', {
-        filteredCount: memoizedFilteredTasks.length,
-        filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
-      });
-    }, [memoizedFilteredTasks]);
+      setFilteredTasks(memoizedFilteredTasksRef.current);
+    }, [filteredTasksIds]); // Solo usar el ID estable como dependencia
 
     // Función para manejar el clic en una fila de tarea
     const handleTaskRowClick = async (task: Task) => {
