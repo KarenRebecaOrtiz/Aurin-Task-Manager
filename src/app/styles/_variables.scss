@@ -213,7 +213,7 @@ $breakpoint-xl: 1200px;
   background: $bg;
   border-radius: $radius;
   box-shadow:
-    inset -#{$intensity}px -#{$intensity}px #{2*$intensity}px lighten($bg, 4%),
+    inset -#{$intensity}px -#{$intensity}px #{2*$intensity}px color.adjust($bg, $lightness: 4%),
     inset #{$intensity}px #{$intensity}px #{2*$intensity}px rgba(0, 0, 0, 0.05);
 }
 

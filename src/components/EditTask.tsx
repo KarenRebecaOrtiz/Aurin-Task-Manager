@@ -64,7 +64,7 @@ const baseFormSchema = z.object({
     objectives: z.string().optional(),
     startDate: z.date({ required_error: "La fecha de inicio es obligatoria*" }).nullable(),
     endDate: z.date({ required_error: "La fecha de finalización es obligatoria*" }).nullable(),
-    status: z.enum(["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"], {
+    status: z.enum(["Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"], {
       required_error: "Selecciona un estado*",
     }),
     priority: z.enum(["Baja", "Media", "Alta"], { required_error: "Selecciona una prioridad*" }),
@@ -1584,7 +1584,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                     }}
                                     ref={statusDropdownPopperRef}
                                   >
-                                    {["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"].map((status) => (
+                                    {["Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"].map((status) => (
                                       <div
                                         key={status}
                                         className={styles.dropdownItem}

@@ -221,15 +221,18 @@ const insertDatePills = (messages: Message[]): Message[] => {
 
   const result: Message[] = [];
   let currentDate: string | null = null;
+  let messagesForCurrentDate: Message[] = [];
 
-  // Los mensajes están ordenados de más recientes a más antiguos
-  // Necesitamos procesarlos en orden cronológico para insertar los date pills correctamente
+  // Los mensajes ya están ordenados de más recientes a más antiguos (descendente)
+  // Para el chat invertido, necesitamos procesarlos en orden cronológico inverso
+  // para que los datepills aparezcan al FINAL de cada grupo de mensajes del día
   const sortedMessages = [...messages].sort((a, b) => {
     const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
     const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
-    return aTime - bTime; // Orden ascendente para procesar cronológicamente
+    return bTime - aTime; // Mantener orden descendente (más recientes primero)
   });
 
+  // Procesar mensajes en orden cronológico inverso para chat invertido
   sortedMessages.forEach((message) => {
     // Si el mensaje ya es un pill de fecha, lo ignoramos
     if (message.isDatePill) return;
@@ -248,30 +251,52 @@ const insertDatePills = (messages: Message[]): Message[] => {
     
     const dateString = messageDate.toDateString();
 
+    // Si cambia la fecha, procesar el grupo anterior y agregar el datepill al final
     if (dateString !== currentDate) {
+      // Si hay mensajes del día anterior, agregarlos primero
+      if (messagesForCurrentDate.length > 0) {
+        result.push(...messagesForCurrentDate);
+        // Agregar el datepill al FINAL de los mensajes del día
+        result.push({
+          id: `date-${currentDate}`,
+          senderId: 'system',
+          senderName: 'system',
+          text: formatDateForPill(new Date(currentDate)),
+          timestamp: messagesForCurrentDate[0].timestamp,
+          read: true,
+          clientId: `date-${currentDate}`,
+          isDatePill: true,
+        });
+      }
+      
+      // Iniciar nuevo grupo para la nueva fecha
       currentDate = dateString;
-      // Crear un mensaje tipo pill para la fecha usando solo la fecha como ID
-      result.push({
-        id: `date-${dateString}`,
-        senderId: 'system',
-        senderName: 'system',
-        text: formatDateForPill(messageDate),
-        timestamp: message.timestamp,
-        read: true,
-        clientId: `date-${dateString}`,
-        isDatePill: true,
-      });
+      messagesForCurrentDate = [message];
+    } else {
+      // Agregar mensaje al grupo actual
+      messagesForCurrentDate.push(message);
     }
-
-    result.push(message);
   });
 
-  // Volver a ordenar en orden descendente (más recientes primero)
-  return result.sort((a, b) => {
-    const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
-    const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
-    return bTime - aTime; // Orden descendente
-  });
+  // Procesar el último grupo de mensajes
+  if (messagesForCurrentDate.length > 0) {
+    result.push(...messagesForCurrentDate);
+    // Agregar el datepill al FINAL del último grupo
+    result.push({
+      id: `date-${currentDate}`,
+      senderId: 'system',
+      senderName: 'system',
+      text: formatDateForPill(new Date(currentDate)),
+      timestamp: messagesForCurrentDate[0].timestamp,
+      read: true,
+      clientId: `date-${currentDate}`,
+      isDatePill: true,
+    });
+  }
+
+  // Para el chat invertido, mantener el orden descendente (más recientes primero)
+  // Los datepills ya están en la posición correcta al final de cada grupo
+  return result;
 };
 
 export const useMessagePagination = ({

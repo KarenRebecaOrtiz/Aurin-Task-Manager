@@ -1,3 +1,4 @@
+@use "sass:color";
 @use 'variables' as *;
 
 // ==============================================================
@@ -1392,7 +1393,7 @@
   @include dark-mode {
     background: rgba($color, $intensity * 1.5);
     border-color: rgba($color, $intensity * 4);
-    color: lighten($color, 20%);
+    color: color.adjust($color, $lightness: 20%);
     @include neomorphic-shadow(dark);
 
     &::before {

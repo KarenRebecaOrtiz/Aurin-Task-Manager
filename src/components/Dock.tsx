@@ -11,11 +11,14 @@ interface Shortcut {
 }
 
 const shortcuts: Shortcut[] = [
+  { name: 'Figma', icon: '/Dock/Figma.webp', link: 'https://www.figma.com' },
+  { name: 'Firefly', icon: '/Dock/Firefly.svg.png', link: 'https://www.adobe.com/products/firefly.html' },
+  { name: 'Freepik', icon: '/Dock/Freepik.png', link: 'https://www.freepik.com' },
+  { name: 'Sesame', icon: '/Dock/Sesame.png', link: 'https://sesame.so' },
+  { name: 'Vercel', icon: '/Dock/Vercel.png', link: 'https://vercel.com' },
+  { name: 'Wordpress', icon: '/Dock/Wordpress.jpg', link: 'https://wordpress.com' },
+  { name: 'Zoho', icon: '/Dock/Zoho.png', link: 'https://www.zoho.com' },
   { name: 'Notion', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6be92ee5ddf0080fb90_notion.png', link: 'https://www.notion.so' },
-  { name: 'Asana', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6bef9d004f8a9cf3b29_asana.png', link: 'https://www.asana.com' },
-  { name: 'Slack', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6be8c099d4e1ed55770_slack.png', link: 'https://www.slack.com' },
-  { name: 'Loom', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6be5b31ba243e4da377_loom.png', link: 'https://www.loom.com' },
-  { name: 'Spotify', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6bea97e140677496dae_spotify.png', link: 'https://www.spotify.com' },
   { name: 'Webflow', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6bea73fcc6ee568f6f0_webflow.png', link: 'https://www.webflow.com' },
 ];
 
@@ -162,10 +165,15 @@ const Dock: React.FC = () => {
                 <Image
                   src={shortcut.icon}
                   alt={`${shortcut.name} icon`}
-                  width={32}
-                  height={32}
+                  width={38}
+                  height={38}
                   className={styles.dockItemImage}
                   unoptimized
+                  style={{
+                    borderRadius: '5px',
+                    objectFit: 'contain',
+                    aspectRatio: '1 / 1',
+                  }}
                 />
               </a>
               <div className={styles.dockItemTooltip}>{shortcut.name}</div>

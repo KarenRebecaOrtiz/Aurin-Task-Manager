@@ -63,7 +63,7 @@ const baseFormSchema = z.object({
     objectives: z.string().optional(),
     startDate: z.date({ required_error: "La fecha de inicio es obligatoria*" }).nullable(),
     endDate: z.date({ required_error: "La fecha de finalización es obligatoria*" }).nullable(),
-    status: z.enum(["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"], {
+    status: z.enum(["Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"], {
       required_error: "Selecciona un estado*",
     }),
     priority: z.enum(["Baja", "Media", "Alta"], { required_error: "Selecciona una prioridad*" }),
@@ -642,7 +642,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     (status: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
-      form.setValue("basicInfo.status", status as "Por Iniciar" | "Diseño" | "Desarrollo" | "En Proceso" | "Finalizado" | "Backlog" | "Cancelado");
+      form.setValue("basicInfo.status", status as "Por Iniciar" | "En Proceso" | "Backlog" | "Por Finalizar" | "Finalizado" | "Cancelado");
       setIsStatusDropdownOpen(false);
     },
     [form, animateClick],
@@ -1648,7 +1648,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       exit={{ opacity: 0, y: -16 }}
                                       transition={{ duration: 0.2, ease: "easeOut" }}
                                     >
-                                      {["Por Iniciar", "Diseño", "Desarrollo", "En Proceso", "Finalizado", "Backlog", "Cancelado"].map((status, index) => (
+                                      {["Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"].map((status, index) => (
                                         <motion.div
                                           key={status}
                                           className={styles.dropdownItem}

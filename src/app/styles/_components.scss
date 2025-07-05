@@ -1,3 +1,4 @@
+@use "sass:color";
 @use 'variables' as *;
 @use 'mixins' as *;
 
@@ -67,12 +68,12 @@
   width: 100%;
   
   @include dark-mode {
-    background: $color-bg-dark-tertiary;
-    border-color: $color-bg-dark-tertiary;
-    color: $color-text-dark-primary;
+    background: color.adjust($color-bg-dark-tertiary, $lightness: -10%);
+    border-color: color.adjust($color-error, $lightness: 10%);
+    color: color.adjust($color-text-dark-primary, $lightness: 10%);
     
     &:hover {
-      background: darken($color-bg-dark-tertiary, 10%);
+      background: color.adjust($color-bg-dark-tertiary, $lightness: -5%);
     }
   }
 }
@@ -133,7 +134,7 @@
     color: $color-text-dark-primary;
     
     &:hover {
-      background: $color-border-dark-secondary;
+      background: color.adjust($color-bg-dark-tertiary, $lightness: -5%);
     }
   }
 }
@@ -585,11 +586,11 @@
 // 🔮 DELETE TEXT STYLES
 // =================================================================
 .deleteText {
-  color: $color-error !important;
+  color: color.adjust($color-error, $lightness: 10%) !important;
   font-weight: $font-weight-semibold;
   
   @include dark-mode {
-    color: lighten($color-error, 10%) !important;
+    color: color.adjust($color-error, $lightness: 10%) !important;
   }
 }
 
@@ -631,7 +632,7 @@
     color: $color-text-dark-primary;
     
     &:hover {
-      background: lighten($color-bg-dark-tertiary, 5%);
+      background: color.adjust($color-bg-dark-tertiary, $lightness: 5%);
     }
   }
 }
@@ -660,10 +661,10 @@
   
   @include dark-mode {
     background: $color-bg-dark-tertiary;
-    border-color: lighten($color-error, 10%);
+    border-color: color.adjust($color-error, $lightness: 10%);
     
     &:hover {
-      background: darken($color-bg-dark-tertiary, 5%);
+      background: color.adjust($color-bg-dark-tertiary, $lightness: -5%);
     }
   }
 }
@@ -741,7 +742,7 @@
   }
   
   @include dark-mode {
-    background: $color-info;
+    background: color.adjust($color-info, $lightness: -10%);
     color: $color-text-dark-primary;
   }
 }
@@ -807,8 +808,8 @@
   gap: 15px;
   
   @include dark-mode {
-    background: darken($color-bg-dark-tertiary, 5%);
-    border-color: lighten($color-error, 10%);
+    background: color.adjust($color-bg-dark-tertiary, $lightness: -5%);
+    border-color: color.adjust($color-error, $lightness: 10%);
   }
 }
 
@@ -1130,11 +1131,11 @@
   word-break: break-all;
 
   &:hover {
-    color: darken($color-info, 10%);
+    color: color.adjust($color-info, $lightness: 20%);
   }
 
   @include dark-mode {
-    color: lighten($color-info, 20%);
+    color: color.adjust($color-info, $lightness: -10%);
     &:hover {
       color: $color-info;
     }

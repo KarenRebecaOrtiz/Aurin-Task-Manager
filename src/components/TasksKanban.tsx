@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, onSnapshot, query, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, getDoc, doc } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, PointerSensor, TouchSensor, useDroppable, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
@@ -60,26 +60,8 @@ interface Task {
 
 type TaskView = 'table' | 'kanban';
 
-const tasksKanbanCache = {
-  tasks: new Map<string, { data: Task[]; timestamp: number }>(),
-  clients: new Map<string, { data: Client[]; timestamp: number }>(),
-  users: new Map<string, { data: User[]; timestamp: number }>(),
-  listeners: new Map<string, { tasks: (() => void) | null; clients: (() => void) | null; users: (() => void) | null }>(),
-};
-
-const CACHE_DURATION = 10 * 60 * 1000;
-
 export const cleanupTasksKanbanListeners = () => {
-  console.log('[TasksKanban] Cleaning up all listeners');
-  tasksKanbanCache.listeners.forEach((listener) => {
-    if (listener.tasks) listener.tasks();
-    if (listener.clients) listener.clients();
-    if (listener.users) listener.users();
-  });
-  tasksKanbanCache.listeners.clear();
-  tasksKanbanCache.tasks.clear();
-  tasksKanbanCache.clients.clear();
-  tasksKanbanCache.users.clear();
+  console.log('[TasksKanban] Cleaning up all kanban listeners');
 };
 
 interface AvatarGroupProps {
@@ -161,6 +143,7 @@ interface SortableItemProps {
   users: User[];
   getUnreadCount: (task: Task) => number;
   markAsViewed: (taskId: string) => Promise<void>;
+  normalizeStatus: (status: string) => string;
 }
 
 const SortableItem: React.FC<SortableItemProps> = ({
@@ -182,6 +165,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
   users,
   getUnreadCount,
   markAsViewed,
+  normalizeStatus,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -192,6 +176,18 @@ const SortableItem: React.FC<SortableItemProps> = ({
     boxShadow: isDragging ? '0 8px 25px rgba(0, 0, 0, 0.15)' : 'none',
     cursor: isAdmin ? 'grab' : 'pointer',
     touchAction: isAdmin ? 'none' : 'manipulation',
+  };
+
+  const getStatusIcon = (status: string): string => {
+    const normalizedStatus = normalizeStatus(status);
+    let icon = '/timer.svg';
+    if (normalizedStatus === 'En Proceso') icon = '/timer.svg';
+    else if (normalizedStatus === 'Backlog') icon = '/circle-help.svg';
+    else if (normalizedStatus === 'Por Iniciar') icon = '/circle.svg';
+    else if (normalizedStatus === 'Cancelado') icon = '/circle-x.svg';
+    else if (normalizedStatus === 'Por Finalizar') icon = '/circle-check.svg';
+    else if (normalizedStatus === 'Finalizado') icon = '/check-check.svg';
+    return icon;
   };
 
   return (
@@ -210,6 +206,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
       }}
     >
       <div className={styles.taskHeader}>
+        <div className={styles.taskStatusAndName}>
         <div className={styles.taskNameWrapper}>
         <span className={styles.taskName}>{task.name}</span>
           {(() => {
@@ -219,6 +216,19 @@ const SortableItem: React.FC<SortableItemProps> = ({
               <NotificationDot count={updateCount} />
             );
           })()}
+          </div>
+          <div className={styles.taskStatus}>
+            <Image
+              src={getStatusIcon(task.status)}
+              alt={normalizeStatus(task.status)}
+              width={16}
+              height={16}
+              style={{ opacity: 0.7 }}
+            />
+            <span className={styles[`status-${normalizeStatus(task.status).replace(/\s/g, '-')}`]}>
+              {normalizeStatus(task.status)}
+            </span>
+          </div>
         </div>
         {(isAdmin || task.CreatedBy === userId) && (
           <ActionMenu
@@ -322,63 +332,12 @@ const DroppableColumn: React.FC<{ id: string; children: React.ReactNode; classNa
 };
 
 // Type for Firestore timestamp
-interface FirestoreTimestamp {
-  toDate(): Date;
-}
+
 
 // Type guard for Firestore timestamp
-const isFirestoreTimestamp = (timestamp: unknown): timestamp is FirestoreTimestamp => {
-  return timestamp !== null && 
-         typeof timestamp === 'object' && 
-         'toDate' in timestamp && 
-         typeof (timestamp as FirestoreTimestamp).toDate === 'function';
-};
 
-// Helper function to safely convert Firestore timestamp or string to ISO string
-const safeTimestampToISO = (timestamp: unknown): string => {
-  if (!timestamp) return new Date().toISOString();
-  
-  // If it's already a string, return it
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
-  
-  // If it's a Firestore timestamp, convert it
-  if (isFirestoreTimestamp(timestamp)) {
-    return timestamp.toDate().toISOString();
-  }
-  
-  // If it's a Date object, convert it
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
-  // Fallback to current date
-  return new Date().toISOString();
-};
 
-// Helper function to safely convert Firestore timestamp or string to ISO string or null
-const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
-  if (!timestamp) return null;
-  
-  // If it's already a string, return it
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
-  
-  // If it's a Firestore timestamp, convert it
-  if (isFirestoreTimestamp(timestamp)) {
-    return timestamp.toDate().toISOString();
-  }
-  
-  // If it's a Date object, convert it
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
-  // Fallback to null
-  return null;
-};
+
 
 interface TasksKanbanHeaderProps {
   searchQuery: string;
@@ -743,15 +702,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     externalUsers,
   }) => {
     const { user } = useUser();
-    const { isAdmin, isLoading } = useAuth();
+    const { isAdmin } = useAuth();
 
-    const tasksRef = useRef<Task[]>([]);
-    const clientsRef = useRef<Client[]>([]);
-    const usersRef = useRef<User[]>([]);
-
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
     const [clientFilter, setClientFilter] = useState<string>('');
@@ -762,13 +714,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
     const [isTouchDevice, setIsTouchDevice] = useState(false);
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
-    const [isLoadingClients, setIsLoadingClients] = useState(true);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [activeTask, setActiveTask] = useState<Task | null>(null);
-
-    // Eliminar estados de undo ya no necesarios
-
-
 
     const containerRef = useRef<HTMLDivElement>(null);
     const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -779,10 +726,38 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    // Use external data if provided, otherwise use internal state
-    const effectiveTasks = externalTasks || tasks;
-    const effectiveClients = externalClients || clients;
-    const effectiveUsers = externalUsers || users;
+    // PRIORIZAR external data para asegurar sincronización con TasksPage
+    const effectiveTasks = useMemo(() => externalTasks ?? [], [externalTasks]);
+    const effectiveClients = useMemo(() => externalClients ?? [], [externalClients]);
+    const effectiveUsers = useMemo(() => externalUsers ?? [], [externalUsers]);
+
+
+
+    // Forzar refresco cuando cambie el estado de cualquier tarea
+    const statusChangesString = useMemo(() => 
+      effectiveTasks.map(t => t.status).join(','), 
+      [effectiveTasks]
+    );
+    
+    useEffect(() => {
+      const statusChanges = effectiveTasks.map(t => `${t.id}-${t.status}`).join(',');
+      console.log('[TasksKanban] Status changes detected:', statusChanges);
+      
+      // Forzar re-render del componente
+      // No necesitamos setFilteredTasks aquí porque groupedTasks se recalcula automáticamente
+      
+      // Forzar re-render adicional para cambios de estado
+      if (effectiveTasks.length > 0) {
+        const hasStatusChanges = effectiveTasks.some(task => 
+          task.status && task.status !== 'Por Iniciar'
+        );
+        
+        if (hasStatusChanges) {
+          console.log('[TasksKanban] Forcing immediate re-render due to status changes');
+          // groupedTasks se recalcula automáticamente, esto es solo para logging
+        }
+      }
+    }, [statusChangesString, effectiveTasks]);
 
     // Usar el hook de notificaciones simplificado
     const { getUnreadCount, markAsViewed } = useTaskNotifications();
@@ -800,18 +775,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         },
       })
     );
-
-
-
-    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
-      const cached = cacheMap.get(cacheKey);
-      if (!cached) return false;
-
-      const now = Date.now();
-      return (now - cached.timestamp) < CACHE_DURATION;
-    }, []);
-
-
 
     const handleUserFilter = (id: string) => {
       const userDropdownTrigger = userDropdownRef.current?.querySelector(`.${styles.dropdownTrigger}`);
@@ -913,18 +876,17 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const statusColumns = useMemo(
       () => [
         { id: 'por-iniciar', title: 'Por Iniciar' },
-        { id: 'diseno', title: 'Diseño' },
-        { id: 'desarrollo', title: 'Desarrollo' },
         { id: 'en-proceso', title: 'En Proceso' },
-        { id: 'finalizado', title: 'Finalizado' },
         { id: 'backlog', title: 'Backlog' },
+        { id: 'por-finalizar', title: 'Por Finalizar' },
+        { id: 'finalizado', title: 'Finalizado' },
         { id: 'cancelado', title: 'Cancelado' },
       ],
       [],
     );
 
     // Helper function to normalize status values
-    const normalizeStatus = (status: string): string => {
+    const normalizeStatus = useCallback((status: string): string => {
       if (!status) return 'Por Iniciar'; // Default for empty/null status
       
       const normalized = status.trim();
@@ -937,16 +899,13 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         'pending': 'Por Iniciar',
         'to do': 'Por Iniciar',
         'todo': 'Por Iniciar',
-        'diseno': 'Diseño',
-        'diseño': 'Diseño',
-        'design': 'Diseño',
-        'desarrollo': 'Desarrollo',
-        'development': 'Desarrollo',
-        'dev': 'Desarrollo',
         'en proceso': 'En Proceso',
         'en-proceso': 'En Proceso',
         'in progress': 'En Proceso',
         'progreso': 'En Proceso',
+        'por finalizar': 'Por Finalizar',
+        'por-finalizar': 'Por Finalizar',
+        'to finish': 'Por Finalizar',
         'finalizado': 'Finalizado',
         'finalizada': 'Finalizado',
         'completed': 'Finalizado',
@@ -960,10 +919,17 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         'cancelado': 'Cancelado',
         'cancelada': 'Cancelado',
         'cancelled': 'Cancelado',
+        // Legacy status mapping
+        'diseno': 'Por Iniciar',
+        'diseño': 'Por Iniciar',
+        'design': 'Por Iniciar',
+        'desarrollo': 'En Proceso',
+        'development': 'En Proceso',
+        'dev': 'En Proceso',
       };
       
       return statusMap[normalized.toLowerCase()] || normalized;
-    };
+    }, []);
 
     useEffect(() => {
       const checkTouchDevice = () => {
@@ -1001,364 +967,25 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       };
     }, []);
 
-    // CRÍTICO: Usar datos externos inmediatamente cuando estén disponibles
+    // Setup de tasks con actualizaciones en tiempo real - ELIMINAR DUPLICADO
     useEffect(() => {
-      if (externalTasks && externalTasks.length > 0) {
-        console.log('[TasksKanban] Using external tasks immediately:', externalTasks.length);
-        tasksRef.current = externalTasks;
-        setTasks(externalTasks);
-        setIsLoadingTasks(false);
-      }
-    }, [externalTasks]);
+      if (!user?.id) return;
 
-    useEffect(() => {
-      if (externalClients && externalClients.length > 0) {
-        console.log('[TasksKanban] Using external clients immediately:', externalClients.length);
-        clientsRef.current = externalClients;
-        setClients(externalClients);
-        setIsLoadingClients(false);
-      }
-    }, [externalClients]);
-
-    useEffect(() => {
-      if (externalUsers && externalUsers.length > 0) {
-        console.log('[TasksKanban] Using external users immediately:', externalUsers.length);
-        usersRef.current = externalUsers;
-        setUsers(externalUsers);
-        setIsLoadingUsers(false);
-      }
-    }, [externalUsers]);
-
-    const memoizedFilteredTasks = useMemo(() => {
-      // Helper function inside useMemo to avoid dependency issues
-      const getInvolvedUserIds = (task: Task) => {
-        const ids = new Set<string>();
-        if (task.CreatedBy) ids.add(task.CreatedBy);
-        if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
-        if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
-        return Array.from(ids);
-      };
-
-      console.log('[TasksKanban] Filtering tasks with:', {
-        totalTasks: effectiveTasks.length,
-        searchQuery,
-        priorityFilter,
-        clientFilter,
-        userFilter,
-        userId,
-        isAdmin,
-        isLoading
-      });
-
-      // Debug: verificar status de admin
-      console.log('[TasksKanban] Admin status check:', {
-        isAdmin,
-        userId,
-        isLoading,
-        totalTasks: effectiveTasks.length,
-        taskIds: effectiveTasks.map(t => t.id)
-      });
+      console.log('[TasksKanban] Using shared tasks state - no duplicate onSnapshot');
       
-      // Los admins deben poder ver todas las tareas, no solo las asignadas
-      const visibleTasks = effectiveTasks;
-
-      // CRÍTICO: TasksKanban SIEMPRE filtra tareas archivadas (archived: true)
-      const nonArchivedTasks = visibleTasks.filter((task) => {
-        // Verificar multiple formas de detectar si está archivada
-        const isArchived = task.archived === true || String(task.archived) === 'true' || Boolean(task.archived);
-        
-        console.log('[TasksKanban] Task archive check:', {
-          table: 'TasksKanban',
-          taskId: task.id,
-          taskName: task.name,
-          taskStatus: task.status,
-          archived: task.archived,
-          archivedType: typeof task.archived,
-          archivedString: JSON.stringify(task.archived),
-          isArchived,
-          willExclude: isArchived,
-          archivedAt: task.archivedAt,
-          archivedBy: task.archivedBy,
-          filterPurpose: 'Checking if task should be excluded from Kanban'
-        });
-        
-        if (isArchived) {
-                  console.log('[TasksKanban] EXCLUDING archived task:', {
-          table: 'TasksKanban',
-          taskId: task.id,
-          taskName: task.name,
-          taskStatus: task.status,
-          archived: task.archived,
-          archivedAt: task.archivedAt,
-          archivedBy: task.archivedBy,
-          reason: 'Task is archived, filtering out from Kanban view'
-        });
-        }
-        return !isArchived; // Solo mostrar tareas NO archivadas
-      });
-
-      console.log('[TasksKanban] Archive filtering results:', {
-        table: 'TasksKanban',
-        totalTasks: visibleTasks.length,
-        archivedTasksCount: visibleTasks.filter(t => Boolean(t.archived)).length,
-        nonArchivedTasksCount: nonArchivedTasks.length,
-        archivedTaskIds: visibleTasks.filter(t => Boolean(t.archived)).map(t => t.id),
-        nonArchivedTaskIds: nonArchivedTasks.map(t => t.id),
-        filterPurpose: 'Show only non-archived tasks in Kanban columns'
-      });
-
-      // Aplicar otros filtros solo a tareas NO archivadas
-      const filtered = nonArchivedTasks.filter((task) => {
-        const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-        const matchesClient = !clientFilter || task.clientId === clientFilter;
-        let matchesUser = true;
-        
-        if (userFilter === 'me') {
-          const involvedUserIds = getInvolvedUserIds(task);
-          matchesUser = involvedUserIds.includes(userId);
-        } else if (userFilter && userFilter !== 'me') {
-          const involvedUserIds = getInvolvedUserIds(task);
-          matchesUser = involvedUserIds.includes(userFilter);
-        }
-        
-        const passesFilters = matchesSearch && matchesPriority && matchesClient && matchesUser;
-        
-        console.log('[TasksKanban] Task filter check:', {
-          taskId: task.id,
-          taskName: task.name,
-          matchesSearch,
-          matchesPriority,
-          matchesClient,
-          matchesUser,
-          passesFilters,
-          searchQuery,
-          priorityFilter,
-          clientFilter,
-          userFilter,
-        });
-        
-        return passesFilters;
-      });
-
-      console.log('[TasksKanban] Final filtered tasks (NON-ARCHIVED only):', {
-        table: 'TasksKanban',
-        filteredCount: filtered.length,
-        filteredTaskIds: filtered.map(t => t.id),
-        filterResult: 'Only non-archived tasks that match all filters',
-        appliedFilters: {
-          search: searchQuery,
-          priority: priorityFilter,
-          client: clientFilter,
-          user: userFilter
-        }
-      });
-
-      return filtered;
-    }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, isAdmin, isLoading]);
-
-    // ARREGLAR: Remover el useEffect problemático y asignar directamente
-    const finalFilteredTasks = memoizedFilteredTasks;
-
-    useEffect(() => {
-      // Solo animar las tarjetas cuando hay cambios reales
-      console.log('[TasksKanban] Updated filteredTasks:', {
-        filteredCount: finalFilteredTasks.length,
-        filteredTaskIds: finalFilteredTasks.map((t) => t.id),
-        assignedToUser: finalFilteredTasks.filter((t) => t.AssignedTo.includes(userId)).map((t) => t.id),
-        currentFilters: {
-          searchQuery,
-          priorityFilter,
-          clientFilter,
-          userFilter
-        }
-      });
-
-      setTimeout(() => {
-        const taskCards = document.querySelectorAll(`.${styles.taskCard}`);
-        taskCards.forEach((card, index) => {
-          gsap.fromTo(
-            card,
-            {
-              opacity: 0,
-              y: 20,
-              scale: 0.95,
-              rotationX: -5,
-            },
-            {
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              rotationX: 0,
-              duration: 0.4,
-              delay: index * 0.05,
-              ease: 'power2.out',
-            }
-          );
-        });
-
-        const columnHeaders = document.querySelectorAll(`.${styles.columnHeader}`);
-        columnHeaders.forEach((header) => {
-          const taskCount = header.querySelector(`.${styles.taskCount}`);
-          if (taskCount) {
-            gsap.fromTo(
-              taskCount,
-              { scale: 1.2, backgroundColor: '#e6f4ff' },
-              {
-                scale: 1,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                duration: 0.3,
-                ease: 'power2.out',
-              }
-            );
-          }
-        });
-      }, 0);
-    }, [finalFilteredTasks, userId]);
-
-    // CRÍTICO: Usar datos externos inmediatamente cuando estén disponibles
-    useEffect(() => {
-      if (externalTasks && externalTasks.length > 0) {
-        console.log('[TasksKanban] Using external tasks immediately:', externalTasks.length);
-        tasksRef.current = externalTasks;
-        setTasks(externalTasks);
+      // No establecer onSnapshot aquí - usar siempre externalTasks del hook compartido
+      if (externalTasks) {
+        console.log('[TasksKanban] Using external tasks from shared state:', externalTasks.length);
         setIsLoadingTasks(false);
-        }
-    }, [externalTasks]);
+      }
+    }, [user?.id, externalTasks]);
 
+    // Setup de clients con actualizaciones en tiempo real
     useEffect(() => {
-      if (externalClients && externalClients.length > 0) {
-        console.log('[TasksKanban] Using external clients immediately:', externalClients.length);
-        clientsRef.current = externalClients;
-        setClients(externalClients);
-        setIsLoadingClients(false);
-      }
-    }, [externalClients]);
+      if (!user?.id || externalClients) return;
 
-    useEffect(() => {
-      if (externalUsers && externalUsers.length > 0) {
-        console.log('[TasksKanban] Using external users immediately:', externalUsers.length);
-        usersRef.current = externalUsers;
-        setUsers(externalUsers);
-        setIsLoadingUsers(false);
-      }
-    }, [externalUsers]);
-
-    useEffect(() => {
-      // CRÍTICO: Solo cargar datos de tareas si no hay datos externos
-      if (externalTasks || !user?.id) return;
-
-      const cacheKey = `tasks_${user.id}`;
-
-      const existingListener = tasksKanbanCache.listeners.get(cacheKey);
-
-      if (existingListener?.tasks) {
-        console.log('[TasksKanban] Reusing existing tasks listener');
-        if (tasksKanbanCache.tasks.has(cacheKey)) {
-          const cachedData = tasksKanbanCache.tasks.get(cacheKey)!.data;
-          tasksRef.current = cachedData;
-          setTasks(cachedData);
-          setIsLoadingTasks(false);
-        }
-        return;
-      }
-
-      if (isCacheValid(cacheKey, tasksKanbanCache.tasks)) {
-        const cachedData = tasksKanbanCache.tasks.get(cacheKey)!.data;
-        tasksRef.current = cachedData;
-        setTasks(cachedData);
-        setIsLoadingTasks(false);
-        console.log('[TasksKanban] Using cached tasks on remount:', cachedData.length);
-        return;
-      }
-
-      console.log('[TasksKanban] Setting up new tasks onSnapshot listener');
-      setIsLoadingTasks(true);
-
-      const tasksQuery = query(collection(db, 'tasks'));
-      const unsubscribeTasks = onSnapshot(
-        tasksQuery,
-        (snapshot) => {
-          const tasksData: Task[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            clientId: doc.data().clientId || '',
-            project: doc.data().project || '',
-            name: doc.data().name || '',
-            description: doc.data().description || '',
-            status: doc.data().status || '',
-            priority: doc.data().priority || '',
-            startDate: safeTimestampToISOOrNull(doc.data().startDate),
-            endDate: safeTimestampToISOOrNull(doc.data().endDate),
-            LeadedBy: doc.data().LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
-            createdAt: safeTimestampToISO(doc.data().createdAt),
-            CreatedBy: doc.data().CreatedBy || '',
-            lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt) || new Date().toISOString(),
-            hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
-            lastViewedBy: doc.data().lastViewedBy || {},
-            archived: doc.data().archived || false,
-            archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
-            archivedBy: doc.data().archivedBy || '',
-          }));
-
-          console.log('[TasksKanban] Tasks onSnapshot update:', tasksData.length);
-
-          tasksRef.current = tasksData;
-          setTasks(tasksData);
-
-          tasksKanbanCache.tasks.set(cacheKey, {
-            data: tasksData,
-            timestamp: Date.now(),
-          });
-
-          setIsLoadingTasks(false);
-        },
-        (error) => {
-          console.error('[TasksKanban] Error in tasks onSnapshot:', error);
-          setTasks([]);
-          setIsLoadingTasks(false);
-        }
-      );
-
-      tasksKanbanCache.listeners.set(cacheKey, {
-        tasks: unsubscribeTasks,
-        clients: existingListener?.clients || null,
-        users: existingListener?.users || null,
-      });
-
-      return () => {};
-    }, [user?.id, isCacheValid, externalTasks, externalClients, externalUsers]);
-
-    useEffect(() => {
-      // CRÍTICO: Solo cargar datos de clientes si no hay datos externos
-      if (!externalTasks && !externalClients && !externalUsers) return;
-
-      const cacheKey = `clients_${user.id}`;
-
-      const existingListener = tasksKanbanCache.listeners.get(cacheKey);
-
-      if (existingListener?.clients) {
-        console.log('[TasksKanban] Reusing existing clients listener');
-        if (tasksKanbanCache.clients.has(cacheKey)) {
-          const cachedData = tasksKanbanCache.clients.get(cacheKey)!.data;
-          clientsRef.current = cachedData;
-          setClients(cachedData);
-          setIsLoadingClients(false);
-        }
-        return;
-      }
-
-      if (isCacheValid(cacheKey, tasksKanbanCache.clients)) {
-        const cachedData = tasksKanbanCache.clients.get(cacheKey)!.data;
-        clientsRef.current = cachedData;
-        setClients(cachedData);
-        setIsLoadingClients(false);
-        console.log('[TasksKanban] Using cached clients on remount:', cachedData.length);
-        return;
-      }
-
-      console.log('[TasksKanban] Setting up new clients onSnapshot listener');
-      setIsLoadingClients(true);
+      console.log('[TasksKanban] Setting up clients listener');
+      setIsLoadingUsers(true);
 
       const clientsQuery = query(collection(db, 'clients'));
       const unsubscribeClients = onSnapshot(
@@ -1372,132 +999,93 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
           console.log('[TasksKanban] Clients onSnapshot update:', clientsData.length);
 
-          clientsRef.current = clientsData;
-          setClients(clientsData);
-
-          tasksKanbanCache.clients.set(cacheKey, {
-            data: clientsData,
-            timestamp: Date.now(),
-          });
-
-          setIsLoadingClients(false);
+          // Actualizar estado directamente sin caché
+          setIsLoadingUsers(false);
         },
         (error) => {
           console.error('[TasksKanban] Error in clients onSnapshot:', error);
-          setClients([]);
-          setIsLoadingClients(false);
+          setIsLoadingUsers(false);
         }
       );
 
-      tasksKanbanCache.listeners.set(cacheKey, {
-        tasks: existingListener?.tasks || null,
-        clients: unsubscribeClients,
-        users: existingListener?.users || null,
-      });
+      return () => {
+        unsubscribeClients();
+      };
+    }, [user?.id, externalClients]);
 
-      return () => {};
-    }, [user?.id, isCacheValid, externalTasks, externalClients, externalUsers]);
-
+    // Setup de users con actualizaciones en tiempo real
     useEffect(() => {
-      // CRÍTICO: Solo cargar datos de usuarios si no hay datos externos
-      if (!externalTasks && !externalClients && !externalUsers) return;
+      if (!user?.id || externalUsers) return;
 
-      const cacheKey = `users_${user.id}`;
-
-      const existingListener = tasksKanbanCache.listeners.get(cacheKey);
-
-      if (existingListener?.users) {
-        console.log('[TasksKanban] Reusing existing users listener');
-        if (tasksKanbanCache.users.has(cacheKey)) {
-          const cachedData = tasksKanbanCache.users.get(cacheKey)!.data;
-          usersRef.current = cachedData;
-          setUsers(cachedData);
-          setIsLoadingUsers(false);
-        }
-        return;
-      }
-
-      if (isCacheValid(cacheKey, tasksKanbanCache.users)) {
-        const cachedData = tasksKanbanCache.users.get(cacheKey)!.data;
-        usersRef.current = cachedData;
-        setUsers(cachedData);
-        setIsLoadingUsers(false);
-        console.log('[TasksKanban] Using cached users on remount:', cachedData.length);
-        return;
-      }
-
-      console.log('[TasksKanban] Setting up new users onSnapshot listener');
+      console.log('[TasksKanban] Setting up users fetch');
       setIsLoadingUsers(true);
 
+      // Fetch users
       const fetchUsers = async () => {
         try {
-          console.log('[TasksKanban] Fetching users: imageUrl from Clerk API, other data from Firestore');
-          
-          // 1. Obtener imageUrl de Clerk
           const response = await fetch('/api/users');
-          if (!response.ok) throw new Error('Failed to fetch users from Clerk');
+          if (!response.ok) {
+            throw new Error(`Failed to fetch users: ${response.status}`);
+          }
 
           const clerkUsers: {
             id: string;
             imageUrl?: string;
             firstName?: string;
             lastName?: string;
-            publicMetadata: { role?: string };
+            publicMetadata: { role?: string; description?: string };
           }[] = await response.json();
 
-          // Crear un mapa de imageUrls de Clerk
-          const clerkImageMap = new Map<string, string>();
-          clerkUsers.forEach(clerkUser => {
-            if (clerkUser.imageUrl) {
-              clerkImageMap.set(clerkUser.id, clerkUser.imageUrl);
-            }
-          });
-          
-          // 2. Obtener todos los demás datos de Firestore
-          const usersQuery = query(collection(db, 'users'));
-          const firestoreSnapshot = await getDocs(usersQuery);
-          
-          const usersData: User[] = firestoreSnapshot.docs.map((doc) => {
-            const userData = doc.data();
+          const usersData: User[] = await Promise.all(
+            clerkUsers.map(async (clerkUser) => {
+              try {
+                const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
                 return {
-              id: doc.id,
-              imageUrl: userData.imageUrl || clerkImageMap.get(doc.id) || '', // Firestore first, then Clerk
-              fullName: userData.fullName || userData.name || 'Sin nombre', // de Firestore
-              role: userData.role || 'Sin rol', // de Firestore
+                  id: clerkUser.id,
+                  imageUrl: clerkUser.imageUrl || '',
+                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                  role: userDoc.exists() && userDoc.data().role
+                    ? userDoc.data().role
+                    : (clerkUser.publicMetadata.role || 'Sin rol'),
                 };
-          });
-
-          usersRef.current = usersData;
-          setUsers(usersData);
-
-          tasksKanbanCache.users.set(cacheKey, {
-            data: usersData,
-            timestamp: Date.now(),
-          });
+              } catch {
+                return {
+                  id: clerkUser.id,
+                  imageUrl: clerkUser.imageUrl || '',
+                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+                  role: clerkUser.publicMetadata.role || 'Sin rol',
+                };
+              }
+            }),
+          );
           
-          console.log('[TasksKanban] Users fetched and cached:', {
+          console.log('[TasksKanban] Users fetched:', {
             total: usersData.length,
             withImages: usersData.filter(u => u.imageUrl).length,
             withoutImages: usersData.filter(u => !u.imageUrl).length
           });
         } catch (error) {
           console.error('[TasksKanban] Error fetching users:', error);
-          setUsers([]);
-        } finally {
-          setIsLoadingUsers(false);
+          if (isLoadingUsers) {
+            setIsLoadingUsers(false);
+          }
         }
       };
 
+      // Ejecutar fetch inicial
       fetchUsers();
 
-      tasksKanbanCache.listeners.set(cacheKey, {
-        tasks: existingListener?.tasks || null,
-        clients: existingListener?.clients || null,
-        users: null,
+      // Setup listener para cambios en usuarios
+      const usersQuery = query(collection(db, 'users'));
+      const unsubscribeUsers = onSnapshot(usersQuery, () => {
+        // Re-fetch users cuando hay cambios
+        fetchUsers();
       });
 
-      return () => {};
-    }, [user?.id, isCacheValid, externalTasks, externalClients, externalUsers]);
+      return () => {
+        unsubscribeUsers();
+      };
+    }, [user?.id, externalUsers, isLoadingUsers]);
 
     // Cleanup all table listeners when component unmounts
     useEffect(() => {
@@ -1561,42 +1149,98 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       setIsClientDropdownOpen(false);
     };
 
+    // Helper function to get involved user IDs
+    const getInvolvedUserIds = useCallback((task: Task) => {
+      const ids = new Set<string>();
+      if (task.CreatedBy) ids.add(task.CreatedBy);
+      if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
+      if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
+      return Array.from(ids);
+    }, []);
+
     // Group tasks by status - essential for Kanban functionality
     const groupedTasks = useMemo(() => {
+      console.log('[TasksKanban] Grouping tasks:', {
+        total: effectiveTasks.length,
+        filtered: effectiveTasks.filter(t => !t.archived).length
+      });
+
       const groups: { [key: string]: Task[] } = {};
       
+      // Initialize empty arrays for all columns
       statusColumns.forEach(column => {
         groups[column.id] = [];
       });
       
-      finalFilteredTasks.forEach(task => {
+      // Only process non-archived tasks
+      effectiveTasks
+        .filter(task => !task.archived)
+        .forEach(task => {
         const normalizedStatus = normalizeStatus(task.status);
         const columnId = normalizedStatus.toLowerCase().replace(/\s+/g, '-');
         
         // Map status to column IDs
         const statusToColumnMap: { [key: string]: string } = {
           'por-iniciar': 'por-iniciar',
-          'diseño': 'diseno',
-          'desarrollo': 'desarrollo',
           'en-proceso': 'en-proceso',
-          'finalizado': 'finalizado',
           'backlog': 'backlog',
+            'por-finalizar': 'por-finalizar',
+            'finalizado': 'finalizado',
           'cancelado': 'cancelado'
         };
         
         const targetColumn = statusToColumnMap[columnId] || 'por-iniciar';
+          
+          // Apply filters exactly like TasksTable
+          const matchesSearch = !searchQuery || 
+            task.name.toLowerCase().includes(searchQuery.toLowerCase());
+            
+          const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+          
+          const matchesClient = !clientFilter || task.clientId === clientFilter;
+          
+          let matchesUser = true;
+          if (userFilter === 'me') {
+            const involvedUserIds = getInvolvedUserIds(task);
+            matchesUser = involvedUserIds.includes(userId);
+          } else if (userFilter && userFilter !== 'me') {
+            const involvedUserIds = getInvolvedUserIds(task);
+            matchesUser = involvedUserIds.includes(userFilter);
+          }
+
+          if (matchesSearch && matchesPriority && matchesClient && matchesUser) {
         if (groups[targetColumn]) {
           groups[targetColumn].push(task);
-        }
+            }
+          }
+        });
+      
+      // Sort tasks within each column by lastActivity
+      Object.keys(groups).forEach(columnId => {
+        groups[columnId].sort((a, b) => {
+          const dateA = new Date(a.lastActivity || a.createdAt).getTime();
+          const dateB = new Date(b.lastActivity || b.createdAt).getTime();
+          return dateB - dateA; // Most recent first
+        });
       });
       
       return groups;
-    }, [finalFilteredTasks, statusColumns]);
+    }, [
+      effectiveTasks, 
+      statusColumns, 
+      searchQuery, 
+      priorityFilter, 
+      clientFilter, 
+      userFilter, 
+      userId, 
+      getInvolvedUserIds, 
+      normalizeStatus
+    ]);
 
     // Drag and drop handlers - essential for Kanban functionality
     const handleDragStart = (event: DragStartEvent) => {
       const taskId = event.active.id;
-      const task = finalFilteredTasks.find(t => t.id === taskId);
+      const task = effectiveTasks.find(t => t.id === taskId);
       if (task) {
         setActiveTask(task);
         console.log('[TasksKanban] Drag started for task:', taskId);
@@ -1612,17 +1256,16 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         return;
       }
 
-      const taskId = active.id;
+      const taskId = String(active.id);
       const newStatus = over.id;
       
       // Map column IDs back to proper status names
       const columnToStatusMap: { [key: string]: string } = {
         'por-iniciar': 'Por Iniciar',
-        'diseno': 'Diseño',
-        'desarrollo': 'Desarrollo',
         'en-proceso': 'En Proceso',
-        'finalizado': 'Finalizado',
         'backlog': 'Backlog',
+        'por-finalizar': 'Por Finalizar',
+        'finalizado': 'Finalizado',
         'cancelado': 'Cancelado'
       };
       
@@ -1635,14 +1278,29 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       });
 
       try {
-        // Update task status via external handler if available
-        // This should be handled by the parent component
-        const task = finalFilteredTasks.find(t => t.id === taskId);
+        const task = effectiveTasks.find(t => t.id === taskId);
         if (task && task.status !== newStatusName) {
-          // For now, just log - the parent should handle actual updates
-          console.log('[TasksKanban] Task status change requested:', {
+          console.log('[TasksKanban] Updating task status in Firestore:', {
             taskId,
             oldStatus: task.status,
+            newStatus: newStatusName
+          });
+
+          // Importar funciones de Firestore
+          const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore');
+          const { updateTaskActivity } = await import('@/lib/taskUtils');
+          
+          // Actualizar el estado en Firestore
+          await updateDoc(doc(db, 'tasks', taskId), {
+            status: newStatusName,
+            lastActivity: serverTimestamp(),
+          });
+          
+          // Actualizar la actividad de la tarea
+          await updateTaskActivity(taskId, 'status_change');
+          
+          console.log('[TasksKanban] Task status updated successfully via drag & drop:', {
+            taskId,
             newStatus: newStatusName
           });
         }
@@ -1693,10 +1351,38 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       }
     }, [isAdmin, userId]);
 
-    // Eliminar función handleUndo ya no necesaria
-
-    if (isLoading || isLoadingTasks || isLoadingClients || isLoadingUsers) {
-      return <SkeletonLoader type="kanban" rows={6} />;
+    if (isLoadingTasks) {
+      return (
+        <div className={styles.container}>
+          <style jsx>{`
+            @keyframes pulse {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.5; }
+            }
+          `}</style>
+          <div className={styles.swiperContainer}>
+            <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
+          </div>
+          <div className={styles.header} style={{margin:'30px 0px'}}>
+            <div className={styles.searchWrapper}>
+              <div className={styles.searchInput} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+                <div style={{ width: '100%', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
+              </div>
+            </div>
+            <div className={styles.filtersWrapper}>
+              <div className={styles.viewButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+                <div style={{ width: '20px', height: '20px', background: '#f0f0f0', borderRadius: '4px' }} />
+                <div style={{ width: '80px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
+              </div>
+              <div className={styles.createButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+                <div style={{ width: '16px', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
+                <div style={{ width: '100px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
+              </div>
+            </div>
+          </div>
+          <SkeletonLoader type="kanban" rows={6} />
+        </div>
+      );
     }
 
     return (
@@ -1713,8 +1399,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           priorityFilter={priorityFilter}
           clientFilter={clientFilter}
           userFilter={userFilter}
-          clients={clients}
-          users={users}
+          clients={effectiveClients}
+          users={effectiveUsers}
           userId={userId}
           isAdmin={isAdmin}
           isPriorityDropdownOpen={isPriorityDropdownOpen}
@@ -1776,6 +1462,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                         users={effectiveUsers}
                         getUnreadCount={getUnreadCount}
                         markAsViewed={markAsViewed}
+                        normalizeStatus={normalizeStatus}
                       />
                     ))}
                   </div>
@@ -1841,8 +1528,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
             ) : null}
           </DragOverlay>
         </DndContext>
-
-
       </div>
     );
   }

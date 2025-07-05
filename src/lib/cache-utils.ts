@@ -38,24 +38,4 @@ export const invalidateUsersCache = () => {
   } catch (error) {
     console.error('[InvalidateCache] Error invalidating users cache:', error);
   }
-};
-
-// Función para invalidar cache de tasks cuando hay cambios
-export const invalidateTasksCache = () => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    // Limpiar cache de localStorage
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('tasksPageCache_tasks_') || key.startsWith('tasksTableCache_tasks_') || key.startsWith('archiveTableCache_tasks_')) {
-        localStorage.removeItem(key);
-        console.log('[InvalidateCache] Removed task cache key:', key);
-      }
-    });
-    
-    console.log('[InvalidateCache] All tasks cache invalidated');
-  } catch (error) {
-    console.error('[InvalidateCache] Error invalidating tasks cache:', error);
-  }
 }; 

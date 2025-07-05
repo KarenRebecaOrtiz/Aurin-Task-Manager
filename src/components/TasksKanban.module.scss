@@ -685,9 +685,36 @@
 }
 
 .taskHeader {
-  @include flex-between;
-  gap: $spacing-sm;
-  margin-bottom: $spacing-sm;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  padding: 12px;
+  gap: 8px;
+}
+
+.taskStatusAndName {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.taskNameWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.taskStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 .taskName {
@@ -928,11 +955,4 @@
   &::before {
     display: none !important;
   }
-}
-
-.taskNameWrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, memo, forwardRef, Dispatch, u
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
-import { Timestamp, doc, setDoc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, getDoc, writeBatch, onSnapshot } from 'firebase/firestore';
+import { Timestamp, doc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { gsap } from 'gsap';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -23,6 +23,7 @@ import { useMessagePagination } from '@/hooks/useMessagePagination';
 import { useMessageActions } from '@/hooks/useMessageActions';
 import { useMessageDrag } from '@/hooks/useMessageDrag';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
+import { useTimer } from '@/hooks/useTimer';
 
 interface Message {
   id: string;
@@ -445,8 +446,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const { encryptMessage, decryptMessage } = useEncryption();
   const { markAsViewed } = useTaskNotifications();
   
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
   const [timerInput, setTimerInput] = useState('00:00');
   const [dateInput, setDateInput] = useState<Date>(new Date());
@@ -467,7 +466,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
   const [isLoadingChunk, setIsLoadingChunk] = useState(false);
   const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
-  const [isRestoringTimer, setIsRestoringTimer] = useState(false);
+
+  // Usar el nuevo hook de timer
+  const {
+    startTimer,
+    pauseTimer,
+    finalizeTimer,
+    isTimerRunning,
+    timerSeconds,
+    isRestoringTimer,
+  } = useTimer(task.id, user?.id || '');
 
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -509,116 +517,65 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     },
   });
 
-  // 🔄 RESTAURAR TIMER DESDE FIRESTORE
-  useEffect(() => {
-    const restoreTimer = async () => {
-      if (!isOpen || !user?.id || !task.id) return;
-      
-      setIsRestoringTimer(true);
-      console.log('[ChatSidebar] 🔄 Iniciando restauración de timer...', {
-        userId: user.id,
-        taskId: task.id,
-        isOpen
-      });
+  // El hook useTimer maneja la restauración automáticamente
 
-      try {
-        const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
-        const timerDoc = await getDoc(timerDocRef);
-        
-        if (timerDoc.exists()) {
-          const timerData = timerDoc.data();
-          console.log('[ChatSidebar] 📊 Datos de timer encontrados:', timerData);
-          
-          if (timerData.isRunning && timerData.startTime) {
-            // Timer está corriendo - calcular tiempo transcurrido
-            const startTime = timerData.startTime.toDate();
-            const now = new Date();
-            const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-            const totalSeconds = (timerData.accumulatedSeconds || 0) + elapsedSeconds;
-            
-            console.log('[ChatSidebar] ▶️ Restaurando timer activo:', {
-              startTime: startTime.toISOString(),
-              elapsedSeconds,
-              accumulatedSeconds: timerData.accumulatedSeconds || 0,
-              totalSeconds
-            });
-            
-            setIsTimerRunning(true);
-            setTimerSeconds(totalSeconds);
-          } else if (!timerData.isRunning && timerData.accumulatedSeconds > 0) {
-            // Timer pausado con tiempo acumulado
-            console.log('[ChatSidebar] ⏸️ Restaurando timer pausado:', {
-              accumulatedSeconds: timerData.accumulatedSeconds
-            });
-            
-            setIsTimerRunning(false);
-            setTimerSeconds(timerData.accumulatedSeconds);
-          } else {
-            // Timer en estado inicial
-            console.log('[ChatSidebar] 🆕 Timer en estado inicial');
-            setIsTimerRunning(false);
-            setTimerSeconds(0);
-          }
-        } else {
-          // No hay datos de timer - estado inicial
-          console.log('[ChatSidebar] ❌ No se encontraron datos de timer - estado inicial');
-          setIsTimerRunning(false);
-          setTimerSeconds(0);
-        }
-      } catch (error) {
-        console.error('[ChatSidebar] ❌ Error restaurando timer:', error);
-        // En caso de error, mantener estado limpio
-        setIsTimerRunning(false);
-        setTimerSeconds(0);
-      } finally {
-        setIsRestoringTimer(false);
-      }
-    };
-
-    restoreTimer();
-  }, [isOpen, user?.id, task.id]);
-
-  // Optimized task updates with periodic checks and local caching
+  // Listener en tiempo real para actualizaciones de la tarea específica
   useEffect(() => {
     if (!isOpen || !task.id) return;
 
-    const checkTaskUpdates = async () => {
-      try {
-        const lastModified = localStorage.getItem(`taskLastModified_${task.id}`);
-        const taskRef = doc(db, 'tasks', task.id);
-        const docSnap = await getDoc(taskRef);
-        
+    console.log('[ChatSidebar] Setting up real-time task listener for task:', task.id);
+
+    const taskRef = doc(db, 'tasks', task.id);
+    const unsubscribe = onSnapshot(
+      taskRef,
+      (docSnap) => {
         if (docSnap.exists()) {
           const taskData = docSnap.data();
-          const serverLastModified = taskData.lastModified?.toDate();
           
-          // Solo actualizar si hay cambios reales
-          if (!lastModified || (serverLastModified && new Date(lastModified) < serverLastModified)) {
-        setTask(prevTask => ({
-          ...prevTask,
-              ...taskData, // Usar spread para actualizar todos los campos
-            }));
-            
-            if (serverLastModified) {
-              localStorage.setItem(`taskLastModified_${task.id}`, serverLastModified.toISOString());
-            }
-            
-            console.log('[ChatSidebar] Task actualizado desde Firestore:', taskData);
+          console.log('[ChatSidebar] Task updated from onSnapshot:', {
+            taskId: task.id,
+            oldStatus: task.status,
+            newStatus: taskData.status,
+            oldPriority: task.priority,
+            newPriority: taskData.priority,
+            hasUpdates: taskData.hasUnreadUpdates,
+            lastActivity: taskData.lastActivity
+          });
+          
+          // Actualizar el estado local de la tarea con los nuevos datos
+          setTask(prevTask => ({
+            ...prevTask,
+            status: taskData.status || prevTask.status,
+            priority: taskData.priority || prevTask.priority,
+            description: taskData.description || prevTask.description,
+            name: taskData.name || prevTask.name,
+            AssignedTo: taskData.AssignedTo || prevTask.AssignedTo,
+            LeadedBy: taskData.LeadedBy || prevTask.LeadedBy,
+            startDate: taskData.startDate || prevTask.startDate,
+            endDate: taskData.endDate || prevTask.endDate,
+          }));
+          
+          // Forzar refresco adicional para cambios de estado
+          if (taskData.status !== task.status) {
+            console.log('[ChatSidebar] Status change detected, forcing refresh:', {
+              oldStatus: task.status,
+              newStatus: taskData.status
+            });
           }
-      } else {
-          console.warn('[ChatSidebar] Documento de tarea no existe:', task.id);
+        } else {
+          console.warn('[ChatSidebar] Task document does not exist:', task.id);
+        }
+      },
+      (error) => {
+        console.error('[ChatSidebar] Error in task onSnapshot:', error);
       }
-      } catch (error) {
-        console.error('[ChatSidebar] Error verificando actualizaciones de tarea:', error);
-      }
-    };
+    );
 
-    // Verificar inmediatamente y luego cada 5 minutos
-    checkTaskUpdates();
-    const interval = setInterval(checkTaskUpdates, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, [isOpen, task.id]);
+    return () => {
+      console.log('[ChatSidebar] Cleaning up task listener for task:', task.id);
+      unsubscribe();
+    };
+  }, [isOpen, task.id, task.status, task.priority]);
 
   const handleLoadMoreMessages = useCallback(async () => {
     if (hasMore && !isLoadingMore && !isLoadingChunk) {
@@ -667,7 +624,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     [user?.id, task.AssignedTo, task.LeadedBy, task.CreatedBy]
   );
   const canViewTeamAndHours = useMemo(() => isInvolved || isAdmin, [isInvolved, isAdmin]);
-  const statusOptions = ['Por Iniciar', 'En Proceso', 'Diseño', 'Desarrollo', 'Backlog', 'Finalizado', 'Cancelado'];
+  const statusOptions = ['Por Iniciar', 'En Proceso', 'Backlog', 'Por Finalizar', 'Finalizado', 'Cancelado'];
 
   const isMobile = () => window.innerWidth < 768;
 
@@ -703,58 +660,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     };
   }, [isOpen]);
 
-  // 🕒 TIMER ACTIVO - Actualizar cada segundo
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (isTimerRunning && !isRestoringTimer) {
-      // Actualizar contador local cada segundo de forma lineal
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning, isRestoringTimer]);
-
-  // 📡 LISTENER EN TIEMPO REAL PARA TIMER - Solo para cambios de estado (iniciar/pausar)
-  useEffect(() => {
-    if (!isOpen || !user?.id || !task.id) return;
-
-    console.log("[ChatSidebar] 📡 Configurando listener en tiempo real para timer...");
-
-    const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
-    const unsubscribe = onSnapshot(timerDocRef, (doc) => {
-      if (doc.exists() && !isRestoringTimer) {
-        const timerData = doc.data();
-        console.log("[ChatSidebar] 🔄 Cambio detectado en timer remoto:", timerData);
-        
-        // Solo sincronizar cambios de estado, no el tiempo transcurrido
-        if (timerData.isRunning !== isTimerRunning) {
-          if (timerData.isRunning) {
-            // Timer iniciado desde otro dispositivo
-            console.log("[ChatSidebar] 🔄 Timer iniciado desde remoto");
-            setIsTimerRunning(true);
-            setTimerSeconds(timerData.accumulatedSeconds || 0);
-          } else {
-            // Timer pausado desde otro dispositivo
-            console.log("[ChatSidebar] 🔄 Timer pausado desde remoto");
-            setIsTimerRunning(false);
-            setTimerSeconds(timerData.accumulatedSeconds || 0);
-          }
-        }
-      }
-    }, (error) => {
-      console.error("[ChatSidebar] ❌ Error en listener de timer:", error);
-    });
-
-    return () => {
-      console.log("[ChatSidebar] 🔌 Desconectando listener de timer...");
-      unsubscribe();
-    };
-  }, [isOpen, isRestoringTimer, isTimerRunning, user?.id, task.id]);
+  // El hook useTimer maneja el timer activo y la sincronización automáticamente
 
   useEffect(() => {
     if (sidebarRef.current) {
@@ -941,23 +847,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     });
   };
 
-  const handleStatusChange = useCallback(async (status: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('[ChatSidebar] handleStatusChange called:', {
-      status,
-      isCreator,
-      isAdmin,
-      userId: user?.id,
-      taskId: task.id,
-      currentStatus: task.status
-    });
-
+  const handleStatusChange = async (status: string) => {
     if (!isCreator && !isAdmin) {
-      console.warn('[ChatSidebar] User not authorized to change status:', {
-        userId: user?.id,
-        isCreator,
-        isAdmin
-      });
+      console.warn('[ChatSidebar] User not authorized to change status');
       return;
     }
 
@@ -967,44 +859,51 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
 
     try {
-      // Update local state for immediate UI feedback
-      setTask(prevTask => ({ ...prevTask, status }));
-      setActiveCardDropdown(null); // Close dropdown immediately
-      
-      console.log('[ChatSidebar] Updating task status in Firestore...');
-      await updateDoc(doc(db, 'tasks', task.id), {
+      // Actualizar primero en Firestore
+      const taskRef = doc(db, 'tasks', task.id);
+      await updateDoc(taskRef, {
         status,
         lastActivity: serverTimestamp(),
       });
-      
-      await updateTaskActivity(task.id, 'status_change');
-      
+
+      // Actualizar estado local después de confirmar actualización en Firestore
+      setTask(prevTask => ({ ...prevTask, status }));
+      setActiveCardDropdown(null);
+
+      // Notificar a otros usuarios
       const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
       if (task.CreatedBy) recipients.add(task.CreatedBy);
       recipients.delete(user.id);
-      
-      const notificationPromises = Array.from(recipients).map(recipientId =>
-        addDoc(collection(db, 'notifications'), {
-          userId: user.id,
-          taskId: task.id,
-          message: `${user.firstName || 'Usuario'} cambió el estado de la tarea "${task.name}" a "${status}"`,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-          type: 'task_status_changed',
-        })
-      );
-      
-      await Promise.all(notificationPromises);
-      console.log('[ChatSidebar] Task status updated successfully:', status);
-      
+
+      for (const recipientId of recipients) {
+        try {
+          await addDoc(collection(db, 'notifications'), {
+            userId: user.id,
+            recipientId,
+            message: `${user.fullName || 'Usuario'} ha cambiado el estado de la tarea "${task.name}" a "${status}"`,
+            timestamp: serverTimestamp(),
+            read: false,
+            type: 'task_status_changed',
+            taskId: task.id,
+          });
+        } catch (error) {
+          console.warn('[ChatSidebar] Error sending notification:', error);
+        }
+      }
+
+      console.log('[ChatSidebar] Task status updated successfully:', {
+        taskId: task.id,
+        newStatus: status,
+        notifiedUsers: Array.from(recipients)
+      });
+
     } catch (error) {
       console.error('[ChatSidebar] Error updating task status:', error);
-      // Revert local state if Firestore update fails
-      setTask(prevTask => ({ ...prevTask, status: initialTask.status }));
-      alert(`Error al cambiar el estado: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      // Revertir estado local en caso de error
+      setTask(prevTask => ({ ...prevTask }));
+      setActiveCardDropdown(null);
     }
-  }, [user?.id, user?.firstName, task.id, task.status, task.AssignedTo, task.LeadedBy, task.CreatedBy, task.name, initialTask.status, isCreator, isAdmin]);
+  };
 
   const handleDeleteTask = async () => {
     if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
@@ -1121,64 +1020,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
     
     handleClick(_e.currentTarget as HTMLElement);
-    const wasRunning = isTimerRunning;
-    const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
     
     console.log('[ChatSidebar] 🎯 Toggle timer:', {
-      wasRunning,
+      isRunning: isTimerRunning,
       currentSeconds: timerSeconds,
       userId: user.id,
       taskId: task.id
     });
 
-    if (wasRunning) {
-      // ⏸️ PAUSAR TIMER
-      console.log('[ChatSidebar] ⏸️ Pausando timer...');
-      setIsTimerRunning(false);
-      
-      try {
-        // Guardar estado pausado en Firestore
-        await setDoc(timerDocRef, {
-          userId: user.id,
-          isRunning: false,
-          startTime: null,
-          accumulatedSeconds: timerSeconds,
-          lastPaused: serverTimestamp(),
-        }, { merge: true });
-        
-        console.log('[ChatSidebar] ✅ Timer pausado y guardado:', {
-          accumulatedSeconds: timerSeconds,
-          status: 'paused'
-        });
-      } catch (error) {
-        console.error('[ChatSidebar] ❌ Error pausando timer:', error);
-        // Revertir estado local en caso de error
-        setIsTimerRunning(true);
+    try {
+      if (isTimerRunning) {
+        // ⏸️ PAUSAR TIMER
+        console.log('[ChatSidebar] ⏸️ Pausando timer...');
+        await pauseTimer();
+        console.log('[ChatSidebar] ✅ Timer pausado correctamente');
+      } else {
+        // ▶️ INICIAR/REANUDAR TIMER
+        console.log('[ChatSidebar] ▶️ Iniciando/reanudando timer...');
+        await startTimer();
+        console.log('[ChatSidebar] ✅ Timer iniciado correctamente');
       }
-    } else {
-      // ▶️ INICIAR/REANUDAR TIMER
-      console.log('[ChatSidebar] ▶️ Iniciando/reanudando timer...');
-      setIsTimerRunning(true);
-      
-      try {
-        // Guardar estado activo en Firestore
-        await setDoc(timerDocRef, {
-          userId: user.id,
-          isRunning: true,
-          startTime: serverTimestamp(),
-          accumulatedSeconds: timerSeconds,
-          lastStarted: serverTimestamp(),
-        }, { merge: true });
-        
-        console.log('[ChatSidebar] ✅ Timer iniciado y guardado:', {
-          accumulatedSeconds: timerSeconds,
-          status: 'running'
-        });
-      } catch (error) {
-        console.error('[ChatSidebar] ❌ Error iniciando timer:', error);
-        // Revertir estado local en caso de error
-        setIsTimerRunning(false);
-      }
+    } catch (error) {
+      console.error('[ChatSidebar] ❌ Error en toggle timer:', error);
     }
   };
 
@@ -1189,7 +1052,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   // 🛑 FINALIZAR TIMER (función para cuando se quiere enviar el tiempo con doble click)
-  const finalizeTimer = async () => {
+  const handleFinalizeTimer = async () => {
     console.log('[ChatSidebar] 🎯 Iniciando finalizeTimer:', {
       userId: user?.id,
       taskId: task.id,
@@ -1219,7 +1082,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     const displayHours = Math.floor(timerSeconds / 3600);
     const displayMinutes = Math.floor((timerSeconds % 3600) / 60);
     const timeEntry = `${displayHours}h ${displayMinutes}m`;
-    const timerDocRef = doc(db, `tasks/${task.id}/timers/${user.id}`);
 
     console.log('[ChatSidebar] 🛑 Finalizando timer con doble click:', {
       totalSeconds: timerSeconds,
@@ -1235,21 +1097,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       await sendTimeMessage(user.id, user.firstName || "Usuario", hours, timeEntry);
       console.log('[ChatSidebar] ✅ Mensaje de tiempo enviado correctamente');
       
-      // Limpiar timer en Firestore
-      console.log('[ChatSidebar] 🧹 Limpiando timer en Firestore...');
-      await setDoc(timerDocRef, {
-        userId: user.id,
-        isRunning: false,
-        startTime: null,
-        accumulatedSeconds: 0,
-        lastFinalized: serverTimestamp(),
-      });
-      console.log('[ChatSidebar] ✅ Timer limpiado en Firestore');
-      
-      // Limpiar estado local
-      console.log('[ChatSidebar] 🧹 Limpiando estado local...');
-      setIsTimerRunning(false);
-      setTimerSeconds(0);
+      // Usar la función del hook para finalizar
+      await finalizeTimer();
       
       console.log('[ChatSidebar] 🎉 Timer finalizado y tiempo registrado exitosamente:', timeEntry);
     } catch (error) {
@@ -1722,7 +1571,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                       <div
                         key={status}
                         className={styles.cardDropdownItem}
-                        onClick={(e) => handleStatusChange(status, e)}
+                        onClick={() => handleStatusChange(status)}
                       >
                         {status}
                       </div>
@@ -1878,7 +1727,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         timerSeconds={timerSeconds}
         isTimerRunning={isTimerRunning}
         onToggleTimer={toggleTimer}
-        onFinalizeTimer={finalizeTimer}
+        onFinalizeTimer={handleFinalizeTimer}
         onToggleTimerPanel={toggleTimerPanel}
         isTimerPanelOpen={isTimerPanelOpen}
         setIsTimerPanelOpen={setIsTimerPanelOpen}

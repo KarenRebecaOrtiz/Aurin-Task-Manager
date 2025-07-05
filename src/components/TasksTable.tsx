@@ -55,64 +55,11 @@ interface Task {
 
 type TaskView = 'table' | 'kanban';
 
-// Type for Firestore timestamp
-interface FirestoreTimestamp {
-  toDate(): Date;
-}
 
-// Type guard for Firestore timestamp
-const isFirestoreTimestamp = (timestamp: unknown): timestamp is FirestoreTimestamp => {
-  return timestamp !== null && 
-         typeof timestamp === 'object' && 
-         'toDate' in timestamp && 
-         typeof (timestamp as FirestoreTimestamp).toDate === 'function';
-};
 
-// Helper function to safely convert Firestore timestamp or string to ISO string
-const safeTimestampToISO = (timestamp: unknown): string => {
-  if (!timestamp) return new Date().toISOString();
-  
-  // If it's already a string, return it
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
-  
-  // If it's a Firestore timestamp, convert it
-  if (isFirestoreTimestamp(timestamp)) {
-    return timestamp.toDate().toISOString();
-  }
-  
-  // If it's a Date object, convert it
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
-  // Fallback to current date
-  return new Date().toISOString();
-};
 
-// Helper function to safely convert Firestore timestamp or string to ISO string or null
-const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
-  if (!timestamp) return null;
-  
-  // If it's already a string, return it
-  if (typeof timestamp === 'string') {
-    return timestamp;
-  }
-  
-  // If it's a Firestore timestamp, convert it
-  if (isFirestoreTimestamp(timestamp)) {
-    return timestamp.toDate().toISOString();
-  }
-  
-  // If it's a Date object, convert it
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
-  // Fallback to null
-  return null;
-};
+
+
 
 // Helper function to normalize status values (same as TasksKanban)
 const normalizeStatus = (status: string): string => {
@@ -128,16 +75,13 @@ const normalizeStatus = (status: string): string => {
     'pending': 'Por Iniciar',
     'to do': 'Por Iniciar',
     'todo': 'Por Iniciar',
-    'diseno': 'Diseño',
-    'diseño': 'Diseño',
-    'design': 'Diseño',
-    'desarrollo': 'Desarrollo',
-    'development': 'Desarrollo',
-    'dev': 'Desarrollo',
     'en proceso': 'En Proceso',
     'en-proceso': 'En Proceso',
     'in progress': 'En Proceso',
     'progreso': 'En Proceso',
+    'por finalizar': 'Por Finalizar',
+    'por-finalizar': 'Por Finalizar',
+    'to finish': 'Por Finalizar',
     'finalizado': 'Finalizado',
     'finalizada': 'Finalizado',
     'completed': 'Finalizado',
@@ -151,6 +95,13 @@ const normalizeStatus = (status: string): string => {
     'cancelado': 'Cancelado',
     'cancelada': 'Cancelado',
     'cancelled': 'Cancelado',
+    // Legacy status mapping
+    'diseno': 'Por Iniciar',
+    'diseño': 'Por Iniciar',
+    'design': 'Por Iniciar',
+    'desarrollo': 'En Proceso',
+    'development': 'En Proceso',
+    'dev': 'En Proceso',
   };
   
   return statusMap[normalized.toLowerCase()] || normalized;
@@ -163,87 +114,9 @@ interface AvatarGroupProps {
   currentUserId: string;
 }
 
-// Cache global persistente para TasksTable
-const tasksTableCache = {
-  tasks: new Map<string, { data: Task[]; timestamp: number; isLoading: boolean }>(),
-  clients: new Map<string, { data: Client[]; timestamp: number; isLoading: boolean }>(),
-  users: new Map<string, { data: User[]; timestamp: number; isLoading: boolean }>(),
-  listeners: new Map<string, { tasks: (() => void) | null; clients: (() => void) | null; users: (() => void) | null }>(),
-  // Cache persistente en localStorage
-  persistentCache: {
-    tasks: new Map<string, { data: Task[]; timestamp: number }>(),
-    clients: new Map<string, { data: Client[]; timestamp: number }>(),
-    users: new Map<string, { data: User[]; timestamp: number }>(),
-  }
-};
-
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
-const PERSISTENT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
-
-// Función para cargar cache persistente desde localStorage
-const loadPersistentCache = () => {
-  if (typeof window === 'undefined') return; // Solo en cliente
-  
-  try {
-    const stored = localStorage.getItem('tasksTableCache');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const now = Date.now();
-      
-      // Cargar solo datos válidos
-      Object.keys(parsed).forEach(key => {
-        if (parsed[key] && typeof parsed[key] === 'object') {
-          Object.keys(parsed[key]).forEach(cacheKey => {
-            const item = parsed[key][cacheKey];
-            if (item && (now - item.timestamp) < PERSISTENT_CACHE_DURATION) {
-              tasksTableCache.persistentCache[key as keyof typeof tasksTableCache.persistentCache].set(cacheKey, item);
-            }
-          });
-        }
-      });
-      console.log('[TasksTable] Persistent cache loaded from localStorage');
-    }
-  } catch (error) {
-    console.warn('[TasksTable] Error loading persistent cache:', error);
-  }
-};
-
-// Función para guardar cache persistente en localStorage
-const savePersistentCache = () => {
-  if (typeof window === 'undefined') return; // Solo en cliente
-  
-  try {
-    const toStore: Record<string, Record<string, { data: Task[] | Client[] | User[]; timestamp: number }>> = {};
-    Object.keys(tasksTableCache.persistentCache).forEach(key => {
-      toStore[key] = {};
-      tasksTableCache.persistentCache[key as keyof typeof tasksTableCache.persistentCache].forEach((value, cacheKey) => {
-        toStore[key][cacheKey] = value;
-      });
-    });
-    localStorage.setItem('tasksTableCache', JSON.stringify(toStore));
-  } catch (error) {
-    console.warn('[TasksTable] Error saving persistent cache:', error);
-  }
-};
-
-// Cargar cache persistente al inicializar
-loadPersistentCache();
-
-// Función para limpiar listeners de TasksTable
-export const cleanupTasksTableListeners = () => {
-  console.log('[TasksTable] Cleaning up all listeners');
-  tasksTableCache.listeners.forEach((listener) => {
-    if (listener.tasks) listener.tasks();
-    if (listener.clients) listener.clients();
-    if (listener.users) listener.users();
-  });
-  tasksTableCache.listeners.clear();
-  tasksTableCache.tasks.clear();
-  tasksTableCache.clients.clear();
-  tasksTableCache.users.clear();
-  
-  // Guardar cache persistente antes de limpiar
-  savePersistentCache();
+// Eliminar todo el sistema de caché global
+const cleanupTasksTableListeners = () => {
+  console.log('[TasksTable] Cleaning up all table listeners');
 };
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds, users, currentUserId }) => {
@@ -316,15 +189,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth();
     
+
+
+
     // Estados optimizados con refs para evitar re-renders
-    const tasksRef = useRef<Task[]>([]);
-    const clientsRef = useRef<Client[]>([]);
-    const usersRef = useRef<User[]>([]);
+    // const tasksRef = useRef<Task[]>([]);
+    // const clientsRef = useRef<Client[]>([]);
+    // const usersRef = useRef<User[]>([]);
     
     // Estados locales - solo se usan si no hay externalTasks
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
+    // const [tasks, setTasks] = useState<Task[]>([]);
+    // const [clients, setClients] = useState<Client[]>([]);
+    // const [users, setUsers] = useState<User[]>([]);
     const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
     const [sortKey, setSortKey] = useState<string>('lastActivity');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -354,202 +230,70 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const userId = useMemo(() => user?.id || '', [user]);
 
     // PRIORIZAR external data para asegurar sincronización con TasksPage
-    const effectiveTasks = externalTasks ?? tasks;
-    const effectiveClients = externalClients ?? clients;
-    const effectiveUsers = externalUsers ?? users;
+    const effectiveTasks = useMemo(() => externalTasks ?? [], [externalTasks]);
+    const effectiveClients = useMemo(() => externalClients ?? [], [externalClients]);
+    const effectiveUsers = useMemo(() => externalUsers ?? [], [externalUsers]);
 
     // Usar un ref para trackear los IDs de tareas en lugar del array completo
     const effectiveTasksIds = useMemo(() => effectiveTasks.map(t => t.id).join(','), [effectiveTasks]);
 
-    // Función para verificar cache válido - estabilizada
-    const isCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number; isLoading: boolean }>) => {
-      const cached = cacheMap.get(cacheKey);
-      if (!cached) return false;
-      
-      const now = Date.now();
-      return (now - cached.timestamp) < CACHE_DURATION;
-    }, []);
+    // Extraer expresión compleja de dependencias
+    const statusChangesString = useMemo(() => effectiveTasks.map(t => t.status).join(','), [effectiveTasks]);
 
-    // Función para verificar cache persistente válido - estabilizada
-    const isPersistentCacheValid = useCallback((cacheKey: string, cacheMap: Map<string, { data: Task[] | Client[] | User[]; timestamp: number }>) => {
-      const cached = cacheMap.get(cacheKey);
-      if (!cached) return false;
+    // Agregar logging para debuggear cambios de estado
+    useEffect(() => {
+      console.log('[TasksTable] Effective tasks updated:', {
+        count: effectiveTasks.length,
+        taskIds: effectiveTasks.map(t => t.id),
+        statuses: effectiveTasks.map(t => ({ id: t.id, status: t.status, name: t.name })),
+        timestamp: new Date().toISOString(),
+        hasExternalTasks: !!externalTasks
+      });
+    }, [effectiveTasks, externalTasks]);
+
+    // Forzar refresco cuando cambie el estado de cualquier tarea
+    useEffect(() => {
+      const statusChanges = effectiveTasks.map(t => `${t.id}-${t.status}`).join(',');
+      console.log('[TasksTable] Status changes detected:', statusChanges);
       
-      const now = Date.now();
-      return (now - cached.timestamp) < PERSISTENT_CACHE_DURATION;
-    }, []);
+      // Forzar re-render del componente
+      setFilteredTasks([...effectiveTasks]);
+      
+      // Forzar re-render adicional para cambios de estado
+      if (effectiveTasks.length > 0) {
+        const hasStatusChanges = effectiveTasks.some(task => 
+          task.status && task.status !== 'Por Iniciar'
+        );
+        
+        if (hasStatusChanges) {
+          console.log('[TasksTable] Forcing immediate re-render due to status changes');
+          // Forzar re-render del componente
+          setFilteredTasks([...effectiveTasks]);
+        }
+      }
+    }, [statusChangesString, effectiveTasks]);
 
     // Usar el hook de notificaciones simplificado
     const { getUnreadCount, markAsViewed } = useTaskNotifications();
 
-    // Setup de tasks con cache optimizado
+    // Setup de tasks con actualizaciones en tiempo real - ELIMINAR DUPLICADO
     useEffect(() => {
-      if (!user?.id || externalTasks) return;
+      if (!user?.id) return;
 
-      const cacheKey = `tasks_${user.id}`;
+      console.log('[TasksTable] Using shared tasks state - no duplicate onSnapshot');
       
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = tasksTableCache.listeners.get(cacheKey);
-      
-      if (existingListener?.tasks) {
-        console.log('[TasksTable] Reusing existing tasks listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (tasksTableCache.tasks.has(cacheKey)) {
-          const cachedData = tasksTableCache.tasks.get(cacheKey)!.data;
-          tasksRef.current = cachedData;
-          setTasks(cachedData);
-          setIsLoadingTasks(false);
-        }
-        return;
-      }
-      
-      // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, tasksTableCache.persistentCache.tasks)) {
-        const cachedData = tasksTableCache.persistentCache.tasks.get(cacheKey)!.data;
-        tasksRef.current = cachedData;
-        setTasks(cachedData);
+      // No establecer onSnapshot aquí - usar siempre externalTasks del hook compartido
+      if (externalTasks) {
+        console.log('[TasksTable] Using external tasks from shared state:', externalTasks.length);
         setIsLoadingTasks(false);
-        console.log('[TasksTable] Using persistent cached tasks:', cachedData.length);
-        
-        // Restaurar en cache principal
-        tasksTableCache.tasks.set(cacheKey, {
-          data: cachedData,
-          timestamp: Date.now(),
-          isLoading: false,
-        });
       }
-      
-      // Verificar cache principal
-      if (isCacheValid(cacheKey, tasksTableCache.tasks)) {
-        const cachedData = tasksTableCache.tasks.get(cacheKey)!.data;
-        tasksRef.current = cachedData;
-        setTasks(cachedData);
-        setIsLoadingTasks(false);
-        console.log('[TasksTable] Using cached tasks on remount:', cachedData.length);
-        return;
-      }
+    }, [user?.id, externalTasks]);
 
-      console.log('[TasksTable] Setting up new tasks onSnapshot listener');
-      setIsLoadingTasks(true);
-
-      const tasksQuery = query(collection(db, 'tasks'));
-      const unsubscribeTasks = onSnapshot(
-        tasksQuery,
-        (snapshot) => {
-          const tasksData: Task[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            clientId: doc.data().clientId || '',
-            project: doc.data().project || '',
-            name: doc.data().name || '',
-            description: doc.data().description || '',
-            status: doc.data().status || '',
-            priority: doc.data().priority || '',
-            startDate: safeTimestampToISOOrNull(doc.data().startDate),
-            endDate: safeTimestampToISOOrNull(doc.data().endDate),
-            LeadedBy: doc.data().LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
-            createdAt: safeTimestampToISO(doc.data().createdAt),
-            CreatedBy: doc.data().CreatedBy || '',
-            lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt) || new Date().toISOString(),
-            hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
-            lastViewedBy: doc.data().lastViewedBy || {},
-            archived: doc.data().archived || false,
-            archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
-            archivedBy: doc.data().archivedBy || '',
-          }));
-
-          console.log('[TasksTable] Tasks onSnapshot update:', {
-            count: tasksData.length,
-            taskIds: tasksData.map(t => t.id),
-            statuses: [...new Set(tasksData.map(t => t.status))],
-            normalizedStatuses: [...new Set(tasksData.map(t => normalizeStatus(t.status)))]
-          });
-          
-          tasksRef.current = tasksData;
-          setTasks(tasksData);
-          
-          // Actualizar cache
-          tasksTableCache.tasks.set(cacheKey, {
-            data: tasksData,
-            timestamp: Date.now(),
-            isLoading: false,
-          });
-          
-          // Actualizar cache persistente
-          tasksTableCache.persistentCache.tasks.set(cacheKey, {
-            data: tasksData,
-            timestamp: Date.now(),
-          });
-          
-          setIsLoadingTasks(false);
-        },
-        (error) => {
-          console.error('[TasksTable] Error in tasks onSnapshot:', error);
-          setTasks([]);
-          setIsLoadingTasks(false);
-        }
-      );
-
-      // Guardar el listener en el cache global
-      tasksTableCache.listeners.set(cacheKey, {
-        tasks: unsubscribeTasks,
-        clients: existingListener?.clients || null,
-        users: existingListener?.users || null,
-      });
-
-      return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
-      };
-    }, [user?.id, isCacheValid, isPersistentCacheValid, externalTasks]);
-
-    // Setup de clients con cache optimizado
+    // Setup de clients con actualizaciones en tiempo real
     useEffect(() => {
       if (!user?.id || externalClients) return;
 
-      const cacheKey = `clients_${user.id}`;
-      
-      // Verificar si ya existe un listener para este usuario
-      const existingListener = tasksTableCache.listeners.get(cacheKey);
-      
-      if (existingListener?.clients) {
-        console.log('[TasksTable] Reusing existing clients listener');
-        // El listener ya existe, solo actualizar los datos si hay cache
-        if (tasksTableCache.clients.has(cacheKey)) {
-          const cachedData = tasksTableCache.clients.get(cacheKey)!.data;
-          clientsRef.current = cachedData;
-          setClients(cachedData);
-          setIsLoadingClients(false);
-        }
-        return;
-      }
-      
-      // Verificar cache persistente primero (más rápido)
-      if (isPersistentCacheValid(cacheKey, tasksTableCache.persistentCache.clients)) {
-        const cachedData = tasksTableCache.persistentCache.clients.get(cacheKey)!.data;
-        clientsRef.current = cachedData;
-        setClients(cachedData);
-        setIsLoadingClients(false);
-        console.log('[TasksTable] Using persistent cached clients:', cachedData.length);
-        
-        // Restaurar en cache principal
-        tasksTableCache.clients.set(cacheKey, {
-          data: cachedData,
-          timestamp: Date.now(),
-          isLoading: false,
-        });
-      }
-      
-      // Verificar cache principal
-      if (isCacheValid(cacheKey, tasksTableCache.clients)) {
-        const cachedData = tasksTableCache.clients.get(cacheKey)!.data;
-        clientsRef.current = cachedData;
-        setClients(cachedData);
-        setIsLoadingClients(false);
-        console.log('[TasksTable] Using cached clients on remount:', cachedData.length);
-        return;
-      }
-
-      console.log('[TasksTable] Setting up new clients onSnapshot listener');
+      console.log('[TasksTable] Setting up clients listener');
       setIsLoadingClients(true);
 
       const clientsQuery = query(collection(db, 'clients'));
@@ -564,86 +308,31 @@ const TasksTable: React.FC<TasksTableProps> = memo(
 
           console.log('[TasksTable] Clients onSnapshot update:', clientsData.length);
           
-          clientsRef.current = clientsData;
-          setClients(clientsData);
-          
-          // Actualizar cache
-          tasksTableCache.clients.set(cacheKey, {
-            data: clientsData,
-            timestamp: Date.now(),
-            isLoading: false,
-          });
-          
-          // Actualizar cache persistente
-          tasksTableCache.persistentCache.clients.set(cacheKey, {
-            data: clientsData,
-            timestamp: Date.now(),
-          });
-          
+          // Actualizar estado directamente sin caché
+          // clientsRef.current = clientsData;
+          // setClients(clientsData);
           setIsLoadingClients(false);
         },
         (error) => {
           console.error('[TasksTable] Error in clients onSnapshot:', error);
-          setClients([]);
+          // setClients([]);
           setIsLoadingClients(false);
         }
       );
 
-      // Guardar el listener en el cache global
-      tasksTableCache.listeners.set(cacheKey, {
-        tasks: existingListener?.tasks || null,
-        clients: unsubscribeClients,
-        users: existingListener?.users || null,
-      });
-
       return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+        unsubscribeClients();
       };
-    }, [user?.id, isCacheValid, isPersistentCacheValid, externalClients]);
+    }, [user?.id, externalClients]);
 
-    // Setup de users con cache optimizado (NO BLOQUEAR renderización)
+    // Setup de users con actualizaciones en tiempo real
     useEffect(() => {
       if (!user?.id || externalUsers) return;
 
-      const cacheKey = `users_${user.id}`;
-      
-      // PRIORIDAD 1: Verificar cache persistente INMEDIATAMENTE
-      if (isPersistentCacheValid(cacheKey, tasksTableCache.persistentCache.users)) {
-        const cachedData = tasksTableCache.persistentCache.users.get(cacheKey)!.data;
-        usersRef.current = cachedData;
-        setUsers(cachedData);
-        setIsLoadingUsers(false);
-        console.log('[TasksTable] Using persistent cached users (IMMEDIATE):', cachedData.length);
-        
-        // Restaurar en cache principal
-        tasksTableCache.users.set(cacheKey, {
-          data: cachedData,
-          timestamp: Date.now(),
-          isLoading: false,
-        });
-        
-        // Continuar con fetch en background para actualizar
-      }
-      
-      // PRIORIDAD 2: Verificar cache principal
-      if (isCacheValid(cacheKey, tasksTableCache.users)) {
-        const cachedData = tasksTableCache.users.get(cacheKey)!.data;
-        usersRef.current = cachedData;
-        setUsers(cachedData);
-        setIsLoadingUsers(false);
-        console.log('[TasksTable] Using main cached users:', cachedData.length);
-        return; // No necesita fetch si cache es válido
-      }
+      console.log('[TasksTable] Setting up users fetch');
+      setIsLoadingUsers(true);
 
-      // PRIORIDAD 3: Fetch async SIN bloquear (background)
-      console.log('[TasksTable] Starting background users fetch');
-      
-      // NO setear loading aquí - usar datos de cache mientras tanto
-      if (usersRef.current.length === 0) {
-        setIsLoadingUsers(true);
-      }
-
-      // Usar la misma lógica de fetch que MembersTable
+      // Fetch users
       const fetchUsers = async () => {
         try {
           const response = await fetch('/api/users');
@@ -682,54 +371,45 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             }),
           );
           
-          usersRef.current = usersData;
-          setUsers(usersData);
+          // Actualizar estado directamente sin caché
+          // usersRef.current = usersData;
+          // setUsers(usersData);
           
-          // Actualizar cache
-          tasksTableCache.users.set(cacheKey, {
-            data: usersData,
-            timestamp: Date.now(),
-            isLoading: false,
-          });
-          
-          // Actualizar cache persistente
-          tasksTableCache.persistentCache.users.set(cacheKey, {
-            data: usersData,
-            timestamp: Date.now(),
-          });
-          
-          // Guardar inmediatamente en localStorage
-          savePersistentCache();
-          
-          console.log('[TasksTable] Users fetched and cached:', {
+          console.log('[TasksTable] Users fetched:', {
             total: usersData.length,
             withImages: usersData.filter(u => u.imageUrl).length,
             withoutImages: usersData.filter(u => !u.imageUrl).length
           });
         } catch (error) {
           console.error('[TasksTable] Error fetching users:', error);
-          // NO limpiar usuarios existentes en caso de error
-          if (usersRef.current.length === 0) {
-            setUsers([]);
+          if (/* usersRef.current.length === 0 */ false) {
+            // setUsers([]);
           }
         } finally {
           setIsLoadingUsers(false);
         }
       };
 
-      // Ejecutar fetch de forma async sin bloquear
+      // Ejecutar fetch inicial
       fetchUsers();
 
+      // Setup listener para cambios en usuarios
+      const usersQuery = query(collection(db, 'users'));
+      const unsubscribeUsers = onSnapshot(usersQuery, () => {
+        // Re-fetch users cuando hay cambios
+        fetchUsers();
+      });
+
       return () => {
-        // No limpiar el listener aquí, solo marcar como no disponible para este componente
+        unsubscribeUsers();
       };
-    }, [user?.id, isCacheValid, isPersistentCacheValid, externalUsers]);
+    }, [user?.id, externalUsers]);
 
     useEffect(() => {
       // Inicializar filteredTasks directamente con effectiveTasks
       // NO comparar con JSON.stringify ya que esto interfiere con los filtros
       setFilteredTasks(effectiveTasks);
-    }, [effectiveTasksIds]); // Usar string de IDs en lugar del array completo
+    }, [effectiveTasksIds, effectiveTasks]); // Usar string de IDs en lugar del array completo
 
     const getInvolvedUserIds = useCallback((task: Task) => {
       const ids = new Set<string>();
@@ -761,6 +441,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     }, []);
 
     const memoizedFilteredTasks = useMemo(() => {
+      console.log('[TasksTable] Recalculating filtered tasks:', {
+        effectiveTasksCount: effectiveTasks.length,
+        effectiveTasksIds: effectiveTasks.map(t => t.id),
+        effectiveTasksStatuses: effectiveTasks.map(t => ({ id: t.id, status: t.status })),
+        searchQuery,
+        priorityFilter,
+        clientFilter,
+        userFilter
+      });
+
       const filtered = effectiveTasks.filter((task) => {
         // Excluir tareas archivadas (redundante ahora que TasksPage filtra)
         if (task.archived) {
@@ -787,6 +477,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         }
 
         return matchesSearch && matchesPriority && matchesClient && matchesUser;
+      });
+
+      console.log('[TasksTable] Filtered tasks result:', {
+        filteredCount: filtered.length,
+        filteredTaskIds: filtered.map(t => t.id),
+        filteredTaskStatuses: filtered.map(t => ({ id: t.id, status: t.status }))
       });
 
       return filtered;
@@ -1148,14 +844,17 @@ const TasksTable: React.FC<TasksTableProps> = memo(
             else if (normalizedStatus === 'Backlog') icon = '/circle-help.svg';
             else if (normalizedStatus === 'Por Iniciar') icon = '/circle.svg';
             else if (normalizedStatus === 'Cancelado') icon = '/circle-x.svg';
-            else if (normalizedStatus === 'Diseño') icon = '/pencil-ruler.svg';
-            else if (normalizedStatus === 'Desarrollo') icon = '/code-xml.svg';
-            else if (normalizedStatus === 'Finalizado') icon = '/circle-check.svg';
+            else if (normalizedStatus === 'Por Finalizar') icon = '/circle-check.svg';
+            else if (normalizedStatus === 'Finalizado') icon = '/check-check.svg';
             
-            console.log('[TasksTable] Rendering status column:', {
+            console.log('[TasksTable] Rendering status column - REAL TIME:', {
               taskId: task.id,
+              taskName: task.name,
               originalStatus: task.status,
               normalizedStatus: normalizedStatus,
+              icon: icon,
+              timestamp: new Date().toISOString(),
+              renderCount: Math.random() // Para verificar si se re-renderiza
             });
             
             return (
@@ -1331,7 +1030,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
           await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
           
           // Actualizar estado local
-          setTasks((prevTasks) => {
+          setFilteredTasks((prevTasks) => {
             return prevTasks.map((t) => 
               t.id === undoItem.task.id 
                 ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
@@ -1351,20 +1050,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         console.error('Error in undo process:', error);
       }
     }, [userId, isAdmin]);
-
-    // Guardar cache persistente cuando los datos cambien
-    useEffect(() => {
-      if (externalTasks && externalClients && externalUsers) return;
-      
-      if (effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0) {
-        // Guardar cache persistente cada 30 segundos si hay datos
-        const saveInterval = setInterval(() => {
-          savePersistentCache();
-        }, 30000);
-
-        return () => clearInterval(saveInterval);
-      }
-    }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length]);
 
     // Cleanup all table listeners when component unmounts
     useEffect(() => {
@@ -1827,6 +1512,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         </div>
 
         <Table
+          key={`tasks-table-${effectiveTasksIds}`}
           data={sortedTasks}
           columns={columns}
           itemsPerPage={10}

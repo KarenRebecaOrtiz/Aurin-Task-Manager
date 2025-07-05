@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, onSnapshot, query, getDocs, where } from 'firebase/firestore';
+import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
@@ -44,17 +44,17 @@ interface MembersTableProps {
   onCacheUpdate?: (users: User[], tasks: Task[]) => void;
 }
 
-// Cache global persistente para MembersTable
+// Cache implementation - ELIMINAR CACHÉ DE TAREAS
 const membersTableCache = {
   users: new Map<string, { data: User[]; timestamp: number }>(),
-  tasks: new Map<string, { data: Task[]; timestamp: number }>(),
   listeners: new Map<string, { users: (() => void) | null; tasks: (() => void) | null }>(),
 };
 
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
+// Cache duration in milliseconds (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000;
 
-function getCacheKey(type: 'users' | 'tasks', userId: string) {
-  return `members_${type}_${userId}`;
+function getCacheKey(type: 'users', userId: string) {
+  return `${type}_${userId}`;
 }
 
 function saveUsersCache(userId: string, data: User[]) {
@@ -98,47 +98,6 @@ function loadUsersCache(userId: string): User[] | null {
   return null;
 }
 
-function saveTasksCache(userId: string, data: Task[]) {
-  const key = getCacheKey('tasks', userId);
-  const value = JSON.stringify({ data, timestamp: Date.now() });
-  try {
-    localStorage.setItem(key, value);
-    membersTableCache.tasks.set(key, { data, timestamp: Date.now() });
-    console.log(`[MembersTable] [CACHE] Saved tasks to localStorage (${data.length})`);
-  } catch (e) {
-    console.warn(`[MembersTable] [CACHE] Error saving tasks to localStorage`, e);
-  }
-}
-
-function loadTasksCache(userId: string): Task[] | null {
-  const key = getCacheKey('tasks', userId);
-  if (membersTableCache.tasks.has(key)) {
-    const cached = membersTableCache.tasks.get(key);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log(`[MembersTable] [CACHE] Using in-memory tasks cache (${cached.data.length})`);
-      return cached.data;
-    }
-  }
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && Date.now() - parsed.timestamp < CACHE_DURATION) {
-        membersTableCache.tasks.set(key, { data: parsed.data, timestamp: parsed.timestamp });
-        console.log(`[MembersTable] [CACHE] Using localStorage tasks cache (${parsed.data.length})`);
-        return parsed.data;
-      } else {
-        localStorage.removeItem(key);
-        membersTableCache.tasks.delete(key);
-        console.log(`[MembersTable] [CACHE] Expired tasks cache removed`);
-      }
-    }
-  } catch (e) {
-    console.warn(`[MembersTable] [CACHE] Error loading tasks from localStorage`, e);
-  }
-  return null;
-}
-
 // Función para limpiar listeners cuando sea necesario (ej: logout)
 export const cleanupMembersTableListeners = () => {
   console.log('[MembersTable] Cleaning up all listeners');
@@ -146,13 +105,9 @@ export const cleanupMembersTableListeners = () => {
     if (listener.users) {
       listener.users();
     }
-    if (listener.tasks) {
-      listener.tasks();
-    }
   });
   membersTableCache.listeners.clear();
   membersTableCache.users.clear();
-  membersTableCache.tasks.clear();
 };
 
 const MembersTable: React.FC<MembersTableProps> = memo(
@@ -265,7 +220,6 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           }));
           
           setTasks(tasksData);
-          saveTasksCache(user.id, tasksData);
           
           // Pasar datos al cache global
           if (onCacheUpdate) {
@@ -289,56 +243,18 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       fetchUsers();
     }, [user?.id, onCacheUpdate]);
 
-    // Setup de tareas con cache optimizado (reutilizar listeners existentes)
+    // Setup de tareas con cache optimizado (reutilizar listeners existentes) - ELIMINAR
     useEffect(() => {
       if (!user?.id || externalTasks) return;
-      const cacheKey = getCacheKey('tasks', user.id);
-      // Intentar hidratar desde cache
-      const cached = loadTasksCache(user.id);
-      if (cached) {
-        tasksRef.current = cached;
-        setTasks([...cached]);
+      
+      console.log('[MembersTable] Using shared tasks state - no duplicate onSnapshot');
+      
+      // No establecer onSnapshot aquí - usar siempre externalTasks del hook compartido
+      if (externalTasks) {
+        console.log('[MembersTable] Using external tasks from shared state:', externalTasks.length);
+        setTasks(externalTasks);
         setIsLoadingTasks(false);
-        // No montar listener hasta que expire el cache
-        return;
       }
-      // Si no hay cache válido, montar listener
-      setIsLoadingTasks(true);
-      const tasksQuery = query(collection(db, 'tasks'));
-      const unsubscribeTasks = onSnapshot(
-        tasksQuery,
-        (snapshot) => {
-          const tasksData: Task[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            clientId: doc.data().clientId || '',
-            project: doc.data().project || '',
-            name: doc.data().name || '',
-            description: doc.data().description || '',
-            status: doc.data().status || '',
-            priority: doc.data().priority || '',
-            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
-            LeadedBy: doc.data().LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
-            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-            CreatedBy: doc.data().CreatedBy || '',
-          }));
-          tasksRef.current = tasksData;
-          setTasks(tasksData);
-          saveTasksCache(user.id, tasksData);
-          setIsLoadingTasks(false);
-        },
-        (error) => {
-          console.error('[MembersTable] Error in tasks onSnapshot:', error);
-          setTasks([]);
-          setIsLoadingTasks(false);
-        }
-      );
-      membersTableCache.listeners.set(cacheKey, {
-        users: null,
-        tasks: unsubscribeTasks,
-      });
-      return () => {};
     }, [user?.id, externalTasks]);
 
     // Calcular proyectos activos por usuario (memoizado)
