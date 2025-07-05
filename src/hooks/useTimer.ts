@@ -1,199 +1,88 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface TimerState {
   isRunning: boolean;
   accumulatedSeconds: number;
   startTime: Date | null;
-  lastSync: Date;
   deviceId: string;
   isRestoring: boolean;
-  isSyncing: boolean;
 }
 
-// Función para obtener tiempo del servidor con offset
-let serverTimeOffset = 0;
-
-const getServerTime = async (): Promise<Date> => {
-  try {
-    // Usar Timestamp.now() de Firestore para obtener tiempo del servidor
-    const serverTimestamp = Timestamp.now();
-    const now = new Date();
-    
-    // Calcular offset para futuras llamadas
-    serverTimeOffset = serverTimestamp.toDate().getTime() - now.getTime();
-    
-    return new Date(now.getTime() + serverTimeOffset);
-  } catch (error) {
-    console.warn('[getServerTime] Error, usando tiempo local:', error);
-    return new Date();
-  }
-};
-
-// Función para calcular tiempo transcurrido
-const calculateElapsedTime = (startTime: Date, serverTime: Date): number => {
-  return Math.max(0, Math.floor((serverTime.getTime() - startTime.getTime()) / 1000));
-};
-
-
-
 export const useTimer = (taskId: string, userId: string) => {
+  const deviceId = useRef(crypto.randomUUID());
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerDocRef = useRef(doc(db, `tasks/${taskId}/timers/${userId}`));
+  
   const [timerState, setTimerState] = useState<TimerState>({
     isRunning: false,
     accumulatedSeconds: 0,
     startTime: null,
-    lastSync: new Date(),
-    deviceId: crypto.randomUUID(),
-    isRestoring: false,
-    isSyncing: false,
+    deviceId: deviceId.current,
+    isRestoring: true,
   });
 
-  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
-  const timerDocRef = useRef(doc(db, `tasks/${taskId}/timers/${userId}`));
-  const lastSyncRef = useRef<number>(0);
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Función para manejar errores del timer
-  const handleTimerError = useCallback(async (operation: string, fallbackState: TimerState) => {
-    console.error(`[useTimer] Error en ${operation}`);
-    
-    // Verificar estado real en Firestore
-    try {
-      const timerDoc = await getDoc(timerDocRef.current);
-      if (timerDoc.exists()) {
-        const realData = timerDoc.data();
-        const serverTime = await getServerTime();
-        
-        let accumulatedSeconds = realData.accumulatedSeconds || 0;
-        
-        if (realData.isRunning && realData.startTime) {
-          const elapsed = calculateElapsedTime(realData.startTime.toDate(), serverTime);
-          accumulatedSeconds += elapsed;
-        }
-        
-        setTimerState({
-          isRunning: realData.isRunning,
-          accumulatedSeconds,
-          startTime: realData.startTime?.toDate() || null,
-          lastSync: serverTime,
-          deviceId: timerState.deviceId,
-          isRestoring: false,
-          isSyncing: false,
-        });
-        
-        console.log('[useTimer] ✅ Estado restaurado desde Firestore');
-      } else {
-        setTimerState(fallbackState);
-        console.log('[useTimer] ⚠️ No hay datos en Firestore, usando estado de fallback');
-      }
-    } catch (error) {
-      console.error('[useTimer] ❌ Error verificando estado real:', error);
-      setTimerState(fallbackState);
-    }
-  }, [timerState.deviceId]);
-
-  // Función optimizada para sincronizar con Firestore
-  const syncWithFirestore = useCallback(async (newState: Partial<TimerState>, forceSync = false) => {
-    const now = Date.now();
-    
-    // Evitar sincronizaciones muy frecuentes (mínimo 1 segundo entre syncs)
-    if (!forceSync && (now - lastSyncRef.current) < 1000) {
-      console.log('[useTimer] ⏭️ Sincronización omitida (muy frecuente)');
-      return;
-    }
-
-    if (timerState.isSyncing) {
-      console.log('[useTimer] ⏭️ Sincronización en progreso, omitiendo');
-      return;
-    }
-    
-    setTimerState(prev => ({ ...prev, isSyncing: true }));
-    lastSyncRef.current = now;
-    
+  // Función para sincronizar con Firestore
+  const syncToFirestore = useCallback(async (state: TimerState) => {
     try {
       const firestoreData = {
         userId,
-        isRunning: newState.isRunning,
-        startTime: newState.startTime ? serverTimestamp() : null,
-        accumulatedSeconds: newState.accumulatedSeconds || 0,
-        lastSync: serverTimestamp(),
-        deviceId: timerState.deviceId,
-        lastAction: newState.isRunning ? 'started' : 'paused',
-        lastActionTime: serverTimestamp(),
+        isRunning: state.isRunning,
+        startTime: state.startTime ? Timestamp.fromDate(state.startTime) : null,
+        accumulatedSeconds: state.accumulatedSeconds,
+        deviceId: deviceId.current,
+        lastSync: Timestamp.fromDate(new Date()),
       };
 
       await setDoc(timerDocRef.current, firestoreData, { merge: true });
-      
-      console.log('[useTimer] ✅ Sincronización exitosa:', {
-        isRunning: newState.isRunning,
-        accumulatedSeconds: newState.accumulatedSeconds,
-        deviceId: timerState.deviceId
-      });
+      console.log('[useTimer] ✅ Sincronizado con Firestore:', { isRunning: state.isRunning, seconds: state.accumulatedSeconds });
     } catch (error) {
       console.error('[useTimer] ❌ Error sincronizando:', error);
-      await handleTimerError('sync', timerState);
-    } finally {
-      setTimerState(prev => ({ ...prev, isSyncing: false }));
     }
-  }, [timerState, userId, handleTimerError]);
+  }, [userId]);
 
-  // Función para sincronización inmediata (para acciones críticas)
-  const immediateSync = useCallback((newState: Partial<TimerState>) => {
-    return syncWithFirestore(newState, true);
-  }, [syncWithFirestore]);
+  // Función para obtener tiempo del servidor
+  const getServerTime = useCallback(() => new Date(), []);
 
-
+  // Función para calcular tiempo transcurrido
+  const calculateElapsedTime = useCallback((startTime: Date, currentTime: Date): number => {
+    return Math.max(0, Math.floor((currentTime.getTime() - startTime.getTime()) / 1000));
+  }, []);
 
   // Restaurar timer al montar
   useEffect(() => {
     const restoreTimer = async () => {
       if (!taskId || !userId) return;
       
-      setTimerState(prev => ({ ...prev, isRestoring: true }));
-      console.log('[useTimer] 🔄 Iniciando restauración de timer...', { taskId, userId });
-      
       try {
         const timerDoc = await getDoc(timerDocRef.current);
         
         if (timerDoc.exists()) {
           const data = timerDoc.data();
-          const serverTime = await getServerTime();
-          
-          console.log('[useTimer] 📊 Datos de timer encontrados:', data);
+          const serverTime = getServerTime();
           
           let accumulatedSeconds = data.accumulatedSeconds || 0;
           
           if (data.isRunning && data.startTime) {
             const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
             accumulatedSeconds += elapsed;
-            
-            console.log('[useTimer] ▶️ Restaurando timer activo:', {
-              startTime: data.startTime.toDate().toISOString(),
-              elapsed,
-              accumulatedSeconds: data.accumulatedSeconds || 0,
-              totalSeconds: accumulatedSeconds
-            });
-          } else if (!data.isRunning && data.accumulatedSeconds > 0) {
-            console.log('[useTimer] ⏸️ Restaurando timer pausado:', {
-              accumulatedSeconds: data.accumulatedSeconds
-            });
-          } else {
-            console.log('[useTimer] 🆕 Timer en estado inicial');
           }
           
-          setTimerState({
+          const newState = {
             isRunning: data.isRunning,
             accumulatedSeconds,
-            startTime: data.startTime?.toDate() || null,
-            lastSync: serverTime,
-            deviceId: timerState.deviceId,
+            startTime: data.isRunning ? data.startTime.toDate() : null,
+            deviceId: deviceId.current,
             isRestoring: false,
-            isSyncing: false,
-          });
+          };
+          
+          setTimerState(newState);
+          console.log('[useTimer] ✅ Timer restaurado:', newState);
         } else {
-          console.log('[useTimer] ❌ No se encontraron datos de timer - estado inicial');
           setTimerState(prev => ({ ...prev, isRestoring: false }));
+          console.log('[useTimer] 🆕 Timer inicial');
         }
       } catch (error) {
         console.error('[useTimer] ❌ Error restaurando timer:', error);
@@ -202,51 +91,79 @@ export const useTimer = (taskId: string, userId: string) => {
     };
 
     restoreTimer();
-  }, [taskId, userId, timerState.deviceId]);
+  }, [taskId, userId, getServerTime, calculateElapsedTime]);
 
-  // Timer activo - actualizar cada segundo
+  // Timer local - actualizar cada segundo
   useEffect(() => {
     if (timerState.isRunning && !timerState.isRestoring) {
-      const interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         setTimerState(prev => ({
           ...prev,
           accumulatedSeconds: prev.accumulatedSeconds + 1,
         }));
       }, 1000);
-      
-      setIntervalId(interval);
-      console.log('[useTimer] ▶️ Timer iniciado');
-    } else if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
-      console.log('[useTimer] ⏸️ Timer pausado');
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        setIntervalId(null);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [timerState.isRunning, timerState.isRestoring, intervalId]);
+  }, [timerState.isRunning, timerState.isRestoring]);
 
-  // Listener en tiempo real para sincronización entre dispositivos - MEJORADO
+  // Sincronización periódica cada 5 minutos
+  useEffect(() => {
+    if (timerState.isRunning && !timerState.isRestoring) {
+      syncIntervalRef.current = setInterval(() => {
+        setTimerState(prev => {
+          const currentTime = getServerTime();
+          let accumulatedSeconds = prev.accumulatedSeconds;
+          
+          if (prev.startTime) {
+            const elapsed = calculateElapsedTime(prev.startTime, currentTime);
+            accumulatedSeconds = elapsed;
+          }
+          
+          const newState = {
+            ...prev,
+            accumulatedSeconds,
+          };
+          
+          // Sincronizar con Firestore
+          syncToFirestore(newState);
+          
+          return newState;
+        });
+      }, 5 * 60 * 1000); // 5 minutos
+    } else if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+      syncIntervalRef.current = null;
+    }
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+    };
+  }, [timerState.isRunning, timerState.isRestoring, syncToFirestore, getServerTime, calculateElapsedTime]);
+
+  // Listener en tiempo real para sincronización entre dispositivos
   useEffect(() => {
     if (timerState.isRestoring) return;
-
-    console.log('[useTimer] 📡 Configurando listener en tiempo real...');
 
     const unsubscribe = onSnapshot(timerDocRef.current, (doc) => {
       if (!doc.exists()) return;
       
       const remoteData = doc.data();
-      console.log('[useTimer] 🔄 Cambio detectado en timer remoto:', remoteData);
       
       // Solo sincronizar si es de otro dispositivo
-      if (remoteData.deviceId !== timerState.deviceId) {
-        console.log('[useTimer] 🔄 Sincronizando desde dispositivo remoto');
-        
-        const serverTime = new Date();
+      if (remoteData.deviceId !== deviceId.current) {
+        const serverTime = getServerTime();
         let accumulatedSeconds = remoteData.accumulatedSeconds || 0;
         
         if (remoteData.isRunning && remoteData.startTime) {
@@ -254,160 +171,116 @@ export const useTimer = (taskId: string, userId: string) => {
           accumulatedSeconds += elapsed;
         }
         
-        // Sincronización inmediata para cambios de estado
-        const isStateChange = remoteData.isRunning !== timerState.isRunning;
-        
-        setTimerState(prev => ({
-          ...prev,
-          isRunning: remoteData.isRunning,
-          accumulatedSeconds,
-          startTime: remoteData.startTime?.toDate() || null,
-          lastSync: serverTime,
-        }));
-
-        // Si es un cambio de estado (start/pause), forzar sincronización inmediata
-        if (isStateChange) {
-          console.log('[useTimer] 🚨 Cambio de estado detectado, sincronizando inmediatamente');
-          if (syncTimeoutRef.current) {
-            clearTimeout(syncTimeoutRef.current);
+        setTimerState(prev => {
+          // Solo actualizar si realmente hay cambios
+          if (prev.isRunning === remoteData.isRunning && 
+              Math.abs(prev.accumulatedSeconds - accumulatedSeconds) < 2) {
+            return prev;
           }
-          syncTimeoutRef.current = setTimeout(() => {
-            immediateSync({
-              isRunning: remoteData.isRunning,
-              startTime: remoteData.startTime?.toDate() || null,
-              accumulatedSeconds,
-            });
-          }, 100);
-        }
+          
+          return {
+            ...prev,
+            isRunning: remoteData.isRunning,
+            accumulatedSeconds,
+            startTime: remoteData.isRunning ? remoteData.startTime.toDate() : null,
+          };
+        });
       }
-    }, (error) => {
-      console.error('[useTimer] ❌ Error en listener de timer:', error);
     });
 
-    return () => {
-      console.log('[useTimer] 🔌 Desconectando listener de timer...');
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-      unsubscribe();
-    };
-  }, [taskId, userId, timerState.isRestoring, timerState.deviceId, immediateSync, timerState.isRunning]);
+    return () => unsubscribe();
+  }, [taskId, userId, timerState.isRestoring, getServerTime, calculateElapsedTime]);
 
-  // Funciones de control del timer - OPTIMIZADAS
+  // Funciones de control del timer
   const startTimer = useCallback(async () => {
     console.log('[useTimer] 🎯 Iniciando timer...');
     
-    try {
-      const serverTime = await getServerTime();
-      
-      setTimerState(prev => ({
+    const serverTime = getServerTime();
+    
+    setTimerState(prev => {
+      const newState = {
         ...prev,
         isRunning: true,
         startTime: serverTime,
-        lastSync: serverTime,
-      }));
-
-      // Sincronización inmediata para acciones críticas
-      await immediateSync({
-        isRunning: true,
-        startTime: serverTime,
-        accumulatedSeconds: timerState.accumulatedSeconds,
-      });
+      };
       
-      console.log('[useTimer] ✅ Timer iniciado correctamente');
-    } catch (error) {
-      console.error('[useTimer] ❌ Error iniciando timer:', error);
-      await handleTimerError('start', timerState);
-    }
-  }, [timerState, immediateSync, handleTimerError]);
+      // Sincronización inmediata
+      syncToFirestore(newState);
+      
+      return newState;
+    });
+    
+    console.log('[useTimer] ✅ Timer iniciado');
+  }, [getServerTime, syncToFirestore]);
 
   const pauseTimer = useCallback(async () => {
     console.log('[useTimer] 🎯 Pausando timer...');
     
-    try {
-      const serverTime = await getServerTime();
-      const finalSeconds = timerState.accumulatedSeconds;
-      
-      setTimerState(prev => ({
+    setTimerState(prev => {
+      const newState = {
         ...prev,
         isRunning: false,
         startTime: null,
-        accumulatedSeconds: finalSeconds,
-        lastSync: serverTime,
-      }));
-
-      // Sincronización inmediata para pausar (acción crítica)
-      await immediateSync({
-        isRunning: false,
-        startTime: null,
-        accumulatedSeconds: finalSeconds,
-      });
+      };
       
-      console.log('[useTimer] ✅ Timer pausado correctamente');
-    } catch (error) {
-      console.error('[useTimer] ❌ Error pausando timer:', error);
-      await handleTimerError('pause', timerState);
-    }
-  }, [timerState, immediateSync, handleTimerError]);
+      // Sincronización inmediata
+      syncToFirestore(newState);
+      
+      return newState;
+    });
+    
+    console.log('[useTimer] ✅ Timer pausado');
+  }, [syncToFirestore]);
 
   const resetTimer = useCallback(async () => {
     console.log('[useTimer] 🎯 Reseteando timer...');
     
-    try {
-      setTimerState(prev => ({
+    setTimerState(prev => {
+      const newState = {
         ...prev,
         isRunning: false,
         startTime: null,
         accumulatedSeconds: 0,
-        lastSync: new Date(),
-      }));
-
-      await immediateSync({
-        isRunning: false,
-        startTime: null,
-        accumulatedSeconds: 0,
-      });
+      };
       
-      console.log('[useTimer] ✅ Timer reseteado correctamente');
-    } catch (error) {
-      console.error('[useTimer] ❌ Error reseteando timer:', error);
-      await handleTimerError('reset', timerState);
-    }
-  }, [immediateSync, handleTimerError, timerState]);
+      // Sincronización inmediata
+      syncToFirestore(newState);
+      
+      return newState;
+    });
+    
+    console.log('[useTimer] ✅ Timer reseteado');
+  }, [syncToFirestore]);
 
   const finalizeTimer = useCallback(async () => {
     console.log('[useTimer] 🎯 Finalizando timer...');
     
-    try {
-      const finalSeconds = timerState.accumulatedSeconds;
+    let finalSeconds = 0;
+    
+    setTimerState(prev => {
+      finalSeconds = prev.accumulatedSeconds;
       
       // Limpiar timer en Firestore
-      await setDoc(timerDocRef.current, {
+      setDoc(timerDocRef.current, {
         userId,
         isRunning: false,
         startTime: null,
         accumulatedSeconds: 0,
-        lastFinalized: serverTimestamp(),
-        deviceId: timerState.deviceId,
+        lastFinalized: Timestamp.fromDate(new Date()),
+        deviceId: deviceId.current,
       });
       
-      // Limpiar estado local
-      setTimerState(prev => ({
+      return {
         ...prev,
         isRunning: false,
         startTime: null,
         accumulatedSeconds: 0,
-        lastSync: new Date(),
-      }));
-      
-      console.log('[useTimer] ✅ Timer finalizado correctamente');
-      return finalSeconds;
-    } catch (error) {
-      console.error('[useTimer] ❌ Error finalizando timer:', error);
-      await handleTimerError('finalize', timerState);
-      throw error;
-    }
-  }, [timerState, userId, handleTimerError]);
+      };
+    });
+    
+    console.log('[useTimer] ✅ Timer finalizado');
+    return finalSeconds;
+  }, [userId]);
 
   return {
     timerState,

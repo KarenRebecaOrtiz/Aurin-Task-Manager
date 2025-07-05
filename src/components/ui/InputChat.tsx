@@ -640,15 +640,17 @@ export default function InputChat({
               <button 
                 className={styles.playStopButton} 
                 onClick={(e) => {
-                  // Prevenir conflicto con doble click
-                  if (e.currentTarget && e.currentTarget.dataset) {
-                    e.currentTarget.dataset.clickTimeout = setTimeout(() => {
-                      onToggleTimer(e);
-                      if (e.currentTarget && e.currentTarget.dataset) {
-                        delete e.currentTarget.dataset.clickTimeout;
-                      }
-                    }, 250).toString();
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  // Cancelar cualquier timeout pendiente
+                  if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.clickTimeout) {
+                    clearTimeout(parseInt(e.currentTarget.dataset.clickTimeout));
+                    delete e.currentTarget.dataset.clickTimeout;
                   }
+                  
+                  // Ejecutar toggle timer inmediatamente
+                  onToggleTimer(e);
                 }}
                 onDoubleClick={async (e) => {
                   e.preventDefault();
