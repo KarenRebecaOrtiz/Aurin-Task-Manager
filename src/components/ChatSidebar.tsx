@@ -17,7 +17,6 @@ import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/
 import { ai } from '@/lib/firebase';
 import { AnimatePresence, motion } from 'framer-motion';
 import UserAvatar from './ui/UserAvatar';
-import MiniAvatar from './ui/MiniAvatar';
 import { useEncryption } from '@/hooks/useEncryption';
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { useMessagePagination } from '@/hooks/useMessagePagination';
@@ -207,12 +206,6 @@ const MessageItem = memo(
                   <span className={styles.replyLabel}>Respondiendo a {message.replyTo.senderName}</span>
                 </div>
                 <div className={styles.replyPreview}>
-                  {/* Mini avatar para el reply */}
-                  <MiniAvatar
-                    imageUrl={message.replyTo.imageUrl}
-                    userName={message.replyTo.senderName}
-                    size="small"
-                  />
                   {message.replyTo.imageUrl && (
                     <Image
                       src={message.replyTo.imageUrl}

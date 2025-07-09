@@ -154,14 +154,22 @@ export function useSharedTasksState(userId: string | undefined) {
           archivedBy: doc.data().archivedBy || '',
         }));
 
-        console.log('[useSharedTasksState] Tasks updated:', {
+        console.log('[useSharedTasksState] Tasks onSnapshot update - IMMEDIATE:', {
           count: tasksData.length,
-          hasStatusChanges: tasksData.some(t => t.status !== 'Por Iniciar')
+          taskIds: tasksData.map(t => t.id),
+          statuses: [...new Set(tasksData.map(t => t.status))],
+          timestamp: new Date().toISOString(),
+          hasStatusChanges: tasksData.some(t => t.status !== 'Por Iniciar'),
+          statusDetails: tasksData.map(t => ({ id: t.id, status: t.status, name: t.name }))
         });
 
         // Actualizar estado inmediatamente sin caché
         setTasks(tasksData);
         setIsLoadingTasks(false);
+        
+        // Forzar refresco adicional para cambios de estado
+        const statusChanges = tasksData.map(t => `${t.id}-${t.status}`).join(',');
+        console.log('[useSharedTasksState] Status changes detected:', statusChanges);
       },
       (error) => {
         console.error('[useSharedTasksState] Error in tasks onSnapshot:', error);

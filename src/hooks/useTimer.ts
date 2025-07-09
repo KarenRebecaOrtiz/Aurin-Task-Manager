@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -15,7 +15,6 @@ export const useTimer = (taskId: string, userId: string) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timerDocRef = useRef(doc(db, `tasks/${taskId}/timers/${userId}`));
-  const lastSyncRef = useRef<number>(0);
   
   const [timerState, setTimerState] = useState<TimerState>({
     isRunning: false,
@@ -25,22 +24,9 @@ export const useTimer = (taskId: string, userId: string) => {
     isRestoring: true,
   });
 
-  // Memoizar funciones para evitar recreaciones
-  const getServerTime = useMemo(() => () => new Date(), []);
-
-  const calculateElapsedTime = useMemo(() => (startTime: Date, currentTime: Date): number => {
-    return Math.max(0, Math.floor((currentTime.getTime() - startTime.getTime()) / 1000));
-  }, []);
-
-  // Función para sincronizar con Firestore - memoizada
+  // Función para sincronizar con Firestore
   const syncToFirestore = useCallback(async (state: TimerState) => {
     try {
-      const now = Date.now();
-      // Evitar sincronizaciones muy frecuentes
-      if (now - lastSyncRef.current < 1000) {
-        return;
-      }
-      
       const firestoreData = {
         userId,
         isRunning: state.isRunning,
@@ -51,14 +37,21 @@ export const useTimer = (taskId: string, userId: string) => {
       };
 
       await setDoc(timerDocRef.current, firestoreData, { merge: true });
-      lastSyncRef.current = now;
       console.log('[useTimer] ✅ Sincronizado con Firestore:', { isRunning: state.isRunning, seconds: state.accumulatedSeconds });
     } catch (error) {
       console.error('[useTimer] ❌ Error sincronizando:', error);
     }
   }, [userId]);
 
-  // Restaurar timer al montar - solo una vez
+  // Función para obtener tiempo del servidor
+  const getServerTime = useCallback(() => new Date(), []);
+
+  // Función para calcular tiempo transcurrido
+  const calculateElapsedTime = useCallback((startTime: Date, currentTime: Date): number => {
+    return Math.max(0, Math.floor((currentTime.getTime() - startTime.getTime()) / 1000));
+  }, []);
+
+  // Restaurar timer al montar
   useEffect(() => {
     const restoreTimer = async () => {
       if (!taskId || !userId) return;
@@ -98,9 +91,9 @@ export const useTimer = (taskId: string, userId: string) => {
     };
 
     restoreTimer();
-  }, [taskId, userId, calculateElapsedTime, getServerTime]); // Solo dependencias esenciales
+  }, [taskId, userId, getServerTime, calculateElapsedTime]);
 
-  // Timer local - actualizar cada segundo - optimizado
+  // Timer local - actualizar cada segundo
   useEffect(() => {
     if (timerState.isRunning && !timerState.isRestoring) {
       intervalRef.current = setInterval(() => {
@@ -122,7 +115,7 @@ export const useTimer = (taskId: string, userId: string) => {
     };
   }, [timerState.isRunning, timerState.isRestoring]);
 
-  // Sincronización periódica cada 5 minutos - optimizada
+  // Sincronización periódica cada 5 minutos
   useEffect(() => {
     if (timerState.isRunning && !timerState.isRestoring) {
       syncIntervalRef.current = setInterval(() => {
@@ -157,9 +150,9 @@ export const useTimer = (taskId: string, userId: string) => {
         syncIntervalRef.current = null;
       }
     };
-  }, [timerState.isRunning, timerState.isRestoring, syncToFirestore, calculateElapsedTime, getServerTime]);
+  }, [timerState.isRunning, timerState.isRestoring, syncToFirestore, getServerTime, calculateElapsedTime]);
 
-  // Listener en tiempo real para sincronización entre dispositivos - optimizado
+  // Listener en tiempo real para sincronización entre dispositivos
   useEffect(() => {
     if (timerState.isRestoring) return;
 
@@ -179,9 +172,9 @@ export const useTimer = (taskId: string, userId: string) => {
         }
         
         setTimerState(prev => {
-          // Solo actualizar si realmente hay cambios significativos
+          // Solo actualizar si realmente hay cambios
           if (prev.isRunning === remoteData.isRunning && 
-              Math.abs(prev.accumulatedSeconds - accumulatedSeconds) < 5) {
+              Math.abs(prev.accumulatedSeconds - accumulatedSeconds) < 2) {
             return prev;
           }
           
@@ -196,9 +189,9 @@ export const useTimer = (taskId: string, userId: string) => {
     });
 
     return () => unsubscribe();
-  }, [taskId, userId, timerState.isRestoring, calculateElapsedTime, getServerTime]); // Dependencias mínimas
+  }, [taskId, userId, timerState.isRestoring, getServerTime, calculateElapsedTime]);
 
-  // Funciones de control del timer - memoizadas
+  // Funciones de control del timer
   const startTimer = useCallback(async () => {
     console.log('[useTimer] 🎯 Iniciando timer...');
     
@@ -289,20 +282,15 @@ export const useTimer = (taskId: string, userId: string) => {
     return finalSeconds;
   }, [userId]);
 
-  // Retornar valores memoizados para evitar re-renders
-  const isTimerRunning = useMemo(() => timerState.isRunning, [timerState.isRunning]);
-  const timerSeconds = useMemo(() => timerState.accumulatedSeconds, [timerState.accumulatedSeconds]);
-  const isRestoringTimer = useMemo(() => timerState.isRestoring, [timerState.isRestoring]);
-
   return {
     timerState,
     startTimer,
     pauseTimer,
     resetTimer,
     finalizeTimer,
-    // Getters memoizados para compatibilidad
-    isTimerRunning,
-    timerSeconds,
-    isRestoringTimer,
+    // Getters para compatibilidad
+    isTimerRunning: timerState.isRunning,
+    timerSeconds: timerState.accumulatedSeconds,
+    isRestoringTimer: timerState.isRestoring,
   };
 }; 
