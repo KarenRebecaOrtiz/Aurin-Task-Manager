@@ -1,8 +1,9 @@
 'use client';
 
 import { useUser } from '@clerk/nextjs';
-import ThemeToggler from '@/components/ui/ThemeToggler';
 import AdviceInput from '@/components/ui/AdviceInput';
+import ToDoDynamic from '@/components/ToDoDynamic';
+import AvailabilityToggle from '@/components/ui/AvailabilityToggle';
 import styles from './Header.module.scss';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
@@ -688,8 +689,12 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        <div ref={iconRef} className={styles.sunMoonWrapper}>
-          <ThemeToggler />
+        <div className={styles.todoContainer}>
+          <ToDoDynamic />
+        </div>
+
+        <div className={styles.availabilityContainer}>
+          <AvailabilityToggle />
         </div>
 
         <div className={styles.notificationContainer}>

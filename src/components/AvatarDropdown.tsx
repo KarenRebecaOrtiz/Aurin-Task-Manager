@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Image from 'next/image';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -9,13 +9,8 @@ import styles from './AvatarDropdown.module.scss';
 import { gsap } from 'gsap';
 import { createPortal } from 'react-dom';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-
-const statusOptions = [
-  { label: 'Disponible', value: 'Disponible', color: '#178d00' },
-  { label: 'Ocupado', value: 'Ocupado', color: '#d32f2f' },
-  { label: 'Por terminar', value: 'Por terminar', color: '#f57c00' },
-  { label: 'Fuera', value: 'Fuera', color: '#616161' },
-];
+import ThemeToggler from '@/components/ui/ThemeToggler';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
   const { user, isLoaded } = useUser();
@@ -27,7 +22,8 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   
   // Usar el hook de estado online
-  const { currentStatus: onlineStatus, updateStatus } = useOnlineStatus();
+  const { currentStatus: onlineStatus } = useOnlineStatus();
+  const { isDarkMode } = useTheme();
 
   // Create portal container
   useEffect(() => {
@@ -60,17 +56,6 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
     return () => unsubscribe();
   }, [user?.id, isLoaded]);
 
-  // Update status in Firestore
-  const handleStatusChange = async (newStatus: string) => {
-    if (!user?.id) return;
-    try {
-      await updateStatus(newStatus);
-      setIsDropdownOpen(false);
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
-  };
-
   // GSAP animation for dropdown
   useEffect(() => {
     if (isDropdownOpen && dropdownRef.current && portalContainer) {
@@ -87,7 +72,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         },
       );
       gsap.fromTo(
-        dropdownRef.current.querySelectorAll(`.${styles.dropdownItem}, .${styles.statusOption}`),
+        dropdownRef.current.querySelectorAll(`.${styles.dropdownItem}`),
         { opacity: 0, y: 10 },
         {
           opacity: 1,
@@ -131,20 +116,34 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   }, []);
 
   // Menu item handlers
-  const handleConfig = () => {
+  const handleConfig = useCallback(() => {
     onChangeContainer('config');
     setIsDropdownOpen(false);
-  };
+  }, [onChangeContainer]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     signOut();
     setIsDropdownOpen(false);
-  };
+  }, [signOut]);
 
-  const currentStatusOption = statusOptions.find((opt) => opt.value === onlineStatus) || statusOptions[0];
+  // Get status color based on current status
+  const getStatusColor = useCallback((status: string) => {
+    switch (status) {
+      case 'Disponible':
+        return '#178d00';
+      case 'Ocupado':
+        return '#d32f2f';
+      case 'Por terminar':
+        return '#f57c00';
+      case 'Fuera':
+        return '#616161';
+      default:
+        return '#178d00';
+    }
+  }, []);
 
   // Calculate dropdown position
-  const getDropdownPosition = () => {
+  const getDropdownPosition = useCallback(() => {
     if (!buttonRef.current) {
       return { top: 0, right: 0 };
     }
@@ -153,11 +152,11 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
       top: rect.bottom + window.scrollY + 8,
       right: window.innerWidth - rect.right,
     };
-  };
+  }, []);
 
   const dropdownPosition = getDropdownPosition();
 
-  const DropdownMenu = () => {
+  const dropdownMenuContent = useMemo(() => {
     return (
       <div
         ref={dropdownRef}
@@ -168,28 +167,29 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
           width: '220px',
         }}
       >
-        {/* Estados Section */}
-        <div className={styles.sectionLabel}>Estados</div>
-        {statusOptions.map((option) => (
-          <div
-            key={option.value}
-            className={`${styles.statusOption} ${option.value.replace(' ', '_')}`}
-            onClick={() => handleStatusChange(option.value)}
-            role="option"
-            aria-selected={onlineStatus === option.value}
-          >
-            <div
-              className={styles.statusDot}
-              style={{ backgroundColor: option.color }}
-            />
-            {option.label}
-          </div>
-        ))}
-        
-        <div className={styles.separator} />
-        
         {/* Configuración Section */}
         <div className={styles.sectionLabel}>Configuración</div>
+        
+        {/* Theme Toggle */}
+        <div className={styles.dropdownItem}>
+          <div className={styles.dropdownItemContent}>
+            <Image
+              src={isDarkMode ? "/sun.svg" : "/moon.svg"}
+              alt="Tema"
+              width={16}
+              height={16}
+              className={styles.dropdownIcon}
+              style={{
+                filter: isDarkMode ? 'brightness(0) invert(1)' : 'none',
+              }}
+            />
+            <span>Tema</span>
+          </div>
+          <div className={styles.themeToggleContainer}>
+            <ThemeToggler />
+          </div>
+        </div>
+        
         <button onClick={handleConfig} className={styles.dropdownItem}>
           <Image
             src="/settings.svg"
@@ -212,7 +212,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         </button>
       </div>
     );
-  };
+  }, [dropdownPosition, handleConfig, handleLogout, isDarkMode]);
 
   return (
     <div className={styles.avatarContainer}>
@@ -237,10 +237,10 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         )}
         <div
           className={styles.statusDot}
-          style={{ backgroundColor: currentStatusOption.color }}
+          style={{ backgroundColor: getStatusColor(onlineStatus) }}
         />
       </button>
-      {isDropdownOpen && portalContainer && createPortal(<DropdownMenu />, portalContainer)}
+      {isDropdownOpen && portalContainer && createPortal(dropdownMenuContent, portalContainer)}
     </div>
   );
 };

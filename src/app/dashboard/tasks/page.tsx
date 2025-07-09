@@ -43,7 +43,7 @@ import Dock from '@/components/Dock';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import ToDoDynamic from '@/components/ToDoDynamic';
+
 import DeletePopup from '@/components/DeletePopup';
 import FailAlert from '@/components/FailAlert';
 import SuccessAlert from '@/components/SuccessAlert';
@@ -239,13 +239,8 @@ function TasksPageContent() {
   }, [user?.id]);
 
   const handleClientsTableCacheUpdate = useCallback((updatedClients: Client[]) => {
-    // No need to update clients state directly as it will be handled by onSnapshot
-    console.log('[TasksPage] Clients table cache updated:', updatedClients.length);
-  }, []);
-
-  const handleMembersTableCacheUpdate = useCallback((updatedUsers: User[]) => {
-    // No need to update users state directly as it will be handled by onSnapshot
-    console.log('[TasksPage] Members table cache updated:', updatedUsers.length);
+    // Actualizar el cache global si es necesario
+    console.log('[TasksPage] Clients cache updated:', updatedClients.length);
   }, []);
 
   const handleDataRefresh = useCallback(async () => {
@@ -601,7 +596,8 @@ function TasksPageContent() {
           {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
             <MembersTable
               onMessageSidebarOpen={handleMessageSidebarOpen}
-              onCacheUpdate={handleMembersTableCacheUpdate}
+              externalUsers={users}
+              externalTasks={tasks}
             />
           )}
 
@@ -762,7 +758,6 @@ function TasksPageContent() {
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
       <Dock />
-      <ToDoDynamic/>
       <Footer />
       {isDeletePopupOpen && deleteTarget && (
         <DeletePopup

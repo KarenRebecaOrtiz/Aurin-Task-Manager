@@ -257,18 +257,18 @@ const insertDatePills = (messages: Message[]): Message[] => {
       if (messagesForCurrentDate.length > 0) {
         result.push(...messagesForCurrentDate);
         // Agregar el datepill al FINAL de los mensajes del día
-        result.push({
+      result.push({
           id: `date-${currentDate}`,
-          senderId: 'system',
-          senderName: 'system',
+        senderId: 'system',
+        senderName: 'system',
           text: formatDateForPill(new Date(currentDate)),
           timestamp: messagesForCurrentDate[0].timestamp,
-          read: true,
+        read: true,
           clientId: `date-${currentDate}`,
-          isDatePill: true,
-        });
-      }
-      
+        isDatePill: true,
+      });
+    }
+
       // Iniciar nuevo grupo para la nueva fecha
       currentDate = dateString;
       messagesForCurrentDate = [message];

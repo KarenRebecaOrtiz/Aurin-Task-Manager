@@ -28,10 +28,11 @@ interface TableProps<T extends HasId> {
   onRowClick?: (item: T, columnKey: string) => void;
   getRowClassName?: (item: T) => string;
   emptyStateType?: 'tasks' | 'archive' | 'clients' | 'members' | 'team';
+  className?: string;
 }
 
 const Table = memo(
-  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick, getRowClassName, emptyStateType }: TableProps<T>) => {
+  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick, getRowClassName, emptyStateType, className }: TableProps<T>) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isMobile, setIsMobile] = useState(false);
     const tableRef = useRef<HTMLDivElement>(null);
@@ -167,7 +168,7 @@ const Table = memo(
     };
 
     return (
-      <div className={styles.tableContainer}>
+      <div className={`${styles.tableContainer} ${className || ''}`}>
         <div ref={tableRef} className={styles.table}>
           <div className={styles.header}>
             {columns.map((column) => (
@@ -268,7 +269,8 @@ const Table = memo(
       prevProps.onSort === nextProps.onSort &&
       prevProps.onRowClick === nextProps.onRowClick &&
       prevProps.getRowClassName === nextProps.getRowClassName &&
-      prevProps.emptyStateType === nextProps.emptyStateType
+      prevProps.emptyStateType === nextProps.emptyStateType &&
+      prevProps.className === nextProps.className
     );
   },
 );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -41,84 +41,17 @@ interface MembersTableProps {
   onMessageSidebarOpen: (user: User) => void;
   externalUsers?: User[];
   externalTasks?: Task[];
-  onCacheUpdate?: (users: User[], tasks: Task[]) => void;
 }
 
-// Cache implementation - ELIMINAR CACHÉ DE TAREAS
-const membersTableCache = {
-  users: new Map<string, { data: User[]; timestamp: number }>(),
-  listeners: new Map<string, { users: (() => void) | null; tasks: (() => void) | null }>(),
-};
-
-// Cache duration in milliseconds (5 minutes)
-const CACHE_DURATION = 5 * 60 * 1000;
-
-function getCacheKey(type: 'users', userId: string) {
-  return `${type}_${userId}`;
-}
-
-function saveUsersCache(userId: string, data: User[]) {
-  const key = getCacheKey('users', userId);
-  const value = JSON.stringify({ data, timestamp: Date.now() });
-  try {
-    localStorage.setItem(key, value);
-    membersTableCache.users.set(key, { data, timestamp: Date.now() });
-    console.log(`[MembersTable] [CACHE] Saved users to localStorage (${data.length})`);
-  } catch (e) {
-    console.warn(`[MembersTable] [CACHE] Error saving users to localStorage`, e);
-  }
-}
-
-function loadUsersCache(userId: string): User[] | null {
-  const key = getCacheKey('users', userId);
-  if (membersTableCache.users.has(key)) {
-    const cached = membersTableCache.users.get(key);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log(`[MembersTable] [CACHE] Using in-memory users cache (${cached.data.length})`);
-      return cached.data;
-    }
-  }
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && Date.now() - parsed.timestamp < CACHE_DURATION) {
-        membersTableCache.users.set(key, { data: parsed.data, timestamp: parsed.timestamp });
-        console.log(`[MembersTable] [CACHE] Using localStorage users cache (${parsed.data.length})`);
-        return parsed.data;
-      } else {
-        localStorage.removeItem(key);
-        membersTableCache.users.delete(key);
-        console.log(`[MembersTable] [CACHE] Expired users cache removed`);
-      }
-    }
-  } catch (e) {
-    console.warn(`[MembersTable] [CACHE] Error loading users from localStorage`, e);
-  }
-  return null;
-}
-
-// Función para limpiar listeners cuando sea necesario (ej: logout)
-export const cleanupMembersTableListeners = () => {
-  console.log('[MembersTable] Cleaning up all listeners');
-  membersTableCache.listeners.forEach((listener) => {
-    if (listener.users) {
-      listener.users();
-    }
-  });
-  membersTableCache.listeners.clear();
-  membersTableCache.users.clear();
-};
+// (Eliminar definiciones de getCacheKey, saveUsersCache, loadUsersCache, cleanupMembersTableListeners)
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ onMessageSidebarOpen, externalUsers, externalTasks, onCacheUpdate }) => {
+  ({ onMessageSidebarOpen, externalUsers, externalTasks }) => {
     const { user } = useUser();
     const { isLoading } = useAuth();
     const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
     
     // Estados optimizados con refs para evitar re-renders
-    const usersRef = useRef<User[]>([]);
-    const tasksRef = useRef<Task[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -132,39 +65,37 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const effectiveUsers = externalUsers || users;
     const effectiveTasks = externalTasks || tasks;
     
-    // Setup inicial de usuarios usando API (igual que en tasks/page.tsx)
+    // Debug logs para verificar el estado de los usuarios
+    console.log('[MembersTable] Debug - effectiveUsers:', effectiveUsers?.length, 'externalUsers:', externalUsers?.length, 'users:', users.length);
+    console.log('[MembersTable] Debug - effectiveTasks:', effectiveTasks?.length, 'externalTasks:', externalTasks?.length, 'tasks:', tasks.length);
+    
+    // Memoizar los callbacks para evitar re-renders
+    const handleMessageSidebarOpen = useCallback((user: User) => {
+      onMessageSidebarOpen(user);
+    }, [onMessageSidebarOpen]);
+    
+    // Setup inicial de usuarios usando API (solo si no hay datos externos)
     useEffect(() => {
       if (!user?.id) {
         setIsLoadingUsers(false);
         return;
       }
       
-      // Intentar hidratar desde cache
-      const cached = loadUsersCache(user.id);
-      if (cached) {
-        usersRef.current = cached;
-        setUsers([...cached]);
+      // Si tenemos datos externos, usarlos y no hacer fetch
+      if (externalUsers) {
+        console.log('[MembersTable] Using external users:', externalUsers.length);
+        setUsers(externalUsers);
         setIsLoadingUsers(false);
-        console.log('[MembersTable] Using cached users:', cached.length);
-        
-        // Pasar datos al cache global
-        if (onCacheUpdate) {
-          onCacheUpdate(cached, tasksRef.current);
-        }
         return;
       }
       
-      // Si no hay cache válido, fetch desde API
       setIsLoadingUsers(true);
-      
       const fetchUsers = async () => {
         try {
           console.log('[MembersTable] Fetching users: imageUrl from Clerk API, other data from Firestore');
-          
           // 1. Obtener imageUrl de Clerk
           const response = await fetch('/api/users');
           if (!response.ok) throw new Error('Failed to fetch users from Clerk');
-          
           const clerkUsers: {
             id: string;
             imageUrl?: string;
@@ -172,7 +103,6 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             lastName?: string;
             publicMetadata: { role?: string };
           }[] = await response.json();
-          
           // Crear un mapa de imageUrls de Clerk
           const clerkImageMap = new Map<string, string>();
           clerkUsers.forEach(clerkUser => {
@@ -180,27 +110,53 @@ const MembersTable: React.FC<MembersTableProps> = memo(
               clerkImageMap.set(clerkUser.id, clerkUser.imageUrl);
             }
           });
-          
           // 2. Obtener todos los demás datos de Firestore
           const usersQuery = query(collection(db, 'users'));
           const firestoreSnapshot = await getDocs(usersQuery);
-          
           const usersData: User[] = firestoreSnapshot.docs.map((doc) => {
             const userData = doc.data();
             return {
               id: doc.id,
-              imageUrl: userData.imageUrl || clerkImageMap.get(doc.id) || '', // Firestore first, then Clerk
-              fullName: userData.fullName || userData.name || 'Sin nombre', // de Firestore
-              role: userData.role || 'Sin rol', // de Firestore
-              description: userData.description || '', // de Firestore
-              status: userData.status || 'offline', // de Firestore
+              imageUrl: userData.imageUrl || clerkImageMap.get(doc.id) || '',
+              fullName: userData.fullName || userData.name || 'Sin nombre',
+              role: userData.role || 'Sin rol',
+              description: userData.description || '',
+              status: userData.status || 'offline',
             };
           });
-          
           setUsers(usersData);
-          saveUsersCache(user.id, usersData);
-          
-          // También obtener datos de tareas si es necesario
+          console.log('[MembersTable] Users fetched:', {
+            users: usersData.length,
+            usersWithImages: usersData.filter(u => u.imageUrl).length
+          });
+        } catch (error) {
+          console.error('[MembersTable] Error fetching users:', error);
+          setUsers([]);
+        } finally {
+          setIsLoadingUsers(false);
+        }
+      };
+      fetchUsers();
+    }, [user?.id, externalUsers]);
+
+    // Setup de tareas (solo si no hay datos externos)
+    useEffect(() => {
+      if (!user?.id) {
+        setIsLoadingTasks(false);
+        return;
+      }
+      
+      // Si tenemos datos externos, usarlos y no hacer fetch
+      if (externalTasks) {
+        console.log('[MembersTable] Using external tasks:', externalTasks.length);
+        setTasks(externalTasks);
+        setIsLoadingTasks(false);
+        return;
+      }
+      
+      setIsLoadingTasks(true);
+      const fetchTasks = async () => {
+        try {
           const tasksQuery = query(collection(db, 'tasks'));
           const tasksSnapshot = await getDocs(tasksQuery);
           const tasksData: Task[] = tasksSnapshot.docs.map((doc) => ({
@@ -218,43 +174,16 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             createdAt: doc.data().createdAt ? doc.data().createdAt.toDate().toISOString() : new Date().toISOString(),
             CreatedBy: doc.data().CreatedBy || '',
           }));
-          
           setTasks(tasksData);
-          
-          // Pasar datos al cache global
-          if (onCacheUpdate) {
-            onCacheUpdate(usersData, tasksData);
-          }
-          
-          console.log('[MembersTable] Users and tasks fetched and cached:', {
-            users: usersData.length,
-            usersWithImages: usersData.filter(u => u.imageUrl).length,
-            tasks: tasksData.length
-          });
+          console.log('[MembersTable] Tasks fetched:', tasksData.length);
         } catch (error) {
-          console.error('[MembersTable] Error fetching users:', error);
-          setUsers([]);
+          console.error('[MembersTable] Error fetching tasks:', error);
           setTasks([]);
         } finally {
-          setIsLoadingUsers(false);
+          setIsLoadingTasks(false);
         }
       };
-
-      fetchUsers();
-    }, [user?.id, onCacheUpdate]);
-
-    // Setup de tareas con cache optimizado (reutilizar listeners existentes) - ELIMINAR
-    useEffect(() => {
-      if (!user?.id || externalTasks) return;
-      
-      console.log('[MembersTable] Using shared tasks state - no duplicate onSnapshot');
-      
-      // No establecer onSnapshot aquí - usar siempre externalTasks del hook compartido
-      if (externalTasks) {
-        console.log('[MembersTable] Using external tasks from shared state:', externalTasks.length);
-        setTasks(externalTasks);
-        setIsLoadingTasks(false);
-      }
+      fetchTasks();
     }, [user?.id, externalTasks]);
 
     // Calcular proyectos activos por usuario (memoizado)
@@ -429,7 +358,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
                   console.error('[MembersTable] Error marking conversation as read:', error);
                 }
               }
-              onMessageSidebarOpen(u);
+              handleMessageSidebarOpen(u);
             }
           }}
           emptyStateType="members"

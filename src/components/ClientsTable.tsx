@@ -277,26 +277,26 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         {
           key: 'imageUrl',
           label: '',
-          width: '20%',
+          width: '15%',
           mobileVisible: false,
         },
         {
           key: 'name',
           label: 'Cuentas',
-          width: '80%',
+          width: '45%',
           mobileVisible: true,
           mobileWidth: '50%',
         },
         {
           key: 'projectCount',
           label: 'Proyectos Asignados',
-          width: '20%',
+          width: '25%',
           mobileVisible: false,
         },
         {
           key: 'action',
           label: 'Acciones',
-          width: '20%',
+          width: '15%',
           mobileVisible: true,
           mobileWidth: '50%',
         },
@@ -717,6 +717,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
               sortDirection={sortDirection}
               onSort={handleSort}
               emptyStateType="clients"
+              className="clients-table"
             />
           </>
         )}

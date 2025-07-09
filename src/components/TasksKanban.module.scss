@@ -715,6 +715,14 @@
   font-size: 12px;
   font-weight: 500;
   opacity: 0.8;
+
+  @include dark-mode {
+    color: $color-text-dark-primary;
+    
+    img {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
 }
 
 .taskName {

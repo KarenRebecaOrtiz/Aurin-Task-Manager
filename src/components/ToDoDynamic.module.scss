@@ -5,12 +5,14 @@
 // 🔮 DYNAMIC ISLAND TODO - STANDARDIZED STYLES
 // =================================================================
 
-.dynamicIslandTodo {
-  position: fixed;
-  left: 50%;
+.todoButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 50px;
+  height: 50px;
   border-radius: $radius-2xl !important;
-  top: 40px;
-  transform: translateX(-50%);
   opacity: 0.8;
   z-index: 50;
   padding: $spacing-sm;
@@ -37,6 +39,15 @@
     @include neomorphic-inset(light);
   }
 
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    filter: invert(0%) brightness(100%);
+  }
+
   @include dark-mode {
     background: rgba(30, 30, 30, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
@@ -55,193 +66,51 @@
       @include neomorphic-inset(dark);
     }
 
-    .inputIcon,
-    .addButton svg {
+    svg {
       filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
     }
   }
 }
 
-.container {
-  height: 100%;
-  overflow: hidden;
-  border-radius: inherit;
-  background: transparent;
-}
-
-.header {
-  padding: $spacing-sm;
-  @include flex-center;
-  height: 100%;
-}
-
-.counters {
-  @include flex-center;
-  gap: $spacing-sm;
-  height: 100%;
-}
-
-.remainingCount,
-.completedCount {
-  border-radius: $radius-full;
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  @include flex-center;
-  @include typography($text-xs, $font-weight-medium);
-}
-
-.remainingCount {
-  background-color: $color-btn-primary;
-  color: $white;
-}
-
-.completedCount {
-  background-color: $zinc-500;
-  color: $white;
-}
-
-.expandedContent {
-  padding: $spacing-lg;
-}
-
-.inputContainer {
-  @include flex-center;
-  margin-bottom: $spacing-lg;
-}
-
-.inputWrapper {
-  position: relative;
-  flex-grow: 1;
-  margin-right: $spacing-sm;
-}
-
-.input {
-  width: 100%;
-  background-color: transparent;
-  color: $color-text-primary;
-  padding: $spacing-md $spacing-md $spacing-md 34px;
-  border-radius: $radius-xl;
-  height: 40px;
-  transition: border-color 0.2s;
-  @include typography($text-sm, $font-weight-normal);
-  backdrop-filter: blur(4px);
-
-  &::placeholder {
-    color: $color-text-muted;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.4);
-  }
-}
-
-.inputIcon {
-  position: absolute;
-  left: $spacing-md;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: $color-text-primary;
-}
-
-.addButton {
-  background-color: rgba(252, 252, 252, 0.688);
-  color: $color-text-muted;
-  border: white solid 1px;
-  padding: 0 $spacing-md;
-  height: 40px;
-  border-radius: $radius-xl;
-  @include flex-center;
-  transition: all 0.15s ease-in-out;
-  backdrop-filter: blur(4px);
-
-  &:hover {
-    background-color: rgba(223, 223, 223, 0.8);
-    color: $color-text-primary;
-    border-color: rgba(255, 255, 255, 0.4);
-  }
-}
-
-.todoList {
-  max-height: 240px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-
-  &::-webkit-scrollbar {
-    width: 3px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-  }
-}
-
-.todoItem {
-  @include flex-between;
-  margin-bottom: $spacing-sm;
-}
-
-.todoText {
-  flex-grow: 1;
-  @include typography($text-sm, $font-weight-normal);
-
-  &.active {
-    color: $color-text-primary;
-  }
-
-  &.completed {
-    color: $color-text-muted;
-    text-decoration: line-through;
-    text-decoration-color: $color-text-muted;
-  }
-}
-
-.todoActions {
-  @include flex-center;
-  background-color: rgba(242, 242, 242, 0.8);
-  border-radius: $radius-sm;
-  backdrop-filter: blur(4px);
-}
-
-.actionButton {
-  background-color: rgba(252, 252, 252, 0.688);
-  color: $color-text-muted;
-  border: white solid 1px;
-  padding: 0 $spacing-md;
-  height: 40px;
-  border-radius: $radius-xl;
-  @include flex-center;
-  transition: all 0.15s ease-in-out;
-  backdrop-filter: blur(4px);
-
-  &:hover {
-    background-color: rgba(223, 223, 223, 0.8);
-    color: $color-text-primary;
-    border-color: rgba(255, 255, 255, 0.4);
-  }
-}
-
-.separator {
-  width: 1px;
+.todoNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
   height: 20px;
-  background-color: rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+  font-weight: 600;
+  color: $color-text-primary;
+  line-height: 1;
+
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
 }
 
-@include responsive(sm) {
-  .dynamicIslandTodo {
-    --di-collapsed-width: 200px;
-    --di-expanded-width: 90vw;
-    --di-collapsed-height: 36px;
-    --di-border-radius: 28px;
-    top: 10px;
+.todoCount {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background: $color-btn-primary;
+  color: $white;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border: 2px solid rgba(241, 245, 249, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  @include dark-mode {
+    background: $color-btn-primary;
+    border-color: rgba(30, 30, 30, 0.9);
   }
 }

@@ -703,6 +703,11 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
   }) => {
     const { user } = useUser();
     const { isAdmin } = useAuth();
+    
+    // Memoizar los callbacks para evitar re-renders
+    const handleNewTaskOpen = useCallback(() => {
+      onNewTaskOpen();
+    }, [onNewTaskOpen]);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [priorityFilter, setPriorityFilter] = useState<string>('');
@@ -1095,7 +1100,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       };
     }, []);
 
-    const animateClick = (element: HTMLElement) => {
+    const animateClick = useCallback((element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
         opacity: 0.8,
@@ -1105,9 +1110,9 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         repeat: 1,
       });
       console.log('[TasksKanban] Click animation triggered');
-    };
+    }, []);
 
-    const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const handlePrioritySelect = useCallback((priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       
       // Animate filter change
@@ -1126,9 +1131,9 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       console.log('[TasksKanban] Priority filter selected:', priority);
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
-    };
+    }, [animateClick]);
 
-    const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const handleClientSelect = useCallback((clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       animateClick(e.currentTarget);
       
       // Animate filter change
@@ -1147,7 +1152,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       console.log('[TasksKanban] Client filter selected:', clientId);
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
-    };
+    }, [animateClick]);
 
     // Helper function to get involved user IDs
     const getInvolvedUserIds = useCallback((task: Task) => {
@@ -1395,7 +1400,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           setSearchQuery={setSearchQuery}
           onViewChange={onViewChange}
           onArchiveTableOpen={onArchiveTableOpen}
-          onNewTaskOpen={onNewTaskOpen}
+          onNewTaskOpen={handleNewTaskOpen}
           priorityFilter={priorityFilter}
           clientFilter={clientFilter}
           userFilter={userFilter}

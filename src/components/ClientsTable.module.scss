@@ -805,3 +805,115 @@ $font-family-table: "Urbanist", sans-serif;
     width: 100%;
   }
 }
+
+// ==============================================================
+// 🔮 CLIENTS TABLE SPECIFIC LAYOUT - 4 COLUMNS
+// =================================================================
+
+// Specific column widths for ClientsTable
+:global(.clients-table) {
+  .headerCell {
+    &:nth-child(1) { // Foto
+      width: 15% !important;
+      min-width: 80px;
+      max-width: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    &:nth-child(2) { // Cuentas
+      width: 45% !important;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: start;
+    }
+    
+    &:nth-child(3) { // Proyectos Asignados
+      width: 25% !important;
+      min-width: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: start;
+    }
+    
+    &:nth-child(4) { // Acciones
+      width: 15% !important;
+      min-width: 80px;
+      max-width: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+  
+  .cell {
+    &:nth-child(1) { // Foto
+      width: 15% !important;
+      min-width: 80px;
+      max-width: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    &:nth-child(2) { // Cuentas
+      width: 45% !important;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: start;
+    }
+    
+    &:nth-child(3) { // Proyectos Asignados
+      width: 25% !important;
+      min-width: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: start;
+    }
+    
+    &:nth-child(4) { // Acciones
+      width: 15% !important;
+      min-width: 80px;
+      max-width: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// Mobile responsive adjustments for ClientsTable
+@media (max-width: 768px) {
+  :global(.clients-table) {
+    .headerCell {
+      &:nth-child(1), &:nth-child(3) { // Hide Foto and Proyectos on mobile
+        display: none !important;
+      }
+      
+      &:nth-child(2) { // Cuentas
+        width: 60% !important;
+      }
+      
+      &:nth-child(4) { // Acciones
+        width: 40% !important;
+      }
+    }
+    
+    .cell {
+      &:nth-child(1), &:nth-child(3) { // Hide Foto and Proyectos on mobile
+        display: none !important;
+      }
+      
+      &:nth-child(2) { // Cuentas
+        width: 60% !important;
+      }
+      
+      &:nth-child(4) { // Acciones
+        width: 40% !important;
+      }
+    }
+  }
+}

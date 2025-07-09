@@ -1,0 +1,463 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.dropdownOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.dropdown {
+  position: fixed;
+  width: 320px;
+  max-height: 500px;
+  background: rgba(241, 245, 249, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: $radius-xl;
+  box-shadow: 
+    -8px -8px 16px rgba(255, 255, 255, 0.8),
+    8px 8px 16px rgba(0, 0, 0, 0.05),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: visible;
+  pointer-events: auto;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+
+  @include dark-mode {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 
+      -8px -8px 16px rgba(0, 0, 0, 0.3),
+      8px 8px 16px rgba(0, 0, 0, 0.2),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+      inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.dropdownHeader {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+
+  @include dark-mode {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.dropdownTitle {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: $color-text-primary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+.todoStats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: $color-text-secondary;
+
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+  }
+}
+
+.remainingCount {
+  color: $color-btn-primary;
+  font-weight: 500;
+
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+.completedCount {
+  color: $color-text-muted;
+
+  @include dark-mode {
+    color: $color-text-dark-muted;
+  }
+}
+
+.inputContainer {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  @include dark-mode {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.inputWrapper {
+  position: relative;
+  flex: 1;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: $radius-lg;
+  background: rgba(255, 255, 255, 0.8);
+  color: $color-text-primary;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 
+      -2px -2px 4px rgba(255, 255, 255, 0.8),
+      2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &.inputError {
+    border-color: #ef4444;
+    background: rgba(254, 242, 242, 0.9);
+    box-shadow: 
+      -2px -2px 4px rgba(254, 242, 242, 0.8),
+      2px 2px 4px rgba(239, 68, 68, 0.1);
+
+    &:focus {
+      border-color: #dc2626;
+      background: rgba(254, 242, 242, 0.95);
+      box-shadow: 
+        -2px -2px 4px rgba(254, 242, 242, 0.8),
+        2px 2px 4px rgba(239, 68, 68, 0.2);
+    }
+
+    @include dark-mode {
+      border-color: #f87171;
+      background: rgba(30, 30, 30, 0.9);
+      box-shadow: 
+        -2px -2px 4px rgba(0, 0, 0, 0.3),
+        2px 2px 4px rgba(248, 113, 113, 0.2);
+
+      &:focus {
+        border-color: #fca5a5;
+        background: rgba(30, 30, 30, 0.95);
+        box-shadow: 
+          -2px -2px 4px rgba(0, 0, 0, 0.3),
+          2px 2px 4px rgba(248, 113, 113, 0.3);
+      }
+    }
+  }
+
+  @include dark-mode {
+    background: rgba(30, 30, 30, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: $color-text-dark-primary;
+
+    &::placeholder {
+      color: $color-text-dark-muted;
+    }
+
+    &:focus {
+      border-color: rgba(255, 255, 255, 0.4);
+      background: rgba(30, 30, 30, 0.9);
+      box-shadow: 
+        -2px -2px 4px rgba(0, 0, 0, 0.3),
+        2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+.inputIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: $color-text-muted;
+  pointer-events: none;
+
+  @include dark-mode {
+    color: $color-text-dark-muted;
+  }
+}
+
+.errorMessage {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: $radius-sm;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  @include dark-mode {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: #f87171;
+    color: #fca5a5;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: $radius-lg;
+  background: rgba(255, 255, 255, 0.8);
+  color: $color-text-primary;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: $color-btn-primary;
+    transform: translateY(-1px);
+    box-shadow: 
+      -2px -2px 4px rgba(255, 255, 255, 0.8),
+      2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 
+      inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  @include dark-mode {
+    background: rgba(30, 30, 30, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: $color-text-dark-primary;
+
+    &:hover:not(:disabled) {
+      background: rgba(30, 30, 30, 0.9);
+      border-color: rgba(255, 255, 255, 0.4);
+      color: $color-btn-primary;
+      box-shadow: 
+        -2px -2px 4px rgba(0, 0, 0, 0.3),
+        2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    &:active:not(:disabled) {
+      box-shadow: 
+        inset -2px -2px 4px rgba(0, 0, 0, 0.3),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+.todoListContainer {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 300px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+
+  @include dark-mode {
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+.todoList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.todoItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  @include dark-mode {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+.todoText {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+  transition: all 0.2s ease;
+
+  &.active {
+    color: $color-text-primary;
+
+    @include dark-mode {
+      color: $color-text-dark-primary;
+    }
+  }
+
+  &.completed {
+    color: $color-text-muted;
+    text-decoration: line-through;
+    text-decoration-color: $color-text-muted;
+
+    @include dark-mode {
+      color: $color-text-dark-muted;
+      text-decoration-color: $color-text-dark-muted;
+    }
+  }
+}
+
+.todoActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: $radius-sm;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  @include dark-mode {
+    background: rgba(30, 30, 30, 0.8);
+  }
+}
+
+.todoItem:hover .todoActions {
+  opacity: 1;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: $color-text-primary;
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+
+  @include dark-mode {
+    color: $color-text-dark-secondary;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-dark-primary;
+    }
+  }
+}
+
+.separator {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 2px;
+
+  @include dark-mode {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .dropdown {
+    width: calc(100vw - 32px);
+    max-width: 400px;
+    left: 16px;
+    right: 16px;
+    margin: 0 auto;
+  }
+
+  .dropdownHeader {
+    padding: 20px 24px 16px;
+  }
+
+  .inputContainer {
+    padding: 20px 24px;
+  }
+
+  .todoItem {
+    padding: 16px 24px;
+  }
+
+  .todoActions {
+    opacity: 1;
+  }
+} 

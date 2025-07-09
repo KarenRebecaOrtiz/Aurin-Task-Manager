@@ -189,6 +189,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     const { user } = useUser();
     const { isAdmin, isLoading } = useAuth();
     
+    // Memoizar los callbacks para evitar re-renders
+    const handleNewTaskOpen = useCallback(() => {
+      onNewTaskOpen();
+    }, [onNewTaskOpen]);
+    
 
 
 
@@ -237,41 +242,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(
     // Usar un ref para trackear los IDs de tareas en lugar del array completo
     const effectiveTasksIds = useMemo(() => effectiveTasks.map(t => t.id).join(','), [effectiveTasks]);
 
-    // Extraer expresión compleja de dependencias
-    const statusChangesString = useMemo(() => effectiveTasks.map(t => t.status).join(','), [effectiveTasks]);
 
-    // Agregar logging para debuggear cambios de estado
-    useEffect(() => {
-      console.log('[TasksTable] Effective tasks updated:', {
-        count: effectiveTasks.length,
-        taskIds: effectiveTasks.map(t => t.id),
-        statuses: effectiveTasks.map(t => ({ id: t.id, status: t.status, name: t.name })),
-        timestamp: new Date().toISOString(),
-        hasExternalTasks: !!externalTasks
-      });
-    }, [effectiveTasks, externalTasks]);
 
-    // Forzar refresco cuando cambie el estado de cualquier tarea
+    // Logging optimizado - solo cuando hay cambios reales
     useEffect(() => {
-      const statusChanges = effectiveTasks.map(t => `${t.id}-${t.status}`).join(',');
-      console.log('[TasksTable] Status changes detected:', statusChanges);
-      
-      // Forzar re-render del componente
-      setFilteredTasks([...effectiveTasks]);
-      
-      // Forzar re-render adicional para cambios de estado
       if (effectiveTasks.length > 0) {
-        const hasStatusChanges = effectiveTasks.some(task => 
-          task.status && task.status !== 'Por Iniciar'
-        );
-        
-        if (hasStatusChanges) {
-          console.log('[TasksTable] Forcing immediate re-render due to status changes');
-          // Forzar re-render del componente
-          setFilteredTasks([...effectiveTasks]);
-        }
+        console.log('[TasksTable] Effective tasks updated:', {
+          count: effectiveTasks.length,
+          taskIds: effectiveTasks.map(t => t.id),
+          hasExternalTasks: !!externalTasks
+        });
       }
-    }, [statusChangesString, effectiveTasks]);
+    }, [effectiveTasksIds, externalTasks, effectiveTasks]);
 
     // Usar el hook de notificaciones simplificado
     const { getUnreadCount, markAsViewed } = useTaskNotifications();
@@ -1499,7 +1481,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(
                 className={styles.createButton}
                 onClick={(e) => {
                   animateClick(e.currentTarget);
-                  onNewTaskOpen();
+                  handleNewTaskOpen();
                   console.log('[TasksTable] New task creation triggered');
                 }}
               >

@@ -66,6 +66,14 @@
     @include flex-center;
     gap: $spacing-sm;
   }
+
+  .todoContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 50;
+  }
   
   .adminButtonWrapper {
     display: inline-block;
@@ -256,6 +264,14 @@
     }
   }
   
+  .availabilityContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 50;
+  }
+  
   .notificationContainer {
     position: relative;
     z-index: 1000;
@@ -265,7 +281,6 @@
     @include flex-center;
     width: 50px;
     height: 50px;
-    padding: 30px;
     border-radius: $radius-2xl;
     border: 1px solid $color-border-subtle;
     cursor: pointer;

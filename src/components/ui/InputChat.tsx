@@ -10,6 +10,7 @@ import NumberFlow, { NumberFlowGroup } from '@number-flow/react';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
 import TimerPanel from './TimerPanel';
+import MiniAvatar from './MiniAvatar';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -547,6 +548,12 @@ export default function InputChat({
               </button>
             </div>
             <div className={styles.replyPreview}>
+              {/* Mini avatar para el reply */}
+              <MiniAvatar
+                imageUrl={effectiveReplyingTo.imageUrl}
+                userName={effectiveReplyingTo.senderName}
+                size="tiny"
+              />
               {effectiveReplyingTo.imageUrl && <Image src={effectiveReplyingTo.imageUrl} alt="Imagen" width={40} height={40} className={styles.replyImage} draggable="false" onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />}
               {effectiveReplyingTo.text && (
                 <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(effectiveReplyingTo.text.length > 50 ? `${effectiveReplyingTo.text.substring(0, 50)}...` : effectiveReplyingTo.text, { allowedTags: ['strong', 'em', 'u', 'code'], allowedAttributes: { '*': ['style', 'class'] }, transformTags: { 'strong': (_, attribs) => ({ tagName: 'strong', attribs: { ...attribs, style: `font-weight: bold; ${attribs.style || ''}` } }), 'em': (_, attribs) => ({ tagName: 'em', attribs: { ...attribs, style: `font-style: italic; ${attribs.style || ''}` } }), 'u': (_, attribs) => ({ tagName: 'u', attribs: { ...attribs, style: `text-decoration: underline; ${attribs.style || ''}` } }), 'code': (_, attribs) => ({ tagName: 'code', attribs: { ...attribs, style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}` } }) } }) }} />

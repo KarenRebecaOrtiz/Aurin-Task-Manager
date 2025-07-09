@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 export const useTheme = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -37,5 +37,14 @@ export const useTheme = () => {
     };
   }, []);
 
-  return { isDarkMode };
+  const toggleTheme = useCallback(() => {
+    setIsDarkMode(prev => !prev);
+  }, []);
+
+  const themeValue = useMemo(() => ({
+    isDarkMode,
+    toggleTheme,
+  }), [isDarkMode, toggleTheme]);
+
+  return themeValue;
 }; 

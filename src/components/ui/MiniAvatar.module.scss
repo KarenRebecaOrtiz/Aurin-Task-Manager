@@ -1,0 +1,116 @@
+/* ==============================================================
+   MINI AVATAR - COMPONENTE ESPECÍFICO PARA REPLIES
+   ============================================================== */
+
+.miniAvatar {
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(241, 245, 249, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Size variants */
+.tiny {
+  width: 16px;
+  height: 16px;
+  
+  .miniAvatarPlaceholder {
+    font-size: 8px;
+  }
+}
+
+.small {
+  width: 24px;
+  height: 24px;
+  
+  .miniAvatarPlaceholder {
+    font-size: 10px;
+  }
+}
+
+.medium {
+  width: 32px;
+  height: 32px;
+  
+  .miniAvatarPlaceholder {
+    font-size: 12px;
+  }
+}
+
+/* Avatar image */
+.miniAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: filter 0.2s ease-in-out;
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+/* Avatar placeholder */
+.miniAvatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+  }
+}
+
+/* Modo oscuro */
+:global(body.dark) .miniAvatar {
+  background: rgba(30, 30, 30, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+  &:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+
+  .miniAvatarPlaceholder {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+
+    &:hover {
+      background: linear-gradient(135deg, #5b21b6, #4c1d95);
+    }
+  }
+}
+
+/* Animación de entrada */
+@keyframes miniAvatarFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.miniAvatar {
+  animation: miniAvatarFadeIn 0.3s ease-out;
+} 

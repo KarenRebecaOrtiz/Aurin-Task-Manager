@@ -248,7 +248,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   }
 
   return (
-    <div className={`${styles.swiperContainer} ${className || ''}`}>
+    <div className={`${styles.swiperContainer} ${className || ''}`} style={{ paddingTop: '20px', paddingBottom: '20px' }}>
       {/* Viñetado izquierdo */}
       <div className={styles.vignetteLeft}></div>
       
@@ -259,11 +259,18 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
         ref={splideRef}
         className="splide"
         aria-label="Carrusel de Perfiles de Usuarios"
+        
       >
-        <div className="splide__track" style={{ paddingTop: '30px', paddingBottom: '30px', paddingLeft: '0px', paddingRight: '0px', overflow: 'visible!important' }}>
-          <ul className="splide__list">
+        <div className="splide__track" style={{ 
+          paddingTop: '20px', 
+          paddingBottom: '20px', 
+          paddingLeft: '0px', 
+          paddingRight: '0px', 
+          overflow: 'visible!important' 
+        }}>
+          <ul className="splide__list" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
             {users.map((user) => (
-              <li key={user.id} className={`splide__slide ${styles.swiperSlide}`}>
+              <li key={user.id} >
                 <div
                   className={styles.card}
                   role="button"
@@ -271,9 +278,10 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                   onClick={() => handleCardClick(user)}
                   onKeyDown={(e) => handleCardKeyDown(e, user)}
                   aria-label={`Enviar mensaje a ${user.firstName || 'Usuario'}`}
+                  
                 >
-                  <div className={styles.cardInfo}>
-                    <div className={styles.avatarWrapper}>
+                  <div className={styles.cardInfo} >
+                    <div className={styles.avatarWrapper} >
                       <button
                         className={styles.cardAvatar}
                         tabIndex={0}
@@ -286,6 +294,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                         }}
                         onKeyDown={(e) => handleAvatarKeyDown(e, user)}
                         aria-label={`Ver perfil de ${user.firstName || 'Usuario'}`}
+                        
                       >
                         <UserAvatar
                           userId={user.id}
@@ -296,7 +305,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                         />
                       </button>
                     </div>
-                    <div className={styles.cardText}>
+                    <div className={styles.cardText} >
                       <div className={styles.cardTitle}>
                         {(user.firstName || user.lastName)
                           ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
@@ -308,7 +317,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                           color: statusColors[user.status as keyof typeof statusColors] || '#333',
                         }}
                       >
-                        {user.status || 'En la oficina'}
+                        {user.status || 'Disponible'}
                       </div>
                     </div>
                   </div>

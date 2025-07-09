@@ -67,6 +67,8 @@
   justify-content: start;
   gap: 10px;
   user-select: none;
+  line-height: $leading-normal;
+  max-width: 250px!important;
   
   &.sortable {
     cursor: pointer;
@@ -74,6 +76,11 @@
   
   @include dark-mode {
     color: $color-text-dark-secondary;
+  }
+  
+  /* Quitar padding en mobile */
+  @media (max-width: 768px) {
+    padding: 0;
   }
 }
 
@@ -266,5 +273,72 @@
   
   @include dark-mode {
     color: $color-text-dark-secondary;
+  }
+}
+
+/* ==============================================================
+   🔮 CLIENTS TABLE SPECIFIC STYLES - HEADER & CELL ALIGNMENT
+   ================================================================= */
+
+/* Ensure header and cells have same layout for ClientsTable */
+.clients-table {
+  .header {
+    .headerCell {
+      /* Same layout as cells */
+      display: flex;
+      align-items: center;
+      justify-content: start;
+      max-width: 250px!important;
+      line-height: $leading-normal;
+      
+      /* Specific column alignments */
+      &:nth-child(1) { // Foto
+        justify-content: center;
+        align-items: center;
+      }
+      
+      &:nth-child(2) { // Cuentas
+        justify-content: start;
+      }
+      
+      &:nth-child(3) { // Proyectos Asignados
+        justify-content: start;
+      }
+      
+      &:nth-child(4) { // Acciones
+        justify-content: center;
+        align-items: center;
+      }
+    }
+  }
+  
+  .row {
+    .cell {
+      /* Same layout as header */
+      display: flex;
+      align-items: center;
+      justify-content: start;
+      max-width: 250px!important;
+      line-height: $leading-normal;
+      
+      /* Specific column alignments */
+      &:nth-child(1) { // Foto
+        justify-content: center;
+        align-items: center;
+      }
+      
+      &:nth-child(2) { // Cuentas
+        justify-content: start;
+      }
+      
+      &:nth-child(3) { // Proyectos Asignados
+        justify-content: start;
+      }
+      
+      &:nth-child(4) { // Acciones
+        justify-content: center;
+        align-items: center;
+      }
+    }
   }
 }
