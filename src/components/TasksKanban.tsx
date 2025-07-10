@@ -1172,9 +1172,25 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         groups[column.id] = [];
       });
       
-      // Only process non-archived tasks
+      // Only process non-archived tasks with permission filtering
       effectiveTasks
         .filter(task => !task.archived)
+        .filter(task => {
+          // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
+          const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
+          
+          if (!canViewTask) {
+            console.log('[TasksKanban] Task excluded by permissions:', {
+              taskId: task.id,
+              taskName: task.name,
+              isAdmin,
+              userId,
+              involvedUserIds: getInvolvedUserIds(task)
+            });
+          }
+          
+          return canViewTask;
+        })
         .forEach(task => {
         const normalizedStatus = normalizeStatus(task.status);
         const columnId = normalizedStatus.toLowerCase().replace(/\s+/g, '-');
@@ -1234,7 +1250,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       userFilter, 
       userId, 
       getInvolvedUserIds, 
-      normalizeStatus
+      normalizeStatus,
+      isAdmin
     ]);
 
     // Drag and drop handlers - essential for Kanban functionality

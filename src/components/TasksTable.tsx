@@ -448,12 +448,20 @@ const TasksTable: React.FC<TasksTableProps> = memo(
         searchQuery,
         priorityFilter,
         clientFilter,
-        userFilter
+        userFilter,
+        isAdmin,
+        userId
       });
 
       const filtered = effectiveTasks.filter((task) => {
         // Excluir tareas archivadas (redundante ahora que TasksPage filtra)
         if (task.archived) {
+          return false;
+        }
+        
+        // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
+        const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
+        if (!canViewTask) {
           return false;
         }
         
@@ -482,11 +490,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(
       console.log('[TasksTable] Filtered tasks result:', {
         filteredCount: filtered.length,
         filteredTaskIds: filtered.map(t => t.id),
-        filteredTaskStatuses: filtered.map(t => ({ id: t.id, status: t.status }))
+        filteredTaskStatuses: filtered.map(t => ({ id: t.id, status: t.status })),
+        isAdmin,
+        userId
       });
 
       return filtered;
-    }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
+    }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
     // Crear un ID estable para las tareas filtradas
     const filteredTasksIds = useMemo(() => memoizedFilteredTasks.map(t => t.id).join(','), [memoizedFilteredTasks]);

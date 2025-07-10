@@ -121,6 +121,8 @@ export function useSharedTasksState(userId: string | undefined) {
     return Date.now() - lastUpdate < CACHE_DURATION;
   }, []);
 
+
+
   // Setup tasks listener - SIN CACHÉ, SIEMPRE TIEMPO REAL
   useEffect(() => {
     if (!userId) return;
@@ -163,7 +165,9 @@ export function useSharedTasksState(userId: string | undefined) {
           statusDetails: tasksData.map(t => ({ id: t.id, status: t.status, name: t.name }))
         });
 
-        // Actualizar estado inmediatamente sin caché
+        // 🔒 FILTRO DE PERMISOS: Solo pasar tareas que el usuario puede ver
+        // Por ahora, pasamos todas las tareas y el filtrado se hace en los componentes
+        // Esto es más eficiente porque los componentes pueden hacer cache de los permisos
         setTasks(tasksData);
         setIsLoadingTasks(false);
         
