@@ -57,7 +57,7 @@ interface UseMessagePaginationProps {
   decryptMessage: (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string }) => Promise<string>;
 }
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 10;  // Cambiado de 20 a 10
 
 let globalCallTimestamps: number[] = [];
 

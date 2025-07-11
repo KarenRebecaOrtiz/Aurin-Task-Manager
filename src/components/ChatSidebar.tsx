@@ -500,7 +500,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       loadMoreMessages,
     } = useMessagePagination({
       taskId: task.id,
-      pageSize: 20,
+      pageSize: 10,
       decryptMessage,
     });
 
