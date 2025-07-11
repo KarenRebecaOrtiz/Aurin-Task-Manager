@@ -1,3 +1,4 @@
+// src/hooks/useMessageActions.ts
 import { useState, useCallback } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -36,8 +37,8 @@ interface Task {
   description: string;
   status: string;
   priority: string;
-  startDate: string | null;
-  endDate: string | null;
+  startDate: string | Timestamp | null;
+  endDate: string | Timestamp | null;
   LeadedBy: string[];
   AssignedTo: string[];
   CreatedBy?: string;
@@ -45,7 +46,7 @@ interface Task {
 
 interface UseMessageActionsProps {
   task: Task;
-  encryptMessage: (text: string) => string;
+  encryptMessage: (text: string) => Promise<{ encryptedData: string; nonce: string; tag: string; salt: string }>;
   addOptimisticMessage: (message: Message) => void;
   updateOptimisticMessage: (clientId: string, updates: Partial<Message>) => void;
 }
@@ -58,12 +59,10 @@ export const useMessageActions = ({
 }: UseMessageActionsProps) => {
   const [isSending, setIsSending] = useState(false);
 
-  // Función para enviar mensaje
   const sendMessage = useCallback(async (
     messageData: Partial<Message>,
     isAudio = false,
     audioUrl?: string,
-    duration?: number,
   ) => {
     if (!messageData.senderId || isSending) return;
     setIsSending(true);
@@ -71,7 +70,6 @@ export const useMessageActions = ({
     const clientId = messageData.clientId || crypto.randomUUID();
     const tempId = `temp-${clientId}`;
 
-    // Agregar mensaje optimista inmediatamente
     const optimisticMessage = {
       id: tempId,
       senderId: messageData.senderId,
@@ -92,16 +90,13 @@ export const useMessageActions = ({
 
     addOptimisticMessage(optimisticMessage);
 
-    let encryptedText = null;
-    if (messageData.text) {
-      encryptedText = encryptMessage(messageData.text.trim());
-    }
-
     try {
+      const encrypted = messageData.text ? await encryptMessage(messageData.text.trim()) : null;
+
       const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: messageData.senderId,
         senderName: messageData.senderName || 'Usuario',
-        text: encryptedText,
+        encrypted,
         timestamp: serverTimestamp(),
         read: false,
         imageUrl: messageData.imageUrl || null,
@@ -109,8 +104,8 @@ export const useMessageActions = ({
         fileName: messageData.fileName || (isAudio ? `audio_${Date.now()}.webm` : null),
         fileType: messageData.fileType || (isAudio ? 'audio/webm' : null),
         filePath: messageData.filePath || null,
+        clientId, // Add clientId here
         replyTo: messageData.replyTo || null,
-        ...(duration && { hours: duration / 3600 }),
       });
 
       updateOptimisticMessage(clientId, {
@@ -131,18 +126,15 @@ export const useMessageActions = ({
     }
   }, [task.id, isSending, encryptMessage, addOptimisticMessage, updateOptimisticMessage]);
 
-  // Función para editar mensaje
   const editMessage = useCallback(async (messageId: string, newText: string) => {
     if (!newText.trim()) {
       throw new Error('El mensaje no puede estar vacío.');
     }
 
     try {
-      // Cifrar el texto editado antes de guardarlo en Firestore
-      const encryptedText = encryptMessage(newText.trim());
+      const encrypted = await encryptMessage(newText.trim());
       const now = Timestamp.now();
       
-      // Obtener el mensaje actual para mantener su timestamp original
       const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
       const messageDoc = await getDoc(messageRef);
       
@@ -150,13 +142,11 @@ export const useMessageActions = ({
         throw new Error('El mensaje no existe.');
       }
       
-      // Mantener el timestamp original y solo actualizar lastModified
       await updateDoc(messageRef, {
-        text: encryptedText,
-        lastModified: now, // Solo actualizamos lastModified
+        encrypted,
+        lastModified: now,
       });
 
-      // Actualizar la actividad de la tarea
       await updateTaskActivity(task.id, 'message');
     } catch (error) {
       console.error('Error editing message:', error);
@@ -164,7 +154,6 @@ export const useMessageActions = ({
     }
   }, [task.id, encryptMessage]);
 
-  // Función para eliminar mensaje
   const deleteMessage = useCallback(async (messageId: string) => {
     try {
       console.log('[MessageActions] Deleting message', messageId);
@@ -174,7 +163,6 @@ export const useMessageActions = ({
       if (messageDoc.exists()) {
         const messageData = messageDoc.data();
         
-        // Si el mensaje tiene horas registradas, actualizar el timer global
         if (messageData.hours && typeof messageData.hours === 'number' && messageData.hours > 0) {
           console.log('[MessageActions] Mensaje con tiempo detectado:', { hours: messageData.hours });
           const timerRef = doc(db, `tasks/${task.id}/timers/global`);
@@ -188,7 +176,6 @@ export const useMessageActions = ({
           }
         }
 
-        // Eliminar archivo si existe
         if (messageData.filePath) {
           try {
             const response = await fetch('/api/delete-image', {
@@ -215,7 +202,6 @@ export const useMessageActions = ({
     }
   }, [task.id]);
 
-  // Función para reenviar mensaje
   const resendMessage = useCallback(async (message: Message) => {
     if (isSending) {
       return;
@@ -233,17 +219,15 @@ export const useMessageActions = ({
       hasError: false,
     };
 
-    // Agregar mensaje optimista
     addOptimisticMessage(resendMessage);
 
     try {
-      // Cifrar el texto antes de reenviarlo a Firestore
-      const encryptedText = message.text ? encryptMessage(message.text) : message.text;
+      const encrypted = message.text ? await encryptMessage(message.text) : null;
       
       const docRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId: message.senderId,
         senderName: message.senderName,
-        text: encryptedText, // Guardar el texto cifrado
+        encrypted,
         timestamp: serverTimestamp(),
         read: false,
         imageUrl: message.imageUrl,
@@ -251,11 +235,11 @@ export const useMessageActions = ({
         fileName: message.fileName,
         fileType: message.fileType,
         filePath: message.filePath,
+        clientId: newClientId, // Use newClientId
         replyTo: message.replyTo || null,
         ...(message.hours && { hours: message.hours }),
       });
 
-      // Actualizar mensaje optimista con ID real
       updateOptimisticMessage(newClientId, {
         id: docRef.id,
         isPending: false,
@@ -273,7 +257,6 @@ export const useMessageActions = ({
     }
   }, [task.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage, isSending]);
 
-  // Función para marcar mensajes como leídos
   const markMessagesAsRead = useCallback(async (messageIds: string[]) => {
     if (messageIds.length === 0) return;
 
@@ -290,7 +273,6 @@ export const useMessageActions = ({
     }
   }, [task.id]);
 
-  // Función para enviar mensaje de tiempo
   const sendTimeMessage = useCallback(async (
     senderId: string,
     senderName: string,
@@ -307,27 +289,24 @@ export const useMessageActions = ({
     try {
       const timestamp = Timestamp.now();
       
-      // Cifrar el mensaje de tiempo antes de guardarlo
       const timeMessage = dateString 
         ? `Añadió una entrada de tiempo de ${timeEntry} el ${dateString}`
         : `Añadió una entrada de tiempo de ${timeEntry}`;
-      const encryptedTimeMessage = encryptMessage(timeMessage);
+      const encryptedTime = await encryptMessage(timeMessage);
       
       console.log('[useMessageActions] 📝 Creando documento de tiempo:', {
         originalMessage: timeMessage,
-        encryptedTimeMessage: encryptedTimeMessage,
         hours,
         timestamp: timestamp.toDate(),
         senderId,
         senderName
       });
 
-      // 🚀 CREAR MENSAJE OPTIMISTA INMEDIATAMENTE
       const optimisticTimeMessage = {
         id: timeMessageTempId,
         senderId,
         senderName,
-        text: timeMessage, // Mostrar texto sin cifrar en la UI
+        text: timeMessage,
         timestamp: new Date(),
         read: false,
         hours,
@@ -345,30 +324,27 @@ export const useMessageActions = ({
       console.log('[useMessageActions] 🚀 Añadiendo mensaje optimista de tiempo:', optimisticTimeMessage);
       addOptimisticMessage(optimisticTimeMessage);
 
-      // Crear el mensaje de tiempo en Firestore
       const timeDocRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
         senderId,
         senderName,
-        text: encryptedTimeMessage, // Guardar el mensaje cifrado
+        encrypted: encryptedTime,
         timestamp,
         read: false,
+        clientId: timeMessageClientId, // Add clientId here
         hours,
       });
       
       console.log('[useMessageActions] ✅ Documento de tiempo creado con ID:', timeDocRef.id);
       
-      // 🔄 ACTUALIZAR MENSAJE OPTIMISTA CON ID REAL
       updateOptimisticMessage(timeMessageClientId, {
         id: timeDocRef.id,
         timestamp: Timestamp.now(),
         isPending: false,
       });
       
-      // Si hay comentario, crear un mensaje separado
       if (comment && comment.trim()) {
         console.log('[useMessageActions] 💬 Añadiendo comentario:', comment);
         
-        // Crear mensaje optimista para el comentario
         const optimisticCommentMessage = {
           id: commentTempId,
           senderId,
@@ -390,14 +366,14 @@ export const useMessageActions = ({
         
         addOptimisticMessage(optimisticCommentMessage);
         
-        // Cifrar y guardar el comentario
-        const encryptedComment = encryptMessage(comment.trim());
+        const encryptedComment = await encryptMessage(comment.trim());
         const commentDocRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
           senderId,
           senderName,
-          text: encryptedComment,
+          encrypted: encryptedComment,
           timestamp: Timestamp.fromMillis(timestamp.toMillis() + 1),
           read: false,
+          clientId: commentClientId, // Add clientId here
         });
         
         updateOptimisticMessage(commentClientId, {
@@ -409,7 +385,6 @@ export const useMessageActions = ({
         console.log('[useMessageActions] ✅ Comentario creado con ID:', commentDocRef.id);
       }
       
-      // Actualizar la actividad de la tarea
       await updateTaskActivity(task.id, 'time_entry');
       
       console.log('[useMessageActions] 🎉 sendTimeMessage completado exitosamente');
@@ -417,7 +392,6 @@ export const useMessageActions = ({
     } catch (error) {
       console.error('[useMessageActions] ❌ Error en sendTimeMessage:', error);
       
-      // Marcar mensajes optimistas como error
       updateOptimisticMessage(timeMessageClientId, {
         hasError: true,
         isPending: false,
@@ -443,4 +417,4 @@ export const useMessageActions = ({
     markMessagesAsRead,
     sendTimeMessage,
   };
-}; 
+};

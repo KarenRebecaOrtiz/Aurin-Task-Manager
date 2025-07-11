@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, onSnapshot, query, doc, getDoc } from 'firebase/firestore';
+import { useEffect } from 'react';
+import { collection, onSnapshot, query, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useDataStore } from '@/stores/dataStore';
 
 // Type definitions
 interface Task {
@@ -29,10 +30,10 @@ interface Client {
   id: string;
   name: string;
   imageUrl: string;
-  projectCount: number;
-  projects: string[];
-  createdBy: string;
-  createdAt: string;
+  projectCount?: number;
+  projects?: string[];
+  createdBy?: string;
+  createdAt?: string;
 }
 
 interface User {
@@ -44,90 +45,44 @@ interface User {
   status?: string;
 }
 
-interface FirestoreTimestamp {
-  toDate(): Date;
-}
-
-// Type guard for Firestore timestamp
-const isFirestoreTimestamp = (timestamp: unknown): timestamp is FirestoreTimestamp => {
-  return timestamp !== null && 
-         typeof timestamp === 'object' && 
-         'toDate' in timestamp && 
-         typeof (timestamp as FirestoreTimestamp).toDate === 'function';
-};
-
-// Helper function to safely convert Firestore timestamp or string to ISO string
-const safeTimestampToISO = (timestamp: unknown): string => {
+// Helper functions
+const safeTimestampToISO = (timestamp: Timestamp | Date | string | null | undefined): string => {
   if (!timestamp) return new Date().toISOString();
-  
+  if (timestamp instanceof Timestamp) return timestamp.toDate().toISOString();
+  if (timestamp instanceof Date) return timestamp.toISOString();
   if (typeof timestamp === 'string') return timestamp;
-  
-  if (isFirestoreTimestamp(timestamp)) {
-    return timestamp.toDate().toISOString();
-  }
-  
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
   return new Date().toISOString();
 };
 
-// Helper function to safely convert Firestore timestamp or string to ISO string or null
-const safeTimestampToISOOrNull = (timestamp: unknown): string | null => {
+const safeTimestampToISOOrNull = (timestamp: Timestamp | Date | string | null | undefined): string | null => {
   if (!timestamp) return null;
-  
+  if (timestamp instanceof Timestamp) return timestamp.toDate().toISOString();
+  if (timestamp instanceof Date) return timestamp.toISOString();
   if (typeof timestamp === 'string') return timestamp;
-  
-  if (isFirestoreTimestamp(timestamp)) {
-    return timestamp.toDate().toISOString();
-  }
-  
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  
   return null;
 };
 
-// Cache implementation - ELIMINAR CACHÉ PARA TAREAS
-const sharedCache = {
-  clients: new Map<string, Client[]>(),
-  users: new Map<string, User[]>(),
-  lastUpdate: {
-    clients: 0,
-    users: 0
-  }
-};
-
-// Cache duration in milliseconds (5 minutes)
-const CACHE_DURATION = 5 * 60 * 1000;
-
 export function useSharedTasksState(userId: string | undefined) {
-  // States
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
-  const [isLoadingClients, setIsLoadingClients] = useState(true);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  // Usar el store de Zustand directamente
+  const setTasks = useDataStore((state) => state.setTasks);
+  const setClients = useDataStore((state) => state.setClients);
+  const setUsers = useDataStore((state) => state.setUsers);
+  const setIsLoadingTasks = useDataStore((state) => state.setIsLoadingTasks);
+  const setIsLoadingClients = useDataStore((state) => state.setIsLoadingClients);
+  const setIsLoadingUsers = useDataStore((state) => state.setIsLoadingUsers);
 
-  // Refs for cleanup
-  const unsubscribeRefs = useRef<{ [key: string]: () => void }>({});
+  const tasks = useDataStore((state) => state.tasks);
+  const clients = useDataStore((state) => state.clients);
+  const users = useDataStore((state) => state.users);
+  const isLoadingTasks = useDataStore((state) => state.isLoadingTasks);
+  const isLoadingClients = useDataStore((state) => state.isLoadingClients);
+  const isLoadingUsers = useDataStore((state) => state.isLoadingUsers);
 
-  // Check if cache is valid - SOLO PARA CLIENTS Y USERS
-  const isCacheValid = useCallback((type: 'clients' | 'users') => {
-    const lastUpdate = sharedCache.lastUpdate[type];
-    return Date.now() - lastUpdate < CACHE_DURATION;
-  }, []);
-
-
-
-  // Setup tasks listener - SIN CACHÉ, SIEMPRE TIEMPO REAL
+  // Setup tasks listener
   useEffect(() => {
     if (!userId) return;
 
-    console.log('[useSharedTasksState] Setting up tasks listener - NO CACHE');
+    console.log('[useSharedTasksState] Setting up tasks listener with Zustand');
     setIsLoadingTasks(true);
 
     const tasksQuery = query(collection(db, 'tasks'));
@@ -156,24 +111,17 @@ export function useSharedTasksState(userId: string | undefined) {
           archivedBy: doc.data().archivedBy || '',
         }));
 
-        console.log('[useSharedTasksState] Tasks onSnapshot update - IMMEDIATE:', {
-          count: tasksData.length,
-          taskIds: tasksData.map(t => t.id),
-          statuses: [...new Set(tasksData.map(t => t.status))],
-          timestamp: new Date().toISOString(),
-          hasStatusChanges: tasksData.some(t => t.status !== 'Por Iniciar'),
-          statusDetails: tasksData.map(t => ({ id: t.id, status: t.status, name: t.name }))
-        });
+        // Solo loggear si hay cambios significativos
+        const hasStatusChanges = tasksData.some(t => t.status !== 'Por Iniciar');
+        if (hasStatusChanges) {
+          console.log('[useSharedTasksState] Tasks updated via Zustand:', {
+            count: tasksData.length,
+            hasStatusChanges: true,
+          });
+        }
 
-        // 🔒 FILTRO DE PERMISOS: Solo pasar tareas que el usuario puede ver
-        // Por ahora, pasamos todas las tareas y el filtrado se hace en los componentes
-        // Esto es más eficiente porque los componentes pueden hacer cache de los permisos
         setTasks(tasksData);
         setIsLoadingTasks(false);
-        
-        // Forzar refresco adicional para cambios de estado
-        const statusChanges = tasksData.map(t => `${t.id}-${t.status}`).join(',');
-        console.log('[useSharedTasksState] Status changes detected:', statusChanges);
       },
       (error) => {
         console.error('[useSharedTasksState] Error in tasks onSnapshot:', error);
@@ -182,26 +130,15 @@ export function useSharedTasksState(userId: string | undefined) {
       }
     );
 
-    // Capture current ref value to avoid ESLint warning
-    const currentRef = unsubscribeRefs.current;
-    currentRef.tasks = unsubscribe;
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, setTasks, setIsLoadingTasks]);
 
   // Setup clients listener
   useEffect(() => {
     if (!userId) return;
 
-    console.log('[useSharedTasksState] Setting up clients listener');
+    console.log('[useSharedTasksState] Setting up clients listener with Zustand');
     setIsLoadingClients(true);
-
-    // Check cache first
-    if (isCacheValid('clients') && sharedCache.clients.has(userId)) {
-      console.log('[useSharedTasksState] Using cached clients');
-      setClients(sharedCache.clients.get(userId) || []);
-      setIsLoadingClients(false);
-      return;
-    }
 
     const clientsQuery = query(collection(db, 'clients'));
     const unsubscribe = onSnapshot(
@@ -217,10 +154,6 @@ export function useSharedTasksState(userId: string | undefined) {
           createdAt: safeTimestampToISO(doc.data().createdAt),
         }));
 
-        // Update cache
-        sharedCache.clients.set(userId, clientsData);
-        sharedCache.lastUpdate.clients = Date.now();
-
         setClients(clientsData);
         setIsLoadingClients(false);
       },
@@ -231,26 +164,15 @@ export function useSharedTasksState(userId: string | undefined) {
       }
     );
 
-    // Capture current ref value to avoid ESLint warning
-    const currentRef = unsubscribeRefs.current;
-    currentRef.clients = unsubscribe;
     return () => unsubscribe();
-  }, [userId, isCacheValid]);
+  }, [userId, setClients, setIsLoadingClients]);
 
   // Setup users fetch and listener
   useEffect(() => {
     if (!userId) return;
 
-    console.log('[useSharedTasksState] Setting up users fetch');
+    console.log('[useSharedTasksState] Setting up users fetch with Zustand');
     setIsLoadingUsers(true);
-
-    // Check cache first
-    if (isCacheValid('users') && sharedCache.users.has(userId)) {
-      console.log('[useSharedTasksState] Using cached users');
-      setUsers(sharedCache.users.get(userId) || []);
-      setIsLoadingUsers(false);
-      return;
-    }
 
     const fetchUsers = async () => {
       try {
@@ -297,10 +219,6 @@ export function useSharedTasksState(userId: string | undefined) {
           }),
         );
 
-        // Update cache
-        sharedCache.users.set(userId, usersData);
-        sharedCache.lastUpdate.users = Date.now();
-
         setUsers(usersData);
         setIsLoadingUsers(false);
       } catch (error) {
@@ -319,21 +237,8 @@ export function useSharedTasksState(userId: string | undefined) {
       fetchUsers();
     });
 
-    // Capture current ref value to avoid ESLint warning
-    const currentRef = unsubscribeRefs.current;
-    currentRef.users = unsubscribe;
     return () => unsubscribe();
-  }, [userId, isCacheValid]);
-
-  // Cleanup function
-  useEffect(() => {
-    // Capture current ref value to avoid ESLint warning
-    const currentUnsubscribes = unsubscribeRefs.current;
-    
-    return () => {
-      Object.values(currentUnsubscribes).forEach(unsubscribe => unsubscribe());
-    };
-  }, []);
+  }, [userId, setUsers, setIsLoadingUsers]);
 
   return {
     tasks,

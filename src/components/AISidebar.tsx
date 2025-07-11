@@ -658,7 +658,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
           return (
             <div
-              key={m.id}
+              key={`${m.id}-${index}`}
               data-message-id={m.id}
               className={`${styles.message} ${m.isPending ? styles.pending : ""} ${m.hasError ? styles.error : ""}`}
               ref={index === messages.length - 1 ? lastMessageRef : null}

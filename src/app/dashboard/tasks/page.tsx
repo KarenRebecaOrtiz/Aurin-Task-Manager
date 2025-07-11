@@ -125,7 +125,7 @@ function TasksPageContent() {
   const { user } = useUser();
   const { isAdmin } = useAuth();
   
-  // Usar el hook compartido
+  // Usar el hook compartido que maneja Zustand
   const {
     tasks,
     clients,
@@ -463,10 +463,8 @@ function TasksPageContent() {
 
   // Agregar logging para debuggear cambios de estado
   useEffect(() => {
-    console.log('[TasksPage] Tasks from shared state updated:', {
+    console.log('[TasksPage] Tasks from Zustand store updated:', {
       count: tasks.length,
-      taskIds: tasks.map(t => t.id),
-      statuses: tasks.map(t => ({ id: t.id, status: t.status, name: t.name })),
       timestamp: new Date().toISOString()
     });
   }, [tasks]);

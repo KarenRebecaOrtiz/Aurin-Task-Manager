@@ -188,6 +188,15 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
     return result;
   }, [form]);
 
+  // Memoized validator functions to prevent infinite loops
+  const validateStep0 = useMemo(() => async (): Promise<boolean> => {
+    return validateStep(0);
+  }, [validateStep]);
+
+  const validateStep1 = useMemo(() => async (): Promise<boolean> => {
+    return validateStep(1);
+  }, [validateStep]);
+
   // Final submission
   const handleSubmit = useCallback(async () => {
     const values = form.getValues();
@@ -280,7 +289,7 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
           <WizardProgress />
 
           {/* Step 1: Time Input */}
-          <WizardStep step={0} validator={() => validateStep(0)}>
+          <WizardStep step={0} validator={validateStep0}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
                 ⏰ Tiempo Invertido
@@ -364,7 +373,7 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
           </WizardStep>
 
           {/* Step 2: Date Selection */}
-          <WizardStep step={1} validator={() => validateStep(1)}>
+          <WizardStep step={1} validator={validateStep1}>
             <div style={{ textAlign: 'center' }}>
               <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
                 📅 Fecha de Trabajo

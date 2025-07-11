@@ -6,7 +6,6 @@ import sanitizeHtml from 'sanitize-html';
 import { Timestamp } from 'firebase/firestore';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
-import NumberFlow, { NumberFlowGroup } from '@number-flow/react';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
 import TimerPanel from './TimerPanel';
@@ -17,6 +16,7 @@ import { useEditorPersistence } from './use-form-persistence';
 import { saveErrorMessage, removeErrorMessage, PersistedMessage } from '@/lib/messagePersistence';
 import { toast } from './use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
+import TimerDisplay from '../TimerDisplay';
 
 interface Message {
   id: string;
@@ -636,57 +636,14 @@ export default function InputChat({
             />
           </div>
           <div className={styles.actions}>
-            <div className={styles.timerContainer} style={{ width: '100%' }}>
-              <button 
-                className={styles.playStopButton} 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  // Cancelar cualquier timeout pendiente
-                  if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.clickTimeout) {
-                    clearTimeout(parseInt(e.currentTarget.dataset.clickTimeout));
-                    delete e.currentTarget.dataset.clickTimeout;
-                  }
-                  
-                  // Ejecutar toggle timer inmediatamente
-                  onToggleTimer(e);
-                }}
-                onDoubleClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  // Cancelar el click simple si existe
-                  if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.clickTimeout) {
-                    clearTimeout(parseInt(e.currentTarget.dataset.clickTimeout));
-                    delete e.currentTarget.dataset.clickTimeout;
-                  }
-                  
-                  // Ejecutar finalizeTimer solo si hay tiempo acumulado
-                  if (timerSeconds > 0 && onFinalizeTimer) {
-                    console.log('[InputChat] 🎯 Doble click detectado - finalizando timer:', timerSeconds);
-                    await onFinalizeTimer();
-                  }
-                }}
-                disabled={isProcessing} 
-                type="button" 
-                aria-label={isTimerRunning ? 'Detener temporizador (doble click para enviar tiempo)' : 'Iniciar temporizador'} 
-                title={isTimerRunning ? 'Click: Pausar | Doble click: Enviar tiempo' : 'Iniciar temporizador'}
-              >
-                <Image src={isTimerRunning ? '/Stop.svg' : '/Play.svg'} alt={isTimerRunning ? 'Detener' : 'Iniciar'} width={12} height={12} draggable="false" />
-              </button>
-              <div className={styles.timer} onClick={handleToggleTimerPanel} title="Abrir/cerrar panel de temporizador">
-                <NumberFlowGroup>
-                  <div className={styles.timerNumbers}>
-                    <NumberFlow trend={-1} value={Math.floor(timerSeconds / 3600)} format={{ minimumIntegerDigits: 2 }} />
-                    <NumberFlow prefix=":" trend={-1} value={Math.floor((timerSeconds % 3600) / 60)} digits={{ 1: { max: 5 } }} format={{ minimumIntegerDigits: 2 }} />
-                    <NumberFlow prefix=":" trend={-1} value={timerSeconds % 60} digits={{ 1: { max: 5 } }} format={{ minimumIntegerDigits: 2 }} />
-                  </div>
-                </NumberFlowGroup>
-                {isRestoringTimer && <div className={styles.restoreIndicator}>↻</div>}
-                <Image src="/chevron-down.svg" alt="Abrir panel" width={12} height={12} draggable="false" />
-              </div>
-            </div>
+            <TimerDisplay
+              timerSeconds={timerSeconds}
+              isTimerRunning={isTimerRunning}
+              onToggleTimer={onToggleTimer}
+              onFinalizeTimer={onFinalizeTimer}
+              onTogglePanel={handleToggleTimerPanel}
+              isRestoringTimer={!!isRestoringTimer}
+            />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <div className={styles.dropupContainer} ref={dropupRef}>
                 <button type="button" className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={() => setIsDropupOpen(prev => !prev)} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con Gemini AI" title="Reformular texto con Gemini AI ✨" aria-expanded={isDropupOpen}>

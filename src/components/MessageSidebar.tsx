@@ -808,10 +808,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         {!isLoading && messages.length === 0 && (
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
-        {messages.map((m) => {
+        {messages.map((m, index) => {
           return (
             <div
-              key={m.id}
+              key={`${m.id}-${index}`}
               data-message-id={m.id}
               className={`${styles.message} ${m.isPending ? styles.pending : ''} ${
                 isDraggingMessage && draggedMessageId === m.id ? styles.dragging : ''

@@ -1458,9 +1458,9 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                   strategy={verticalListSortingStrategy}
                 >
                   <div className={styles.taskList}>
-                    {groupedTasks[column.id]?.map((task) => (
+                    {groupedTasks[column.id]?.map((task, index) => (
                       <SortableItem
-                        key={task.id}
+                        key={`${task.id}-${index}`}
                         id={task.id}
                         task={task}
                         onChatSidebarOpen={onChatSidebarOpen}

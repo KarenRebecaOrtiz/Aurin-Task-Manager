@@ -38,13 +38,13 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
   const [direction, setDirection] = useState<"next" | "prev" | null>(null);
   const wizardContainerRef = useRef<HTMLDivElement>(null);
 
-  const registerValidator = useCallback((step: number, validator: () => Promise<boolean>) => {
+  const registerValidator = useRef((step: number, validator: () => Promise<boolean>) => {
     setValidators((prev) => {
       const newValidators = [...prev];
       newValidators[step] = validator;
       return newValidators;
     });
-  }, []);
+  }).current;
 
   const nextStep = useCallback(async () => {
     const validator = validators[currentStep];
@@ -131,12 +131,19 @@ interface WizardStepProps {
 
 const WizardStep: React.FC<WizardStepProps> = ({ step, children, validator, currentStep, registerValidator, direction }) => {
   const stepRef = useRef<HTMLDivElement>(null);
+  const hasRegisteredValidator = useRef(false);
 
   useEffect(() => {
-    if (validator && registerValidator) {
+    if (validator && registerValidator && !hasRegisteredValidator.current) {
       registerValidator(step, validator);
+      hasRegisteredValidator.current = true;
     }
   }, [step, validator, registerValidator]);
+
+  // Reset the registration flag when the step changes
+  useEffect(() => {
+    hasRegisteredValidator.current = false;
+  }, [step]);
 
   useEffect(() => {
     if (stepRef.current && currentStep === step) {
