@@ -18,6 +18,7 @@ import { getLastActivityTimestamp, archiveTask } from '@/lib/taskUtils';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import { tasksTableStore } from '@/stores/tasksTableStore';
 
 interface Client {
@@ -183,195 +184,84 @@ const TasksTable: React.FC<TasksTableProps> = ({
   externalClients,
   externalUsers,
 }) => {
-  // Log para identificar si las props están cambiando
-  console.log('📋 TasksTableProps', {
-    timestamp: new Date().toISOString(),
-    externalTasksRef: externalTasks?.map(t => t.id).join(','),
-    externalClientsRef: externalClients?.map(c => c.id).join(','),
-    externalUsersRef: externalUsers?.map(u => u.id).join(','),
-    // Verificar si las funciones están cambiando
-    onNewTaskOpenRef: onNewTaskOpen.toString().slice(0, 50),
-    onEditTaskOpenRef: onEditTaskOpen.toString().slice(0, 50),
-    onChatSidebarOpenRef: onChatSidebarOpen.toString().slice(0, 50),
-  });
-  // Log principal de renderizado
-  console.log('🔄 TasksTableRendering', {
-    timestamp: new Date().toISOString(),
-    externalTasksCount: externalTasks?.length || 0,
-    externalClientsCount: externalClients?.length || 0,
-    externalUsersCount: externalUsers?.length || 0,
-    hasExternalData: !!(externalTasks && externalClients && externalUsers),
-    // Agregar stack trace para identificar qué está causando el re-render
-    stack: new Error().stack?.split('\n').slice(1, 4).join('\n')
-  });
-
   const { user } = useUser();
   const { isAdmin } = useAuth();
 
-  // Logs para cada selector del store
-  const filteredTasks = useStore(tasksTableStore, (state) => {
-    console.log('📊 [TasksTable] filteredTasks selector called', {
-      count: state.filteredTasks.length,
-      taskIds: state.filteredTasks.map(t => t.id)
-    });
-    return state.filteredTasks;
-  });
-  
-  const searchQuery = useStore(tasksTableStore, (state) => {
-    console.log('🔍 [TasksTable] searchQuery selector called', { value: state.searchQuery });
-    return state.searchQuery;
-  });
-  
-  const priorityFilter = useStore(tasksTableStore, (state) => {
-    console.log('🎯 [TasksTable] priorityFilter selector called', { value: state.priorityFilter });
-    return state.priorityFilter;
-  });
-
-  const clientFilter = useStore(tasksTableStore, (state) => {
-    console.log('🏢 [TasksTable] clientFilter selector called', { value: state.clientFilter });
-    return state.clientFilter;
-  });
-  
-  const sortKey = useStore(tasksTableStore, (state) => {
-    console.log('📈 [TasksTable] sortKey selector called', { value: state.sortKey });
-    return state.sortKey;
-  });
-  
-  const sortDirection = useStore(tasksTableStore, (state) => {
-    console.log('📊 [TasksTable] sortDirection selector called', { value: state.sortDirection });
-    return state.sortDirection;
-  });
-  
-  const isUserDropdownOpen = useStore(tasksTableStore, (state) => {
-    console.log('👤 [TasksTable] isUserDropdownOpen selector called', { value: state.isUserDropdownOpen });
-    return state.isUserDropdownOpen;
-  });
-  
-  const isPriorityDropdownOpen = useStore(tasksTableStore, (state) => {
-    console.log('🎯 [TasksTable] isPriorityDropdownOpen selector called', { value: state.isPriorityDropdownOpen });
-    return state.isPriorityDropdownOpen;
-  });
-
-  const isClientDropdownOpen = useStore(tasksTableStore, (state) => {
-    console.log('🏢 [TasksTable] isClientDropdownOpen selector called', { value: state.isClientDropdownOpen });
-    return state.isClientDropdownOpen;
-  });
-  
-  const isLoadingTasks = useStore(tasksTableStore, (state) => {
-    console.log('⏳ [TasksTable] isLoadingTasks selector called', { value: state.isLoadingTasks });
-    return state.isLoadingTasks;
-  });
-  
-  const isLoadingClients = useStore(tasksTableStore, (state) => {
-    console.log('⏳ [TasksTable] isLoadingClients selector called', { value: state.isLoadingClients });
-    return state.isLoadingClients;
-  });
-  
-  const isLoadingUsers = useStore(tasksTableStore, (state) => {
-    console.log('⏳ [TasksTable] isLoadingUsers selector called', { value: state.isLoadingUsers });
-    return state.isLoadingUsers;
-  });
-  
-  const actionMenuOpenId = useStore(tasksTableStore, (state) => {
-    console.log('🎛️ [TasksTable] actionMenuOpenId selector called', { value: state.actionMenuOpenId });
-    return state.actionMenuOpenId;
-  });
-  
-  const undoStack = useStore(tasksTableStore, (state) => {
-    console.log('↩️ [TasksTable] undoStack selector called', { count: state.undoStack.length });
-    return state.undoStack;
-  });
-  
-  const showUndo = useStore(tasksTableStore, (state) => {
-    console.log('🔄 [TasksTable] showUndo selector called', { value: state.showUndo });
-    return state.showUndo;
-  });
-  
-  const userFilter = useStore(tasksTableStore, (state) => {
-    console.log('👤 [TasksTable] userFilter selector called', { value: state.userFilter });
-    return state.userFilter;
-  });
-
-  // Logs para las acciones del store
-  const setFilteredTasks = useStore(tasksTableStore, (state) => {
-    console.log('📊 [TasksTable] setFilteredTasks action accessed');
-    return state.setFilteredTasks;
-  });
-  
-  const setSearchQuery = useStore(tasksTableStore, (state) => {
-    console.log('🔍 [TasksTable] setSearchQuery action accessed');
-    return state.setSearchQuery;
-  });
-  
-  const setPriorityFilter = useStore(tasksTableStore, (state) => {
-    console.log('🎯 [TasksTable] setPriorityFilter action accessed');
-    return state.setPriorityFilter;
-  });
-
-  const setClientFilter = useStore(tasksTableStore, (state) => {
-    console.log('🏢 [TasksTable] setClientFilter action accessed');
-    return state.setClientFilter;
-  });
-  
-  const setSortKey = useStore(tasksTableStore, (state) => {
-    console.log('📈 [TasksTable] setSortKey action accessed');
-    return state.setSortKey;
-  });
-  
-  const setSortDirection = useStore(tasksTableStore, (state) => {
-    console.log('📊 [TasksTable] setSortDirection action accessed');
-    return state.setSortDirection;
-  });
-  
-  const setIsUserDropdownOpen = useStore(tasksTableStore, (state) => {
-    console.log('👤 [TasksTable] setIsUserDropdownOpen action accessed');
-    return state.setIsUserDropdownOpen;
-  });
-  
-  const setIsPriorityDropdownOpen = useStore(tasksTableStore, (state) => {
-    console.log('🎯 [TasksTable] setIsPriorityDropdownOpen action accessed');
-    return state.setIsPriorityDropdownOpen;
-  });
-
-  const setIsClientDropdownOpen = useStore(tasksTableStore, (state) => {
-    console.log('🏢 [TasksTable] setIsClientDropdownOpen action accessed');
-    return state.setIsClientDropdownOpen;
-  });
-  
-  const setIsLoadingTasks = useStore(tasksTableStore, (state) => {
-    console.log('⏳ [TasksTable] setIsLoadingTasks action accessed');
-    return state.setIsLoadingTasks;
-  });
-  
-  const setIsLoadingClients = useStore(tasksTableStore, (state) => {
-    console.log('⏳ [TasksTable] setIsLoadingClients action accessed');
-    return state.setIsLoadingClients;
-  });
-  
-  const setIsLoadingUsers = useStore(tasksTableStore, (state) => {
-    console.log('⏳ [TasksTable] setIsLoadingUsers action accessed');
-    return state.setIsLoadingUsers;
-  });
-  
-  const setActionMenuOpenId = useStore(tasksTableStore, (state) => {
-    console.log('🎛️ [TasksTable] setActionMenuOpenId action accessed');
-    return state.setActionMenuOpenId;
-  });
-  
-  const setUndoStack = useStore(tasksTableStore, (state) => {
-    console.log('↩️ [TasksTable] setUndoStack action accessed');
-    return state.setUndoStack;
-  });
-  
-  const setShowUndo = useStore(tasksTableStore, (state) => {
-    console.log('🔄 [TasksTable] setShowUndo action accessed');
-    return state.setShowUndo;
-  });
-  
-  const setUserFilter = useStore(tasksTableStore, (state) => {
-    console.log('👤 [TasksTable] setUserFilter action accessed');
-    return state.setUserFilter;
-  });
+  // Optimizar selectores de Zustand para evitar re-renders innecesarios
+  const {
+    // Estado
+    filteredTasks,
+    searchQuery,
+    priorityFilter,
+    clientFilter,
+    sortKey,
+    sortDirection,
+    isUserDropdownOpen,
+    isPriorityDropdownOpen,
+    isClientDropdownOpen,
+    isLoadingTasks,
+    isLoadingClients,
+    isLoadingUsers,
+    actionMenuOpenId,
+    undoStack,
+    showUndo,
+    userFilter,
+    // Acciones
+    setFilteredTasks,
+    setSearchQuery,
+    setPriorityFilter,
+    setClientFilter,
+    setSortKey,
+    setSortDirection,
+    setIsUserDropdownOpen,
+    setIsPriorityDropdownOpen,
+    setIsClientDropdownOpen,
+    setIsLoadingTasks,
+    setIsLoadingClients,
+    setIsLoadingUsers,
+    setActionMenuOpenId,
+    setUndoStack,
+    setShowUndo,
+    setUserFilter,
+  } = useStore(
+    tasksTableStore,
+    useShallow((state) => ({
+      // Estado
+      filteredTasks: state.filteredTasks,
+      searchQuery: state.searchQuery,
+      priorityFilter: state.priorityFilter,
+      clientFilter: state.clientFilter,
+      sortKey: state.sortKey,
+      sortDirection: state.sortDirection,
+      isUserDropdownOpen: state.isUserDropdownOpen,
+      isPriorityDropdownOpen: state.isPriorityDropdownOpen,
+      isClientDropdownOpen: state.isClientDropdownOpen,
+      isLoadingTasks: state.isLoadingTasks,
+      isLoadingClients: state.isLoadingClients,
+      isLoadingUsers: state.isLoadingUsers,
+      actionMenuOpenId: state.actionMenuOpenId,
+      undoStack: state.undoStack,
+      showUndo: state.showUndo,
+      userFilter: state.userFilter,
+      // Acciones
+      setFilteredTasks: state.setFilteredTasks,
+      setSearchQuery: state.setSearchQuery,
+      setPriorityFilter: state.setPriorityFilter,
+      setClientFilter: state.setClientFilter,
+      setSortKey: state.setSortKey,
+      setSortDirection: state.setSortDirection,
+      setIsUserDropdownOpen: state.setIsUserDropdownOpen,
+      setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
+      setIsClientDropdownOpen: state.setIsClientDropdownOpen,
+      setIsLoadingTasks: state.setIsLoadingTasks,
+      setIsLoadingClients: state.setIsLoadingClients,
+      setIsLoadingUsers: state.setIsLoadingUsers,
+      setActionMenuOpenId: state.setActionMenuOpenId,
+      setUndoStack: state.setUndoStack,
+      setShowUndo: state.setShowUndo,
+      setUserFilter: state.setUserFilter,
+    }))
+  );
 
   // Refs
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -385,104 +275,49 @@ const TasksTable: React.FC<TasksTableProps> = ({
   const userId = useMemo(() => user?.id || '', [user]);
 
   // Usar datos externos si están disponibles, de lo contrario usar datos del store
-  const effectiveTasks = useMemo(() => {
-    console.log('🔄 useMemo - effectiveTasks recalculating', {
-      timestamp: new Date().toISOString(),
-      externalTasksCount: externalTasks?.length || 0,
-      externalTasksIds: externalTasks?.map(t => t.id).join(',') || 'none'
-    });
-    return externalTasks ?? [];
-  }, [externalTasks]);
-  
-  const effectiveClients = useMemo(() => {
-    console.log('🔄 useMemo - effectiveClients recalculating', {
-      timestamp: new Date().toISOString(),
-      externalClientsCount: externalClients?.length || 0,
-      externalClientsIds: externalClients?.map(c => c.id).join(',') || 'none'
-    });
-    return externalClients ?? [];
-  }, [externalClients]);
-  
-  const effectiveUsers = useMemo(() => {
-    console.log('🔄 useMemo - effectiveUsers recalculating', {
-      timestamp: new Date().toISOString(),
-      externalUsersCount: externalUsers?.length || 0,
-      externalUsersIds: externalUsers?.map(u => u.id).join(',') || 'none'
-    });
-    return externalUsers ?? [];
-  }, [externalUsers]);
+  const effectiveTasks = useMemo(() => externalTasks ?? [], [externalTasks]);
+  const effectiveClients = useMemo(() => externalClients ?? [], [externalClients]);
+  const effectiveUsers = useMemo(() => externalUsers ?? [], [externalUsers]);
 
-  // Usar un ref para trackear los IDs de tareas en lugar del array completo
-  const effectiveTasksIds = useMemo(() => {
-    console.log('🔄 useMemo - effectiveTasksIds recalculating', {
-      timestamp: new Date().toISOString(),
-      effectiveTasksCount: effectiveTasks.length,
-      effectiveTasksIds: effectiveTasks.map(t => t.id).join(',')
-    });
-    return effectiveTasks.map(t => t.id).join(',');
+  // Optimizar tracking de cambios usando refs para evitar re-renders
+  const effectiveTasksRef = useRef(effectiveTasks);
+  const effectiveTasksIdsRef = useRef('');
+  
+  // Solo recalcular IDs si realmente cambió el array
+  useEffect(() => {
+    const newIds = effectiveTasks.map(t => t.id).join(',');
+    if (newIds !== effectiveTasksIdsRef.current) {
+      effectiveTasksIdsRef.current = newIds;
+      effectiveTasksRef.current = effectiveTasks;
+    }
   }, [effectiveTasks]);
 
-
-
-  // Agregar logging para debuggear cambios de estado
+  // Inicializar filteredTasks cuando cambien las tareas efectivas
   useEffect(() => {
-    console.log('🔄 [TasksTable] useEffect - effectiveTasks/externalTasks changed', {
-      timestamp: new Date().toISOString(),
-      effectiveTasksCount: effectiveTasks.length,
-      externalTasksCount: externalTasks?.length || 0,
-      hasExternalTasks: !!externalTasks,
-      effectiveTasksIds: effectiveTasks.map(t => t.id),
-      effectiveTasksStatuses: effectiveTasks.map(t => t.status)
-    });
-    
-    // Solo loggear si hay cambios significativos
-    const hasStatusChanges = effectiveTasks.some(task => 
-      task.status && task.status !== 'Por Iniciar'
-    );
-    
-    if (hasStatusChanges) {
-      console.log('⚠️ [TasksTable] Status changes detected in effectiveTasks:', {
-        count: effectiveTasks.length,
-        hasExternalTasks: !!externalTasks
-      });
-    }
-  }, [effectiveTasks, externalTasks]);
+    setFilteredTasks(effectiveTasks);
+  }, [effectiveTasks, setFilteredTasks]);
 
   // Usar el hook de notificaciones simplificado
   const { getUnreadCount, markAsViewed } = useTaskNotifications();
 
   // Setup de tasks con actualizaciones en tiempo real - ELIMINAR DUPLICADO
   useEffect(() => {
-    console.log('🔄 [TasksTable] useEffect - user?.id/effectiveTasks/setIsLoadingTasks changed', {
-      timestamp: new Date().toISOString(),
-      userId: user?.id,
-      effectiveTasksCount: effectiveTasks.length,
-      effectiveTasksIds: effectiveTasks.map(t => t.id)
-    });
-    
     if (!user?.id) return;
 
-    console.log('📊 [TasksTable] Using Zustand store - no duplicate onSnapshot');
+    console.log('[TasksTable] Using Zustand store - no duplicate onSnapshot');
     
     // No establecer onSnapshot aquí - usar siempre datos del store de Zustand
     if (effectiveTasks.length > 0) {
-      console.log('📊 [TasksTable] Using tasks from Zustand store:', effectiveTasks.length);
+      console.log('[TasksTable] Using tasks from Zustand store:', effectiveTasks.length);
       setIsLoadingTasks(false);
     }
   }, [user?.id, effectiveTasks, setIsLoadingTasks]);
 
   // Setup de clients con actualizaciones en tiempo real
   useEffect(() => {
-    console.log('🔄 [TasksTable] useEffect - user?.id/effectiveClients/setIsLoadingClients changed', {
-      timestamp: new Date().toISOString(),
-      userId: user?.id,
-      effectiveClientsCount: effectiveClients.length,
-      effectiveClientsIds: effectiveClients.map(c => c.id)
-    });
-    
     if (!user?.id || effectiveClients.length > 0) return;
 
-    console.log('🏢 [TasksTable] Setting up clients listener');
+    console.log('[TasksTable] Setting up clients listener');
     setIsLoadingClients(true);
 
     const clientsQuery = query(collection(db, 'clients'));
@@ -495,19 +330,18 @@ const TasksTable: React.FC<TasksTableProps> = ({
           imageUrl: doc.data().imageUrl || '/empty-image.png',
         }));
 
-        console.log('🏢 [TasksTable] Clients onSnapshot update:', clientsData.length);
+        console.log('[TasksTable] Clients onSnapshot update:', clientsData.length);
         
         // Actualizar estado directamente sin caché
         setIsLoadingClients(false);
       },
       (error) => {
-        console.error('❌ [TasksTable] Error in clients onSnapshot:', error);
+        console.error('[TasksTable] Error in clients onSnapshot:', error);
         setIsLoadingClients(false);
       }
     );
 
     return () => {
-      console.log('🧹 [TasksTable] Cleaning up clients listener');
       unsubscribeClients();
     };
   }, [user?.id, effectiveClients, setIsLoadingClients]);
@@ -585,24 +419,10 @@ const TasksTable: React.FC<TasksTableProps> = ({
     };
   }, [user?.id, effectiveUsers, setIsLoadingUsers]);
 
-  // Use ref to track previous effectiveTasks to avoid unnecessary updates
-  const prevEffectiveTasksRef = useRef<string>('');
-  
   useEffect(() => {
-    const currentTasksIds = effectiveTasks.map(t => t.id).join(',');
-    
-    // Only update if the task IDs have actually changed
-    if (currentTasksIds !== prevEffectiveTasksRef.current) {
-      console.log('🔄 [TasksTable] Updating filteredTasks - tasks changed', {
-        timestamp: new Date().toISOString(),
-        prevIds: prevEffectiveTasksRef.current,
-        currentIds: currentTasksIds,
-        effectiveTasksCount: effectiveTasks.length
-      });
-      
-      setFilteredTasks(effectiveTasks);
-      prevEffectiveTasksRef.current = currentTasksIds;
-    }
+    // Inicializar filteredTasks directamente con effectiveTasks
+    // NO comparar con JSON.stringify ya que esto interfiere con los filtros
+    setFilteredTasks(effectiveTasks);
   }, [effectiveTasks, setFilteredTasks]);
 
   const getInvolvedUserIds = useCallback((task: Task) => {
@@ -635,20 +455,8 @@ const TasksTable: React.FC<TasksTableProps> = ({
   }, [setUserFilter, setIsUserDropdownOpen]);
 
   const memoizedFilteredTasks = useMemo(() => {
-    console.log('[TasksTable] Recalculating filtered tasks:', {
-      effectiveTasksCount: effectiveTasks.length,
-      effectiveTasksIds: effectiveTasks.map(t => t.id),
-      effectiveTasksStatuses: effectiveTasks.map(t => ({ id: t.id, status: t.status })),
-      searchQuery,
-      priorityFilter,
-      clientFilter,
-      userFilter,
-      isAdmin,
-      userId
-    });
-
-    const filtered = effectiveTasks.filter((task) => {
-      // Excluir tareas archivadas (redundante ahora que TasksPage filtra)
+    return effectiveTasks.filter((task) => {
+      // Excluir tareas archivadas
       if (task.archived) {
         return false;
       }
@@ -680,16 +488,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
 
       return matchesSearch && matchesPriority && matchesClient && matchesUser;
     });
-
-    console.log('[TasksTable] Filtered tasks result:', {
-      filteredCount: filtered.length,
-      filteredTaskIds: filtered.map(t => t.id),
-      filteredTaskStatuses: filtered.map(t => ({ id: t.id, status: t.status })),
-      isAdmin,
-      userId
-    });
-
-    return filtered;
   }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
   // Crear un ID estable para las tareas filtradas
@@ -807,25 +605,15 @@ const TasksTable: React.FC<TasksTableProps> = ({
 
   const handleSort = (key: string) => {
     if (key === sortKey) {
-      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-      setSortDirection(newDirection);
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortKey(key);
-      const newDirection = key === 'createdAt' ? 'desc' : 'asc';
-      setSortDirection(newDirection);
+      setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
     }
     console.log('[TasksTable] Sorting tasks:', { sortKey: key, sortDirection });
   };
 
   const sortedTasks = useMemo(() => {
-    console.log('🔄 [TasksTable] useMemo - sortedTasks recalculating', {
-      timestamp: new Date().toISOString(),
-      filteredTasksCount: filteredTasks.length,
-      sortKey,
-      sortDirection,
-      effectiveClientsCount: effectiveClients.length
-    });
-    
     const sorted = [...filteredTasks];
     if (sortKey === 'lastActivity') {
       sorted.sort((a, b) => {
@@ -868,12 +656,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
           : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task])),
       );
     }
-    console.log('📊 [TasksTable] Tasks sorted:', {
-      sortedCount: sorted.length,
-      sortedTaskIds: sorted.map((t) => t.id),
-      sortKey,
-      sortDirection,
-    });
     return sorted;
   }, [filteredTasks, sortKey, sortDirection, effectiveClients]);
 
@@ -886,7 +668,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
       yoyo: true,
       repeat: 1,
     });
-    console.log('[TasksTable] Click animation triggered');
+
   };
 
   const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
@@ -985,11 +767,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
         ...col,
         render: (task: Task) => {
           const client = effectiveClients.find((c) => c.id === task.clientId);
-          console.log('[TasksTable] Rendering client column:', {
-            taskId: task.id,
-            clientId: task.clientId,
-            clientName: client?.name,
-          });
+
           return client ? (
             <div className={styles.clientWrapper}>
               <Image
@@ -1025,7 +803,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
         ...col,
         render: (task: Task) => {
           const updateCount = getUnreadCount(task);
-          console.log('[TasksTable] Task:', task.id, 'Count:', updateCount, 'HasUpdates:', task.hasUnreadUpdates);
+
           return (
             <div className={styles.notificationDotWrapper}>
               <NotificationDot count={updateCount} />
@@ -1038,12 +816,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
       return {
         ...col,
         render: (task: Task) => {
-          console.log('[TasksTable] Rendering assignedTo column:', {
-            taskId: task.id,
-            assignedUserIds: task.AssignedTo,
-            leadedByUserIds: task.LeadedBy,
-            currentUserId: userId,
-          });
+
           return <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={effectiveUsers} currentUserId={userId} />;
         },
       };
@@ -1061,15 +834,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
           else if (normalizedStatus === 'Por Finalizar') icon = '/circle-check.svg';
           else if (normalizedStatus === 'Finalizado') icon = '/check-check.svg';
           
-          console.log('[TasksTable] Rendering status column - REAL TIME:', {
-            taskId: task.id,
-            taskName: task.name,
-            originalStatus: task.status,
-            normalizedStatus: normalizedStatus,
-            icon: icon,
-            timestamp: new Date().toISOString(),
-            renderCount: Math.random() // Para verificar si se re-renderiza
-          });
+
           
           return (
             <div className={styles.statusWrapper}>
@@ -1090,10 +855,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
       return {
         ...col,
         render: (task: Task) => {
-          console.log('[TasksTable] Rendering priority column:', {
-            taskId: task.id,
-            priority: task.priority,
-          });
+
           return (
             <div className={styles.priorityWrapper}>
               <Image
@@ -1143,8 +905,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
                       action: 'archive' as const,
                       timestamp: Date.now()
                     };
-                    const newUndoStack = [...undoStack, undoItem];
-                    setUndoStack(newUndoStack);
+                    setUndoStack([...undoStack, undoItem]);
                     setShowUndo(true);
 
                     // Limpiar timeout anterior
@@ -1155,8 +916,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
                     // Configurar timeout para limpiar undo
                     undoTimeoutRef.current = setTimeout(() => {
                       setShowUndo(false);
-                      const filteredStack = undoStack.filter(item => item.timestamp !== undoItem.timestamp);
-                      setUndoStack(filteredStack);
+                      setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
                     }, 3000);
                     
                     // Ejecutar la función de archivo
@@ -1246,17 +1006,15 @@ const TasksTable: React.FC<TasksTableProps> = ({
         await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
         
         // Actualizar estado local
-        const updatedTasks = filteredTasks.map((t) => 
+        setFilteredTasks(filteredTasks.map((t) => 
           t.id === undoItem.task.id 
             ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
             : t
-        );
-        setFilteredTasks(updatedTasks);
+        ));
       }
       
       // Remover del undo stack
-      const filteredStack = undoStack.filter(item => item.timestamp !== undoItem.timestamp);
-      setUndoStack(filteredStack);
+      setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
       setShowUndo(false);
       
       if (undoTimeoutRef.current) {
@@ -1265,7 +1023,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
     } catch (error) {
       console.error('Error in undo process:', error);
     }
-  }, [userId, isAdmin, setFilteredTasks, setUndoStack, setShowUndo]);
+  }, [userId, isAdmin, setFilteredTasks, setUndoStack, setShowUndo, filteredTasks, undoStack]);
 
   // Cleanup all table listeners when component unmounts
   useEffect(() => {
@@ -1282,19 +1040,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
 
   // Handle loading state - PRIORIZADO para mostrar TasksTable inmediatamente
   const shouldShowLoader = useMemo(() => {
-    console.log('🔄 [TasksTable] useMemo - shouldShowLoader recalculating', {
-      timestamp: new Date().toISOString(),
-      externalTasksCount: externalTasks?.length || 0,
-      externalClientsCount: externalClients?.length || 0,
-      externalUsersCount: externalUsers?.length || 0,
-      effectiveTasksCount: effectiveTasks.length,
-      effectiveClientsCount: effectiveClients.length,
-      effectiveUsersCount: effectiveUsers.length,
-      isLoadingTasks,
-      isLoadingClients,
-      isLoadingUsers
-    });
-    
     // Si hay datos externos, nunca mostrar loader
     if (externalTasks && externalClients && externalUsers) {
       return false;
@@ -1306,7 +1051,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
     // Solo mostrar loader si NO hay ningún dato Y está cargando tareas (lo más importante)
     const isReallyLoading = !hasAnyData && isLoadingTasks;
     
-    console.log('⏳ [TasksTable] Loading state decision:', {
+    console.log('[TasksTable] Loading state decision:', {
       hasExternalData: !!(externalTasks && externalClients && externalUsers),
       hasAnyData,
       isLoadingTasks,
@@ -1552,8 +1297,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
                   className={styles.dropdownTrigger}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    const newPriorityDropdownState = !isPriorityDropdownOpen;
-                    setIsPriorityDropdownOpen(newPriorityDropdownState);
+                    setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
                     if (!isPriorityDropdownOpen) {
                       setIsClientDropdownOpen(false);
                       setIsUserDropdownOpen(false);
@@ -1599,8 +1343,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
                   className={styles.dropdownTrigger}
                   onClick={(e) => {
                     animateClick(e.currentTarget);
-                    const newClientDropdownState = !isClientDropdownOpen;
-                    setIsClientDropdownOpen(newClientDropdownState);
+                    setIsClientDropdownOpen(!isClientDropdownOpen);
                     if (!isClientDropdownOpen) {
                       setIsPriorityDropdownOpen(false);
                       setIsUserDropdownOpen(false);
@@ -1648,8 +1391,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      const newUserDropdownState = !isUserDropdownOpen;
-                      setIsUserDropdownOpen(newUserDropdownState);
+                      setIsUserDropdownOpen(!isUserDropdownOpen);
                       if (!isUserDropdownOpen) {
                         setIsPriorityDropdownOpen(false);
                         setIsClientDropdownOpen(false);
@@ -1738,7 +1480,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
       </div>
 
       <Table
-        key={`tasks-table-${effectiveTasksIds}`}
+        key={`tasks-table-${effectiveTasksIdsRef.current}`}
         data={sortedTasks}
         columns={columns}
         itemsPerPage={10}

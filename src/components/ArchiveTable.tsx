@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -12,6 +12,9 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
+import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { archiveTableStore } from '@/stores/archiveTableStore';
 
 interface Client {
   id: string;
@@ -157,27 +160,75 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     const { user } = useUser();
     const { isAdmin } = useAuth();
     
-    const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
-    const [sortKey, setSortKey] = useState<string>('archivedAt');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [priorityFilter, setPriorityFilter] = useState<string>('');
-    const [clientFilter, setClientFilter] = useState<string>('');
-    const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
-    const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
-    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+    // Optimizar selectores de Zustand para evitar re-renders innecesarios
+    const {
+      // Estado
+      filteredTasks,
+      sortKey,
+      sortDirection,
+      searchQuery,
+      priorityFilter,
+      clientFilter,
+      actionMenuOpenId,
+      isPriorityDropdownOpen,
+      isClientDropdownOpen,
+      isUserDropdownOpen,
+      userFilter,
+      undoStack,
+      showUndo,
+      // Acciones
+      setFilteredTasks,
+      setSortKey,
+      setSortDirection,
+      setSearchQuery,
+      setPriorityFilter,
+      setClientFilter,
+      setActionMenuOpenId,
+      setIsPriorityDropdownOpen,
+      setIsClientDropdownOpen,
+      setIsUserDropdownOpen,
+      setUserFilter,
+      setUndoStack,
+      setShowUndo,
+    } = useStore(
+      archiveTableStore,
+      useShallow((state) => ({
+        // Estado
+        filteredTasks: state.filteredTasks,
+        sortKey: state.sortKey,
+        sortDirection: state.sortDirection,
+        searchQuery: state.searchQuery,
+        priorityFilter: state.priorityFilter,
+        clientFilter: state.clientFilter,
+        actionMenuOpenId: state.actionMenuOpenId,
+        isPriorityDropdownOpen: state.isPriorityDropdownOpen,
+        isClientDropdownOpen: state.isClientDropdownOpen,
+        isUserDropdownOpen: state.isUserDropdownOpen,
+        userFilter: state.userFilter,
+        undoStack: state.undoStack,
+        showUndo: state.showUndo,
+        // Acciones
+        setFilteredTasks: state.setFilteredTasks,
+        setSortKey: state.setSortKey,
+        setSortDirection: state.setSortDirection,
+        setSearchQuery: state.setSearchQuery,
+        setPriorityFilter: state.setPriorityFilter,
+        setClientFilter: state.setClientFilter,
+        setActionMenuOpenId: state.setActionMenuOpenId,
+        setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
+        setIsClientDropdownOpen: state.setIsClientDropdownOpen,
+        setIsUserDropdownOpen: state.setIsUserDropdownOpen,
+        setUserFilter: state.setUserFilter,
+        setUndoStack: state.setUndoStack,
+        setShowUndo: state.setShowUndo,
+      }))
+    );
     
     const actionMenuRef = useRef<HTMLDivElement>(null);
     const priorityDropdownRef = useRef<HTMLDivElement>(null);
     const clientDropdownRef = useRef<HTMLDivElement>(null);
     const userDropdownRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-    const [userFilter, setUserFilter] = useState<string>('');
-
-    // Estado para undo
-    const [undoStack, setUndoStack] = useState<Array<{task: Task, action: 'archive' | 'unarchive', timestamp: number}>>([]);
-    const [showUndo, setShowUndo] = useState(false);
     const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const userId = useMemo(() => user?.id || '', [user]);
@@ -272,7 +323,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         filteredCount: memoizedFilteredTasks.length,
         filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
       });
-    }, [memoizedFilteredTasks]);
+    }, [memoizedFilteredTasks, setFilteredTasks]);
 
     const handleUserFilter = (id: string) => {
       setUserFilter(id);
@@ -301,9 +352,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         };
         
         // Actualización optimista del estado local
-        setFilteredTasks(prev => prev.filter(t => t.id !== task.id));
+        setFilteredTasks(filteredTasks.filter(t => t.id !== task.id));
         
-        setUndoStack(prev => [...prev, undoItem]);
+        setUndoStack([...undoStack, undoItem]);
         setShowUndo(true);
 
         // Limpiar timeout anterior
@@ -314,7 +365,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         // Configurar timeout para limpiar undo
         undoTimeoutRef.current = setTimeout(() => {
           setShowUndo(false);
-          setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+          setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
         }, 3000);
         
         // Ejecutar la acción en segundo plano
@@ -323,8 +374,8 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           onTaskArchive(task, 'unarchive').catch(error => {
             // Si falla, revertir la actualización optimista
             console.error('[ArchiveTable] Failed to unarchive task:', error);
-            setFilteredTasks(prev => [...prev, task]);
-            setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+            setFilteredTasks([...filteredTasks, task]);
+            setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
             setShowUndo(false);
           });
         }
@@ -334,7 +385,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           onDataRefresh();
         }
       }
-    }, [isAdmin, onDataRefresh, onTaskArchive]);
+    }, [isAdmin, onDataRefresh, onTaskArchive, filteredTasks, setFilteredTasks, setUndoStack, setShowUndo, undoStack]);
 
     // Función para deshacer - MEJORADA con actualización optimista
     const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
@@ -349,14 +400,14 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           // Actualización optimista del estado local
           if (undoItem.action === 'unarchive') {
             // Si estamos deshaciendo un desarchivado, volvemos a mostrar la tarea
-            setFilteredTasks(prev => [...prev, undoItem.task]);
+            setFilteredTasks([...filteredTasks, undoItem.task]);
           } else {
             // Si estamos deshaciendo un archivado, quitamos la tarea
-            setFilteredTasks(prev => prev.filter(t => t.id !== undoItem.task.id));
+            setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
           }
           
           // Remover del undo stack inmediatamente
-          setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+          setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
           setShowUndo(false);
           
           if (undoTimeoutRef.current) {
@@ -369,16 +420,16 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             // Si falla, revertir la actualización optimista
             console.error('[ArchiveTable] Failed to undo action:', error);
             if (undoItem.action === 'unarchive') {
-              setFilteredTasks(prev => prev.filter(t => t.id !== undoItem.task.id));
+              setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
             } else {
-              setFilteredTasks(prev => [...prev, undoItem.task]);
+              setFilteredTasks([...filteredTasks, undoItem.task]);
             }
           });
         }
       } catch (error) {
         console.error('[ArchiveTable] Error undoing action:', error);
       }
-    }, [onTaskArchive]);
+    }, [onTaskArchive, filteredTasks, setFilteredTasks, setUndoStack, setShowUndo, undoStack]);
 
     // Ordenar tareas
     const sortedTasks = useMemo(() => {
@@ -448,7 +499,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [setActionMenuOpenId]);
 
     const handleSort = (key: string) => {
       if (sortKey === key) {
@@ -642,7 +693,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                         action: 'unarchive' as const,
                         timestamp: Date.now()
                       };
-                      setUndoStack(prev => [...prev, undoItem]);
+                      setUndoStack([...undoStack, undoItem]);
                       setShowUndo(true);
 
                       // Limpiar timeout anterior
@@ -653,7 +704,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                       // Configurar timeout para limpiar undo
                       undoTimeoutRef.current = setTimeout(() => {
                         setShowUndo(false);
-                        setUndoStack(prev => prev.filter(item => item.timestamp !== undoItem.timestamp));
+                        setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
                       }, 3000);
                       
                       // Ejecutar la función de desarchivo
@@ -857,13 +908,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsPriorityDropdownOpen((prev) => {
-                        if (!prev) {
-                          setIsClientDropdownOpen(false);
-                          setIsUserDropdownOpen(false);
-                        }
-                        return !prev;
-                      });
+                      setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                      if (!isPriorityDropdownOpen) {
+                        setIsClientDropdownOpen(false);
+                        setIsUserDropdownOpen(false);
+                      }
                       console.log('[ArchiveTable] Priority dropdown toggled');
                     }}
                   >
@@ -905,13 +954,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                     className={styles.dropdownTrigger}
                     onClick={(e) => {
                       animateClick(e.currentTarget);
-                      setIsClientDropdownOpen((prev) => {
-                        if (!prev) {
-                          setIsPriorityDropdownOpen(false);
-                          setIsUserDropdownOpen(false);
-                        }
-                        return !prev;
-                      });
+                      setIsClientDropdownOpen(!isClientDropdownOpen);
+                      if (!isClientDropdownOpen) {
+                        setIsPriorityDropdownOpen(false);
+                        setIsUserDropdownOpen(false);
+                      }
                       console.log('[ArchiveTable] Client dropdown toggled');
                     }}
                   >
@@ -955,13 +1002,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                       className={styles.dropdownTrigger}
                       onClick={(e) => {
                         animateClick(e.currentTarget);
-                        setIsUserDropdownOpen((prev) => {
-                          if (!prev) {
-                            setIsPriorityDropdownOpen(false);
-                            setIsClientDropdownOpen(false);
-                          }
-                          return !prev;
-                        });
+                        setIsUserDropdownOpen(!isUserDropdownOpen);
+                        if (!isUserDropdownOpen) {
+                          setIsPriorityDropdownOpen(false);
+                          setIsClientDropdownOpen(false);
+                        }
                         console.log('[ArchiveTable] User dropdown toggled');
                       }}
                     >

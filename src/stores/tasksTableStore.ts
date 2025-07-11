@@ -85,131 +85,22 @@ export const tasksTableStore = createStore<TasksTableStore>()((set) => ({
     undoStack: [],
     showUndo: false,
     userFilter: '',
-    setFilteredTasks: (tasks) => {
-      console.log('📊 [Store] setFilteredTasks called', {
-        timestamp: new Date().toISOString(),
-        tasksCount: tasks.length,
-        taskIds: tasks.map(t => t.id)
-      });
-      set({ filteredTasks: tasks });
-    },
-    setSearchQuery: (query) => {
-      console.log('🔍 [Store] setSearchQuery called', {
-        timestamp: new Date().toISOString(),
-        query
-      });
-      set({ searchQuery: query });
-    },
-    setPriorityFilter: (filter) => {
-      console.log('🎯 [Store] setPriorityFilter called', {
-        timestamp: new Date().toISOString(),
-        filter
-      });
-      set({ priorityFilter: filter });
-    },
-    setStatusFilter: (filter) => {
-      console.log('📋 [Store] setStatusFilter called', {
-        timestamp: new Date().toISOString(),
-        filter
-      });
-      set({ statusFilter: filter });
-    },
-    setClientFilter: (filter) => {
-      console.log('🏢 [Store] setClientFilter called', {
-        timestamp: new Date().toISOString(),
-        filter
-      });
-      set({ clientFilter: filter });
-    },
-    setSortKey: (key) => {
-      console.log('📈 [Store] setSortKey called', {
-        timestamp: new Date().toISOString(),
-        key
-      });
-      set({ sortKey: key });
-    },
-    setSortDirection: (dir) => {
-      console.log('📊 [Store] setSortDirection called', {
-        timestamp: new Date().toISOString(),
-        dir
-      });
-      set({ sortDirection: dir });
-    },
-    setIsUserDropdownOpen: (open) => {
-      console.log('👤 [Store] setIsUserDropdownOpen called', {
-        timestamp: new Date().toISOString(),
-        open
-      });
-      set({ isUserDropdownOpen: open });
-    },
-    setIsPriorityDropdownOpen: (open) => {
-      console.log('🎯 [Store] setIsPriorityDropdownOpen called', {
-        timestamp: new Date().toISOString(),
-        open
-      });
-      set({ isPriorityDropdownOpen: open });
-    },
-    setIsStatusDropdownOpen: (open) => {
-      console.log('📋 [Store] setIsStatusDropdownOpen called', {
-        timestamp: new Date().toISOString(),
-        open
-      });
-      set({ isStatusDropdownOpen: open });
-    },
-    setIsClientDropdownOpen: (open) => {
-      console.log('🏢 [Store] setIsClientDropdownOpen called', {
-        timestamp: new Date().toISOString(),
-        open
-      });
-      set({ isClientDropdownOpen: open });
-    },
-    setIsLoadingTasks: (loading) => {
-      console.log('⏳ [Store] setIsLoadingTasks called', {
-        timestamp: new Date().toISOString(),
-        loading
-      });
-      set({ isLoadingTasks: loading });
-    },
-    setIsLoadingClients: (loading) => {
-      console.log('⏳ [Store] setIsLoadingClients called', {
-        timestamp: new Date().toISOString(),
-        loading
-      });
-      set({ isLoadingClients: loading });
-    },
-    setIsLoadingUsers: (loading) => {
-      console.log('⏳ [Store] setIsLoadingUsers called', {
-        timestamp: new Date().toISOString(),
-        loading
-      });
-      set({ isLoadingUsers: loading });
-    },
-    setActionMenuOpenId: (id) => {
-      console.log('🎛️ [Store] setActionMenuOpenId called', {
-        timestamp: new Date().toISOString(),
-        id
-      });
-      set({ actionMenuOpenId: id });
-    },
-    setUndoStack: (stack) => {
-      console.log('↩️ [Store] setUndoStack called', {
-        timestamp: new Date().toISOString(),
-        stackCount: stack.length
-      });
-      set({ undoStack: stack });
-    },
-    setShowUndo: (show) => {
-      console.log('🔄 [Store] setShowUndo called', {
-        timestamp: new Date().toISOString(),
-        show
-      });
-      set({ showUndo: show });
-    },
-    setUserFilter: (filter) => {
-      console.log('👤 [Store] setUserFilter called', {
-        timestamp: new Date().toISOString(),
-        filter
-      });
-      set({ userFilter: filter });
-    },
+    setFilteredTasks: (tasks) => set({ filteredTasks: tasks }),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    setPriorityFilter: (filter) => set({ priorityFilter: filter }),
+    setStatusFilter: (filter) => set({ statusFilter: filter }),
+    setClientFilter: (filter) => set({ clientFilter: filter }),
+    setSortKey: (key) => set({ sortKey: key }),
+    setSortDirection: (dir) => set({ sortDirection: dir }),
+    setIsUserDropdownOpen: (open) => set({ isUserDropdownOpen: open }),
+    setIsPriorityDropdownOpen: (open) => set({ isPriorityDropdownOpen: open }),
+    setIsStatusDropdownOpen: (open) => set({ isStatusDropdownOpen: open }),
+    setIsClientDropdownOpen: (open) => set({ isClientDropdownOpen: open }),
+    setIsLoadingTasks: (loading) => set({ isLoadingTasks: loading }),
+    setIsLoadingClients: (loading) => set({ isLoadingClients: loading }),
+    setIsLoadingUsers: (loading) => set({ isLoadingUsers: loading }),
+    setActionMenuOpenId: (id) => set({ actionMenuOpenId: id }),
+    setUndoStack: (stack) => set({ undoStack: stack }),
+    setShowUndo: (show) => set({ showUndo: show }),
+    setUserFilter: (filter) => set({ userFilter: filter }),
 }));

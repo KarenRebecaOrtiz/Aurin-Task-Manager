@@ -124,7 +124,7 @@ export const useMessagePagination = ({
   pageSize = DEFAULT_PAGE_SIZE,
   decryptMessage,
 }: UseMessagePaginationProps) => {
-  const selectMessages = useMemo(() => (state: any) => state.messages[taskId] || EMPTY_MESSAGES, [taskId]);
+  const selectMessages = useMemo(() => (state: { messages: Record<string, Message[]> }) => state.messages[taskId] || EMPTY_MESSAGES, [taskId]);
   const messages = useDataStore(selectMessages);
   const { addMessage, updateMessage, setMessages: setTaskMessages } = useDataStore();
   const groupedMessages = useMemo(() => groupMessagesByDate(messages), [messages]);

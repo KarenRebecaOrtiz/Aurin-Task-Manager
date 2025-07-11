@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, onSnapshot, query, getDoc, doc } from 'firebase/firestore';
 import Image from 'next/image';
@@ -14,10 +14,12 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
-// Remove unused imports - functions handled by parent component
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 import NotificationDot from '@/components/ui/NotificationDot';
+import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { tasksKanbanStore } from '@/stores/tasksKanbanStore';
 
 
 
@@ -704,18 +706,65 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
     const { user } = useUser();
     const { isAdmin } = useAuth();
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [priorityFilter, setPriorityFilter] = useState<string>('');
-    const [clientFilter, setClientFilter] = useState<string>('');
-    const [userFilter, setUserFilter] = useState<string>('');
-    const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
-    const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
-    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
-    const [isTouchDevice, setIsTouchDevice] = useState(false);
-    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
-    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-    const [activeTask, setActiveTask] = useState<Task | null>(null);
+    // Optimizar selectores de Zustand para evitar re-renders innecesarios
+    const {
+      // Estado
+      searchQuery,
+      priorityFilter,
+      clientFilter,
+      userFilter,
+      actionMenuOpenId,
+      isPriorityDropdownOpen,
+      isClientDropdownOpen,
+      isUserDropdownOpen,
+      isTouchDevice,
+      isLoadingTasks,
+      isLoadingUsers,
+      activeTask,
+      // Acciones
+      setSearchQuery,
+      setPriorityFilter,
+      setClientFilter,
+      setUserFilter,
+      setActionMenuOpenId,
+      setIsPriorityDropdownOpen,
+      setIsClientDropdownOpen,
+      setIsUserDropdownOpen,
+      setIsTouchDevice,
+      setIsLoadingTasks,
+      setIsLoadingUsers,
+      setActiveTask,
+    } = useStore(
+      tasksKanbanStore,
+      useShallow((state) => ({
+        // Estado
+        searchQuery: state.searchQuery,
+        priorityFilter: state.priorityFilter,
+        clientFilter: state.clientFilter,
+        userFilter: state.userFilter,
+        actionMenuOpenId: state.actionMenuOpenId,
+        isPriorityDropdownOpen: state.isPriorityDropdownOpen,
+        isClientDropdownOpen: state.isClientDropdownOpen,
+        isUserDropdownOpen: state.isUserDropdownOpen,
+        isTouchDevice: state.isTouchDevice,
+        isLoadingTasks: state.isLoadingTasks,
+        isLoadingUsers: state.isLoadingUsers,
+        activeTask: state.activeTask,
+        // Acciones
+        setSearchQuery: state.setSearchQuery,
+        setPriorityFilter: state.setPriorityFilter,
+        setClientFilter: state.setClientFilter,
+        setUserFilter: state.setUserFilter,
+        setActionMenuOpenId: state.setActionMenuOpenId,
+        setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
+        setIsClientDropdownOpen: state.setIsClientDropdownOpen,
+        setIsUserDropdownOpen: state.setIsUserDropdownOpen,
+        setIsTouchDevice: state.setIsTouchDevice,
+        setIsLoadingTasks: state.setIsLoadingTasks,
+        setIsLoadingUsers: state.setIsLoadingUsers,
+        setActiveTask: state.setActiveTask,
+      }))
+    );
 
     const containerRef = useRef<HTMLDivElement>(null);
     const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -871,7 +920,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
             break;
         }
       }
-    }, []);
+    }, [setSearchQuery]);
 
     const statusColumns = useMemo(
       () => [
@@ -944,7 +993,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       return () => {
         window.removeEventListener('resize', checkTouchDevice);
       };
-    }, []);
+    }, [setIsTouchDevice]);
 
     useEffect(() => {
       const container = containerRef.current;
@@ -978,7 +1027,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         console.log('[TasksKanban] Using external tasks from shared state:', externalTasks.length);
         setIsLoadingTasks(false);
       }
-    }, [user?.id, externalTasks]);
+    }, [user?.id, externalTasks, setIsLoadingTasks]);
 
     // Setup de clients con actualizaciones en tiempo real
     useEffect(() => {
@@ -1011,7 +1060,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       return () => {
         unsubscribeClients();
       };
-    }, [user?.id, externalClients]);
+    }, [user?.id, externalClients, setIsLoadingUsers]);
 
     // Setup de users con actualizaciones en tiempo real
     useEffect(() => {
@@ -1085,7 +1134,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       return () => {
         unsubscribeUsers();
       };
-    }, [user?.id, externalUsers, isLoadingUsers]);
+    }, [user?.id, externalUsers, isLoadingUsers, setIsLoadingUsers]);
 
     // Cleanup all table listeners when component unmounts
     useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useEffect, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -11,6 +11,9 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { useMessageNotifications } from '@/hooks/useMessageNotifications';
 import NotificationDot from '@/components/ui/NotificationDot';
+import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { membersTableStore } from '@/stores/membersTableStore';
 
 interface User {
   id: string;
@@ -51,15 +54,45 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const { isLoading } = useAuth();
     const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
     
-    // Estados optimizados con refs para evitar re-renders
-    const [users, setUsers] = useState<User[]>([]);
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-    const [sortKey, setSortKey] = useState<string>('fullName');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+    // Zustand selectors agrupados
+    const {
+      users,
+      tasks,
+      filteredUsers,
+      sortKey,
+      sortDirection,
+      searchQuery,
+      isLoadingUsers,
+      isLoadingTasks,
+      setUsers,
+      setTasks,
+      setFilteredUsers,
+      setSortKey,
+      setSortDirection,
+      setSearchQuery,
+      setIsLoadingUsers,
+      setIsLoadingTasks,
+    } = useStore(
+      membersTableStore,
+      useShallow((state) => ({
+        users: state.users,
+        tasks: state.tasks,
+        filteredUsers: state.filteredUsers,
+        sortKey: state.sortKey,
+        sortDirection: state.sortDirection,
+        searchQuery: state.searchQuery,
+        isLoadingUsers: state.isLoadingUsers,
+        isLoadingTasks: state.isLoadingTasks,
+        setUsers: state.setUsers,
+        setTasks: state.setTasks,
+        setFilteredUsers: state.setFilteredUsers,
+        setSortKey: state.setSortKey,
+        setSortDirection: state.setSortDirection,
+        setSearchQuery: state.setSearchQuery,
+        setIsLoadingUsers: state.setIsLoadingUsers,
+        setIsLoadingTasks: state.setIsLoadingTasks,
+      }))
+    );
     
     // Use external data if provided, otherwise use internal state
     const effectiveUsers = externalUsers || users;
@@ -137,7 +170,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         }
       };
       fetchUsers();
-    }, [user?.id, externalUsers]);
+    }, [user?.id, externalUsers, setIsLoadingUsers, setUsers]);
 
     // Setup de tareas (solo si no hay datos externos)
     useEffect(() => {
@@ -184,7 +217,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         }
       };
       fetchTasks();
-    }, [user?.id, externalTasks]);
+    }, [user?.id, externalTasks, setIsLoadingTasks, setTasks]);
 
     // Calcular proyectos activos por usuario (memoizado)
     const activeProjectsCount = useMemo(() => {
@@ -221,15 +254,15 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             u.status?.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       setFilteredUsers(filtered);
-    }, [memoizedFilteredUsers, searchQuery]);
+    }, [memoizedFilteredUsers, searchQuery, setFilteredUsers]);
 
     // Ordenamiento (memoizado)
     const handleSort = useCallback(
       (key: string) => {
         setSortKey(key);
-          setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
       },
-      [],
+      [sortDirection, setSortKey, setSortDirection],
     );
 
     // Definir columnas (memoizado)

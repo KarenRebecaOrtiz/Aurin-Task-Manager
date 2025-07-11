@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import Image from 'next/image';
@@ -11,16 +11,10 @@ import ActionMenu from './ui/ActionMenu';
 import styles from './ClientsTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 import SkeletonLoader from '@/components/SkeletonLoader'; // Import SkeletonLoader
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-  projectCount: number;
-  projects: string[];
-  createdBy: string;
-  createdAt: string;
-}
+import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { clientsTableStore } from '@/stores/clientsTableStore';
+import { Client } from '@/types';
 
 // Cache global persistente para ClientsTable
 const clientsTableCache = {
@@ -93,17 +87,44 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     // Estados optimizados con refs para evitar re-renders
     const clientsRef = useRef<Client[]>([]);
     
-    const [clients, setClients] = useState<Client[]>([]);
-    const [filteredClients, setFilteredClients] = useState<Client[]>([]);
-    const [sortKey, setSortKey] = useState<string>('name');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
-    const [isDataLoading, setIsDataLoading] = useState(true); // Local loading state for data fetching
-    const actionMenuRef = useRef<HTMLDivElement>(null);
-    const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+    // Zustand selectors agrupados
+    const {
+      clients,
+      filteredClients,
+      sortKey,
+      sortDirection,
+      searchQuery,
+      actionMenuOpenId,
+      isDataLoading,
+      setClients,
+      setFilteredClients,
+      setSortKey,
+      setSortDirection,
+      setSearchQuery,
+      setActionMenuOpenId,
+      setIsDataLoading,
+    } = useStore(
+      clientsTableStore,
+      useShallow((state) => ({
+        clients: state.clients,
+        filteredClients: state.filteredClients,
+        sortKey: state.sortKey,
+        sortDirection: state.sortDirection,
+        searchQuery: state.searchQuery,
+        actionMenuOpenId: state.actionMenuOpenId,
+        isDataLoading: state.isDataLoading,
+        setClients: state.setClients,
+        setFilteredClients: state.setFilteredClients,
+        setSortKey: state.setSortKey,
+        setSortDirection: state.setSortDirection,
+        setSearchQuery: state.setSearchQuery,
+        setActionMenuOpenId: state.setActionMenuOpenId,
+        setIsDataLoading: state.setIsDataLoading,
+      }))
+    );
 
     const userId = useMemo(() => user?.id || '', [user]);
+    const actionMenuRef = useRef<HTMLDivElement>(null);
 
     // Use external data if provided, otherwise use internal state
     const effectiveClients = externalClients || clients;
@@ -201,7 +222,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       return () => {
         // No limpiar el listener aquí
       };
-    }, [user?.id, onCacheUpdate]);
+    }, [user?.id, onCacheUpdate, setClients, setIsDataLoading]);
 
     const memoizedFilteredClients = useMemo(() => {
       return effectiveClients.filter((client) =>
@@ -213,10 +234,10 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
 
     useEffect(() => {
       setFilteredClients(memoizedFilteredClients);
-    }, [memoizedFilteredClients]);
+    }, [memoizedFilteredClients, setFilteredClients]);
 
     useEffect(() => {
-      const currentActionMenuRef = actionMenuRef.current;
+      const currentActionMenuRef = actionMenuOpenId && actionMenuOpenId;
       if (actionMenuOpenId && currentActionMenuRef) {
         gsap.fromTo(
           currentActionMenuRef,
@@ -232,34 +253,29 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     }, [actionMenuOpenId]);
 
     useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
+      const handleClickOutside = () => {
         if (
-          actionMenuRef.current &&
-          !actionMenuRef.current.contains(event.target as Node) &&
-          !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
+          actionMenuOpenId &&
+          actionMenuOpenId
         ) {
           setActionMenuOpenId(null);
         }
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [actionMenuOpenId]);
+    }, [actionMenuOpenId, setActionMenuOpenId]);
 
     const handleSort = useCallback(
       (key: string) => {
-        if (key === sortKey) {
-          setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-        } else {
-          setSortKey(key);
-          setSortDirection('asc');
-        }
+        setSortKey(key);
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
       },
-      [sortKey],
+      [sortDirection, setSortKey, setSortDirection],
     );
 
     const handleActionClick = useCallback((clientId: string) => {
-      setActionMenuOpenId((prev) => (prev === clientId ? null : clientId));
-    }, []);
+      setActionMenuOpenId(actionMenuOpenId === clientId ? null : clientId);
+    }, [actionMenuOpenId, setActionMenuOpenId]);
 
     const animateClick = useCallback((element: HTMLElement) => {
       gsap.to(element, {
@@ -365,9 +381,9 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                     }}
                     animateClick={animateClick}
                     actionMenuRef={actionMenuRef}
-                    actionButtonRef={(el) => {
-                      if (el) actionButtonRefs.current.set(client.id, el);
-                      else actionButtonRefs.current.delete(client.id);
+                    actionButtonRef={() => {
+                      // This ref is not directly used in the current ActionMenu component
+                      // as it expects a Map of refs.
                     }}
                   />
                 );
@@ -376,7 +392,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           }
           return col;
         }),
-      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, userId, isAdmin, isLoading, animateClick],
+      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, userId, isAdmin, isLoading, animateClick, setActionMenuOpenId],
     );
 
     // Handle loading state - mostrar loader mientras cargan los datos
