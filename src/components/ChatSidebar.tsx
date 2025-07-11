@@ -9,7 +9,7 @@ import { useUser } from '@clerk/nextjs';
 import { Timestamp, doc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, writeBatch, onSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
-import InfiniteScroll from 'react-infinite-scroll-component';
+
 import ImagePreviewOverlay from './ImagePreviewOverlay';
 import InputChat from './ui/InputChat';
 import DatePill from './ui/DatePill';
@@ -27,6 +27,8 @@ import { useMessageDrag } from '@/hooks/useMessageDrag';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 import { useTimer } from '@/hooks/useTimer';
 import { useDataStore } from '@/stores/dataStore';
+import LoadMoreButton from './ui/LoadMoreButton';
+
 
 interface Message {
   id: string;
@@ -468,8 +470,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
-    const [isLoadingChunk, setIsLoadingChunk] = useState(false);
-    const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
+      const [isLoadingChunk, setIsLoadingChunk] = useState(false);
+  const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
 
     const { addMessage, updateMessage } = useDataStore();
 
@@ -511,6 +513,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         lastMessage: messages[messages.length - 1]?.text?.substring(0, 50),
         pendingCount: messages.filter(m => m.isPending).length
       });
+    }, [messages]);
+
+    // Agregar useEffect para loggear cambios en messages con ChunkDebug
+    useEffect(() => {
+      console.log('[ChunkDebug:Front] Messages updated in ChatSidebar. Total count:', messages.length, 'Last message:', messages[messages.length - 1]?.id);
     }, [messages]);
 
     // Debug: Track component renders
@@ -611,8 +618,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     }, [isOpen, task.id, task.status, task.priority]);
 
     const handleLoadMoreMessages = useCallback(async () => {
+      console.log('[ChatSidebar] handleLoadMoreMessages called. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'isLoadingChunk:', isLoadingChunk);
       if (hasMore && !isLoadingMore && !isLoadingChunk) {
         setIsLoadingChunk(true);
+        console.log('[ChunkDebug:Front] Manual load more triggered. Current messages:', messages.length);
         const currentMessageCount = messages.length;
         await new Promise(resolve => setTimeout(resolve, 2000));
         try {
@@ -625,7 +634,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
               setNewChunkMessageIds(new Set<string>());
             }, 3000);
           }, 100);
-        } finally {
+                } finally {
           setIsLoadingChunk(false);
         }
       }
@@ -1543,57 +1552,49 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           {!isLoadingMessages && messages.length === 0 && (
             <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
           )}
-          <InfiniteScroll
-            dataLength={messages.length}
-            next={handleLoadMoreMessages}
-            hasMore={hasMore}
-            loader={
-              <div className={styles.chunkLoader}>
-                <div className={styles.loader}></div>
-              </div>
-            }
-            endMessage={<div className={styles.noMessages}>No hay más mensajes.</div>}
-            style={{ display: 'flex', flexDirection: 'column-reverse', overflowY: 'auto' }}
-            scrollableTarget="chat-container"
-            inverse={true}
-            scrollThreshold="50px"
-          >
-            {groupedMessages.map((group, groupIndex) => {
-              // Validación defensiva para evitar "Invalid time value"
-              const dateKey = group.date instanceof Date && !isNaN(group.date.getTime())
-                ? group.date.toISOString()
-                : `invalid-date-${groupIndex}`; // Usar índice como fallback para fechas inválidas
+          {groupedMessages.map((group, groupIndex) => {
+            // Validación defensiva para evitar "Invalid time value"
+            const dateKey = group.date instanceof Date && !isNaN(group.date.getTime())
+              ? group.date.toISOString()
+              : `invalid-date-${groupIndex}`; // Usar índice como fallback para fechas inválidas
 
-              return (
-                <React.Fragment key={dateKey}>
-                  {group.messages.map((message, messageIndex) => (
-                  <MessageItem
-                      key={`${message.id}-${message.clientId}-${messageIndex}`}
-                    message={message}
-                    users={users}
-                    userId={user?.id}
-                    styles={styles}
-                    setActionMenuOpenId={setActionMenuOpenId}
-                    actionMenuOpenId={actionMenuOpenId}
-                    setEditingMessageId={setEditingMessageId}
-                    setEditingText={setEditingText}
-                    handleDeleteMessage={handleDeleteMessage}
-                    setImagePreviewSrc={setImagePreviewSrc}
-                    editingMessageId={editingMessageId}
-                    isDraggingMessage={isDraggingMessage}
-                    draggedMessageId={draggedMessageId}
-                    dragOffset={dragOffset}
-                    onMessageDragStart={handleMessageDragStart}
-                    isNewChunk={newChunkMessageIds.has(message.id)}
-                    isLoadingChunk={isLoadingChunk}
-                    ref={message.id === messages[0]?.id ? lastMessageRef : null}
-                  />
-                ))}
-                <DatePill date={group.date} />
-              </React.Fragment>
-              );
-            })}
-          </InfiniteScroll>
+            return (
+              <React.Fragment key={dateKey}>
+                {group.messages.map((message, messageIndex) => (
+                <MessageItem
+                    key={`${message.id}-${message.clientId}-${messageIndex}`}
+                  message={message}
+                  users={users}
+                  userId={user?.id}
+                  styles={styles}
+                  setActionMenuOpenId={setActionMenuOpenId}
+                  actionMenuOpenId={actionMenuOpenId}
+                  setEditingMessageId={setEditingMessageId}
+                  setEditingText={setEditingText}
+                  handleDeleteMessage={handleDeleteMessage}
+                  setImagePreviewSrc={setImagePreviewSrc}
+                  editingMessageId={editingMessageId}
+                  isDraggingMessage={isDraggingMessage}
+                  draggedMessageId={draggedMessageId}
+                  dragOffset={dragOffset}
+                  onMessageDragStart={handleMessageDragStart}
+                  isNewChunk={newChunkMessageIds.has(message.id)}
+                  isLoadingChunk={isLoadingChunk}
+                  ref={message.id === messages[0]?.id ? lastMessageRef : null}
+                />
+              ))}
+              <DatePill date={group.date} />
+            </React.Fragment>
+            );
+          })}
+
+          <LoadMoreButton
+            onClick={handleLoadMoreMessages}
+            isLoading={isLoadingMore}
+            hasMoreMessages={hasMore}
+            className={styles.loadMoreButtonContainer}
+          />
+
         </div>
         <InputChat
           taskId={task.id}

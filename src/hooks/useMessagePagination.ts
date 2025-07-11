@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useDataStore } from '@/stores/dataStore';
+import { useChunkStore } from '@/stores/chunkStore';
 
 interface Message {
   id: string;
@@ -127,10 +128,16 @@ export const useMessagePagination = ({
   const selectMessages = useMemo(() => (state: { messages: Record<string, Message[]> }) => state.messages[taskId] || EMPTY_MESSAGES, [taskId]);
   const messages = useDataStore(selectMessages);
   const { addMessage, updateMessage, setMessages: setTaskMessages } = useDataStore();
+  const { addChunk, getChunks } = useChunkStore();
   const groupedMessages = useMemo(() => groupMessagesByDate(messages), [messages]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  
+  // Debug: Log cuando hasMore cambia
+  useEffect(() => {
+    console.log('[ChunkDebug:Hook] hasMore changed to:', hasMore);
+  }, [hasMore]);
   const [error, setError] = useState<string>('');
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -171,26 +178,94 @@ export const useMessagePagination = ({
   const loadInitialMessages = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Verificar cache primero
+      const cachedChunks = getChunks(taskId);
+      if (cachedChunks && cachedChunks.length > 0 && !checkFirebaseCallLimits()) {
+        console.log('[ChunkDebug:Hook] Using cached chunks from chunkStore due to limits. Chunks:', cachedChunks.length);
+        cachedChunks.forEach(chunk => chunk.forEach(msg => addMessage(taskId, msg)));
+        
+        // Necesitamos establecer lastDocRef y hasMore para chunks cacheados
+        // Obtener el total de mensajes para determinar si hay más chunks
+        const allMessagesQuery = query(
+          collection(db, `tasks/${taskId}/messages`), 
+          orderBy('timestamp', 'desc')
+        );
+        const allMessagesSnapshot = await getDocs(allMessagesQuery);
+        const totalMessages = allMessagesSnapshot.docs.length;
+        console.log('[ChunkDebug:Hook] Cache loaded - Total messages in task:', totalMessages);
+        
+        // Determinar si hay más chunks disponibles
+        const hasMoreMessages = totalMessages > pageSize;
+        
+        // Establecer lastDocRef
+        if (allMessagesSnapshot.docs.length > 0) {
+          lastDocRef.current = allMessagesSnapshot.docs[0];
+          console.log('[ChunkDebug:Hook] Cache loaded - Setting hasMore to:', hasMoreMessages, 'totalMessages:', totalMessages, 'pageSize:', pageSize);
+          setHasMore(hasMoreMessages);
+        }
+        return;
+      }
+      
       if (!checkFirebaseCallLimits()) {
         throw new Error('Límite de llamadas excedido');
       }
+      
+      // Cargar todos los mensajes para determinar correctamente si hay más chunks
+      const allMessagesQuery = query(
+        collection(db, `tasks/${taskId}/messages`), 
+        orderBy('timestamp', 'desc')
+      );
+      const allMessagesSnapshot = await getDocs(allMessagesQuery);
+      const totalMessages = allMessagesSnapshot.docs.length;
+      console.log('[ChunkDebug:Hook] Total messages in task:', totalMessages);
+      
+      // Determinar si hay más chunks disponibles
+      const hasMoreMessages = totalMessages > pageSize;
+      
+      // Cargar solo el primer chunk
       const q = query(collection(db, `tasks/${taskId}/messages`), orderBy('timestamp', 'desc'), limit(pageSize));
       const snapshot = await getDocs(q);
       const newMessages = await Promise.all(snapshot.docs.map(async (doc) => await processMessage(doc.data(), doc.id)));
       setTaskMessages(taskId, newMessages);
+      addChunk(taskId, newMessages);  // Guarda el chunk inicial en chunkStore
+      console.log('[ChunkDebug:Hook] Initial chunk loaded and saved to chunkStore. Messages count:', newMessages.length);
       lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
-      setHasMore(snapshot.docs.length === pageSize);
+      console.log('[ChunkDebug:Hook] Initial load - Setting hasMore to:', hasMoreMessages, 'totalMessages:', totalMessages, 'pageSize:', pageSize);
+      setHasMore(hasMoreMessages);
     } catch (err) {
       setError('Error al cargar mensajes iniciales');
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [taskId, pageSize, processMessage, setTaskMessages]);
+  }, [taskId, pageSize, processMessage, setTaskMessages, addChunk, getChunks]);
 
   const loadMoreMessages = useCallback(async () => {
-    if (!hasMore || isLoadingMore || !lastDocRef.current) return;
+    console.log('[ChunkDebug:Hook] loadMoreMessages called. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'lastDocRef:', !!lastDocRef.current);
+    if (!hasMore || isLoadingMore || !lastDocRef.current) {
+      console.log('[ChunkDebug:Hook] loadMoreMessages early return. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'lastDocRef:', !!lastDocRef.current);
+      return;
+    }
     setIsLoadingMore(true);
+    
+    // Verificación adicional: verificar si realmente hay más mensajes
+    try {
+      const checkQuery = query(
+        collection(db, `tasks/${taskId}/messages`),
+        orderBy('timestamp', 'desc'),
+        startAfter(lastDocRef.current),
+        limit(1)
+      );
+      const checkSnapshot = await getDocs(checkQuery);
+      if (checkSnapshot.docs.length === 0) {
+        console.log('[ChunkDebug:Hook] No more messages available, setting hasMore to false');
+        setHasMore(false);
+        setIsLoadingMore(false);
+        return;
+      }
+    } catch (error) {
+      console.error('[ChunkDebug:Hook] Error checking for more messages:', error);
+    }
     try {
       if (!checkFirebaseCallLimits()) {
         throw new Error('Límite de llamadas excedido');
@@ -204,15 +279,19 @@ export const useMessagePagination = ({
       const snapshot = await getDocs(q);
       const newMessages = await Promise.all(snapshot.docs.map(async (doc) => await processMessage(doc.data(), doc.id)));
       newMessages.forEach((msg) => addMessage(taskId, msg));
+      addChunk(taskId, newMessages);  // Guarda nuevo chunk
+      console.log('[ChunkDebug:Hook] New chunk loaded from Firebase. Size:', newMessages.length, 'Total messages now:', messages.length + newMessages.length);
       lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
-      setHasMore(snapshot.docs.length === pageSize);
+      const newHasMore = snapshot.docs.length === pageSize;
+      console.log('[ChunkDebug:Hook] Setting hasMore to:', newHasMore, 'docs.length:', snapshot.docs.length, 'pageSize:', pageSize);
+      setHasMore(newHasMore);
     } catch (err) {
       setError('Error al cargar más mensajes');
       console.error(err);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [hasMore, isLoadingMore, taskId, pageSize, processMessage, addMessage]);
+  }, [hasMore, isLoadingMore, taskId, pageSize, processMessage, addMessage, addChunk, messages.length, setHasMore]);
 
   const addOptimisticMessage = useCallback((message: Message) => {
     addMessage(taskId, message);
@@ -223,6 +302,7 @@ export const useMessagePagination = ({
   }, [taskId, updateMessage]);
 
   useEffect(() => {
+    console.log('[ChunkDebug:Hook] useEffect triggered. taskId:', taskId, 'current hasMore:', hasMore);
     // Evitar múltiples listeners
     if (unsubscribeRef.current) {
       console.log('[useMessagePagination] Cleaning up existing listener for taskId:', taskId);
@@ -230,8 +310,15 @@ export const useMessagePagination = ({
       unsubscribeRef.current = null;
     }
     
-    // Cargar mensajes iniciales primero
-    loadInitialMessages();
+    // Solo cargar mensajes iniciales si no hay mensajes ya cargados
+    const currentMessages = messages.length;
+    console.log('[ChunkDebug:Hook] Current messages count:', currentMessages);
+    if (currentMessages === 0) {
+      console.log('[ChunkDebug:Hook] Loading initial messages...');
+      loadInitialMessages();
+    } else {
+      console.log('[ChunkDebug:Hook] Skipping initial load, messages already loaded');
+    }
     
     // Configurar listener para cambios en tiempo real
     const q = query(collection(db, `tasks/${taskId}/messages`), orderBy('timestamp', 'desc'));
@@ -303,6 +390,8 @@ export const useMessagePagination = ({
           console.error('[useMessagePagination] Error processing change:', error);
         }
       }
+      
+      console.log('[ChunkDebug:Hook] Batch processed. Updated messages count:', currentMessages.length);
       
       pendingChanges = [];
       isProcessing = false;
