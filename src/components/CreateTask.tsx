@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, memo, useMemo, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { doc, collection, setDoc, addDoc, onSnapshot } from "firebase/firestore";
 import { gsap } from "gsap";
@@ -14,7 +14,7 @@ import "react-day-picker/style.css";
 import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
 import { z } from "zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, Control, FieldValues, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import { toast } from "@/components/ui/use-toast";
@@ -25,34 +25,10 @@ import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
+import { useFilteredCollaborators, useFilteredLeaders, useFilteredClients, useAnimationOptimizations, useDropdownHandlers } from '@/hooks/useCreateTaskOptimizations';
+import { useCreateTaskDropdowns, useCreateTaskSearch, useCreateTaskAlerts, useCreateTaskGeneral } from '@/stores/createTaskStore';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const debounce = <T extends unknown[]>(func: (...args: T) => void, delay: number) => {
-  let timer: NodeJS.Timeout | null = null;
-  return (...args: T) => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      func(...args);
-      timer = null;
-    }, delay);
-  };
-};
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-  projects: string[];
-  createdBy: string;
-}
-
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
-}
 
 // Esquema base sin validación condicional
 const baseFormSchema = z.object({
@@ -141,6 +117,98 @@ interface CreateTaskProps {
   onShowFailAlert?: (message: string, error?: string) => void;
 }
 
+// Interfaces necesarias
+interface Client {
+  id: string;
+  name: string;
+  imageUrl: string;
+  projects: string[];
+  createdBy: string;
+}
+
+interface DropdownStates {
+  project: boolean;
+  status: boolean;
+  priority: boolean;
+  collaborator: boolean;
+  leader: boolean;
+  client: boolean;
+  startDate: boolean;
+  endDate: boolean;
+}
+
+interface SearchStates {
+  collaborator: string;
+  leader: string;
+  client: string;
+}
+
+// Componentes memoizados para evitar re-renders innecesarios
+const MemoizedTextInput = memo(({ 
+  name, 
+  control, 
+  placeholder, 
+  label, 
+  subtitle,
+  onKeyDown,
+  ...props 
+}: {
+  name: string;
+  control: Control<FieldValues>; // Arreglar tipo any
+  placeholder: string;
+  label: string;
+  subtitle?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  [key: string]: unknown;
+}) => (
+  <div className={styles.formGroup}>
+    <label className={styles.label}>{label}</label>
+    {subtitle && <div className={styles.sectionSubtitle}>{subtitle}</div>}
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => ( // Remover fieldState no usado
+        <input
+          className={styles.input}
+          placeholder={placeholder}
+          {...field}
+          onKeyDown={onKeyDown}
+          {...props}
+        />
+      )}
+    />
+  </div>
+));
+
+MemoizedTextInput.displayName = 'MemoizedTextInput';
+
+const MemoizedDropdown = memo(({ 
+  isOpen, 
+  onToggle, 
+  placeholder, 
+  label, 
+  children 
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+  placeholder: string;
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className={styles.formGroup}>
+    <label className={styles.label}>{label}</label>
+    <div className={styles.dropdownContainer}>
+      <div className={styles.dropdownTrigger} onClick={onToggle}>
+        <span>{placeholder}</span>
+        <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
+      </div>
+      {isOpen && children}
+    </div>
+  </div>
+));
+
+MemoizedDropdown.displayName = 'MemoizedDropdown';
+
 const CreateTask: React.FC<CreateTaskProps> = ({
   isOpen,
   onToggle,
@@ -156,14 +224,34 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const { isAdmin, isLoading } = useAuth(); // Use AuthContext for isAdmin and isLoading
   const [clients, setClients] = useState<Client[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
-  const [isCollaboratorDropdownOpen, setIsCollaboratorDropdownOpen] = useState(false);
-  const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false);
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
-  const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+  // Estados migrados al store optimizado
+  const { dropdownStates, toggleDropdown, selectDropdownItem } = useCreateTaskDropdowns();
+  const { searchStates, setSearchState } = useCreateTaskSearch();
+  const { alertStates, setAlertState } = useCreateTaskAlerts();
+  const { isMounted: storeIsMounted, includeMembers: storeIncludeMembers, setMounted: setStoreMounted, setIncludeMembers: setStoreIncludeMembers } = useCreateTaskGeneral();
+  
+  // Mapear estados del store a variables locales para compatibilidad
+  const isProjectDropdownOpen = dropdownStates.project;
+  const isStatusDropdownOpen = dropdownStates.status;
+  const isPriorityDropdownOpen = dropdownStates.priority;
+  const isCollaboratorDropdownOpen = dropdownStates.collaborator;
+  const isLeaderDropdownOpen = dropdownStates.leader;
+  const isClientDropdownOpen = dropdownStates.client;
+  const isStartDateOpen = dropdownStates.startDate;
+  const isEndDateOpen = dropdownStates.endDate;
+  
+  const searchCollaborator = searchStates.collaborator;
+  const searchLeader = searchStates.leader;
+  const searchClient = searchStates.client;
+  
+  const showSuccessAlert = alertStates.showSuccess;
+  const showFailAlert = alertStates.showFail;
+  const failErrorMessage = alertStates.failMessage;
+  
+  const isMounted = storeIsMounted;
+  const includeMembers = storeIncludeMembers;
+  
+  // Estados de posición mantenidos localmente por ahora
   const [projectDropdownPosition, setProjectDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null);
@@ -172,14 +260,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const [clientDropdownPosition, setClientDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [startDatePosition, setStartDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [endDatePosition, setEndDatePosition] = useState<{ top: number; left: number } | null>(null);
-  const [searchCollaborator, setSearchCollaborator] = useState("");
-  const [searchLeader, setSearchLeader] = useState("");
-  const [searchClient, setSearchClient] = useState("");
-  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [showFailAlert, setShowFailAlert] = useState(false);
-  const [failErrorMessage, setFailErrorMessage] = useState("");
-  const [isMounted, setIsMounted] = useState(false);
-  const [includeMembers, setIncludeMembers] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const projectDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -199,16 +279,23 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
 
   // Consumir users del store global en lugar de hacer fetch directo
-  const { users, isLoadingUsers } = useDataStore(
+  const { users } = useDataStore(
     useShallow((state) => ({
       users: state.users,
-      isLoadingUsers: state.isLoadingUsers,
     }))
   );
 
+  // Memoizar el resolver para evitar recrearlo constantemente
+  const formResolver = useMemo(() => {
+    return zodResolver(createFormSchema(includeMembers));
+  }, [includeMembers]);
+
+  // Memoizar defaultValues para evitar recrearlos
+  const memoizedDefaultValues = useMemo(() => defaultValues, []);
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(createFormSchema(includeMembers)),
-    defaultValues,
+    resolver: formResolver,
+    defaultValues: memoizedDefaultValues,
     mode: "onChange",
   });
 
@@ -223,19 +310,22 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
   // Prevent hydration issues
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    setStoreMounted(true);
+  }, [setStoreMounted]);
 
-  // Update resolver when includeMembers changes
-  useEffect(() => {
+  // Memoizar la función de validación para evitar re-renders
+  const validateForm = useCallback(() => {
     form.clearErrors();
     form.trigger();
-  }, [includeMembers, form]);
+  }, [form]);
 
-  // Removed local isAdmin fetch useEffect
-
+  // Update resolver when includeMembers changes - OPTIMIZADO
   useEffect(() => {
-    const subscription = form.watch((value) => {
+    validateForm();
+  }, [includeMembers, validateForm]);
+
+  // Memoizar la función de watch para evitar re-renders constantes
+  const handleFormChange = useCallback((value: Partial<FormValues>) => {
       saveFormData();
       const isChanged = Object.keys(value).some((key) => {
         const current = value[key as keyof FormValues];
@@ -246,21 +336,30 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         return current !== initial;
       });
       onHasUnsavedChanges(isChanged);
-    });
+  }, [saveFormData, onHasUnsavedChanges]);
+
+  // Optimizar el watch del formulario
+  useEffect(() => {
+    const subscription = form.watch(handleFormChange);
     return () => subscription.unsubscribe();
-  }, [form, onHasUnsavedChanges, saveFormData]);
+  }, [form, handleFormChange]);
+
+  // Memoizar la función de reset para evitar re-renders
+  const resetForm = useCallback(() => {
+      form.reset(defaultValues);
+      clearPersistedData();
+    setAlertState('showSuccess', false);
+    setAlertState('showFail', false);
+      onHasUnsavedChanges(false);
+    toggleDropdown('startDate');
+    toggleDropdown('endDate');
+  }, [form, clearPersistedData, setAlertState, onHasUnsavedChanges, toggleDropdown]);
 
   useEffect(() => {
     if (!isOpen) {
-      form.reset(defaultValues);
-      clearPersistedData();
-      setShowSuccessAlert(false);
-      setShowFailAlert(false);
-      onHasUnsavedChanges(false);
-      setIsStartDateOpen(false);
-      setIsEndDateOpen(false);
+      resetForm();
     }
-  }, [isOpen, form, onHasUnsavedChanges, clearPersistedData]);
+  }, [isOpen, resetForm]);
 
   useEffect(() => {
     const clientsCollection = collection(db, "clients");
@@ -299,7 +398,28 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     }
   }, [onClientAlertChange, showSuccessAlert, showFailAlert, failErrorMessage, form]);
 
-  // Combined useEffect for dropdowns and container animations
+  // SEPARAR EL useEffect MASIVO en múltiples useEffect más pequeños
+  // useEffect para animaciones del contenedor principal
+  useEffect(() => {
+    if (!isMounted || !containerRef.current) return;
+
+    if (isOpen) {
+      gsap.fromTo(
+        containerRef.current,
+        { opacity: 0, height: 0 },
+        { opacity: 1, height: "auto", duration: 0.3, ease: "power2.out" },
+      );
+    } else {
+      gsap.to(containerRef.current, {
+        opacity: 0,
+        height: 0,
+        duration: 0.3,
+        ease: "power2.in",
+      });
+    }
+  }, [isOpen, isMounted]);
+
+  // useEffect para posiciones de dropdowns
   useEffect(() => {
     if (!isMounted) return;
 
@@ -318,6 +438,18 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           left: rect.left + window.scrollX,
         });
       }
+    };
+
+    updatePositions();
+    window.addEventListener("resize", updatePositions);
+    return () => window.removeEventListener("resize", updatePositions);
+  }, [isMounted, isStartDateOpen, isEndDateOpen]);
+
+  // useEffect para posiciones de dropdowns de proyecto, estado y prioridad
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const updatePositions = () => {
       if (isProjectDropdownOpen && projectDropdownRef.current) {
         const rect = projectDropdownRef.current.getBoundingClientRect();
         setProjectDropdownPosition({
@@ -339,6 +471,18 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           left: rect.left + window.scrollX,
         });
       }
+    };
+
+    updatePositions();
+    window.addEventListener("resize", updatePositions);
+    return () => window.removeEventListener("resize", updatePositions);
+  }, [isMounted, isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen]);
+
+  // useEffect para posiciones de dropdowns de usuarios
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const updatePositions = () => {
       if (isCollaboratorDropdownOpen && collaboratorInputRef.current) {
         const rect = collaboratorInputRef.current.getBoundingClientRect();
         setCollaboratorDropdownPosition({
@@ -362,6 +506,15 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       }
     };
 
+    updatePositions();
+    window.addEventListener("resize", updatePositions);
+    return () => window.removeEventListener("resize", updatePositions);
+  }, [isMounted, isCollaboratorDropdownOpen, isLeaderDropdownOpen, isClientDropdownOpen]);
+
+  // useEffect para animaciones de poppers
+  useEffect(() => {
+    if (!isMounted) return;
+
     const animatePoppers = () => {
       if (isProjectDropdownOpen && projectDropdownPopperRef.current) {
         gsap.fromTo(
@@ -384,6 +537,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
         );
       }
+    };
+
+    animatePoppers();
+  }, [isMounted, isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen]);
+
+  // useEffect para animaciones de poppers de usuarios
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const animatePoppers = () => {
       if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
         gsap.fromTo(
           collaboratorDropdownPopperRef.current,
@@ -405,6 +568,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
         );
       }
+    };
+
+    animatePoppers();
+  }, [isMounted, isCollaboratorDropdownOpen, isLeaderDropdownOpen, isClientDropdownOpen]);
+
+  // useEffect para animaciones de date pickers
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const animatePoppers = () => {
       if (isStartDateOpen && startDatePopperRef.current) {
         gsap.fromTo(
           startDatePopperRef.current,
@@ -421,41 +594,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       }
     };
 
-    if (containerRef.current) {
-      if (isOpen) {
-        gsap.fromTo(
-          containerRef.current,
-          { opacity: 0, height: 0 },
-          { opacity: 1, height: "auto", duration: 0.3, ease: "power2.out" },
-        );
-      } else {
-        gsap.to(containerRef.current, {
-          opacity: 0,
-          height: 0,
-          duration: 0.3,
-          ease: "power2.in",
-        });
-      }
-    }
-
-    updatePositions();
     animatePoppers();
+  }, [isMounted, isStartDateOpen, isEndDateOpen]);
 
-    window.addEventListener("resize", updatePositions);
-    return () => window.removeEventListener("resize", updatePositions);
-  }, [
-    isOpen,
-    isMounted,
-    isStartDateOpen,
-    isEndDateOpen,
-    isProjectDropdownOpen,
-    isStatusDropdownOpen,
-    isPriorityDropdownOpen,
-    isCollaboratorDropdownOpen,
-    isLeaderDropdownOpen,
-    isClientDropdownOpen,
-  ]);
-
+  // OPTIMIZAR EL useEffect DE CLICK OUTSIDE separándolo en múltiples useEffect
+  // useEffect para dropdowns de proyecto, estado y prioridad
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -465,7 +608,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !projectDropdownPopperRef.current.contains(event.target as Node) &&
         isProjectDropdownOpen
       ) {
-        setIsProjectDropdownOpen(false);
+        toggleDropdown("project");
       }
       if (
         statusDropdownRef.current &&
@@ -474,7 +617,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !statusDropdownPopperRef.current.contains(event.target as Node) &&
         isStatusDropdownOpen
       ) {
-        setIsStatusDropdownOpen(false);
+        toggleDropdown("status");
       }
       if (
         priorityDropdownRef.current &&
@@ -483,8 +626,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !priorityDropdownPopperRef.current.contains(event.target as Node) &&
         isPriorityDropdownOpen
       ) {
-        setIsPriorityDropdownOpen(false);
+        toggleDropdown("priority");
       }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen, toggleDropdown]);
+
+  // useEffect para date pickers
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         startDateInputRef.current &&
         !startDateInputRef.current.contains(event.target as Node) &&
@@ -492,7 +643,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !startDatePopperRef.current.contains(event.target as Node) &&
         isStartDateOpen
       ) {
-        setIsStartDateOpen(false);
+        toggleDropdown("startDate");
       }
       if (
         endDateInputRef.current &&
@@ -501,8 +652,16 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !endDatePopperRef.current.contains(event.target as Node) &&
         isEndDateOpen
       ) {
-        setIsEndDateOpen(false);
+        toggleDropdown("endDate");
       }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isStartDateOpen, isEndDateOpen, toggleDropdown]);
+
+  // useEffect para dropdowns de usuarios
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         collaboratorInputRef.current &&
         !collaboratorInputRef.current.contains(event.target as Node) &&
@@ -510,7 +669,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !collaboratorDropdownPopperRef.current.contains(event.target as Node) &&
         isCollaboratorDropdownOpen
       ) {
-        setIsCollaboratorDropdownOpen(false);
+        toggleDropdown("collaborator");
       }
       if (
         clientInputRef.current &&
@@ -519,7 +678,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !clientDropdownPopperRef.current.contains(event.target as Node) &&
         isClientDropdownOpen
       ) {
-        setIsClientDropdownOpen(false);
+        toggleDropdown("client");
       }
       if (
         leaderInputRef.current &&
@@ -528,202 +687,65 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         !leaderDropdownPopperRef.current.contains(event.target as Node) &&
         isLeaderDropdownOpen
       ) {
-        setIsLeaderDropdownOpen(false);
+        toggleDropdown("leader");
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [
-    isProjectDropdownOpen,
-    isStatusDropdownOpen,
-    isPriorityDropdownOpen,
-    isStartDateOpen,
-    isEndDateOpen,
-    isCollaboratorDropdownOpen,
-    isClientDropdownOpen,
-    isLeaderDropdownOpen,
-  ]);
+  }, [isCollaboratorDropdownOpen, isClientDropdownOpen, isLeaderDropdownOpen, toggleDropdown]);
 
-  // Handle scroll with touch compatibility
-  useEffect(() => {
-    const handleScroll = debounce(() => {
-      if (
-        isStartDateOpen ||
-        isEndDateOpen ||
-        isProjectDropdownOpen ||
-        isStatusDropdownOpen ||
-        isPriorityDropdownOpen ||
-        isCollaboratorDropdownOpen ||
-        isLeaderDropdownOpen ||
-        isClientDropdownOpen
-      ) {
-        setIsStartDateOpen(false);
-        setIsEndDateOpen(false);
-        setIsProjectDropdownOpen(false);
-        setIsStatusDropdownOpen(false);
-        setIsPriorityDropdownOpen(false);
-        setIsCollaboratorDropdownOpen(false);
-        setIsLeaderDropdownOpen(false);
-        setIsClientDropdownOpen(false);
-      }
-    }, 200);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [
-    isStartDateOpen,
-    isEndDateOpen,
-    isProjectDropdownOpen,
-    isStatusDropdownOpen,
-    isPriorityDropdownOpen,
-    isCollaboratorDropdownOpen,
-    isLeaderDropdownOpen,
-    isClientDropdownOpen,
-  ]);
+  // Animaciones optimizadas usando hooks memoizados
+  const { animateClick } = useAnimationOptimizations();
 
-  const animateClick = useCallback((element: HTMLElement) => {
-    gsap.to(element, {
-      scale: 0.98,
-      opacity: 0.9,
-      duration: 0.15,
-      ease: "power1.out",
-      yoyo: true,
-      repeat: 1,
-    });
-  }, []);
+  // MEMOIZAR LOS CALLBACKS para evitar recrearlos constantemente
+  const memoizedToggleDropdown = useCallback((dropdown: keyof DropdownStates) => {
+    toggleDropdown(dropdown);
+  }, [toggleDropdown]);
 
-  const handleClientSelectDropdown = useCallback(
-    (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.clientId", clientId);
-      setSearchClient("");
-      setIsClientDropdownOpen(false);
-    },
-    [form, animateClick],
+  const memoizedSelectDropdownItem = useCallback((dropdown: keyof DropdownStates, searchField?: keyof SearchStates) => {
+    selectDropdownItem(dropdown, searchField);
+  }, [selectDropdownItem]);
+
+  // Funciones de manejo de dropdowns memoizadas
+  const {
+    handleClientSelectDropdown,
+    handleProjectSelect,
+    handleStatusSelect,
+    handlePrioritySelect,
+    handleLeaderSelect,
+    handleCollaboratorSelect,
+    handleClientRemove,
+    handleLeaderRemove,
+    handleCollaboratorRemove,
+  } = useDropdownHandlers(form as any, memoizedSelectDropdownItem, animateClick);
+
+  // MEMOIZAR LOS VALORES DEL FORMULARIO que se usan constantemente
+  const watchedFormValues = useMemo(() => {
+    return {
+      clientId: form.watch("clientInfo.clientId"),
+      project: form.watch("clientInfo.project"),
+      name: form.watch("basicInfo.name"),
+      description: form.watch("basicInfo.description"),
+      objectives: form.watch("basicInfo.objectives"),
+      startDate: form.watch("basicInfo.startDate"),
+      endDate: form.watch("basicInfo.endDate"),
+      status: form.watch("basicInfo.status"),
+      priority: form.watch("basicInfo.priority"),
+      leadedBy: form.watch("teamInfo.LeadedBy"),
+      assignedTo: form.watch("teamInfo.AssignedTo"),
+    };
+  }, [form]);
+
+  // Filtros optimizados usando hooks memoizados
+  // MEMOIZAR LOS VALORES DEL FORMULARIO para evitar recálculos constantes
+  const watchedLeadedBy = watchedFormValues.leadedBy;
+  
+  const filteredCollaborators = useFilteredCollaborators(
+    searchCollaborator,
+    watchedLeadedBy || []
   );
-
-  const handleClientRemove = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.clientId", "");
-      form.setValue("clientInfo.project", "");
-    },
-    [form, animateClick],
-  );
-
-  const handleProjectSelect = useCallback(
-    (project: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.project", project);
-      setIsProjectDropdownOpen(false);
-    },
-    [form, animateClick],
-  );
-
-  const handleStatusSelect = useCallback(
-    (status: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("basicInfo.status", status as "Por Iniciar" | "En Proceso" | "Backlog" | "Por Finalizar" | "Finalizado" | "Cancelado");
-      setIsStatusDropdownOpen(false);
-    },
-    [form, animateClick],
-  );
-
-  const handlePrioritySelect = useCallback(
-    (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("basicInfo.priority", priority as "Baja" | "Media" | "Alta");
-      setIsPriorityDropdownOpen(false);
-    },
-    [form, animateClick],
-  );
-
-  const handleLeaderSelect = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      const currentLeaders = form.getValues("teamInfo.LeadedBy");
-      const isSelected = currentLeaders.includes(userId);
-      const newLeaders = isSelected
-        ? currentLeaders.filter((id) => id !== userId)
-        : [...currentLeaders, userId];
-      form.setValue("teamInfo.LeadedBy", newLeaders);
-      setSearchLeader("");
-      setIsLeaderDropdownOpen(false);
-    },
-    [form, animateClick],
-  );
-
-  const handleCollaboratorSelect = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      if (!form.getValues("teamInfo.LeadedBy").includes(userId)) {
-        const currentAssignedTo = form.getValues("teamInfo.AssignedTo");
-        const isSelected = currentAssignedTo.includes(userId);
-        const newAssignedTo = isSelected
-          ? currentAssignedTo.filter((id) => id !== userId)
-          : [...currentAssignedTo, userId];
-        form.setValue("teamInfo.AssignedTo", newAssignedTo);
-        setSearchCollaborator("");
-        setIsCollaboratorDropdownOpen(false);
-      }
-    },
-    [form, animateClick],
-  );
-
-  const handleLeaderRemove = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue(
-        "teamInfo.LeadedBy",
-        form.getValues("teamInfo.LeadedBy").filter((id) => id !== userId),
-      );
-    },
-    [form, animateClick],
-  );
-
-  const handleCollaboratorRemove = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue(
-        "teamInfo.AssignedTo",
-        form.getValues("teamInfo.AssignedTo").filter((id) => id !== userId),
-      );
-    },
-    [form, animateClick],
-  );
-
-  const filteredCollaborators = useMemo(() => {
-    return users.filter(
-      (u) =>
-        !form.getValues("teamInfo.LeadedBy").includes(u.id) &&
-        (u.fullName.toLowerCase().includes(searchCollaborator.toLowerCase()) ||
-         u.role.toLowerCase().includes(searchCollaborator.toLowerCase())),
-    );
-  }, [users, searchCollaborator, form]);
-
-  const filteredLeaders = useMemo(() => {
-    return users.filter(
-      (u) =>
-        u.fullName.toLowerCase().includes(searchLeader.toLowerCase()) ||
-        u.role.toLowerCase().includes(searchLeader.toLowerCase()),
-    );
-  }, [users, searchLeader]);
-
-  const filteredClients = useMemo(() => {
-    return clients.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchClient.toLowerCase()) ||
-        c.projects.some((project) => project.toLowerCase().includes(searchClient.toLowerCase())),
-    );
-  }, [clients, searchClient]);
+  const filteredLeaders = useFilteredLeaders(searchLeader);
+  const filteredClients = useFilteredClients(searchClient);
 
   const onSubmit = async (values: FormValues) => {
     if (!user) {
@@ -779,7 +801,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       if (onShowSuccessAlert) {
         onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha creado exitosamente.`);
       } else {
-        setShowSuccessAlert(true);
+        setAlertState("showSuccess", true);
       }
       
       form.reset(defaultValues);
@@ -829,8 +851,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       if (onShowFailAlert) {
         onShowFailAlert("No se pudo crear la tarea.", errorMessage);
       } else {
-        setShowFailAlert(true);
-        setFailErrorMessage(errorMessage);
+        setAlertState("showFail", true);
+        setAlertState("failMessage", errorMessage);
       }
       
       setIsSaving(false);
@@ -922,15 +944,17 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
                         </div>
+                        {/* Ocultar el input cuando ya hay una cuenta seleccionada */}
+                        {!form.watch("clientInfo.clientId") && (
                         <input
                           className={styles.input}
                           value={searchClient}
                           onChange={(e) => {
-                            setSearchClient(e.target.value);
-                            setIsClientDropdownOpen(e.target.value.trim() !== "");
+                              setSearchState("client", e.target.value);
+                              memoizedToggleDropdown("client");
                           }}
                           onBlur={() => {
-                            setTimeout(() => setIsClientDropdownOpen(false), 200);
+                              setTimeout(() => memoizedToggleDropdown("client"), 200);
                           }}
                           placeholder="Ej: Nombre de la cuenta"
                           ref={clientInputRef}
@@ -963,13 +987,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       const start = targetV.selectionStart;
                                       const end = targetV.selectionEnd;
                                       const newValue = searchClient.substring(0, start) + text + searchClient.substring(end);
-                                      setSearchClient(newValue);
-                                      setIsClientDropdownOpen(text.trim() !== "");
+                                        setSearchState("client", newValue);
+                                        memoizedToggleDropdown("client");
                                       setTimeout(() => {
                                         targetV.setSelectionRange(start + text.length, start + text.length);
                                       }, 0);
                                     } else {
-                                      setSearchClient(searchClient + text);
+                                        setSearchState("client", searchClient + text);
                                     }
                                   }).catch(() => {
                                     document.execCommand('paste');
@@ -985,10 +1009,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         const start = targetX.selectionStart;
                                         const end = targetX.selectionEnd;
                                         const newValue = searchClient.substring(0, start) + searchClient.substring(end);
-                                        setSearchClient(newValue);
-                                        setIsClientDropdownOpen(newValue.trim() !== "");
+                                          setSearchState("client", newValue);
+                                          memoizedToggleDropdown("client");
                                       } else {
-                                        setSearchClient('');
+                                          setSearchState("client", '');
                                       }
                                     }).catch(() => {
                                       const textArea = document.createElement('textarea');
@@ -1002,10 +1026,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         const start = targetX2.selectionStart;
                                         const end = targetX2.selectionEnd;
                                         const newValue = searchClient.substring(0, start) + searchClient.substring(end);
-                                        setSearchClient(newValue);
-                                        setIsClientDropdownOpen(newValue.trim() !== "");
+                                          setSearchState("client", newValue);
+                                          memoizedToggleDropdown("client");
                                       } else {
-                                        setSearchClient('');
+                                          setSearchState("client", '');
                                       }
                                     });
                                   }
@@ -1014,7 +1038,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                             }
                           }}
                         />
-                        {isClientDropdownOpen &&
+                        )}
+                        {isClientDropdownOpen && !form.watch("clientInfo.clientId") &&
                           createPortal(
                             <motion.div
                               className={styles.dropdown}
@@ -1035,7 +1060,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 filteredClients.map((client) => (
                                   <motion.div
                                     key={client.id}
-                                    className={styles.dropdownItem}
+                                    className={`${styles.dropdownItem} ${form.watch("clientInfo.clientId") === client.id ? styles.selectedItem : ''}`}
                                     onClick={(e) => handleClientSelectDropdown(client.id, e)}
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -1062,10 +1087,9 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                             e.currentTarget.src = '/empty-image.png';
                                           }}
                                         />
-                                      </div>
+                                  </div>
                                       <span>{client.name}</span>
                                     </div>
-                                    {form.watch("clientInfo.clientId") === client.id && " (Seleccionado)"}
                                   </motion.div>
                                 ))
                               ) : (
@@ -1129,16 +1153,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                             className={styles.dropdownTrigger}
                             onClick={(e) => {
                               animateClick(e.currentTarget);
-                              setIsProjectDropdownOpen((prev) => {
-                                if (!prev) {
-                                  setIsStatusDropdownOpen(false);
-                                  setIsPriorityDropdownOpen(false);
-                                  setIsClientDropdownOpen(false);
-                                  setIsLeaderDropdownOpen(false);
-                                  setIsCollaboratorDropdownOpen(false);
-                                }
-                                return !prev;
-                              });
+                              memoizedToggleDropdown("project");
                             }}
                           >
                             <span>{form.watch("clientInfo.project") || "Seleccionar una Carpeta"}</span>
@@ -1536,7 +1551,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               <div
                                 ref={startDateInputRef}
                                 className={styles.dateInput}
-                                onClick={() => setIsStartDateOpen(!isStartDateOpen)}
+                                onClick={() => memoizedToggleDropdown("startDate")}
                                 style={{
                                   padding: "12px 16px",
                                   background: "rgba(255, 255, 255, 0.15)",
@@ -1575,7 +1590,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       selected={form.watch("basicInfo.startDate") || undefined}
                                       onSelect={(date) => {
                                         form.setValue("basicInfo.startDate", date || null);
-                                        setIsStartDateOpen(false);
+                                        memoizedToggleDropdown("startDate");
                                       }}
                                       className={styles.customCalendar}
                                       style={{
@@ -1594,7 +1609,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               <div
                                 ref={endDateInputRef}
                                 className={styles.dateInput}
-                                onClick={() => setIsEndDateOpen(!isEndDateOpen)}
+                                onClick={() => memoizedToggleDropdown("endDate")}
                                 style={{
                                   padding: "12px 16px",
                                   background: "rgba(255, 255, 255, 0.15)",
@@ -1633,7 +1648,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       selected={form.watch("basicInfo.endDate") || undefined}
                                       onSelect={(date) => {
                                         form.setValue("basicInfo.endDate", date || null);
-                                        setIsEndDateOpen(false);
+                                        memoizedToggleDropdown("endDate");
                                       }}
                                       className={styles.customCalendar}
                                       style={{
@@ -1657,16 +1672,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 className={styles.dropdownTrigger}
                                 onClick={(e) => {
                                   animateClick(e.currentTarget);
-                                  setIsStatusDropdownOpen((prev) => {
-                                    if (!prev) {
-                                      setIsProjectDropdownOpen(false);
-                                      setIsPriorityDropdownOpen(false);
-                                      setIsClientDropdownOpen(false);
-                                      setIsLeaderDropdownOpen(false);
-                                      setIsCollaboratorDropdownOpen(false);
-                                    }
-                                    return !prev;
-                                  });
+                                  memoizedToggleDropdown("status");
                                 }}
                               >
                                 <span>{form.watch("basicInfo.status") || "Seleccionar"}</span>
@@ -1720,16 +1726,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 className={styles.dropdownTrigger}
                                 onClick={(e) => {
                                   animateClick(e.currentTarget);
-                                  setIsPriorityDropdownOpen((prev) => {
-                                    if (!prev) {
-                                      setIsProjectDropdownOpen(false);
-                                      setIsStatusDropdownOpen(false);
-                                      setIsClientDropdownOpen(false);
-                                      setIsLeaderDropdownOpen(false);
-                                      setIsCollaboratorDropdownOpen(false);
-                                    }
-                                    return !prev;
-                                  });
+                                  memoizedToggleDropdown("priority");
                                 }}
                               >
                                 <span>{form.watch("basicInfo.priority") || "Seleccionar"}</span>
@@ -1790,11 +1787,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           className={styles.input}
                           value={searchLeader}
                           onChange={(e) => {
-                            setSearchLeader(e.target.value);
-                            setIsLeaderDropdownOpen(e.target.value.trim() !== "");
+                            setSearchState("leader", e.target.value);
+                            memoizedToggleDropdown("leader");
                           }}
                           onBlur={() => {
-                            setTimeout(() => setIsLeaderDropdownOpen(false), 200);
+                            setTimeout(() => memoizedToggleDropdown("leader"), 200);
                           }}
                           placeholder="Ej: John Doe"
                           ref={leaderInputRef}
@@ -1827,13 +1824,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       const start = targetV.selectionStart;
                                       const end = targetV.selectionEnd;
                                       const newValue = searchLeader.substring(0, start) + text + searchLeader.substring(end);
-                                      setSearchLeader(newValue);
-                                      setIsLeaderDropdownOpen(text.trim() !== "");
+                                      setSearchState("leader", newValue);
+                                      memoizedToggleDropdown("leader");
                                       setTimeout(() => {
                                         targetV.setSelectionRange(start + text.length, start + text.length);
                                       }, 0);
                                     } else {
-                                      setSearchLeader(searchLeader + text);
+                                      setSearchState("leader", searchLeader + text);
                                     }
                                   }).catch(() => {
                                     document.execCommand('paste');
@@ -1849,10 +1846,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         const start = targetX.selectionStart;
                                         const end = targetX.selectionEnd;
                                         const newValue = searchLeader.substring(0, start) + searchLeader.substring(end);
-                                        setSearchLeader(newValue);
-                                        setIsLeaderDropdownOpen(newValue.trim() !== "");
+                                        setSearchState("leader", newValue);
+                                        memoizedToggleDropdown("leader");
                                       } else {
-                                        setSearchLeader('');
+                                        setSearchState("leader", '');
                                       }
                                     }).catch(() => {
                                       const textArea = document.createElement('textarea');
@@ -1866,10 +1863,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         const start = targetX2.selectionStart;
                                         const end = targetX2.selectionEnd;
                                         const newValue = searchLeader.substring(0, start) + searchLeader.substring(end);
-                                        setSearchLeader(newValue);
-                                        setIsLeaderDropdownOpen(newValue.trim() !== "");
+                                        setSearchState("leader", newValue);
+                                        memoizedToggleDropdown("leader");
                                       } else {
-                                        setSearchLeader('');
+                                        setSearchState("leader", '');
                                       }
                                     });
                                   }
@@ -1930,7 +1927,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                           className={styles.statusDot} 
                                           style={{ backgroundColor: '#178d00' }}
                                         />
-                                      </div>
+                                  </div>
                                       <span>{u.fullName} ({u.role})</span>
                                     </div>
                                     {Array.isArray(form.watch("teamInfo.LeadedBy")) && form.watch("teamInfo.LeadedBy").includes(u.id) && " (Seleccionado)"}
@@ -1978,7 +1975,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                             type="checkbox"
                             id="includeMembers"
                             checked={includeMembers}
-                            onChange={(e) => setIncludeMembers(e.target.checked)}
+                            onChange={(e) => setStoreIncludeMembers(e.target.checked)}
                             className={styles.checkbox}
                           />
                           <label htmlFor="includeMembers" className={styles.checkboxLabel}>
@@ -1997,11 +1994,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                             className={styles.input}
                             value={searchCollaborator}
                             onChange={(e) => {
-                              setSearchCollaborator(e.target.value);
-                              setIsCollaboratorDropdownOpen(e.target.value.trim() !== "");
+                              setSearchState("collaborator", e.target.value);
+                              memoizedToggleDropdown("collaborator");
                             }}
                             onBlur={() => {
-                              setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
+                              setTimeout(() => memoizedToggleDropdown("collaborator"), 200);
                             }}
                             placeholder="Ej: John Doe"
                             ref={collaboratorInputRef}
@@ -2034,13 +2031,13 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         const start = targetV.selectionStart;
                                         const end = targetV.selectionEnd;
                                         const newValue = searchCollaborator.substring(0, start) + text + searchCollaborator.substring(end);
-                                        setSearchCollaborator(newValue);
-                                        setIsCollaboratorDropdownOpen(text.trim() !== "");
+                                        setSearchState("collaborator", newValue);
+                                        memoizedToggleDropdown("collaborator");
                                         setTimeout(() => {
                                           targetV.setSelectionRange(start + text.length, start + text.length);
                                         }, 0);
                                       } else {
-                                        setSearchCollaborator(searchCollaborator + text);
+                                        setSearchState("collaborator", searchCollaborator + text);
                                       }
                                     }).catch(() => {
                                       document.execCommand('paste');
@@ -2056,10 +2053,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                           const start = targetX.selectionStart;
                                           const end = targetX.selectionEnd;
                                           const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
-                                          setSearchCollaborator(newValue);
-                                          setIsCollaboratorDropdownOpen(newValue.trim() !== "");
+                                          setSearchState("collaborator", newValue);
+                                          memoizedToggleDropdown("collaborator");
                                         } else {
-                                          setSearchCollaborator('');
+                                          setSearchState("collaborator", '');
                                         }
                                       }).catch(() => {
                                         const textArea = document.createElement('textarea');
@@ -2073,10 +2070,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                           const start = targetX2.selectionStart;
                                           const end = targetX2.selectionEnd;
                                           const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
-                                          setSearchCollaborator(newValue);
-                                          setIsCollaboratorDropdownOpen(newValue.trim() !== "");
+                                          setSearchState("collaborator", newValue);
+                                          memoizedToggleDropdown("collaborator");
                                         } else {
-                                          setSearchCollaborator('');
+                                          setSearchState("collaborator", '');
                                         }
                                       });
                                     }
@@ -2143,7 +2140,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                             className={styles.statusDot} 
                                             style={{ backgroundColor: '#178d00' }}
                                           />
-                                        </div>
+                                    </div>
                                         <span>{u.fullName} ({u.role})</span>
                                       </div>
                                       {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
@@ -2201,5 +2198,60 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     </>
   );
 };
+
+// Componentes memoizados para evitar re-renders innecesarios
+const MemoizedDropdownItem = memo(({ 
+  item, 
+  onClick, 
+  isSelected, 
+  isDisabled = false 
+}: { 
+  item: { id: string; name?: string; fullName?: string; imageUrl?: string; role?: string }; 
+  onClick: (e: React.MouseEvent<HTMLDivElement>) => void; 
+  isSelected?: boolean; 
+  isDisabled?: boolean; 
+}) => (
+  <motion.div
+    className={`${styles.dropdownItem} ${isDisabled ? styles.disabled : ""}`}
+    onClick={isDisabled ? undefined : onClick}
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.2, delay: 0.05 }}
+    whileHover={!isDisabled ? {
+      scale: 1.02,
+      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+      transition: { duration: 0.2, ease: "easeOut" }
+    } : {}}
+    whileTap={!isDisabled ? {
+      scale: 0.98,
+      transition: { duration: 0.1 }
+    } : {}}
+  >
+    <div className={styles.dropdownItemContent}>
+      <div className={styles.avatarContainer}>
+        <Image
+          src={item.imageUrl || '/empty-image.png'}
+          alt={item.name || item.fullName}
+          width={32}
+          height={32}
+          className={styles.avatarImage}
+          onError={(e) => {
+            e.currentTarget.src = '/empty-image.png';
+          }}
+        />
+        <div 
+          className={styles.statusDot} 
+          style={{ backgroundColor: '#178d00' }}
+        />
+      </div>
+      <span>{item.name || item.fullName}</span>
+    </div>
+    {isSelected && "(Seleccionado)"}
+  </motion.div>
+));
+
+MemoizedDropdownItem.displayName = 'MemoizedDropdownItem';
+
+
 
 export default CreateTask;

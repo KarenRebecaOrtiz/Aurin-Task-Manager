@@ -13,7 +13,7 @@ interface StatusDebugProps {
 
 const StatusDebug: React.FC<StatusDebugProps> = ({ isVisible = false }) => {
   const { user } = useUser();
-  const { currentStatus, isOnline, tabCount, lastUpdate, updateStatus } = useOnlineStatus();
+  const { currentStatus, isOnline, updateStatus } = useOnlineStatus(); // Remover tabCount y lastUpdate que no existen
   const { activeTabCount, isOnline: tabIsOnline, sessionId } = useTabDetection();
   const [firestoreStatus, setFirestoreStatus] = useState<string>('Loading...');
   const [lastFirestoreUpdate, setLastFirestoreUpdate] = useState<string>('Never');
@@ -100,9 +100,10 @@ const StatusDebug: React.FC<StatusDebugProps> = ({ isVisible = false }) => {
 
   if (!isVisible) return null;
 
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString();
-  };
+  // Remover formatTime ya que no se usa
+  // const formatTime = (timestamp: number) => {
+  //   return new Date(timestamp).toLocaleTimeString();
+  // };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -183,12 +184,12 @@ const StatusDebug: React.FC<StatusDebugProps> = ({ isVisible = false }) => {
         <h4 style={{ margin: '0 0 8px 0', color: '#fff' }}>📱 Detección de Pestañas</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
           <div>
-            <span style={{ color: '#888' }}>Hook Tab Count:</span>
-            <div style={{ color: '#fff', fontWeight: 'bold' }}>{tabCount}</div>
-          </div>
-          <div>
             <span style={{ color: '#888' }}>Detection Tab Count:</span>
             <div style={{ color: '#fff', fontWeight: 'bold' }}>{activeTabCount}</div>
+          </div>
+          <div>
+            <span style={{ color: '#888' }}>Session ID:</span>
+            <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '10px' }}>{sessionId.substring(0, 8)}...</div>
           </div>
         </div>
       </div>
@@ -197,7 +198,6 @@ const StatusDebug: React.FC<StatusDebugProps> = ({ isVisible = false }) => {
       <div style={{ marginBottom: '15px' }}>
         <h4 style={{ margin: '0 0 8px 0', color: '#fff' }}>⏰ Timestamps</h4>
         <div style={{ fontSize: '10px' }}>
-          <div><span style={{ color: '#888' }}>Last Update:</span> {lastUpdate ? formatTime(lastUpdate) : 'Never'}</div>
           <div><span style={{ color: '#888' }}>Firestore Update:</span> {lastFirestoreUpdate}</div>
         </div>
       </div>
@@ -327,7 +327,7 @@ const StatusDebug: React.FC<StatusDebugProps> = ({ isVisible = false }) => {
           {['Disponible', 'Ocupado', 'Por terminar', 'Fuera'].map(status => (
             <button
               key={status}
-              onClick={() => updateStatus(status, true)}
+              onClick={() => updateStatus(status)}
               style={{
                 backgroundColor: currentStatus === status ? getStatusColor(status) : '#333',
                 color: currentStatus === status ? '#000' : '#fff',

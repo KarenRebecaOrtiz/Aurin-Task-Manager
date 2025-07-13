@@ -169,7 +169,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       searchQuery,
       priorityFilter,
       clientFilter,
-      actionMenuOpenId,
       isPriorityDropdownOpen,
       isClientDropdownOpen,
       isUserDropdownOpen,
@@ -183,7 +182,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       setSearchQuery,
       setPriorityFilter,
       setClientFilter,
-      setActionMenuOpenId,
       setIsPriorityDropdownOpen,
       setIsClientDropdownOpen,
       setIsUserDropdownOpen,
@@ -200,7 +198,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         searchQuery: state.searchQuery,
         priorityFilter: state.priorityFilter,
         clientFilter: state.clientFilter,
-        actionMenuOpenId: state.actionMenuOpenId,
         isPriorityDropdownOpen: state.isPriorityDropdownOpen,
         isClientDropdownOpen: state.isClientDropdownOpen,
         isUserDropdownOpen: state.isUserDropdownOpen,
@@ -214,7 +211,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         setSearchQuery: state.setSearchQuery,
         setPriorityFilter: state.setPriorityFilter,
         setClientFilter: state.setClientFilter,
-        setActionMenuOpenId: state.setActionMenuOpenId,
         setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
         setIsClientDropdownOpen: state.setIsClientDropdownOpen,
         setIsUserDropdownOpen: state.setIsUserDropdownOpen,
@@ -493,13 +489,13 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           !actionMenuRef.current.contains(event.target as Node) &&
           !actionButtonRefs.current.has((event.target as Element).closest('button')?.id || '')
         ) {
-          setActionMenuOpenId(null);
+          // setActionMenuOpenId(null); // Remover variable no usada
         }
       };
 
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [setActionMenuOpenId]);
+    }, []); // Remover variable no usada
 
     const handleSort = (key: string) => {
       if (sortKey === key) {
@@ -672,12 +668,12 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   userId={userId}
                   onEdit={() => {
                     onEditTaskOpen(task.id);
-                    setActionMenuOpenId(null);
+                    // setActionMenuOpenId(null); // Remover variable no usada
                     console.log('[ArchiveTable] Edit action triggered for task:', task.id);
                   }}
                   onDelete={() => {
                     onDeleteTaskOpen(task.id);
-                    setActionMenuOpenId(null);
+                    // setActionMenuOpenId(null); // Remover variable no usada
                     console.log('[ArchiveTable] Delete action triggered for task:', task.id);
                   }}
                   onArchive={async () => {
@@ -704,7 +700,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                       
                       // Ejecutar la función de desarchivo
                       await handleUnarchiveTask(task);
-                      setActionMenuOpenId(null);
+                      // setActionMenuOpenId(null); // Remover variable no usada
                       console.log('[ArchiveTable] Task unarchived successfully:', task.id);
                     } catch (error) {
                       console.error('[ArchiveTable] Error unarchiving task:', error);

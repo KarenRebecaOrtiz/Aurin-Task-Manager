@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback, memo, forwardRef, Dispatch, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import Image from 'next/image';
+import SafeImage from '@/components/ui/SafeImage';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
 import { Timestamp, doc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, writeBatch, onSnapshot, DocumentData } from 'firebase/firestore';
@@ -188,13 +189,14 @@ const MessageItem = memo(
                 </div>
                 <div className={styles.replyPreview}>
                   {message.replyTo.imageUrl && (
-                    <Image
+                    <SafeImage
                       src={message.replyTo.imageUrl}
                       alt="Imagen de respuesta"
                       width={40}
                       height={40}
                       className={styles.replyImage}
-                      onError={(e) => { e.currentTarget.src = '/empty-image.png'; }}
+                      maxRetries={3}
+                      fallbackSrc="/empty-image.png"
                     />
                   )}
                   {message.replyTo.text && (
@@ -218,14 +220,15 @@ const MessageItem = memo(
         if (message.imageUrl) {
           contentElements.push(
             <div key="image" className={styles.imageContainer}>
-              <Image
+              <SafeImage
                 src={message.imageUrl}
                 alt="Imagen"
                 width={200}
                 height={200}
                 className={styles.messageImage}
                 onClick={() => setImagePreviewSrc(message.imageUrl)}
-                onError={(e) => { e.currentTarget.src = '/empty-image.png'; }}
+                maxRetries={3}
+                fallbackSrc="/empty-image.png"
               />
             </div>
           );

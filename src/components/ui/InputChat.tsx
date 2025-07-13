@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
+import SafeImage from '@/components/ui/SafeImage';
 import sanitizeHtml from 'sanitize-html';
 import { Timestamp } from 'firebase/firestore';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
@@ -547,7 +548,7 @@ export default function InputChat({
               </button>
             </div>
             <div className={styles.replyPreview}>
-              {effectiveReplyingTo.imageUrl && <Image src={effectiveReplyingTo.imageUrl} alt="Imagen" width={40} height={40} className={styles.replyImage} draggable="false" onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />}
+              {effectiveReplyingTo.imageUrl && <SafeImage src={effectiveReplyingTo.imageUrl} alt="Imagen" width={40} height={40} className={styles.replyImage} maxRetries={3} fallbackSrc="/empty-image.png" />}
               {effectiveReplyingTo.text && (
                 <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(effectiveReplyingTo.text.length > 50 ? `${effectiveReplyingTo.text.substring(0, 50)}...` : effectiveReplyingTo.text, { allowedTags: ['strong', 'em', 'u', 'code'], allowedAttributes: { '*': ['style', 'class'] }, transformTags: { 'strong': (_, attribs) => ({ tagName: 'strong', attribs: { ...attribs, style: `font-weight: bold; ${attribs.style || ''}` } }), 'em': (_, attribs) => ({ tagName: 'em', attribs: { ...attribs, style: `font-style: italic; ${attribs.style || ''}` } }), 'u': (_, attribs) => ({ tagName: 'u', attribs: { ...attribs, style: `text-decoration: underline; ${attribs.style || ''}` } }), 'code': (_, attribs) => ({ tagName: 'code', attribs: { ...attribs, style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}` } }) } }) }} />
               )}

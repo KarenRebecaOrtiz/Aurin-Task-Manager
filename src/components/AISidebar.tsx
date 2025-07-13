@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import { useUser, User } from "@clerk/nextjs";
 import {
   collection,
@@ -704,7 +705,15 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
                     ))}
                 </div>
                 {m.imageUrl && (
-                  <Image src={m.imageUrl} alt="Adjunto" width={200} height={200} className={styles.image} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
+                  <SafeImage 
+                    src={m.imageUrl} 
+                    alt="Adjunto" 
+                    width={200} 
+                    height={200} 
+                    className={styles.image}
+                    maxRetries={3}
+                    fallbackSrc="/empty-image.png"
+                  />
                 )}
                 {m.fileUrl && (
                   <div className={styles.file}>

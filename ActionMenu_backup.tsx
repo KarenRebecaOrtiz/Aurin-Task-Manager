@@ -8,7 +8,6 @@ import styles from './ActionMenu.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActionMenuStore } from '@/stores/actionMenuStore';
 import { useShallow } from 'zustand/react/shallow';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface Task {
   id: string;
@@ -158,87 +157,81 @@ const ActionMenu = memo<ActionMenuProps>(({
             )}
           </button>
           {isOpen && canEditOrDelete && createPortal(
-            <AnimatePresence>
-              <motion.div 
-                ref={actionMenuRef} 
-                className={styles.dropdown}
-                style={{ 
-                  top: dropdownPosition.top, 
-                  left: dropdownPosition.left 
+            <div 
+              ref={actionMenuRef} 
+              className={styles.dropdown}
+              style={{ 
+                top: dropdownPosition.top, 
+                left: dropdownPosition.left 
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className={styles.dropdownItem}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  animateClick(e.currentTarget);
+                  onEdit();
+                  setOpenMenuId(null);
                 }}
-                onClick={(e) => e.stopPropagation()}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.18, ease: 'easeInOut' }}
+                title="Editar Tarea"
               >
+                <Image 
+                  src="/pencil.svg" 
+                  alt="Editar" 
+                  width={18} 
+                  height={18} 
+                  style={{ width: 'auto', height: 'auto' }} 
+                />
+                <span className={styles.tooltip}>Editar Tarea</span>
+              </div>
+              {onArchive && (
                 <div
                   className={styles.dropdownItem}
                   onClick={(e) => {
                     e.stopPropagation();
                     animateClick(e.currentTarget);
-                    onEdit();
+                    onArchive();
                     setOpenMenuId(null);
                   }}
-                  title="Editar Tarea"
+                  title={task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}
                 >
                   <Image 
-                    src="/pencil.svg" 
-                    alt="Editar" 
-                    width={18} 
-                    height={18} 
-                    style={{ width: 'auto', height: 'auto' }} 
+                    src="/archive.svg" 
+                    alt={task.archived ? "Desarchivar" : "Archivar"} 
+                    width={11} 
+                    height={11} 
+                    style={{ 
+                      width: 'auto', 
+                      height: 'auto',
+                      opacity: 0.8
+                    }} 
                   />
-                  <span className={styles.tooltip}>Editar Tarea</span>
+                  <span className={styles.tooltip}>
+                    {task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}
+                  </span>
                 </div>
-                {onArchive && (
-                  <div
-                    className={styles.dropdownItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      animateClick(e.currentTarget);
-                      onArchive();
-                      setOpenMenuId(null);
-                    }}
-                    title={task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}
-                  >
-                    <Image 
-                      src="/archive.svg" 
-                      alt={task.archived ? "Desarchivar" : "Archivar"} 
-                      width={18} 
-                      height={18} 
-                      style={{ 
-                        width: '15px', 
-                        height: '15px',
-                        opacity: 0.8
-                      }} 
-                    />
-                    <span className={styles.tooltip}>
-                      {task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}
-                    </span>
-                  </div>
-                )}
-                <div
-                  className={`${styles.dropdownItem} ${styles.deleteItem}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    animateClick(e.currentTarget);
-                    onDelete();
-                    setOpenMenuId(null);
-                  }}
-                  title="Eliminar Tarea"
-                >
-                  <Image 
-                    src="/trash-2.svg" 
-                    alt="Eliminar" 
-                    width={18} 
-                    height={18} 
-                    style={{ width: 'auto', height: 'auto' }} 
-                  />
-                  <span className={styles.tooltip}>Eliminar Tarea</span>
-                </div>
-              </motion.div>
-            </AnimatePresence>,
+              )}
+              <div
+                className={`${styles.dropdownItem} ${styles.deleteItem}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  animateClick(e.currentTarget);
+                  onDelete();
+                  setOpenMenuId(null);
+                }}
+                title="Eliminar Tarea"
+              >
+                <Image 
+                  src="/trash-2.svg" 
+                  alt="Eliminar" 
+                  width={18} 
+                  height={18} 
+                  style={{ width: 'auto', height: 'auto' }} 
+                />
+                <span className={styles.tooltip}>Eliminar Tarea</span>
+              </div>
+            </div>,
             document.body
           )}
         </>

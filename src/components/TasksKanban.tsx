@@ -1029,7 +1029,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       return () => {
         unsubscribeClients();
       };
-    }, [user?.id, externalClients]);
+    }, [user?.id, externalClients, setIsLoadingTasks]);
 
     // Users are now managed centrally by useSharedTasksState
     // No independent user fetching needed

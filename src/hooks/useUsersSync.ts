@@ -31,7 +31,7 @@ export const useUsersSync = () => {
         // Convertir a formato esperado por dataStore
         const users = firestoreUsers.map(user => ({
           id: user.id,
-          imageUrl: user.imageUrl || '/default-avatar.png',
+          imageUrl: user.imageUrl || '/empty-image.png',
           fullName: user.fullName || 'Usuario',
           role: user.role || 'user',
           status: user.status || 'Disponible',

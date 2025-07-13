@@ -1211,28 +1211,25 @@ const EditTask: React.FC<EditTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
                         </div>
-                        {/* Ocultar el input cuando ya hay una cuenta seleccionada */}
-                        {!form.watch("clientInfo.clientId") && (
-                          <input
-                            className={styles.input}
-                            value={searchClient}
-                            onChange={(e) => {
-                              setSearchClient(e.target.value);
-                              setIsClientDropdownOpen(e.target.value.trim() !== "");
-                            }}
-                            onBlur={() => {
-                              setTimeout(() => setIsClientDropdownOpen(false), 200);
-                            }}
-                            placeholder="Ej: Nombre de la cuenta"
-                            ref={clientInputRef}
-                            onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchClient, searchClient, setIsClientDropdownOpen)}
-                            onCopy={e => e.stopPropagation()}
-                            onPaste={e => e.stopPropagation()}
-                            onCut={e => e.stopPropagation()}
-                            onSelect={e => e.stopPropagation()}
-                          />
-                        )}
-                        {isClientDropdownOpen && !form.watch("clientInfo.clientId") &&
+                        <input
+                          className={styles.input}
+                          value={searchClient}
+                          onChange={(e) => {
+                            setSearchClient(e.target.value);
+                            setIsClientDropdownOpen(e.target.value.trim() !== "");
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => setIsClientDropdownOpen(false), 200);
+                          }}
+                          placeholder="Ej: Nombre de la cuenta"
+                          ref={clientInputRef}
+                          onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchClient, searchClient, setIsClientDropdownOpen)}
+                          onCopy={e => e.stopPropagation()}
+                          onPaste={e => e.stopPropagation()}
+                          onCut={e => e.stopPropagation()}
+                          onSelect={e => e.stopPropagation()}
+                        />
+                        {isClientDropdownOpen &&
                           createPortal(
                             <div
                               className={styles.dropdown}
@@ -1249,24 +1246,11 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 filteredClients.map((client) => (
                                   <div
                                     key={client.id}
-                                    className={`${styles.dropdownItem} ${form.watch("clientInfo.clientId") === client.id ? styles.selectedItem : ''}`}
+                                    className={styles.dropdownItem}
                                     onClick={(e) => handleClientSelectDropdown(client.id, e)}
                                   >
-                                    <div className={styles.dropdownItemContent}>
-                                      <div className={styles.avatarContainer}>
-                                        <Image
-                                          src={client.imageUrl || '/empty-image.png'}
-                                          alt={client.name}
-                                          width={32}
-                                          height={32}
-                                          className={styles.avatarImage}
-                                          onError={(e) => {
-                                            e.currentTarget.src = '/empty-image.png';
-                                          }}
-                                        />
-                                      </div>
-                                      <span>{client.name}</span>
-                                    </div>
+                                    {client.name}
+                                    {form.watch("clientInfo.clientId") === client.id && " (Seleccionado)"}
                                   </div>
                                 ))
                               ) : (
@@ -1287,13 +1271,6 @@ const EditTask: React.FC<EditTaskProps> = ({
                               const selectedClient = clients.find((c) => c.id === form.watch("clientInfo.clientId"));
                               return selectedClient ? (
                                 <div key={selectedClient.id} className={styles.tag}>
-                                  <Image
-                                    src={selectedClient.imageUrl || '/empty-image.png'}
-                                    alt={selectedClient.name}
-                                    width={24}
-                                    height={24}
-                                    style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
-                                  />
                                   {selectedClient.name}
                                   <button onClick={(e) => handleClientRemove(e)}>X</button>
                                 </div>
@@ -1718,24 +1695,11 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 filteredLeaders.map((u) => (
                                   <div
                                     key={u.id}
-                                    className={`${styles.dropdownItem} ${watchedLeadedBy.includes(u.id) ? styles.selectedItem : ''}`}
+                                    className={styles.dropdownItem}
                                     onClick={(e) => handleLeaderSelect(u.id, e)}
                                   >
-                                    <div className={styles.dropdownItemContent}>
-                                      <div className={styles.avatarContainer}>
-                                        <Image
-                                          src={u.imageUrl || '/empty-image.png'}
-                                          alt={u.fullName}
-                                          width={32}
-                                          height={32}
-                                          className={styles.avatarImage}
-                                          onError={(e) => {
-                                            e.currentTarget.src = '/empty-image.png';
-                                          }}
-                                        />
-                                      </div>
-                                      <span>{u.fullName} ({u.role})</span>
-                                    </div>
+                                    {u.fullName} ({u.role})
+                                    {watchedLeadedBy.includes(u.id) && " (Seleccionado)"}
                                   </div>
                                 ))
                               ) : (
@@ -1755,13 +1719,6 @@ const EditTask: React.FC<EditTaskProps> = ({
                             const collaborator = users.find((u) => u.id === userId);
                             return collaborator ? (
                               <div key={userId} className={styles.tag}>
-                                <Image
-                                  src={collaborator.imageUrl || '/empty-image.png'}
-                                  alt={collaborator.fullName}
-                                  width={24}
-                                  height={24}
-                                  className={styles.tagAvatar}
-                                />
                                 {collaborator.fullName}
                                 <button onClick={(e) => handleLeaderRemove(userId, e)}>X</button>
                               </div>
@@ -1858,28 +1815,15 @@ const EditTask: React.FC<EditTaskProps> = ({
                                         key={u.id}
                                         className={`${styles.dropdownItem} ${
                                           currentLeadedBy.includes(u.id) ? styles.disabled : ""
-                                        } ${watchedAssignedTo.includes(u.id) ? styles.selectedItem : ''}`}
+                                        }`}
                                         onClick={(e) => {
                                           if (!currentLeadedBy.includes(u.id)) {
                                             handleCollaboratorSelect(u.id, e);
                                           }
                                         }}
                                       >
-                                        <div className={styles.dropdownItemContent}>
-                                          <div className={styles.avatarContainer}>
-                                            <Image
-                                              src={u.imageUrl || '/empty-image.png'}
-                                              alt={u.fullName}
-                                              width={32}
-                                              height={32}
-                                              className={styles.avatarImage}
-                                              onError={(e) => {
-                                                e.currentTarget.src = '/empty-image.png';
-                                              }}
-                                            />
-                                          </div>
-                                          <span>{u.fullName} ({u.role})</span>
-                                        </div>
+                                        {u.fullName} ({u.role}){" "}
+                                        {watchedAssignedTo.includes(u.id) && "(Seleccionado)"}
                                       </div>
                                     ))
                                   ) : (
@@ -1899,13 +1843,6 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 const collaborator = users.find((u) => u.id === userId);
                                 return collaborator ? (
                                   <div key={userId} className={styles.tag}>
-                                    <Image
-                                      src={collaborator.imageUrl || '/empty-image.png'}
-                                      alt={collaborator.fullName}
-                                      width={24}
-                                      height={24}
-                                      className={styles.tagAvatar}
-                                    />
                                     {collaborator.fullName}
                                     <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
                                   </div>

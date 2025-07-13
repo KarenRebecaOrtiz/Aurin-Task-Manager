@@ -377,24 +377,24 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
       }, 5000); // 5 second timeout
 
       return () => clearTimeout(timeout);
-    }, [stepIndex, isLoaded, localError, handleLottieError]);
+    }, [stepIndex, isLoaded, localError]);
 
     const handleError = useCallback(() => {
       console.error(`[SafeLottieComponent] Step ${stepIndex} Lottie error`);
       setLocalError(true);
       handleLottieError(stepIndex, 'render');
-    }, [stepIndex, handleLottieError]);
+    }, [stepIndex]);
 
     const handleLoad = useCallback(() => {
       console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie loaded`);
       setIsLoaded(true);
       handleLottieLoad(stepIndex);
-    }, [stepIndex, handleLottieLoad]);
+    }, [stepIndex]);
 
     const handleLoadStart = useCallback(() => {
       console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie load started`);
       handleLottieLoadStart(stepIndex);
-    }, [stepIndex, handleLottieLoadStart]);
+    }, [stepIndex]);
 
     if (localError || lottieErrors.has(stepIndex)) {
       return (
@@ -472,7 +472,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         </div>
       </div>
     );
-  }, [stepData]);
+  }, [stepData, SafeLottieComponent]);
 
   // Show loading state
   if (isLoading) {

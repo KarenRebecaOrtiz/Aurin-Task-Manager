@@ -278,7 +278,7 @@ export default React.memo(function NotificationDropdown({
           <div className={styles.notificationHeader}>
             <div className={styles.senderInfo}>
               <Image
-                src={sender?.imageUrl || '/default-avatar.png'}
+                src={sender?.imageUrl || '/empty-image.png'}
                 alt={sender?.firstName || 'Usuario'}
                 width={32}
                 height={32}

@@ -723,7 +723,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
       let coverPhotoUrl = formData.coverPhoto;
 
       if (formData.profilePhotoFile) {
-        if (config?.profilePhoto && !config.profilePhoto.includes('clerk.com') && !config.profilePhoto.includes('default-avatar.png')) {
+        if (config?.profilePhoto && !config.profilePhoto.includes('clerk.com') && !config.profilePhoto.includes('empty-image.png')) {
           const filePath = config.profilePhoto.split('aurin-plattform/')[1];
           if (filePath) {
             await deleteImageFromGCS(filePath);
