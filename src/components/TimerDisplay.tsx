@@ -40,7 +40,7 @@ const TimerDisplay = memo(({
         className={styles.playStopButton} 
         onClick={onToggleTimer}
         onDoubleClick={handleDoubleClick}
-        title={isTimerRunning ? 'Click: Pausar | Doble click: Enviar' : 'Iniciar'}
+        title="Ingresar tiempo personalizado"
       >
         <Image 
           src={isTimerRunning ? '/Stop.svg' : '/Play.svg'} 

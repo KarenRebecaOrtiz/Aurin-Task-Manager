@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { collection, onSnapshot, query, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
-import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
@@ -60,11 +59,10 @@ type TaskView = 'table' | 'kanban';
 
 // Helper function to normalize status values (same as TasksKanban)
 const normalizeStatus = (status: string): string => {
-  if (!status) return 'Por Iniciar'; // Default for empty/null status
+  if (!status) return 'Por Iniciar';
   
   const normalized = status.trim();
   
-  // Handle common variations
   const statusMap: { [key: string]: string } = {
     'por iniciar': 'Por Iniciar',
     'por-iniciar': 'Por Iniciar',
@@ -92,7 +90,6 @@ const normalizeStatus = (status: string): string => {
     'cancelado': 'Cancelado',
     'cancelada': 'Cancelado',
     'cancelled': 'Cancelado',
-    // Legacy status mapping
     'diseno': 'Por Iniciar',
     'diseño': 'Por Iniciar',
     'design': 'Por Iniciar',
@@ -111,11 +108,6 @@ interface AvatarGroupProps {
   currentUserId: string;
 }
 
-// Eliminar todo el sistema de caché global
-const cleanupTasksTableListeners = () => {
-  console.log('[TasksTable] Cleaning up all table listeners');
-};
-
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds, users, currentUserId }) => {
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
@@ -131,26 +123,25 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUser
   }, [assignedUserIds, leadedByUserIds, users, currentUserId]);
 
   return (
-    <div className={avatarStyles.avatarGroup}>
-      {avatars.length > 0 ? (
+    <div className={styles.avatarGroup}>
+      {avatars.length > 0 ? 
         avatars.map((user) => (
-          <div key={user.id} className={avatarStyles.avatar}>
-            <span className={avatarStyles.avatarName}>{user.fullName}</span>
+          <div key={user.id} className={styles.avatar}>
+            <span className={styles.avatarName}>{user.fullName}</span>
             <Image
               src={user.imageUrl || '/empty-image.png'}
               alt={`${user.fullName}'s avatar`}
               width={40}
               height={40}
-              className={avatarStyles.avatarImage}
+              className={styles.avatarImage}
               onError={(e) => {
                 e.currentTarget.src = '/empty-image.png';
               }}
             />
           </div>
         ))
-      ) : (
-        <span>No asignados</span>
-      )}
+        : <span>No asignados</span>
+      }
     </div>
   );
 };
@@ -169,9 +160,7 @@ interface TasksTableProps {
   externalUsers?: User[];
 }
 
-
-
-const TasksTable: React.FC<TasksTableProps> = ({
+const TasksTable = memo(({
   onNewTaskOpen,
   onEditTaskOpen,
   onChatSidebarOpen,
@@ -183,14 +172,40 @@ const TasksTable: React.FC<TasksTableProps> = ({
   externalTasks,
   externalClients,
   externalUsers,
-}) => {
+}: TasksTableProps) => {
   const { user } = useUser();
   const { isAdmin } = useAuth();
+  const userId = useMemo(() => user?.id || '', [user]);
+  const { getUnreadCount, markAsViewed } = useTaskNotifications();
 
-  // Optimizar selectores de Zustand para evitar re-renders innecesarios
+  // Refs
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const priorityDropdownRef = useRef<HTMLDivElement>(null);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+  const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const effectiveTasksRef = useRef<Task[]>([]);
+  const effectiveTasksIdsRef = useRef<string>('');
+
+  // Memoized data
+  const effectiveTasks = useMemo(() => {
+    console.log('[TasksTableRenders] Tasks memo', { externalTasksLength: externalTasks?.length });
+    return externalTasks ?? [];
+  }, [externalTasks]);
+
+  const effectiveClients = useMemo(() => {
+    console.log('[TasksTableRenders] Clients memo', { externalClientsLength: externalClients?.length });
+    return externalClients ?? [];
+  }, [externalClients]);
+
+  const effectiveUsers = useMemo(() => {
+    console.log('[TasksTableRenders] Users memo', { externalUsersLength: externalUsers?.length });
+    return externalUsers ?? [];
+  }, [externalUsers]);
+
+  // Store state
   const {
-    // Estado
-    filteredTasks,
     searchQuery,
     priorityFilter,
     clientFilter,
@@ -200,13 +215,10 @@ const TasksTable: React.FC<TasksTableProps> = ({
     isPriorityDropdownOpen,
     isClientDropdownOpen,
     isLoadingTasks,
-    isLoadingClients,
-    isLoadingUsers,
     actionMenuOpenId,
     undoStack,
     showUndo,
     userFilter,
-    // Acciones
     setFilteredTasks,
     setSearchQuery,
     setPriorityFilter,
@@ -225,9 +237,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
     setUserFilter,
   } = useStore(
     tasksTableStore,
-    useShallow((state) => ({
-      // Estado
-      filteredTasks: state.filteredTasks,
+    useShallow(state => ({
       searchQuery: state.searchQuery,
       priorityFilter: state.priorityFilter,
       clientFilter: state.clientFilter,
@@ -237,13 +247,10 @@ const TasksTable: React.FC<TasksTableProps> = ({
       isPriorityDropdownOpen: state.isPriorityDropdownOpen,
       isClientDropdownOpen: state.isClientDropdownOpen,
       isLoadingTasks: state.isLoadingTasks,
-      isLoadingClients: state.isLoadingClients,
-      isLoadingUsers: state.isLoadingUsers,
       actionMenuOpenId: state.actionMenuOpenId,
       undoStack: state.undoStack,
       showUndo: state.showUndo,
       userFilter: state.userFilter,
-      // Acciones
       setFilteredTasks: state.setFilteredTasks,
       setSearchQuery: state.setSearchQuery,
       setPriorityFilter: state.setPriorityFilter,
@@ -263,52 +270,23 @@ const TasksTable: React.FC<TasksTableProps> = ({
     }))
   );
 
-  // Refs
-  const userDropdownRef = useRef<HTMLDivElement>(null);
-  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const priorityDropdownRef = useRef<HTMLDivElement>(null);
-
-  const clientDropdownRef = useRef<HTMLDivElement>(null);
-  const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const actionMenuRef = useRef<HTMLDivElement>(null);
-
-  const userId = useMemo(() => user?.id || '', [user]);
-
-  // Usar datos externos si están disponibles, de lo contrario usar datos del store
-  const effectiveTasks = useMemo(() => externalTasks ?? [], [externalTasks]);
-  const effectiveClients = useMemo(() => externalClients ?? [], [externalClients]);
-  const effectiveUsers = useMemo(() => externalUsers ?? [], [externalUsers]);
-
-  // Optimizar tracking de cambios usando refs para evitar re-renders
-  const effectiveTasksRef = useRef(effectiveTasks);
-  const effectiveTasksIdsRef = useRef('');
-  
-  // Solo recalcular IDs si realmente cambió el array
+  // Refs para tracking de cambios
   useEffect(() => {
     const newIds = effectiveTasks.map(t => t.id).join(',');
     if (newIds !== effectiveTasksIdsRef.current) {
       effectiveTasksIdsRef.current = newIds;
       effectiveTasksRef.current = effectiveTasks;
+      setFilteredTasks(effectiveTasks);
     }
-  }, [effectiveTasks]);
-
-  // Inicializar filteredTasks cuando cambien las tareas efectivas
-  useEffect(() => {
-    setFilteredTasks(effectiveTasks);
   }, [effectiveTasks, setFilteredTasks]);
 
-  // Usar el hook de notificaciones simplificado
-  const { getUnreadCount, markAsViewed } = useTaskNotifications();
-
-  // Setup de tasks con actualizaciones en tiempo real - ELIMINAR DUPLICADO
+  // Setup de tasks con actualizaciones en tiempo real
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || effectiveTasks.length > 0) return;
 
-    // No establecer onSnapshot aquí - usar siempre datos del store de Zustand
-    if (effectiveTasks.length > 0) {
-      setIsLoadingTasks(false);
-    }
-  }, [user?.id, effectiveTasks, setIsLoadingTasks]);
+    console.log('[TasksTable] Using Zustand store - no duplicate onSnapshot');
+    setIsLoadingTasks(false);
+  }, [user?.id, effectiveTasks.length, setIsLoadingTasks]);
 
   // Setup de clients con actualizaciones en tiempo real
   useEffect(() => {
@@ -321,15 +299,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
     const unsubscribeClients = onSnapshot(
       clientsQuery,
       (snapshot) => {
-        const clientsData: Client[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '/empty-image.png',
-        }));
-
-        console.log('[TasksTable] Clients onSnapshot update:', clientsData.length);
-        
-        // Actualizar estado directamente sin caché
+        console.log('[TasksTable] Clients onSnapshot update:', snapshot.docs.length);
         setIsLoadingClients(false);
       },
       (error) => {
@@ -338,90 +308,34 @@ const TasksTable: React.FC<TasksTableProps> = ({
       }
     );
 
-    return () => {
-      unsubscribeClients();
-    };
-  }, [user?.id, effectiveClients, setIsLoadingClients]);
+    return () => unsubscribeClients();
+  }, [user?.id, effectiveClients.length, setIsLoadingClients]);
 
-  // Setup de users con actualizaciones en tiempo real
+  // Setup de users
   useEffect(() => {
     if (!user?.id || effectiveUsers.length > 0) return;
-
-    console.log('[TasksTable] Setting up users fetch');
+    
     setIsLoadingUsers(true);
-
-    // Fetch users
+    
     const fetchUsers = async () => {
       try {
         const response = await fetch('/api/users');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch users: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
         
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string; description?: string };
-        }[] = await response.json();
-
-        const usersData: User[] = await Promise.all(
-          clerkUsers.map(async (clerkUser) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: userDoc.exists() && userDoc.data().role
-                  ? userDoc.data().role
-                  : (clerkUser.publicMetadata.role || 'Sin rol'),
-              };
-            } catch {
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: clerkUser.publicMetadata.role || 'Sin rol',
-              };
-            }
-          }),
-        );
+        const clerkUsers = await response.json();
+        console.log('[TasksTable] Users fetched:', clerkUsers.length);
         
-        console.log('[TasksTable] Users fetched:', {
-          total: usersData.length,
-          withImages: usersData.filter(u => u.imageUrl).length,
-          withoutImages: usersData.filter(u => !u.imageUrl).length
-        });
+        setIsLoadingUsers(false);
       } catch (error) {
         console.error('[TasksTable] Error fetching users:', error);
-      } finally {
         setIsLoadingUsers(false);
       }
     };
 
-    // Ejecutar fetch inicial
     fetchUsers();
+  }, [user?.id, effectiveUsers.length, setIsLoadingUsers]);
 
-    // Setup listener para cambios en usuarios
-    const usersQuery = query(collection(db, 'users'));
-    const unsubscribeUsers = onSnapshot(usersQuery, () => {
-      // Re-fetch users cuando hay cambios
-      fetchUsers();
-    });
-
-    return () => {
-      unsubscribeUsers();
-    };
-  }, [user?.id, effectiveUsers, setIsLoadingUsers]);
-
-  useEffect(() => {
-    // Inicializar filteredTasks directamente con effectiveTasks
-    // NO comparar con JSON.stringify ya que esto interfiere con los filtros
-    setFilteredTasks(effectiveTasks);
-  }, [effectiveTasks, setFilteredTasks]);
-
+  // Helpers
   const getInvolvedUserIds = useCallback((task: Task) => {
     const ids = new Set<string>();
     if (task.CreatedBy) ids.add(task.CreatedBy);
@@ -430,8 +344,17 @@ const TasksTable: React.FC<TasksTableProps> = ({
     return Array.from(ids);
   }, []);
 
+  // Event handlers  
+  const handleSort = useCallback((key: string) => {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
+    }
+  }, [sortKey, setSortKey, sortDirection, setSortDirection]);
+
   const handleUserFilter = useCallback((id: string) => {
-    // Animate filter change
     const userDropdownTrigger = userDropdownRef.current?.querySelector(`.${styles.dropdownTrigger}`);
     if (userDropdownTrigger) {
       const filterIcon = userDropdownTrigger.querySelector('img');
@@ -451,212 +374,74 @@ const TasksTable: React.FC<TasksTableProps> = ({
     setIsUserDropdownOpen(false);
   }, [setUserFilter, setIsUserDropdownOpen]);
 
-  const memoizedFilteredTasks = useMemo(() => {
-    return effectiveTasks.filter((task) => {
-      // Excluir tareas archivadas
-      if (task.archived) {
-        return false;
-      }
-      
-      // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
-      const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
-      if (!canViewTask) {
-        return false;
-      }
-      
-      // Filtro de búsqueda
-      const matchesSearch = !searchQuery || task.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // Filtro de prioridad
-      const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-      
-      // Filtro de cliente
-      const matchesClient = !clientFilter || task.clientId === clientFilter;
-      
-      // Filtro de usuario
-      let matchesUser = true;
-      if (userFilter === 'me') {
-        const involvedUserIds = getInvolvedUserIds(task);
-        matchesUser = involvedUserIds.includes(userId);
-      } else if (userFilter && userFilter !== 'me') {
-        const involvedUserIds = getInvolvedUserIds(task);
-        matchesUser = involvedUserIds.includes(userFilter);
-      }
-
-      return matchesSearch && matchesPriority && matchesClient && matchesUser;
+  const handlePrioritySelect = useCallback((priority: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    gsap.to(target, {
+      scale: 0.95,
+      opacity: 0.8,
+      duration: 0.15,
+      ease: 'power1.out',
+      yoyo: true,
+      repeat: 1,
     });
-  }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
-
-  // Crear un ID estable para las tareas filtradas
-  const filteredTasksIds = useMemo(() => memoizedFilteredTasks.map(t => t.id).join(','), [memoizedFilteredTasks]);
-  
-  // Usar ref para evitar problemas de dependencias
-  const memoizedFilteredTasksRef = useRef(memoizedFilteredTasks);
-  memoizedFilteredTasksRef.current = memoizedFilteredTasks;
-
-  useEffect(() => {
-    setFilteredTasks(memoizedFilteredTasksRef.current);
-  }, [filteredTasksIds, setFilteredTasks]); // Solo usar el ID estable como dependencia
-
-  // Función para manejar el clic en una fila de tarea
-  const handleTaskRowClick = async (task: Task) => {
-    // Marcar la tarea como vista usando el nuevo sistema
-    await markAsViewed(task.id);
     
-    // Abrir el chat de la tarea
+    setPriorityFilter(priority);
+    setIsPriorityDropdownOpen(false);
+  }, [setPriorityFilter, setIsPriorityDropdownOpen]);
+
+  const handleClientSelect = useCallback((clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    gsap.to(target, {
+      scale: 0.95,
+      opacity: 0.8,
+      duration: 0.15,
+      ease: 'power1.out',
+      yoyo: true,
+      repeat: 1,
+    });
+    
+    setClientFilter(clientId);
+    setIsClientDropdownOpen(false);
+  }, [setClientFilter, setIsClientDropdownOpen]);
+
+  // Función para deshacer
+  const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
+    if (!undoItem || !userId || !isAdmin) {
+      console.error('Cannot undo: missing required data');
+      return;
+    }
+
+    try {
+      if (undoItem.action === 'archive') {
+        await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
+        setFilteredTasks(prev => 
+          prev.map(t => 
+            t.id === undoItem.task.id 
+              ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
+              : t
+          )
+        );
+      }
+      
+      setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
+      setShowUndo(false);
+      
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+    } catch (error) {
+      console.error('Error in undo process:', error);
+    }
+  }, [userId, isAdmin, setFilteredTasks, setUndoStack, setShowUndo, undoStack]);
+
+  // Click handlers
+  const handleTaskRowClick = useCallback(async (task: Task) => {
+    await markAsViewed(task.id);
     onChatSidebarOpen(task);
-    console.log('[TasksTable] Row clicked, opening chat for task:', task.id);
-  };
+  }, [markAsViewed, onChatSidebarOpen]);
 
-  useEffect(() => {
-    const currentActionMenuRef = actionMenuRef.current;
-    if (actionMenuOpenId && currentActionMenuRef) {
-      gsap.fromTo(
-        currentActionMenuRef,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-      console.log('[TasksTable] Action menu animated for task:', actionMenuOpenId);
-    }
-    return () => {
-      if (currentActionMenuRef) {
-        gsap.killTweensOf(currentActionMenuRef);
-      }
-    };
-  }, [actionMenuOpenId]);
-
-  useEffect(() => {
-    const priorityItems = priorityDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
-    if (isPriorityDropdownOpen && priorityItems) {
-      gsap.fromTo(
-        priorityItems,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-      console.log('[TasksTable] Priority dropdown animated');
-    }
-  }, [isPriorityDropdownOpen]);
-
-  useEffect(() => {
-    const clientItems = clientDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
-    if (isClientDropdownOpen && clientItems) {
-      gsap.fromTo(
-        clientItems,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-      console.log('[TasksTable] Client dropdown animated');
-    }
-  }, [isClientDropdownOpen]);
-
-  useEffect(() => {
-    const userItems = userDropdownRef.current?.querySelector(`.${styles.dropdownItems}`);
-    if (isUserDropdownOpen && userItems) {
-      gsap.fromTo(
-        userItems,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-      );
-      console.log('[TasksTable] User dropdown animated');
-    }
-  }, [isUserDropdownOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        actionMenuRef.current &&
-        !actionMenuRef.current.contains(event.target as Node) &&
-        !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
-      ) {
-        setActionMenuOpenId(null);
-        console.log('[TasksTable] Action menu closed via outside click');
-      }
-      if (
-        priorityDropdownRef.current &&
-        !priorityDropdownRef.current.contains(event.target as Node) &&
-        isPriorityDropdownOpen
-      ) {
-        setIsPriorityDropdownOpen(false);
-        console.log('[TasksTable] Priority dropdown closed via outside click');
-      }
-      if (
-        clientDropdownRef.current &&
-        !clientDropdownRef.current.contains(event.target as Node) &&
-        isClientDropdownOpen
-      ) {
-        setIsClientDropdownOpen(false);
-        console.log('[TasksTable] Client dropdown closed via outside click');
-      }
-      if (
-        userDropdownRef.current &&
-        !userDropdownRef.current.contains(event.target as Node) &&
-        isUserDropdownOpen
-      ) {
-        setIsUserDropdownOpen(false);
-        console.log('[TasksTable] User dropdown closed via outside click');
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isUserDropdownOpen, setActionMenuOpenId, setIsPriorityDropdownOpen, setIsClientDropdownOpen, setIsUserDropdownOpen]);
-
-  const handleSort = (key: string) => {
-    if (key === sortKey) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
-    }
-    console.log('[TasksTable] Sorting tasks:', { sortKey: key, sortDirection });
-  };
-
-  const sortedTasks = useMemo(() => {
-    const sorted = [...filteredTasks];
-    if (sortKey === 'lastActivity') {
-      sorted.sort((a, b) => {
-        const activityA = getLastActivityTimestamp(a);
-        const activityB = getLastActivityTimestamp(b);
-        return sortDirection === 'asc' ? activityA - activityB : activityB - activityA;
-      });
-    } else if (sortKey === 'clientId') {
-      sorted.sort((a, b) => {
-        const clientA = effectiveClients.find((c) => c.id === a.clientId)?.name || '';
-        const clientB = effectiveClients.find((c) => c.id === b.clientId)?.name || '';
-        return sortDirection === 'asc'
-          ? clientA.localeCompare(clientB)
-          : clientB.localeCompare(clientA);
-      });
-    } else if (sortKey === 'status') {
-      const statusOrder = ['Por Iniciar', 'Diseño', 'Desarrollo', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelado'];
-      sorted.sort((a, b) => {
-        const indexA = statusOrder.indexOf(normalizeStatus(a.status));
-        const indexB = statusOrder.indexOf(normalizeStatus(b.status));
-        return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
-      });
-    } else if (sortKey === 'priority') {
-      const priorityOrder = ['Alta', 'Media', 'Baja'];
-      sorted.sort((a, b) => {
-        const indexA = priorityOrder.indexOf(a.priority);
-        const indexB = priorityOrder.indexOf(b.priority);
-        return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
-      });
-    } else if (sortKey === 'createdAt') {
-      sorted.sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
-      });
-    } else {
-      sorted.sort((a, b) =>
-        sortDirection === 'asc'
-          ? String(a[sortKey as keyof Task]).localeCompare(String(b[sortKey as keyof Task]))
-          : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task])),
-      );
-    }
-    return sorted;
-  }, [filteredTasks, sortKey, sortDirection, effectiveClients]);
-
-  const animateClick = (element: HTMLElement) => {
+  // Animation helper
+  const animateClick = useCallback((element: HTMLElement) => {
     gsap.to(element, {
       scale: 0.95,
       opacity: 0.8,
@@ -665,48 +450,91 @@ const TasksTable: React.FC<TasksTableProps> = ({
       yoyo: true,
       repeat: 1,
     });
+  }, []);
 
-  };
-
-  const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
-    animateClick(e.currentTarget);
-    
-    // Animate filter change
-    const filterIcon = e.currentTarget.querySelector('img');
-    if (filterIcon) {
-      gsap.to(filterIcon, {
-        rotation: 360,
-        scale: 1.2,
-        duration: 0.3,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 1
-      });
+  // Animations
+  useEffect(() => {
+    if (actionMenuOpenId && actionMenuRef.current) {
+      gsap.fromTo(
+        actionMenuRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+      );
     }
-    
-    setPriorityFilter(priority);
-    setIsPriorityDropdownOpen(false);
-  };
+  }, [actionMenuOpenId]);
 
-  const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-    animateClick(e.currentTarget);
-    
-    // Animate filter change
-    const filterIcon = e.currentTarget.querySelector('img');
-    if (filterIcon) {
-      gsap.to(filterIcon, {
-        rotation: 360,
-        scale: 1.2,
-        duration: 0.3,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 1
-      });
+  useEffect(() => {
+    if (isPriorityDropdownOpen && priorityDropdownRef.current) {
+      const items = priorityDropdownRef.current.querySelector(`.${styles.dropdownItems}`);
+      if (items) {
+        gsap.fromTo(
+          items,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        );
+      }
     }
+  }, [isPriorityDropdownOpen]);
+
+  useEffect(() => {
+    if (isClientDropdownOpen && clientDropdownRef.current) {
+      const items = clientDropdownRef.current.querySelector(`.${styles.dropdownItems}`);
+      if (items) {
+        gsap.fromTo(
+          items,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        );
+      }
+    }
+  }, [isClientDropdownOpen]);
+
+  useEffect(() => {
+    if (isUserDropdownOpen && userDropdownRef.current) {
+      const items = userDropdownRef.current.querySelector(`.${styles.dropdownItems}`);
+      if (items) {
+        gsap.fromTo(
+          items,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' }
+        );
+      }
+    }
+  }, [isUserDropdownOpen]);
+
+  // Click outside handlers
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node) &&
+        !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
+      ) {
+        setActionMenuOpenId(null);
+      }
+      
+      if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(event.target as Node)) {
+        setIsPriorityDropdownOpen(false);
+      }
+      
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
+        setIsClientDropdownOpen(false);
+      }
+      
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setIsUserDropdownOpen(false);
+      }
+    };
     
-    setClientFilter(clientId);
-    setIsClientDropdownOpen(false);
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [
+    actionMenuOpenId,
+    setActionMenuOpenId,
+    setIsPriorityDropdownOpen,
+    setIsClientDropdownOpen,
+    setIsUserDropdownOpen
+  ]);
 
   // Función para obtener las clases CSS de una fila de tarea
   const getRowClassName = useCallback(() => {
@@ -831,8 +659,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
           else if (normalizedStatus === 'Por Finalizar') icon = '/circle-check.svg';
           else if (normalizedStatus === 'Finalizado') icon = '/check-check.svg';
           
-
-          
           return (
             <div className={styles.statusWrapper}>
               <Image
@@ -882,10 +708,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
               <ActionMenu
                 task={task}
                 userId={userId}
-                isOpen={actionMenuOpenId === task.id}
-                onOpen={() => {
-                  setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id);
-                }}
                 onEdit={() => {
                   onEditTaskOpen(task.id);
                   setActionMenuOpenId(null);
@@ -934,12 +756,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
                 }}
               />
             );
-          } else {
-            console.log('❌ [DEBUG] Not rendering action menu - user is not admin:', {
-              taskId: task.id,
-              isAdmin,
-              userId
-            });
           }
           return null;
         },
@@ -948,85 +764,10 @@ const TasksTable: React.FC<TasksTableProps> = ({
     return col;
   });
 
-  useEffect(() => {
-    const containerElement = document.querySelector('.tasks-container');
-
-    let startX = 0;
-    let currentX = 0;
-
-    const handleTouchStart = (event: TouchEvent) => {
-      startX = event.touches[0].clientX;
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      currentX = event.touches[0].clientX;
-    };
-
-    const handleTouchEnd = () => {
-      const deltaX = currentX - startX;
-      if (Math.abs(deltaX) > 50) {
-        if (deltaX > 0) {
-          console.log('Swipe right detected');
-          // Logic to switch to the previous container
-        } else {
-          console.log('Swipe left detected');
-          // Logic to switch to the next container
-        }
-      }
-    };
-
-    if (containerElement) {
-      containerElement.addEventListener('touchstart', handleTouchStart);
-      containerElement.addEventListener('touchmove', handleTouchMove);
-      containerElement.addEventListener('touchend', handleTouchEnd);
-    }
-
-    return () => {
-      if (containerElement) {
-        containerElement.removeEventListener('touchstart', handleTouchStart);
-        containerElement.removeEventListener('touchmove', handleTouchMove);
-        containerElement.removeEventListener('touchend', handleTouchEnd);
-      }
-    };
-  }, []);
-
-  // Función para deshacer
-  const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
-    if (!undoItem || !userId || !isAdmin) {
-      console.error('Cannot undo: missing required data');
-      return;
-    }
-
-    try {
-      if (undoItem.action === 'archive') {
-        // Desarchivar la tarea
-        await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
-        
-        // Actualizar estado local
-        setFilteredTasks(filteredTasks.map((t) => 
-          t.id === undoItem.task.id 
-            ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
-            : t
-        ));
-      }
-      
-      // Remover del undo stack
-      setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-      setShowUndo(false);
-      
-      if (undoTimeoutRef.current) {
-        clearTimeout(undoTimeoutRef.current);
-      }
-    } catch (error) {
-      console.error('Error in undo process:', error);
-    }
-  }, [userId, isAdmin, setFilteredTasks, setUndoStack, setShowUndo, filteredTasks, undoStack]);
-
   // Cleanup all table listeners when component unmounts
   useEffect(() => {
     return () => {
       console.log('[TasksTable] Cleaning up all table listeners on unmount');
-      cleanupTasksTableListeners();
       
       // Cleanup undo timeout
       if (undoTimeoutRef.current) {
@@ -1035,33 +776,101 @@ const TasksTable: React.FC<TasksTableProps> = ({
     };
   }, []);
 
-  // Handle loading state - PRIORIZADO para mostrar TasksTable inmediatamente
-  const shouldShowLoader = useMemo(() => {
-    // Si hay datos externos, nunca mostrar loader
-    if (externalTasks && externalClients && externalUsers) {
-      return false;
-    }
-    
-    // Si hay CUALQUIER dato en caché (tareas, clientes o usuarios), mostrar tabla
-    const hasAnyData = effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0;
-    
-    // Solo mostrar loader si NO hay ningún dato Y está cargando tareas (lo más importante)
-    const isReallyLoading = !hasAnyData && isLoadingTasks;
-    
-    console.log('[TasksTable] Loading state decision:', {
-      hasExternalData: !!(externalTasks && externalClients && externalUsers),
-      hasAnyData,
-      isLoadingTasks,
-      isLoadingClients,
-      isLoadingUsers,
-      shouldShow: isReallyLoading,
-      tasksCount: effectiveTasks.length,
-      clientsCount: effectiveClients.length,
-      usersCount: effectiveUsers.length
+  // Memoized sorted tasks
+  const sortedTasks = useMemo(() => {
+    const filtered = effectiveTasks.filter((task) => {
+      if (task.archived) return false;
+      
+      const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
+      if (!canViewTask) return false;
+      
+      const matchesSearch = !searchQuery || task.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+      const matchesClient = !clientFilter || task.clientId === clientFilter;
+      
+      let matchesUser = true;
+      if (userFilter === 'me') {
+        matchesUser = getInvolvedUserIds(task).includes(userId);
+      } else if (userFilter && userFilter !== 'me') {
+        matchesUser = getInvolvedUserIds(task).includes(userFilter);
+      }
+
+      return matchesSearch && matchesPriority && matchesClient && matchesUser;
     });
+
+    const sorted = [...filtered];
     
-    return isReallyLoading;
-  }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoadingTasks, isLoadingClients, isLoadingUsers]);
+    if (sortKey === 'lastActivity') {
+      sorted.sort((a, b) => {
+        const activityA = getLastActivityTimestamp(a);
+        const activityB = getLastActivityTimestamp(b);
+        return sortDirection === 'asc' ? activityA - activityB : activityB - activityA;
+      });
+    } else if (sortKey === 'clientId') {
+      sorted.sort((a, b) => {
+        const clientA = effectiveClients.find((c) => c.id === a.clientId)?.name || '';
+        const clientB = effectiveClients.find((c) => c.id === b.clientId)?.name || '';
+        return sortDirection === 'asc'
+          ? clientA.localeCompare(clientB)
+          : clientB.localeCompare(clientA);
+      });
+    } else if (sortKey === 'status') {
+      const statusOrder = ['Por Iniciar', 'Diseño', 'Desarrollo', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelado'];
+      sorted.sort((a, b) => {
+        const indexA = statusOrder.indexOf(normalizeStatus(a.status));
+        const indexB = statusOrder.indexOf(normalizeStatus(b.status));
+        return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
+      });
+    } else if (sortKey === 'priority') {
+      const priorityOrder = ['Alta', 'Media', 'Baja'];
+      sorted.sort((a, b) => {
+        const indexA = priorityOrder.indexOf(a.priority);
+        const indexB = priorityOrder.indexOf(b.priority);
+        return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
+      });
+    } else if (sortKey === 'createdAt') {
+      sorted.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    } else {
+      sorted.sort((a, b) =>
+        sortDirection === 'asc'
+          ? String(a[sortKey as keyof Task]).localeCompare(String(b[sortKey as keyof Task]))
+          : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task]))
+      );
+    }
+
+    return sorted;
+  }, [
+    effectiveTasks,
+    searchQuery,
+    priorityFilter,
+    clientFilter,
+    userFilter,
+    sortKey,
+    sortDirection,
+    effectiveClients,
+    userId,
+    isAdmin,
+    getInvolvedUserIds
+  ]);
+
+  // Loading state
+  const shouldShowLoader = useMemo(() => {
+    const hasExternalData = !!(externalTasks && externalClients && externalUsers);
+    const hasAnyData = effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0;
+    return !hasExternalData && !hasAnyData && isLoadingTasks;
+  }, [
+    externalTasks,
+    externalClients,
+    externalUsers,
+    effectiveTasks.length,
+    effectiveClients.length,
+    effectiveUsers.length,
+    isLoadingTasks
+  ]);
 
   if (shouldShowLoader) {
     return (
@@ -1562,7 +1371,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+});
 
 TasksTable.displayName = 'TasksTable';
 

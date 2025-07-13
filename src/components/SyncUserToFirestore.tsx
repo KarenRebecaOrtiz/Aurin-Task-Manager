@@ -6,7 +6,6 @@ import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { firebaseConfig } from '@/lib/firebaseConfig';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -15,7 +14,6 @@ const auth = getAuth(app);
 export default function SyncUserToFirestore() {
   const { getToken, userId } = useClerkAuth();
   const { user } = useUser();
-  const { isAdmin } = useAuth();
   const [synced, setSynced] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
@@ -39,7 +37,6 @@ export default function SyncUserToFirestore() {
           clerkUserId: user.id,
           email: user.emailAddresses[0]?.emailAddress,
           publicMetadata: user.publicMetadata,
-          isAdmin,
         });
 
         const token = await getToken({ template: 'integration_firebase' });
@@ -63,29 +60,32 @@ export default function SyncUserToFirestore() {
 
         const email = user.emailAddresses[0]?.emailAddress || 'no-email';
         const displayName = user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Usuario';
-        const access = isAdmin || user.publicMetadata.access === 'admin' ? 'admin' : 'user';
         const profilePhoto = user.imageUrl || '';
         const docRef = doc(db, 'users', userId);
 
+        // Get existing user data from Firestore
         const userDoc = await getDoc(docRef);
-        const status = userDoc.exists() && userDoc.data().status ? userDoc.data().status : 'Disponible';
-
-        await setDoc(docRef, {
+        const existingData = userDoc.exists() ? userDoc.data() : {};
+        
+        // Prepare user data for Firestore (excluding admin status which is handled by Clerk)
+        const userData = {
           userId,
           email,
           displayName,
-          createdAt: new Date().toISOString(),
-          access,
-          status,
           profilePhoto,
-        }, { merge: true });
+          // Preserve existing Firestore data
+          ...existingData,
+          // Update with Clerk data
+          lastUpdated: new Date().toISOString(),
+        };
+
+        await setDoc(docRef, userData, { merge: true });
         console.log('[SyncUserToFirestore] User data stored in Firestore:', {
           userId,
           email,
           displayName,
-          access,
-          status,
           profilePhoto,
+          preservedFields: Object.keys(existingData).length,
         });
 
         const updatedUserDoc = await getDoc(docRef);
@@ -122,7 +122,7 @@ export default function SyncUserToFirestore() {
     };
 
     syncUser();
-  }, [userId, user, synced, getToken, isAdmin, retryCount]);
+  }, [userId, user, synced, getToken, retryCount]);
 
   return null;
 }

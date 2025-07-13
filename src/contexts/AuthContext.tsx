@@ -2,8 +2,6 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 // Define the context shape
 interface AuthContextType {
@@ -28,18 +26,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchAdminStatus = async () => {
+    const checkAdminStatus = () => {
       if (!user?.id) {
         setIsAdmin(false);
-        setIsLoading(false);
-        return;
-      }
-
-      // Intenta leer de sessionStorage primero
-      const cacheKey = `isAdmin-${user.id}`;
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached !== null) {
-        setIsAdmin(cached === 'true');
         setIsLoading(false);
         return;
       }
@@ -47,27 +36,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         setIsLoading(true);
         setError(null);
-        const userDoc = await getDoc(doc(db, 'users', user.id));
-        if (userDoc.exists()) {
-          const access = userDoc.data().access;
-          const isAdminValue = access === 'admin';
-          setIsAdmin(isAdminValue);
-          sessionStorage.setItem(cacheKey, isAdminValue ? 'true' : 'false');
-        } else {
-          setIsAdmin(false);
-          sessionStorage.setItem(cacheKey, 'false');
-        }
-      } catch {
+        
+        // Verificar admin status desde Clerk metadata (más rápido que Firestore)
+        const access = user.publicMetadata?.access as string;
+        const isAdminValue = access === 'admin';
+        
+        console.log('[AuthContext] Admin status from Clerk metadata:', {
+          userId: user.id,
+          access,
+          isAdmin: isAdminValue
+        });
+        
+        setIsAdmin(isAdminValue);
+        
+        // Cache en sessionStorage para futuras verificaciones
+        const cacheKey = `isAdmin-${user.id}`;
+        sessionStorage.setItem(cacheKey, isAdminValue ? 'true' : 'false');
+        
+      } catch (error) {
+        console.error('[AuthContext] Error checking admin status:', error);
         setError('Failed to fetch admin status');
         setIsAdmin(false);
-        sessionStorage.setItem(cacheKey, 'false');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAdminStatus();
-  }, [user?.id]);
+    checkAdminStatus();
+  }, [user?.id, user?.publicMetadata?.access]);
 
   return (
     <AuthContext.Provider value={{ isAdmin, isLoading, error }}>

@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { gsap } from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import SuccessAlert from "./SuccessAlert";
 import FailAlert from "./FailAlert";
 import styles from "./OnboardingStepper.module.scss";
 import Image from "next/image";
+import { useOnboardingStatus } from "@/hooks/useOnboardingStatus";
 
 gsap.registerPlugin(ScrollToPlugin);
 
@@ -68,9 +69,8 @@ const LottieErrorBoundary = ({
 
 const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
   const { user } = useUser();
-  const [isOpen, setIsOpen] = useState(false);
+  const { isCompleted, currentStep, isLoading, error } = useOnboardingStatus();
   const [step, setStep] = useState(1);
-  const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<{ id: string; type: "success" | "failure"; message?: string; error?: string }[]>([]);
   const [lottieErrors, setLottieErrors] = useState<Set<number>>(new Set());
   const [loadingStates, setLoadingStates] = useState<Set<number>>(new Set());
@@ -78,50 +78,23 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const prevStepRef = useRef<number>(1);
-  const renderCountRef = useRef<number>(0);
 
-  useEffect(() => {
-    renderCountRef.current += 1;
-    console.log("[OnboardingStepper] Component rendered, count:", renderCountRef.current);
-  });
+  // Memoize shouldRender to prevent unnecessary re-renders
+  const shouldRender = useMemo(() => {
+    return !isCompleted && !isLoading && !!user;
+  }, [isCompleted, isLoading, user]);
 
-  // Fetch user onboarding status
+  // Update step when onboarding status changes
   useEffect(() => {
-    if (!user) {
-      console.log("[OnboardingStepper] No user, skipping fetch");
-      return;
+    if (!isLoading && !isCompleted) {
+      setStep(currentStep);
     }
-
-    const userDocRef = doc(db, "users", user.id);
-    const unsubscribe = onSnapshot(
-      userDocRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const onboardingCompleted = data.onboardingCompleted ?? false;
-          console.log("[OnboardingStepper] User data fetched, onboardingCompleted:", onboardingCompleted);
-          setIsOpen(!onboardingCompleted);
-          if (!onboardingCompleted) {
-            setStep(data.currentStep || 1);
-          }
-        } else {
-          console.log("[OnboardingStepper] No user document, showing stepper");
-          setIsOpen(true);
-        }
-      },
-      (err) => {
-        console.error("[OnboardingStepper] Error fetching user data:", err);
-        setError("Error al cargar datos del usuario.");
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user]);
+  }, [isLoading, isCompleted, currentStep]);
 
   // GSAP animation for stepper mount
   useEffect(() => {
     const stepper = stepperRef.current;
-    if (stepper && isOpen) {
+    if (stepper && shouldRender) {
       console.log("[OnboardingStepper] Applying GSAP mount animation");
       gsap.fromTo(
         stepper,
@@ -136,7 +109,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         }
       );
     }
-  }, [isOpen]);
+  }, [shouldRender]);
 
   // GSAP animation for step transitions
   useEffect(() => {
@@ -173,20 +146,20 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
     prevStepRef.current = step; // Update previous step
   }, [step]);
 
-  // Handle alerts
-  const addAlert = (type: "success" | "failure", message?: string, error?: string) => {
+  // Handle alerts with useCallback
+  const addAlert = useCallback((type: "success" | "failure", message?: string, error?: string) => {
     const id = `${type}-${Date.now()}`;
     console.log(`[OnboardingStepper] Adding ${type} alert with ID:`, id);
     setAlerts((prev) => [...prev, { id, type, message, error }]);
-  };
+  }, []);
 
-  const removeAlert = (id: string) => {
+  const removeAlert = useCallback((id: string) => {
     console.log("[OnboardingStepper] Removing alert with ID:", id);
     setAlerts((prev) => prev.filter((alert) => alert.id !== id));
-  };
+  }, []);
 
-  // Handle step change
-  const handleStepChange = async (newStep: number) => {
+  // Handle step change with useCallback
+  const handleStepChange = useCallback(async (newStep: number) => {
     if (!user?.id) {
       console.log("[OnboardingStepper] No user ID, skipping step change");
       return;
@@ -200,23 +173,55 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al cambiar de paso";
       console.error("[OnboardingStepper] Step change error:", message);
-      setError(message);
       addAlert("failure", "No se pudo cambiar de paso.", message);
     }
-  };
+  }, [user?.id, addAlert]);
 
-  // Handle completion
-  const handleComplete = async () => {
+  // Handle completion with useCallback
+  const handleComplete = useCallback(async () => {
     if (!user?.id) {
       console.log("[OnboardingStepper] No user ID, skipping completion");
       return;
     }
 
     try {
+      // 1. Marcar como completado en Firestore
       const userDocRef = doc(db, "users", user.id);
-      await setDoc(userDocRef, { onboardingCompleted: true, currentStep: 5 }, { merge: true });
-      console.log("[OnboardingStepper] Onboarding completed, set onboardingCompleted: true");
+      await setDoc(userDocRef, { 
+        onboardingCompleted: true, 
+        currentStep: 5 
+      }, { merge: true });
+      
+      console.log("[OnboardingStepper] Onboarding completed in Firestore");
+
+      // 2. Actualizar Clerk metadata para consistencia
+      try {
+        const response = await fetch('/api/update-user-metadata', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            metadata: {
+              onboardingCompleted: true,
+              currentStep: 5,
+            },
+          }),
+        });
+
+        if (response.ok) {
+          console.log("[OnboardingStepper] Clerk metadata updated successfully");
+        } else {
+          console.warn("[OnboardingStepper] Failed to update Clerk metadata");
+        }
+      } catch (clerkError) {
+        console.warn("[OnboardingStepper] Could not update Clerk metadata:", clerkError);
+        // No es crítico, Firestore es la fuente de verdad
+      }
+
       addAlert("success", "¡Onboarding completado! Bienvenido a la plataforma.");
+      
       const stepper = stepperRef.current;
       if (stepper) {
         gsap.to(stepper, {
@@ -227,7 +232,6 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
           ease: "power3.in",
           onComplete: () => {
             console.log("[OnboardingStepper] Stepper closed");
-            setIsOpen(false);
             if (onComplete) {
               console.log("[OnboardingStepper] Triggering onComplete callback");
               onComplete();
@@ -235,7 +239,6 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
           },
         });
       } else {
-        setIsOpen(false);
         if (onComplete) {
           console.log("[OnboardingStepper] Triggering onComplete callback (no stepper)");
           onComplete();
@@ -244,13 +247,12 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error al completar el onboarding";
       console.error("[OnboardingStepper] Completion error:", message);
-      setError(message);
       addAlert("failure", "No se pudo completar el onboarding.", message);
     }
-  };
+  }, [user?.id, addAlert, onComplete]);
 
-  // Handle Lottie errors with more robust error detection
-  const handleLottieError = (stepIndex: number, errorType = 'general') => {
+  // Handle Lottie errors with useCallback
+  const handleLottieError = useCallback((stepIndex: number, errorType = 'general') => {
     console.error(`[OnboardingStepper] Lottie error for step ${stepIndex}, type: ${errorType}`);
     setLottieErrors(prev => new Set(prev).add(stepIndex));
     setLoadingStates(prev => {
@@ -258,25 +260,25 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
       newSet.delete(stepIndex);
       return newSet;
     });
-  };
+  }, []);
 
-  // Handle Lottie loading states
-  const handleLottieLoad = (stepIndex: number) => {
+  // Handle Lottie loading states with useCallback
+  const handleLottieLoad = useCallback((stepIndex: number) => {
     console.log(`[OnboardingStepper] Lottie loaded successfully for step ${stepIndex}`);
     setLoadingStates(prev => {
       const newSet = new Set(prev);
       newSet.delete(stepIndex);
       return newSet;
     });
-  };
+  }, []);
 
-  const handleLottieLoadStart = (stepIndex: number) => {
+  const handleLottieLoadStart = useCallback((stepIndex: number) => {
     console.log(`[OnboardingStepper] Lottie loading started for step ${stepIndex}`);
     setLoadingStates(prev => new Set(prev).add(stepIndex));
-  };
+  }, []);
 
-  // Lottie animation data
-  const stepData = [
+  // Memoize step data to prevent recreation
+  const stepData = useMemo(() => [
     {
       title: "🗂️ Crea y asigna tareas",
       lottieUrl: "https://lottie.host/76f2bdb2-5236-44f0-b671-9807f46f002b/FWf3sNMOue.lottie",
@@ -348,7 +350,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         </>
       )
     }
-  ];
+  ], []);
 
   // Safe Lottie Component with enhanced error handling
   const SafeLottieComponent = ({ stepIndex, data }: { 
@@ -375,24 +377,24 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
       }, 5000); // 5 second timeout
 
       return () => clearTimeout(timeout);
-    }, [stepIndex, isLoaded, localError]);
+    }, [stepIndex, isLoaded, localError, handleLottieError]);
 
-    const handleError = () => {
+    const handleError = useCallback(() => {
       console.error(`[SafeLottieComponent] Step ${stepIndex} Lottie error`);
       setLocalError(true);
       handleLottieError(stepIndex, 'render');
-    };
+    }, [stepIndex, handleLottieError]);
 
-    const handleLoad = () => {
+    const handleLoad = useCallback(() => {
       console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie loaded`);
       setIsLoaded(true);
       handleLottieLoad(stepIndex);
-    };
+    }, [stepIndex, handleLottieLoad]);
 
-    const handleLoadStart = () => {
+    const handleLoadStart = useCallback(() => {
       console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie load started`);
       handleLottieLoadStart(stepIndex);
-    };
+    }, [stepIndex, handleLottieLoadStart]);
 
     if (localError || lottieErrors.has(stepIndex)) {
       return (
@@ -419,7 +421,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
             priority
           />
         }
-        onError={() => handleError()}
+        onError={handleError}
       >
         <div style={{ position: 'relative' }}>
           {loadingStates.has(stepIndex) && (
@@ -453,8 +455,8 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
     );
   };
 
-  // Render step content with enhanced error handling
-  const renderStepContent = (stepIndex: number) => {
+  // Render step content with useCallback
+  const renderStepContent = useCallback((stepIndex: number) => {
     const data = stepData[stepIndex];
 
     return (
@@ -470,10 +472,27 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         </div>
       </div>
     );
-  };
+  }, [stepData]);
 
-  if (!isOpen || !user) {
-    console.log("[OnboardingStepper] Not rendering stepper, isOpen:", isOpen, "user:", !!user);
+  // Show loading state
+  if (isLoading) {
+    console.log("[OnboardingStepper] Loading onboarding status...");
+    return null;
+  }
+
+  // Show error state
+  if (error) {
+    console.error("[OnboardingStepper] Error loading onboarding status:", error);
+    return null;
+  }
+
+  // Don't render if onboarding is completed or no user
+  if (!shouldRender) {
+    console.log("[OnboardingStepper] Not rendering stepper:", {
+      isCompleted,
+      isLoading,
+      hasUser: !!user
+    });
     return null;
   }
 
@@ -519,10 +538,11 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
             prevStep={() => handleStepChange(step - 1)}
           />
         </Wizard>
-        {error && <p className={styles.error}>{error}</p>}
       </div>
     </div>
   );
 };
+
+OnboardingStepper.displayName = 'OnboardingStepper';
 
 export default OnboardingStepper;

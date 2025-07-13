@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import { gsap } from 'gsap';
+import { FixedSizeList as List } from 'react-window';
 import styles from './NotificationDropdown.module.scss';
 import React from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -20,6 +21,13 @@ interface Notification {
   recipientId: string;
   conversationId?: string;
   type?: string;
+}
+
+interface GroupedNotifications {
+  type: string;
+  title: string;
+  notifications: Notification[];
+  count: number;
 }
 
 interface NotificationDropdownProps {
@@ -148,7 +156,7 @@ export default React.memo(function NotificationDropdown({
 
   // Memoizar el cálculo de tiempo relativo para evitar recálculos innecesarios
   const formatRelativeTime = useCallback((timestamp: Timestamp) => {
-    const now = new Date(); // Usar new Date() directamente en lugar de time prop
+    const now = new Date();
     const date = timestamp.toDate();
     const diffMs = now.getTime() - date.getTime();
     const diffSeconds = Math.floor(diffMs / 1000);
@@ -165,24 +173,63 @@ export default React.memo(function NotificationDropdown({
       month: '2-digit',
       year: '2-digit',
     });
-  }, []); // Sin dependencias para estabilizar la función
+  }, []);
 
-  // Memoizar las notificaciones procesadas para evitar recálculos
-  const processedNotifications = useMemo(() => {
+  // Función para obtener título del grupo (mover antes del useMemo)
+  const getGroupTitle = useCallback((type: string): string => {
+    switch (type) {
+      case 'task_deleted':
+        return '🗑️ Tareas Eliminadas';
+      case 'task_archived':
+        return '📁 Tareas Archivadas';
+      case 'task_unarchived':
+        return '📂 Tareas Desarchivadas';
+      case 'task_status_changed':
+        return '🔄 Cambios de Estado';
+      case 'group_message':
+        return '💬 Mensajes de Grupo';
+      case 'private_message':
+        return '💭 Mensajes Privados';
+      default:
+        return '📢 Otras Notificaciones';
+    }
+  }, []);
+
+  // Agrupar notificaciones por tipo
+  const groupedNotifications = useMemo(() => {
     if (!isVisible) return [];
     
-    return notifications.slice(0, 20).map((n) => {
-      const sender = users.find((u) => u.id === n.userId);
-      return {
-        ...n,
-        senderInfo: {
-          imageUrl: sender?.imageUrl || '/default-avatar.png',
-          name: sender?.firstName || 'Usuario'
-        },
-        relativeTime: formatRelativeTime(n.timestamp)
-      };
+    const groups: { [key: string]: Notification[] } = {};
+    
+    notifications.slice(0, 50).forEach((notification) => {
+      const type = notification.type || 'other';
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(notification);
     });
-  }, [notifications, users, formatRelativeTime, isVisible]);
+    
+    // Convertir a array y ordenar por timestamp más reciente
+    return Object.entries(groups).map(([type, notifications]) => {
+      const sortedNotifications = notifications.sort((a, b) => 
+        b.timestamp.toMillis() - a.timestamp.toMillis()
+      );
+      
+      const title = getGroupTitle(type);
+      
+      return {
+        type,
+        title,
+        notifications: sortedNotifications,
+        count: sortedNotifications.length
+      };
+    }).sort((a, b) => {
+      // Ordenar por la notificación más reciente del grupo
+      const aLatest = a.notifications[0]?.timestamp.toMillis() || 0;
+      const bLatest = b.notifications[0]?.timestamp.toMillis() || 0;
+      return bLatest - aLatest;
+    });
+  }, [notifications, isVisible, getGroupTitle]);
 
   const truncateText = useCallback((txt: string, max: number) => {
     // Limpiar el texto de posibles HTML tags
@@ -203,27 +250,127 @@ export default React.memo(function NotificationDropdown({
     return truncated + '...';
   }, []);
 
-  // Función para procesar el texto y hacer bold al nombre de la tarea
-  const processNotificationText = useCallback((message: string) => {
-    // Buscar patrones comunes de nombres de tareas
-    const taskPatterns = [
-      /"([^"]+)"/g, // Texto entre comillas
-      /'([^']+)'/g, // Texto entre comillas simples
-      /tarea\s+"([^"]+)"/gi, // "tarea" seguido de texto entre comillas
-      /task\s+"([^"]+)"/gi, // "task" seguido de texto entre comillas
-    ];
+  // Componente para renderizar item de notificación
+  const NotificationItem = useCallback(({ notification }: { notification: Notification; index?: number }) => {
+    const sender = users.find((u) => u.id === notification.userId);
+    const relativeTime = formatRelativeTime(notification.timestamp);
+    const swipeDistance = swipedNotificationId === notification.id ? swipeStartX - swipeCurrentX : 0;
+    
+    return (
+      <div
+        className={`${styles.notificationItem} ${!notification.read ? styles.unread : ''} ${
+          isSwiping && swipedNotificationId === notification.id ? styles.swiping : ''
+        }`}
+        style={{
+          transform: `translateX(${swipeDistance}px)`,
+          transition: isSwiping && swipedNotificationId === notification.id ? 'none' : 'transform 0.3s ease'
+        }}
+        onMouseDown={(e) => handleSwipeStart(e, notification.id)}
+        onMouseMove={handleSwipeMove}
+        onMouseUp={handleSwipeEnd}
+        onMouseLeave={handleSwipeEnd}
+        onTouchStart={(e) => handleSwipeStart(e, notification.id)}
+        onTouchMove={handleSwipeMove}
+        onTouchEnd={handleSwipeEnd}
+        onClick={() => handleNotificationClick(notification)}
+      >
+        <div className={styles.notificationContent}>
+          <div className={styles.notificationHeader}>
+            <div className={styles.senderInfo}>
+              <Image
+                src={sender?.imageUrl || '/default-avatar.png'}
+                alt={sender?.firstName || 'Usuario'}
+                width={32}
+                height={32}
+                className={styles.senderAvatar}
+              />
+              <span className={styles.senderName}>{sender?.firstName || 'Usuario'}</span>
+            </div>
+            <span className={styles.timestamp}>{relativeTime}</span>
+          </div>
+          <div className={styles.messageContainer}>
+            <p className={styles.message}>{truncateText(notification.message, 100)}</p>
+            {!notification.read && <div className={styles.unreadIndicator} />}
+          </div>
+        </div>
+        <div className={styles.swipeActions}>
+          <button
+            className={styles.deleteButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteNotification(notification.id);
+            }}
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    );
+  }, [users, formatRelativeTime, swipedNotificationId, swipeStartX, swipeCurrentX, isSwiping, handleSwipeStart, handleSwipeMove, handleSwipeEnd, handleNotificationClick, handleDeleteNotification, truncateText]);
 
-    let processedText = message;
+  // Componente para renderizar grupo de notificaciones
+  const GroupHeader = useCallback(({ group }: { group: GroupedNotifications }) => (
+    <div className={styles.groupHeader}>
+      <h3 className={styles.groupTitle}>{group.title}</h3>
+      <span className={styles.groupCount}>{group.count} notificación{group.count !== 1 ? 'es' : ''}</span>
+    </div>
+  ), []);
 
-    // Aplicar cada patrón
-    taskPatterns.forEach(pattern => {
-      processedText = processedText.replace(pattern, (match, taskName) => {
-        return match.replace(taskName, `<strong>${taskName}</strong>`);
-      });
-    });
+  // Renderizar lista virtualizada
+  const renderVirtualizedList = useCallback(() => {
+    if (groupedNotifications.length === 0) {
+      return (
+        <div className={styles.emptyState}>
+          <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={64} height={64} />
+          <p>No hay notificaciones</p>
+        </div>
+      );
+    }
 
-    return processedText;
-  }, []);
+    const itemCount = groupedNotifications.reduce((total, group) => total + group.notifications.length + 1, 0);
+    const itemSize = 80; // Altura de cada item
+    const listHeight = Math.min(400, itemCount * itemSize);
+
+    return (
+      <List
+        height={listHeight}
+        itemCount={itemCount}
+        itemSize={itemSize}
+        width="100%"
+        className={styles.virtualizedList}
+      >
+        {({ index, style }) => {
+          let currentIndex = 0;
+          
+          for (const group of groupedNotifications) {
+            // Renderizar header del grupo
+            if (index === currentIndex) {
+              return (
+                <div style={style}>
+                  <GroupHeader group={group} />
+                </div>
+              );
+            }
+            currentIndex++;
+            
+            // Renderizar notificaciones del grupo
+            for (const notification of group.notifications) {
+              if (index === currentIndex) {
+                return (
+                  <div style={style}>
+                    <NotificationItem notification={notification} index={index} />
+                  </div>
+                );
+              }
+              currentIndex++;
+            }
+          }
+          
+          return null;
+        }}
+      </List>
+    );
+  }, [groupedNotifications, GroupHeader, NotificationItem]);
 
   useEffect(() => {
     if (isOpen && notificationsRef.current) {
@@ -322,46 +469,7 @@ export default React.memo(function NotificationDropdown({
                 <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
                 <span>{error}</span>
               </div>
-            ) : processedNotifications.length === 0 ? (
-              <div className={styles.emptyState}>
-                <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={60} height={60} />
-                <span>No hay notificaciones nuevas por ahora...</span>
-              </div>
-            ) : (
-              processedNotifications.map((n) => {
-                const swipeDistance = swipedNotificationId === n.id ? swipeStartX - swipeCurrentX : 0;
-                const itemStyle = swipedNotificationId === n.id ? { transform: `translateX(-${Math.max(0, swipeDistance)}px)` } : undefined;
-                return (
-                  <div
-                    key={n.id}
-                    className={`${styles.notificationItem} ${!n.read ? styles.unread : ''} ${isSwiping && swipedNotificationId === n.id ? styles.swiping : ''}`}
-                    style={itemStyle}
-                    data-type={n.type}
-                    onMouseDown={(e) => handleSwipeStart(e, n.id)}
-                    onMouseMove={handleSwipeMove}
-                    onMouseUp={handleSwipeEnd}
-                    onMouseLeave={handleSwipeEnd}
-                    onTouchStart={(e) => handleSwipeStart(e, n.id)}
-                    onTouchMove={handleSwipeMove}
-                    onTouchEnd={handleSwipeEnd}
-                  >
-                    <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
-                    <div className={styles.content}>
-                      <span
-                        className={styles.message}
-                        onClick={() => {
-                          handleNotificationClick(n);
-                          onClose();
-                        }}
-                        dangerouslySetInnerHTML={{ __html: processNotificationText(truncateText(n.message, 120)) }}
-                      />
-                      <span className={styles.time}>{n.relativeTime}</span>
-                    </div>
-                    <button className={styles.deleteButton} onClick={() => handleDeleteNotification(n.id)}>×</button>
-                  </div>
-                );
-              })
-            )}
+            ) : renderVirtualizedList()}
           </div>
         </div>
       </>,
@@ -397,46 +505,7 @@ export default React.memo(function NotificationDropdown({
             <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
             <span>{error}</span>
           </div>
-        ) : processedNotifications.length === 0 ? (
-          <div className={styles.emptyState}>
-            <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={60} height={60} />
-            <span>No hay notificaciones nuevas por ahora...</span>
-          </div>
-        ) : (
-          processedNotifications.map((n) => {
-            const swipeDistance = swipedNotificationId === n.id ? swipeStartX - swipeCurrentX : 0;
-            const itemStyle = swipedNotificationId === n.id ? { transform: `translateX(-${Math.max(0, swipeDistance)}px)` } : undefined;
-            return (
-              <div
-                key={n.id}
-                className={`${styles.notificationItem} ${!n.read ? styles.unread : ''} ${isSwiping && swipedNotificationId === n.id ? styles.swiping : ''}`}
-                style={itemStyle}
-                data-type={n.type}
-                onMouseDown={(e) => handleSwipeStart(e, n.id)}
-                onMouseMove={handleSwipeMove}
-                onMouseUp={handleSwipeEnd}
-                onMouseLeave={handleSwipeEnd}
-                onTouchStart={(e) => handleSwipeStart(e, n.id)}
-                onTouchMove={handleSwipeMove}
-                onTouchEnd={handleSwipeEnd}
-              >
-                <Image src={n.senderInfo.imageUrl} alt={n.senderInfo.name} width={38} height={38} className={styles.avatar} onError={(e) => { e.currentTarget.src = '/empty-image.png'; }} />
-                <div className={styles.content}>
-                  <span
-                    className={styles.message}
-                    onClick={() => {
-                      handleNotificationClick(n);
-                      onClose();
-                    }}
-                    dangerouslySetInnerHTML={{ __html: processNotificationText(truncateText(n.message, 100)) }}
-                  />
-                  <span className={styles.time}>{n.relativeTime}</span>
-                </div>
-                <button className={styles.deleteButton} onClick={() => handleDeleteNotification(n.id)}>×</button>
-              </div>
-            );
-          })
-        )}
+        ) : renderVirtualizedList()}
       </div>
     </div>,
     document.body,

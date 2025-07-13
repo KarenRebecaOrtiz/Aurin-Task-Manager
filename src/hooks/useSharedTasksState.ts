@@ -111,13 +111,10 @@ export function useSharedTasksState(userId: string | undefined) {
           archivedBy: doc.data().archivedBy || '',
         }));
 
-        // Solo loggear si hay cambios significativos
+        // Only log significant changes to reduce console noise
         const hasStatusChanges = tasksData.some(t => t.status !== 'Por Iniciar');
         if (hasStatusChanges) {
-          console.log('[useSharedTasksState] Tasks updated via Zustand:', {
-            count: tasksData.length,
-            hasStatusChanges: true,
-          });
+          console.log('[useSharedTasksState] Tasks updated with status changes:', tasksData.length);
         }
 
         setTasks(tasksData);

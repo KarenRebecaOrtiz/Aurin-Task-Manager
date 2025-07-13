@@ -782,31 +782,18 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
 
 
 
-    // Forzar refresco cuando cambie el estado de cualquier tarea
-    const statusChangesString = useMemo(() => 
-      effectiveTasks.map(t => t.status).join(','), 
-      [effectiveTasks]
-    );
-    
+    // Only log significant changes to reduce console noise
     useEffect(() => {
-      const statusChanges = effectiveTasks.map(t => `${t.id}-${t.status}`).join(',');
-      console.log('[TasksKanban] Status changes detected:', statusChanges);
-      
-      // Forzar re-render del componente
-      // No necesitamos setFilteredTasks aquí porque groupedTasks se recalcula automáticamente
-      
-      // Forzar re-render adicional para cambios de estado
       if (effectiveTasks.length > 0) {
         const hasStatusChanges = effectiveTasks.some(task => 
           task.status && task.status !== 'Por Iniciar'
         );
         
         if (hasStatusChanges) {
-          console.log('[TasksKanban] Forcing immediate re-render due to status changes');
-          // groupedTasks se recalcula automáticamente, esto es solo para logging
+          console.log('[TasksKanban] Tasks updated with status changes:', effectiveTasks.length);
         }
       }
-    }, [statusChangesString, effectiveTasks]);
+    }, [effectiveTasks]);
 
     // Usar el hook de notificaciones simplificado
     const { getUnreadCount, markAsViewed } = useTaskNotifications();

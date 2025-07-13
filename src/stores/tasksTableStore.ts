@@ -1,4 +1,4 @@
-import { createStore } from 'zustand';
+import { create } from 'zustand';
 
 interface Task {
   id: string;
@@ -66,7 +66,7 @@ type TasksTableActions = {
 
 type TasksTableStore = TasksTableState & TasksTableActions;
 
-export const tasksTableStore = createStore<TasksTableStore>()((set) => ({
+export const tasksTableStore = create<TasksTableStore>()((set) => ({
     filteredTasks: [],
     searchQuery: '',
     priorityFilter: '',

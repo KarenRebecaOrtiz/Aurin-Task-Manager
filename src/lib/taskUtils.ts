@@ -180,6 +180,7 @@ export async function createBatchNotifications(notifications: Array<{
         ...notification,
         timestamp: Timestamp.now(),
         read: false,
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
       });
     });
     
@@ -352,6 +353,7 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
         read: false,
         recipientId, // ID del usuario que recibe la notificación
         type: 'task_deleted', // Añadir tipo para mejor manejo
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
       });
       console.log('[taskUtils] Sent notification to:', recipientId);
     }
@@ -396,6 +398,7 @@ export async function archiveTask(taskId: string, userId: string, isAdmin: boole
         read: false,
         recipientId, // ID del usuario que recibe la notificación
         type: 'task_archived', // Añadir tipo para mejor manejo
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
       });
       console.log('[taskUtils] Sent archive notification to:', recipientId);
     }
@@ -438,6 +441,7 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
         read: false,
         recipientId, // ID del usuario que recibe la notificación
         type: 'task_unarchived', // Añadir tipo para mejor manejo
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
       });
       console.log('[taskUtils] Sent unarchive notification to:', recipientId);
     }

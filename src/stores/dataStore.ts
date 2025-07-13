@@ -99,6 +99,7 @@ interface DataStore {
   users: User[];
   setUsers: (users: User[]) => void;
   updateUser: (userId: string, updates: Partial<User>) => void;
+  updateUserStatus: (userId: string, newStatus: string) => void;
   addUser: (user: User) => void;
   deleteUser: (userId: string) => void;
   isLoadingUsers: boolean;
@@ -232,6 +233,12 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     set((state) => ({
       users: state.users.map((user) =>
         user.id === userId ? { ...user, ...updates } : user
+      ),
+    })),
+  updateUserStatus: (userId, newStatus) =>
+    set((state) => ({
+      users: state.users.map((user) =>
+        user.id === userId ? { ...user, status: newStatus } : user
       ),
     })),
   addUser: (user) =>

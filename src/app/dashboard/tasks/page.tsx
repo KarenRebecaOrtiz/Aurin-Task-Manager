@@ -461,36 +461,18 @@ function TasksPageContent() {
   }
   }, [isLoadingTasks, isLoadingClients, isLoadingUsers]);
 
-  // Agregar logging para debuggear cambios de estado
+  // Only log significant changes to reduce console noise
   useEffect(() => {
-    console.log('[TasksPage] Tasks from Zustand store updated:', {
-      count: tasks.length,
-      timestamp: new Date().toISOString()
-    });
-  }, [tasks]);
-
-  // Forzar refresco cuando cambie el estado de cualquier tarea
-  const taskStatusChanges = useMemo(() => tasks.map(t => t.status).join(','), [tasks]);
-  
-  useEffect(() => {
-    const statusChanges = tasks.map(t => `${t.id}-${t.status}`).join(',');
-    console.log('[TasksPage] Status changes detected:', statusChanges);
-    
-    // Forzar re-render de componentes hijos
-    // Los componentes hijos ya reciben externalTasks, así que se actualizarán automáticamente
-    
-    // Forzar re-render adicional para cambios de estado
     if (tasks.length > 0) {
       const hasStatusChanges = tasks.some(task => 
         task.status && task.status !== 'Por Iniciar'
       );
       
       if (hasStatusChanges) {
-        console.log('[TasksPage] Forcing immediate re-render due to status changes');
-        // Los componentes hijos ya reciben externalTasks, así que se actualizarán automáticamente
+        console.log('[TasksPage] Tasks updated with status changes:', tasks.length);
       }
     }
-  }, [taskStatusChanges, tasks]);
+  }, [tasks]);
 
   return (
     <div className={styles.container}>
