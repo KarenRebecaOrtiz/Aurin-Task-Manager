@@ -23,6 +23,8 @@ import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDataStore } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -43,13 +45,6 @@ interface Client {
   imageUrl: string;
   projects: string[];
   createdBy: string;
-}
-
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
 }
 
 // Esquema base sin validación condicional
@@ -154,7 +149,6 @@ const EditTask: React.FC<EditTaskProps> = ({
   const router = useRouter();
   const { isAdmin, isLoading } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -197,6 +191,14 @@ const EditTask: React.FC<EditTaskProps> = ({
   const collaboratorDropdownPopperRef = useRef<HTMLDivElement>(null);
   const leaderDropdownPopperRef = useRef<HTMLDivElement>(null);
   const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
+
+  // Consumir users del store global en lugar de hacer fetch directo
+  const { users, isLoadingUsers } = useDataStore(
+    useShallow((state) => ({
+      users: state.users,
+      isLoadingUsers: state.isLoadingUsers,
+    }))
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createFormSchema(includeMembers)),
@@ -1105,57 +1107,11 @@ const EditTask: React.FC<EditTaskProps> = ({
       },
     );
 
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Failed to fetch users');
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string };
-        }[] = await response.json();
-        
-        // Obtener datos de Firestore para cada usuario
-        const usersData: User[] = await Promise.all(
-          clerkUsers.map(async (clerkUser) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: userDoc.exists() && userDoc.data().role
-                  ? userDoc.data().role
-                  : (clerkUser.publicMetadata.role || 'Sin rol'),
-              };
-            } catch (docError) {
-              console.warn('[EditTask] Error fetching user document:', {
-                userId: clerkUser.id,
-                error: docError instanceof Error ? docError.message : 'Unknown error',
-              });
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: clerkUser.publicMetadata.role || 'Sin rol',
-              };
-            }
-          }),
-        );
-        setUsers(usersData);
-      } catch (error) {
-        console.error('[EditTask] Error fetching users:', error);
-      }
-    };
-
     fetchTask();
-    fetchUsers();
     return () => unsubscribeClients();
   }, [taskId, user?.id, router, fetchTask]);
 
-  if (isLoading || !isMounted) {
+  if (isLoading || !isMounted || isLoadingUsers) {
     return (
       <div className={`${styles.container} ${styles.open}`}>
         <div className={styles.loaderOverlay}>
@@ -1231,7 +1187,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                         />
                         {isClientDropdownOpen &&
                           createPortal(
-                            <div
+                            <motion.div
                               className={styles.dropdown}
                               style={{
                                 top: clientDropdownPosition?.top,
@@ -1241,17 +1197,47 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 width: clientInputRef.current?.offsetWidth,
                               }}
                               ref={clientDropdownPopperRef}
+                              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                              transition={{ duration: 0.3, ease: "easeOut" }}
                             >
                               {filteredClients.length ? (
                                 filteredClients.map((client) => (
-                                  <div
+                                  <motion.div
                                     key={client.id}
                                     className={styles.dropdownItem}
                                     onClick={(e) => handleClientSelectDropdown(client.id, e)}
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.2, delay: 0.05 }}
+                                    whileHover={{
+                                      scale: 1.02,
+                                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                                      transition: { duration: 0.2, ease: "easeOut" }
+                                    }}
+                                    whileTap={{
+                                      scale: 0.98,
+                                      transition: { duration: 0.1 }
+                                    }}
                                   >
-                                    {client.name}
+                                    <div className={styles.dropdownItemContent}>
+                                      <div className={styles.avatarContainer}>
+                                        <Image
+                                          src={client.imageUrl || '/empty-image.png'}
+                                          alt={client.name}
+                                          width={32}
+                                          height={32}
+                                          className={styles.avatarImage}
+                                          onError={(e) => {
+                                            e.currentTarget.src = '/empty-image.png';
+                                          }}
+                                        />
+                                      </div>
+                                      <span>{client.name}</span>
+                                    </div>
                                     {form.watch("clientInfo.clientId") === client.id && " (Seleccionado)"}
-                                  </div>
+                                  </motion.div>
                                 ))
                               ) : (
                                 <div className={styles.emptyState}>
@@ -1262,7 +1248,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                   </span>
                                 </div>
                               )}
-                            </div>,
+                            </motion.div>,
                             document.body,
                           )}
                         <div className={styles.tags}>
@@ -1271,6 +1257,13 @@ const EditTask: React.FC<EditTaskProps> = ({
                               const selectedClient = clients.find((c) => c.id === form.watch("clientInfo.clientId"));
                               return selectedClient ? (
                                 <div key={selectedClient.id} className={styles.tag}>
+                                  <Image
+                                    src={selectedClient.imageUrl || '/empty-image.png'}
+                                    alt={selectedClient.name}
+                                    width={24}
+                                    height={24}
+                                    style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
+                                  />
                                   {selectedClient.name}
                                   <button onClick={(e) => handleClientRemove(e)}>X</button>
                                 </div>
@@ -1315,7 +1308,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                           </div>
                           {isProjectDropdownOpen &&
                             createPortal(
-                              <div
+                              <motion.div
                                 className={styles.dropdownItems}
                                 style={{
                                   top: projectDropdownPosition?.top,
@@ -1324,6 +1317,10 @@ const EditTask: React.FC<EditTaskProps> = ({
                                   zIndex: 150000,
                                 }}
                                 ref={projectDropdownPopperRef}
+                                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                                transition={{ duration: 0.3, ease: "easeOut" }}
                               >
                                 {(() => {
                                   const selectedClient = clients.find(
@@ -1341,16 +1338,40 @@ const EditTask: React.FC<EditTaskProps> = ({
                                     );
                                   }
                                   return selectedClient.projects.map((project, index) => (
-                                    <div
+                                    <motion.div
                                       key={`${project}-${index}`}
                                       className={styles.dropdownItem}
                                       onClick={(e) => handleProjectSelect(project, e)}
+                                      initial={{ opacity: 0, y: -10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ duration: 0.2, delay: index * 0.05 }}
+                                      whileHover={{
+                                        scale: 1.02,
+                                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                                        transition: { duration: 0.2, ease: "easeOut" }
+                                      }}
+                                      whileTap={{
+                                        scale: 0.98,
+                                        transition: { duration: 0.1 }
+                                      }}
                                     >
-                                      {project}
-                                    </div>
+                                      <div className={styles.dropdownItemContent}>
+                                        <div className={styles.avatarContainer}>
+                                          <Image
+                                            src="/shapes/folder.svg"
+                                            alt="Folder"
+                                            width={32}
+                                            height={32}
+                                            className={styles.svgIcon}
+                                            style={{ objectFit: 'contain' }}
+                                          />
+                                        </div>
+                                        <span>{project}</span>
+                                      </div>
+                                    </motion.div>
                                   ));
                                 })()}
-                              </div>,
+                              </motion.div>,
                               document.body,
                             )}
                         </div>
@@ -1680,7 +1701,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                         />
                         {isLeaderDropdownOpen &&
                           createPortal(
-                            <div
+                            <motion.div
                               className={styles.dropdown}
                               style={{
                                 top: leaderDropdownPosition?.top,
@@ -1690,17 +1711,51 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 width: leaderInputRef.current?.offsetWidth,
                               }}
                               ref={leaderDropdownPopperRef}
+                              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                              transition={{ duration: 0.3, ease: "easeOut" }}
                             >
                               {filteredLeaders.length ? (
                                 filteredLeaders.map((u) => (
-                                  <div
+                                  <motion.div
                                     key={u.id}
                                     className={styles.dropdownItem}
                                     onClick={(e) => handleLeaderSelect(u.id, e)}
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.2, delay: 0.05 }}
+                                    whileHover={{
+                                      scale: 1.02,
+                                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                                      transition: { duration: 0.2, ease: "easeOut" }
+                                    }}
+                                    whileTap={{
+                                      scale: 0.98,
+                                      transition: { duration: 0.1 }
+                                    }}
                                   >
-                                    {u.fullName} ({u.role})
+                                    <div className={styles.dropdownItemContent}>
+                                      <div className={styles.avatarContainer}>
+                                        <Image
+                                          src={u.imageUrl || '/empty-image.png'}
+                                          alt={u.fullName}
+                                          width={32}
+                                          height={32}
+                                          className={styles.avatarImage}
+                                          onError={(e) => {
+                                            e.currentTarget.src = '/empty-image.png';
+                                          }}
+                                        />
+                                        <div 
+                                          className={styles.statusDot} 
+                                          style={{ backgroundColor: '#178d00' }}
+                                        />
+                                      </div>
+                                      <span>{u.fullName} ({u.role})</span>
+                                    </div>
                                     {watchedLeadedBy.includes(u.id) && " (Seleccionado)"}
-                                  </div>
+                                  </motion.div>
                                 ))
                               ) : (
                                 <div className={styles.emptyState}>
@@ -1711,7 +1766,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                   </span>
                                 </div>
                               )}
-                            </div>,
+                            </motion.div>,
                             document.body,
                           )}
                         <div className={styles.tags}>
@@ -1719,6 +1774,13 @@ const EditTask: React.FC<EditTaskProps> = ({
                             const collaborator = users.find((u) => u.id === userId);
                             return collaborator ? (
                               <div key={userId} className={styles.tag}>
+                                <Image
+                                  src={collaborator.imageUrl || '/empty-image.png'}
+                                  alt={collaborator.fullName}
+                                  width={24}
+                                  height={24}
+                                  style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
+                                />
                                 {collaborator.fullName}
                                 <button onClick={(e) => handleLeaderRemove(userId, e)}>X</button>
                               </div>
@@ -1798,7 +1860,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                             />
                             {isCollaboratorDropdownOpen &&
                               createPortal(
-                                <div
+                                <motion.div
                                   className={styles.dropdown}
                                   style={{
                                     top: collaboratorDropdownPosition?.top,
@@ -1808,10 +1870,14 @@ const EditTask: React.FC<EditTaskProps> = ({
                                     width: collaboratorInputRef.current?.offsetWidth,
                                   }}
                                   ref={collaboratorDropdownPopperRef}
+                                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                                  transition={{ duration: 0.3, ease: "easeOut" }}
                                 >
                                   {filteredCollaborators.length ? (
                                     filteredCollaborators.map((u) => (
-                                      <div
+                                      <motion.div
                                         key={u.id}
                                         className={`${styles.dropdownItem} ${
                                           currentLeadedBy.includes(u.id) ? styles.disabled : ""
@@ -1821,10 +1887,40 @@ const EditTask: React.FC<EditTaskProps> = ({
                                             handleCollaboratorSelect(u.id, e);
                                           }
                                         }}
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.2, delay: 0.05 }}
+                                        whileHover={!currentLeadedBy.includes(u.id) ? {
+                                          scale: 1.02,
+                                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                                          transition: { duration: 0.2, ease: "easeOut" }
+                                        } : {}}
+                                        whileTap={!currentLeadedBy.includes(u.id) ? {
+                                          scale: 0.98,
+                                          transition: { duration: 0.1 }
+                                        } : {}}
                                       >
-                                        {u.fullName} ({u.role}){" "}
+                                        <div className={styles.dropdownItemContent}>
+                                          <div className={styles.avatarContainer}>
+                                            <Image
+                                              src={u.imageUrl || '/empty-image.png'}
+                                              alt={u.fullName}
+                                              width={32}
+                                              height={32}
+                                              className={styles.avatarImage}
+                                              onError={(e) => {
+                                                e.currentTarget.src = '/empty-image.png';
+                                              }}
+                                            />
+                                            <div 
+                                              className={styles.statusDot} 
+                                              style={{ backgroundColor: '#178d00' }}
+                                            />
+                                          </div>
+                                          <span>{u.fullName} ({u.role})</span>
+                                        </div>
                                         {watchedAssignedTo.includes(u.id) && "(Seleccionado)"}
-                                      </div>
+                                      </motion.div>
                                     ))
                                   ) : (
                                     <div className={styles.emptyState}>
@@ -1835,7 +1931,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                       </span>
                                     </div>
                                   )}
-                                </div>,
+                                </motion.div>,
                                 document.body,
                               )}
                             <div className={styles.tags}>
@@ -1843,6 +1939,13 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 const collaborator = users.find((u) => u.id === userId);
                                 return collaborator ? (
                                   <div key={userId} className={styles.tag}>
+                                    <Image
+                                      src={collaborator.imageUrl || '/empty-image.png'}
+                                      alt={collaborator.fullName}
+                                      width={24}
+                                      height={24}
+                                      style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
+                                    />
                                     {collaborator.fullName}
                                     <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
                                   </div>

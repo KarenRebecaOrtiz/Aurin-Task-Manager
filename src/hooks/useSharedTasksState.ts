@@ -62,11 +62,6 @@ const safeTimestampToISOOrNull = (timestamp: Timestamp | Date | string | null | 
   return null;
 };
 
-// Global flag to prevent multiple simultaneous user fetches
-let isFetchingUsers = false;
-let lastUsersFetch = 0;
-const USERS_FETCH_COOLDOWN = 15000; // 15 seconds
-
 export function useSharedTasksState(userId: string | undefined) {
   // Usar el store de Zustand directamente
   const setTasks = useDataStore((state) => state.setTasks);
@@ -86,7 +81,6 @@ export function useSharedTasksState(userId: string | undefined) {
   // Refs para evitar re-renders innecesarios
   const tasksListenerRef = useRef<(() => void) | null>(null);
   const clientsListenerRef = useRef<(() => void) | null>(null);
-  const usersListenerRef = useRef<(() => void) | null>(null);
 
   // Setup tasks listener
   useEffect(() => {
@@ -198,35 +192,14 @@ export function useSharedTasksState(userId: string | undefined) {
     };
   }, [userId, setClients, setIsLoadingClients]);
 
-  // Setup users fetch and listener - CON PREVENCIÓN DE BUCLES INFINITOS
+  // Setup users fetch - SOLO FETCH INICIAL, SIN LISTENER
   useEffect(() => {
     if (!userId) return;
-
-    // Cleanup previous listener
-    if (usersListenerRef.current) {
-      usersListenerRef.current();
-    }
 
     console.log('[useSharedTasksState] Setting up users fetch with Zustand');
     setIsLoadingUsers(true);
 
     const fetchUsers = async () => {
-      // Prevenir múltiples fetches simultáneos
-      if (isFetchingUsers) {
-        console.log('[useSharedTasksState] Users fetch already in progress, skipping');
-        return;
-      }
-
-      // Prevenir fetches muy frecuentes
-      const now = Date.now();
-      if (now - lastUsersFetch < USERS_FETCH_COOLDOWN) {
-        console.log('[useSharedTasksState] Users fetch too recent, skipping');
-        return;
-      }
-
-      isFetchingUsers = true;
-      lastUsersFetch = now;
-
       try {
         console.log('[useSharedTasksState] Starting users fetch');
         const response = await fetch('/api/users');
@@ -279,34 +252,17 @@ export function useSharedTasksState(userId: string | undefined) {
         console.error('[useSharedTasksState] Error fetching users:', error);
         setUsers([]);
         setIsLoadingUsers(false);
-      } finally {
-        isFetchingUsers = false;
       }
     };
 
-    // Initial fetch
+    // Solo fetch inicial, sin listener
     fetchUsers();
 
-    // Setup listener for user changes - CON DEBOUNCE MÁS AGRESIVO
-    const usersQuery = query(collection(db, 'users'));
-    const unsubscribe = onSnapshot(usersQuery, () => {
-      // Solo re-fetch si han pasado al menos 10 segundos desde el último fetch
-      const now = Date.now();
-      if (now - lastUsersFetch > 10000) {
-        console.log('[useSharedTasksState] User changes detected, re-fetching users');
-        fetchUsers();
-      } else {
-        console.log('[useSharedTasksState] User changes detected but fetch too recent, skipping');
-      }
-    });
-
-    usersListenerRef.current = unsubscribe;
+    // NO HAY LISTENER DE USERS - UserAvatar maneja status individualmente
+    // Esto elimina el re-fetch excesivo cuando cambia el status de un usuario
 
     return () => {
-      if (usersListenerRef.current) {
-        usersListenerRef.current();
-        usersListenerRef.current = null;
-      }
+      // Cleanup no necesario ya que no hay listener
     };
   }, [userId, setUsers, setIsLoadingUsers]);
 

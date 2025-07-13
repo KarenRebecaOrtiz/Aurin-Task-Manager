@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
+
+// Variables
+$white: #FFFFFF;
+$black: #0F172A;
+$zinc-50: #F1F5F9;
+$zinc-900: #0e0e0e;
+$text-light: #0F172A;
+$primary: #164C22;
+$border-light: rgba(255, 255, 255, 0.2);
+$border-dark: rgba(255, 255, 255, 0.1);
+$zinc-800: #27272a;
+$zinc-700: #3f3f46;
+$zinc-600: #52525b;
+
+// Mixins
+@mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 10px) {
+  background: $bg;
+  border-radius: $radius;
+  border: 1px solid $border-light;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+@mixin crystal-hover {
+  transform: translateY(-2px) scale(1.02);
+  background: rgba(241, 245, 249, 0.85);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.9),
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+@mixin crystal-active {
+  transform: scale(0.98);
+  background: rgba(241, 245, 249, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    inset 2px 2px 6px rgba(0, 0, 0, 0.1),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.3),
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+@mixin crystal-dark($bg: $zinc-900) {
+  background: $bg;
+  border-color: $border-dark;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+// Component styles
+.dropdownItem {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: $text-light;
+  cursor: pointer;
+  margin: 2px 4px;
+  border-radius: 8px;
+  @include crystal-surface();
+  transition: all 0.2s ease;
+
+  &:hover {
+    @include crystal-hover;
+  }
+
+  &:active {
+    @include crystal-active;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .dropdownItemContent {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+
+    .avatarContainer {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+
+      .avatarImage {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+      }
+
+      .svgIcon {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 50%;
+        padding: 4px;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .statusDot {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+
+        :global(body.dark) & {
+          border-color: rgba(30, 30, 30, 0.9);
+          box-shadow: 0 0 4px rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+
+    .itemText {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .itemName {
+        font-size: 13px;
+        font-weight: 500;
+        color: inherit;
+        line-height: 1.2;
+      }
+
+      .itemSubtitle {
+        font-size: 11px;
+        font-weight: 400;
+        color: rgba(0, 0, 0, 0.6);
+        line-height: 1.2;
+
+        :global(body.dark) & {
+          color: rgba(255, 255, 255, 0.6);
+        }
+      }
+    }
+  }
+
+  :global(body.dark) & {
+    @include crystal-dark();
+    color: #E5E7EB;
+
+    &:hover {
+      background: $zinc-700;
+      color: #E5E7EB;
+      border: none;
+      box-shadow: none;
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    &:active {
+      background: $zinc-600;
+      border: none;
+      box-shadow: none;
+    }
+
+    .itemText .itemSubtitle {
+      color: rgba(255, 255, 255, 0.6);
+    }
+  }
+} 
