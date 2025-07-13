@@ -670,11 +670,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                 <ActionMenu
                   task={task}
                   userId={userId}
-                  isOpen={actionMenuOpenId === task.id}
-                  onOpen={() => {
-                    setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id);
-                    console.log('[ArchiveTable] Action menu toggled for task:', task.id);
-                  }}
                   onEdit={() => {
                     onEditTaskOpen(task.id);
                     setActionMenuOpenId(null);

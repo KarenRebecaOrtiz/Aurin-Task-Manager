@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { collection, onSnapshot, query, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useDataStore } from '@/stores/dataStore';
@@ -62,6 +62,11 @@ const safeTimestampToISOOrNull = (timestamp: Timestamp | Date | string | null | 
   return null;
 };
 
+// Global flag to prevent multiple simultaneous user fetches
+let isFetchingUsers = false;
+let lastUsersFetch = 0;
+const USERS_FETCH_COOLDOWN = 15000; // 15 seconds
+
 export function useSharedTasksState(userId: string | undefined) {
   // Usar el store de Zustand directamente
   const setTasks = useDataStore((state) => state.setTasks);
@@ -78,9 +83,19 @@ export function useSharedTasksState(userId: string | undefined) {
   const isLoadingClients = useDataStore((state) => state.isLoadingClients);
   const isLoadingUsers = useDataStore((state) => state.isLoadingUsers);
 
+  // Refs para evitar re-renders innecesarios
+  const tasksListenerRef = useRef<(() => void) | null>(null);
+  const clientsListenerRef = useRef<(() => void) | null>(null);
+  const usersListenerRef = useRef<(() => void) | null>(null);
+
   // Setup tasks listener
   useEffect(() => {
     if (!userId) return;
+
+    // Cleanup previous listener
+    if (tasksListenerRef.current) {
+      tasksListenerRef.current();
+    }
 
     console.log('[useSharedTasksState] Setting up tasks listener with Zustand');
     setIsLoadingTasks(true);
@@ -127,12 +142,24 @@ export function useSharedTasksState(userId: string | undefined) {
       }
     );
 
-    return () => unsubscribe();
+    tasksListenerRef.current = unsubscribe;
+
+    return () => {
+      if (tasksListenerRef.current) {
+        tasksListenerRef.current();
+        tasksListenerRef.current = null;
+      }
+    };
   }, [userId, setTasks, setIsLoadingTasks]);
 
   // Setup clients listener
   useEffect(() => {
     if (!userId) return;
+
+    // Cleanup previous listener
+    if (clientsListenerRef.current) {
+      clientsListenerRef.current();
+    }
 
     console.log('[useSharedTasksState] Setting up clients listener with Zustand');
     setIsLoadingClients(true);
@@ -161,18 +188,47 @@ export function useSharedTasksState(userId: string | undefined) {
       }
     );
 
-    return () => unsubscribe();
+    clientsListenerRef.current = unsubscribe;
+
+    return () => {
+      if (clientsListenerRef.current) {
+        clientsListenerRef.current();
+        clientsListenerRef.current = null;
+      }
+    };
   }, [userId, setClients, setIsLoadingClients]);
 
-  // Setup users fetch and listener
+  // Setup users fetch and listener - CON PREVENCIÓN DE BUCLES INFINITOS
   useEffect(() => {
     if (!userId) return;
+
+    // Cleanup previous listener
+    if (usersListenerRef.current) {
+      usersListenerRef.current();
+    }
 
     console.log('[useSharedTasksState] Setting up users fetch with Zustand');
     setIsLoadingUsers(true);
 
     const fetchUsers = async () => {
+      // Prevenir múltiples fetches simultáneos
+      if (isFetchingUsers) {
+        console.log('[useSharedTasksState] Users fetch already in progress, skipping');
+        return;
+      }
+
+      // Prevenir fetches muy frecuentes
+      const now = Date.now();
+      if (now - lastUsersFetch < USERS_FETCH_COOLDOWN) {
+        console.log('[useSharedTasksState] Users fetch too recent, skipping');
+        return;
+      }
+
+      isFetchingUsers = true;
+      lastUsersFetch = now;
+
       try {
+        console.log('[useSharedTasksState] Starting users fetch');
         const response = await fetch('/api/users');
         if (!response.ok) {
           throw new Error(`Failed to fetch users: ${response.status}`);
@@ -216,25 +272,42 @@ export function useSharedTasksState(userId: string | undefined) {
           }),
         );
 
+        console.log('[useSharedTasksState] Users fetched successfully:', usersData.length);
         setUsers(usersData);
         setIsLoadingUsers(false);
       } catch (error) {
         console.error('[useSharedTasksState] Error fetching users:', error);
         setUsers([]);
         setIsLoadingUsers(false);
+      } finally {
+        isFetchingUsers = false;
       }
     };
 
     // Initial fetch
     fetchUsers();
 
-    // Setup listener for user changes
+    // Setup listener for user changes - CON DEBOUNCE MÁS AGRESIVO
     const usersQuery = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(usersQuery, () => {
-      fetchUsers();
+      // Solo re-fetch si han pasado al menos 10 segundos desde el último fetch
+      const now = Date.now();
+      if (now - lastUsersFetch > 10000) {
+        console.log('[useSharedTasksState] User changes detected, re-fetching users');
+        fetchUsers();
+      } else {
+        console.log('[useSharedTasksState] User changes detected but fetch too recent, skipping');
+      }
     });
 
-    return () => unsubscribe();
+    usersListenerRef.current = unsubscribe;
+
+    return () => {
+      if (usersListenerRef.current) {
+        usersListenerRef.current();
+        usersListenerRef.current = null;
+      }
+    };
   }, [userId, setUsers, setIsLoadingUsers]);
 
   return {

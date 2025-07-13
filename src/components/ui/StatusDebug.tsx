@@ -350,7 +350,7 @@ const StatusDebug: React.FC<StatusDebugProps> = ({ isVisible = false }) => {
         <div>1. Abre múltiples pestañas</div>
         <div>2. Cierra todas las pestañas excepto una</div>
         <div>3. Cierra la última pestaña</div>
-        <div>4. Verifica que el estado cambie a "Fuera"</div>
+        <div>4. Verifica que el estado cambie a &quot;Fuera&quot;</div>
         <div><strong>Nota:</strong> Múltiples terminales pueden interferir</div>
       </div>
     </div>

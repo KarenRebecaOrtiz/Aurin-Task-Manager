@@ -2,7 +2,7 @@
 @use '@/app/styles/mixins' as *;
 
 // ==============================================================
-// 🔮 USER SWIPER - OPTIMIZED WITH NEW MIXINS & COMPONENTS
+// 🔮 USER SWIPER SKELETON LOADER - OPTIMIZED WITH NEW MIXINS & COMPONENTS
 // =================================================================
 
 .swiperContainer {
@@ -10,7 +10,7 @@
   @include swiper-container-responsive;
 }
 
-// Hide UserSwiper on mobile devices
+// Hide UserSwiperSkeletonLoader on mobile devices
 @media (max-width: 768px) {
   .swiperContainer {
     display: none !important;
@@ -65,18 +65,6 @@
 }
 
 // ==============================================================
-// 🔮 TOOLTIP - USING NEW COMPONENT
-// =================================================================
-.tooltip {
-  @include tooltip-base;
-}
-
-.tooltipContainer {
-  position: relative;
-  display: inline-block;
-}
-
-// ==============================================================
 // 🔮 CARD TEXT - USING NEW MIXINS
 // =================================================================
 .cardText {
@@ -88,100 +76,40 @@
 
 .cardTitle {
   @include card-title-responsive;
+  height: 16px;
+  width: 80px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
 }
 
 .cardStatus {
   @include card-status-responsive;
-}
-
-// ==============================================================
-// 🔮 LOADING STATES - USING EXISTING COMPONENTS
-// =================================================================
-.loading {
-  text-align: center;
-  padding: $spacing-2xl;
-  @include typography($text-base, $font-weight-normal, $color-text-primary, center);
-  
-  @include dark-mode {
-    @include typography($text-base, $font-weight-normal, $color-text-dark-primary, center);
-  }
-}
-
-.loader {
-  @include typography($text-sm, $font-weight-normal, $color-text-primary, center);
-  @include pulse;
-  
-  @include dark-mode {
-    @include typography($text-sm, $font-weight-normal, $color-text-dark-primary, center);
-  }
-}
-
-// ==============================================================
-// 🔮 ERROR STATES - RETRY BUTTON
-// =================================================================
-.errorContainer {
-  @include flex-center;
-  flex-direction: column;
-  gap: 1rem;
-  padding: $spacing-2xl;
-  text-align: center;
-  min-height: 200px;
-}
-
-.errorMessage {
-  @include typography($text-base, $font-weight-normal, $color-text-primary, center);
-  color: #dc3545;
-  
-  @include dark-mode {
-    @include typography($text-base, $font-weight-normal, $color-text-dark-primary, center);
-    color: #ff6b6b;
-  }
-}
-
-.retryButton {
-  @include flex-center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
+  height: 12px;
+  width: 60px;
+  border-radius: 4px;
+  opacity: 0.7;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-  }
-  
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  
-  svg {
-    width: 16px;
-    height: 16px;
-    transition: transform 0.3s ease;
-  }
-  
-  &:hover:not(:disabled) svg {
-    transform: rotate(180deg);
-  }
 }
 
 // ==============================================================
-// 🔮 STATUS RING - USING NEW MIXIN
+// 🔮 SHIMMER EFFECT - USING NEW MIXIN
 // =================================================================
-.statusRing {
-  @include status-ring;
+.shimmerOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  transform: translateX(-100%);
+  pointer-events: none;
+  transition: all 0.3s ease;
 }
 
 // ==============================================================
@@ -256,4 +184,4 @@
   .swiperContainer {
     max-width: 50vw;
   }
-}
+} 

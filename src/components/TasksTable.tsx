@@ -5,7 +5,7 @@ import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { collection, onSnapshot, query, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
@@ -218,7 +218,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
     setIsClientDropdownOpen,
     setIsLoadingTasks,
     setIsLoadingClients,
-    setIsLoadingUsers,
+    
     setActionMenuOpenId,
     setUndoStack,
     setShowUndo,
@@ -255,7 +255,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
       setIsClientDropdownOpen: state.setIsClientDropdownOpen,
       setIsLoadingTasks: state.setIsLoadingTasks,
       setIsLoadingClients: state.setIsLoadingClients,
-      setIsLoadingUsers: state.setIsLoadingUsers,
+
       setActionMenuOpenId: state.setActionMenuOpenId,
       setUndoStack: state.setUndoStack,
       setShowUndo: state.setShowUndo,
@@ -343,78 +343,8 @@ const TasksTable: React.FC<TasksTableProps> = ({
     };
   }, [user?.id, effectiveClients, setIsLoadingClients]);
 
-  // Setup de users con actualizaciones en tiempo real
-  useEffect(() => {
-    if (!user?.id || effectiveUsers.length > 0) return;
-
-    console.log('[TasksTable] Setting up users fetch');
-    setIsLoadingUsers(true);
-
-    // Fetch users
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/users');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch users: ${response.status}`);
-        }
-        
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string; description?: string };
-        }[] = await response.json();
-
-        const usersData: User[] = await Promise.all(
-          clerkUsers.map(async (clerkUser) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: userDoc.exists() && userDoc.data().role
-                  ? userDoc.data().role
-                  : (clerkUser.publicMetadata.role || 'Sin rol'),
-              };
-            } catch {
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: clerkUser.publicMetadata.role || 'Sin rol',
-              };
-            }
-          }),
-        );
-        
-        console.log('[TasksTable] Users fetched:', {
-          total: usersData.length,
-          withImages: usersData.filter(u => u.imageUrl).length,
-          withoutImages: usersData.filter(u => !u.imageUrl).length
-        });
-      } catch (error) {
-        console.error('[TasksTable] Error fetching users:', error);
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
-
-    // Ejecutar fetch inicial
-    fetchUsers();
-
-    // Setup listener para cambios en usuarios
-    const usersQuery = query(collection(db, 'users'));
-    const unsubscribeUsers = onSnapshot(usersQuery, () => {
-      // Re-fetch users cuando hay cambios
-      fetchUsers();
-    });
-
-    return () => {
-      unsubscribeUsers();
-    };
-  }, [user?.id, effectiveUsers, setIsLoadingUsers]);
+  // Users are now managed centrally by useSharedTasksState
+  // No independent user fetching needed
 
   useEffect(() => {
     // Inicializar filteredTasks directamente con effectiveTasks
@@ -882,10 +812,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
               <ActionMenu
                 task={task}
                 userId={userId}
-                isOpen={actionMenuOpenId === task.id}
-                onOpen={() => {
-                  setActionMenuOpenId(actionMenuOpenId === task.id ? null : task.id);
-                }}
                 onEdit={() => {
                   onEditTaskOpen(task.id);
                   setActionMenuOpenId(null);

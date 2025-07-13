@@ -8,10 +8,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Splide from '@splidejs/splide';
 import '@splidejs/splide/css/core';
-import { doc, getDoc, query, collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import styles from './UserSwiper.module.scss';
 import UserAvatar from './ui/UserAvatar';
+import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { useDataStore } from '@/stores/dataStore';
 
 interface ClerkUser {
   id: string;
@@ -41,113 +42,34 @@ const statusColors = {
   'Fuera': '#616161',
 };
 
-const CACHE_KEY = 'cached_clerk_users';
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 horas - cache más largo para datos de Clerk
-
 const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwiperProps) => {
   const { user, isLoaded } = useUser();
-  const [users, setUsers] = useState<ClerkUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
 
+  // Consumir usuarios del dataStore centralizado
+  const { users: storeUsers, isLoadingUsers } = useStore(
+    useDataStore,
+    useShallow((state) => ({
+      users: state.users,
+      isLoadingUsers: state.isLoadingUsers,
+    }))
+  );
+
+  // Convertir usuarios del store al formato que necesita UserSwiper
+  const users: ClerkUser[] = storeUsers.map((storeUser) => ({
+    id: storeUser.id,
+    imageUrl: storeUser.imageUrl,
+    firstName: storeUser.fullName.split(' ')[0] || '',
+    lastName: storeUser.fullName.split(' ').slice(1).join(' ') || '',
+    status: 'Disponible', // Default status, se puede obtener de Firestore si es necesario
+  }));
+
   useEffect(() => {
-    const unsubscribe = () => {};
-
-    const getCachedUsers = (): ClerkUser[] | null => {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (!cached) return null;
-
-      const { users, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp > CACHE_DURATION) {
-        localStorage.removeItem(CACHE_KEY);
-        return null;
-      }
-      return users;
-    };
-
-    const setCachedUsers = (users: ClerkUser[]) => {
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({ users, timestamp: Date.now() })
-      );
-    };
-
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const cachedUsers = getCachedUsers();
-        if (cachedUsers && user?.id) {
-          const filteredCachedUsers = cachedUsers.filter((u) => u.id !== user.id);
-          setUsers(filteredCachedUsers);
-          setIsLoading(false);
-          console.log('[UserSwiper] Loaded users from cache:', {
-            count: filteredCachedUsers.length,
-            userIds: filteredCachedUsers.map((u) => u.id),
-          });
-        }
-
-        // PRIORIZAR datos de Clerk completamente
-        console.log('[UserSwiper] Fetching users: ALL data from Clerk API, minimal Firestore for status only');
-        
-        // 1. Obtener TODOS los datos de Clerk (imageUrl, firstName, lastName)
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Failed to fetch users from Clerk');
-        
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string };
-        }[] = await response.json();
-
-        // 2. Crear un mapa de status de Firestore (solo para status, lo demás de Clerk)
-        const usersQuery = query(collection(db, 'users'));
-        const firestoreSnapshot = await getDocs(usersQuery);
-        const firestoreStatusMap = new Map<string, string>();
-        
-        firestoreSnapshot.docs.forEach(doc => {
-          const userData = doc.data();
-          if (userData.status) {
-            firestoreStatusMap.set(doc.id, userData.status);
-          }
-        });
-        
-        // 3. Combinar: CLERK data + Firestore status únicamente
-        const finalUsers: ClerkUser[] = clerkUsers
-          .map((clerkUser) => ({
-            id: clerkUser.id,
-            imageUrl: clerkUser.imageUrl || '', // PRIORIDAD: Clerk imageUrl
-            firstName: clerkUser.firstName || '', // PRIORIDAD: Clerk firstName  
-            lastName: clerkUser.lastName || '', // PRIORIDAD: Clerk lastName
-            status: firestoreStatusMap.get(clerkUser.id) || 'Disponible', // Solo status de Firestore
-          }))
-          .filter((u) => u.id !== user?.id);
-
-        setUsers(finalUsers);
-        setCachedUsers(finalUsers);
-
-        console.log('[UserSwiper] Users fetched and cached:', {
-          total: finalUsers.length,
-          withImages: finalUsers.filter(u => u.imageUrl).length,
-          withoutImages: finalUsers.filter(u => !u.imageUrl).length,
-          dataSource: 'Clerk (imageUrl, firstName, lastName) + Firestore (status only)'
-        });
-      } catch (error) {
-        console.error('[UserSwiper] Error fetching users:', error);
-        setUsers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isLoaded) {
-      fetchUsers();
-    }
-
-    return () => unsubscribe();
-  }, [isLoaded, user?.id]);
+    // Actualizar loading state basado en el estado del store
+    setIsLoading(isLoadingUsers);
+  }, [isLoadingUsers]);
 
   useEffect(() => {
     if (splideRef.current && users.length > 0) {
@@ -189,31 +111,26 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
       return;
     }
 
-    // PRIORIZAR datos de Clerk - solo obtener role de Firestore si es necesario
-    const userForChat: User = {
-      id: clerkUser.id,
-      imageUrl: clerkUser.imageUrl || '', // PRIORIDAD: Clerk imageUrl
-      fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre', // PRIORIDAD: Clerk names
-      role: 'Miembro', // Default role, se puede obtener de Firestore si es crítico
-    };
-
-    // Solo obtener role de Firestore si es absolutamente necesario
-    try {
-      const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-      if (userDoc.exists() && userDoc.data().role) {
-        userForChat.role = userDoc.data().role;
-      }
-    } catch (error) {
-      console.warn('[UserSwiper] Could not fetch role from Firestore, using default:', error);
-      // userForChat.role ya está configurado como 'Miembro'
+    // Usar datos del store centralizado
+    const storeUser = storeUsers.find(u => u.id === clerkUser.id);
+    if (!storeUser) {
+      console.error('[UserSwiper] User not found in store:', clerkUser.id);
+      return;
     }
+
+    const userForChat: User = {
+      id: storeUser.id,
+      imageUrl: storeUser.imageUrl,
+      fullName: storeUser.fullName,
+      role: storeUser.role,
+    };
 
     onMessageSidebarOpen(userForChat);
     console.log('[UserSwiper] Opened MessageSidebar for user:', {
       userId: userForChat.id,
       fullName: userForChat.fullName,
       role: userForChat.role,
-      dataSource: 'Clerk (imageUrl, names) + Firestore (role)',
+      dataSource: 'Centralized dataStore',
     });
   };
 
@@ -230,7 +147,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
       e.stopPropagation();
       onOpenProfile({
         id: user.id,
-        imageUrl: user.imageUrl || '', // Usar imageUrl del usuario (ya viene de Clerk)
+        imageUrl: user.imageUrl || '',
       });
     }
   };
@@ -289,7 +206,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                           e.stopPropagation();
                           onOpenProfile({
                             id: user.id,
-                            imageUrl: user.imageUrl || '', // Usar imageUrl del usuario (ya viene de Clerk)
+                            imageUrl: user.imageUrl || '',
                           });
                         }}
                         onKeyDown={(e) => handleAvatarKeyDown(e, user)}

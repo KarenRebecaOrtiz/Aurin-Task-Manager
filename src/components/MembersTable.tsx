@@ -14,6 +14,7 @@ import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { membersTableStore } from '@/stores/membersTableStore';
+import { useDataStore } from '@/stores/dataStore';
 
 interface User {
   id: string;
@@ -54,18 +55,29 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const { isLoading } = useAuth();
     const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
     
-    // Zustand selectors agrupados
+    // Usar dataStore para los datos y membersTableStore para UI
     const {
       users,
       tasks,
+      isLoadingUsers: dataStoreLoadingUsers,
+      isLoadingTasks: dataStoreLoadingTasks,
+    } = useDataStore(
+      useShallow((state) => ({
+        users: state.users,
+        tasks: state.tasks,
+        isLoadingUsers: state.isLoadingUsers,
+        isLoadingTasks: state.isLoadingTasks,
+      }))
+    );
+
+    // UI state desde membersTableStore
+    const {
       filteredUsers,
       sortKey,
       sortDirection,
       searchQuery,
       isLoadingUsers,
       isLoadingTasks,
-      setUsers,
-      setTasks,
       setFilteredUsers,
       setSortKey,
       setSortDirection,
@@ -75,16 +87,12 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     } = useStore(
       membersTableStore,
       useShallow((state) => ({
-        users: state.users,
-        tasks: state.tasks,
         filteredUsers: state.filteredUsers,
         sortKey: state.sortKey,
         sortDirection: state.sortDirection,
         searchQuery: state.searchQuery,
         isLoadingUsers: state.isLoadingUsers,
         isLoadingTasks: state.isLoadingTasks,
-        setUsers: state.setUsers,
-        setTasks: state.setTasks,
         setFilteredUsers: state.setFilteredUsers,
         setSortKey: state.setSortKey,
         setSortDirection: state.setSortDirection,
@@ -107,117 +115,15 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       onMessageSidebarOpen(user);
     }, [onMessageSidebarOpen]);
     
-    // Setup inicial de usuarios usando API (solo si no hay datos externos)
+    // Los datos vienen de dataStore - no necesitamos hacer fetch aquí
+    // Solo sincronizar el estado de loading
     useEffect(() => {
-      if (!user?.id) {
-        setIsLoadingUsers(false);
-        return;
-      }
-      
-      // Si tenemos datos externos, usarlos y no hacer fetch
-      if (externalUsers) {
-        console.log('[MembersTable] Using external users:', externalUsers.length);
-        setUsers(externalUsers);
-        setIsLoadingUsers(false);
-        return;
-      }
-      
-      setIsLoadingUsers(true);
-      const fetchUsers = async () => {
-        try {
-          console.log('[MembersTable] Fetching users: imageUrl from Clerk API, other data from Firestore');
-          // 1. Obtener imageUrl de Clerk
-          const response = await fetch('/api/users');
-          if (!response.ok) throw new Error('Failed to fetch users from Clerk');
-          const clerkUsers: {
-            id: string;
-            imageUrl?: string;
-            firstName?: string;
-            lastName?: string;
-            publicMetadata: { role?: string };
-          }[] = await response.json();
-          // Crear un mapa de imageUrls de Clerk
-          const clerkImageMap = new Map<string, string>();
-          clerkUsers.forEach(clerkUser => {
-            if (clerkUser.imageUrl) {
-              clerkImageMap.set(clerkUser.id, clerkUser.imageUrl);
-            }
-          });
-          // 2. Obtener todos los demás datos de Firestore
-          const usersQuery = query(collection(db, 'users'));
-          const firestoreSnapshot = await getDocs(usersQuery);
-          const usersData: User[] = firestoreSnapshot.docs.map((doc) => {
-            const userData = doc.data();
-            return {
-              id: doc.id,
-              imageUrl: userData.imageUrl || clerkImageMap.get(doc.id) || '',
-              fullName: userData.fullName || userData.name || 'Sin nombre',
-              role: userData.role || 'Sin rol',
-              description: userData.description || '',
-              status: userData.status || 'offline',
-            };
-          });
-          setUsers(usersData);
-          console.log('[MembersTable] Users fetched:', {
-            users: usersData.length,
-            usersWithImages: usersData.filter(u => u.imageUrl).length
-          });
-        } catch (error) {
-          console.error('[MembersTable] Error fetching users:', error);
-          setUsers([]);
-        } finally {
-          setIsLoadingUsers(false);
-        }
-      };
-      fetchUsers();
-    }, [user?.id, externalUsers, setIsLoadingUsers, setUsers]);
+      setIsLoadingUsers(dataStoreLoadingUsers);
+    }, [dataStoreLoadingUsers, setIsLoadingUsers]);
 
-    // Setup de tareas (solo si no hay datos externos)
     useEffect(() => {
-      if (!user?.id) {
-        setIsLoadingTasks(false);
-        return;
-      }
-      
-      // Si tenemos datos externos, usarlos y no hacer fetch
-      if (externalTasks) {
-        console.log('[MembersTable] Using external tasks:', externalTasks.length);
-        setTasks(externalTasks);
-        setIsLoadingTasks(false);
-        return;
-      }
-      
-      setIsLoadingTasks(true);
-      const fetchTasks = async () => {
-        try {
-          const tasksQuery = query(collection(db, 'tasks'));
-          const tasksSnapshot = await getDocs(tasksQuery);
-          const tasksData: Task[] = tasksSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            clientId: doc.data().clientId || '',
-            project: doc.data().project || '',
-            name: doc.data().name || '',
-            description: doc.data().description || '',
-            status: doc.data().status || '',
-            priority: doc.data().priority || '',
-            startDate: doc.data().startDate ? doc.data().startDate.toDate().toISOString() : null,
-            endDate: doc.data().endDate ? doc.data().endDate.toDate().toISOString() : null,
-            LeadedBy: doc.data().LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
-            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate().toISOString() : new Date().toISOString(),
-            CreatedBy: doc.data().CreatedBy || '',
-          }));
-          setTasks(tasksData);
-          console.log('[MembersTable] Tasks fetched:', tasksData.length);
-        } catch (error) {
-          console.error('[MembersTable] Error fetching tasks:', error);
-          setTasks([]);
-        } finally {
-          setIsLoadingTasks(false);
-        }
-      };
-      fetchTasks();
-    }, [user?.id, externalTasks, setIsLoadingTasks, setTasks]);
+      setIsLoadingTasks(dataStoreLoadingTasks);
+    }, [dataStoreLoadingTasks, setIsLoadingTasks]);
 
     // Calcular proyectos activos por usuario (memoizado)
     const activeProjectsCount = useMemo(() => {
@@ -253,7 +159,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
             u.status?.toLowerCase().includes(searchQuery.toLowerCase()),
       );
-      setFilteredUsers(filtered);
+      setFilteredUsers(filtered.map(u => u.id)); // Solo guardar IDs
     }, [memoizedFilteredUsers, searchQuery, setFilteredUsers]);
 
     // Ordenamiento (memoizado)
@@ -363,7 +269,9 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           </div>
         </div>
         <Table
-          data={filteredUsers}
+          data={memoizedFilteredUsers.filter(u => 
+            filteredUsers.includes(u.id)
+          )}
           columns={columns}
           itemsPerPage={10}
           sortKey={sortKey}

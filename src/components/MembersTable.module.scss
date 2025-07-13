@@ -167,6 +167,67 @@
     100% { transform: rotate(360deg); }
 }
 
+// ==============================================================
+// 🔮 ERROR STATES - RETRY BUTTON
+// =================================================================
+.errorContainer {
+  @include flex-center;
+  flex-direction: column;
+  gap: 1rem;
+  padding: $spacing-2xl;
+  text-align: center;
+  min-height: 200px;
+}
+
+.errorMessage {
+  @include typography($text-base, $font-weight-normal, $color-text-primary, center);
+  color: #dc3545;
+  
+  @include dark-mode {
+    @include typography($text-base, $font-weight-normal, $color-text-dark-primary, center);
+    color: #ff6b6b;
+  }
+}
+
+.retryButton {
+  @include flex-center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+  }
+  
+  &:hover:not(:disabled) svg {
+    transform: rotate(180deg);
+  }
+}
+
 .invitePopupOverlay {
     position: fixed;
     top: 0;

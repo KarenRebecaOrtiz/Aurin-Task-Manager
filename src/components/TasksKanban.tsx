@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, onSnapshot, query, getDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, PointerSensor, TouchSensor, useDroppable, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
@@ -132,8 +132,6 @@ interface SortableItemProps {
   onChatSidebarOpen: (task: Task) => void;
   isAdmin: boolean;
   userId: string;
-  setActionMenuOpenId: (id: string | null) => void;
-  actionMenuOpenId: string | null;
   onEditTaskOpen: (taskId: string) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onArchiveTask: (task: Task) => Promise<void>;
@@ -154,8 +152,6 @@ const SortableItem: React.FC<SortableItemProps> = ({
   onChatSidebarOpen,
   isAdmin,
   userId,
-  setActionMenuOpenId,
-  actionMenuOpenId,
   onEditTaskOpen,
   onDeleteTaskOpen,
   onArchiveTask,
@@ -236,11 +232,6 @@ const SortableItem: React.FC<SortableItemProps> = ({
           <ActionMenu
             task={task}
             userId={userId}
-            isOpen={actionMenuOpenId === task.id}
-            onOpen={() => {
-              setActionMenuOpenId(task.id);
-              console.log('[TasksKanban] Action menu opened for task:', task.id);
-            }}
             onEdit={() => {
               onEditTaskOpen(task.id);
               console.log('[TasksKanban] Edit task requested:', task.id);
@@ -253,7 +244,6 @@ const SortableItem: React.FC<SortableItemProps> = ({
               try {
                 // Usar la función directamente del prop
                 await onArchiveTask(task);
-                setActionMenuOpenId(null);
                 console.log('[TasksKanban] Task archived successfully:', task.id);
               } catch (error) {
                 console.error('[TasksKanban] Error archiving task:', error);
@@ -713,26 +703,22 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       priorityFilter,
       clientFilter,
       userFilter,
-      actionMenuOpenId,
       isPriorityDropdownOpen,
       isClientDropdownOpen,
       isUserDropdownOpen,
       isTouchDevice,
       isLoadingTasks,
-      isLoadingUsers,
       activeTask,
       // Acciones
       setSearchQuery,
       setPriorityFilter,
       setClientFilter,
       setUserFilter,
-      setActionMenuOpenId,
       setIsPriorityDropdownOpen,
       setIsClientDropdownOpen,
       setIsUserDropdownOpen,
       setIsTouchDevice,
       setIsLoadingTasks,
-      setIsLoadingUsers,
       setActiveTask,
     } = useStore(
       tasksKanbanStore,
@@ -742,26 +728,22 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
         priorityFilter: state.priorityFilter,
         clientFilter: state.clientFilter,
         userFilter: state.userFilter,
-        actionMenuOpenId: state.actionMenuOpenId,
         isPriorityDropdownOpen: state.isPriorityDropdownOpen,
         isClientDropdownOpen: state.isClientDropdownOpen,
         isUserDropdownOpen: state.isUserDropdownOpen,
         isTouchDevice: state.isTouchDevice,
         isLoadingTasks: state.isLoadingTasks,
-        isLoadingUsers: state.isLoadingUsers,
         activeTask: state.activeTask,
         // Acciones
         setSearchQuery: state.setSearchQuery,
         setPriorityFilter: state.setPriorityFilter,
         setClientFilter: state.setClientFilter,
         setUserFilter: state.setUserFilter,
-        setActionMenuOpenId: state.setActionMenuOpenId,
         setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
         setIsClientDropdownOpen: state.setIsClientDropdownOpen,
         setIsUserDropdownOpen: state.setIsUserDropdownOpen,
         setIsTouchDevice: state.setIsTouchDevice,
         setIsLoadingTasks: state.setIsLoadingTasks,
-        setIsLoadingUsers: state.setIsLoadingUsers,
         setActiveTask: state.setActiveTask,
       }))
     );
@@ -1021,7 +1003,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
       if (!user?.id || externalClients) return;
 
       console.log('[TasksKanban] Setting up clients listener');
-      setIsLoadingUsers(true);
+      setIsLoadingTasks(true);
 
       const clientsQuery = query(collection(db, 'clients'));
       const unsubscribeClients = onSnapshot(
@@ -1036,92 +1018,21 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
           console.log('[TasksKanban] Clients onSnapshot update:', clientsData.length);
 
           // Actualizar estado directamente sin caché
-          setIsLoadingUsers(false);
+          setIsLoadingTasks(false);
         },
         (error) => {
           console.error('[TasksKanban] Error in clients onSnapshot:', error);
-          setIsLoadingUsers(false);
+          setIsLoadingTasks(false);
         }
       );
 
       return () => {
         unsubscribeClients();
       };
-    }, [user?.id, externalClients, setIsLoadingUsers]);
+    }, [user?.id, externalClients]);
 
-    // Setup de users con actualizaciones en tiempo real
-    useEffect(() => {
-      if (!user?.id || externalUsers) return;
-
-      console.log('[TasksKanban] Setting up users fetch');
-      setIsLoadingUsers(true);
-
-      // Fetch users
-      const fetchUsers = async () => {
-        try {
-          const response = await fetch('/api/users');
-          if (!response.ok) {
-            throw new Error(`Failed to fetch users: ${response.status}`);
-          }
-
-          const clerkUsers: {
-            id: string;
-            imageUrl?: string;
-            firstName?: string;
-            lastName?: string;
-            publicMetadata: { role?: string; description?: string };
-          }[] = await response.json();
-
-          const usersData: User[] = await Promise.all(
-            clerkUsers.map(async (clerkUser) => {
-              try {
-                const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-                return {
-                  id: clerkUser.id,
-                  imageUrl: clerkUser.imageUrl || '',
-                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                  role: userDoc.exists() && userDoc.data().role
-                    ? userDoc.data().role
-                    : (clerkUser.publicMetadata.role || 'Sin rol'),
-                };
-              } catch {
-                return {
-                  id: clerkUser.id,
-                  imageUrl: clerkUser.imageUrl || '',
-                  fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                  role: clerkUser.publicMetadata.role || 'Sin rol',
-                };
-              }
-            }),
-          );
-          
-          console.log('[TasksKanban] Users fetched:', {
-            total: usersData.length,
-            withImages: usersData.filter(u => u.imageUrl).length,
-            withoutImages: usersData.filter(u => !u.imageUrl).length
-          });
-        } catch (error) {
-          console.error('[TasksKanban] Error fetching users:', error);
-          if (isLoadingUsers) {
-            setIsLoadingUsers(false);
-          }
-        }
-      };
-
-      // Ejecutar fetch inicial
-      fetchUsers();
-
-      // Setup listener para cambios en usuarios
-      const usersQuery = query(collection(db, 'users'));
-      const unsubscribeUsers = onSnapshot(usersQuery, () => {
-        // Re-fetch users cuando hay cambios
-        fetchUsers();
-      });
-
-      return () => {
-        unsubscribeUsers();
-      };
-    }, [user?.id, externalUsers, isLoadingUsers, setIsLoadingUsers]);
+    // Users are now managed centrally by useSharedTasksState
+    // No independent user fetching needed
 
     // Cleanup all table listeners when component unmounts
     useEffect(() => {
@@ -1502,8 +1413,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = memo(
                         onChatSidebarOpen={onChatSidebarOpen}
                         isAdmin={isAdmin}
                         userId={userId}
-                        setActionMenuOpenId={setActionMenuOpenId}
-                        actionMenuOpenId={actionMenuOpenId}
                         onEditTaskOpen={onEditTaskOpen}
                         onDeleteTaskOpen={onDeleteTaskOpen}
                         onArchiveTask={handleArchiveTask}
