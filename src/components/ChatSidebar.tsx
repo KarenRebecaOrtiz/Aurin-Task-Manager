@@ -27,6 +27,7 @@ import { useMessageDrag } from '@/hooks/useMessageDrag';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 import { useTimer } from '@/hooks/useTimer';
 import { useDataStore } from '@/stores/dataStore';
+import { useSidebarManager } from '@/hooks/useSidebarManager';
 import LoadMoreButton from './ui/LoadMoreButton';
 
 
@@ -472,6 +473,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
   const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
 
     const { addMessage, updateMessage } = useDataStore();
+    
+    // Usar el hook para manejar un solo sidebar abierto
+    const { handleClose } = useSidebarManager({
+      isOpen,
+      sidebarType: 'chat',
+      sidebarId: task.id,
+      onClose,
+    });
 
     const {
       startTimer,
@@ -745,9 +754,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       const handleClickOutside = (event: MouseEvent) => {
         if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
           // No cerrar si hay modales abiertos
-          if (!isDeletePopupOpen && !isTimerPanelOpen && !isSummarizeDropdownOpen) {
-            onClose();
-          }
+                  if (!isDeletePopupOpen && !isTimerPanelOpen && !isSummarizeDropdownOpen) {
+          handleClose();
+        }
         }
       };
       
@@ -758,7 +767,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
-    }, [isOpen, onClose, isDeletePopupOpen, isTimerPanelOpen, isSummarizeDropdownOpen]);
+          }, [isOpen, handleClose, isDeletePopupOpen, isTimerPanelOpen, isSummarizeDropdownOpen]);
 
     useEffect(() => {
       const handleScroll = () => {
@@ -840,14 +849,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       try {
         setIsDeletePopupOpen(false);
         setDeleteConfirm('');
-        onClose();
+        handleClose();
       } catch (error) {
         console.error('Error closing task', error);
         alert(`Error al cerrar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
       } finally {
         setIsDeleting(false);
       }
-    }, [user?.id, deleteConfirm, onClose]);
+    }, [user?.id, deleteConfirm, handleClose]);
 
     const handleSendMessage = useCallback(async (
       messageData: Partial<Message>,

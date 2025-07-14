@@ -55,6 +55,10 @@ interface InputMessageProps {
   containerRef: React.RefObject<HTMLElement>;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
+  editingMessageId?: string | null;
+  editingText?: string;
+  onEditMessage?: (messageId: string, newText: string) => Promise<void>;
+  onCancelEdit?: () => void;
   conversationId?: string;
 }
 
@@ -68,6 +72,10 @@ export function InputMessage({
   containerRef,
   replyingTo,
   onCancelReply,
+  editingMessageId,
+  editingText,
+  onEditMessage,
+  onCancelEdit,
   conversationId,
 }: InputMessageProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -186,6 +194,17 @@ export function InputMessage({
     }
   }, [editor]);
 
+  // Handle editing state
+  useEffect(() => {
+    if (editingMessageId && editingText && editor) {
+      editor.commands.setContent(editingText);
+      editor.commands.focus('end');
+      adjustEditorHeight();
+    } else if (!editingMessageId && editor) {
+      editor.commands.clearContent();
+    }
+  }, [editingMessageId, editingText, editor, adjustEditorHeight]);
+
   // Toggle formatting
   const toggleFormat = useCallback(
     (format: string) => {
@@ -261,6 +280,28 @@ export function InputMessage({
     };
 
     try {
+      // Handle editing mode
+      if (editingMessageId && onEditMessage) {
+        const newText = editor.getHTML();
+        if (!newText.trim()) {
+          alert('El mensaje no puede estar vacío.');
+          return;
+        }
+        await onEditMessage(editingMessageId, newText);
+        editor?.commands.clearContent();
+        setFile(null);
+        setPreviewUrl(null);
+        setHasReformulated(false);
+        adjustEditorHeight();
+        removeErrorMessage(currentConversationId);
+        clearPersistedData();
+        if (onCancelReply) onCancelReply();
+        if (onCancelEdit) onCancelEdit();
+        console.log('[InputMessage] Message edited successfully');
+        return;
+      }
+
+      // Handle sending new message
       if (file) {
         const formData = new FormData();
         formData.append('file', file);
@@ -314,6 +355,13 @@ export function InputMessage({
 
   // Handle keydown for shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Handle Escape to cancel editing
+    if (e.key === 'Escape' && editingMessageId && onCancelEdit) {
+      e.preventDefault();
+      onCancelEdit();
+      return;
+    }
+    
     if (e.ctrlKey || e.metaKey) {
       switch (e.key.toLowerCase()) {
         case 'a':
@@ -377,7 +425,7 @@ export function InputMessage({
       e.preventDefault();
       handleSend(e);
     }
-  }, [isSending, isProcessing, handleSend, editor]);
+  }, [isSending, isProcessing, handleSend, editor, editingMessageId, onCancelEdit]);
 
   // Handle context menu for editor
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -792,6 +840,26 @@ export function InputMessage({
               {!effectiveReplyingTo.text && !effectiveReplyingTo.imageUrl && (
                 <span className={styles.replyText}>Mensaje</span>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {editingMessageId && (
+        <div className={styles.editContainer}>
+          <div className={styles.editContent}>
+            <div className={styles.editHeader}>
+              <span className={styles.editLabel}>✏️ Editando mensaje</span>
+              <button
+                type="button"
+                className={styles.editCancelButton}
+                onClick={onCancelEdit}
+                aria-label="Cancelar edición"
+              >
+                <Image src="/x.svg" alt="Cancelar" width={16} height={16} />
+              </button>
+            </div>
+            <div className={styles.editPreview}>
+              <span className={styles.editText}>Presiona Enter para guardar o Esc para cancelar</span>
             </div>
           </div>
         </div>
