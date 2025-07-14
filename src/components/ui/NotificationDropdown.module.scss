@@ -226,54 +226,7 @@
     background: rgba(241, 245, 249, 0.85);
   }
 
-  // Estilos para diferentes tipos de notificaciones
-  &[data-type='group_message'] .avatar::before {
-    content: '💬';
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    font-size: 12px;
-    background: $color-info;
-    color: white;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &[data-type='private_message'] .avatar::before {
-    content: '✉️';
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    font-size: 12px;
-    background: $color-success;
-    color: white;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &[data-type^='task_'] .avatar::before {
-    content: '📋';
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    font-size: 12px;
-    background: $color-warning;
-    color: white;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  // Estilos para diferentes tipos de notificaciones - removidos los pseudo-elementos absolutos
 
   @include dark-mode {
     background: rgba(39, 39, 42, 0.7);
@@ -487,9 +440,12 @@
   }
 } 
 
-.virtualizedList {
+.notificationsList {
   width: 100%;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
   
   &::-webkit-scrollbar {
     width: 4px;
@@ -556,33 +512,47 @@
 .notificationItem {
   display: flex;
   align-items: flex-start;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 16px;
+  margin-bottom: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.37);
+  /* border: 1px solid rgba(0, 0, 0, 0.1); */
+  backdrop-filter: blur(8px);
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
   
   &:hover {
-    background: var(--color-background-hover);
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px) scale(1.005);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   }
   
   &.unread {
-    background: var(--color-background-unread);
-    
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 3px;
-      background: var(--color-accent);
-    }
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid #3b82f6;
   }
   
   &.swiping {
     transition: none;
+  }
+  
+  @include dark-mode {
+    background: rgba(39, 39, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+    
+    &:hover {
+      background: rgba(39, 39, 42, 0.95);
+    }
+    
+    &.unread {
+      background: rgba(59, 130, 246, 0.15);
+    }
   }
 }
 
@@ -634,13 +604,12 @@
 }
 
 .unreadIndicator {
-  position: absolute;
-  top: 0;
-  right: 0;
+  display: inline-block;
   width: 8px;
   height: 8px;
   background: var(--color-accent);
   border-radius: 50%;
+  margin-left: 8px;
 }
 
 .swipeActions {

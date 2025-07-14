@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
-import { gsap } from 'gsap';
-import { FixedSizeList as List } from 'react-window';
+import { motion, AnimatePresence } from 'framer-motion';
 import styles from './NotificationDropdown.module.scss';
 import React from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -21,13 +20,6 @@ interface Notification {
   recipientId: string;
   conversationId?: string;
   type?: string;
-}
-
-interface GroupedNotifications {
-  type: string;
-  title: string;
-  notifications: Notification[];
-  count: number;
 }
 
 interface NotificationDropdownProps {
@@ -175,61 +167,15 @@ export default React.memo(function NotificationDropdown({
     });
   }, []);
 
-  // Función para obtener título del grupo (mover antes del useMemo)
-  const getGroupTitle = useCallback((type: string): string => {
-    switch (type) {
-      case 'task_deleted':
-        return '🗑️ Tareas Eliminadas';
-      case 'task_archived':
-        return '📁 Tareas Archivadas';
-      case 'task_unarchived':
-        return '📂 Tareas Desarchivadas';
-      case 'task_status_changed':
-        return '🔄 Cambios de Estado';
-      case 'group_message':
-        return '💬 Mensajes de Grupo';
-      case 'private_message':
-        return '💭 Mensajes Privados';
-      default:
-        return '📢 Otras Notificaciones';
-    }
-  }, []);
-
-  // Agrupar notificaciones por tipo
-  const groupedNotifications = useMemo(() => {
+  // Filtrar y ordenar notificaciones
+  const filteredNotifications = useMemo(() => {
     if (!isVisible) return [];
     
-    const groups: { [key: string]: Notification[] } = {};
-    
-    notifications.slice(0, 50).forEach((notification) => {
-      const type = notification.type || 'other';
-      if (!groups[type]) {
-        groups[type] = [];
-      }
-      groups[type].push(notification);
-    });
-    
-    // Convertir a array y ordenar por timestamp más reciente
-    return Object.entries(groups).map(([type, notifications]) => {
-      const sortedNotifications = notifications.sort((a, b) => 
-        b.timestamp.toMillis() - a.timestamp.toMillis()
-      );
-      
-      const title = getGroupTitle(type);
-      
-      return {
-        type,
-        title,
-        notifications: sortedNotifications,
-        count: sortedNotifications.length
-      };
-    }).sort((a, b) => {
-      // Ordenar por la notificación más reciente del grupo
-      const aLatest = a.notifications[0]?.timestamp.toMillis() || 0;
-      const bLatest = b.notifications[0]?.timestamp.toMillis() || 0;
-      return bLatest - aLatest;
-    });
-  }, [notifications, isVisible, getGroupTitle]);
+    return notifications
+      .slice(0, 50)
+      .filter(notification => notification.type !== 'task_archived')
+      .sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+  }, [notifications, isVisible]);
 
   const truncateText = useCallback((txt: string, max: number) => {
     // Limpiar el texto de posibles HTML tags
@@ -251,13 +197,13 @@ export default React.memo(function NotificationDropdown({
   }, []);
 
   // Componente para renderizar item de notificación
-  const NotificationItem = useCallback(({ notification }: { notification: Notification; index?: number }) => {
+  const NotificationItem = useCallback(({ notification, index }: { notification: Notification; index: number }) => {
     const sender = users.find((u) => u.id === notification.userId);
     const relativeTime = formatRelativeTime(notification.timestamp);
     const swipeDistance = swipedNotificationId === notification.id ? swipeStartX - swipeCurrentX : 0;
     
     return (
-      <div
+      <motion.div
         className={`${styles.notificationItem} ${!notification.read ? styles.unread : ''} ${
           isSwiping && swipedNotificationId === notification.id ? styles.swiping : ''
         }`}
@@ -273,145 +219,97 @@ export default React.memo(function NotificationDropdown({
         onTouchMove={handleSwipeMove}
         onTouchEnd={handleSwipeEnd}
         onClick={() => handleNotificationClick(notification)}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ 
+          duration: 0.3, 
+          ease: "easeOut",
+          delay: index * 0.05 // Stagger effect
+        }}
+        whileHover={{ 
+          scale: 1.02,
+          transition: { duration: 0.2 }
+        }}
+        whileTap={{ 
+          scale: 0.98,
+          transition: { duration: 0.1 }
+        }}
+        layout
       >
         <div className={styles.notificationContent}>
           <div className={styles.notificationHeader}>
             <div className={styles.senderInfo}>
               <Image
                 src={sender?.imageUrl || '/empty-image.png'}
-                alt={sender?.firstName || 'Usuario'}
+                alt={sender?.fullName || 'Usuario'}
                 width={32}
                 height={32}
                 className={styles.senderAvatar}
               />
-              <span className={styles.senderName}>{sender?.firstName || 'Usuario'}</span>
+              <span className={styles.senderName}>{sender?.fullName || 'Usuario'}</span>
             </div>
             <span className={styles.timestamp}>{relativeTime}</span>
           </div>
           <div className={styles.messageContainer}>
-            <p className={styles.message}>{truncateText(notification.message, 100)}</p>
-            {!notification.read && <div className={styles.unreadIndicator} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <p className={styles.message}>{truncateText(notification.message, 100)}</p>
+              {!notification.read && <div className={styles.unreadIndicator} />}
+            </div>
           </div>
         </div>
-        <div className={styles.swipeActions}>
-          <button
+        <motion.div 
+          className={styles.swipeActions}
+          initial={{ opacity: 0 }}
+          whileHover={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.button
             className={styles.deleteButton}
             onClick={(e) => {
               e.stopPropagation();
               handleDeleteNotification(notification.id);
             }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
-            🗑️
-          </button>
-        </div>
-      </div>
+            <Image src="/trash-2.svg" alt="Eliminar" width={16} height={16} />
+          </motion.button>
+        </motion.div>
+      </motion.div>
     );
   }, [users, formatRelativeTime, swipedNotificationId, swipeStartX, swipeCurrentX, isSwiping, handleSwipeStart, handleSwipeMove, handleSwipeEnd, handleNotificationClick, handleDeleteNotification, truncateText]);
 
-  // Componente para renderizar grupo de notificaciones
-  const GroupHeader = useCallback(({ group }: { group: GroupedNotifications }) => (
-    <div className={styles.groupHeader}>
-      <h3 className={styles.groupTitle}>{group.title}</h3>
-      <span className={styles.groupCount}>{group.count} notificación{group.count !== 1 ? 'es' : ''}</span>
-    </div>
-  ), []);
-
-  // Renderizar lista virtualizada
-  const renderVirtualizedList = useCallback(() => {
-    if (groupedNotifications.length === 0) {
+  // Renderizar lista de notificaciones
+  const renderNotificationsList = useCallback(() => {
+    if (filteredNotifications.length === 0) {
       return (
-        <div className={styles.emptyState}>
+        <motion.div 
+          className={styles.emptyState}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
           <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={64} height={64} />
           <p>No hay notificaciones</p>
-        </div>
+        </motion.div>
       );
     }
 
-    const itemCount = groupedNotifications.reduce((total, group) => total + group.notifications.length + 1, 0);
-    const itemSize = 80; // Altura de cada item
-    const listHeight = Math.min(400, itemCount * itemSize);
-
     return (
-      <List
-        height={listHeight}
-        itemCount={itemCount}
-        itemSize={itemSize}
-        width="100%"
-        className={styles.virtualizedList}
-      >
-        {({ index, style }) => {
-          let currentIndex = 0;
-          
-          for (const group of groupedNotifications) {
-            // Renderizar header del grupo
-            if (index === currentIndex) {
-              return (
-                <div style={style}>
-                  <GroupHeader group={group} />
-                </div>
-              );
-            }
-            currentIndex++;
-            
-            // Renderizar notificaciones del grupo
-            for (const notification of group.notifications) {
-              if (index === currentIndex) {
-                return (
-                  <div style={style}>
-                    <NotificationItem notification={notification} index={index} />
-                  </div>
-                );
-              }
-              currentIndex++;
-            }
-          }
-          
-          return null;
-        }}
-      </List>
+      <div className={styles.notificationsList}>
+        <AnimatePresence mode="popLayout">
+          {filteredNotifications.map((notification, index) => (
+            <NotificationItem 
+              key={notification.id} 
+              notification={notification} 
+              index={index} 
+            />
+          ))}
+        </AnimatePresence>
+      </div>
     );
-  }, [groupedNotifications, GroupHeader, NotificationItem]);
-
-  useEffect(() => {
-    if (isOpen && notificationsRef.current) {
-      if (isMobile) {
-        // Animación desde abajo para móvil
-        gsap.fromTo(
-          notificationsRef.current,
-          { y: '100%', opacity: 0 },
-          { y: '0%', opacity: 1, duration: 0.3, ease: 'power2.out' },
-        );
-      } else {
-        // Animación normal para desktop
-        gsap.fromTo(
-          notificationsRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
-        );
-      }
-    } else if (isVisible && notificationsRef.current) {
-      if (isMobile) {
-        // Animación hacia abajo para móvil
-        gsap.to(notificationsRef.current, {
-          y: '100%',
-          opacity: 0,
-          duration: 0.3,
-          ease: 'power2.in',
-          onComplete: () => onClose(),
-        });
-      } else {
-        // Animación normal para desktop
-        gsap.to(notificationsRef.current, {
-          opacity: 0,
-          y: -10,
-          scale: 0.95,
-          duration: 0.2,
-          ease: 'power2.in',
-          onComplete: () => onClose(),
-        });
-      }
-    }
-  }, [isOpen, isVisible, onClose, isMobile]);
+  }, [filteredNotifications, NotificationItem]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -434,80 +332,189 @@ export default React.memo(function NotificationDropdown({
   // Solo renderizar cuando es realmente visible
   if (!isVisible) return null;
 
+  // Animaciones de Framer Motion
+  const dropdownVariants = {
+    hidden: isMobile 
+      ? { y: '100%', opacity: 0 }
+      : { opacity: 0, y: -10, scale: 0.95 },
+    visible: isMobile
+      ? { y: '0%', opacity: 1 }
+      : { opacity: 1, y: 0, scale: 1 },
+    exit: isMobile
+      ? { y: '100%', opacity: 0 }
+      : { opacity: 0, y: -10, scale: 0.95 }
+  };
+
+  const overlayVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    exit: { opacity: 0 }
+  };
+
   // Renderizado para móvil
   if (isMobile) {
     return createPortal(
-      <>
-        <div className={styles.dropdownOverlay} onClick={onClose} />
-        <div
-          ref={(el) => {
-            notificationsRef.current = el;
-            scrollContainerRef.current = el;
-          }}
-          className={styles.dropdown}
-          style={{ transform: `translateY(${dragOffset}px)` }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          data-notification-dropdown
-        >
-          <div className={styles.header}>
-            <div className={styles.dragBar} />
-            <div className={styles.title}>Notificaciones</div>
-            <button className={styles.closeButton} onClick={onClose} aria-label="Cerrar notificaciones">
-              <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
-            </button>
-          </div>
-          <div className={styles.scrollContainer}>
-            {isLoading ? (
-              <div className={styles.loadingState}>
-                <div className={styles.spinner}></div>
-                <span>Cargando notificaciones...</span>
-              </div>
-            ) : error ? (
-              <div className={styles.errorState}>
-                <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
-                <span>{error}</span>
-              </div>
-            ) : renderVirtualizedList()}
-          </div>
-        </div>
-      </>,
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div 
+              className={styles.dropdownOverlay} 
+              onClick={onClose}
+              variants={overlayVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ duration: 0.3 }}
+            />
+            <motion.div
+              ref={(el) => {
+                notificationsRef.current = el;
+                scrollContainerRef.current = el;
+              }}
+              className={styles.dropdown}
+              style={{ transform: `translateY(${dragOffset}px)` }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              data-notification-dropdown
+              variants={dropdownVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ 
+                duration: 0.3, 
+                ease: "easeInOut",
+                type: "spring",
+                stiffness: 300,
+                damping: 30
+              }}
+            >
+              <motion.div 
+                className={styles.header}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+              >
+                <div className={styles.dragBar} />
+                <div className={styles.title}>Notificaciones</div>
+                <motion.button 
+                  className={styles.closeButton} 
+                  onClick={onClose} 
+                  aria-label="Cerrar notificaciones"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
+                </motion.button>
+              </motion.div>
+              <motion.div 
+                className={styles.scrollContainer}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+              >
+                {isLoading ? (
+                  <motion.div 
+                    className={styles.loadingState}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className={styles.spinner}></div>
+                    <span>Cargando notificaciones...</span>
+                  </motion.div>
+                ) : error ? (
+                  <motion.div 
+                    className={styles.errorState}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
+                    <span>{error}</span>
+                  </motion.div>
+                ) : renderNotificationsList()}
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>,
       document.body,
     );
   }
 
   // Renderizado para desktop (dropdown normal)
   return createPortal(
-    <div
-      ref={(el) => {
-        notificationsRef.current = el;
-        scrollContainerRef.current = el;
-      }}
-      className={styles.dropdown}
-      style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
-      data-notification-dropdown
-    >
-      <div className={styles.header}>
-        <div className={styles.title}>Notificaciones</div>
-        <button className={styles.closeButton} onClick={onClose} aria-label="Cerrar notificaciones">
-          <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
-        </button>
-      </div>
-      <div className={styles.scrollContainer}>
-        {isLoading ? (
-          <div className={styles.loadingState}>
-            <div className={styles.spinner}></div>
-            <span>Cargando notificaciones...</span>
-          </div>
-        ) : error ? (
-          <div className={styles.errorState}>
-            <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
-            <span>{error}</span>
-          </div>
-        ) : renderVirtualizedList()}
-      </div>
-    </div>,
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          ref={(el) => {
+            notificationsRef.current = el;
+            scrollContainerRef.current = el;
+          }}
+          className={styles.dropdown}
+          style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
+          data-notification-dropdown
+          variants={dropdownVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          transition={{ 
+            duration: 0.2, 
+            ease: "easeOut",
+            type: "spring",
+            stiffness: 400,
+            damping: 25
+          }}
+        >
+          <motion.div 
+            className={styles.header}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05, duration: 0.2 }}
+          >
+            <div className={styles.title}>Notificaciones</div>
+            <motion.button 
+              className={styles.closeButton} 
+              onClick={onClose} 
+              aria-label="Cerrar notificaciones"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
+            </motion.button>
+          </motion.div>
+          <motion.div 
+            className={styles.scrollContainer}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.2 }}
+          >
+            {isLoading ? (
+              <motion.div 
+                className={styles.loadingState}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className={styles.spinner}></div>
+                <span>Cargando notificaciones...</span>
+              </motion.div>
+            ) : error ? (
+              <motion.div 
+                className={styles.errorState}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Image src="/circle-x.svg" alt="Error" width={40} height={40} />
+                <span>{error}</span>
+              </motion.div>
+            ) : renderNotificationsList()}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 }, (prevProps, nextProps) => {
