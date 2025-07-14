@@ -435,6 +435,47 @@
   }
 }
 
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 12px;
+  
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: $color-btn-primary;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  span {
+    font-size: 14px;
+    color: $color-text-secondary;
+    font-weight: 500;
+  }
+  
+  @include dark-mode {
+    .spinner {
+      border-color: rgba(255, 255, 255, 0.2);
+      border-top-color: $color-btn-primary;
+    }
+    
+    span {
+      color: $color-text-dark-secondary;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 // Mobile responsive
 @media (max-width: 768px) {
   .dropdown {

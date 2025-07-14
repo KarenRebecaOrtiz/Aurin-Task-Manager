@@ -111,6 +111,27 @@ service cloud.firestore {
                            (request.auth.uid == userId || isAdmin());
     }
 
+    // Todos collection - REGLAS SIMPLIFICADAS
+    match /todos/{todoId} {
+      // ✅ PERMITIR LECTURA: Usuarios pueden leer sus propios todos
+      allow read: if request.auth != null && 
+                  resource.data.userId == request.auth.uid;
+      
+      // ✅ PERMITIR CREACIÓN: Usuarios autenticados pueden crear sus propios todos
+      allow create: if request.auth != null && 
+                   request.resource.data.userId == request.auth.uid;
+      
+      // ✅ PERMITIR ACTUALIZACIÓN: Usuarios pueden actualizar sus propios todos
+      allow update: if request.auth != null && 
+                   resource.data.userId == request.auth.uid;
+      
+      // ✅ PERMITIR ELIMINACIÓN: Usuarios pueden eliminar sus propios todos
+      allow delete: if request.auth != null && 
+                   resource.data.userId == request.auth.uid;
+    }
+
+
+
     // AI Conversations collection
     match /ai_conversations/{conversationId} {
       allow read, write: if isAdmin();

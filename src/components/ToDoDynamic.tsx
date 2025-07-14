@@ -4,47 +4,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './ToDoDynamic.module.scss';
 import ToDoDropdown from './ui/ToDoDropdown';
-
-interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
-  completedDate?: string;
-}
+import { useTodos } from '@/hooks/useTodos';
 
 export default function ToDoDynamic() {
-  const [todos, setTodos] = useState<Todo[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  // Load todos from localStorage on mount and listen for changes
-  useEffect(() => {
-    const loadTodos = () => {
-      try {
-        const savedTodos = localStorage.getItem('todos');
-        if (savedTodos) {
-          const parsedTodos = JSON.parse(savedTodos);
-          setTodos(parsedTodos);
-        }
-      } catch (error) {
-        console.error('Error loading todos from localStorage:', error);
-      }
-    };
-
-    loadTodos();
-
-    // Listen for custom events from the dropdown
-    const handleTodoChange = () => {
-      loadTodos();
-    };
-
-    window.addEventListener('todosChanged', handleTodoChange);
-
-    return () => {
-      window.removeEventListener('todosChanged', handleTodoChange);
-    };
-  }, []);
+  
+  const { todos } = useTodos();
 
   // Calculate dropdown position when opening
   const handleToggleDropdown = useCallback((e: React.MouseEvent) => {

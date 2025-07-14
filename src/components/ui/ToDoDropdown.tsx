@@ -3,10 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import Image from 'next/image';
+import { useTodos } from '@/hooks/useTodos';
 import styles from './ToDoDropdown.module.scss';
 
 interface Todo {
-  id: number;
+  id: string;
   text: string;
   completed: boolean;
   completedDate?: string;
@@ -20,43 +22,15 @@ interface ToDoDropdownProps {
 
 export default function ToDoDropdown({ isVisible, isOpen, dropdownPosition }: ToDoDropdownProps) {
   const [mounted, setMounted] = useState(false);
-  const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodoText, setNewTodoText] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isInputError, setIsInputError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, getCompletedToday } = useTodos();
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    // Load todos from localStorage
-    try {
-      const savedTodos = localStorage.getItem('todos');
-      if (savedTodos) {
-        setTodos(JSON.parse(savedTodos));
-      }
-    } catch (error) {
-      console.error('Error loading todos:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Listen for todos changes from other components
-    const handleTodosChanged = () => {
-      try {
-        const savedTodos = localStorage.getItem('todos');
-        if (savedTodos) {
-          setTodos(JSON.parse(savedTodos));
-        }
-      } catch (error) {
-        console.error('Error loading todos:', error);
-      }
-    };
-
-    window.addEventListener('todosChanged', handleTodosChanged);
-    return () => window.removeEventListener('todosChanged', handleTodosChanged);
   }, []);
 
   // Focus input when dropdown opens
@@ -68,18 +42,18 @@ export default function ToDoDropdown({ isVisible, isOpen, dropdownPosition }: To
     }
   }, [isOpen]);
 
-  // Get today's date in ISO format
-  const getTodayDate = () => {
-    return new Date().toISOString().split('T')[0];
-  };
+  // Handle error from hook
+  useEffect(() => {
+    if (error) {
+      setErrorMessage(error);
+      setIsInputError(true);
+    } else {
+      setErrorMessage('');
+      setIsInputError(false);
+    }
+  }, [error]);
 
-  // Get completed todos for today
-  const getCompletedToday = () => {
-    const today = getTodayDate();
-    return todos.filter(todo => todo.completed && todo.completedDate === today).length;
-  };
-
-  const addTodo = () => {
+  const handleAddTodo = async () => {
     const trimmedText = newTodoText.trim();
     
     // Validation
@@ -108,67 +82,24 @@ export default function ToDoDropdown({ isVisible, isOpen, dropdownPosition }: To
       return;
     }
 
-    const newTodo: Todo = {
-      id: Date.now(),
-      text: trimmedText,
-      completed: false,
-    };
-
-    const updatedTodos = [newTodo, ...todos];
-    setTodos(updatedTodos);
+    await addTodo(trimmedText);
     setNewTodoText('');
     setErrorMessage('');
     setIsInputError(false);
-    
-    // Save to localStorage and dispatch event
-    try {
-      localStorage.setItem('todos', JSON.stringify(updatedTodos));
-      window.dispatchEvent(new CustomEvent('todosChanged'));
-    } catch (error) {
-      console.error('Error saving todos:', error);
-    }
   };
 
-  const toggleTodo = (id: number) => {
-    const updatedTodos = todos.map(todo => {
-      if (todo.id === id) {
-        return {
-          ...todo,
-          completed: !todo.completed,
-          completedDate: !todo.completed ? getTodayDate() : undefined
-        };
-      }
-      return todo;
-    });
-    
-    setTodos(updatedTodos);
-    
-    // Save to localStorage and dispatch event
-    try {
-      localStorage.setItem('todos', JSON.stringify(updatedTodos));
-      window.dispatchEvent(new CustomEvent('todosChanged'));
-    } catch (error) {
-      console.error('Error saving todos:', error);
-    }
+  const handleToggleTodo = async (id: string, completed: boolean) => {
+    await toggleTodo(id, completed);
   };
 
-  const deleteTodo = (id: number) => {
-    const updatedTodos = todos.filter(todo => todo.id !== id);
-    setTodos(updatedTodos);
-    
-    // Save to localStorage and dispatch event
-    try {
-      localStorage.setItem('todos', JSON.stringify(updatedTodos));
-      window.dispatchEvent(new CustomEvent('todosChanged'));
-    } catch (error) {
-      console.error('Error saving todos:', error);
-    }
+  const handleDeleteTodo = async (id: string) => {
+    await deleteTodo(id);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      addTodo();
+      handleAddTodo();
     }
   };
 
@@ -247,8 +178,8 @@ export default function ToDoDropdown({ isVisible, isOpen, dropdownPosition }: To
               </div>
               <button
                 className={styles.addButton}
-                onClick={addTodo}
-                disabled={!newTodoText.trim()}
+                onClick={handleAddTodo}
+                disabled={!newTodoText.trim() || isLoading}
                 title="Añadir todo"
               >
                 +
@@ -256,46 +187,58 @@ export default function ToDoDropdown({ isVisible, isOpen, dropdownPosition }: To
             </div>
 
             <div className={styles.todoListContainer}>
-              <ul className={styles.todoList}>
-                <AnimatePresence>
-                  {todos.map((todo) => (
-                    <motion.li
-                      key={todo.id}
-                      className={styles.todoItem}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20, height: 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      layout
-                    >
-                      <span
-                        className={`${styles.todoText} ${todo.completed ? styles.completed : styles.active}`}
-                        onClick={() => toggleTodo(todo.id)}
-                        style={{ cursor: 'pointer' }}
+              {isLoading ? (
+                <motion.div 
+                  className={styles.loadingState}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className={styles.spinner}></div>
+                  <span>Cargando todos...</span>
+                </motion.div>
+              ) : (
+                <ul className={styles.todoList}>
+                  <AnimatePresence>
+                    {todos.map((todo) => (
+                      <motion.li
+                        key={todo.id}
+                        className={styles.todoItem}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20, height: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        layout
                       >
-                        {todo.text}
-                      </span>
-                      <div className={styles.todoActions}>
-                        <button
-                          className={styles.actionButton}
-                          onClick={() => toggleTodo(todo.id)}
-                          title={todo.completed ? "Marcar como pendiente" : "Marcar como completado"}
+                        <span
+                          className={`${styles.todoText} ${todo.completed ? styles.completed : styles.active}`}
+                          onClick={() => handleToggleTodo(todo.id, todo.completed)}
+                          style={{ cursor: 'pointer' }}
                         >
-                          {todo.completed ? "↺" : "✓"}
-                        </button>
-                        <div className={styles.separator} />
-                        <button
-                          className={styles.actionButton}
-                          onClick={() => deleteTodo(todo.id)}
-                          title="Eliminar todo"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </motion.li>
-                  ))}
-                </AnimatePresence>
-              </ul>
+                          {todo.text}
+                        </span>
+                        <div className={styles.todoActions}>
+                          <button
+                            className={styles.actionButton}
+                            onClick={() => handleToggleTodo(todo.id, todo.completed)}
+                            title={todo.completed ? "Marcar como pendiente" : "Marcar como completado"}
+                          >
+                            {todo.completed ? "↺" : "✓"}
+                          </button>
+                          <div className={styles.separator} />
+                          <button
+                            className={styles.actionButton}
+                            onClick={() => handleDeleteTodo(todo.id)}
+                            title="Eliminar todo"
+                          >
+                            <Image src="/trash-2.svg" alt="Eliminar" width={16} height={16} />
+                          </button>
+                        </div>
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              )}
             </div>
           </motion.div>
         </motion.div>
