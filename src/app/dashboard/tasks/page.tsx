@@ -1,20 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import {
   collection,
   doc,
   deleteDoc,
   getDocs,
-  onSnapshot,
   query,
   updateDoc,
   addDoc,
-  Timestamp,
-  where,
-  orderBy,
-  limit,
 } from 'firebase/firestore';
 import Header from '@/components/ui/Header';
 import Marquee from '@/components/ui/Marquee';
@@ -96,18 +91,6 @@ interface Task {
   archivedBy?: string;
 }
 
-interface Notification {
-  id: string;
-  userId: string;
-  message: string | null;
-  timestamp: Timestamp | null;
-  read: boolean;
-  recipientId: string;
-  conversationId?: string;
-  taskId?: string;
-  type?: string;
-}
-
 interface Sidebar {
   id: string;
   type: 'message' | 'chat' | 'client-sidebar';
@@ -130,20 +113,17 @@ function TasksPageContent() {
     tasks,
     clients,
     users,
-    isLoadingTasks,
-    isLoadingClients,
-    isLoadingUsers
+    isInitialLoadComplete,
+    loadingProgress
   } = useSharedTasksState(user?.id);
   
   // Estados locales que no necesitan caché
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [container, setContainer] = useState<Container>('tareas');
   const [taskView, setTaskView] = useState<TaskView>('table');
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isArchiveTableOpen, setIsArchiveTableOpen] = useState(false);
   const [sidebars, setSidebars] = useState<Sidebar[]>([]);
-  const [showLoader, setShowLoader] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string } | null>(null);
@@ -159,6 +139,10 @@ function TasksPageContent() {
   const [successMessage, setSuccessMessage] = useState('');
   const [failMessage, setFailMessage] = useState('');
   const [selectedProfileUser] = useState<User | null>(null);
+  
+  // Estado para controlar la visibilidad del loader con efecto de telón
+  const [showLoader, setShowLoader] = useState(true);
+  const [contentReady, setContentReady] = useState(false);
 
   // Refs
   const headerRef = useRef<HTMLDivElement>(null);
@@ -170,6 +154,19 @@ function TasksPageContent() {
   const memoizedUsers = useMemo(() => users, [users]);
   const selectedContainer = container;
   const memoizedOpenSidebars = useMemo(() => sidebars, [sidebars]);
+
+  // Efecto para manejar el loader y el contenido
+  useEffect(() => {
+    if (isInitialLoadComplete && !contentReady) {
+      // Marcar el contenido como listo
+      setContentReady(true);
+      
+      // Pequeño delay para asegurar que el contenido se renderice
+      setTimeout(() => {
+        setShowLoader(false);
+      }, 100);
+    }
+  }, [isInitialLoadComplete, contentReady]);
 
   // Event handlers
   const handleNotificationClick = useCallback(() => {
@@ -327,8 +324,6 @@ function TasksPageContent() {
     // Profile functionality removed
   }, []);
 
-
-
   const handleArchiveTableOpen = useCallback(() => {
     setIsArchiveTableOpen(true);
   }, []);
@@ -411,73 +406,10 @@ function TasksPageContent() {
     }
   }, [user?.id, clientSidebarData?.isEdit, handleClientSidebarClose, handleShowSuccessAlert, handleShowFailAlert]);
 
-  // Setup de notificaciones con actualizaciones en tiempo real
-  useEffect(() => {
-    if (!user?.id) return;
-
-    console.log('[TasksPage] Setting up notifications listener');
-
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      where('recipientId', '==', user.id),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-      );
-      
-    const unsubscribeNotifications = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const notificationsData: Notification[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          userId: doc.data().userId || '',
-          message: doc.data().message || null,
-          timestamp: doc.data().timestamp || null,
-          read: doc.data().read || false,
-          recipientId: doc.data().recipientId || '',
-          conversationId: doc.data().conversationId,
-          taskId: doc.data().taskId,
-          type: doc.data().type || 'default',
-        }));
-
-        console.log('[TasksPage] Notifications onSnapshot update:', notificationsData.length);
-        
-        setNotifications(notificationsData);
-      },
-      (error) => {
-        console.error('[TasksPage] Error in notifications onSnapshot:', error);
-        setNotifications([]);
-      }
-    );
-
-    return () => {
-      unsubscribeNotifications();
-    };
-  }, [user?.id]);
-
-  // Mostrar loader mientras cargan los datos iniciales
-  useEffect(() => {
-    if (!isLoadingTasks && !isLoadingClients && !isLoadingUsers) {
-      setShowLoader(false);
-  }
-  }, [isLoadingTasks, isLoadingClients, isLoadingUsers]);
-
-  // Only log significant changes to reduce console noise
-  useEffect(() => {
-    if (tasks.length > 0) {
-      const hasStatusChanges = tasks.some(task => 
-        task.status && task.status !== 'Por Iniciar'
-      );
-      
-      if (hasStatusChanges) {
-        console.log('[TasksPage] Tasks updated with status changes:', tasks.length);
-      }
-    }
-  }, [tasks]);
-
-  return (
+  // Renderizar el contenido principal
+  const mainContent = (
     <div className={styles.container}>
       <Marquee />
-      {showLoader && <Loader />}
       <SyncUserToFirestore />
       
       <div ref={headerRef}>
@@ -485,7 +417,341 @@ function TasksPageContent() {
           selectedContainer={selectedContainer}
           isArchiveTableOpen={isArchiveTableOpen}
           users={memoizedUsers}
-          notifications={notifications}
+          notifications={[]}
+          onNotificationClick={handleNotificationClick}
+          onLimitNotifications={() => {}}
+          onChangeContainer={handleContainerChange}
+        />
+      </div>
+      <OnboardingStepper onComplete={handleOnboardingComplete} />
+      <div ref={selectorRef} className={styles.selector}>
+        <Selector
+          selectedContainer={selectedContainer as SelectorContainer}
+          setSelectedContainer={(c: SelectorContainer) => handleContainerChange(c)}
+          options={[
+            { value: 'tareas', label: 'Inicio' },
+            { value: 'cuentas', label: 'Cuentas' },
+            { value: 'miembros', label: 'Miembros' },
+          ]}
+        />
+      </div>
+      <CursorProvider>
+        <div ref={contentRef} className={styles.content}>
+          {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && !isArchiveTableOpen && (
+            <>
+              {taskView === 'table' && (
+                <TasksTable
+                  onNewTaskOpen={() => setIsCreateTaskOpen(true)}
+                  onEditTaskOpen={handleTasksTableEditTask}
+                  onChatSidebarOpen={handleChatSidebarOpen}
+                  onMessageSidebarOpen={handleMessageSidebarOpen}
+                  onOpenProfile={handleOpenProfile}
+                  onViewChange={setTaskView}
+                  onDeleteTaskOpen={(taskId) => {
+                    setDeleteTarget({ type: 'task', id: taskId });
+                    setIsDeletePopupOpen(true);
+                  }}
+                  onArchiveTableOpen={handleArchiveTableOpen}
+                  externalTasks={tasks.filter(task => !task.archived)}
+                  externalClients={clients}
+                  externalUsers={users}
+                />
+              )}
+              
+              {taskView === 'kanban' && (
+                <TasksKanban
+                  onNewTaskOpen={() => setIsCreateTaskOpen(true)}
+                  onEditTaskOpen={handleTasksTableEditTask}
+                  onChatSidebarOpen={handleChatSidebarOpen}
+                  onMessageSidebarOpen={handleMessageSidebarOpen}
+                  onOpenProfile={handleOpenProfile}
+                  onViewChange={setTaskView}
+                  onDeleteTaskOpen={(taskId) => {
+                    setDeleteTarget({ type: 'task', id: taskId });
+                    setIsDeletePopupOpen(true);
+                  }}
+                  onArchiveTableOpen={handleArchiveTableOpen}
+                  externalTasks={tasks.filter(task => !task.archived)}
+                  externalClients={clients}
+                  externalUsers={users}
+                />
+              )}
+            </>
+          )}
+
+          {selectedContainer === 'tareas' && !isCreateTaskOpen && !isEditTaskOpen && isArchiveTableOpen && (
+            <ArchiveTable
+              onEditTaskOpen={handleArchiveTableEditTask}
+              onViewChange={handleArchiveTableViewChange}
+              onDeleteTaskOpen={handleArchiveTableDeleteTask}
+              onClose={handleArchiveTableClose}
+              onChatSidebarOpen={handleChatSidebarOpen}
+              onTaskArchive={handleTaskArchive}
+              externalTasks={tasks.filter(task => task.archived)}
+              externalClients={clients}
+              externalUsers={users}
+              onTaskUpdate={handleArchiveTableTaskUpdate}
+              onDataRefresh={handleDataRefresh}
+            />
+          )}
+
+          {selectedContainer === 'cuentas' && !isCreateTaskOpen && !isEditTaskOpen && (
+            <ClientsTable
+              onCreateOpen={handleCreateClientOpen}
+              onEditOpen={handleEditClientOpen}
+              onDeleteOpen={handleDeleteClientOpen}
+              externalClients={clients.length > 0 ? clients : undefined}
+              onCacheUpdate={handleClientsTableCacheUpdate}
+            />
+          )}
+
+          {selectedContainer === 'miembros' && !isCreateTaskOpen && !isEditTaskOpen && (
+            <MembersTable
+              onMessageSidebarOpen={handleMessageSidebarOpen}
+              externalUsers={users}
+              externalTasks={tasks}
+            />
+          )}
+
+          {selectedContainer === 'config' && !isCreateTaskOpen && !isEditTaskOpen && (
+            <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
+            />
+          )}
+
+          {/* Mover EditTask y CreateTask fuera de las condiciones de contenedor para que siempre se muestren como overlay */}
+          {isEditTaskOpen && editTaskId && (
+            <EditTask
+              isOpen={isEditTaskOpen}
+              onToggle={() => {
+                setIsEditTaskOpen(false);
+                setEditTaskId(null);
+              }}
+              taskId={editTaskId}
+              onHasUnsavedChanges={setHasUnsavedChanges}
+              onCreateClientOpen={handleCreateClientOpen}
+              onEditClientOpen={handleEditClientOpen}
+              onClientAlertChange={handleClientAlertChange}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
+            />
+          )}
+
+          {isCreateTaskOpen && (
+            <CreateTask
+              isOpen={isCreateTaskOpen}
+              onToggle={handleCreateTaskToggle}
+              onHasUnsavedChanges={setHasUnsavedChanges}
+              onCreateClientOpen={handleCreateClientOpen}
+              onEditClientOpen={handleEditClientOpen}
+              onTaskCreated={() => setIsCreateTaskOpen(false)}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
+            />
+          )}
+        </div>
+        <Cursor>
+          <svg
+            className={styles.cursorIcon}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 40 40"
+          >
+            <path
+              fill="currentColor"
+              d="M1.8 4.4 7 36.2c.3 1.8 2.6 2.3 3.6.8l3.9-5.7c1.7-2.5 4.5-4.1 7.5-4.3l6.9-.5c1.8-.1 2.5-2.4 1.1-3.5L5 2.5c-1.4-1.1-3.5 0-3.3 1.9Z"
+            />
+          </svg>
+        </Cursor>
+        <CursorFollow>
+          <div className={styles.cursorFollowContent}>{user?.fullName || 'Usuario'}</div>
+        </CursorFollow>
+      </CursorProvider>
+      {isDeleteClientOpen && isAdmin && (
+        <div className={clientStyles.popupOverlay}>
+          <div className={clientStyles.deletePopup}>
+            <h2>Confirmar Eliminación</h2>
+            <p>Escribe &apos;Eliminar&apos; para confirmar:</p>
+            <input
+              type="text"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              className={clientStyles.deleteConfirmInput}
+              placeholder="Escribe 'Eliminar'"
+            />
+            <button
+              onClick={async () => {
+                if (deleteConfirm.toLowerCase() === 'eliminar' && typeof isDeleteClientOpen === 'string') {
+                  try {
+                    await deleteDoc(doc(db, 'clients', isDeleteClientOpen));
+                    setIsDeleteClientOpen(false);
+                    setDeleteConfirm('');
+                    handleShowSuccessAlert('Cliente eliminado exitosamente');
+                  } catch (error) {
+                    console.error('Error deleting client:', error);
+                    handleShowFailAlert('Error al eliminar la cuenta');
+                  }
+                }
+              }}
+              disabled={deleteConfirm.toLowerCase() !== 'eliminar'}
+              className={clientStyles.deleteConfirmButton}
+            >
+              Sí, eliminar
+            </button>
+            <button
+              onClick={() => {
+                setIsDeleteClientOpen(false);
+                setDeleteConfirm('');
+              }}
+              className={clientStyles.cancelButton}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+      {isConfirmExitOpen && (
+        <div className={clientStyles.popupOverlay}>
+          <div className={clientStyles.deletePopup} ref={confirmExitPopupRef}>
+            <h2>¿Salir sin guardar?</h2>
+            <p>¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado.</p>
+            <div className={clientStyles.popupActions}>
+              <button
+                onClick={handleConfirmExit}
+                className={clientStyles.deleteConfirmButton}
+              >
+                Salir
+              </button>
+              <button
+                onClick={handleCancelExit}
+                className={clientStyles.cancelButton}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {selectedProfileUser && (
+        <ProfileCard
+          userId={selectedProfileUser.id}
+          imageUrl={selectedProfileUser.imageUrl}
+          onClose={handleCloseProfile}
+        />
+      )}
+      <AISidebar isOpen={false} onClose={() => {}} />
+      {memoizedOpenSidebars.map((sidebar) => {
+        if (sidebar.type === 'message' && user?.id && sidebar.data) {
+          return (
+            <MessageSidebar
+              key={sidebar.id}
+              isOpen={true}
+              onClose={() => handleCloseSidebar(sidebar.id)}
+              senderId={user.id}
+              receiver={sidebar.data as User}
+              conversationId={[user.id, (sidebar.data as User).id].sort().join('_')}
+            />
+          );
+  }
+        if (sidebar.type === 'chat' && sidebar.data && (sidebar.data as Task).id) {
+          return (
+            <ChatSidebar
+              key={sidebar.id}
+              isOpen={true}
+              onClose={() => handleCloseSidebar(sidebar.id)}
+              task={sidebar.data as Task}
+              clientName={clients.find((c) => c.id === (sidebar.data as Task).clientId)?.name || 'Sin cuenta'}
+              users={memoizedUsers}
+            />
+          );
+        }
+        return null;
+      })}
+      <div className={styles.vignetteTop} />
+      <div className={styles.vignetteBottom} />
+      <Dock />
+      <Footer />
+      
+      {/* ClientSidebar */}
+      {isClientSidebarOpen && clientSidebarData && (
+        <ClientOverlay
+          isOpen={isClientSidebarOpen}
+          isEdit={clientSidebarData.isEdit}
+          initialForm={
+            clientSidebarData.isEdit && clientSidebarData.client
+              ? {
+                  id: clientSidebarData.client.id,
+                  name: clientSidebarData.client.name,
+                  imageFile: null,
+                  imagePreview: clientSidebarData.client.imageUrl,
+                  projects: clientSidebarData.client.projects.length
+                    ? clientSidebarData.client.projects
+                    : [''],
+                  deleteProjectIndex: null,
+                  deleteConfirm: '',
+                }
+              : {
+                  name: '',
+                  imageFile: null,
+                  imagePreview: '',
+                  projects: [''],
+                  deleteProjectIndex: null,
+                  deleteConfirm: '',
+                }
+          }
+          onFormSubmit={handleClientSubmit}
+          onClose={handleClientSidebarClose}
+          isClientLoading={isClientLoading}
+        />
+      )}
+      
+      {/* Alert Components */}
+      {showSuccessAlert && (
+        <SuccessAlert
+          message={successMessage}
+          onClose={() => setShowSuccessAlert(false)}
+        />
+      )}
+      {showFailAlert && (
+        <FailAlert
+          message={failMessage}
+          error="Se produjo un error al realizar la operación"
+          onClose={() => setShowFailAlert(false)}
+        />
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {/* Loader con efecto de telón */}
+      <Loader 
+        isFullPage={true} 
+        message="Cargando datos de la aplicación..." 
+        loadingProgress={loadingProgress}
+        isVisible={showLoader}
+        onAnimationComplete={() => {
+          console.log('Loader animation completed');
+        }}
+      />
+      
+      {/* Contenido principal que se renderiza antes de que el loader se oculte */}
+      {contentReady && mainContent}
+    </>
+  );
+
+  return (
+    <div className={styles.container}>
+      <Marquee />
+      {/* {showLoader && <Loader />} */} {/* This line is removed as per the new_code */}
+      <SyncUserToFirestore />
+      
+      <div ref={headerRef}>
+        <Header
+          selectedContainer={selectedContainer}
+          isArchiveTableOpen={isArchiveTableOpen}
+          users={memoizedUsers}
+          notifications={[]}
           onNotificationClick={handleNotificationClick}
           onLimitNotifications={() => {}}
           onChangeContainer={handleContainerChange}

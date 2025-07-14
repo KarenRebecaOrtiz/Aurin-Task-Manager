@@ -5,7 +5,8 @@ import { useDataStore } from '@/stores/dataStore';
 
 interface FirestoreUser {
   id: string;
-  imageUrl?: string;
+  profilePhoto?: string;
+  displayName?: string;
   fullName?: string;
   role?: string;
   status?: string;
@@ -31,8 +32,9 @@ export const useUsersSync = () => {
         // Convertir a formato esperado por dataStore
         const users = firestoreUsers.map(user => ({
           id: user.id,
-          imageUrl: user.imageUrl || '/empty-image.png',
-          fullName: user.fullName || 'Usuario',
+          // Usar profilePhoto de Firestore (que viene de Clerk) o imagen de Clerk por defecto
+          imageUrl: user.profilePhoto || `https://img.clerk.com/${user.id}`,
+          fullName: user.displayName || user.fullName || 'Usuario',
           role: user.role || 'user',
           status: user.status || 'Disponible',
           description: typeof user.description === 'string' ? user.description : undefined

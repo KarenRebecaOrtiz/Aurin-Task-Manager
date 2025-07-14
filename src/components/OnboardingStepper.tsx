@@ -88,7 +88,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
   useEffect(() => {
     if (!isLoading && !isCompleted) {
       setStep(currentStep);
-    }
+          }
   }, [isLoading, isCompleted, currentStep]);
 
   // GSAP animation for stepper mount

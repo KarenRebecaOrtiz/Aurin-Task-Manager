@@ -40,6 +40,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       if (docSnap.exists()) {
         const data = docSnap.data();
         setStatus(data.status || 'Disponible');
+        // Usar profilePhoto que es donde se guarda la imagen de Clerk
         if (data.profilePhoto) {
           setUserImageUrl(data.profilePhoto);
         }
@@ -81,7 +82,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
           height={dimensions.height}
           className={styles.avatarImage}
           onError={(e) => {
-            e.currentTarget.src = '/empty-image.png';
+            // Si la imagen falla, usar una imagen de Clerk por defecto
+            e.currentTarget.src = `https://img.clerk.com/${userId}`;
           }}
         />
       ) : (

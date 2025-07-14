@@ -105,6 +105,18 @@ interface DataStore {
   isLoadingUsers: boolean;
   setIsLoadingUsers: (loading: boolean) => void;
   
+  // Global loading state
+  isInitialLoadComplete: boolean;
+  setIsInitialLoadComplete: (complete: boolean) => void;
+  
+  // Loading progress
+  loadingProgress: {
+    tasks: boolean;
+    clients: boolean;
+    users: boolean;
+  };
+  setLoadingProgress: (progress: { tasks?: boolean; clients?: boolean; users?: boolean }) => void;
+  
   // Cache management
   clearCache: () => void;
   getTaskById: (taskId: string) => Task | undefined;
@@ -252,6 +264,18 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   isLoadingUsers: false,
   setIsLoadingUsers: (loading) => set({ isLoadingUsers: loading }),
   
+  // Global loading state
+  isInitialLoadComplete: false,
+  setIsInitialLoadComplete: (complete) => set({ isInitialLoadComplete: complete }),
+  
+  // Loading progress
+  loadingProgress: {
+    tasks: false,
+    clients: false,
+    users: false,
+  },
+  setLoadingProgress: (progress) => set({ loadingProgress: { ...get().loadingProgress, ...progress } }),
+  
   // Cache management
   clearCache: () =>
     set({
@@ -262,6 +286,12 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       isLoadingTasks: false,
       isLoadingClients: false,
       isLoadingUsers: false,
+      isInitialLoadComplete: false,
+      loadingProgress: {
+        tasks: false,
+        clients: false,
+        users: false,
+      },
     }),
   getTaskById: (taskId) => get().tasks.find((task) => task.id === taskId),
   getClientById: (clientId) => get().clients.find((client) => client.id === clientId),
@@ -312,6 +342,7 @@ export const useUsers = () => useDataStore((state) => state.users);
 export const useTasksLoading = () => useDataStore((state) => state.isLoadingTasks);
 export const useClientsLoading = () => useDataStore((state) => state.isLoadingClients);
 export const useUsersLoading = () => useDataStore((state) => state.isLoadingUsers);
+export const useInitialLoadComplete = () => useDataStore((state) => state.isInitialLoadComplete);
 
 // Helper to get filtered tasks
 export const useFilteredTasks = (filterFn?: (task: Task) => boolean) =>

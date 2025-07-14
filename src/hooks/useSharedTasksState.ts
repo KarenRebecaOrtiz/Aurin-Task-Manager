@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { collection, onSnapshot, query, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useDataStore } from '@/stores/dataStore';
@@ -70,6 +70,8 @@ export function useSharedTasksState(userId: string | undefined) {
   const setIsLoadingTasks = useDataStore((state) => state.setIsLoadingTasks);
   const setIsLoadingClients = useDataStore((state) => state.setIsLoadingClients);
   const setIsLoadingUsers = useDataStore((state) => state.setIsLoadingUsers);
+  const setIsInitialLoadComplete = useDataStore((state) => state.setIsInitialLoadComplete);
+  const setLoadingProgress = useDataStore((state) => state.setLoadingProgress);
 
   const tasks = useDataStore((state) => state.tasks);
   const clients = useDataStore((state) => state.clients);
@@ -77,10 +79,13 @@ export function useSharedTasksState(userId: string | undefined) {
   const isLoadingTasks = useDataStore((state) => state.isLoadingTasks);
   const isLoadingClients = useDataStore((state) => state.isLoadingClients);
   const isLoadingUsers = useDataStore((state) => state.isLoadingUsers);
+  const isInitialLoadComplete = useDataStore((state) => state.isInitialLoadComplete);
+  const loadingProgress = useDataStore((state) => state.loadingProgress);
 
   // Refs para evitar re-renders innecesarios
   const tasksListenerRef = useRef<(() => void) | null>(null);
   const clientsListenerRef = useRef<(() => void) | null>(null);
+  const hasInitializedRef = useRef(false);
 
   // Setup tasks listener
   useEffect(() => {
@@ -120,14 +125,15 @@ export function useSharedTasksState(userId: string | undefined) {
           archivedBy: doc.data().archivedBy || '',
         }));
 
-        // Only log significant changes to reduce console noise
-        const hasStatusChanges = tasksData.some(t => t.status !== 'Por Iniciar');
-        if (hasStatusChanges) {
-          console.log('[useSharedTasksState] Tasks updated with status changes:', tasksData.length);
-        }
-
         setTasks(tasksData);
         setIsLoadingTasks(false);
+        setLoadingProgress({ tasks: true });
+        
+        // Marcar como inicializado si es la primera carga
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          checkInitialLoadComplete();
+        }
       },
       (error) => {
         console.error('[useSharedTasksState] Error in tasks onSnapshot:', error);
@@ -174,6 +180,13 @@ export function useSharedTasksState(userId: string | undefined) {
 
         setClients(clientsData);
         setIsLoadingClients(false);
+        setLoadingProgress({ clients: true });
+        
+        // Marcar como inicializado si es la primera carga
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          checkInitialLoadComplete();
+        }
       },
       (error) => {
         console.error('[useSharedTasksState] Error in clients onSnapshot:', error);
@@ -192,16 +205,16 @@ export function useSharedTasksState(userId: string | undefined) {
     };
   }, [userId, setClients, setIsLoadingClients]);
 
-  // Setup users fetch - SOLO FETCH INICIAL, SIN LISTENER
+  // Setup users fetch - OPTIMIZADO
   useEffect(() => {
     if (!userId) return;
 
-    console.log('[useSharedTasksState] Setting up users fetch with Zustand');
+    console.log('[useSharedTasksState] Setting up optimized users fetch');
     setIsLoadingUsers(true);
 
     const fetchUsers = async () => {
       try {
-        console.log('[useSharedTasksState] Starting users fetch');
+        console.log('[useSharedTasksState] Starting optimized users fetch');
         const response = await fetch('/api/users');
         if (!response.ok) {
           throw new Error(`Failed to fetch users: ${response.status}`);
@@ -215,39 +228,36 @@ export function useSharedTasksState(userId: string | undefined) {
           publicMetadata: { role?: string; description?: string };
         }[] = await response.json();
 
-        const usersData: User[] = await Promise.all(
-          clerkUsers.map(async (clerkUser) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: userDoc.exists() && userDoc.data().role
-                  ? userDoc.data().role
-                  : (clerkUser.publicMetadata.role || 'Sin rol'),
-                description: userDoc.exists() && userDoc.data().description
-                  ? userDoc.data().description
-                  : (clerkUser.publicMetadata.description || ''),
-                status: userDoc.exists() && userDoc.data().status
-                  ? userDoc.data().status
-                  : undefined,
-              };
-            } catch {
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: clerkUser.publicMetadata.role || 'Sin rol',
-                description: clerkUser.publicMetadata.description || '',
-              };
-            }
-          }),
+        // OPTIMIZACIÓN: Usar batch getDocs en lugar de Promise.all
+        const userIds = clerkUsers.map(user => user.id);
+        const userDocs = await Promise.all(
+          userIds.map(id => getDoc(doc(db, 'users', id)))
         );
+
+        const usersData: User[] = clerkUsers.map((clerkUser, index) => {
+          const userDoc = userDocs[index];
+          const userData = userDoc.exists() ? userDoc.data() : {};
+          
+          return {
+            id: clerkUser.id,
+            imageUrl: clerkUser.imageUrl || '',
+            fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+            role: userData.role || clerkUser.publicMetadata.role || 'Sin rol',
+            description: userData.description || clerkUser.publicMetadata.description || '',
+            status: userData.status || undefined,
+          };
+        });
 
         console.log('[useSharedTasksState] Users fetched successfully:', usersData.length);
         setUsers(usersData);
         setIsLoadingUsers(false);
+        setLoadingProgress({ users: true });
+        
+        // Marcar como inicializado si es la primera carga
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          checkInitialLoadComplete();
+        }
       } catch (error) {
         console.error('[useSharedTasksState] Error fetching users:', error);
         setUsers([]);
@@ -255,16 +265,50 @@ export function useSharedTasksState(userId: string | undefined) {
       }
     };
 
-    // Solo fetch inicial, sin listener
     fetchUsers();
-
-    // NO HAY LISTENER DE USERS - UserAvatar maneja status individualmente
-    // Esto elimina el re-fetch excesivo cuando cambia el status de un usuario
 
     return () => {
       // Cleanup no necesario ya que no hay listener
     };
   }, [userId, setUsers, setIsLoadingUsers]);
+
+  // Función para verificar si la carga inicial está completa
+  const checkInitialLoadComplete = useCallback(() => {
+    // Verificar que no esté cargando Y que haya datos reales
+    const hasTasksData = tasks.length > 0;
+    const hasClientsData = clients.length > 0;
+    const hasUsersData = users.length > 0;
+    const isNotLoading = !isLoadingTasks && !isLoadingClients && !isLoadingUsers;
+    
+    // Solo marcar como completo si hay datos Y no está cargando
+    if (isNotLoading && hasTasksData && hasClientsData && hasUsersData) {
+      console.log('[useSharedTasksState] Initial load complete with data:', {
+        tasks: tasks.length,
+        clients: clients.length,
+        users: users.length
+      });
+      setIsInitialLoadComplete(true);
+    } else {
+      console.log('[useSharedTasksState] Still loading or missing data:', {
+        isLoadingTasks,
+        isLoadingClients,
+        isLoadingUsers,
+        hasTasksData,
+        hasClientsData,
+        hasUsersData,
+        tasksCount: tasks.length,
+        clientsCount: clients.length,
+        usersCount: users.length
+      });
+    }
+  }, [isLoadingTasks, isLoadingClients, isLoadingUsers, tasks.length, clients.length, users.length, setIsInitialLoadComplete]);
+
+  // Verificar cuando cambian los estados de carga
+  useEffect(() => {
+    if (hasInitializedRef.current) {
+      checkInitialLoadComplete();
+    }
+  }, [isLoadingTasks, isLoadingClients, isLoadingUsers, checkInitialLoadComplete]);
 
   return {
     tasks,
@@ -272,6 +316,8 @@ export function useSharedTasksState(userId: string | undefined) {
     users,
     isLoadingTasks,
     isLoadingClients,
-    isLoadingUsers
+    isLoadingUsers,
+    isInitialLoadComplete,
+    loadingProgress,
   };
 } 
