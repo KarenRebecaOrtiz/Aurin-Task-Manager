@@ -117,6 +117,7 @@ export const useOnlineStatus = () => {
   return {
     isOnline: tabCountRef.current > 0,
     currentStatus,
-    updateStatus
+    updateStatus,
+    tabCount: tabCountRef.current
   };
 }; 

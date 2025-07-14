@@ -88,7 +88,7 @@ export default function StatusDebug() {
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      await updateStatus(newStatus, true);
+      await updateStatus(newStatus);
       console.log(`Status changed to: ${newStatus}`);
     } catch (error) {
       console.error('Error changing status:', error);
