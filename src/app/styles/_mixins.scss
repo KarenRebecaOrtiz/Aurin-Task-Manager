@@ -637,8 +637,7 @@
 
 @mixin swiper-track {
   padding: $spacing-4xl 0px;
-  overflow: visible !important;
-  overflow-x: hidden !important;
+  overflow-x: hidden;
 }
 
 @mixin swiper-slide {
