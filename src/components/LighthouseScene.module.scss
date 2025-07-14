@@ -1,0 +1,856 @@
+// Colour Variables
+$mainBlack: #141912;
+$mainGrey: #252b21;
+$lighthouseLight: #f9f04c;
+
+// Timing variables
+$glowLightTiming: 6s; 
+$lightTiming: 6s; 
+$oceanLayer: 4s;
+
+.scene {
+  position: absolute;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.container {
+  position: absolute;
+  height: 100vh;
+  width: 100%;
+}
+
+.top {
+  position: relative;
+  height: 75vh;
+  width: 100%;
+}
+
+// Stars
+.stars {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80%;
+  z-index: -1;
+  
+  & > * {
+    position: absolute;
+    background: rgba(241, 241, 241, 1);
+    border-radius: 50px;
+    animation: twinkle 2s infinite;
+    transition-timing-function: ease-in-out;
+  }
+}
+
+// Generate star positions with static values instead of random()
+.star {
+  position: relative;
+  width: 3px;
+  height: 3px;
+  animation-delay: 0s;
+  
+  &:nth-of-type(1) { top: 10%; left: 15%; width: 2px; height: 2px; animation-delay: 0.5s; }
+  &:nth-of-type(2) { top: 25%; left: 85%; width: 4px; height: 4px; animation-delay: 1s; }
+  &:nth-of-type(3) { top: 45%; left: 35%; width: 3px; height: 3px; animation-delay: 1.5s; }
+  &:nth-of-type(4) { top: 65%; left: 75%; width: 2px; height: 2px; animation-delay: 2s; }
+  &:nth-of-type(5) { top: 85%; left: 25%; width: 5px; height: 5px; animation-delay: 2.5s; }
+  &:nth-of-type(6) { top: 15%; left: 65%; width: 3px; height: 3px; animation-delay: 3s; }
+  &:nth-of-type(7) { top: 35%; left: 95%; width: 2px; height: 2px; animation-delay: 3.5s; }
+  &:nth-of-type(8) { top: 55%; left: 5%; width: 4px; height: 4px; animation-delay: 4s; }
+  &:nth-of-type(9) { top: 75%; left: 45%; width: 3px; height: 3px; animation-delay: 4.5s; }
+  &:nth-of-type(10) { top: 95%; left: 85%; width: 2px; height: 2px; animation-delay: 5s; }
+  &:nth-of-type(11) { top: 5%; left: 35%; width: 5px; height: 5px; animation-delay: 0.5s; }
+  &:nth-of-type(12) { top: 25%; left: 75%; width: 3px; height: 3px; animation-delay: 1s; }
+  &:nth-of-type(13) { top: 45%; left: 15%; width: 2px; height: 2px; animation-delay: 1.5s; }
+  &:nth-of-type(14) { top: 65%; left: 55%; width: 4px; height: 4px; animation-delay: 2s; }
+  &:nth-of-type(15) { top: 85%; left: 95%; width: 3px; height: 3px; animation-delay: 2.5s; }
+  &:nth-of-type(16) { top: 15%; left: 25%; width: 2px; height: 2px; animation-delay: 3s; }
+  &:nth-of-type(17) { top: 35%; left: 65%; width: 5px; height: 5px; animation-delay: 3.5s; }
+  &:nth-of-type(18) { top: 55%; left: 85%; width: 3px; height: 3px; animation-delay: 4s; }
+  &:nth-of-type(19) { top: 75%; left: 5%; width: 2px; height: 2px; animation-delay: 4.5s; }
+  &:nth-of-type(20) { top: 95%; left: 45%; width: 4px; height: 4px; animation-delay: 5s; }
+}
+
+@keyframes twinkle {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.sky {
+  position: fixed;
+  height: 100vh;
+  width: 100%;
+  background-color: #d5df62;
+  background: radial-gradient(center, ellipse cover, #c5cfb7 0%,#84ad98 20%,#5f9986 39%,#5f9986 50%,#5f9986 60%,#4a8974 72%,#326565 84%,#082d47 100%);
+}
+
+.aurinLogo {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  opacity: 0.9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.smallProgressBar {
+  width: 80px;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.8), transparent);
+  border-radius: 2px;
+  animation: progress-animation 2s ease-in-out infinite;
+}
+
+@keyframes progress-animation {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
+  }
+}
+
+.rightAttachment {
+  position: absolute;
+  height: 100px;
+  width: 150px;
+  background: $mainBlack;
+  left: 20px;
+  top: -20px;
+}
+
+.rightRoof {
+  position: absolute;
+  height: 20px;
+  width: 140px;
+  background: $mainBlack;
+  left: 11px;
+  top: -20px;	
+  transform: skew(50deg);
+}
+
+.satellite {
+  position: absolute;
+  height: 60px;
+  width: 2px;
+  background: $mainBlack;
+  left: 90px;
+  top: -40px;
+}
+
+.backRocks {
+  position: absolute;
+  width: 480px;
+  height: 50px;
+  left: -130px;
+  bottom: -47px;
+}
+
+.backRock1 {
+  position: absolute;
+  width: 68px;
+  height: 60px;
+  background: $mainGrey;
+  left: 0px;
+  bottom: -30px;
+  border-radius: 100%;
+}
+
+.backRock2 {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  background: $mainGrey;
+  left: 68%;
+  bottom: -30px;
+  border-radius: 100%;
+}
+
+.backRock3 {
+  position: absolute;
+  width: 55px;
+  height: 55px;
+  background: $mainGrey;
+  left: 88%;
+  bottom: -30px;
+  border-radius: 100%;
+}
+
+.frontRocks {
+  position: absolute;
+  bottom: -90px;
+  left: -145px;
+  height: 100px;
+  width: 350px;
+}
+
+.frontRock1 {
+  position: absolute;
+  left: 50px;
+  height: 150px;
+  width: 180px;
+  background: $mainBlack;
+  border-radius: 100%;
+}
+
+.frontRock2 {
+  position: absolute;
+  bottom: 0px;
+  left: 240px;
+  height: 100px;
+  width: 150px;
+  background: $mainBlack;
+  border-radius: 100%;
+}
+
+.frontRock3 {
+  position: absolute;
+  bottom: -22px;
+  left: 365px;
+  height: 100px;
+  width: 90px;
+  background: $mainBlack;
+  border-radius: 100%;
+}
+
+.overlay {
+  position: absolute;
+  height: 40px;
+  width: 42px;
+  background: #141b11;
+  top: 54px;
+  left: -19px;
+}
+
+.panelContainer {
+  width: 100%;
+  height: 307px;
+  border: 0px solid #CCC;
+  margin: 0 0px;
+  position: absolute;
+  transform: perspective(300px);
+  left: 0px;
+  bottom: -12px;
+}
+
+.leftMidRoof {
+  position: absolute;
+  height: 35px;
+  width: 100px;
+  background: $mainBlack;
+  bottom: 0%;
+  left: -16px;
+}
+
+.leftMidRoof2 {
+  position: absolute;
+  height: 5px;
+  width: 70px;
+  background: $mainBlack;
+  bottom: 18%;
+  left: -11px;
+  border-radius: 10%;
+}
+
+.panel {
+  background-size: 100%;
+  background: $mainBlack;
+  width: 50px;
+  height: 100%;
+  min-height: 220px;
+  margin: auto;
+  transform: perspective(329px) rotateX(44deg) translate3d(0px, 0px, 0px);
+}
+
+.topTriangle {
+  padding-top: 7px;
+  position: relative;
+  height: 0px;
+  width: 3px;
+  bottom: 262px;
+  left: 3px;
+  background: rgba(0, 128, 0, 0);
+  border-left: 20px rgba(0, 128, 0, 0) solid;
+  border-right: 23px rgba(0, 128, 0, 0) solid;
+  border-bottom: 18px #141b11 solid;
+  border-top: 3px rgba(0, 128, 0, 0) solid;
+  border-bottom-right-radius: 28%;
+  border-bottom-left-radius: 28%;
+  opacity: 0.98;
+}
+
+.topTriangleCircleMiddle {
+  position: absolute;
+  height: 2px;
+  width: 9.5px;
+  background: $mainBlack;
+  bottom: 0px;
+  left: -3px;
+}
+
+.topTriangleCircle {
+  position: relative;
+  height: 8px;
+  width: 8px;
+  bottom: 17px;
+  left: -2.5px;
+  background: $mainBlack;
+  border-radius: 100%;
+}
+
+.topTriangleCircleTop {
+  position: relative;
+  height: 8px;
+  width: 6px;
+  bottom: 3px;
+  left: -1.5px;
+  background: $mainBlack;
+}
+
+.lightHouse {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.midRailingsRail {
+  position: absolute;
+  height: 10px;
+  width: 55px;
+  top: 72px;
+  left: -26px;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  border: 1px solid $mainBlack;
+}
+
+.midRail {
+  position: absolute;
+  width: 1px;
+  height: 10px;
+  background: $mainBlack;
+}
+
+.midRail1 {
+  left: 2px;
+}
+
+.midRail2 {
+  left: 4px;
+}
+
+.midRail3 {
+  left: 6px;
+}
+
+.midRail5 {
+  left: 49px;
+}
+
+.midRail6 {
+  left: 52px;
+}
+
+.leftMidRailings {
+  position: absolute;
+  top: 80px;
+  left: -28px;
+  border-left: 26px rgba(0, 128, 0, 0.0) solid;
+  border-right: 15px rgba(0, 128, 0, 0) solid;
+  border-bottom: 15px #141b11 solid;
+  border-top: 0px rgba(0, 128, 0, 0) solid;
+  border-bottom-right-radius: 0%;
+  border-bottom-left-radius: 100%;
+}
+
+.rightMidRailings {
+  position: absolute;
+  top: 80px;
+  left: -8px;
+  border-left: 26px rgba(0, 128, 0, 0.0) solid;
+  border-right: 15px rgba(0, 128, 0, 0) solid;
+  border-bottom: 15px #141b11 solid;
+  border-top: 0px rgba(0, 128, 0, 0) solid;
+  border-bottom-right-radius: 100%;
+  border-bottom-left-radius: 0%;
+}
+
+.topLedge {
+  position: absolute;
+  height: 8px;
+  width: 50px;
+  top: 55px;
+  left: -23px;
+  background-color: $mainBlack; 	
+  border-bottom-right-radius: 100%;
+  border-bottom-left-radius: 100%;
+}
+
+.shiningLightsContainer {
+  position: absolute;
+  height: 100px;
+  width: 800px;
+  left: -399px;
+  top: -39px;
+  animation: left-to-right $lightTiming infinite 0s forwards linear;
+}
+
+@keyframes left-to-right {
+  0% {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(-180deg);
+    left: -393px;
+    opacity: 0.7;
+  }
+  100% {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+.shiningLightLeft {
+  position: absolute;
+  height: 46px;
+  width: 70%;
+  background: linear-gradient(to right, rgba(249,245,159,1) 0% ,rgba(249,245,159,0) 100%);
+  opacity: 0.7;
+  float: left;
+  top: 57px;
+  left: 10px;
+  transform: perspective(529px) rotateX(0deg) rotateY(-120deg) rotate(0deg);
+}
+
+.shiningLightRight {
+  position: absolute;
+  height: 46px;
+  left: 236px;
+  width: 70%;
+  top: 56px;
+  background: linear-gradient(to left, rgba(249,245,159,1) 0% ,rgba(249,245,159,0) 100%);
+  transform: perspective(529px) rotateX(180deg) rotateY(-120deg) rotate(0deg) skew(1deg);
+}
+
+.glowShineContainer {
+  position: absolute;
+  height: 350px;
+  width: 350px;
+  left: -150px !important;
+  top: -398px !important;
+  border-radius: 100%;
+  background: radial-gradient(ellipse at center, rgba(214,205,112,0.6) 0%,rgba(211,206,160,0) 100%);
+  animation: glowing $glowLightTiming infinite 1s forwards linear;
+}
+
+@keyframes glowing {
+  0% {
+    transform: scale(1); 
+  }
+  50% { 
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.shineCircle {
+  border-radius: 100%;
+}
+
+.glowShine1 {
+  position: absolute;
+  height: 30%;
+  width: 30%;
+  background: #edea89;
+  top: 35%;
+  left: 35%;
+  opacity: 0.2;
+}
+
+.glowShine2 {
+  position: relative;
+  height: 10%;
+  width: 10%;
+  background: #edea89;
+  margin: auto;
+  top: 45%;
+  opacity: 0.1;
+  animation: glowing-shine-1 $glowLightTiming infinite 0s forwards ease-in;
+}
+
+@keyframes glowing-shine-1 {
+  0% { 
+    box-shadow: 0px 0px 0px #edea89;
+    opacity: 0.6;
+    transform: scale(1); 
+  }
+  50% { 
+    box-shadow: 0px 0px 32px #edea89;
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% { 
+    box-shadow: 0px 0px 0px #edea89;
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+.glowShine3 {
+  position: absolute;
+  height: 50%;
+  width: 50%;
+  background: #edea89;
+  top: 25%;
+  left: 25%;
+  opacity: 0.05;
+}
+
+.glowShine4 {
+  position: absolute;
+  height: 70%;
+  width: 70%;
+  background: #edea89;
+  top: 15%;
+  left: 15%;
+  opacity: 0.05;
+}
+
+.glowShine5 {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  background: #edea89;
+  top: 0%;
+  left: 0%;
+  opacity: 0.05;
+}
+
+.midLedge {
+  position: absolute;
+  height: 8px;
+  width: 52px;
+  top: 100px;
+  left: -24px;
+  background-color: $mainBlack; 	
+  border-bottom-right-radius: 100%;
+  border-bottom-left-radius: 100%;	
+}
+
+.lighthouseLights {
+  position: absolute;
+  height: 110px;
+  top: -130px;
+  width: 43px;
+  right: 0px;
+}
+
+.light {
+  background: $lighthouseLight;
+  border-top-right-radius: 20px;
+  border-top-left-radius: 20px;
+  box-shadow: rgba(255, 235, 59, 1) 0px 0 22px, rgba(252, 250, 185, 0.44) 0 0 3px 1px inset;
+}
+
+.lightRightTop {
+  position: relative;
+  height: 26px;
+  top: 0px;
+  width: 10px;
+  right: -24px;
+}
+
+.lightLeftMiddle {
+  position: relative;
+  height: 26px;
+  top: 30px;
+  width: 10px;
+  right: -7px;
+}
+
+.lightLeftBottom {
+  position: absolute;
+  height: 18px;
+  top: -15px;
+  width: 8px;
+  right: -22px;
+  border-radius: 0px;
+}
+
+.lightRightBottom {
+  position: absolute;
+  height: 18px;
+  top: -15px;
+  width: 8px;
+  right: -35px;
+  border-radius: 0px;
+}
+
+.glow {
+  position: absolute;
+  height: 22px;
+  width: 22px;
+  background: radial-gradient(center, ellipse cover, #fbfae1 0%,#fffb6c 100%);
+  top: 28px !important;
+  left: -8px !important;
+  border-radius: 100%;
+  box-shadow: rgba(255, 235, 59, 1) 0px 0 22px, rgba(252, 250, 185, 0.44) 0 0 3px 1px inset;
+  animation: glowing-ball $lightTiming infinite 0s forwards linear;
+}
+
+@keyframes glowing-ball {
+  0% { 
+    opacity: 0.3; 
+  }
+  50% { 
+    opacity: 1; 
+  }
+  100% { 
+    opacity: 0.3;
+  }
+}
+
+.topbar {
+  position: absolute;
+  height: 120px;
+  width: 2px;
+  background: $mainBlack;	
+  opacity: 0.8;
+}
+
+.topBars {
+  opacity: 0.8;
+}
+
+.topBar1 {
+  left: -14px;
+}
+
+.topBar2 {
+  left: -8px;
+}
+
+.topBar3 {
+  left: -1px;
+}
+
+.topBar4 {
+  left: 5.5px;
+}
+
+.topBar5 {
+  left: 12px;
+}
+
+.topBar6 {
+  left: 18px;
+}
+
+.topRailings {
+  position: absolute;
+  height: 8px;
+  width: 38px;
+  top: 45px;
+  left: -19px;
+  border: 2px solid #141b11;
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.railing {
+  position: absolute;
+  height: 10px;
+  width: 2px;
+  background: $mainBlack;
+  top: -1px;
+}
+
+.topRailing1 {
+  left: 6px;
+}
+
+.topRailing2 {
+  left: 12px;
+}
+
+.topRailing3 {
+  left: 19px;
+}
+
+.topRailing4 {
+  left: 25px;
+}
+
+.topRailing5 {
+  left: 32px;
+}
+
+.topRailing6 {
+  left: 35px;
+}
+
+// Bottom
+.bottom {
+  position: absolute;
+  height: 25vh;
+  width: 100%;
+  left: 0% !important;
+  top: 75% !important;
+}
+
+.topTier1 {
+  position: absolute;
+  width: 100%;
+  left: 0%;
+  height: 3vh;
+  top: 0vh;
+  background: radial-gradient(center, ellipse cover, #c6d1bf 0%,#235161 100%);
+  background-size: 100%;
+  background-attachment: fixed;
+  animation: top-tier-1 $oceanLayer infinite 0s forwards linear;
+}
+
+@keyframes top-tier-1 {
+  0% {
+    height: 3vh;
+  }
+  50% {
+    height: 5vh;
+  }
+  100% {
+    height: 3vh;
+  }
+}
+
+.topTier2 {
+  position: absolute;
+  top: 3vh;
+  width: 100%;
+  height: 3vh;
+  float: left;
+  background: radial-gradient(center, ellipse cover, #93bfa8 0%,#123845 100%);
+  background-size: 100%;
+  background-attachment: fixed;
+  animation: top-tier-2 $oceanLayer infinite 0s forwards linear;
+}
+
+@keyframes top-tier-2 {
+  0% {
+    height: 3vh;
+    top: 3vh;
+  }
+  50% {
+    height: 5vh;
+    top: 4vh;
+  }
+  100% {
+    top: 3vh;
+    height: 3vh;
+  }
+}
+
+.topTier3 {
+  position: absolute;
+  width: 100%;
+  height: 5vh;
+  top: 6vh;
+  background: radial-gradient(center, ellipse cover, #368981 0%,#07212e 100%);
+  background-size: 100%;
+  background-attachment: fixed;
+  animation: top-tier-3 $oceanLayer infinite 0s forwards linear;
+}
+
+@keyframes top-tier-3 {
+  0% {
+    height: 3vh;
+    top: 6vh;
+  }
+  50% {
+    height: 5vh;
+    top: 8vh;
+  }
+  100% {
+    top: 6vh;
+    height: 3vh;
+  }
+}
+
+.topTier4 {
+  position: absolute;
+  width: 100%;
+  height: 7vh;
+  top: 11vh;
+  background: radial-gradient(center, ellipse cover, #093d4a 0%,#01101b 100%);
+  background-size: 100%;
+  background-attachment: fixed;
+  animation: top-tier-4 $oceanLayer infinite 0s forwards linear;
+}
+
+@keyframes top-tier-4 {
+  0% {
+    height: 7vh;
+    top: 9vh;
+  }
+  50% {
+    height: 9vh;
+    top: 11vh;
+  }
+  100% {
+    top: 9vh;
+    height: 7vh;
+  }
+}
+
+.topTier5 {
+  position: absolute;
+  width: 100%;
+  height: 7vh;
+  top: 18vh;
+  background: radial-gradient(center, ellipse cover, #001624 0%,#00030a 100%);
+  background-size: 100%;
+  background-attachment: fixed;
+  animation: top-tier-5 $oceanLayer infinite 0s forwards linear;
+}
+
+@keyframes top-tier-5 {
+  0% {
+    height: 12vh;
+    top: 14vh;
+  }
+  50% {
+    height: 12vh;
+    top: 17vh;
+  }
+  100% {
+    top: 14vh;
+    height: 12vh;
+  }
+} 
