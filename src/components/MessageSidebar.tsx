@@ -57,13 +57,11 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     optimisticMessages,
     addOptimisticMessage,
     updateOptimisticMessage,
-    updateMessage,
   } = usePrivateMessageStore(
     useShallow(state => ({
       optimisticMessages: state.optimisticMessages,
       addOptimisticMessage: state.addOptimisticMessage,
       updateOptimisticMessage: state.updateOptimisticMessage,
-      updateMessage: state.updateMessage,
     }))
   );
 
@@ -93,7 +91,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     encryptMessage,
     addOptimisticMessage,
     updateOptimisticMessage,
-    updateMessage,
   });
 
   // Combinar mensajes paginados con optimistas
