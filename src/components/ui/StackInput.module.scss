@@ -1,5 +1,6 @@
 @use '@/app/styles/variables' as *;
 @use '@/app/styles/mixins' as *;
+@use 'sass:color';
 
 .stackInput {
     position: relative;
@@ -131,8 +132,11 @@
   
   .tag {
     @include crystallized-tag($color-info, 0.1, true);
-    font-size: 12px;
-    gap: 4px;
+    
+    & {
+      font-size: 12px;
+      gap: 4px;
+    }
   }
   
   .removeTagButton {
@@ -155,7 +159,7 @@
     }
   
     @include dark-mode {
-      color: lighten($color-info, 20%);
+      color: color.adjust($color-info, $lightness: 20%);
   
       &:hover {
         background: rgba(59, 130, 246, 0.3);

@@ -1,11 +1,12 @@
 @use '@/app/styles/variables' as *;
 @use '@/app/styles/mixins' as *;
+@use 'sass:color';
 
 // ==============================================================
-// 🔮 SELECTOR CONTAINER
+// 🔮 SIDEBAR CONTAINER
 // =================================================================
 .container {
-  @include sidebar-container(400px);
+  @include sidebar-container;
   
   &::before {
     content: "";
@@ -37,7 +38,10 @@
 .content {
   @include sidebar-content;
   position: relative;
-  z-index: 2;
+  
+  & {
+    z-index: 2;
+  }
 }
 
 // ==============================================================
@@ -99,7 +103,7 @@
 // 🔮 BUTTONS
 // =================================================================
 .submitButton {
-  @include button-primary($color-info, $white, darken($color-info, 10%));
+  @include button-primary($color-info, $white, color.adjust($color-info, $lightness: -10%));
   width: 100%;
 }
 

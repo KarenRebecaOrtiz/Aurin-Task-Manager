@@ -7,13 +7,6 @@ import Image from 'next/image';
 import { useTodos } from '@/hooks/useTodos';
 import styles from './ToDoDropdown.module.scss';
 
-interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
-  completedDate?: string;
-}
-
 interface ToDoDropdownProps {
   isVisible: boolean;
   isOpen: boolean;

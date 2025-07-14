@@ -67,6 +67,122 @@ const LottieErrorBoundary = ({
   return <>{children}</>;
 };
 
+// Safe Lottie Component with enhanced error handling - moved outside component
+const SafeLottieComponent = ({ 
+  stepIndex, 
+  data,
+  onLottieError,
+  onLottieLoad,
+  onLottieLoadStart,
+  lottieErrors,
+  loadingStates
+}: { 
+  stepIndex: number; 
+  data: {
+    title: string;
+    lottieUrl: string;
+    fallbackImage: string;
+    size: { width: number; height: number };
+    content: React.ReactNode;
+  };
+  onLottieError: (stepIndex: number, type: string) => void;
+  onLottieLoad: (stepIndex: number) => void;
+  onLottieLoadStart: (stepIndex: number) => void;
+  lottieErrors: Set<number>;
+  loadingStates: Set<number>;
+}) => {
+  const [localError, setLocalError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    // Set a timeout to fallback to image if Lottie takes too long to load
+    const timeout = setTimeout(() => {
+      if (!isLoaded && !localError) {
+        console.warn(`[SafeLottieComponent] Step ${stepIndex} Lottie timeout, falling back to image`);
+        setLocalError(true);
+        onLottieError(stepIndex, 'timeout');
+      }
+    }, 5000); // 5 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [stepIndex, isLoaded, localError, onLottieError]);
+
+  const handleError = useCallback(() => {
+    console.error(`[SafeLottieComponent] Step ${stepIndex} Lottie error`);
+    setLocalError(true);
+    onLottieError(stepIndex, 'render');
+  }, [stepIndex, onLottieError]);
+
+  const handleLoad = useCallback(() => {
+    console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie loaded`);
+    setIsLoaded(true);
+    onLottieLoad(stepIndex);
+  }, [stepIndex, onLottieLoad]);
+
+  const handleLoadStart = useCallback(() => {
+    console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie load started`);
+    onLottieLoadStart(stepIndex);
+  }, [stepIndex, onLottieLoadStart]);
+
+  if (localError || lottieErrors.has(stepIndex)) {
+    return (
+      <Image
+        src={data.fallbackImage}
+        alt={`Step ${stepIndex + 1} illustration`}
+        width={data.size.width}
+        height={data.size.height}
+        className={styles.stepImage}
+        priority
+      />
+    );
+  }
+
+  return (
+    <LottieErrorBoundary
+      fallback={
+        <Image
+          src={data.fallbackImage}
+          alt={`Step ${stepIndex + 1} illustration`}
+          width={data.size.width}
+          height={data.size.height}
+          className={styles.stepImage}
+          priority
+        />
+      }
+      onError={handleError}
+    >
+      <div style={{ position: 'relative' }}>
+        {loadingStates.has(stepIndex) && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1
+            }}
+          >
+            <div>Cargando...</div>
+          </div>
+        )}
+        <DotLottieReact
+          src={data.lottieUrl}
+          loop
+          autoplay
+          className={styles.stepImage}
+          style={{
+            ...data.size,
+            opacity: isLoaded ? 1 : 0.5
+          }}
+          onLoad={handleLoad}
+          onLoadStart={handleLoadStart}
+          onError={handleError}
+        />
+      </div>
+    </LottieErrorBoundary>
+  );
+};
+
 const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
   const { user } = useUser();
   const { isCompleted, currentStep, isLoading, error } = useOnboardingStatus();
@@ -352,109 +468,6 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
     }
   ], []);
 
-  // Safe Lottie Component with enhanced error handling
-  const SafeLottieComponent = ({ stepIndex, data }: { 
-    stepIndex: number; 
-    data: {
-      title: string;
-      lottieUrl: string;
-      fallbackImage: string;
-      size: { width: number; height: number };
-      content: React.ReactNode;
-    }
-  }) => {
-    const [localError, setLocalError] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
-
-    useEffect(() => {
-      // Set a timeout to fallback to image if Lottie takes too long to load
-      const timeout = setTimeout(() => {
-        if (!isLoaded && !localError) {
-          console.warn(`[SafeLottieComponent] Step ${stepIndex} Lottie timeout, falling back to image`);
-          setLocalError(true);
-          handleLottieError(stepIndex, 'timeout');
-        }
-      }, 5000); // 5 second timeout
-
-      return () => clearTimeout(timeout);
-    }, [stepIndex, isLoaded, localError]);
-
-    const handleError = useCallback(() => {
-      console.error(`[SafeLottieComponent] Step ${stepIndex} Lottie error`);
-      setLocalError(true);
-      handleLottieError(stepIndex, 'render');
-    }, [stepIndex]);
-
-    const handleLoad = useCallback(() => {
-      console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie loaded`);
-      setIsLoaded(true);
-      handleLottieLoad(stepIndex);
-    }, [stepIndex]);
-
-    const handleLoadStart = useCallback(() => {
-      console.log(`[SafeLottieComponent] Step ${stepIndex} Lottie load started`);
-      handleLottieLoadStart(stepIndex);
-    }, [stepIndex]);
-
-    if (localError || lottieErrors.has(stepIndex)) {
-      return (
-        <Image
-          src={data.fallbackImage}
-          alt={`Step ${stepIndex + 1} illustration`}
-          width={data.size.width}
-          height={data.size.height}
-          className={styles.stepImage}
-          priority
-        />
-      );
-    }
-
-    return (
-      <LottieErrorBoundary
-        fallback={
-          <Image
-            src={data.fallbackImage}
-            alt={`Step ${stepIndex + 1} illustration`}
-            width={data.size.width}
-            height={data.size.height}
-            className={styles.stepImage}
-            priority
-          />
-        }
-        onError={handleError}
-      >
-        <div style={{ position: 'relative' }}>
-          {loadingStates.has(stepIndex) && (
-            <div 
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 1
-              }}
-            >
-              <div>Cargando...</div>
-            </div>
-          )}
-          <DotLottieReact
-            src={data.lottieUrl}
-            loop
-            autoplay
-            className={styles.stepImage}
-            style={{
-              ...data.size,
-              opacity: isLoaded ? 1 : 0.5
-            }}
-            onLoad={handleLoad}
-            onLoadStart={handleLoadStart}
-            onError={handleError}
-          />
-        </div>
-      </LottieErrorBoundary>
-    );
-  };
-
   // Render step content with useCallback
   const renderStepContent = useCallback((stepIndex: number) => {
     const data = stepData[stepIndex];
@@ -464,7 +477,15 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         <div ref={cardRef} className={styles.card}>
           <div className={styles.creaYAsignaTareas}>{data.title}</div>
           <div className={styles.lottieWrapper}>
-            <SafeLottieComponent stepIndex={stepIndex} data={data} />
+            <SafeLottieComponent 
+              stepIndex={stepIndex} 
+              data={data} 
+              onLottieError={handleLottieError}
+              onLottieLoad={handleLottieLoad}
+              onLottieLoadStart={handleLottieLoadStart}
+              lottieErrors={lottieErrors}
+              loadingStates={loadingStates}
+            />
           </div>
           <div className={styles.puedesCrearTareas}>
             {data.content}
@@ -472,7 +493,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
         </div>
       </div>
     );
-  }, [stepData, SafeLottieComponent]);
+  }, [stepData, handleLottieError, handleLottieLoad, handleLottieLoadStart, lottieErrors, loadingStates]);
 
   // Show loading state
   if (isLoading) {

@@ -14,7 +14,7 @@ import "react-day-picker/style.css";
 import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
 import { z } from "zod";
-import { useForm, Controller, Control, FieldValues, UseFormReturn } from "react-hook-form";
+import { useForm, Controller, Control, FieldValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import { toast } from "@/components/ui/use-toast";
@@ -25,7 +25,7 @@ import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
-import { useFilteredCollaborators, useFilteredLeaders, useFilteredClients, useAnimationOptimizations, useDropdownHandlers } from '@/hooks/useCreateTaskOptimizations';
+import { useFilteredCollaborators, useFilteredLeaders, useFilteredClients, useAnimationOptimizations } from '@/hooks/useCreateTaskOptimizations';
 import { useCreateTaskDropdowns, useCreateTaskSearch, useCreateTaskAlerts, useCreateTaskGeneral } from '@/stores/createTaskStore';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -49,7 +49,7 @@ const baseFormSchema = z.object({
   }),
   teamInfo: z.object({
     LeadedBy: z.array(z.string()).min(1, { message: "Selecciona al menos un líder*" }),
-    AssignedTo: z.array(z.string()).optional(),
+    AssignedTo: z.array(z.string()),
   }),
 });
 
@@ -137,11 +137,7 @@ interface DropdownStates {
   endDate: boolean;
 }
 
-interface SearchStates {
-  collaborator: string;
-  leader: string;
-  client: string;
-}
+
 
 // Componentes memoizados para evitar re-renders innecesarios
 const MemoizedTextInput = memo(({ 
@@ -225,7 +221,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const [clients, setClients] = useState<Client[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   // Estados migrados al store optimizado
-  const { dropdownStates, toggleDropdown, selectDropdownItem } = useCreateTaskDropdowns();
+  const { dropdownStates, toggleDropdown } = useCreateTaskDropdowns();
   const { searchStates, setSearchState } = useCreateTaskSearch();
   const { alertStates, setAlertState } = useCreateTaskAlerts();
   const { isMounted: storeIsMounted, includeMembers: storeIncludeMembers, setMounted: setStoreMounted, setIncludeMembers: setStoreIncludeMembers } = useCreateTaskGeneral();
@@ -702,22 +698,117 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     toggleDropdown(dropdown);
   }, [toggleDropdown]);
 
-  const memoizedSelectDropdownItem = useCallback((dropdown: keyof DropdownStates, searchField?: keyof SearchStates) => {
-    selectDropdownItem(dropdown, searchField);
-  }, [selectDropdownItem]);
 
-  // Funciones de manejo de dropdowns memoizadas
-  const {
-    handleClientSelectDropdown,
-    handleProjectSelect,
-    handleStatusSelect,
-    handlePrioritySelect,
-    handleLeaderSelect,
-    handleCollaboratorSelect,
-    handleClientRemove,
-    handleLeaderRemove,
-    handleCollaboratorRemove,
-  } = useDropdownHandlers(form as any, memoizedSelectDropdownItem, animateClick);
+
+  // Funciones de manejo de dropdowns memoizadas - definidas directamente como en EditTask
+  const handleClientSelectDropdown = useCallback(
+    (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue("clientInfo.clientId", clientId);
+      setSearchState("client", "");
+      memoizedToggleDropdown("client");
+    },
+    [form, animateClick, setSearchState, memoizedToggleDropdown],
+  );
+
+  const handleClientRemove = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue("clientInfo.clientId", "");
+      form.setValue("clientInfo.project", "");
+    },
+    [form, animateClick],
+  );
+
+  const handleProjectSelect = useCallback(
+    (project: string, e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue("clientInfo.project", project);
+      memoizedToggleDropdown("project");
+    },
+    [form, animateClick, memoizedToggleDropdown],
+  );
+
+  const handleStatusSelect = useCallback(
+    (status: string, e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue("basicInfo.status", status as FormValues["basicInfo"]["status"]);
+      memoizedToggleDropdown("status");
+    },
+    [form, animateClick, memoizedToggleDropdown],
+  );
+
+  const handlePrioritySelect = useCallback(
+    (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue("basicInfo.priority", priority as FormValues["basicInfo"]["priority"]);
+      memoizedToggleDropdown("priority");
+    },
+    [form, animateClick, memoizedToggleDropdown],
+  );
+
+  const handleLeaderSelect = useCallback(
+    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      const currentLeaders = form.getValues("teamInfo.LeadedBy");
+      const isSelected = currentLeaders.includes(userId);
+      const newLeaders = isSelected
+        ? currentLeaders.filter((id) => id !== userId)
+        : [...currentLeaders, userId];
+      form.setValue("teamInfo.LeadedBy", newLeaders);
+      setSearchState("leader", "");
+      memoizedToggleDropdown("leader");
+    },
+    [form, animateClick, setSearchState, memoizedToggleDropdown],
+  );
+
+  const handleCollaboratorSelect = useCallback(
+    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      if (!form.getValues("teamInfo.LeadedBy").includes(userId)) {
+        const currentAssignedTo = form.getValues("teamInfo.AssignedTo");
+        const isSelected = currentAssignedTo.includes(userId);
+        const newAssignedTo = isSelected
+          ? currentAssignedTo.filter((id) => id !== userId)
+          : [...currentAssignedTo, userId];
+        form.setValue("teamInfo.AssignedTo", newAssignedTo);
+        setSearchState("collaborator", "");
+        memoizedToggleDropdown("collaborator");
+      }
+    },
+    [form, animateClick, setSearchState, memoizedToggleDropdown],
+  );
+
+  const handleLeaderRemove = useCallback(
+    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue(
+        "teamInfo.LeadedBy",
+        form.getValues("teamInfo.LeadedBy").filter((id) => id !== userId),
+      );
+    },
+    [form, animateClick],
+  );
+
+  const handleCollaboratorRemove = useCallback(
+    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      animateClick(e.currentTarget);
+      form.setValue(
+        "teamInfo.AssignedTo",
+        form.getValues("teamInfo.AssignedTo").filter((id) => id !== userId),
+      );
+    },
+    [form, animateClick],
+  );
 
   // MEMOIZAR LOS VALORES DEL FORMULARIO que se usan constantemente
   const watchedFormValues = useMemo(() => {

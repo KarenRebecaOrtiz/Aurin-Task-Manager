@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -72,7 +72,7 @@ export const useOfficeStatusSync = () => {
   };
 
   // Función principal para verificar estado de oficina
-  const checkOfficeStatus = async () => {
+  const checkOfficeStatus = useCallback(async () => {
     try {
       if (!user?.id) return;
 
@@ -111,7 +111,7 @@ export const useOfficeStatusSync = () => {
 
       // Si está fuera de oficina/horario, actualizar status principal
       if (shouldUpdateStatus) {
-        await updateStatus('Fuera', false);
+        await updateStatus('Fuera'); // <-- Solo un argumento
       }
 
       console.log(`🏢 Estado de oficina: ${newOfficeStatus} (${distance.toFixed(2)}km de distancia)`);
@@ -120,7 +120,7 @@ export const useOfficeStatusSync = () => {
       console.error('Error verificando estado de oficina:', error);
       setOfficeStatus('Error al verificar ubicación');
     }
-  };
+  }, [user?.id, updateStatus]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -132,7 +132,7 @@ export const useOfficeStatusSync = () => {
     const interval = setInterval(checkOfficeStatus, 15 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [user?.id, checkOfficeStatus]);
 
   return { 
     officeStatus, 

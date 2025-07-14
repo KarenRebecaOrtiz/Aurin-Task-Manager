@@ -1,5 +1,6 @@
 @use '@/app/styles/variables' as *;
 @use '@/app/styles/mixins' as *;
+@use 'sass:color';
 
 // ==============================================================
 // 🔮 TOAST - OPTIMIZED WITH NEW SYSTEM
@@ -141,7 +142,7 @@
   }
 
   &.info {
-    background: lighten($color-info, 30%);
+    background: color.adjust($color-info, $lightness: 30%);
     border: 1px solid $color-info;
   }
 }

@@ -64,7 +64,7 @@
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  justify-content: start;
+  justify-content: flex-start;
   gap: 10px;
   user-select: none;
   line-height: $leading-normal;
@@ -134,7 +134,7 @@
   display: flex;
   align-items: center;
   max-width: 250px!important;
-  justify-content: start;
+  justify-content: flex-start;
   
   @include dark-mode {
     color: $color-text-dark-primary;
@@ -287,7 +287,7 @@
       /* Same layout as cells */
       display: flex;
       align-items: center;
-      justify-content: start;
+      justify-content: flex-start;
       max-width: 250px!important;
       line-height: $leading-normal;
       
@@ -298,11 +298,11 @@
       }
       
       &:nth-child(2) { // Cuentas
-        justify-content: start;
+        justify-content: flex-start;
       }
       
       &:nth-child(3) { // Proyectos Asignados
-        justify-content: start;
+        justify-content: flex-start;
       }
       
       &:nth-child(4) { // Acciones
@@ -317,7 +317,7 @@
       /* Same layout as header */
       display: flex;
       align-items: center;
-      justify-content: start;
+      justify-content: flex-start;
       max-width: 250px!important;
       line-height: $leading-normal;
       
@@ -328,11 +328,11 @@
       }
       
       &:nth-child(2) { // Cuentas
-        justify-content: start;
+        justify-content: flex-start;
       }
       
       &:nth-child(3) { // Proyectos Asignados
-        justify-content: start;
+        justify-content: flex-start;
       }
       
       &:nth-child(4) { // Acciones

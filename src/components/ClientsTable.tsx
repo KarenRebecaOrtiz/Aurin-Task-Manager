@@ -273,10 +273,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       [sortDirection, setSortKey, setSortDirection],
     );
 
-    const handleActionClick = useCallback((clientId: string) => {
-      setActionMenuOpenId(actionMenuOpenId === clientId ? null : clientId);
-    }, [actionMenuOpenId, setActionMenuOpenId]);
-
     const animateClick = useCallback((element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
@@ -355,7 +351,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                   <ActionMenu
                     task={{
                       id: client.id,
-                      clientId: '',
+                      clientId: client.id,
                       project: '',
                       name: client.name,
                       description: '',
@@ -369,8 +365,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
                       CreatedBy: client.createdBy,
                     }}
                     userId={userId}
-                    isOpen={actionMenuOpenId === client.id}
-                    onOpen={() => handleActionClick(client.id)}
                     onEdit={() => {
                       onEditOpen(client);
                       setActionMenuOpenId(null);
@@ -392,7 +386,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           }
           return col;
         }),
-      [baseColumns, actionMenuOpenId, handleActionClick, onEditOpen, onDeleteOpen, userId, isAdmin, isLoading, animateClick, setActionMenuOpenId],
+      [baseColumns, onEditOpen, onDeleteOpen, userId, isAdmin, isLoading, animateClick, setActionMenuOpenId],
     );
 
     // Handle loading state - mostrar loader mientras cargan los datos

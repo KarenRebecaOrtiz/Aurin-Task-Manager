@@ -23,7 +23,6 @@ interface UsePrivateMessageActionsProps {
   encryptMessage: (text: string) => Promise<{ encryptedData: string; nonce: string; tag: string; salt: string }>;
   addOptimisticMessage: (message: Message) => void;
   updateOptimisticMessage: (clientId: string, updates: Partial<Message>) => void;
-  updateMessage: (messageId: string, updates: Partial<Message>) => void;
 }
 
 export const usePrivateMessageActions = ({
@@ -34,7 +33,6 @@ export const usePrivateMessageActions = ({
   encryptMessage,
   addOptimisticMessage,
   updateOptimisticMessage,
-  updateMessage,
 }: UsePrivateMessageActionsProps) => {
   const [isSending, setIsSending] = useState(false);
 

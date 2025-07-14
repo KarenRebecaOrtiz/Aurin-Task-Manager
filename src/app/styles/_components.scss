@@ -1228,7 +1228,10 @@
 
 .digitalClockContainer {
   @include digital-clock-container;
-  @include digital-clock-transition;
+  
+  & {
+    @include digital-clock-transition;
+  }
 
   &.visible {
     @include digital-clock-visible;
