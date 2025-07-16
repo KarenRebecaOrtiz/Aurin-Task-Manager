@@ -9,7 +9,7 @@ import styles from './MembersTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import UserAvatar from '@/components/ui/UserAvatar';
-import { useMessageNotifications } from '@/hooks/useMessageNotifications';
+
 import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
@@ -45,15 +45,16 @@ interface MembersTableProps {
   onMessageSidebarOpen: (user: User) => void;
   externalUsers?: User[];
   externalTasks?: Task[];
+  getUnreadCountForUser?: (userId: string) => number;
+  markConversationAsRead?: (conversationId: string) => Promise<void>;
 }
 
 // (Eliminar definiciones de getCacheKey, saveUsersCache, loadUsersCache, cleanupMembersTableListeners)
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ onMessageSidebarOpen, externalUsers, externalTasks }) => {
+  ({ onMessageSidebarOpen, externalUsers, externalTasks, getUnreadCountForUser, markConversationAsRead }) => {
     const { user } = useUser();
     const { isLoading } = useAuth();
-    const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
     
     // Optimizar selectores de dataStore para evitar re-renders innecesarios
     const users = useDataStore(useShallow(state => state.users));
@@ -78,6 +79,18 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const effectiveTasks = externalTasks || tasks;
     
     // Debug logs para verificar el estado de los usuarios
+    console.log('[MembersTable] render', {
+      props: {
+        externalUsers,
+        externalTasks,
+      },
+      usersLength: users.length,
+      tasksLength: tasks.length,
+      filteredUsersLength: filteredUsers.length,
+      sortKey,
+      sortDirection,
+      searchQuery,
+    });
     console.log('[MembersTable] Debug - effectiveUsers:', effectiveUsers?.length, 'externalUsers:', externalUsers?.length, 'users:', users.length);
     console.log('[MembersTable] Debug - effectiveTasks:', effectiveTasks?.length, 'externalTasks:', externalTasks?.length, 'tasks:', tasks.length);
     
@@ -88,30 +101,42 @@ const MembersTable: React.FC<MembersTableProps> = memo(
 
     // Memoizar el callback de row click para evitar re-renders
     const handleRowClick = useCallback(async (u: User, columnKey: string) => {
+      console.log('[MembersTable] handleRowClick', {
+        user: u,
+        columnKey,
+        currentUserId: user?.id,
+        getUnreadCount: getUnreadCountForUser ? getUnreadCountForUser(u.id) : 0,
+        props: {
+          externalUsers,
+          externalTasks,
+        }
+      });
       if (['imageUrl', 'fullName', 'role', 'activeProjects', 'status', 'messageNotifications'].includes(columnKey) &&
           u.id !== user?.id) {
-        // Marcar la conversación como leída antes de abrir el sidebar
-        const unreadCount = getUnreadCountForUser(u.id);
-        if (unreadCount > 0) {
-          // Buscar la conversación y marcarla como leída
-          const conversationsQuery = query(
-            collection(db, 'conversations'),
-            where('participants', 'array-contains', user?.id),
-            where('participants', 'array-contains', u.id)
-          );
-          try {
-            const conversationsSnapshot = await getDocs(conversationsQuery);
-            if (!conversationsSnapshot.empty) {
-              const conversationId = conversationsSnapshot.docs[0].id;
-              await markConversationAsRead(conversationId);
+        // Marcar la conversación como leída antes de abrir el sidebar (solo si las funciones están disponibles)
+        if (getUnreadCountForUser && markConversationAsRead) {
+          const unreadCount = getUnreadCountForUser(u.id);
+          if (unreadCount > 0) {
+            // Buscar la conversación y marcarla como leída
+            const conversationsQuery = query(
+              collection(db, 'conversations'),
+              where('participants', 'array-contains', user?.id),
+              where('participants', 'array-contains', u.id)
+            );
+            try {
+              const conversationsSnapshot = await getDocs(conversationsQuery);
+              if (!conversationsSnapshot.empty) {
+                const conversationId = conversationsSnapshot.docs[0].id;
+                await markConversationAsRead(conversationId);
+              }
+            } catch (error) {
+              console.error('[MembersTable] Error marking conversation as read:', error);
             }
-          } catch (error) {
-            console.error('[MembersTable] Error marking conversation as read:', error);
           }
         }
         handleMessageSidebarOpen(u);
       }
-    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen]);
+    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen, externalUsers, externalTasks]);
     
     // Los datos vienen de dataStore - no necesitamos hacer fetch aquí
     // Solo sincronizar el estado de loading

@@ -33,7 +33,7 @@ import { db } from '@/lib/firebase';
 import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
 import styles from '@/components/TasksPage.module.scss';
 import clientStyles from '@/components/ClientsTable.module.scss';
-import { v4 as uuidv4 } from 'uuid';
+
 import Dock from '@/components/Dock';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
@@ -44,6 +44,8 @@ import FailAlert from '@/components/FailAlert';
 import SuccessAlert from '@/components/SuccessAlert';
 import ClientOverlay from '@/components/ClientOverlay';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { useMessageNotifications } from '@/hooks/useMessageNotifications';
 
 // Define types
 type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
@@ -154,6 +156,11 @@ function TasksPageContent() {
   const memoizedUsers = useMemo(() => users, [users]);
   const selectedContainer = container;
   const memoizedOpenSidebars = useMemo(() => sidebars, [sidebars]);
+
+  // Log de cambios en sidebars para rastrear triggers de re-render (solo para ChatSidebar ahora)
+  useEffect(() => {
+    console.log('[TasksPageContent] sidebars changed (ChatSidebar only)', sidebars);
+  }, [sidebars]);
 
   // Efecto para manejar el loader y el contenido
   useEffect(() => {
@@ -282,39 +289,45 @@ function TasksPageContent() {
     }
   }, [hasUnsavedChanges]);
 
+  // Usar el store para evitar re-renders en componentes
+  const openMessageSidebar = useSidebarStateStore(state => state.openMessageSidebar);
+  const closeMessageSidebar = useSidebarStateStore(state => state.closeMessageSidebar);
+  const openChatSidebar = useSidebarStateStore(state => state.openChatSidebar);
+  const closeChatSidebar = useSidebarStateStore(state => state.closeChatSidebar);
+  const isOpen = useSidebarStateStore(state => state.isOpen);
+  const sidebarType = useSidebarStateStore(state => state.sidebarType);
+  const messageSidebar = useSidebarStateStore(state => state.messageSidebar);
+  const chatSidebar = useSidebarStateStore(state => state.chatSidebar);
+
   const handleChatSidebarOpen = useCallback((task: Task) => {
-    const existingSidebarIndex = sidebars.findIndex(
-      (s) => s.type === 'chat' && (s.data as Task)?.id === task.id
-    );
-
-    if (existingSidebarIndex !== -1) {
-      // Move existing sidebar to end
-      const newSidebars = [...sidebars];
-      const [sidebar] = newSidebars.splice(existingSidebarIndex, 1);
-      newSidebars.push(sidebar);
-      setSidebars(newSidebars);
-      } else {
-      // Add new sidebar
-      setSidebars([...sidebars, { id: uuidv4(), type: 'chat', data: task }]);
-      }
-  }, [sidebars]);
-
+    // Usar el store en lugar del estado local para evitar re-renders
+    const clientName = clients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
+    console.log('[TasksPageContent] Opening ChatSidebar via store', { task: task.id, clientName });
+    openChatSidebar(task, clientName);
+  }, [openChatSidebar, clients]);
+  
+  // Mover useMessageNotifications aquí para evitar re-renders en MembersTable
+  const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
+  
+  // Log para rastrear re-renders de TasksPageContent
+  console.log('[TasksPageContent] render - sidebar state:', { 
+    isOpen, 
+    sidebarType, 
+    hasMessageReceiver: !!messageSidebar.receiver,
+    hasChatTask: !!chatSidebar.task 
+  });
+  
   const handleMessageSidebarOpen = useCallback((user: User) => {
-    const existingSidebarIndex = sidebars.findIndex(
-      (s) => s.type === 'message' && (s.data as User)?.id === user.id
-    );
-
-    if (existingSidebarIndex !== -1) {
-      // Move existing sidebar to end
-      const newSidebars = [...sidebars];
-      const [sidebar] = newSidebars.splice(existingSidebarIndex, 1);
-      newSidebars.push(sidebar);
-      setSidebars(newSidebars);
-          } else {
-      // Add new sidebar
-      setSidebars([...sidebars, { id: uuidv4(), type: 'message', data: user }]);
-    }
-  }, [sidebars]);
+    // Usar el store en lugar del estado local para evitar re-renders
+    const conversationId = `conversation_${user.id}_${user?.id}`;
+    console.log('[TasksPageContent] Opening MessageSidebar via store', { user, conversationId });
+    openMessageSidebar(user?.id || '', {
+      id: user.id,
+      imageUrl: user.imageUrl,
+      fullName: user.fullName,
+      role: user.role,
+    }, conversationId);
+  }, [openMessageSidebar, user?.id]);
 
   const handleOpenProfile = useCallback(() => {
     // Profile functionality removed
@@ -510,6 +523,8 @@ function TasksPageContent() {
               onMessageSidebarOpen={handleMessageSidebarOpen}
               externalUsers={users}
               externalTasks={tasks}
+              getUnreadCountForUser={getUnreadCountForUser}
+              markConversationAsRead={markConversationAsRead}
             />
           )}
 
@@ -640,33 +655,29 @@ function TasksPageContent() {
         />
       )}
       <AISidebar isOpen={false} onClose={() => {}} />
-      {memoizedOpenSidebars.map((sidebar) => {
-        if (sidebar.type === 'message' && user?.id && sidebar.data) {
-          return (
-            <MessageSidebar
-              key={sidebar.id}
-              isOpen={true}
-              onClose={() => handleCloseSidebar(sidebar.id)}
-              senderId={user.id}
-              receiver={sidebar.data as User}
-              conversationId={[user.id, (sidebar.data as User).id].sort().join('_')}
-            />
-          );
-  }
-        if (sidebar.type === 'chat' && sidebar.data && (sidebar.data as Task).id) {
-          return (
-            <ChatSidebar
-              key={sidebar.id}
-              isOpen={true}
-              onClose={() => handleCloseSidebar(sidebar.id)}
-              task={sidebar.data as Task}
-              clientName={clients.find((c) => c.id === (sidebar.data as Task).clientId)?.name || 'Sin cuenta'}
-              users={memoizedUsers}
-            />
-          );
-        }
-        return null;
-      })}
+      {/* MessageSidebar usando el store para evitar re-renders */}
+      {isOpen && sidebarType === 'message' && messageSidebar.receiver && user?.id && (
+        <MessageSidebar
+          key="message-sidebar"
+          isOpen={true}
+          onClose={closeMessageSidebar}
+          senderId={user.id}
+          receiver={messageSidebar.receiver}
+          conversationId={messageSidebar.conversationId || ''}
+        />
+      )}
+      
+      {/* ChatSidebar usando el store para evitar re-renders */}
+      {isOpen && sidebarType === 'chat' && chatSidebar.task && (
+        <ChatSidebar
+          key="chat-sidebar"
+          isOpen={true}
+          onClose={closeChatSidebar}
+          task={chatSidebar.task}
+          clientName={chatSidebar.clientName || 'Sin cuenta'}
+          users={memoizedUsers}
+        />
+      )}
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
       <Dock />
@@ -844,6 +855,8 @@ function TasksPageContent() {
               onMessageSidebarOpen={handleMessageSidebarOpen}
               externalUsers={users}
               externalTasks={tasks}
+              getUnreadCountForUser={getUnreadCountForUser}
+              markConversationAsRead={markConversationAsRead}
             />
           )}
 

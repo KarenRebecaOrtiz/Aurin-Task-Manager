@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useSidebarStore } from '@/stores/sidebarStore';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 
 interface UseSidebarManagerProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const useSidebarManager = ({
   onClose,
 }: UseSidebarManagerProps) => {
   const { openChatSidebar, openMessageSidebar, closeSidebar, getOpenSidebar } = useSidebarStore();
+  const { openSidebar: openStateSidebar, closeSidebar: closeStateSidebar, getSidebarState } = useSidebarStateStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -25,6 +27,7 @@ export const useSidebarManager = ({
         // Cerrar el sidebar anterior antes de abrir este
         console.log(`[SidebarManager] Closing ${openSidebar.type} sidebar to open ${sidebarType} sidebar`);
         closeSidebar();
+        closeStateSidebar();
         // Pequeño delay para asegurar que el sidebar anterior se cierre
         setTimeout(() => {
           if (sidebarType === 'chat') {
@@ -32,17 +35,20 @@ export const useSidebarManager = ({
           } else {
             openMessageSidebar(sidebarId);
           }
+          openStateSidebar(sidebarType, sidebarId);
         }, 100);
       } else if (openSidebar.type === sidebarType && openSidebar.id !== sidebarId) {
         // Si es el mismo tipo pero diferente ID, cerrar el anterior y abrir el nuevo
         console.log(`[SidebarManager] Switching ${sidebarType} sidebar from ${openSidebar.id} to ${sidebarId}`);
         closeSidebar();
+        closeStateSidebar();
         setTimeout(() => {
           if (sidebarType === 'chat') {
             openChatSidebar(sidebarId);
           } else {
             openMessageSidebar(sidebarId);
           }
+          openStateSidebar(sidebarType, sidebarId);
         }, 100);
       } else if (!openSidebar.type) {
         // No hay sidebar abierto, abrir este
@@ -52,6 +58,7 @@ export const useSidebarManager = ({
         } else {
           openMessageSidebar(sidebarId);
         }
+        openStateSidebar(sidebarType, sidebarId);
       }
     } else {
       // Si se está cerrando, verificar si este es el sidebar actual
@@ -59,9 +66,21 @@ export const useSidebarManager = ({
       if (openSidebar.type === sidebarType && openSidebar.id === sidebarId) {
         console.log(`[SidebarManager] Closing ${sidebarType} sidebar for ${sidebarId}`);
         closeSidebar();
+        closeStateSidebar();
       }
     }
-  }, [isOpen, sidebarType, sidebarId, openChatSidebar, openMessageSidebar, closeSidebar, getOpenSidebar]);
+  }, [
+    isOpen,
+    sidebarType,
+    sidebarId,
+    openChatSidebar,
+    openMessageSidebar,
+    closeSidebar,
+    getOpenSidebar,
+    openStateSidebar,
+    closeStateSidebar,
+    getSidebarState,
+  ]);
 
   // Función para cerrar el sidebar actual
   const handleClose = () => {

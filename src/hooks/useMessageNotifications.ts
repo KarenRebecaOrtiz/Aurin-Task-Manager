@@ -112,9 +112,35 @@ export const useMessageNotifications = () => {
         return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
       });
 
-      setMessageNotifications(sortedNotifications);
+      // Solo actualizar si realmente cambió el estado
+      setMessageNotifications(prev => {
+        const prevLength = prev.length;
+        const newLength = sortedNotifications.length;
+        
+        // Comparar arrays para evitar actualizaciones innecesarias
+        if (prevLength !== newLength) {
+          console.log('[useMessageNotifications] Notifications count changed:', prevLength, '->', newLength);
+          return sortedNotifications;
+        }
+        
+        // Comparar contenido si la longitud es la misma
+        const hasChanged = prev.some((prevNotif, index) => {
+          const newNotif = sortedNotifications[index];
+          return !newNotif || 
+                 prevNotif.conversationId !== newNotif.conversationId ||
+                 prevNotif.unreadCount !== newNotif.unreadCount;
+        });
+        
+        if (hasChanged) {
+          console.log('[useMessageNotifications] Notifications content changed');
+          return sortedNotifications;
+        }
+        
+        console.log('[useMessageNotifications] No changes detected, skipping update');
+        return prev; // No actualizar si no hay cambios
+      });
+      
       setIsLoading(false);
-      console.log('[useMessageNotifications] Fetched message notifications:', sortedNotifications.length);
     }, (error) => {
       console.error('[useMessageNotifications] Error fetching conversations:', error);
       setMessageNotifications([]);
@@ -155,11 +181,4 @@ export const useMessageNotifications = () => {
   }), [messageNotifications, getUnreadCountForUser, markConversationAsRead, isLoading]);
 
   return memoizedReturn;
-
-  return {
-    messageNotifications,
-    getUnreadCountForUser,
-    markConversationAsRead,
-    isLoading,
-  };
 }; 
