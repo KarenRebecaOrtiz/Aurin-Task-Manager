@@ -55,52 +55,23 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const { isLoading } = useAuth();
     const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
     
-    // Usar dataStore para los datos y membersTableStore para UI
-    const {
-      users,
-      tasks,
-      isLoadingUsers: dataStoreLoadingUsers,
-      isLoadingTasks: dataStoreLoadingTasks,
-    } = useDataStore(
-      useShallow((state) => ({
-        users: state.users,
-        tasks: state.tasks,
-        isLoadingUsers: state.isLoadingUsers,
-        isLoadingTasks: state.isLoadingTasks,
-      }))
-    );
+    // Optimizar selectores de dataStore para evitar re-renders innecesarios
+    const users = useDataStore(useShallow(state => state.users));
+    const tasks = useDataStore(useShallow(state => state.tasks));
+    const isLoadingUsers = useDataStore(useShallow(state => state.isLoadingUsers));
+    const isLoadingTasks = useDataStore(useShallow(state => state.isLoadingTasks));
 
-    // UI state desde membersTableStore
-    const {
-      filteredUsers,
-      sortKey,
-      sortDirection,
-      searchQuery,
-      isLoadingUsers,
-      isLoadingTasks,
-      setFilteredUsers,
-      setSortKey,
-      setSortDirection,
-      setSearchQuery,
-      setIsLoadingUsers,
-      setIsLoadingTasks,
-    } = useStore(
-      membersTableStore,
-      useShallow((state) => ({
-        filteredUsers: state.filteredUsers,
-        sortKey: state.sortKey,
-        sortDirection: state.sortDirection,
-        searchQuery: state.searchQuery,
-        isLoadingUsers: state.isLoadingUsers,
-        isLoadingTasks: state.isLoadingTasks,
-        setFilteredUsers: state.setFilteredUsers,
-        setSortKey: state.setSortKey,
-        setSortDirection: state.setSortDirection,
-        setSearchQuery: state.setSearchQuery,
-        setIsLoadingUsers: state.setIsLoadingUsers,
-        setIsLoadingTasks: state.setIsLoadingTasks,
-      }))
-    );
+    // UI state desde membersTableStore - optimizado para evitar re-renders
+    const filteredUsers = useStore(membersTableStore, useShallow(state => state.filteredUsers));
+    const sortKey = useStore(membersTableStore, useShallow(state => state.sortKey));
+    const sortDirection = useStore(membersTableStore, useShallow(state => state.sortDirection));
+    const searchQuery = useStore(membersTableStore, useShallow(state => state.searchQuery));
+    const setFilteredUsers = useStore(membersTableStore, useShallow(state => state.setFilteredUsers));
+    const setSortKey = useStore(membersTableStore, useShallow(state => state.setSortKey));
+    const setSortDirection = useStore(membersTableStore, useShallow(state => state.setSortDirection));
+    const setSearchQuery = useStore(membersTableStore, useShallow(state => state.setSearchQuery));
+    const setIsLoadingUsers = useStore(membersTableStore, useShallow(state => state.setIsLoadingUsers));
+    const setIsLoadingTasks = useStore(membersTableStore, useShallow(state => state.setIsLoadingTasks));
     
     // Use external data if provided, otherwise use internal state
     const effectiveUsers = externalUsers || users;
@@ -114,129 +85,177 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const handleMessageSidebarOpen = useCallback((user: User) => {
       onMessageSidebarOpen(user);
     }, [onMessageSidebarOpen]);
+
+    // Memoizar el callback de row click para evitar re-renders
+    const handleRowClick = useCallback(async (u: User, columnKey: string) => {
+      if (['imageUrl', 'fullName', 'role', 'activeProjects', 'status', 'messageNotifications'].includes(columnKey) &&
+          u.id !== user?.id) {
+        // Marcar la conversación como leída antes de abrir el sidebar
+        const unreadCount = getUnreadCountForUser(u.id);
+        if (unreadCount > 0) {
+          // Buscar la conversación y marcarla como leída
+          const conversationsQuery = query(
+            collection(db, 'conversations'),
+            where('participants', 'array-contains', user?.id),
+            where('participants', 'array-contains', u.id)
+          );
+          try {
+            const conversationsSnapshot = await getDocs(conversationsQuery);
+            if (!conversationsSnapshot.empty) {
+              const conversationId = conversationsSnapshot.docs[0].id;
+              await markConversationAsRead(conversationId);
+            }
+          } catch (error) {
+            console.error('[MembersTable] Error marking conversation as read:', error);
+          }
+        }
+        handleMessageSidebarOpen(u);
+      }
+    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen]);
     
     // Los datos vienen de dataStore - no necesitamos hacer fetch aquí
     // Solo sincronizar el estado de loading
     useEffect(() => {
-      setIsLoadingUsers(dataStoreLoadingUsers);
-    }, [dataStoreLoadingUsers, setIsLoadingUsers]);
+      setIsLoadingUsers(isLoadingUsers);
+    }, [isLoadingUsers, setIsLoadingUsers]);
 
     useEffect(() => {
-      setIsLoadingTasks(dataStoreLoadingTasks);
-    }, [dataStoreLoadingTasks, setIsLoadingTasks]);
+      setIsLoadingTasks(isLoadingTasks);
+    }, [isLoadingTasks, setIsLoadingTasks]);
 
-    // Calcular proyectos activos por usuario (memoizado)
+    // Calcular proyectos activos por usuario (memoizado y optimizado)
     const activeProjectsCount = useMemo(() => {
       const validStatuses = ['En Proceso', 'Diseño', 'Desarrollo'];
       const counts: { [userId: string]: number } = {};
 
+      // Optimizar el cálculo usando Map para mejor rendimiento
+      const taskMap = new Map();
+      effectiveTasks.forEach((task) => {
+        if (validStatuses.includes(task.status)) {
+          const participants = [...task.AssignedTo, ...task.LeadedBy];
+          participants.forEach((userId) => {
+            taskMap.set(userId, (taskMap.get(userId) || 0) + 1);
+          });
+        }
+      });
+
       effectiveUsers.forEach((u) => {
-        counts[u.id] = effectiveTasks.filter(
-          (task) =>
-            validStatuses.includes(task.status) &&
-            (task.AssignedTo.includes(u.id) || task.LeadedBy.includes(u.id)),
-        ).length;
+        counts[u.id] = taskMap.get(u.id) || 0;
       });
 
       return counts;
     }, [effectiveUsers, effectiveTasks]);
 
-    // Filtrar y ordenar usuarios (memoizado)
+    // Filtrar y ordenar usuarios (memoizado y optimizado)
     const memoizedFilteredUsers = useMemo(() => {
+      if (!effectiveUsers.length) return [];
+      
       const currentUser = effectiveUsers.find((u) => u.id === user?.id);
       const otherUsers = effectiveUsers.filter((u) => u.id !== user?.id);
+      
+      // Optimizar el ordenamiento usando localeCompare con opciones
       const sortedUsers = [...otherUsers].sort((a, b) =>
-        a.fullName.toLowerCase().localeCompare(b.fullName.toLowerCase()),
+        a.fullName.toLowerCase().localeCompare(b.fullName.toLowerCase(), 'es', { numeric: true })
       );
-      return currentUser ? [{ ...currentUser, fullName: `${currentUser.fullName} (Tú)` }, ...sortedUsers] : sortedUsers;
+      
+      return currentUser 
+        ? [{ ...currentUser, fullName: `${currentUser.fullName} (Tú)` }, ...sortedUsers] 
+        : sortedUsers;
     }, [effectiveUsers, user?.id]);
 
-    // Aplicar filtro de búsqueda (memoizado)
+    // Aplicar filtro de búsqueda (memoizado y optimizado)
     useEffect(() => {
+      if (!searchQuery.trim()) {
+        // Si no hay búsqueda, mostrar todos los usuarios
+        setFilteredUsers(memoizedFilteredUsers.map(u => u.id));
+        return;
+      }
+
+      const query = searchQuery.toLowerCase();
       const filtered = memoizedFilteredUsers.filter(
           (u) =>
-            u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.status?.toLowerCase().includes(searchQuery.toLowerCase()),
+            u.fullName.toLowerCase().includes(query) ||
+            u.role.toLowerCase().includes(query) ||
+            u.status?.toLowerCase().includes(query),
       );
       setFilteredUsers(filtered.map(u => u.id)); // Solo guardar IDs
     }, [memoizedFilteredUsers, searchQuery, setFilteredUsers]);
 
-    // Ordenamiento (memoizado)
+    // Ordenamiento (memoizado y optimizado)
     const handleSort = useCallback(
       (key: string) => {
-        setSortKey(key);
-        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        if (key !== sortKey) {
+          setSortKey(key);
+          setSortDirection('asc');
+        } else {
+          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        }
       },
-      [sortDirection, setSortKey, setSortDirection],
+      [sortDirection, sortKey, setSortKey, setSortDirection],
     );
 
-    // Definir columnas (memoizado)
-    const columns = useMemo(
-      () => [
-        {
-          key: 'imageUrl',
-          label: '',
-          width: '20%',
-          mobileVisible: true,
-          render: (user: User) => (
-            <UserAvatar
-              userId={user.id}
-              imageUrl={user.imageUrl}
-              userName={user.fullName}
-              size="medium"
-              showStatus={true}
-            />
-          ),
+    // Definir columnas (memoizado y optimizado)
+    const columns = useMemo(() => [
+      {
+        key: 'imageUrl',
+        label: '',
+        width: '20%',
+        mobileVisible: true,
+        render: (user: User) => (
+          <UserAvatar
+            userId={user.id}
+            imageUrl={user.imageUrl}
+            userName={user.fullName}
+            size="medium"
+            showStatus={true}
+          />
+        ),
+      },
+      {
+        key: 'fullName',
+        label: 'Nombre',
+        width: '80%',
+        mobileVisible: true,
+      },
+      {
+        key: 'messageNotifications',
+        label: '',
+        width: '10%',
+        mobileVisible: false,
+        render: (user: User) => {
+          const unreadCount = getUnreadCountForUser(user.id);
+          return (
+            <div className={styles.notificationDotWrapper}>
+              <NotificationDot count={unreadCount} />
+            </div>
+          );
         },
-        {
-          key: 'fullName',
-          label: 'Nombre',
-          width: '80%',
-          mobileVisible: true,
-        },
-        {
-          key: 'messageNotifications',
-          label: '',
-          width: '10%',
-          mobileVisible: false,
-          render: (user: User) => {
-            const unreadCount = getUnreadCountForUser(user.id);
-            console.log('[MembersTable] User:', user.id, 'Unread messages:', unreadCount);
-            return (
-              <div className={styles.notificationDotWrapper}>
-                <NotificationDot count={unreadCount} />
-              </div>
-            );
-          },
-        },
-        {
-          key: 'role',
-          label: 'Rol',
-          width: '25%',
-          mobileVisible: false,
-        },
-        {
-          key: 'activeProjects',
-          label: 'Proyectos activos',
-          width: '20%',
-          mobileVisible: false,
-          render: (user: User) => (
-            <span className={styles.activeProjects}>{activeProjectsCount[user.id] || 0}</span>
-          ),
-        },
-        {
-          key: 'status',
-          label: 'Estado',
-          width: '15%',
-          mobileVisible: false,
-          render: (user: User) => (
-            <span className={styles.status}>{user.status || 'Sin estado'}</span>
-          ),
-        },
-      ],
-      [activeProjectsCount, getUnreadCountForUser],
-    );
+      },
+      {
+        key: 'role',
+        label: 'Rol',
+        width: '25%',
+        mobileVisible: false,
+      },
+      {
+        key: 'activeProjects',
+        label: 'Proyectos activos',
+        width: '20%',
+        mobileVisible: false,
+        render: (user: User) => (
+          <span className={styles.activeProjects}>{activeProjectsCount[user.id] || 0}</span>
+        ),
+      },
+      {
+        key: 'status',
+        label: 'Estado',
+        width: '15%',
+        mobileVisible: false,
+        render: (user: User) => (
+          <span className={styles.status}>{user.status || 'Sin estado'}</span>
+        ),
+      },
+    ], [activeProjectsCount, getUnreadCountForUser]);
 
     // Handle loading state
     if (isLoading || isLoadingUsers || isLoadingTasks) {
@@ -277,31 +296,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSort={handleSort}
-          onRowClick={async (u: User, columnKey: string) => {
-            if (['imageUrl', 'fullName', 'role', 'activeProjects', 'status', 'messageNotifications'].includes(columnKey) &&
-                u.id !== user?.id) {
-              // Marcar la conversación como leída antes de abrir el sidebar
-              const unreadCount = getUnreadCountForUser(u.id);
-              if (unreadCount > 0) {
-                // Buscar la conversación y marcarla como leída
-                const conversationsQuery = query(
-                  collection(db, 'conversations'),
-                  where('participants', 'array-contains', user?.id),
-                  where('participants', 'array-contains', u.id)
-                );
-                try {
-                  const conversationsSnapshot = await getDocs(conversationsQuery);
-                  if (!conversationsSnapshot.empty) {
-                    const conversationId = conversationsSnapshot.docs[0].id;
-                    await markConversationAsRead(conversationId);
-                  }
-                } catch (error) {
-                  console.error('[MembersTable] Error marking conversation as read:', error);
-                }
-              }
-              handleMessageSidebarOpen(u);
-            }
-          }}
+          onRowClick={handleRowClick}
           emptyStateType="members"
         />
       </div>

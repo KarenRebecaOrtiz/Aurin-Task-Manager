@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, query, where, onSnapshot, doc, getDocs, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -145,6 +145,16 @@ export const useMessageNotifications = () => {
     const notification = messageNotifications.find(n => n.senderId === senderId);
     return notification?.unreadCount || 0;
   }, [messageNotifications]);
+
+  // Memoizar el objeto de retorno para evitar re-renders
+  const memoizedReturn = useMemo(() => ({
+    messageNotifications,
+    getUnreadCountForUser,
+    markConversationAsRead,
+    isLoading,
+  }), [messageNotifications, getUnreadCountForUser, markConversationAsRead, isLoading]);
+
+  return memoizedReturn;
 
   return {
     messageNotifications,

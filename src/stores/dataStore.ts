@@ -200,7 +200,13 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   
   // Tasks
   tasks: [],
-  setTasks: (tasks) => set({ tasks }),
+  setTasks: (tasks) => set((state) => {
+    // Solo actualizar si realmente cambió
+    if (JSON.stringify(state.tasks) !== JSON.stringify(tasks)) {
+      return { tasks };
+    }
+    return state;
+  }),
   updateTask: (taskId, updates) =>
     set((state) => ({
       tasks: state.tasks.map((task) =>
@@ -220,7 +226,13 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   
   // Clients
   clients: [],
-  setClients: (clients) => set({ clients }),
+  setClients: (clients) => set((state) => {
+    // Solo actualizar si realmente cambió
+    if (JSON.stringify(state.clients) !== JSON.stringify(clients)) {
+      return { clients };
+    }
+    return state;
+  }),
   updateClient: (clientId, updates) =>
     set((state) => ({
       clients: state.clients.map((client) =>
@@ -240,7 +252,13 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   
   // Users
   users: [],
-  setUsers: (users) => set({ users }),
+  setUsers: (users) => set((state) => {
+    // Solo actualizar si realmente cambió
+    if (JSON.stringify(state.users) !== JSON.stringify(users)) {
+      return { users };
+    }
+    return state;
+  }),
   updateUser: (userId, updates) =>
     set((state) => ({
       users: state.users.map((user) =>

@@ -251,6 +251,23 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     return () => chat.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Click outside para cerrar sidebar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        handleClose();
+      }
+    };
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, handleClose]);
+
   // Initialize conversation and listen for real-time updates
   useEffect(() => {
     if (!isOpen || !senderId || !receiver.id || !user?.id || !conversationId) {
