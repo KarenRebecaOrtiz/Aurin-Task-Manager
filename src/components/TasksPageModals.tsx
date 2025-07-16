@@ -109,9 +109,9 @@ export default function TasksPageModals() {
             setIsClientSidebarOpen(true);
           }}
           onClientAlertChange={(alert) => {
-            if (alert.type === 'success') {
+            if (alert && alert.type === 'success') {
               handleShowSuccessAlert(alert.message || '');
-            } else {
+            } else if (alert && alert.type === 'fail') {
               handleShowFailAlert(alert.error || alert.message || '');
             }
           }}

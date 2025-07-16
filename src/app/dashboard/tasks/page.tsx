@@ -16,7 +16,6 @@ import Selector from '@/components/Selector';
 import MembersTable from '@/components/MembersTable';
 import ClientsTable from '@/components/ClientsTable';
 import TasksTableIsolated from '@/components/TasksTableIsolated';
-import TasksPageModals from '@/components/TasksPageModals';
 import TasksKanban from '@/components/TasksKanban';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
@@ -39,8 +38,8 @@ import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import ArchiveTable from '@/components/ArchiveTable';
-
-
+import EditTask from '@/components/EditTask';
+import CreateTask from '@/components/CreateTask';
 
 
 // Componente completamente aislado para TasksTable - similar a MembersTable
@@ -133,6 +132,11 @@ function TasksPageContent() {
 
   // Nuevo: obtener isArchiveTableOpen del store
   const isArchiveTableOpen = useTasksPageStore(useShallow(state => state.isArchiveTableOpen));
+  const isEditTaskOpen = useTasksPageStore(useShallow(state => state.isEditTaskOpen));
+  const editTaskId = useTasksPageStore(useShallow(state => state.editTaskId));
+  const isCreateTaskOpen = useTasksPageStore(useShallow(state => state.isCreateTaskOpen));
+  const hasUnsavedChanges = useTasksPageStore(useShallow(state => state.hasUnsavedChanges));
+
 
   // TasksTable aislado - no memoizar aquí para evitar re-renders del padre
 
@@ -171,7 +175,9 @@ function TasksPageContent() {
   const handleNewTaskOpen = useCallback(() => {
     console.log('[TasksPage] handleNewTaskOpen called');
     const { openCreateTask } = useTasksPageStore.getState();
+    console.log('[TasksPage] openCreateTask function obtained');
     openCreateTask();
+    console.log('[TasksPage] openCreateTask executed');
   }, []);
 
   // Callbacks para TasksKanban - MEMOIZADOS SIN DEPENDENCIAS
@@ -491,6 +497,88 @@ function TasksPageContent() {
                     // TODO: Implement data refresh functionality
                   }}
                 />
+              ) : isEditTaskOpen && editTaskId ? (
+                <EditTask
+                  isOpen={isEditTaskOpen}
+                  onToggle={() => {
+                    const { closeEditTask } = useTasksPageStore.getState();
+                    closeEditTask();
+                  }}
+                  taskId={editTaskId}
+                  onHasUnsavedChanges={(hasChanges) => {
+                    const { setHasUnsavedChanges } = useTasksPageStore.getState();
+                    setHasUnsavedChanges(hasChanges);
+                  }}
+                  onCreateClientOpen={() => {
+                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                    setClientSidebarData({ isEdit: false });
+                    setIsClientSidebarOpen(true);
+                  }}
+                  onEditClientOpen={(client) => {
+                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                    setClientSidebarData({
+                      client: {
+                        ...client,
+                        projectCount: client.projects?.length || 0,
+                        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
+                      },
+                      isEdit: true,
+                    });
+                    setIsClientSidebarOpen(true);
+                  }}
+                  onClientAlertChange={(alert) => {
+                    if (alert && alert.type === 'success') {
+                      handleShowSuccessAlert(alert.message || '');
+                    } else if (alert && alert.type === 'fail') {
+                      handleShowFailAlert(alert.error || alert.message || '');
+                    }
+                  }}
+                  onShowSuccessAlert={handleShowSuccessAlert}
+                  onShowFailAlert={handleShowFailAlert}
+                />
+              ) : isCreateTaskOpen ? (
+                <CreateTask
+                  isOpen={isCreateTaskOpen}
+                  onToggle={() => {
+                    if (hasUnsavedChanges) {
+                      if (window.confirm('Hay cambios sin guardar. ¿Deseas continuar?')) {
+                        const { closeCreateTask, setHasUnsavedChanges } = useTasksPageStore.getState();
+                        closeCreateTask();
+                        setHasUnsavedChanges(false);
+                      }
+                    } else {
+                      const { closeCreateTask } = useTasksPageStore.getState();
+                      closeCreateTask();
+                    }
+                  }}
+                  onHasUnsavedChanges={(hasChanges) => {
+                    const { setHasUnsavedChanges } = useTasksPageStore.getState();
+                    setHasUnsavedChanges(hasChanges);
+                  }}
+                  onCreateClientOpen={() => {
+                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                    setClientSidebarData({ isEdit: false });
+                    setIsClientSidebarOpen(true);
+                  }}
+                  onEditClientOpen={(client) => {
+                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                    setClientSidebarData({
+                      client: {
+                        ...client,
+                        projectCount: client.projects?.length || 0,
+                        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
+                      },
+                      isEdit: true,
+                    });
+                    setIsClientSidebarOpen(true);
+                  }}
+                  onTaskCreated={() => {
+                    const { closeCreateTask } = useTasksPageStore.getState();
+                    closeCreateTask();
+                  }}
+                  onShowSuccessAlert={handleShowSuccessAlert}
+                  onShowFailAlert={handleShowFailAlert}
+                />
               ) : taskView === 'table' ? (
                 <TasksTableRenderer />
               ) : (
@@ -628,8 +716,6 @@ export default function TasksPage() {
       {/* Sidebars completamente independientes */}
       <IndependentMessageSidebarRenderer />
       <IndependentChatSidebarRenderer />
-      {/* Modals completamente independientes */}
-      <TasksPageModals />
     </AuthProvider>
   );
 }

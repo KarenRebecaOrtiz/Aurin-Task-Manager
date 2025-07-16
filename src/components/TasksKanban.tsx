@@ -678,8 +678,10 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
               <button
                 className={styles.createButton}
                 onClick={(e) => {
+                  console.log('[TasksKanban] Create task button clicked');
                   animateClick(e.currentTarget);
                   onNewTaskOpen();
+                  console.log('[TasksKanban] onNewTaskOpen called');
                 }}
               >
                 <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
