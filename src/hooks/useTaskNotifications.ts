@@ -54,7 +54,7 @@ export const useTaskNotifications = () => {
         updateDoc(doc(db, 'notifications', notifDoc.id), { read: true })
       );
       await Promise.all(updatePromises);
-      console.log('[useTaskNotifications] Marked notifications as read for task:', taskId);
+      // Debug logging disabled to reduce console spam
     } catch (error) {
       console.error('[useTaskNotifications] Error marking task as viewed:', error);
     }

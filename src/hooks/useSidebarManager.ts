@@ -25,7 +25,7 @@ export const useSidebarManager = ({
       
       if (openSidebar.type && openSidebar.type !== sidebarType) {
         // Cerrar el sidebar anterior antes de abrir este
-        console.log(`[SidebarManager] Closing ${openSidebar.type} sidebar to open ${sidebarType} sidebar`);
+        // Debug logging disabled to reduce console spam
         closeSidebar();
         closeStateSidebar();
         // Pequeño delay para asegurar que el sidebar anterior se cierre
@@ -39,7 +39,7 @@ export const useSidebarManager = ({
         }, 100);
       } else if (openSidebar.type === sidebarType && openSidebar.id !== sidebarId) {
         // Si es el mismo tipo pero diferente ID, cerrar el anterior y abrir el nuevo
-        console.log(`[SidebarManager] Switching ${sidebarType} sidebar from ${openSidebar.id} to ${sidebarId}`);
+        // Debug logging disabled to reduce console spam
         closeSidebar();
         closeStateSidebar();
         setTimeout(() => {
@@ -52,7 +52,7 @@ export const useSidebarManager = ({
         }, 100);
       } else if (!openSidebar.type) {
         // No hay sidebar abierto, abrir este
-        console.log(`[SidebarManager] Opening ${sidebarType} sidebar for ${sidebarId}`);
+        // Debug logging disabled to reduce console spam
         if (sidebarType === 'chat') {
           openChatSidebar(sidebarId);
         } else {
@@ -64,7 +64,7 @@ export const useSidebarManager = ({
       // Si se está cerrando, verificar si este es el sidebar actual
       const openSidebar = getOpenSidebar();
       if (openSidebar.type === sidebarType && openSidebar.id === sidebarId) {
-        console.log(`[SidebarManager] Closing ${sidebarType} sidebar for ${sidebarId}`);
+        // Debug logging disabled to reduce console spam
         closeSidebar();
         closeStateSidebar();
       }

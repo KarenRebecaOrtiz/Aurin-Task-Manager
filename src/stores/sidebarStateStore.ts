@@ -6,7 +6,7 @@ interface SidebarState {
   sidebarId: string | null;
   // Estado específico para MessageSidebar
   messageSidebar: {
-    senderId: string | null;
+senderId: string | null;
     receiver: {
       id: string;
       imageUrl: string;
@@ -149,25 +149,31 @@ export const useSidebarStateStore = create<SidebarStateStore>()((set, get) => ({
 
   // Acciones específicas para ChatSidebar
   openChatSidebar: (task, clientName) => {
+    // Debug logging disabled to reduce console spam
     const current = get();
-    const newChatState = { taskId: task?.id || null, task, clientName };
     
     // Solo actualizar si realmente cambió
-    const chatStateChanged = 
+    const shouldUpdate = 
+      current.sidebarType !== 'chat' || 
+      current.sidebarId !== task?.id || 
+      !current.isOpen ||
       current.chatSidebar.taskId !== task?.id ||
-      current.chatSidebar.clientName !== clientName ||
-      JSON.stringify(current.chatSidebar.task) !== JSON.stringify(task);
+      current.chatSidebar.clientName !== clientName;
 
-    if (current.sidebarType !== 'chat' || current.sidebarId !== task?.id || !current.isOpen || chatStateChanged) {
-      console.log('[SidebarStore] Updating ChatSidebar state', { taskId: task?.id, clientName, chatStateChanged });
+    if (shouldUpdate) {
+      // Debug logging disabled to reduce console spam
       set({
         isOpen: true,
         sidebarType: 'chat',
         sidebarId: task?.id || null,
-        chatSidebar: newChatState,
+        chatSidebar: { 
+          taskId: task?.id || null, 
+          task, 
+          clientName 
+        },
       });
     } else {
-      console.log('[SidebarStore] ChatSidebar state unchanged, skipping update');
+      // Debug logging disabled to reduce console spam
     }
   },
 

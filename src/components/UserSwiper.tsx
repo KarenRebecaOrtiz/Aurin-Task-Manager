@@ -5,25 +5,8 @@ import Splide from "@splidejs/splide";
 import "@splidejs/splide/css/core";
 import styles from "./UserSwiper.module.scss";
 import UserAvatar from "./ui/UserAvatar";
-import { useStore } from "zustand";
-import { useShallow } from "zustand/react/shallow";
-import { useDataStore } from "@/stores/dataStore";
-
-interface ClerkUser {
-  id: string;
-  imageUrl?: string;
-  firstName?: string;
-  lastName?: string;
-  // status?: string;
-  role?: string;
-}
-
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
-}
+import { useUserSwiperData, useUserSwiperActions, User } from "@/stores/userSwiperStore";
+import { useUserSwiperSync } from "@/hooks/useUserSwiperSync";
 
 interface UserSwiperProps {
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
@@ -35,27 +18,15 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
 
-  // Consumir usuarios del dataStore centralizado
-  const { users: storeUsers, isLoadingUsers } = useStore(
-    useDataStore,
-    useShallow((state) => ({
-      users: state.users,
-      isLoadingUsers: state.isLoadingUsers,
-    }))
-  );
+  // ✅ Usar el hook de sincronización que evita re-renders
+  useUserSwiperSync();
 
-  // Convertir usuarios del store al formato que necesita UserSwiper
-  const users: ClerkUser[] = storeUsers.map((storeUser) => ({
-    id: storeUser.id,
-    imageUrl: storeUser.imageUrl,
-    firstName: storeUser.fullName.split(" ")[0] || "",
-    lastName: storeUser.fullName.split(" ").slice(1).join(" ") || "",
-    // status: "Disponible", // Eliminado, ya no se usa
-    role: storeUser.role, // Agregamos el campo role
-  }));
+  // ✅ Consumir datos del userSwiperStore optimizado
+  const { clerkUsers, isLoading } = useUserSwiperData();
+  const { getStoreUserById } = useUserSwiperActions();
 
   useEffect(() => {
-    if (splideRef.current && users.length > 0) {
+    if (splideRef.current && clerkUsers.length > 0) {
       splideInstance.current = new Splide(splideRef.current, {
         type: "loop",
         perPage: 2,
@@ -86,9 +57,9 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
         }
       };
     }
-  }, [users]);
+  }, [clerkUsers]);
 
-  if (isLoadingUsers) {
+  if (isLoading) {
     return (
       <div className={styles.loading}>
         <div className={styles.loader}>Cargando...</div>
@@ -96,7 +67,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
     );
   }
 
-  if (users.length === 0) {
+  if (clerkUsers.length === 0) {
     return <div className={styles.loading}>No hay usuarios disponibles</div>;
   }
 
@@ -108,14 +79,14 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
     >
       <div className="splide__track">
         <ul className="splide__list">
-          {users.map((user) => (
+          {clerkUsers.map((user) => (
             <li className="splide__slide" key={user.id}>
               <div
                 className={styles.card}
                 role="button"
                 tabIndex={0}
                 onClick={() => {
-                  const storeUser = storeUsers.find((u) => u.id === user.id);
+                  const storeUser = getStoreUserById(user.id);
                   if (!storeUser) return;
                   onMessageSidebarOpen({
                     id: storeUser.id,
@@ -155,13 +126,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                         ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
                         : "Sin nombre"}
                     </div>
-                    <div
-                      className={styles.cardStatus}
-                      // style={{
-                      //   color: statusColors[user.status as keyof typeof statusColors] || "#333",
-                      // }}
-                    >
-                      {/* Mostrar el role en vez de status */}
+                    <div className={styles.cardStatus}>
                       {user.role === 'user' ? 'No Especificado' : (user.role || 'Sin rol')}
                     </div>
                   </div>

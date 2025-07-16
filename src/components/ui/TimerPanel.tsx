@@ -87,23 +87,19 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
 
   // Main panel animation effect
   useEffect(() => {
-    console.log('[TimerPanel:UseEffect] State changed', {
-      isOpen,
-      panelExists: !!timerPanelRef.current,
-      isMounted
-    });
+    // Debug logging disabled to reduce console spam
 
     if (!isMounted) return;
 
     if (timerPanelRef.current) {
       if (isOpen) {
-        console.log('[TimerPanel:UseEffect] 🟢 OPENING TimerPanel');
+        // Debug logging disabled to reduce console spam
         gsap.fromTo(timerPanelRef.current,
           { height: 0, opacity: 0 },
           { height: 'auto', opacity: 1, duration: 0.3, ease: 'power2.out' }
         );
       } else {
-        console.log('[TimerPanel:UseEffect] 🔴 CLOSING TimerPanel');
+        // Debug logging disabled to reduce console spam
         gsap.to(timerPanelRef.current, {
           height: 0,
           opacity: 0,

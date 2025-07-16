@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useMemo, memo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
-import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, PointerSensor, TouchSensor, useDroppable, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, DragOverlay, closestCenter, useDroppable, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { db } from '@/lib/firebase';
 import ActionMenu from './ui/ActionMenu';
@@ -20,9 +20,18 @@ import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { tasksKanbanStore } from '@/stores/tasksKanbanStore';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { useDataStore } from '@/stores/dataStore';
 
-
-
+// Kanban status columns definition
+const statusColumns = [
+  { id: 'por-iniciar', label: 'Por Iniciar' },
+  { id: 'en-proceso', label: 'En Proceso' },
+  { id: 'backlog', label: 'Backlog' },
+  { id: 'por-finalizar', label: 'Por Finalizar' },
+  { id: 'finalizado', label: 'Finalizado' },
+  { id: 'cancelado', label: 'Cancelado' },
+];
 
 
 interface Client {
@@ -115,15 +124,11 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUser
 interface TasksKanbanProps {
   onNewTaskOpen: () => void;
   onEditTaskOpen: (taskId: string) => void;
-  onChatSidebarOpen: (task: Task) => void;
   onMessageSidebarOpen: (user: User) => void;
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
   onViewChange: (view: TaskView) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onArchiveTableOpen: () => void;
-  externalTasks?: Task[];
-  externalClients?: Client[];
-  externalUsers?: User[];
 }
 
 interface SortableItemProps {
@@ -196,11 +201,12 @@ const SortableItem: React.FC<SortableItemProps> = ({
       {...listeners}
       className={`${styles.taskCard} ${isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
       onClick={async () => {
+        // Debug logging disabled to reduce console spam
+        
         // Marcar la tarea como vista usando el nuevo sistema
         await markAsViewed(task.id);
         
         onChatSidebarOpen(task);
-        console.log('[TasksKanban] Task card clicked, opening chat for task:', task.id);
       }}
     >
       <div className={styles.taskHeader}>
@@ -209,7 +215,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         <span className={styles.taskName}>{task.name}</span>
           {(() => {
             const updateCount = getUnreadCount(task);
-            console.log('[TasksKanban] Task:', task.id, 'Count:', updateCount, 'HasUpdates:', task.hasUnreadUpdates);
+            // Debug logging disabled to reduce console spam
             return (
               <NotificationDot count={updateCount} />
             );
@@ -234,17 +240,17 @@ const SortableItem: React.FC<SortableItemProps> = ({
             userId={userId}
             onEdit={() => {
               onEditTaskOpen(task.id);
-              console.log('[TasksKanban] Edit task requested:', task.id);
+              // Debug logging disabled to reduce console spam
             }}
             onDelete={() => {
               onDeleteTaskOpen(task.id);
-              console.log('[TasksKanban] Delete task requested:', task.id);
+              // Debug logging disabled to reduce console spam
             }}
             onArchive={async () => {
               try {
                 // Usar la función directamente del prop
                 await onArchiveTask(task);
-                console.log('[TasksKanban] Task archived successfully:', task.id);
+                // Debug logging disabled to reduce console spam
               } catch (error) {
                 console.error('[TasksKanban] Error archiving task:', error);
               }
@@ -355,9 +361,8 @@ interface TasksKanbanHeaderProps {
   userDropdownRef: React.RefObject<HTMLDivElement>;
   handlePrioritySelect: (priority: string, e: React.MouseEvent<HTMLDivElement>) => void;
   handleClientSelect: (clientId: string, e: React.MouseEvent<HTMLDivElement>) => void;
-  handleUserFilter: (id: string) => void;
   animateClick: (element: HTMLElement) => void;
-  handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  handleUserFilter: (id: string) => void;
 }
 
 const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
@@ -384,9 +389,8 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
   userDropdownRef,
   handlePrioritySelect,
   handleClientSelect,
-  handleUserFilter,
   animateClick,
-  handleInputKeyDown,
+  handleUserFilter,
 }) => {
   return (
     <div className={styles.header} style={{ margin: '20px 0px' }}>
@@ -412,7 +416,6 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
           }}
           className={styles.searchInput}
           aria-label="Buscar tareas"
-          onKeyDown={handleInputKeyDown}
         />
       </div>
 
@@ -679,821 +682,703 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
   );
 };
 
-const TasksKanban: React.FC<TasksKanbanProps> = memo(
-  ({
-    onNewTaskOpen,
-    onEditTaskOpen,
-    onChatSidebarOpen,
-    onMessageSidebarOpen,
-    onOpenProfile,
-    onViewChange,
-    onDeleteTaskOpen,
-    onArchiveTableOpen,
-    externalTasks,
-    externalClients,
-    externalUsers,
-  }) => {
-    const { user } = useUser();
-    const { isAdmin } = useAuth();
+const TasksKanban: React.FC<TasksKanbanProps> = ({
+  onNewTaskOpen,
+  onEditTaskOpen,
+  onMessageSidebarOpen,
+  onOpenProfile,
+  onViewChange,
+  onDeleteTaskOpen,
+  onArchiveTableOpen,
+}) => {
+  const { user } = useUser();
+  const { isAdmin } = useAuth();
 
-    // Optimizar selectores de Zustand para evitar re-renders innecesarios
-    const {
+  // Usa useDataStore/useShallow para obtener tasks, users, clients, etc. directamente
+  const tasks = useDataStore(useShallow(state => state.tasks));
+  const clients = useDataStore(useShallow(state => state.clients));
+  const users = useDataStore(useShallow(state => state.users));
+  const isLoadingTasks = useDataStore(useShallow(state => state.isLoadingTasks));
+  // const isLoadingClients = useDataStore(useShallow(state => state.isLoadingClients));
+  // const isLoadingUsers = useDataStore(useShallow(state => state.isLoadingUsers));
+
+  // ✅ Usar datos externos solo si están disponibles, de lo contrario usar dataStore
+  const effectiveTasks = tasks;
+  const effectiveClients = clients;
+  const effectiveUsers = users;
+
+  // Helper function to get involved user IDs
+  const getInvolvedUserIds = useCallback((task: Task) => {
+    const ids = new Set<string>();
+    if (task.CreatedBy) ids.add(task.CreatedBy);
+    if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
+    if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
+    return Array.from(ids);
+  }, []);
+
+  // Helper function to normalize status values
+  const normalizeStatus = useCallback((status: string): string => {
+    if (!status) return 'Por Iniciar'; // Default for empty/null status
+    
+    const normalized = status.trim();
+    
+    // Handle common variations
+    const statusMap: { [key: string]: string } = {
+      'por iniciar': 'Por Iniciar',
+      'por-iniciar': 'Por Iniciar',
+      'pendiente': 'Por Iniciar',
+      'pending': 'Por Iniciar',
+      'to do': 'Por Iniciar',
+      'todo': 'Por Iniciar',
+      'en proceso': 'En Proceso',
+      'en-proceso': 'En Proceso',
+      'in progress': 'En Proceso',
+      'progreso': 'En Proceso',
+      'por finalizar': 'Por Finalizar',
+      'por-finalizar': 'Por Finalizar',
+      'to finish': 'Por Finalizar',
+      'finalizado': 'Finalizado',
+      'finalizada': 'Finalizado',
+      'completed': 'Finalizado',
+      'completado': 'Finalizado',
+      'completada': 'Finalizado',
+      'done': 'Finalizado',
+      'terminado': 'Finalizado',
+      'terminada': 'Finalizado',
+      'finished': 'Finalizado',
+      'backlog': 'Backlog',
+      'cancelado': 'Cancelado',
+      'cancelada': 'Cancelado',
+      'cancelled': 'Cancelado',
+      // Legacy status mapping
+      'diseno': 'Por Iniciar',
+      'diseño': 'Por Iniciar',
+      'design': 'Por Iniciar',
+      'desarrollo': 'En Proceso',
+      'development': 'En Proceso',
+      'dev': 'En Proceso',
+    };
+    
+    return statusMap[normalized.toLowerCase()] || normalized;
+  }, []);
+
+  // Usar el hook de notificaciones simplificado
+  const { getUnreadCount, markAsViewed } = useTaskNotifications();
+
+  const handleTaskCardClick = useCallback(async (task: Task) => {
+    // Marcar la tarea como vista usando el nuevo sistema
+    await markAsViewed(task.id);
+    // Usar directamente el store en lugar de props para evitar re-renders
+    const { openChatSidebar } = useSidebarStateStore.getState();
+    // Buscar el nombre del cliente
+    const clientName = effectiveClients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
+    // Actualizar el store directamente
+    openChatSidebar(task, clientName);
+  }, [effectiveClients, markAsViewed]);
+
+  // Optimizar selectores de Zustand para evitar re-renders innecesarios
+  const {
+    // Estado
+    searchQuery,
+    priorityFilter,
+    clientFilter,
+    userFilter,
+    isPriorityDropdownOpen,
+    isClientDropdownOpen,
+    isUserDropdownOpen,
+    isTouchDevice,
+    activeTask,
+    // Acciones
+    setSearchQuery,
+    setPriorityFilter,
+    setClientFilter,
+    setIsPriorityDropdownOpen,
+    setIsClientDropdownOpen,
+    setIsUserDropdownOpen,
+    setIsTouchDevice,
+    setActiveTask,
+  } = useStore(
+    tasksKanbanStore,
+    useShallow((state) => ({
       // Estado
-      searchQuery,
-      priorityFilter,
-      clientFilter,
-      userFilter,
-      isPriorityDropdownOpen,
-      isClientDropdownOpen,
-      isUserDropdownOpen,
-      isTouchDevice,
-      isLoadingTasks,
-      activeTask,
+      searchQuery: state.searchQuery,
+      priorityFilter: state.priorityFilter,
+      clientFilter: state.clientFilter,
+      userFilter: state.userFilter,
+      isPriorityDropdownOpen: state.isPriorityDropdownOpen,
+      isClientDropdownOpen: state.isClientDropdownOpen,
+      isUserDropdownOpen: state.isUserDropdownOpen,
+      isTouchDevice: state.isTouchDevice,
+      activeTask: state.activeTask,
       // Acciones
-      setSearchQuery,
-      setPriorityFilter,
-      setClientFilter,
-      setUserFilter,
-      setIsPriorityDropdownOpen,
-      setIsClientDropdownOpen,
-      setIsUserDropdownOpen,
-      setIsTouchDevice,
-      setIsLoadingTasks,
-      setActiveTask,
-    } = useStore(
-      tasksKanbanStore,
-      useShallow((state) => ({
-        // Estado
-        searchQuery: state.searchQuery,
-        priorityFilter: state.priorityFilter,
-        clientFilter: state.clientFilter,
-        userFilter: state.userFilter,
-        isPriorityDropdownOpen: state.isPriorityDropdownOpen,
-        isClientDropdownOpen: state.isClientDropdownOpen,
-        isUserDropdownOpen: state.isUserDropdownOpen,
-        isTouchDevice: state.isTouchDevice,
-        isLoadingTasks: state.isLoadingTasks,
-        activeTask: state.activeTask,
-        // Acciones
-        setSearchQuery: state.setSearchQuery,
-        setPriorityFilter: state.setPriorityFilter,
-        setClientFilter: state.setClientFilter,
-        setUserFilter: state.setUserFilter,
-        setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
-        setIsClientDropdownOpen: state.setIsClientDropdownOpen,
-        setIsUserDropdownOpen: state.setIsUserDropdownOpen,
-        setIsTouchDevice: state.setIsTouchDevice,
-        setIsLoadingTasks: state.setIsLoadingTasks,
-        setActiveTask: state.setActiveTask,
-      }))
-    );
+      setSearchQuery: state.setSearchQuery,
+      setPriorityFilter: state.setPriorityFilter,
+      setClientFilter: state.setClientFilter,
+      setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
+      setIsClientDropdownOpen: state.setIsClientDropdownOpen,
+      setIsUserDropdownOpen: state.setIsUserDropdownOpen,
+      setIsTouchDevice: state.setIsTouchDevice,
+      setActiveTask: state.setActiveTask,
+    }))
+  );
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const actionMenuRef = useRef<HTMLDivElement>(null);
-    const priorityDropdownRef = useRef<HTMLDivElement>(null);
-    const clientDropdownRef = useRef<HTMLDivElement>(null);
-    const userDropdownRef = useRef<HTMLDivElement>(null);
-    const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  // Add this function to handle user filter
+  const handleUserFilter = useCallback((id: string) => {
+    setUserFilter(id);
+    setIsUserDropdownOpen(false);
+  }, [setUserFilter, setIsUserDropdownOpen]);
 
-    const userId = useMemo(() => user?.id || '', [user]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const priorityDropdownRef = useRef<HTMLDivElement>(null);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-    // PRIORIZAR external data para asegurar sincronización con TasksPage
-    const effectiveTasks = useMemo(() => externalTasks ?? [], [externalTasks]);
-    const effectiveClients = useMemo(() => externalClients ?? [], [externalClients]);
-    const effectiveUsers = useMemo(() => externalUsers ?? [], [externalUsers]);
+  const userId = useMemo(() => user?.id || '', [user]);
 
-
-
-    // Only log significant changes to reduce console noise
-    useEffect(() => {
-      if (effectiveTasks.length > 0) {
-        const hasStatusChanges = effectiveTasks.some(task => 
-          task.status && task.status !== 'Por Iniciar'
-        );
-        
-        if (hasStatusChanges) {
-          console.log('[TasksKanban] Tasks updated with status changes:', effectiveTasks.length);
-        }
+  // Only log significant changes to reduce console noise
+  useEffect(() => {
+    if (effectiveTasks.length > 0) {
+      const hasStatusChanges = effectiveTasks.some(task => 
+        task.status && task.status !== 'Por Iniciar'
+      );
+      
+      if (hasStatusChanges) {
+        console.log('[TasksKanban] Tasks updated with status changes:', effectiveTasks.length);
       }
-    }, [effectiveTasks]);
+    }
+  }, [effectiveTasks]);
 
-    // Usar el hook de notificaciones simplificado
-    const { getUnreadCount, markAsViewed } = useTaskNotifications();
-
-    const sensors = useSensors(
-      useSensor(PointerSensor, {
-        activationConstraint: {
-          distance: 8, // 8px movement required to start drag
-        },
-      }),
-      useSensor(TouchSensor, {
-        activationConstraint: {
-          delay: 250, // 250ms delay before drag starts
-          tolerance: 5, // 5px tolerance for finger movement during delay
-        },
-      })
-    );
-
-    const handleUserFilter = (id: string) => {
-      const userDropdownTrigger = userDropdownRef.current?.querySelector(`.${styles.dropdownTrigger}`);
-      if (userDropdownTrigger) {
-        const filterIcon = userDropdownTrigger.querySelector('img');
-        if (filterIcon) {
-          gsap.to(filterIcon, {
-            rotation: 360,
-            scale: 1.2,
-            duration: 0.3,
-            ease: 'power2.out',
-            yoyo: true,
-            repeat: 1
-          });
-        }
-      }
-
-      setUserFilter(id);
-      setIsUserDropdownOpen(false);
+  useEffect(() => {
+    const checkTouchDevice = () => {
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      setIsTouchDevice(isTouch);
+      console.log('[TasksKanban] Touch device detected:', isTouch);
     };
 
-    const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key.toLowerCase()) {
-          case 'a':
-            e.preventDefault();
-            e.currentTarget.select();
-            break;
-          case 'c':
-            e.preventDefault();
-            const targetC = e.currentTarget as HTMLInputElement;
-            if (targetC.selectionStart !== targetC.selectionEnd) {
-              const selectedText = targetC.value.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-              navigator.clipboard.writeText(selectedText).catch(() => {
-                const textArea = document.createElement('textarea');
-                textArea.value = selectedText;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-              });
-            }
-            break;
-          case 'v':
-            e.preventDefault();
-            const targetV = e.currentTarget as HTMLInputElement;
-            navigator.clipboard.readText().then(text => {
-              if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                const start = targetV.selectionStart;
-                const end = targetV.selectionEnd;
-                const newValue = targetV.value.substring(0, start) + text + targetV.value.substring(end);
-                setSearchQuery(newValue);
-                setTimeout(() => {
-                  targetV.setSelectionRange(start + text.length, start + text.length);
-                }, 0);
-              } else {
-                setSearchQuery(targetV.value + text);
-              }
-            }).catch(() => {
-              document.execCommand('paste');
-            });
-            break;
-          case 'x':
-            e.preventDefault();
-            const targetX = e.currentTarget as HTMLInputElement;
-            if (targetX.selectionStart !== targetX.selectionEnd) {
-              const selectedText = targetX.value.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-              navigator.clipboard.writeText(selectedText).then(() => {
-                if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                  const start = targetX.selectionStart;
-                  const end = targetX.selectionEnd;
-                  const newValue = targetX.value.substring(0, start) + targetX.value.substring(end);
-                  setSearchQuery(newValue);
-                } else {
-                  setSearchQuery('');
-                }
-              }).catch(() => {
-                const textArea = document.createElement('textarea');
-                textArea.value = selectedText;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                  const start = targetX.selectionStart;
-                  const end = targetX.selectionEnd;
-                  const newValue = targetX.value.substring(0, start) + targetX.value.substring(end);
-                  setSearchQuery(newValue);
-                } else {
-                  setSearchQuery('');
-                }
-              });
-            }
-            break;
-        }
-      }
-    }, [setSearchQuery]);
+    checkTouchDevice();
+    window.addEventListener('resize', checkTouchDevice);
 
-    const statusColumns = useMemo(
-      () => [
-        { id: 'por-iniciar', title: 'Por Iniciar' },
-        { id: 'en-proceso', title: 'En Proceso' },
-        { id: 'backlog', title: 'Backlog' },
-        { id: 'por-finalizar', title: 'Por Finalizar' },
-        { id: 'finalizado', title: 'Finalizado' },
-        { id: 'cancelado', title: 'Cancelado' },
-      ],
-      [],
+    return () => {
+      window.removeEventListener('resize', checkTouchDevice);
+    };
+  }, [setIsTouchDevice]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    gsap.fromTo(
+      container,
+      { opacity: 0, y: 50, scale: 0.95 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'power2.out' }
     );
 
-    // Helper function to normalize status values
-    const normalizeStatus = useCallback((status: string): string => {
-      if (!status) return 'Por Iniciar'; // Default for empty/null status
-      
-      const normalized = status.trim();
-      
-      // Handle common variations
-      const statusMap: { [key: string]: string } = {
-        'por iniciar': 'Por Iniciar',
-        'por-iniciar': 'Por Iniciar',
-        'pendiente': 'Por Iniciar',
-        'pending': 'Por Iniciar',
-        'to do': 'Por Iniciar',
-        'todo': 'Por Iniciar',
-        'en proceso': 'En Proceso',
-        'en-proceso': 'En Proceso',
-        'in progress': 'En Proceso',
-        'progreso': 'En Proceso',
-        'por finalizar': 'Por Finalizar',
-        'por-finalizar': 'Por Finalizar',
-        'to finish': 'Por Finalizar',
-        'finalizado': 'Finalizado',
-        'finalizada': 'Finalizado',
-        'completed': 'Finalizado',
-        'completado': 'Finalizado',
-        'completada': 'Finalizado',
-        'done': 'Finalizado',
-        'terminado': 'Finalizado',
-        'terminada': 'Finalizado',
-        'finished': 'Finalizado',
-        'backlog': 'Backlog',
-        'cancelado': 'Cancelado',
-        'cancelada': 'Cancelado',
-        'cancelled': 'Cancelado',
-        // Legacy status mapping
-        'diseno': 'Por Iniciar',
-        'diseño': 'Por Iniciar',
-        'design': 'Por Iniciar',
-        'desarrollo': 'En Proceso',
-        'development': 'En Proceso',
-        'dev': 'En Proceso',
-      };
-      
-      return statusMap[normalized.toLowerCase()] || normalized;
-    }, []);
-
-    useEffect(() => {
-      const checkTouchDevice = () => {
-        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        setIsTouchDevice(isTouch);
-        console.log('[TasksKanban] Touch device detected:', isTouch);
-      };
-
-      checkTouchDevice();
-      window.addEventListener('resize', checkTouchDevice);
-
-      return () => {
-        window.removeEventListener('resize', checkTouchDevice);
-      };
-    }, [setIsTouchDevice]);
-
-    useEffect(() => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      gsap.fromTo(
-        container,
-        { opacity: 0, y: 50, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'power2.out' }
-      );
-
-      return () => {
-        gsap.to(container, {
-          opacity: 0,
-          y: -50,
-          scale: 0.95,
-          duration: 0.3,
-          ease: 'power2.in',
-        });
-      };
-    }, []);
-
-    // Setup de tasks con actualizaciones en tiempo real - ELIMINAR DUPLICADO
-    useEffect(() => {
-      if (!user?.id) return;
-
-      console.log('[TasksKanban] Using shared tasks state - no duplicate onSnapshot');
-      
-      // No establecer onSnapshot aquí - usar siempre externalTasks del hook compartido
-      if (externalTasks) {
-        console.log('[TasksKanban] Using external tasks from shared state:', externalTasks.length);
-        setIsLoadingTasks(false);
-      }
-    }, [user?.id, externalTasks, setIsLoadingTasks]);
-
-    // Setup de clients con actualizaciones en tiempo real
-    useEffect(() => {
-      if (!user?.id || externalClients) return;
-
-      console.log('[TasksKanban] Setting up clients listener');
-      setIsLoadingTasks(true);
-
-      const clientsQuery = query(collection(db, 'clients'));
-      const unsubscribeClients = onSnapshot(
-        clientsQuery,
-        (snapshot) => {
-          const clientsData: Client[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            name: doc.data().name || '',
-            imageUrl: doc.data().imageUrl || '/empty-image.png',
-          }));
-
-          console.log('[TasksKanban] Clients onSnapshot update:', clientsData.length);
-
-          // Actualizar estado directamente sin caché
-          setIsLoadingTasks(false);
-        },
-        (error) => {
-          console.error('[TasksKanban] Error in clients onSnapshot:', error);
-          setIsLoadingTasks(false);
-        }
-      );
-
-      return () => {
-        unsubscribeClients();
-      };
-    }, [user?.id, externalClients, setIsLoadingTasks]);
-
-    // Users are now managed centrally by useSharedTasksState
-    // No independent user fetching needed
-
-    // Cleanup all table listeners when component unmounts
-    useEffect(() => {
-      return () => {
-        console.log('[TasksKanban] Cleaning up all table listeners on unmount');
-        cleanupTasksKanbanListeners();
-      };
-    }, []);
-
-    const animateClick = (element: HTMLElement) => {
-      gsap.to(element, {
+    return () => {
+      gsap.to(container, {
+        opacity: 0,
+        y: -50,
         scale: 0.95,
-        opacity: 0.8,
-        duration: 0.15,
-        ease: 'power1.out',
+        duration: 0.3,
+        ease: 'power2.in',
+      });
+    };
+  }, []);
+
+  // Setup de tasks con actualizaciones en tiempo real
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // No establecer onSnapshot aquí - usar siempre datos del store de Zustand
+    if (effectiveTasks.length > 0) {
+      // No necesitamos setIsLoadingTasks ya que dataStore maneja esto
+    }
+  }, [user?.id, effectiveTasks]);
+
+  // Setup de clients con actualizaciones en tiempo real
+  useEffect(() => {
+    if (!user?.id || effectiveClients.length > 0) return;
+
+    console.log('[TasksKanban] Setting up clients listener');
+    // No necesitamos setIsLoadingClients ya que dataStore maneja esto
+
+    const clientsQuery = query(collection(db, 'clients'));
+    const unsubscribeClients = onSnapshot(
+      clientsQuery,
+      (snapshot) => {
+        const clientsData: Client[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name || '',
+          imageUrl: doc.data().imageUrl || '/empty-image.png',
+        }));
+
+        console.log('[TasksKanban] Clients onSnapshot update:', clientsData.length);
+        
+        // dataStore maneja el estado de loading
+      },
+      (error) => {
+        console.error('[TasksKanban] Error in clients onSnapshot:', error);
+        // dataStore maneja el estado de loading
+      }
+    );
+
+    return () => {
+      unsubscribeClients();
+    };
+  }, [user?.id, effectiveClients]);
+
+  // Users are now managed centrally by useSharedTasksState
+  // No independent user fetching needed
+
+  // Cleanup all table listeners when component unmounts
+  useEffect(() => {
+    return () => {
+      console.log('[TasksKanban] Cleaning up all table listeners on unmount');
+      cleanupTasksKanbanListeners();
+    };
+  }, []);
+
+  const animateClick = (element: HTMLElement) => {
+    gsap.to(element, {
+      scale: 0.95,
+      opacity: 0.8,
+      duration: 0.15,
+      ease: 'power1.out',
+      yoyo: true,
+      repeat: 1,
+    });
+    console.log('[TasksKanban] Click animation triggered');
+  };
+
+  const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
+    animateClick(e.currentTarget);
+    
+    // Animate filter change
+    const filterIcon = e.currentTarget.querySelector('img');
+    if (filterIcon) {
+      gsap.to(filterIcon, {
+        rotation: 360,
+        scale: 1.2,
+        duration: 0.3,
+        ease: 'power2.out',
         yoyo: true,
-        repeat: 1,
+        repeat: 1
       });
-      console.log('[TasksKanban] Click animation triggered');
-    };
+    }
+    
+    console.log('[TasksKanban] Priority filter selected:', priority);
+    setPriorityFilter(priority);
+    setIsPriorityDropdownOpen(false);
+  };
 
-    const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
-      animateClick(e.currentTarget);
-      
-      // Animate filter change
-      const filterIcon = e.currentTarget.querySelector('img');
-      if (filterIcon) {
-        gsap.to(filterIcon, {
-          rotation: 360,
-          scale: 1.2,
-          duration: 0.3,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 1
-        });
-      }
-      
-      console.log('[TasksKanban] Priority filter selected:', priority);
-      setPriorityFilter(priority);
-      setIsPriorityDropdownOpen(false);
-    };
-
-    const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      animateClick(e.currentTarget);
-      
-      // Animate filter change
-      const filterIcon = e.currentTarget.querySelector('img');
-      if (filterIcon) {
-        gsap.to(filterIcon, {
-          rotation: 360,
-          scale: 1.2,
-          duration: 0.3,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 1
-        });
-      }
-      
-      console.log('[TasksKanban] Client filter selected:', clientId);
-      setClientFilter(clientId);
-      setIsClientDropdownOpen(false);
-    };
-
-    // Helper function to get involved user IDs
-    const getInvolvedUserIds = useCallback((task: Task) => {
-      const ids = new Set<string>();
-      if (task.CreatedBy) ids.add(task.CreatedBy);
-      if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
-      if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
-      return Array.from(ids);
-    }, []);
-
-    // Group tasks by status - essential for Kanban functionality
-    const groupedTasks = useMemo(() => {
-      console.log('[TasksKanban] Grouping tasks:', {
-        total: effectiveTasks.length,
-        filtered: effectiveTasks.filter(t => !t.archived).length
+  const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
+    animateClick(e.currentTarget);
+    
+    // Animate filter change
+    const filterIcon = e.currentTarget.querySelector('img');
+    if (filterIcon) {
+      gsap.to(filterIcon, {
+        rotation: 360,
+        scale: 1.2,
+        duration: 0.3,
+        ease: 'power2.out',
+        yoyo: true,
+        repeat: 1
       });
+    }
+    
+    console.log('[TasksKanban] Client filter selected:', clientId);
+    setClientFilter(clientId);
+    setIsClientDropdownOpen(false);
+  };
 
-      const groups: { [key: string]: Task[] } = {};
-      
-      // Initialize empty arrays for all columns
-      statusColumns.forEach(column => {
-        groups[column.id] = [];
-      });
-      
-      // Only process non-archived tasks with permission filtering
-      effectiveTasks
-        .filter(task => !task.archived)
-        .filter(task => {
-          // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
-          const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
-          
-          if (!canViewTask) {
-            console.log('[TasksKanban] Task excluded by permissions:', {
-              taskId: task.id,
-              taskName: task.name,
-              isAdmin,
-              userId,
-              involvedUserIds: getInvolvedUserIds(task)
-            });
-          }
-          
-          return canViewTask;
-        })
-        .forEach(task => {
-        const normalizedStatus = normalizeStatus(task.status);
-        const columnId = normalizedStatus.toLowerCase().replace(/\s+/g, '-');
+  // Group tasks by status - essential for Kanban functionality
+  const groupedTasks = useMemo(() => {
+    console.log('[TasksKanban] Grouping tasks:', {
+      total: effectiveTasks.length,
+      filtered: effectiveTasks.filter(t => !t.archived).length
+    });
+
+    const groups: { [key: string]: Task[] } = {};
+    
+    // Initialize empty arrays for all columns
+    statusColumns.forEach(column => {
+      groups[column.id] = [];
+    });
+    
+    // Only process non-archived tasks with permission filtering
+    effectiveTasks
+      .filter(task => !task.archived)
+      .filter(task => {
+        // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
+        const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
         
-        // Map status to column IDs
-        const statusToColumnMap: { [key: string]: string } = {
-          'por-iniciar': 'por-iniciar',
-          'en-proceso': 'en-proceso',
-          'backlog': 'backlog',
-            'por-finalizar': 'por-finalizar',
-            'finalizado': 'finalizado',
-          'cancelado': 'cancelado'
-        };
-        
-        const targetColumn = statusToColumnMap[columnId] || 'por-iniciar';
-          
-          // Apply filters exactly like TasksTable
-          const matchesSearch = !searchQuery || 
-            task.name.toLowerCase().includes(searchQuery.toLowerCase());
-            
-          const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-          
-          const matchesClient = !clientFilter || task.clientId === clientFilter;
-          
-          let matchesUser = true;
-          if (userFilter === 'me') {
-            const involvedUserIds = getInvolvedUserIds(task);
-            matchesUser = involvedUserIds.includes(userId);
-          } else if (userFilter && userFilter !== 'me') {
-            const involvedUserIds = getInvolvedUserIds(task);
-            matchesUser = involvedUserIds.includes(userFilter);
-          }
-
-          if (matchesSearch && matchesPriority && matchesClient && matchesUser) {
-        if (groups[targetColumn]) {
-          groups[targetColumn].push(task);
-            }
-          }
-        });
-      
-      // Sort tasks within each column by lastActivity
-      Object.keys(groups).forEach(columnId => {
-        groups[columnId].sort((a, b) => {
-          const dateA = new Date(a.lastActivity || a.createdAt).getTime();
-          const dateB = new Date(b.lastActivity || b.createdAt).getTime();
-          return dateB - dateA; // Most recent first
-        });
-      });
-      
-      return groups;
-    }, [
-      effectiveTasks, 
-      statusColumns, 
-      searchQuery, 
-      priorityFilter, 
-      clientFilter, 
-      userFilter, 
-      userId, 
-      getInvolvedUserIds, 
-      normalizeStatus,
-      isAdmin
-    ]);
-
-    // Drag and drop handlers - essential for Kanban functionality
-    const handleDragStart = (event: DragStartEvent) => {
-      const taskId = event.active.id;
-      const task = effectiveTasks.find(t => t.id === taskId);
-      if (task) {
-        setActiveTask(task);
-        console.log('[TasksKanban] Drag started for task:', taskId);
-      }
-    };
-
-    const handleDragEnd = async (event: DragEndEvent) => {
-      const { active, over } = event;
-      setActiveTask(null);
-      
-      if (!over || !isAdmin) {
-        console.log('[TasksKanban] Drag ended without valid drop or insufficient permissions');
-        return;
-      }
-
-      const taskId = String(active.id);
-      const newStatus = over.id;
-      
-      // Map column IDs back to proper status names
-      const columnToStatusMap: { [key: string]: string } = {
-        'por-iniciar': 'Por Iniciar',
-        'en-proceso': 'En Proceso',
-        'backlog': 'Backlog',
-        'por-finalizar': 'Por Finalizar',
-        'finalizado': 'Finalizado',
-        'cancelado': 'Cancelado'
-      };
-      
-      const newStatusName = columnToStatusMap[newStatus] || newStatus;
-      
-      console.log('[TasksKanban] Drag ended - attempting to update task status:', {
-        taskId,
-        newStatus: newStatusName,
-        columnId: newStatus
-      });
-
-      try {
-        const task = effectiveTasks.find(t => t.id === taskId);
-        if (task && task.status !== newStatusName) {
-          console.log('[TasksKanban] Updating task status in Firestore:', {
-            taskId,
-            oldStatus: task.status,
-            newStatus: newStatusName
-          });
-
-          // Importar funciones de Firestore
-          const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore');
-          const { updateTaskActivity } = await import('@/lib/taskUtils');
-          
-          // Actualizar el estado en Firestore
-          await updateDoc(doc(db, 'tasks', taskId), {
-            status: newStatusName,
-            lastActivity: serverTimestamp(),
-          });
-          
-          // Actualizar la actividad de la tarea
-          await updateTaskActivity(taskId, 'status_change');
-          
-          console.log('[TasksKanban] Task status updated successfully via drag & drop:', {
-            taskId,
-            newStatus: newStatusName
+        if (!canViewTask) {
+          console.log('[TasksKanban] Task excluded by permissions:', {
+            taskId: task.id,
+            taskName: task.name,
+            isAdmin,
+            userId,
+            involvedUserIds: getInvolvedUserIds(task)
           });
         }
-      } catch (error) {
-        console.error('[TasksKanban] Error updating task status:', error);
-      }
-    };
-
-    // Handler para archivar localmente
-    const handleArchiveTask = useCallback(async (task: Task) => {
-      if (!isAdmin) {
-        console.warn('[TasksKanban] Archive intentado por usuario no admin');
-        return;
-      }
+        
+        return canViewTask;
+      })
+      .forEach(task => {
+      const normalizedStatus = normalizeStatus(task.status);
+      const columnId = normalizedStatus.toLowerCase().replace(/\s+/g, '-');
       
-      try {
-        console.log('[TasksKanban] Archiving task locally:', {
-          table: 'TasksKanban',
-          taskId: task.id,
-          taskName: task.name,
-          taskStatus: task.status,
-          currentState: {
-            archived: task.archived,
-            archivedAt: task.archivedAt,
-            archivedBy: task.archivedBy
-          },
-          action: 'Archive task from Kanban view',
-          userId,
-          isAdmin
-        });
+      // Map status to column IDs
+      const statusToColumnMap: { [key: string]: string } = {
+        'por-iniciar': 'por-iniciar',
+        'en-proceso': 'en-proceso',
+        'backlog': 'backlog',
+          'por-finalizar': 'por-finalizar',
+          'finalizado': 'finalizado',
+        'cancelado': 'cancelado'
+      };
+      
+      const targetColumn = statusToColumnMap[columnId] || 'por-iniciar';
         
-        // Importar las funciones de archivado
-        const { archiveTask } = await import('@/lib/taskUtils');
+        // Apply filters exactly like TasksTable
+        const matchesSearch = !searchQuery || 
+          task.name.toLowerCase().includes(searchQuery.toLowerCase());
+          
+        const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         
-        // Archivar en Firestore
-        await archiveTask(task.id, userId, isAdmin, task);
+        const matchesClient = !clientFilter || task.clientId === clientFilter;
         
-        console.log('[TasksKanban] Task archived successfully:', {
-          table: 'TasksKanban',
-          taskId: task.id,
-          taskName: task.name,
-          taskStatus: task.status,
-          finalState: 'archived',
-          source: 'Kanban view'
-        });
-      } catch (error) {
-        console.error('[TasksKanban] Error archiving task:', error);
-      }
-    }, [isAdmin, userId]);
+        let matchesUser = true;
+        if (userFilter === 'me') {
+          const involvedUserIds = getInvolvedUserIds(task);
+          matchesUser = involvedUserIds.includes(userId);
+        } else if (userFilter && userFilter !== 'me') {
+          const involvedUserIds = getInvolvedUserIds(task);
+          matchesUser = involvedUserIds.includes(userFilter);
+        }
 
-    if (isLoadingTasks) {
-      return (
-        <div className={styles.container}>
-          <style jsx>{`
-            @keyframes pulse {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.5; }
-            }
-          `}</style>
-          <div className={styles.swiperContainer}>
-            <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
-          </div>
-          <div className={styles.header} style={{margin:'30px 0px'}}>
-            <div className={styles.searchWrapper}>
-              <div className={styles.searchInput} style={{ opacity: 0.5, pointerEvents: 'none' }}>
-                <div style={{ width: '100%', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
-              </div>
-            </div>
-            <div className={styles.filtersWrapper}>
-              <div className={styles.viewButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
-                <div style={{ width: '20px', height: '20px', background: '#f0f0f0', borderRadius: '4px' }} />
-                <div style={{ width: '80px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
-              </div>
-              <div className={styles.createButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
-                <div style={{ width: '16px', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
-                <div style={{ width: '100px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
-              </div>
-            </div>
-          </div>
-          <SkeletonLoader type="kanban" rows={6} />
-        </div>
-      );
+        if (matchesSearch && matchesPriority && matchesClient && matchesUser) {
+    if (groups[targetColumn]) {
+      groups[targetColumn].push(task);
+        }
+      }
+    });
+    
+    // Sort tasks within each column by lastActivity
+    Object.keys(groups).forEach(columnId => {
+      groups[columnId].sort((a, b) => {
+        const dateA = new Date(a.lastActivity || a.createdAt).getTime();
+        const dateB = new Date(b.lastActivity || b.createdAt).getTime();
+        return dateB - dateA; // Most recent first
+      });
+    });
+    
+    return groups;
+  }, [
+    effectiveTasks, 
+    statusColumns, 
+    searchQuery, 
+    priorityFilter, 
+    clientFilter, 
+    userFilter, 
+    userId, 
+    getInvolvedUserIds, 
+    normalizeStatus,
+    isAdmin
+  ]);
+
+  // Drag and drop handlers - essential for Kanban functionality
+  const handleDragStart = (event: DragStartEvent) => {
+    const taskId = event.active.id;
+    const task = effectiveTasks.find(t => t.id === taskId);
+    if (task) {
+      setActiveTask(task);
+      console.log('[TasksKanban] Drag started for task:', taskId);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+    
+    if (!over || !isAdmin) {
+      console.log('[TasksKanban] Drag ended without valid drop or insufficient permissions');
+      return;
     }
 
+    const taskId = String(active.id);
+    const newStatus = over.id;
+    
+    // Map column IDs back to proper status names
+    const columnToStatusMap: { [key: string]: string } = {
+      'por-iniciar': 'Por Iniciar',
+      'en-proceso': 'En Proceso',
+      'backlog': 'Backlog',
+      'por-finalizar': 'Por Finalizar',
+      'finalizado': 'Finalizado',
+      'cancelado': 'Cancelado'
+    };
+    
+    const newStatusName = columnToStatusMap[newStatus] || newStatus;
+    
+    console.log('[TasksKanban] Drag ended - attempting to update task status:', {
+      taskId,
+      newStatus: newStatusName,
+      columnId: newStatus
+    });
+
+    try {
+      const task = effectiveTasks.find(t => t.id === taskId);
+      if (task && task.status !== newStatusName) {
+        console.log('[TasksKanban] Updating task status in Firestore:', {
+          taskId,
+          oldStatus: task.status,
+          newStatus: newStatusName
+        });
+
+        // Importar funciones de Firestore
+        const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore');
+        const { updateTaskActivity } = await import('@/lib/taskUtils');
+        
+        // Actualizar el estado en Firestore
+        await updateDoc(doc(db, 'tasks', taskId), {
+          status: newStatusName,
+          lastActivity: serverTimestamp(),
+        });
+        
+        // Actualizar la actividad de la tarea
+        await updateTaskActivity(taskId, 'status_change');
+        
+        console.log('[TasksKanban] Task status updated successfully via drag & drop:', {
+          taskId,
+          newStatus: newStatusName
+        });
+      }
+    } catch (error) {
+      console.error('[TasksKanban] Error updating task status:', error);
+    }
+  };
+
+  // Handler para archivar localmente
+  const handleArchiveTask = useCallback(async (task: Task) => {
+    if (!isAdmin) {
+      console.warn('[TasksKanban] Archive intentado por usuario no admin');
+      return;
+    }
+    
+    try {
+      console.log('[TasksKanban] Archiving task locally:', {
+        table: 'TasksKanban',
+        taskId: task.id,
+        taskName: task.name,
+        taskStatus: task.status,
+        currentState: {
+          archived: task.archived,
+          archivedAt: task.archivedAt,
+          archivedBy: task.archivedBy
+        },
+        action: 'Archive task from Kanban view',
+        userId,
+        isAdmin
+      });
+      
+      // Importar las funciones de archivado
+      const { archiveTask } = await import('@/lib/taskUtils');
+      
+      // Archivar en Firestore
+      await archiveTask(task.id, userId, isAdmin, task);
+      
+      console.log('[TasksKanban] Task archived successfully:', {
+        table: 'TasksKanban',
+        taskId: task.id,
+        taskName: task.name,
+        taskStatus: task.status,
+        finalState: 'archived',
+        source: 'Kanban view'
+      });
+    } catch (error) {
+      console.error('[TasksKanban] Error archiving task:', error);
+    }
+  }, [isAdmin, userId]);
+
+  if (isLoadingTasks) {
     return (
-      <div className={styles.container} ref={containerRef}>
+      <div className={styles.container}>
+        <style jsx>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
         <div className={styles.swiperContainer}>
           <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
         </div>
-        <TasksKanbanHeader
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onViewChange={onViewChange}
-          onArchiveTableOpen={onArchiveTableOpen}
-          onNewTaskOpen={onNewTaskOpen}
-          priorityFilter={priorityFilter}
-          clientFilter={clientFilter}
-          userFilter={userFilter}
-          clients={effectiveClients}
-          users={effectiveUsers}
-          userId={userId}
-          isAdmin={isAdmin}
-          isPriorityDropdownOpen={isPriorityDropdownOpen}
-          isClientDropdownOpen={isClientDropdownOpen}
-          isUserDropdownOpen={isUserDropdownOpen}
-          setIsPriorityDropdownOpen={setIsPriorityDropdownOpen}
-          setIsClientDropdownOpen={setIsClientDropdownOpen}
-          setIsUserDropdownOpen={setIsUserDropdownOpen}
-          priorityDropdownRef={priorityDropdownRef}
-          clientDropdownRef={clientDropdownRef}
-          userDropdownRef={userDropdownRef}
-          handlePrioritySelect={handlePrioritySelect}
-          handleClientSelect={handleClientSelect}
-          handleUserFilter={handleUserFilter}
-          animateClick={animateClick}
-          handleInputKeyDown={handleInputKeyDown}
-        />
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className={styles.kanbanBoard}>
-            {statusColumns.map((column) => (
-              <DroppableColumn
-                key={column.id}
-                id={column.id}
-                className={`${styles.kanbanColumn} ${groupedTasks[column.id]?.length ? '' : styles.empty}`}
-              >
-                <div className={styles.columnHeader}>
-                  <h2 className={styles.columnTitle}>{column.title}</h2>
-                  <span className={styles.taskCount}>{groupedTasks[column.id]?.length || 0}</span>
-                </div>
-                <SortableContext
-                  id={column.id}
-                  items={groupedTasks[column.id]?.map((task) => task.id) || []}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className={styles.taskList}>
-                    {groupedTasks[column.id]?.map((task, index) => (
-                      <SortableItem
-                        key={`${task.id}-${index}`}
-                        id={task.id}
-                        task={task}
-                        onChatSidebarOpen={onChatSidebarOpen}
-                        isAdmin={isAdmin}
-                        userId={userId}
-                        onEditTaskOpen={onEditTaskOpen}
-                        onDeleteTaskOpen={onDeleteTaskOpen}
-                        onArchiveTask={handleArchiveTask}
-                        animateClick={animateClick}
-                        actionButtonRefs={actionButtonRefs}
-                        actionMenuRef={actionMenuRef}
-                        isTouchDevice={isTouchDevice}
-                        clients={effectiveClients}
-                        users={effectiveUsers}
-                        getUnreadCount={getUnreadCount}
-                        markAsViewed={markAsViewed}
-                        normalizeStatus={normalizeStatus}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DroppableColumn>
-            ))}
+        <div className={styles.header} style={{margin:'30px 0px'}}>
+          <div className={styles.searchWrapper}>
+            <div className={styles.searchInput} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+              <div style={{ width: '100%', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
+            </div>
           </div>
-          <DragOverlay>
-            {activeTask ? (
-              <div
-                className={`${styles.taskCard} ${styles.dragging}`}
-                style={{
-                  zIndex: 10000,
-                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                  cursor: 'grabbing',
-                }}
-              >
-                <div className={styles.taskHeader}>
-                  <span className={styles.taskName}>{activeTask.name}</span>
-                </div>
-                {isAdmin && isTouchDevice && (
-                  <div className={styles.touchDragIndicator}>
-                    <span>👆 Arrastra para mover</span>
-                  </div>
-                )}
-                <div className={styles.taskDetails}>
-                  <div className={styles.taskDetailsRow}>
-                    <div className={styles.taskDetailsLeft}>
-                      <div className={styles.clientInfo}>
-                        {effectiveClients.find((c) => c.id === activeTask.clientId) ? (
-                          <Image
-                            style={{ borderRadius: '999px' }}
-                            src={effectiveClients.find((c) => c.id === activeTask.clientId)?.imageUrl || '/empty-image.png'}
-                            alt={effectiveClients.find((c) => c.id === activeTask.clientId)?.name || 'Client Image'}
-                            width={24}
-                            height={24}
-                            className={styles.clientImage}
-                          />
-                        ) : (
-                          <span className={styles.noClient}>Sin cuenta</span>
-                        )}
-                      </div>
-                      <div className={styles.priorityWrapper}>
-                        <Image
-                          src={
-                            activeTask.priority === 'Alta'
-                              ? '/arrow-up.svg'
-                              : activeTask.priority === 'Media'
-                              ? '/arrow-right.svg'
-                              : '/arrow-down.svg'
-                          }
-                          alt={activeTask.priority}
-                          width={16}
-                          height={16}
-                        />
-                        <span className={styles[`priority-${activeTask.priority}`]}>{activeTask.priority}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <AvatarGroup assignedUserIds={activeTask.AssignedTo} leadedByUserIds={activeTask.LeadedBy} users={effectiveUsers} currentUserId={userId} />
-                </div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+          <div className={styles.filtersWrapper}>
+            <div className={styles.viewButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+              <div style={{ width: '20px', height: '20px', background: '#f0f0f0', borderRadius: '4px' }} />
+              <div style={{ width: '80px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
+            </div>
+            <div className={styles.createButton} style={{ opacity: 0.5, pointerEvents: 'none' }}>
+              <div style={{ width: '16px', height: '16px', background: '#f0f0f0', borderRadius: '4px' }} />
+              <div style={{ width: '100px', height: '16px', background: '#f0f0f0', borderRadius: '4px', marginLeft: '8px' }} />
+            </div>
+          </div>
+        </div>
+        <SkeletonLoader type="kanban" rows={6} />
       </div>
     );
   }
-);
+
+  return (
+    <div className={styles.container} ref={containerRef}>
+      <div className={styles.swiperContainer}>
+        <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
+      </div>
+      <TasksKanbanHeader
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onViewChange={onViewChange}
+        onArchiveTableOpen={onArchiveTableOpen}
+        onNewTaskOpen={onNewTaskOpen}
+        priorityFilter={priorityFilter}
+        clientFilter={clientFilter}
+        userFilter={userFilter}
+        clients={effectiveClients}
+        users={effectiveUsers}
+        userId={userId}
+        isAdmin={isAdmin}
+        isPriorityDropdownOpen={isPriorityDropdownOpen}
+        isClientDropdownOpen={isClientDropdownOpen}
+        isUserDropdownOpen={isUserDropdownOpen}
+        setIsPriorityDropdownOpen={setIsPriorityDropdownOpen}
+        setIsClientDropdownOpen={setIsClientDropdownOpen}
+        setIsUserDropdownOpen={setIsUserDropdownOpen}
+        priorityDropdownRef={priorityDropdownRef}
+        clientDropdownRef={clientDropdownRef}
+        userDropdownRef={userDropdownRef}
+        handlePrioritySelect={handlePrioritySelect}
+        handleClientSelect={handleClientSelect}
+        handleUserFilter={handleUserFilter}
+        animateClick={animateClick}
+      />
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className={styles.kanbanBoard}>
+          {statusColumns.map((column) => (
+            <DroppableColumn
+              key={column.id}
+              id={column.id}
+              className={`${styles.kanbanColumn} ${groupedTasks[column.id]?.length ? '' : styles.empty}`}
+            >
+              <div className={styles.columnHeader}>
+                <h2 className={styles.columnTitle}>{column.label}</h2>
+                <span className={styles.taskCount}>{groupedTasks[column.id]?.length || 0}</span>
+              </div>
+              <SortableContext
+                id={column.id}
+                items={groupedTasks[column.id]?.map((task) => task.id) || []}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className={styles.taskList}>
+                  {groupedTasks[column.id]?.map((task, index) => (
+                    <SortableItem
+                      key={`${task.id}-${index}`}
+                      id={task.id}
+                      task={task}
+                      onChatSidebarOpen={handleTaskCardClick}
+                      isAdmin={isAdmin}
+                      userId={userId}
+                      onEditTaskOpen={onEditTaskOpen}
+                      onDeleteTaskOpen={onDeleteTaskOpen}
+                      onArchiveTask={handleArchiveTask}
+                      animateClick={animateClick}
+                      actionButtonRefs={actionButtonRefs}
+                      actionMenuRef={actionMenuRef}
+                      isTouchDevice={isTouchDevice}
+                      clients={effectiveClients}
+                      users={effectiveUsers}
+                      getUnreadCount={getUnreadCount}
+                      markAsViewed={markAsViewed}
+                      normalizeStatus={normalizeStatus}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DroppableColumn>
+          ))}
+        </div>
+        <DragOverlay>
+          {activeTask ? (
+            <div
+              className={`${styles.taskCard} ${styles.dragging}`}
+              style={{
+                zIndex: 10000,
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                cursor: 'grabbing',
+              }}
+            >
+              <div className={styles.taskHeader}>
+                <span className={styles.taskName}>{activeTask.name}</span>
+              </div>
+              {isAdmin && isTouchDevice && (
+                <div className={styles.touchDragIndicator}>
+                  <span>👆 Arrastra para mover</span>
+                </div>
+              )}
+              <div className={styles.taskDetails}>
+                <div className={styles.taskDetailsRow}>
+                  <div className={styles.taskDetailsLeft}>
+                    <div className={styles.clientInfo}>
+                      {effectiveClients.find((c) => c.id === activeTask.clientId) ? (
+                        <Image
+                          style={{ borderRadius: '999px' }}
+                          src={effectiveClients.find((c) => c.id === activeTask.clientId)?.imageUrl || '/empty-image.png'}
+                          alt={effectiveClients.find((c) => c.id === activeTask.clientId)?.name || 'Client Image'}
+                          width={24}
+                          height={24}
+                          className={styles.clientImage}
+                        />
+                      ) : (
+                        <span className={styles.noClient}>Sin cuenta</span>
+                      )}
+                    </div>
+                    <div className={styles.priorityWrapper}>
+                      <Image
+                        src={
+                          activeTask.priority === 'Alta'
+                            ? '/arrow-up.svg'
+                            : activeTask.priority === 'Media'
+                            ? '/arrow-right.svg'
+                            : '/arrow-down.svg'
+                        }
+                        alt={activeTask.priority}
+                        width={16}
+                        height={16}
+                      />
+                      <span className={styles[`priority-${activeTask.priority}`]}>{activeTask.priority}</span>
+                    </div>
+                  </div>
+                </div>
+                <AvatarGroup assignedUserIds={activeTask.AssignedTo} leadedByUserIds={activeTask.LeadedBy} users={effectiveUsers} currentUserId={userId} />
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
+  );
+};
 
 TasksKanban.displayName = 'TasksKanban';
 

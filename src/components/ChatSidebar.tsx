@@ -6,7 +6,7 @@ import ReactDOM from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
-import { Timestamp, doc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, writeBatch, onSnapshot, DocumentData } from 'firebase/firestore';
+import { Timestamp, doc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,10 +25,12 @@ import { useMessagePagination } from '@/hooks/useMessagePagination';
 import { useMessageActions } from '@/hooks/useMessageActions';
 import { useMessageDrag } from '@/hooks/useMessageDrag';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
-import { useTimer } from '@/hooks/useTimer';
+import { useTimerStoreHook } from '@/hooks/useTimerStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSidebarManager } from '@/hooks/useSidebarManager';
 import LoadMoreButton from './ui/LoadMoreButton';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { useShallow } from 'zustand/react/shallow';
 
 
 interface Message {
@@ -60,21 +62,6 @@ interface Message {
 interface ChatSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  task: {
-    id: string;
-    clientId: string;
-    project: string;
-    name: string;
-    description: string;
-    status: string;
-    priority: string;
-    startDate: string | Timestamp | null;
-    endDate: string | Timestamp | null;
-    LeadedBy: string[];
-    AssignedTo: string[];
-    CreatedBy?: string;
-  };
-  clientName: string;
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
 }
 
@@ -438,18 +425,32 @@ const MessageItem = memo(
   },
 );
 
+
+
 const ChatSidebar: React.FC<ChatSidebarProps> = memo(
   ({
     isOpen,
     onClose,
-    task: initialTask,
-    clientName,
     users = [],
   }) => {
+    // Debug logging disabled to reduce console spam
+  
     const { user } = useUser();
     const sidebarRef = useRef<HTMLDivElement>(null);
     const { isAdmin, isLoading } = useAuth();
-    const { encryptMessage, decryptMessage } = useEncryption(initialTask.id);
+    
+    // Usar el store para el estado del sidebar
+    const chatSidebar = useSidebarStateStore(useShallow(state => state.chatSidebar));
+    
+    // Usar currentTask del store
+    const task = chatSidebar.task;
+    const clientName = chatSidebar.clientName;
+    
+    // Debug logging disabled to reduce console spam
+    
+
+    
+    const { encryptMessage, decryptMessage } = useEncryption(task?.id || '');
     const { markAsViewed } = useTaskNotifications();
 
     const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
@@ -462,15 +463,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
-    const [task, setTask] = useState(initialTask);
+    // Usar task del store directamente
     const [activeCardDropdown, setActiveCardDropdown] = useState<'status' | 'team' | 'hours' | null>(null);
     const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
     const [isSummarizeDropdownOpen, setIsSummarizeDropdownOpen] = useState(false);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
-      const [isLoadingChunk, setIsLoadingChunk] = useState(false);
-  const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
+          const [isLoadingChunk, setIsLoadingChunk] = useState(false);
+    const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
 
     const { addMessage, updateMessage } = useDataStore();
     
@@ -478,7 +479,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const { handleClose } = useSidebarManager({
       isOpen,
       sidebarType: 'chat',
-      sidebarId: task.id,
+      sidebarId: task?.id || '',
       onClose,
     });
 
@@ -489,7 +490,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       isTimerRunning,
       timerSeconds,
       isRestoringTimer,
-    } = useTimer(task.id, user?.id || '');
+    } = useTimerStoreHook(task?.id || '', user?.id || '');
+    
+    // Debug logging disabled to reduce console spam
 
     const lastMessageRef = useRef<HTMLDivElement>(null);
     const deletePopupRef = useRef<HTMLDivElement>(null);
@@ -508,24 +511,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       hasMore,
       loadMoreMessages,
     } = useMessagePagination({
-      taskId: task.id,
+      taskId: task?.id || '',
       pageSize: 10,
       decryptMessage,
     });
+    
+    // Debug logging disabled to reduce console spam
 
-    // Debug: Track renders and message changes
-    useEffect(() => {
-      console.log('[ChatSidebar] Messages changed:', {
-        count: messages.length,
-        lastMessage: messages[messages.length - 1]?.text?.substring(0, 50),
-        pendingCount: messages.filter(m => m.isPending).length
-      });
-    }, [messages]);
 
-    // Agregar useEffect para loggear cambios en messages con ChunkDebug
-    useEffect(() => {
-      console.log('[ChunkDebug:Front] Messages updated in ChatSidebar. Total count:', messages.length, 'Last message:', messages[messages.length - 1]?.id);
-    }, [messages]);
 
     // Debug: Track component renders
     // console.log('[ChatSidebar] Component rendered'); // Comentado para reducir logs
@@ -551,64 +544,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     useEffect(() => {
       if (!isOpen || !task.id) return;
 
-      console.log('[ChatSidebar] Setting up real-time task listener for task:', task.id);
+
 
       const taskRef = doc(db, 'tasks', task.id);
-      
-      // Función para comparar cambios reales
-      const hasSignificantChanges = (prevTask: typeof task, newData: DocumentData) => {
-        return (
-          prevTask.status !== newData.status ||
-          prevTask.priority !== newData.priority ||
-          prevTask.description !== newData.description ||
-          prevTask.name !== newData.name ||
-          JSON.stringify(prevTask.AssignedTo) !== JSON.stringify(newData.AssignedTo || []) ||
-          JSON.stringify(prevTask.LeadedBy) !== JSON.stringify(newData.LeadedBy || []) ||
-          (prevTask.startDate instanceof Timestamp ? prevTask.startDate.toMillis() : prevTask.startDate) !== (newData.startDate instanceof Timestamp ? newData.startDate.toMillis() : newData.startDate) ||
-          (prevTask.endDate instanceof Timestamp ? prevTask.endDate.toMillis() : prevTask.endDate) !== (newData.endDate instanceof Timestamp ? newData.endDate.toMillis() : newData.endDate)
-        );
-      };
       
       const unsubscribe = onSnapshot(
         taskRef,
         (docSnap) => {
           if (docSnap.exists()) {
-            const taskData = docSnap.data();
-            console.log('[ChatSidebar] Task updated from onSnapshot:', {
-              taskId: task.id,
-              oldStatus: task.status,
-              newStatus: taskData.status,
-              oldPriority: task.priority,
-              newPriority: taskData.priority,
-              hasUpdates: taskData.hasUnreadUpdates,
-              lastActivity: taskData.lastActivity
-            });
-            
-            setTask(prevTask => {
-              // Solo actualizar si hay cambios significativos
-              if (!hasSignificantChanges(prevTask, taskData)) {
-                return prevTask;
-              }
-              
-              return {
-                ...prevTask,
-                status: taskData.status || prevTask.status,
-                priority: taskData.priority || prevTask.priority,
-                description: taskData.description || prevTask.description,
-                name: taskData.name || prevTask.name,
-                AssignedTo: taskData.AssignedTo || prevTask.AssignedTo,
-                LeadedBy: taskData.LeadedBy || prevTask.LeadedBy,
-                startDate: taskData.startDate || prevTask.startDate,
-                endDate: taskData.endDate || prevTask.endDate,
-              };
-            });
-            
-            if (taskData.status !== task.status) {
-              console.log('[ChatSidebar] Status change detected, forcing refresh:', {
-                oldStatus: task.status,
-                newStatus: taskData.status
-              });
-            }
+
           } else {
             console.warn('[ChatSidebar] Task document does not exist:', task.id);
           }
@@ -619,7 +563,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       );
 
       return () => {
-        console.log('[ChatSidebar] Cleaning up task listener for task:', task.id);
         unsubscribe();
       };
     }, [isOpen, task.id, task.status, task.priority]);
@@ -628,7 +571,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       console.log('[ChatSidebar] handleLoadMoreMessages called. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'isLoadingChunk:', isLoadingChunk);
       if (hasMore && !isLoadingMore && !isLoadingChunk) {
         setIsLoadingChunk(true);
-        console.log('[ChunkDebug:Front] Manual load more triggered. Current messages:', messages.length);
+        // Debug logging disabled to reduce console spam
         const currentMessageCount = messages.length;
         await new Promise(resolve => setTimeout(resolve, 2000));
         try {
@@ -809,7 +752,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           status,
           lastActivity: serverTimestamp(),
         });
-        setTask(prevTask => ({ ...prevTask, status }));
+        // Actualizar status en el store
+        console.log('[ChatSidebar] Status updated in store');
         setActiveCardDropdown(null);
         const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
         if (task.CreatedBy) recipients.add(task.CreatedBy);
@@ -836,7 +780,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         });
       } catch (error) {
         console.error('[ChatSidebar] Error updating task status:', error);
-        setTask(prevTask => ({ ...prevTask }));
+        // Actualizar task en el store
+        console.log('[ChatSidebar] Task updated in store');
         setActiveCardDropdown(null);
       }
     }, [isCreator, isAdmin, user?.id, user?.fullName, task]);
@@ -1704,11 +1649,14 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             fileName={messages.find(m => m.imageUrl === imagePreviewSrc)?.fileName}
             onClose={() => setImagePreviewSrc(null)}
           />
-        )}
+                )}
       </motion.div>
     );
   }
 );
+
+// Log adicional para verificar que el componente se exporta correctamente
+console.log('[ChatSidebar] ✅ Component definition completed');
 
 ChatSidebar.displayName = 'ChatSidebar';
 

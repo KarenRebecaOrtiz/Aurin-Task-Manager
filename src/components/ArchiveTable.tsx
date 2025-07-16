@@ -15,12 +15,8 @@ import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUt
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { archiveTableStore } from '@/stores/archiveTableStore';
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-}
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { useDataStore } from '@/stores/dataStore';
 
 interface User {
   id: string;
@@ -51,7 +47,7 @@ interface Task {
   archivedBy?: string;
 }
 
-type TaskView = 'table' | 'kanban';
+// type TaskView = 'table' | 'kanban';
 
 interface AvatarGroupProps {
   assignedUserIds: string[];
@@ -131,16 +127,12 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUser
 
 interface ArchiveTableProps {
   onEditTaskOpen: (taskId: string) => void;
-  onViewChange: (view: TaskView) => void;
+  onViewChange: (view: string) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onClose: () => void;
-  onChatSidebarOpen: (task: Task) => void;
-  onTaskArchive?: (task: Task, action: 'archive' | 'unarchive') => Promise<boolean>;
-  externalTasks?: Task[];
-  externalClients?: Client[];
-  externalUsers?: User[];
-  onTaskUpdate?: (task: Task) => void;
-  onDataRefresh?: () => void;
+  onTaskArchive: (task: unknown, action: 'archive' | 'unarchive') => Promise<boolean>;
+  // onTaskUpdate: (task: unknown) => void;
+  onDataRefresh: () => void;
 }
 
 const ArchiveTable: React.FC<ArchiveTableProps> = memo(
@@ -149,17 +141,20 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     onViewChange,
     onDeleteTaskOpen,
     onClose,
-    onChatSidebarOpen,
     onTaskArchive,
-    externalTasks,
-    externalClients,
-    externalUsers,
-    onTaskUpdate: _onTaskUpdate, // eslint-disable-line @typescript-eslint/no-unused-vars
     onDataRefresh,
   }) => {
     const { user } = useUser();
     const { isAdmin } = useAuth();
     
+    // Usa useDataStore/useShallow para obtener tasks, users, clients, etc. directamente
+    const tasks = useDataStore(useShallow(state => state.tasks));
+    const clients = useDataStore(useShallow(state => state.clients));
+    const users = useDataStore(useShallow(state => state.users));
+    // const isLoadingTasks = useDataStore(useShallow(state => state.isLoadingTasks));
+    // const isLoadingClients = useDataStore(useShallow(state => state.isLoadingClients));
+    // const isLoadingUsers = useDataStore(useShallow(state => state.isLoadingUsers));
+
     // Optimizar selectores de Zustand para evitar re-renders innecesarios
     const {
       // Estado
@@ -229,40 +224,40 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     const userId = useMemo(() => user?.id || '', [user]);
 
-    // PRIORIDAD: Usar datos externos siempre que estén disponibles
-    const effectiveTasks = useMemo(() => externalTasks || [], [externalTasks]);
-    const effectiveClients = useMemo(() => externalClients || [], [externalClients]);
-    const effectiveUsers = useMemo(() => externalUsers || [], [externalUsers]);
+    // ✅ Usar datos externos solo si están disponibles, de lo contrario usar dataStore
+    const effectiveTasks = tasks;
+    const effectiveClients = clients;
+    const effectiveUsers = users;
 
     console.log('[ArchiveTable] Data usage check:', {
-      hasExternalTasks: !!externalTasks,
-      hasExternalClients: !!externalClients,
-      hasExternalUsers: !!externalUsers,
+      hasExternalTasks: false, // No external tasks passed as props
+      hasExternalClients: false, // No external clients passed as props
+      hasExternalUsers: false, // No external users passed as props
       effectiveTasksCount: effectiveTasks.length,
       archivedTasksCount: effectiveTasks.filter(t => t.archived === true).length,
-      externalUsersCount: externalUsers?.length || 0,
+      externalUsersCount: users?.length || 0,
       });
 
     // CRÍTICO: Actualizar inmediatamente cuando cambien los datos externos
     useEffect(() => {
-      if (externalTasks && externalTasks.length > 0) {
-        console.log('[ArchiveTable] External tasks updated, count:', externalTasks.length);
-        const archivedCount = externalTasks.filter(t => t.archived === true).length;
+      if (tasks && tasks.length > 0) {
+        console.log('[ArchiveTable] External tasks updated, count:', tasks.length);
+        const archivedCount = tasks.filter(t => t.archived === true).length;
         console.log('[ArchiveTable] Archived tasks in external data:', archivedCount);
       }
-    }, [externalTasks]);
+    }, [tasks]);
 
     useEffect(() => {
-      if (externalClients && externalClients.length > 0) {
-        console.log('[ArchiveTable] External clients updated, count:', externalClients.length);
+      if (clients && clients.length > 0) {
+        console.log('[ArchiveTable] External clients updated, count:', clients.length);
         }
-    }, [externalClients]);
+    }, [clients]);
 
     useEffect(() => {
-      if (externalUsers && externalUsers.length > 0) {
-        console.log('[ArchiveTable] External users updated, count:', externalUsers.length);
+      if (users && users.length > 0) {
+        console.log('[ArchiveTable] External users updated, count:', users.length);
       }
-    }, [externalUsers]);
+    }, [users]);
 
     // CRÍTICO: ArchiveTable SIEMPRE filtra tareas NO archivadas (archived: false)
     const archivedTasks = useMemo(() => {
@@ -473,12 +468,14 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     }, [filteredTasks, sortKey, sortDirection, getClientName]);
 
     const handleTaskRowClick = async (task: Task) => {
-      // Marcar la tarea como vista
-        await markTaskAsViewed(task.id, userId);
-      
-      // Abrir el chat de la tarea
-      onChatSidebarOpen(task);
-      console.log('[ArchiveTable] Row clicked, opening chat for task:', task.id);
+      // Marcar la tarea como vista usando el nuevo sistema
+      await markTaskAsViewed(task.id, userId);
+      // Usar directamente el store en lugar de props para evitar re-renders
+      const { openChatSidebar } = useSidebarStateStore.getState();
+      // Buscar el nombre del cliente
+      const clientName = effectiveClients?.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
+      // Actualizar el store directamente
+      openChatSidebar(task, clientName);
     };
 
     // Manejar clicks fuera del ActionMenu
@@ -738,7 +735,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     }, []);
 
     // Loading state - show table immediately if external data is available
-    if (!externalTasks || !externalClients || !externalUsers) {
+    if (!tasks || !clients || !users) {
       console.log('[ArchiveTable] Showing skeleton loader - waiting for external data');
       return (
         <div className={styles.container}>

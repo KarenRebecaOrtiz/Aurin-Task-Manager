@@ -48,7 +48,7 @@ export const useChunkStore = create<ChunkStore>()(
     (set, get) => ({
       chunksByTask: {},
       addChunk: (taskId, newChunk) => {
-        console.log('[ChunkDebug] Adding chunk to store for taskId:', taskId, 'Chunk size:', newChunk.length);
+        // Debug logging disabled to reduce console spam
         set((state) => {
           const existing = state.chunksByTask[taskId] || { chunks: [], lastFetched: Date.now() };
           return {

@@ -497,7 +497,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
 
   // Show loading state
   if (isLoading) {
-    console.log("[OnboardingStepper] Loading onboarding status...");
+    // Debug logging disabled to reduce console spam
     return null;
   }
 
@@ -509,11 +509,7 @@ const OnboardingStepper = ({ onComplete }: OnboardingStepperProps) => {
 
   // Don't render if onboarding is completed or no user
   if (!shouldRender) {
-    console.log("[OnboardingStepper] Not rendering stepper:", {
-      isCompleted,
-      isLoading,
-      hasUser: !!user
-    });
+    // Debug logging disabled to reduce console spam
     return null;
   }
 

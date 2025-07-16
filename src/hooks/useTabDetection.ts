@@ -66,7 +66,7 @@ export const useTabDetection = (config: TabDetectionConfig = {}) => {
     setIsOnline(newIsOnline);
     
     if (shouldLog()) {
-      console.log(`📱 Tab detection: ${realTabCount} active tabs, online: ${newIsOnline}`);
+      // Debug logging disabled to reduce console spam
     }
     
     if (realTabCount === 0) {

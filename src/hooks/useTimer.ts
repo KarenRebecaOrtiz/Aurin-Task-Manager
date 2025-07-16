@@ -288,7 +288,7 @@ export const useTimer = (taskId: string, userId: string) => {
     pauseTimer,
     resetTimer,
     finalizeTimer,
-    // Getters para compatibilidad
+    // Getters para compatibilidad - memoizados para evitar re-renders
     isTimerRunning: timerState.isRunning,
     timerSeconds: timerState.accumulatedSeconds,
     isRestoringTimer: timerState.isRestoring,

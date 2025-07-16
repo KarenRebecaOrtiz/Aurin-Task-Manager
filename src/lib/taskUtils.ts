@@ -220,7 +220,7 @@ export async function markTaskAsViewed(taskId: string, userId: string) {
       [`lastViewedBy.${userId}`]: now,
     });
     
-    console.log('[taskUtils] Task marked as viewed:', { taskId, userId, timestamp: now });
+    // Debug logging disabled to reduce console spam
     
     // Opcional: Si todos los usuarios asignados han visto la tarea, marcar hasUnreadUpdates como false
     // Esto es opcional y depende de si quieres que el flag general se mantenga o no

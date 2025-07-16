@@ -136,7 +136,7 @@ export const useMessagePagination = ({
   
   // Debug: Log cuando hasMore cambia
   useEffect(() => {
-    console.log('[ChunkDebug:Hook] hasMore changed to:', hasMore);
+    // Debug logging disabled to reduce console spam
   }, [hasMore]);
   const [error, setError] = useState<string>('');
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
@@ -181,7 +181,7 @@ export const useMessagePagination = ({
       // Verificar cache primero
       const cachedChunks = getChunks(taskId);
       if (cachedChunks && cachedChunks.length > 0 && !checkFirebaseCallLimits()) {
-        console.log('[ChunkDebug:Hook] Using cached chunks from chunkStore due to limits. Chunks:', cachedChunks.length);
+        // Debug logging disabled to reduce console spam
         cachedChunks.forEach(chunk => chunk.forEach(msg => addMessage(taskId, msg)));
         
         // Necesitamos establecer lastDocRef y hasMore para chunks cacheados
@@ -192,7 +192,7 @@ export const useMessagePagination = ({
         );
         const allMessagesSnapshot = await getDocs(allMessagesQuery);
         const totalMessages = allMessagesSnapshot.docs.length;
-        console.log('[ChunkDebug:Hook] Cache loaded - Total messages in task:', totalMessages);
+        // Debug logging disabled to reduce console spam
         
         // Determinar si hay más chunks disponibles
         const hasMoreMessages = totalMessages > pageSize;
@@ -200,7 +200,7 @@ export const useMessagePagination = ({
         // Establecer lastDocRef
         if (allMessagesSnapshot.docs.length > 0) {
           lastDocRef.current = allMessagesSnapshot.docs[0];
-          console.log('[ChunkDebug:Hook] Cache loaded - Setting hasMore to:', hasMoreMessages, 'totalMessages:', totalMessages, 'pageSize:', pageSize);
+          // Debug logging disabled to reduce console spam
           setHasMore(hasMoreMessages);
         }
         return;
@@ -217,7 +217,7 @@ export const useMessagePagination = ({
       );
       const allMessagesSnapshot = await getDocs(allMessagesQuery);
       const totalMessages = allMessagesSnapshot.docs.length;
-      console.log('[ChunkDebug:Hook] Total messages in task:', totalMessages);
+              // Debug logging disabled to reduce console spam
       
       // Determinar si hay más chunks disponibles
       const hasMoreMessages = totalMessages > pageSize;
@@ -228,9 +228,9 @@ export const useMessagePagination = ({
       const newMessages = await Promise.all(snapshot.docs.map(async (doc) => await processMessage(doc.data(), doc.id)));
       setTaskMessages(taskId, newMessages);
       addChunk(taskId, newMessages);  // Guarda el chunk inicial en chunkStore
-      console.log('[ChunkDebug:Hook] Initial chunk loaded and saved to chunkStore. Messages count:', newMessages.length);
+              // Debug logging disabled to reduce console spam
       lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
-      console.log('[ChunkDebug:Hook] Initial load - Setting hasMore to:', hasMoreMessages, 'totalMessages:', totalMessages, 'pageSize:', pageSize);
+              // Debug logging disabled to reduce console spam
       setHasMore(hasMoreMessages);
     } catch (err) {
       setError('Error al cargar mensajes iniciales');
@@ -238,12 +238,12 @@ export const useMessagePagination = ({
     } finally {
       setIsLoading(false);
     }
-  }, [taskId, pageSize, processMessage, setTaskMessages, addChunk, getChunks]);
+  }, [taskId, pageSize, processMessage, setTaskMessages, addChunk, getChunks, addMessage]);
 
   const loadMoreMessages = useCallback(async () => {
-    console.log('[ChunkDebug:Hook] loadMoreMessages called. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'lastDocRef:', !!lastDocRef.current);
+          // Debug logging disabled to reduce console spam
     if (!hasMore || isLoadingMore || !lastDocRef.current) {
-      console.log('[ChunkDebug:Hook] loadMoreMessages early return. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'lastDocRef:', !!lastDocRef.current);
+              // Debug logging disabled to reduce console spam
       return;
     }
     setIsLoadingMore(true);
@@ -258,7 +258,7 @@ export const useMessagePagination = ({
       );
       const checkSnapshot = await getDocs(checkQuery);
       if (checkSnapshot.docs.length === 0) {
-        console.log('[ChunkDebug:Hook] No more messages available, setting hasMore to false');
+        // Debug logging disabled to reduce console spam
         setHasMore(false);
         setIsLoadingMore(false);
         return;
@@ -280,10 +280,10 @@ export const useMessagePagination = ({
       const newMessages = await Promise.all(snapshot.docs.map(async (doc) => await processMessage(doc.data(), doc.id)));
       newMessages.forEach((msg) => addMessage(taskId, msg));
       addChunk(taskId, newMessages);  // Guarda nuevo chunk
-      console.log('[ChunkDebug:Hook] New chunk loaded from Firebase. Size:', newMessages.length, 'Total messages now:', messages.length + newMessages.length);
+              // Debug logging disabled to reduce console spam
       lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] || null;
       const newHasMore = snapshot.docs.length === pageSize;
-      console.log('[ChunkDebug:Hook] Setting hasMore to:', newHasMore, 'docs.length:', snapshot.docs.length, 'pageSize:', pageSize);
+              // Debug logging disabled to reduce console spam
       setHasMore(newHasMore);
     } catch (err) {
       setError('Error al cargar más mensajes');
@@ -291,7 +291,7 @@ export const useMessagePagination = ({
     } finally {
       setIsLoadingMore(false);
     }
-  }, [hasMore, isLoadingMore, taskId, pageSize, processMessage, addMessage, addChunk, messages.length, setHasMore]);
+  }, [hasMore, isLoadingMore, taskId, pageSize, processMessage, addMessage, addChunk, setHasMore]);
 
   const addOptimisticMessage = useCallback((message: Message) => {
     addMessage(taskId, message);
@@ -302,22 +302,22 @@ export const useMessagePagination = ({
   }, [taskId, updateMessage]);
 
   useEffect(() => {
-    console.log('[ChunkDebug:Hook] useEffect triggered. taskId:', taskId, 'current hasMore:', hasMore);
+          // Debug logging disabled to reduce console spam
     // Evitar múltiples listeners
     if (unsubscribeRef.current) {
-      console.log('[useMessagePagination] Cleaning up existing listener for taskId:', taskId);
+              // Debug logging disabled to reduce console spam
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
     
     // Solo cargar mensajes iniciales si no hay mensajes ya cargados
     const currentMessages = messages.length;
-    console.log('[ChunkDebug:Hook] Current messages count:', currentMessages);
+            // Debug logging disabled to reduce console spam
     if (currentMessages === 0) {
-      console.log('[ChunkDebug:Hook] Loading initial messages...');
+              // Debug logging disabled to reduce console spam
       loadInitialMessages();
     } else {
-      console.log('[ChunkDebug:Hook] Skipping initial load, messages already loaded');
+              // Debug logging disabled to reduce console spam
     }
     
     // Configurar listener para cambios en tiempo real
@@ -332,11 +332,11 @@ export const useMessagePagination = ({
       if (pendingChanges.length === 0 || isProcessing) return;
       
       isProcessing = true;
-      console.log('[useMessagePagination] Processing batch changes:', pendingChanges.length);
+              // Debug logging disabled to reduce console spam
       
       const store = useDataStore.getState();
       const currentMessages = store.messages[taskId] || [];
-      console.log('[useMessagePagination] Processing batch changes. Current messages count:', currentMessages.length);
+              // Debug logging disabled to reduce console spam
       
       // Deduplicar cambios para evitar actualizaciones múltiples del mismo mensaje
       const uniqueChanges = pendingChanges.reduce((acc, change) => {
@@ -365,24 +365,20 @@ export const useMessagePagination = ({
               // Solo actualizar si hay cambios reales
               const hasChanges = JSON.stringify(existingById) !== JSON.stringify(newMessage);
               if (hasChanges) {
-                console.log('[useMessagePagination] Updating existing message by ID:', newMessage.id);
+                // Debug logging disabled to reduce console spam
                 store.updateMessage(taskId, existingById.id, newMessage);
               } else {
-                console.log('[useMessagePagination] Message unchanged, skipping:', newMessage.id);
+                // Debug logging disabled to reduce console spam
               }
             } else if (existingByClientId) {
               // Si encontramos un mensaje optimista con el mismo clientId, reemplazarlo
-              console.log('[useMessagePagination] Replacing optimistic message with real message:', {
-                optimisticId: existingByClientId.id,
-                realId: newMessage.id,
-                clientId: newMessage.clientId
-              });
+                          // Debug logging disabled to reduce console spam
               
               // Eliminar el mensaje optimista y agregar el real
               store.deleteMessage(taskId, existingByClientId.id);
               store.addMessage(taskId, newMessage);
             } else {
-              console.log('[useMessagePagination] Adding new message:', newMessage.id);
+              // Debug logging disabled to reduce console spam
               store.addMessage(taskId, newMessage);
             }
           } else if (change.type === 'modified') {
@@ -391,12 +387,12 @@ export const useMessagePagination = ({
             if (existing) {
               const hasChanges = JSON.stringify(existing) !== JSON.stringify(updatedMessage);
               if (hasChanges) {
-                console.log('[useMessagePagination] Modifying message:', updatedMessage.id);
+                // Debug logging disabled to reduce console spam
                 store.updateMessage(taskId, updatedMessage.id, updatedMessage);
               }
             }
           } else if (change.type === 'removed') {
-            console.log('[useMessagePagination] Removing message:', change.doc.id);
+            // Debug logging disabled to reduce console spam
             store.deleteMessage(taskId, change.doc.id);
           }
           
@@ -406,7 +402,7 @@ export const useMessagePagination = ({
         }
       }
       
-      console.log('[ChunkDebug:Hook] Batch processed. Updated messages count:', currentMessages.length);
+              // Debug logging disabled to reduce console spam
       
       pendingChanges = [];
       isProcessing = false;
@@ -428,7 +424,7 @@ export const useMessagePagination = ({
       unsubscribe();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [taskId, loadInitialMessages, processMessage]);
+  }, [taskId, loadInitialMessages, processMessage, messages.length]);
 
   return {
     messages,

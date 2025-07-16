@@ -106,11 +106,11 @@
 
 .headerSection {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 8px 0;
   transition: all 0.2s ease-in-out;
-  flex-direction: row;
   &:hover {
     opacity: 0.8;
   }

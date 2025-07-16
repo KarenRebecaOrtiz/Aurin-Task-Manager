@@ -78,21 +78,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const effectiveUsers = externalUsers || users;
     const effectiveTasks = externalTasks || tasks;
     
-    // Debug logs para verificar el estado de los usuarios
-    console.log('[MembersTable] render', {
-      props: {
-        externalUsers,
-        externalTasks,
-      },
-      usersLength: users.length,
-      tasksLength: tasks.length,
-      filteredUsersLength: filteredUsers.length,
-      sortKey,
-      sortDirection,
-      searchQuery,
-    });
-    console.log('[MembersTable] Debug - effectiveUsers:', effectiveUsers?.length, 'externalUsers:', externalUsers?.length, 'users:', users.length);
-    console.log('[MembersTable] Debug - effectiveTasks:', effectiveTasks?.length, 'externalTasks:', externalTasks?.length, 'tasks:', tasks.length);
+    // Debug logging disabled to reduce console spam
     
     // Memoizar los callbacks para evitar re-renders
     const handleMessageSidebarOpen = useCallback((user: User) => {
@@ -101,16 +87,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
 
     // Memoizar el callback de row click para evitar re-renders
     const handleRowClick = useCallback(async (u: User, columnKey: string) => {
-      console.log('[MembersTable] handleRowClick', {
-        user: u,
-        columnKey,
-        currentUserId: user?.id,
-        getUnreadCount: getUnreadCountForUser ? getUnreadCountForUser(u.id) : 0,
-        props: {
-          externalUsers,
-          externalTasks,
-        }
-      });
+      // Debug logging disabled to reduce console spam
       if (['imageUrl', 'fullName', 'role', 'activeProjects', 'status', 'messageNotifications'].includes(columnKey) &&
           u.id !== user?.id) {
         // Marcar la conversación como leída antes de abrir el sidebar (solo si las funciones están disponibles)
@@ -136,7 +113,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         }
         handleMessageSidebarOpen(u);
       }
-    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen, externalUsers, externalTasks]);
+    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen]);
     
     // Los datos vienen de dataStore - no necesitamos hacer fetch aquí
     // Solo sincronizar el estado de loading

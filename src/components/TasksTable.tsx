@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -20,6 +20,9 @@ import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { tasksTableStore } from '@/stores/tasksTableStore';
+import { useDataStore } from '@/stores/dataStore';
+
+import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
 
 interface Client {
   id: string;
@@ -56,7 +59,7 @@ interface Task {
   archivedBy?: string;
 }
 
-type TaskView = 'table' | 'kanban';
+// type TaskView = 'table' | 'kanban'; // Removed as it's no longer used
 
 // Helper function to normalize status values (same as TasksKanban)
 const normalizeStatus = (status: string): string => {
@@ -156,14 +159,6 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUser
 };
 
 interface TasksTableProps {
-  onNewTaskOpen: () => void;
-  onEditTaskOpen: (taskId: string) => void;
-  onChatSidebarOpen: (task: Task) => void;
-  onMessageSidebarOpen: (user: User) => void;
-  onOpenProfile: (user: { id: string; imageUrl: string }) => void;
-  onViewChange: (view: TaskView) => void;
-  onDeleteTaskOpen: (taskId: string) => void;
-  onArchiveTableOpen: () => void;
   externalTasks?: Task[];
   externalClients?: Client[];
   externalUsers?: User[];
@@ -171,97 +166,72 @@ interface TasksTableProps {
 
 
 
-const TasksTable: React.FC<TasksTableProps> = ({
-  onNewTaskOpen,
-  onEditTaskOpen,
-  onChatSidebarOpen,
-  onMessageSidebarOpen,
-  onOpenProfile,
-  onViewChange,
-  onDeleteTaskOpen,
-  onArchiveTableOpen,
+const TasksTable: React.FC<TasksTableProps> = memo(({
   externalTasks,
   externalClients,
   externalUsers,
 }) => {
   const { user } = useUser();
   const { isAdmin } = useAuth();
-
-  // Optimizar selectores de Zustand para evitar re-renders innecesarios
+  
+  // ✅ Usar actions store para evitar callback props
   const {
-    // Estado
-    filteredTasks,
-    searchQuery,
-    priorityFilter,
-    clientFilter,
-    sortKey,
-    sortDirection,
-    isUserDropdownOpen,
-    isPriorityDropdownOpen,
-    isClientDropdownOpen,
-    isLoadingTasks,
-    isLoadingClients,
-    isLoadingUsers,
-    actionMenuOpenId,
-    undoStack,
-    showUndo,
-    userFilter,
-    // Acciones
-    setFilteredTasks,
-    setSearchQuery,
-    setPriorityFilter,
-    setClientFilter,
-    setSortKey,
-    setSortDirection,
-    setIsUserDropdownOpen,
-    setIsPriorityDropdownOpen,
-    setIsClientDropdownOpen,
-    setIsLoadingTasks,
-    setIsLoadingClients,
-    
-    setActionMenuOpenId,
-    setUndoStack,
-    setShowUndo,
-    setUserFilter,
-  } = useStore(
-    tasksTableStore,
-    useShallow((state) => ({
-      // Estado
-      filteredTasks: state.filteredTasks,
-      searchQuery: state.searchQuery,
-      priorityFilter: state.priorityFilter,
-      clientFilter: state.clientFilter,
-      sortKey: state.sortKey,
-      sortDirection: state.sortDirection,
-      isUserDropdownOpen: state.isUserDropdownOpen,
-      isPriorityDropdownOpen: state.isPriorityDropdownOpen,
-      isClientDropdownOpen: state.isClientDropdownOpen,
-      isLoadingTasks: state.isLoadingTasks,
-      isLoadingClients: state.isLoadingClients,
-      isLoadingUsers: state.isLoadingUsers,
-      actionMenuOpenId: state.actionMenuOpenId,
-      undoStack: state.undoStack,
-      showUndo: state.showUndo,
-      userFilter: state.userFilter,
-      // Acciones
-      setFilteredTasks: state.setFilteredTasks,
-      setSearchQuery: state.setSearchQuery,
-      setPriorityFilter: state.setPriorityFilter,
-      setClientFilter: state.setClientFilter,
-      setSortKey: state.setSortKey,
-      setSortDirection: state.setSortDirection,
-      setIsUserDropdownOpen: state.setIsUserDropdownOpen,
-      setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
-      setIsClientDropdownOpen: state.setIsClientDropdownOpen,
-      setIsLoadingTasks: state.setIsLoadingTasks,
-      setIsLoadingClients: state.setIsLoadingClients,
+    openNewTask,
+    openEditTask,
+    openDeleteTask,
+    openArchiveTable,
+    changeView,
+    openProfile,
+    openMessageSidebar
+  } = useTasksTableActionsStore();
+  
+  // ✅ Optimizar selectores de dataStore con useShallow para evitar re-renders
+  const tasks = useDataStore(useShallow(state => state.tasks));
+  const clients = useDataStore(useShallow(state => state.clients));
+  const users = useDataStore(useShallow(state => state.users));
+  const isLoadingTasks = useDataStore(useShallow(state => state.isLoadingTasks));
+  const isLoadingClients = useDataStore(useShallow(state => state.isLoadingClients));
+  
+  const isLoadingUsers = useDataStore(useShallow(state => state.isLoadingUsers));
 
-      setActionMenuOpenId: state.setActionMenuOpenId,
-      setUndoStack: state.setUndoStack,
-      setShowUndo: state.setShowUndo,
-      setUserFilter: state.setUserFilter,
-    }))
-  );
+  // ✅ Usar datos directamente de dataStore (como MembersTable)
+  const effectiveTasks = externalTasks || tasks;
+  const effectiveClients = externalClients || clients;
+  const effectiveUsers = externalUsers || users;
+
+  // ✅ Optimizar selectores de Zustand para evitar re-renders innecesarios - usar selectores individuales como MembersTable
+  const filteredTasks = useStore(tasksTableStore, useShallow(state => state.filteredTasks));
+  const sortKey = useStore(tasksTableStore, useShallow(state => state.sortKey));
+  const sortDirection = useStore(tasksTableStore, useShallow(state => state.sortDirection));
+  const searchQuery = useStore(tasksTableStore, useShallow(state => state.searchQuery));
+  const priorityFilter = useStore(tasksTableStore, useShallow(state => state.priorityFilter));
+  const clientFilter = useStore(tasksTableStore, useShallow(state => state.clientFilter));
+  const userFilter = useStore(tasksTableStore, useShallow(state => state.userFilter));
+  const actionMenuOpenId = useStore(tasksTableStore, useShallow(state => state.actionMenuOpenId));
+  const isPriorityDropdownOpen = useStore(tasksTableStore, useShallow(state => state.isPriorityDropdownOpen));
+  const isClientDropdownOpen = useStore(tasksTableStore, useShallow(state => state.isClientDropdownOpen));
+  const isUserDropdownOpen = useStore(tasksTableStore, useShallow(state => state.isUserDropdownOpen));
+  const undoStack = useStore(tasksTableStore, useShallow(state => state.undoStack));
+  const showUndo = useStore(tasksTableStore, useShallow(state => state.showUndo));
+  
+  // Acciones
+  const setFilteredTasks = useStore(tasksTableStore, useShallow(state => state.setFilteredTasks));
+  const setSortKey = useStore(tasksTableStore, useShallow(state => state.setSortKey));
+  const setSortDirection = useStore(tasksTableStore, useShallow(state => state.setSortDirection));
+  const setSearchQuery = useStore(tasksTableStore, useShallow(state => state.setSearchQuery));
+  const setPriorityFilter = useStore(tasksTableStore, useShallow(state => state.setPriorityFilter));
+  const setClientFilter = useStore(tasksTableStore, useShallow(state => state.setClientFilter));
+  const setUserFilter = useStore(tasksTableStore, useShallow(state => state.setUserFilter));
+  const setActionMenuOpenId = useStore(tasksTableStore, useShallow(state => state.setActionMenuOpenId));
+  const setIsPriorityDropdownOpen = useStore(tasksTableStore, useShallow(state => state.setIsPriorityDropdownOpen));
+  const setIsClientDropdownOpen = useStore(tasksTableStore, useShallow(state => state.setIsClientDropdownOpen));
+  const setIsUserDropdownOpen = useStore(tasksTableStore, useShallow(state => state.setIsUserDropdownOpen));
+  const setIsLoadingTasks = useStore(tasksTableStore, useShallow(state => state.setIsLoadingTasks));
+  const setIsLoadingClients = useStore(tasksTableStore, useShallow(state => state.setIsLoadingClients));
+  const setUndoStack = useStore(tasksTableStore, useShallow(state => state.setUndoStack));
+  const setShowUndo = useStore(tasksTableStore, useShallow(state => state.setShowUndo));
+  
+  // Debug: Log what's causing re-renders - REMOVED TO REDUCE RE-RENDERS
 
   // Refs
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -275,11 +245,6 @@ const TasksTable: React.FC<TasksTableProps> = ({
   const userId = useMemo(() => user?.id || '', [user]);
 
   // Usar datos externos si están disponibles, de lo contrario usar datos del store
-  const effectiveTasks = useMemo(() => externalTasks ?? [], [externalTasks]);
-  const effectiveClients = useMemo(() => externalClients ?? [], [externalClients]);
-  const effectiveUsers = useMemo(() => externalUsers ?? [], [externalUsers]);
-
-  // Optimizar tracking de cambios usando refs para evitar re-renders
   const effectiveTasksRef = useRef(effectiveTasks);
   const effectiveTasksIdsRef = useRef('');
   
@@ -430,12 +395,22 @@ const TasksTable: React.FC<TasksTableProps> = ({
 
   // Función para manejar el clic en una fila de tarea
   const handleTaskRowClick = async (task: Task) => {
-    // Marcar la tarea como vista usando el nuevo sistema
-    await markAsViewed(task.id);
+    console.log('[TasksTable] handleTaskRowClick called', { taskId: task.id, timestamp: new Date().toISOString() });
     
-    // Abrir el chat de la tarea
-    onChatSidebarOpen(task);
-    console.log('[TasksTable] Row clicked, opening chat for task:', task.id);
+    // Usar los action handlers configurados en TasksTableContainer
+    const { openChatSidebar } = useTasksTableActionsStore.getState();
+    
+    // Buscar el nombre del cliente
+    const clientName = clients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
+    
+    // Abrir el sidebar inmediatamente (sin esperar markAsViewed)
+    openChatSidebar(task, clientName);
+            // Debug logging disabled to reduce console spam
+    
+    // Marcar la tarea como vista después de abrir el sidebar (no bloquear)
+    markAsViewed(task.id).catch(error => {
+      console.error('[TasksTable] Error marking task as viewed:', error);
+    });
   };
 
   useEffect(() => {
@@ -813,13 +788,13 @@ const TasksTable: React.FC<TasksTableProps> = ({
                 task={task}
                 userId={userId}
                 onEdit={() => {
-                  onEditTaskOpen(task.id);
+                  openEditTask(task.id);
                   setActionMenuOpenId(null);
                 }}
-                onDelete={() => {
-                  onDeleteTaskOpen(task.id);
-                  setActionMenuOpenId(null);
-                }}
+                                  onDelete={() => {
+                    openDeleteTask(task.id);
+                    setActionMenuOpenId(null);
+                  }}
                 onArchive={async () => {
                   try {
                     // Guardar en undo stack
@@ -999,8 +974,8 @@ const TasksTable: React.FC<TasksTableProps> = ({
           `}
         </style>
         <UserSwiper
-          onOpenProfile={onOpenProfile}
-          onMessageSidebarOpen={onMessageSidebarOpen}
+          onOpenProfile={openProfile}
+          onMessageSidebarOpen={openMessageSidebar}
           className={styles.hideOnMobile}
         />
         <div className={styles.header} style={{margin:'30px 0px'}}>
@@ -1034,8 +1009,8 @@ const TasksTable: React.FC<TasksTableProps> = ({
         `}
       </style>
       <UserSwiper
-        onOpenProfile={onOpenProfile}
-        onMessageSidebarOpen={onMessageSidebarOpen}
+        onOpenProfile={openProfile}
+        onMessageSidebarOpen={openMessageSidebar}
         className={styles.hideOnMobile}
       />
       <div className={styles.header} style={{margin:'30px 0px'}}>
@@ -1148,7 +1123,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
               className={`${styles.viewButton} ${styles.hideOnMobile}`}
               onClick={(e) => {
                 animateClick(e.currentTarget);
-                onViewChange('kanban');
+                changeView('kanban');
                 console.log('[TasksTable] Switching to Kanban view');
               }}
             >
@@ -1183,7 +1158,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
               className={styles.viewButton}
               onClick={(e) => {
                 animateClick(e.currentTarget);
-                onArchiveTableOpen();
+                openArchiveTable();
                 console.log('[TasksTable] Opening Archive Table');
               }}
             >
@@ -1390,7 +1365,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
               className={styles.createButton}
               onClick={(e) => {
                 animateClick(e.currentTarget);
-                onNewTaskOpen();
+                openNewTask();
                 console.log('[TasksTable] New task creation triggered');
               }}
             >
@@ -1488,7 +1463,7 @@ const TasksTable: React.FC<TasksTableProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+});
 
 TasksTable.displayName = 'TasksTable';
 

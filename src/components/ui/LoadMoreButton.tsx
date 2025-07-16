@@ -15,11 +15,11 @@ const LoadMoreButton: React.FC<LoadMoreButtonProps> = ({
   isLoading = false,
   hasMoreMessages = true,
   className = '',
-  showNoMoreMessage = false
+  // showNoMoreMessage = false // Unused variable removed
 }) => {
   // Debug log
   if (process.env.NODE_ENV === 'development') {
-    console.log('[LoadMoreButton] hasMoreMessages:', hasMoreMessages, 'isLoading:', isLoading, 'showNoMoreMessage:', showNoMoreMessage);
+    // Debug logging disabled to reduce console spam
   }
   
   return (

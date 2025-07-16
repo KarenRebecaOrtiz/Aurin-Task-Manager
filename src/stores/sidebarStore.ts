@@ -21,7 +21,7 @@ export const useSidebarStore = create<SidebarState & SidebarActions>()((set, get
       openSidebar: 'chat',
       openSidebarId: taskId,
     });
-    console.log('[SidebarStore] Chat sidebar opened for task:', taskId);
+    // Debug logging disabled to reduce console spam
   },
 
   openMessageSidebar: (conversationId: string) => {
@@ -29,7 +29,7 @@ export const useSidebarStore = create<SidebarState & SidebarActions>()((set, get
       openSidebar: 'message',
       openSidebarId: conversationId,
     });
-    console.log('[SidebarStore] Message sidebar opened for conversation:', conversationId);
+    // Debug logging disabled to reduce console spam
   },
 
   closeSidebar: () => {
@@ -37,7 +37,7 @@ export const useSidebarStore = create<SidebarState & SidebarActions>()((set, get
       openSidebar: null,
       openSidebarId: null,
     });
-    console.log('[SidebarStore] Sidebar closed');
+    // Debug logging disabled to reduce console spam
   },
 
   getOpenSidebar: () => {
