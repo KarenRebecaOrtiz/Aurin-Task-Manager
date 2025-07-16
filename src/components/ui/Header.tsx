@@ -612,131 +612,135 @@ const Header: React.FC<HeaderProps> = ({
             </div>
             <div className={styles.text}>
               <div className={styles.subtitle}>{getSubtitle()}</div>
-              <AdviceInput isAdmin={isAdmin} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className={styles.superiorHeader}>
-        <div className={styles.Clock}>
-          <div
-            style={{ fontSize: '10px', fontFamily: 'Inconsolata, monospace' }}
-            className="ClockDate"
-          >
-            {date}
+      <div className={styles.headerContainer}>
+        <div className={styles.superiorHeader}>
+          <div className={styles.Clock}>
+            <div
+              style={{ fontSize: '10px', fontFamily: 'Inconsolata, monospace' }}
+              className="ClockDate"
+            >
+              {date}
+            </div>
+            <div
+              style={{
+                fontSize: '10px',
+                fontWeight: '600',
+                fontFamily: 'Inconsolata, monospace',
+              }}
+              className="ClockTime"
+            >
+              {formattedTime}
+            </div>
+            <div
+              style={{
+                alignItems: 'flex-start',
+                display: 'flex',
+                fontSize: '10px',
+                fontFamily: 'Inconsolata, monospace',
+              }}
+              className="ClockTemperature"
+            >
+              {location} {temperature}
+              {weatherIcon && (
+                <Image
+                  src={weatherIcon}
+                  draggable="false"
+                  alt="Ícono del clima"
+                  width={15}
+                  height={15}
+                  style={{
+                    marginLeft: '5px',
+                    transition: 'transform 0.3s ease, filter 0.3s ease',
+                    filter:
+                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.2)';
+                    e.currentTarget.style.filter =
+                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.filter =
+                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                  }}
+                />
+              )}
+            </div>
+            <div 
+              style={{
+                fontSize: '10px',
+                fontFamily: 'Inconsolata, monospace',
+                color:
+                  officeStatus === 'En la oficina'
+                    ? '#28a745'
+                    : officeStatus === 'Fuera de la oficina'
+                    ? '#dc3545'
+                    : '#ff6f00',
+              }}
+              className={styles.ClockOfficeStatuHidden}
+            >
+              {officeStatus}
+            </div>
           </div>
-          <div
-            style={{
-              fontSize: '10px',
-              fontWeight: '600',
-              fontFamily: 'Inconsolata, monospace',
-            }}
-            className="ClockTime"
-          >
-            {formattedTime}
-          </div>
-          <div
-            style={{
-              alignItems: 'flex-start',
-              display: 'flex',
-              fontSize: '10px',
-              fontFamily: 'Inconsolata, monospace',
-            }}
-            className="ClockTemperature"
-          >
-            {location} {temperature}
-            {weatherIcon && (
-              <Image
-                src={weatherIcon}
-                draggable="false"
-                alt="Ícono del clima"
-                width={15}
-                height={15}
-                style={{
-                  marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.2)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                }}
-              />
-            )}
-          </div>
-          <div 
-            style={{
-              fontSize: '10px',
-              fontFamily: 'Inconsolata, monospace',
-              color:
-                officeStatus === 'En la oficina'
-                  ? '#28a745'
-                  : officeStatus === 'Fuera de la oficina'
-                  ? '#dc3545'
-                  : '#ff6f00',
-            }}
-            className={styles.ClockOfficeStatuHidden}
-          >
-            {officeStatus}
-          </div>
-        </div>
 
-        <div className={styles.todoContainer}>
-          <ToDoDynamic />
-        </div>
+          <div className={styles.todoContainer}>
+            <ToDoDynamic />
+          </div>
 
-        <div className={styles.availabilityContainer}>
-          <AvailabilityToggle />
-        </div>
+          <div className={styles.availabilityContainer}>
+            <AvailabilityToggle />
+          </div>
 
-        <div className={styles.notificationContainer}>
-          <button
-            ref={notificationButtonRef}
-            className={styles.notificationButton}
-            onClick={toggleNotifications}
-            aria-label="Abrir notificaciones"
-            aria-expanded={isNotificationsOpen}
-            aria-controls="notification-dropdown"
-          >
-            {hasUnread && !hasViewedNotifications ? (
-              <div className={styles.notification}>
-                <div className={styles.bellContainer}>
-                  <div className={styles.bell}></div>
+          <div className={styles.notificationContainer}>
+            <button
+              ref={notificationButtonRef}
+              className={styles.notificationButton}
+              onClick={toggleNotifications}
+              aria-label="Abrir notificaciones"
+              aria-expanded={isNotificationsOpen}
+              aria-controls="notification-dropdown"
+            >
+              {hasUnread && !hasViewedNotifications ? (
+                <div className={styles.notification}>
+                  <div className={styles.bellContainer}>
+                    <div className={styles.bell}></div>
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className={styles.notificationCount} aria-live="polite">{unreadCount}</span>
+                  )}
                 </div>
-                {unreadCount > 0 && (
-                  <span className={styles.notificationCount} aria-live="polite">{unreadCount}</span>
-                )}
-              </div>
-            ) : (
-              <Image
-                src="/EmptyNotification.svg"
-                alt="Notificaciones"
-                width={24}
-                height={24}
-                style={{ width: 'auto', height: 'auto' }}
-              />
-            )}
-          </button>
-          <NotificationDropdown
-            isVisible={isNotificationsVisible}
-            isOpen={isNotificationsOpen}
-            users={users}
-            dropdownPosition={dropdownPosition}
-            onNotificationClick={handleNotificationClick}
-            onClose={handleCloseNotifications}
-          />
-        </div>
+              ) : (
+                <Image
+                  src="/EmptyNotification.svg"
+                  alt="Notificaciones"
+                  width={24}
+                  height={24}
+                  style={{ width: 'auto', height: 'auto' }}
+                />
+              )}
+            </button>
+            <NotificationDropdown
+              isVisible={isNotificationsVisible}
+              isOpen={isNotificationsOpen}
+              users={users}
+              dropdownPosition={dropdownPosition}
+              onNotificationClick={handleNotificationClick}
+              onClose={handleCloseNotifications}
+            />
+          </div>
 
-        <div className={styles.AvatarDesktop}>
-          <AvatarDropdown onChangeContainer={onChangeContainer} />
+          <div className={styles.AvatarDesktop}>
+            <AvatarDropdown onChangeContainer={onChangeContainer} />
+          </div>
+        </div>
+        <div className={styles.adviceContainer}>
+          <AdviceInput isAdmin={isAdmin} />
         </div>
       </div>
     </div>

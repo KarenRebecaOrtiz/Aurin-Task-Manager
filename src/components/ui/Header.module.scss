@@ -67,6 +67,20 @@
     gap: $spacing-sm;
   }
 
+  .headerContainer {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    align-items: flex-start;
+  }
+
+  .adviceContainer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
   .todoContainer {
     display: flex;
     align-items: center;

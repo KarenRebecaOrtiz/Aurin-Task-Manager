@@ -14,7 +14,8 @@ interface ClerkUser {
   imageUrl?: string;
   firstName?: string;
   lastName?: string;
-  status?: string;
+  // status?: string;
+  role?: string;
 }
 
 interface User {
@@ -29,13 +30,6 @@ interface UserSwiperProps {
   onMessageSidebarOpen: (user: User) => void;
   className?: string;
 }
-
-const statusColors = {
-  Disponible: "#28a745",
-  Ocupado: "#dc3545",
-  "Por terminar": "#ff6f00",
-  Fuera: "#616161",
-};
 
 const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwiperProps) => {
   const splideRef = useRef<HTMLDivElement>(null);
@@ -56,7 +50,8 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
     imageUrl: storeUser.imageUrl,
     firstName: storeUser.fullName.split(" ")[0] || "",
     lastName: storeUser.fullName.split(" ").slice(1).join(" ") || "",
-    status: "Disponible", // Default status, se puede obtener de Firestore si es necesario
+    // status: "Disponible", // Eliminado, ya no se usa
+    role: storeUser.role, // Agregamos el campo role
   }));
 
   useEffect(() => {
@@ -162,11 +157,12 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
                     </div>
                     <div
                       className={styles.cardStatus}
-                      style={{
-                        color: statusColors[user.status as keyof typeof statusColors] || "#333",
-                      }}
+                      // style={{
+                      //   color: statusColors[user.status as keyof typeof statusColors] || "#333",
+                      // }}
                     >
-                      {user.status || "Disponible"}
+                      {/* Mostrar el role en vez de status */}
+                      {user.role === 'user' ? 'No Especificado' : (user.role || 'Sin rol')}
                     </div>
                   </div>
                 </div>
