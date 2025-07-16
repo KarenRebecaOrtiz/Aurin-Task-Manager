@@ -356,16 +356,31 @@ export const useMessagePagination = ({
         try {
           if (change.type === 'added') {
             const newMessage = await processMessage(change.doc.data(), change.doc.id);
-            const existing = currentMessages.find(m => m.id === newMessage.id);
-            if (existing) {
+            
+            // Buscar mensaje existente tanto por ID como por clientId
+            const existingById = currentMessages.find(m => m.id === newMessage.id);
+            const existingByClientId = currentMessages.find(m => m.clientId === newMessage.clientId);
+            
+            if (existingById) {
               // Solo actualizar si hay cambios reales
-              const hasChanges = JSON.stringify(existing) !== JSON.stringify(newMessage);
+              const hasChanges = JSON.stringify(existingById) !== JSON.stringify(newMessage);
               if (hasChanges) {
-                console.log('[useMessagePagination] Updating existing message:', newMessage.id);
-                store.updateMessage(taskId, existing.id, newMessage);
+                console.log('[useMessagePagination] Updating existing message by ID:', newMessage.id);
+                store.updateMessage(taskId, existingById.id, newMessage);
               } else {
                 console.log('[useMessagePagination] Message unchanged, skipping:', newMessage.id);
               }
+            } else if (existingByClientId) {
+              // Si encontramos un mensaje optimista con el mismo clientId, reemplazarlo
+              console.log('[useMessagePagination] Replacing optimistic message with real message:', {
+                optimisticId: existingByClientId.id,
+                realId: newMessage.id,
+                clientId: newMessage.clientId
+              });
+              
+              // Eliminar el mensaje optimista y agregar el real
+              store.deleteMessage(taskId, existingByClientId.id);
+              store.addMessage(taskId, newMessage);
             } else {
               console.log('[useMessagePagination] Adding new message:', newMessage.id);
               store.addMessage(taskId, newMessage);

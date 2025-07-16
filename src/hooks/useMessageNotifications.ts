@@ -22,6 +22,14 @@ interface MessageNotification {
   lastMessageTime: Timestamp;
 }
 
+// Función helper para validar si un timestamp es válido
+const isValidTimestamp = (timestamp: unknown): timestamp is Timestamp => {
+  return timestamp && 
+         typeof timestamp === 'object' && 
+         typeof (timestamp as Timestamp).toMillis === 'function' &&
+         typeof (timestamp as Timestamp).toDate === 'function';
+};
+
 export const useMessageNotifications = () => {
   const { user } = useUser();
   const userId = user?.id || '';
@@ -58,14 +66,21 @@ export const useMessageNotifications = () => {
         const lastViewed = conversationData.lastViewedBy?.[userId];
         const lastMessage = conversationData.lastMessage;
         
-        if (lastMessage && lastMessage.senderId !== userId) {
+        // Validar que lastMessage existe y tiene un timestamp válido
+        if (lastMessage && 
+            lastMessage.senderId !== userId && 
+            isValidTimestamp(lastMessage.timestamp)) {
+          
+          // Validar que lastViewed existe y es un timestamp válido
+          const lastViewedValid = isValidTimestamp(lastViewed);
+          
           // Si no hay lastViewed o el último mensaje es más reciente que la última vista
-          if (!lastViewed || lastMessage.timestamp.toMillis() > lastViewed.toMillis()) {
+          if (!lastViewedValid || lastMessage.timestamp.toMillis() > lastViewed.toMillis()) {
             // Contar mensajes no leídos
             const messagesQuery = query(
               collection(db, 'conversations', conversationDoc.id, 'messages'),
               where('senderId', '==', otherParticipant),
-              where('timestamp', '>', lastViewed || new Date(0))
+              where('timestamp', '>', lastViewedValid ? lastViewed : new Date(0))
             );
 
             try {
@@ -90,9 +105,9 @@ export const useMessageNotifications = () => {
 
       // Ordenar por último mensaje (más reciente primero)
       const sortedNotifications = notifications.sort((a, b) => {
-        // Verificar que ambos lastMessageTime existan antes de llamar toMillis()
-        if (!a.lastMessageTime || !b.lastMessageTime) {
-          return 0; // Si alguno no existe, mantener el orden original
+        // Verificar que ambos lastMessageTime existan y sean timestamps válidos antes de llamar toMillis()
+        if (!isValidTimestamp(a.lastMessageTime) || !isValidTimestamp(b.lastMessageTime)) {
+          return 0; // Si alguno no es válido, mantener el orden original
         }
         return b.lastMessageTime.toMillis() - a.lastMessageTime.toMillis();
       });
