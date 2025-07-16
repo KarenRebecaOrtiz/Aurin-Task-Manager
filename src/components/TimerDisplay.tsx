@@ -28,23 +28,78 @@ const TimerDisplay = memo(({
     seconds: timerSeconds % 60
   }), [timerSeconds]);
 
+  // Determinar el estado del timer y el tooltip correspondiente
+  const timerState = useMemo(() => {
+    if (isRestoringTimer) {
+      return {
+        icon: '/Play.svg',
+        alt: 'Iniciar',
+        tooltip: 'Iniciar timer',
+        isDisabled: true
+      };
+    }
+    
+    if (timerSeconds === 0) {
+      return {
+        icon: '/Play.svg',
+        alt: 'Iniciar',
+        tooltip: 'Iniciar timer',
+        isDisabled: false
+      };
+    }
+    
+    if (isTimerRunning) {
+      return {
+        icon: '/Stop.svg',
+        alt: 'Pausar',
+        tooltip: '1 click para pausar o doble click para enviar',
+        isDisabled: false
+      };
+    }
+    
+    // Timer pausado con tiempo acumulado
+    return {
+      icon: '/Play.svg',
+      alt: 'Reanudar',
+      tooltip: 'Reanudar timer',
+      isDisabled: false
+    };
+  }, [timerSeconds, isTimerRunning, isRestoringTimer]);
+
+  const handleButtonClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isRestoringTimer) {
+      return; // No hacer nada si está restaurando
+    }
+    
+    await onToggleTimer(e);
+  };
+
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (timerSeconds > 0) await onFinalizeTimer();
+    
+    if (isRestoringTimer || timerSeconds === 0) {
+      return; // No hacer nada si está restaurando o no hay tiempo
+    }
+    
+    await onFinalizeTimer();
   };
 
   return (
     <div className={styles.timerContainer}>
       <button 
         className={styles.playStopButton} 
-        onClick={onToggleTimer}
+        onClick={handleButtonClick}
         onDoubleClick={handleDoubleClick}
-        title="Ingresar tiempo personalizado"
+        title={timerState.tooltip}
+        disabled={timerState.isDisabled}
       >
         <Image 
-          src={isTimerRunning ? '/Stop.svg' : '/Play.svg'} 
-          alt={isTimerRunning ? 'Detener' : 'Iniciar'} 
+          src={timerState.icon} 
+          alt={timerState.alt} 
           width={12} 
           height={12} 
         />

@@ -190,9 +190,6 @@ export default function TasksPageModals() {
             // Task archive logic would go here
             return true;
           }}
-          onTaskUpdate={() => {
-            // Task update logic would go here
-          }}
           onDataRefresh={() => {
             // Data refresh logic would go here
           }}

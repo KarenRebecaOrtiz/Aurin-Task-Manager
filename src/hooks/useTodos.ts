@@ -45,61 +45,114 @@ export const useTodos = () => {
       return;
     }
 
+    console.log('[useTodos] Loading todos for user:', user.id);
     setIsLoading(true);
     setError(null);
 
-    // Query for active todos
-    const activeTodosQuery = query(
-      collection(db, 'todos'),
-      where('userId', '==', user.id),
-      where('completed', '==', false),
-      orderBy('createdAt', 'desc')
-    );
+    try {
+      // Query for active todos with composite index
+      const activeTodosQuery = query(
+        collection(db, 'todos'),
+        where('userId', '==', user.id),
+        where('completed', '==', false),
+        orderBy('createdAt', 'desc')
+      );
 
-    // Query for completed todos
-    const completedTodosQuery = query(
-      collection(db, 'todos'),
-      where('userId', '==', user.id),
-      where('completed', '==', true),
-      orderBy('completedDate', 'desc')
-    );
+      // Query for completed todos with composite index
+      const completedTodosQuery = query(
+        collection(db, 'todos'),
+        where('userId', '==', user.id),
+        where('completed', '==', true),
+        orderBy('completedDate', 'desc')
+      );
 
-    const unsubscribeActive = onSnapshot(
-      activeTodosQuery,
-      (snapshot) => {
-        const activeTodosData: Todo[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        } as Todo));
-        setTodos(activeTodosData);
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error('Error loading active todos:', error);
-        setError('Error cargando todos activos');
-        setIsLoading(false);
-      }
-    );
+      console.log('[useTodos] Setting up active todos listener');
+      const unsubscribeActive = onSnapshot(
+        activeTodosQuery,
+        (snapshot) => {
+          const activeTodosData: Todo[] = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          } as Todo));
+          console.log('[useTodos] Active todos loaded:', activeTodosData.length);
+          setTodos(activeTodosData);
+          setIsLoading(false);
+        },
+        (error) => {
+          console.error('[useTodos] Error loading active todos:', error);
+          setError(`Error cargando todos activos: ${error.message}`);
+          setIsLoading(false);
+          
+          // Fallback: try simpler query without orderBy
+          console.log('[useTodos] Trying fallback query for active todos');
+          const fallbackQuery = query(
+            collection(db, 'todos'),
+            where('userId', '==', user.id),
+            where('completed', '==', false)
+          );
+          
+          onSnapshot(fallbackQuery, (snapshot) => {
+            const fallbackTodos: Todo[] = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            } as Todo));
+            console.log('[useTodos] Fallback active todos loaded:', fallbackTodos.length);
+            setTodos(fallbackTodos);
+            setIsLoading(false);
+          }, (fallbackError) => {
+            console.error('[useTodos] Fallback query also failed:', fallbackError);
+            setError('No se pudieron cargar los todos. Verifica los índices de Firestore.');
+            setIsLoading(false);
+          });
+        }
+      );
 
-    const unsubscribeCompleted = onSnapshot(
-      completedTodosQuery,
-      (snapshot) => {
-        const completedTodosData: Todo[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        } as Todo));
-        setCompletedTodos(completedTodosData);
-      },
-      (error) => {
-        console.error('Error loading completed todos:', error);
-        setError('Error cargando todos completados');
-      }
-    );
+      console.log('[useTodos] Setting up completed todos listener');
+      const unsubscribeCompleted = onSnapshot(
+        completedTodosQuery,
+        (snapshot) => {
+          const completedTodosData: Todo[] = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          } as Todo));
+          console.log('[useTodos] Completed todos loaded:', completedTodosData.length);
+          setCompletedTodos(completedTodosData);
+        },
+        (error) => {
+          console.error('[useTodos] Error loading completed todos:', error);
+          setError(`Error cargando todos completados: ${error.message}`);
+          
+          // Fallback: try simpler query without orderBy
+          console.log('[useTodos] Trying fallback query for completed todos');
+          const fallbackQuery = query(
+            collection(db, 'todos'),
+            where('userId', '==', user.id),
+            where('completed', '==', true)
+          );
+          
+          onSnapshot(fallbackQuery, (snapshot) => {
+            const fallbackTodos: Todo[] = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            } as Todo));
+            console.log('[useTodos] Fallback completed todos loaded:', fallbackTodos.length);
+            setCompletedTodos(fallbackTodos);
+          }, (fallbackError) => {
+            console.error('[useTodos] Fallback completed query also failed:', fallbackError);
+          });
+        }
+      );
 
-    return () => {
-      unsubscribeActive();
-      unsubscribeCompleted();
-    };
+      return () => {
+        console.log('[useTodos] Cleaning up listeners');
+        unsubscribeActive();
+        unsubscribeCompleted();
+      };
+    } catch (error) {
+      console.error('[useTodos] Error setting up listeners:', error);
+      setError('Error configurando los listeners de todos');
+      setIsLoading(false);
+    }
   }, [user?.id]);
 
   // Add new todo
@@ -136,10 +189,11 @@ export const useTodos = () => {
         updatedAt: serverTimestamp(),
       };
 
+      console.log('[useTodos] Adding new todo:', trimmedText);
       await addDoc(collection(db, 'todos'), newTodo);
       setError(null);
     } catch (error) {
-      console.error('Error adding todo:', error);
+      console.error('[useTodos] Error adding todo:', error);
       setError('Error al crear el todo');
     }
   }, [user?.id]);
@@ -170,10 +224,11 @@ export const useTodos = () => {
         updateData.completedDate = null;
       }
 
+      console.log('[useTodos] Toggling todo:', todoId, 'to completed:', !completed);
       await updateDoc(todoRef, updateData);
       setError(null);
     } catch (error) {
-      console.error('Error toggling todo:', error);
+      console.error('[useTodos] Error toggling todo:', error);
       setError('Error al actualizar el todo');
     }
   }, [user?.id]);
@@ -186,10 +241,11 @@ export const useTodos = () => {
     }
 
     try {
+      console.log('[useTodos] Deleting todo:', todoId);
       await deleteDoc(doc(db, 'todos', todoId));
       setError(null);
     } catch (error) {
-      console.error('Error deleting todo:', error);
+      console.error('[useTodos] Error deleting todo:', error);
       setError('Error al eliminar el todo');
     }
   }, [user?.id]);

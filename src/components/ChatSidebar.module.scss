@@ -74,8 +74,117 @@
 }
 
 .arrowLeft, .ellipsis {
-  cursor: pointer;
-}
+  width: 32px;
+  height: 32px;
+  background: rgba(241, 245, 249, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  /* ——— Sombras neumorfistas ——— */
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.05),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+    inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+
+  /* ——— Transiciones ——— */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+  will-change: transform, box-shadow, background, border-color;
+
+  /* ——— Hover: Levitar ——— */
+  &:hover {
+    transform: translateY(-1px) scale(1.05);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.9),
+      4px 4px 8px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+  }
+
+  /* ——— Active: Presionado ——— */
+  &:active {
+    transform: scale(0.95);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 3px rgba(209, 217, 230, 0.2),
+      -1px -1px 3px rgba(255, 255, 255, 0.8),
+      1px 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ——— Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.4),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5);
+    }
+  
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.5),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -1px -1px 3px rgba(0, 0, 0, 0.35),
+        inset 1px 1px 3px rgba(255, 255, 255, 0.02),
+        -1px -1px 3px rgba(255, 255, 255, 0.03),
+        1px 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    }
+  }
+  
+  .disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  
+  &:hover {
+    transform: none;
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.8),
+      2px 2px 4px rgba(0, 0, 0, 0.05),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+  }
+
+  :global(.dark) & {
+    &:hover {
+      box-shadow:
+        -2px -2px 4px rgba(255, 255, 255, 0.03),
+        2px 2px 4px rgba(0, 0, 0, 0.4),
+        inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+        inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+  }
+  }
 
 .ellipsis.disabled {
   cursor: not-allowed;
@@ -259,31 +368,115 @@
 }
 
 .loadMoreButton {
-  background: #007bff;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  margin: 10px auto;
-  display: block;
-  transition: all 0.2s ease;
+  background: rgba(241, 245, 249, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  /* ——— Sombras neumorfistas ——— */
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.05),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+    inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+
+  /* ——— Transiciones ——— */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+  will-change: transform, box-shadow, background, border-color;
+
+  /* ——— Hover: Levitar ——— */
+  &:hover {
+    transform: translateY(-1px) scale(1.05);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.9),
+      4px 4px 8px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+  }
+
+  /* ——— Active: Presionado ——— */
+  &:active {
+    transform: scale(0.95);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 3px rgba(209, 217, 230, 0.2),
+      -1px -1px 3px rgba(255, 255, 255, 0.8),
+      1px 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ——— Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.4),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5);
+    }
+  
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.5),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -1px -1px 3px rgba(0, 0, 0, 0.35),
+        inset 1px 1px 3px rgba(255, 255, 255, 0.02),
+        -1px -1px 3px rgba(255, 255, 255, 0.03),
+        1px 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    }
+  }
+  
+  .disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   
   &:hover {
-    background: #0056b3;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-  }
-  
-  &:disabled {
-    background: #6c757d;
-    cursor: not-allowed;
     transform: none;
-    box-shadow: none;
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.8),
+      2px 2px 4px rgba(0, 0, 0, 0.05),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 2px rgba(209, 217, 230, 0.2);
   }
-}
+
+  :global(.dark) & {
+    &:hover {
+      box-shadow:
+        -2px -2px 4px rgba(255, 255, 255, 0.03),
+        2px 2px 4px rgba(0, 0, 0, 0.4),
+        inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+        inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+  }
+  }
 
 :global(body.dark) .loadMoreButton {
   background: #3b82f6;
@@ -723,47 +916,237 @@
 }
 
 .actionButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-}
+  /* ——— Layout y dimensiones ——— */
+  width: 32px;
+  height: 32px;
+  background: rgba(241, 245, 249, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  /* ——— Sombras neumorfistas ——— */
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.05),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+    inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+
+  /* ——— Transiciones ——— */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+  will-change: transform, box-shadow, background, border-color;
+
+  /* ——— Hover: Levitar ——— */
+  &:hover {
+    transform: translateY(-1px) scale(1.05);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.9),
+      4px 4px 8px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+  }
+
+  /* ——— Active: Presionado ——— */
+  &:active {
+    transform: scale(0.95);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 3px rgba(209, 217, 230, 0.2),
+      -1px -1px 3px rgba(255, 255, 255, 0.8),
+      1px 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ——— Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.4),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5);
+    }
+  
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.5),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -1px -1px 3px rgba(0, 0, 0, 0.35),
+        inset 1px 1px 3px rgba(255, 255, 255, 0.02),
+        -1px -1px 3px rgba(255, 255, 255, 0.03),
+        1px 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    }
+  }
 
 .actionDropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 80px;
   z-index: 10;
-  min-width: 120px;
   overflow: hidden;
+  
+  // 🔮 CRYSTALLIZED GLASS EFFECT
+  background: rgba(241, 245, 249, 0.7);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.9),
+      6px 6px 12px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08);
+  }
 }
 
 :global(body.dark) .actionDropdown {
-  box-shadow: none;
-  background: #1f1f20;
-  border: none;
+  background: rgba(24, 24, 27, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    -4px -4px 8px rgba(0, 0, 0, 0.3),
+    4px 4px 8px rgba(255, 255, 255, 0.05),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.02);
+  
+  &:hover {
+    background: rgba(24, 24, 27, 0.95);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      -6px -6px 12px rgba(0, 0, 0, 0.4),
+      6px 6px 12px rgba(255, 255, 255, 0.08),
+      inset -2px -2px 6px rgba(0, 0, 0, 0.5),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.03);
+  }
 }
+
 :global(body.dark) .actionButton {
   filter: invert(100%) brightness(100%);
 }
 
 .actionDropdownItem {
-  padding: 8px 12px;
+  padding: 12px;
   font-size: 14px;
   cursor: pointer;
+  margin-right: 40px;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  
   &:hover {
-    background: #f3f4f6;
+    background: rgba(255, 255, 255, 0.3);
+    color: #1f2937;
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(0.95);
+  }
+  
+  // Estilo para items de eliminación
+  &.delete {
+    color: #dc2626;
+    
+    &:hover {
+      background: rgba(220, 38, 38, 0.1);
+      color: #b91c1c;
+    }
+  }
+  
+  // Estilo para items de edición
+  &.edit {
+    color: #2563eb;
+    
+    &:hover {
+      background: rgba(37, 99, 235, 0.1);
+      color: #1d4ed8;
+    }
+  }
+  
+  // Estilo para items de copia
+  &.copy {
+    color: #6b7280;
+    
+    &:hover {
+      background: rgba(107, 114, 128, 0.1);
+      color: #374151;
+    }
   }
 }
 
-.actionDropdownItem:hover {
-  background: #e1e1e1;
+:global(body.dark) .actionDropdownItem {
+  color: #e5e7eb;
+
+  &:hover:not(:disabled) {
+    background: #374151;
+    box-shadow:
+      inset -4px -4px 8px rgba(255, 255, 255, 0.08),
+      inset 4px 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  &:disabled {
+    color: #6b7280;
+  }
+
+  &::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+  }
 }
 
 // -----------------------------------
@@ -2976,21 +3359,95 @@
 // -----------------------------------
 .timeMessage {
   display: flex;
+  padding: 20px;
+  gap: 10px;
+  max-width: 200px;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
+  background: rgba(238, 247, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  margin: 4px 0;
-  transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 
+  /* ——— Sombras neumorfistas ——— */
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.05),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+    inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+
+  /* ——— Transiciones ——— */
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease;
+  will-change: transform, box-shadow, background, border-color;
+
+  /* ——— Hover: Levitar ——— */
   &:hover {
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+    transform: translateY(-1px) scale(1.001);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.9),
+      4px 4px 8px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
   }
-}
+
+  /* ——— Active: Presionado ——— */
+  &:active {
+    transform: scale(0.95);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 3px rgba(209, 217, 230, 0.2),
+      -1px -1px 3px rgba(255, 255, 255, 0.8),
+      1px 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ——— Modo oscuro ——— */
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.4),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5);
+    }
+  
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.5),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -1px -1px 3px rgba(0, 0, 0, 0.35),
+        inset 1px 1px 3px rgba(255, 255, 255, 0.02),
+        -1px -1px 3px rgba(255, 255, 255, 0.03),
+        1px 1px 3px rgba(0, 0, 0, 0.4);
+    }
+    }
+  }
 
 :global(body.dark) .timeMessage {
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);

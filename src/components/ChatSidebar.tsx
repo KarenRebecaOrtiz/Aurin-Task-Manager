@@ -300,7 +300,7 @@ const MessageItem = memo(
                         const rect = e.currentTarget.getBoundingClientRect();
                         setActionMenuPosition({
                           top: rect.bottom + window.scrollY,
-                          left: rect.left + window.scrollX - 150, // Adjust left position as needed for alignment
+                          left: rect.left   // Use left instead of right based on the element position
                         });
                         setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id);
                       }}
@@ -345,21 +345,22 @@ const MessageItem = memo(
             >
               <div className={styles.actionDropdownContent}>
                 <motion.div
-                  className={styles.actionDropdownItem}
+                  className={`${styles.actionDropdownItem} ${styles.copy}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleCopyMessage(message.text || '');
                     setActionMenuOpenId(null);
                   }}
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  title="Copiar mensaje"
                 >
-                  Copiar
+                  <Image src="/copy.svg" alt="Copiar" width={16} height={16} />
                 </motion.div>
                 {message.senderId === userId && (
                   <>
                     {!message.hours && (
                       <motion.div
-                        className={styles.actionDropdownItem}
+                        className={`${styles.actionDropdownItem} ${styles.edit}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditingMessageId(message.id);
@@ -367,26 +368,28 @@ const MessageItem = memo(
                           setActionMenuOpenId(null);
                         }}
                         whileTap={{ scale: 0.95, opacity: 0.8 }}
+                        title="Editar mensaje"
                       >
-                        Editar
+                        <Image src="/pencil.svg" alt="Editar" width={16} height={16} />
                       </motion.div>
                     )}
                     <motion.div
-                      className={styles.actionDropdownItem}
+                      className={`${styles.actionDropdownItem} ${styles.delete}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteMessage(message.id);
                         setActionMenuOpenId(null);
                       }}
                       whileTap={{ scale: 0.95, opacity: 0.8 }}
+                      title="Eliminar mensaje"
                     >
-                      Eliminar
+                      <Image src="/trash-2.svg" alt="Eliminar" width={16} height={16} />
                     </motion.div>
                   </>
                 )}
                 {(message.imageUrl || message.fileUrl) && (
                   <motion.div
-                    className={styles.actionDropdownItem}
+                    className={`${styles.actionDropdownItem} ${styles.copy}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (message.imageUrl || message.fileUrl) {
@@ -401,8 +404,9 @@ const MessageItem = memo(
                       setActionMenuOpenId(null);
                     }}
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title="Descargar archivo"
                   >
-                    Descargar Archivo
+                    <Image src="/download.svg" alt="Descargar" width={16} height={16} />
                   </motion.div>
                 )}
               </div>

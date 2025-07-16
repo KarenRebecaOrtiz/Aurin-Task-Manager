@@ -129,17 +129,18 @@ const PrivateMessageActionMenu = memo<PrivateMessageActionMenuProps>(({
             className={styles.dropdown}
             style={{ 
               top: dropdownPosition.top, 
-              left: dropdownPosition.left 
+              left: dropdownPosition.left,
+              width: '80px'
             }}
             onClick={(e) => e.stopPropagation()}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.18, ease: 'easeInOut' }}
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
           >
             {!message.hasError && onEdit && canEditOrDelete && (
               <div
-                className={styles.dropdownItem}
+                className={`${styles.dropdownItem} ${styles.edit}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   animateClick(e.currentTarget);
@@ -151,17 +152,15 @@ const PrivateMessageActionMenu = memo<PrivateMessageActionMenuProps>(({
                 <Image 
                   src="/pencil.svg" 
                   alt="Editar" 
-                  width={18} 
-                  height={18} 
-                  style={{ width: 'auto', height: 'auto' }} 
+                  width={16} 
+                  height={16} 
                 />
-                <span className={styles.tooltip}>Editar Mensaje</span>
               </div>
             )}
             
             {message.hasError && onResend && (
               <div
-                className={styles.dropdownItem}
+                className={`${styles.dropdownItem} ${styles.copy}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   animateClick(e.currentTarget);
@@ -173,17 +172,15 @@ const PrivateMessageActionMenu = memo<PrivateMessageActionMenuProps>(({
                 <Image 
                   src="/refresh-cw.svg" 
                   alt="Reintentar" 
-                  width={18} 
-                  height={18} 
-                  style={{ width: 'auto', height: 'auto' }} 
+                  width={16} 
+                  height={16} 
                 />
-                <span className={styles.tooltip}>Reintentar Envío</span>
               </div>
             )}
             
             {message.text && message.text.trim() && onCopy && (
               <div
-                className={styles.dropdownItem}
+                className={`${styles.dropdownItem} ${styles.copy}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   animateClick(e.currentTarget);
@@ -195,19 +192,15 @@ const PrivateMessageActionMenu = memo<PrivateMessageActionMenuProps>(({
                 <Image 
                   src="/copy.svg" 
                   alt="Copiar" 
-                  width={15} 
-                  height={15} 
-                  style={{ width: '15px', height: '15px' }} 
+                  width={16} 
+                  height={16} 
                 />
-                <span className={styles.tooltip}>Copiar Mensaje</span>
               </div>
             )}
             
-
-            
             {(message.imageUrl || message.fileUrl) && onDownload && (
               <div
-                className={styles.dropdownItem}
+                className={`${styles.dropdownItem} ${styles.copy}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   animateClick(e.currentTarget);
@@ -219,11 +212,9 @@ const PrivateMessageActionMenu = memo<PrivateMessageActionMenuProps>(({
                 <Image 
                   src="/download.svg" 
                   alt="Descargar" 
-                  width={18} 
-                  height={18} 
-                  style={{ width: 'auto', height: 'auto' }} 
+                  width={16} 
+                  height={16} 
                 />
-                <span className={styles.tooltip}>Descargar Archivo</span>
               </div>
             )}
             
@@ -241,11 +232,9 @@ const PrivateMessageActionMenu = memo<PrivateMessageActionMenuProps>(({
                 <Image 
                   src="/trash-2.svg" 
                   alt="Eliminar" 
-                  width={18} 
-                  height={18} 
-                  style={{ width: 'auto', height: 'auto' }} 
+                  width={16} 
+                  height={16} 
                 />
-                <span className={styles.tooltip}>Eliminar Mensaje</span>
               </div>
             )}
           </motion.div>

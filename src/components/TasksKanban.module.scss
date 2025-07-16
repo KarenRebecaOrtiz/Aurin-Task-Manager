@@ -668,6 +668,149 @@
   }
 }
 
+// ==============================================================
+// 🔮 TASK DETAILS ROW LAYOUT
+// =================================================================
+.taskDetailsRow {
+  @include flex-between;
+  gap: $spacing-sm;
+  align-items: center;
+  width: 100%;
+}
+
+.taskDetailsLeft {
+  @include flex-center;
+  gap: $spacing-sm;
+}
+
+// ==============================================================
+// 🔮 ADDITIONAL COMPONENT CLASSES
+// =================================================================
+.swiperContainer {
+  @include swiper-container;
+  @include swiper-container-responsive;
+}
+
+.buttonWithTooltip {
+  position: relative;
+  display: inline-block;
+
+  &:hover .tooltip,
+  &:focus .tooltip {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.tooltip {
+  @include tooltip-base;
+}
+
+// ==============================================================
+// 🔮 RESPONSIVE DESIGN
+// =================================================================
+@include responsive(lg) {
+  .container {
+    padding: $spacing-xl;
+  }
+}
+
+@include responsive(md) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-md;
+  }
+
+  .searchWrapper {
+    order: 1;
+  }
+
+  .filtersWrapper {
+    order: 2;
+    justify-content: center;
+  }
+}
+
+@include responsive(sm) {
+  .container {
+    padding: $spacing-lg;
+    gap: $spacing-md;
+  }
+
+  .header {
+    margin-bottom: $spacing-xl;
+  }
+
+  .taskCard {
+    padding: $spacing-md;
+  }
+
+  .taskHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-xs;
+  }
+}
+
+// Nuevo dot rojo con número de actualizaciones
+.updateDotRed {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  z-index: 10;
+}
+
+.updateDotPing {
+  position: absolute;
+  display: inline-flex;
+  height: 100%;
+  width: 100%;
+  border-radius: 50%;
+  background-color: rgba(248, 113, 113, 0.75);
+  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.updateDotNumber {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1;
+  z-index: 1;
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+// Indicador de actualizaciones
+.updateIndicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  
+  // Sobrescribir el pseudo-elemento verde del archivo _components.scss
+  &::before {
+    display: none !important;
+  }
+}
+
 .touchDraggable {
   touch-action: none !important;
   user-select: none;
@@ -819,148 +962,5 @@
   @include dark-mode {
     background: rgba(59, 130, 246, 0.2);
     color: #60a5fa;
-  }
-}
-
-// ==============================================================
-// 🔮 TASK DETAILS ROW LAYOUT
-// =================================================================
-.taskDetailsRow {
-  @include flex-between;
-  gap: $spacing-sm;
-  align-items: center;
-  width: 100%;
-}
-
-.taskDetailsLeft {
-  @include flex-center;
-  gap: $spacing-sm;
-}
-
-// ==============================================================
-// 🔮 ADDITIONAL COMPONENT CLASSES
-// =================================================================
-.swiperContainer {
-  @include swiper-container;
-  @include swiper-container-responsive;
-}
-
-.buttonWithTooltip {
-  position: relative;
-  display: inline-block;
-
-  &:hover .tooltip,
-  &:focus .tooltip {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-.tooltip {
-  @include tooltip-base;
-}
-
-// ==============================================================
-// 🔮 RESPONSIVE DESIGN
-// =================================================================
-@include responsive(lg) {
-  .container {
-    padding: $spacing-xl;
-  }
-}
-
-@include responsive(md) {
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: $spacing-md;
-  }
-
-  .searchWrapper {
-    order: 1;
-  }
-
-  .filtersWrapper {
-    order: 2;
-    justify-content: center;
-  }
-}
-
-@include responsive(sm) {
-  .container {
-    padding: $spacing-lg;
-    gap: $spacing-md;
-  }
-
-  .header {
-    margin-bottom: $spacing-xl;
-  }
-
-  .taskCard {
-    padding: $spacing-md;
-  }
-
-  .taskHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $spacing-xs;
-  }
-}
-
-// Nuevo dot rojo con número de actualizaciones
-.updateDotRed {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  z-index: 10;
-}
-
-.updateDotPing {
-  position: absolute;
-  display: inline-flex;
-  height: 100%;
-  width: 100%;
-  border-radius: 50%;
-  background-color: rgba(248, 113, 113, 0.75);
-  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.updateDotNumber {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
-  background-color: #ef4444;
-  color: white;
-  font-size: 10px;
-  font-weight: bold;
-  text-align: center;
-  line-height: 1;
-  z-index: 1;
-}
-
-@keyframes ping {
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-// Indicador de actualizaciones
-.updateIndicator {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  
-  // Sobrescribir el pseudo-elemento verde del archivo _components.scss
-  &::before {
-    display: none !important;
   }
 }

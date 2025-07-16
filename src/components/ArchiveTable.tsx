@@ -131,7 +131,6 @@ interface ArchiveTableProps {
   onDeleteTaskOpen: (taskId: string) => void;
   onClose: () => void;
   onTaskArchive: (task: unknown, action: 'archive' | 'unarchive') => Promise<boolean>;
-  // onTaskUpdate: (task: unknown) => void;
   onDataRefresh: () => void;
 }
 

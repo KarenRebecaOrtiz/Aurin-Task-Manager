@@ -22,6 +22,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { tasksKanbanStore } from '@/stores/tasksKanbanStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
+import { useSensors, useSensor, PointerSensor, TouchSensor } from '@dnd-kit/core';
 
 // Kanban status columns definition
 const statusColumns = [
@@ -134,7 +135,6 @@ interface TasksKanbanProps {
 interface SortableItemProps {
   id: string;
   task: Task;
-  onChatSidebarOpen: (task: Task) => void;
   isAdmin: boolean;
   userId: string;
   onEditTaskOpen: (taskId: string) => void;
@@ -154,7 +154,6 @@ interface SortableItemProps {
 const SortableItem: React.FC<SortableItemProps> = ({
   id,
   task,
-  onChatSidebarOpen,
   isAdmin,
   userId,
   onEditTaskOpen,
@@ -201,12 +200,25 @@ const SortableItem: React.FC<SortableItemProps> = ({
       {...listeners}
       className={`${styles.taskCard} ${isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
       onClick={async () => {
-        // Debug logging disabled to reduce console spam
+        console.log('[TasksKanban] Task card clicked, opening chat for task:', task.id);
         
-        // Marcar la tarea como vista usando el nuevo sistema
-        await markAsViewed(task.id);
-        
-        onChatSidebarOpen(task);
+        try {
+          // Usar directamente el store en lugar de props para evitar re-renders
+          const { openChatSidebar } = useSidebarStateStore.getState();
+          
+          // Buscar el nombre del cliente
+          const clientName = clients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
+          
+          // Abrir el sidebar inmediatamente (sin esperar markAsViewed)
+          openChatSidebar(task, clientName);
+          
+          // Marcar la tarea como vista después de abrir el sidebar (no bloquear)
+          markAsViewed(task.id).catch(error => {
+            console.error('[TasksKanban] Error marking task as viewed:', error);
+          });
+        } catch (error) {
+          console.error('[TasksKanban] Error in onClick:', error);
+        }
       }}
     >
       <div className={styles.taskHeader}>
@@ -765,16 +777,20 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   // Usar el hook de notificaciones simplificado
   const { getUnreadCount, markAsViewed } = useTaskNotifications();
 
-  const handleTaskCardClick = useCallback(async (task: Task) => {
-    // Marcar la tarea como vista usando el nuevo sistema
-    await markAsViewed(task.id);
-    // Usar directamente el store en lugar de props para evitar re-renders
-    const { openChatSidebar } = useSidebarStateStore.getState();
-    // Buscar el nombre del cliente
-    const clientName = effectiveClients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
-    // Actualizar el store directamente
-    openChatSidebar(task, clientName);
-  }, [effectiveClients, markAsViewed]);
+  // Configurar sensores con restricciones para evitar drag accidental
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // 250ms delay before drag starts
+        tolerance: 5, // 5px tolerance for finger movement during delay
+      },
+    })
+  );
 
   // Optimizar selectores de Zustand para evitar re-renders innecesarios
   const {
@@ -824,9 +840,10 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
 
   // Add this function to handle user filter
   const handleUserFilter = useCallback((id: string) => {
+    const { setUserFilter } = tasksKanbanStore.getState();
     setUserFilter(id);
     setIsUserDropdownOpen(false);
-  }, [setUserFilter, setIsUserDropdownOpen]);
+  }, [setIsUserDropdownOpen]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -1078,7 +1095,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     return groups;
   }, [
     effectiveTasks, 
-    statusColumns, 
     searchQuery, 
     priorityFilter, 
     clientFilter, 
@@ -1273,6 +1289,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        sensors={sensors}
       >
         <div className={styles.kanbanBoard}>
           {statusColumns.map((column) => (
@@ -1296,7 +1313,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
                       key={`${task.id}-${index}`}
                       id={task.id}
                       task={task}
-                      onChatSidebarOpen={handleTaskCardClick}
                       isAdmin={isAdmin}
                       userId={userId}
                       onEditTaskOpen={onEditTaskOpen}

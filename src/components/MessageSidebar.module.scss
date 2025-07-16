@@ -364,47 +364,139 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background: #f1f5f9;
-  border-radius: 16px;
-  padding: 8px 0;
-  z-index: 3200;
-  box-shadow:
-    -6px -6px 12px #ffffff,
-    6px 6px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease-in-out;
+  width: 80px;
+  z-index: 10;
   overflow: hidden;
-  animation: fadeScale 0.3s ease-out;
+  
+  // 🔮 CRYSTALLIZED GLASS EFFECT
+  background: rgba(241, 245, 249, 0.7);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.9),
+      6px 6px 12px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .actionDropdownItem {
-  padding: 12px 16px;
+  padding: 12px;
   font-size: 14px;
-  color: #1b2734d9;
-  font-family: $font-family-primary;
   cursor: pointer;
-  transition: background-color 0.3s ease, box-shadow 0.2s ease;
+  margin-right: 40px;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  
   &:hover {
-    background-color: #e2e8f0;
-    box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.2),
-      inset 2px 2px 4px rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.3);
+    color: #1f2937;
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(0.95);
+  }
+  
+  // Estilo para items de eliminación
+  &.delete {
+    color: #dc2626;
+    
+    &:hover {
+      background: rgba(220, 38, 38, 0.1);
+      color: #b91c1c;
+    }
+  }
+  
+  // Estilo para items de edición
+  &.edit {
+    color: #2563eb;
+    
+    &:hover {
+      background: rgba(37, 99, 235, 0.1);
+      color: #1d4ed8;
+    }
+  }
+  
+  // Estilo para items de copia
+  &.copy {
+    color: #6b7280;
+    
+    &:hover {
+      background: rgba(107, 114, 128, 0.1);
+      color: #374151;
+    }
   }
 }
 
 :global(body.dark) .actionDropdown {
-  background: #1f1f20;
+  background: rgba(24, 24, 27, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
   box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.04),
-    6px 6px 12px rgba(0, 0, 0, 0.4);
+    -4px -4px 8px rgba(0, 0, 0, 0.3),
+    4px 4px 8px rgba(255, 255, 255, 0.05),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.02);
+  
+  &:hover {
+    background: rgba(24, 24, 27, 0.95);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      -6px -6px 12px rgba(0, 0, 0, 0.4),
+      6px 6px 12px rgba(255, 255, 255, 0.08),
+      inset -2px -2px 6px rgba(0, 0, 0, 0.5),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.03);
+  }
 }
 
 :global(body.dark) .actionDropdownItem {
-  color: #ffffffcc;
-  &:hover {
-    background-color: #2c2c2f;
+  color: #e5e7eb;
+
+  &:hover:not(:disabled) {
+    background: #374151;
     box-shadow:
-      inset -2px -2px 3px rgba(255, 255, 255, 0.03),
-      inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+      inset -4px -4px 8px rgba(255, 255, 255, 0.08),
+      inset 4px 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  &:disabled {
+    color: #6b7280;
+  }
+
+  &::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
   }
 }
 

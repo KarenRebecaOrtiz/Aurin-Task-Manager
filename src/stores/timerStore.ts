@@ -124,7 +124,7 @@ export const useTimerStore = create<TimerStore>((set, get) => {
           const newState = {
             isRunning: data.isRunning,
             accumulatedSeconds,
-            startTime: data.isRunning ? data.startTime.toDate() : null,
+            startTime: data.isRunning && data.startTime ? data.startTime.toDate() : null,
             isRestoring: false,
           };
           
@@ -161,7 +161,7 @@ export const useTimerStore = create<TimerStore>((set, get) => {
             set({
               isRunning: remoteData.isRunning,
               accumulatedSeconds,
-              startTime: remoteData.isRunning ? remoteData.startTime.toDate() : null,
+              startTime: remoteData.isRunning && remoteData.startTime ? remoteData.startTime.toDate() : null,
             });
           }
         });
@@ -221,8 +221,15 @@ export const useTimerStore = create<TimerStore>((set, get) => {
     startTimer: async () => {
       // Debug logging disabled to reduce console spam
       
-      const serverTime = getServerTime();
       const state = get();
+      
+      // Evitar iniciar si ya está corriendo
+      if (state.isRunning) {
+        console.log('[TimerStore] ⚠️ Timer ya está corriendo, ignorando startTimer');
+        return;
+      }
+      
+      const serverTime = getServerTime();
       
       const newState = {
         ...state,
@@ -232,8 +239,17 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       
       set(newState);
       
+      // Limpiar timers existentes antes de iniciar nuevos
+      if (intervalRef) {
+        clearInterval(intervalRef);
+        intervalRef = null;
+      }
+      if (syncIntervalRef) {
+        clearInterval(syncIntervalRef);
+        syncIntervalRef = null;
+      }
+      
       // Iniciar timer local
-      if (intervalRef) clearInterval(intervalRef);
       intervalRef = setInterval(() => {
         set((prev) => ({
           ...prev,
@@ -242,7 +258,6 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       }, 1000);
 
       // Iniciar sincronización periódica
-      if (syncIntervalRef) clearInterval(syncIntervalRef);
       syncIntervalRef = setInterval(() => {
         const currentState = get();
         const currentTime = getServerTime();
@@ -272,6 +287,13 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       // Debug logging disabled to reduce console spam
       
       const state = get();
+      
+      // Evitar pausar si ya está pausado
+      if (!state.isRunning) {
+        console.log('[TimerStore] ⚠️ Timer ya está pausado, ignorando pauseTimer');
+        return;
+      }
+      
       const newState = {
         ...state,
         isRunning: false,
@@ -344,16 +366,7 @@ export const useTimerStore = create<TimerStore>((set, get) => {
         });
       }
       
-      const newState = {
-        ...state,
-        isRunning: false,
-        startTime: null,
-        accumulatedSeconds: 0,
-      };
-      
-      set(newState);
-      
-      // Limpiar timers
+      // Limpiar timers locales primero
       if (intervalRef) {
         clearInterval(intervalRef);
         intervalRef = null;
@@ -363,7 +376,18 @@ export const useTimerStore = create<TimerStore>((set, get) => {
         syncIntervalRef = null;
       }
       
-      console.log('[TimerStore] ✅ Timer finalizado');
+      // Resetear estado completamente
+      const newState = {
+        ...state,
+        isRunning: false,
+        startTime: null,
+        accumulatedSeconds: 0,
+        isRestoring: false,
+      };
+      
+      set(newState);
+      
+      console.log('[TimerStore] ✅ Timer finalizado y reseteado completamente');
       return finalSeconds;
     },
 
