@@ -43,7 +43,9 @@ export default function TasksTableIsolated() {
       openDeleteTask: (taskId: string) => {
         console.log('[TasksTableIsolated] openDeleteTask called', taskId);
         const { openDeletePopup } = useTasksPageStore.getState();
+        console.log('[TasksTableIsolated] Calling openDeletePopup with:', { type: 'task', id: taskId });
         openDeletePopup('task', taskId);
+        console.log('[TasksTableIsolated] openDeletePopup called successfully');
       },
       openArchiveTable: () => {
         console.log('[TasksTableIsolated] openArchiveTable called');

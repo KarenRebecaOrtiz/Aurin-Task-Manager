@@ -7,16 +7,16 @@ import { db } from '@/lib/firebase';
 import EditTask from './EditTask';
 import CreateTask from './CreateTask';
 import ArchiveTable from './ArchiveTable';
-import DeletePopup from './DeletePopup';
+import SimpleDeletePopup from './SimpleDeletePopup';
 import ClientOverlay from './ClientOverlay';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
 import clientStyles from './ClientsTable.module.scss';
 
 export default function TasksPageModals() {
-  console.log('[TasksPageModals] Render');
+  console.log('[TasksPageModals] Render - Checking modal states');
   
-  // Get modal states
+  // Optimized selectors to prevent unnecessary re-renders
   const isEditTaskOpen = useTasksPageStore(useShallow(state => state.isEditTaskOpen));
   const isCreateTaskOpen = useTasksPageStore(useShallow(state => state.isCreateTaskOpen));
   const isArchiveTableOpen = useTasksPageStore(useShallow(state => state.isArchiveTableOpen));
@@ -34,6 +34,20 @@ export default function TasksPageModals() {
   const showFailAlert = useTasksPageStore(useShallow(state => state.showFailAlert));
   const successMessage = useTasksPageStore(useShallow(state => state.successMessage));
   const failMessage = useTasksPageStore(useShallow(state => state.failMessage));
+  
+  console.log('[TasksPageModals] Modal states:', {
+    deleteTarget,
+    isDeletePopupOpen,
+    isDeleteClientOpen,
+    isConfirmExitOpen,
+    isClientSidebarOpen,
+    isClientLoading,
+    deleteConfirm,
+    showSuccessAlert,
+    showFailAlert,
+    successMessage,
+    failMessage
+  });
 
 
 
@@ -252,24 +266,28 @@ export default function TasksPageModals() {
 
       {/* Delete Popup */}
       {isDeletePopupOpen && deleteTarget && (
-        <DeletePopup
+        <SimpleDeletePopup
           isOpen={isDeletePopupOpen}
           title={`Eliminar ${deleteTarget.type === 'task' ? 'Tarea' : 'Cuenta'}`}
           description={`¿Estás seguro de que quieres eliminar esta ${deleteTarget.type === 'task' ? 'tarea' : 'cuenta'}?`}
           onConfirm={async () => {
+            console.log('[TasksPageModals] Delete popup confirmed for:', deleteTarget);
             if (deleteTarget.type === 'task') {
               try {
+                console.log('[TasksPageModals] Deleting task from Firestore:', deleteTarget.id);
                 await deleteDoc(doc(db, 'tasks', deleteTarget.id));
+                console.log('[TasksPageModals] Task deleted successfully from Firestore');
                 const { closeDeletePopup } = useTasksPageStore.getState();
                 closeDeletePopup();
                 handleShowSuccessAlert('Tarea eliminada exitosamente');
               } catch (error) {
-                console.error('Error deleting task:', error);
+                console.error('[TasksPageModals] Error deleting task:', error);
                 handleShowFailAlert('Error al eliminar la tarea');
               }
             }
           }}
           onCancel={() => {
+            console.log('[TasksPageModals] Delete popup cancelled');
             const { closeDeletePopup } = useTasksPageStore.getState();
             closeDeletePopup();
           }}

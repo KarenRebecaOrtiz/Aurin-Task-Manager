@@ -40,6 +40,7 @@ import { useShallow } from 'zustand/react/shallow';
 import ArchiveTable from '@/components/ArchiveTable';
 import EditTask from '@/components/EditTask';
 import CreateTask from '@/components/CreateTask';
+import TasksPageModals from '@/components/TasksPageModals';
 
 
 // Componente completamente aislado para TasksTable - similar a MembersTable
@@ -190,7 +191,9 @@ function TasksPageContent() {
   const handleTasksKanbanDeleteTask = useCallback((taskId: string) => {
     console.log('[TasksPage] handleTasksKanbanDeleteTask called', taskId);
     const { openDeletePopup } = useTasksPageStore.getState();
+    console.log('[TasksPage] Calling openDeletePopup with:', { type: 'task', id: taskId });
     openDeletePopup('task', taskId);
+    console.log('[TasksPage] openDeletePopup called successfully');
   }, []);
 
   const handleTasksKanbanArchiveTableOpen = useCallback(() => {
@@ -716,6 +719,8 @@ export default function TasksPage() {
       {/* Sidebars completamente independientes */}
       <IndependentMessageSidebarRenderer />
       <IndependentChatSidebarRenderer />
+      {/* Modales y popups */}
+      <TasksPageModals />
     </AuthProvider>
   );
 }
