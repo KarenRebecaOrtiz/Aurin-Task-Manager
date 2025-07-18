@@ -40,7 +40,6 @@ import { useShallow } from 'zustand/react/shallow';
 import ArchiveTable from '@/components/ArchiveTable';
 import EditTask from '@/components/EditTask';
 import CreateTask from '@/components/CreateTask';
-import TasksPageModals from '@/components/TasksPageModals';
 
 
 // Componente completamente aislado para TasksTable - similar a MembersTable
@@ -464,125 +463,126 @@ function TasksPageContent() {
       </div>
       <CursorProvider>
         <div ref={contentRef} className={styles.content}>
-          {selectedContainer === 'tareas' && (
-            <>
-              {isArchiveTableOpen ? (
-                <ArchiveTable
-                  // Pasa los handlers necesarios conectados al store
-                  onEditTaskOpen={(taskId: string) => {
-                    console.log('[TasksPage] ArchiveTable onEditTaskOpen called', taskId);
-                    const { openEditTask } = useTasksPageStore.getState();
-                    openEditTask(taskId);
-                  }}
-                  onViewChange={(view: TaskView) => {
-                    console.log('[TasksPage] ArchiveTable onViewChange called', view);
-                    const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
-                    setTaskView(view);
-                    closeArchiveTable();
-                  }}
-                  onDeleteTaskOpen={(taskId: string) => {
-                    console.log('[TasksPage] ArchiveTable onDeleteTaskOpen called', taskId);
-                    const { openDeletePopup } = useTasksPageStore.getState();
-                    openDeletePopup('task', taskId);
-                  }}
-                  onClose={() => {
-                    console.log('[TasksPage] ArchiveTable onClose called');
-                    const { closeArchiveTable } = useTasksPageStore.getState();
-                    closeArchiveTable();
-                  }}
-                  onTaskArchive={async (task: unknown, action: 'archive' | 'unarchive') => {
-                    console.log('[TasksPage] ArchiveTable onTaskArchive called', { task, action });
-                    // TODO: Implement archive/unarchive functionality
-                    return false;
-                  }}
-                  onDataRefresh={() => {
-                    console.log('[TasksPage] ArchiveTable onDataRefresh called');
-                    // TODO: Implement data refresh functionality
-                  }}
-                />
-              ) : isEditTaskOpen && editTaskId ? (
-                <EditTask
-                  isOpen={isEditTaskOpen}
-                  onToggle={() => {
-                    const { closeEditTask } = useTasksPageStore.getState();
-                    closeEditTask();
-                  }}
-                  taskId={editTaskId}
-                  onHasUnsavedChanges={(hasChanges) => {
-                    const { setHasUnsavedChanges } = useTasksPageStore.getState();
-                    setHasUnsavedChanges(hasChanges);
-                  }}
-                  onCreateClientOpen={() => {
-                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                    setClientSidebarData({ isEdit: false });
-                    setIsClientSidebarOpen(true);
-                  }}
-                  onEditClientOpen={(client) => {
-                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                    setClientSidebarData({
-                      client: {
-                        ...client,
-                        projectCount: client.projects?.length || 0,
-                        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
-                      },
-                      isEdit: true,
-                    });
-                    setIsClientSidebarOpen(true);
-                  }}
-                  onClientAlertChange={(alert) => {
-                    if (alert && alert.type === 'success') {
-                      handleShowSuccessAlert(alert.message || '');
-                    } else if (alert && alert.type === 'fail') {
-                      handleShowFailAlert(alert.error || alert.message || '');
-                    }
-                  }}
-                  onShowSuccessAlert={handleShowSuccessAlert}
-                  onShowFailAlert={handleShowFailAlert}
-                />
-              ) : isCreateTaskOpen ? (
-                <CreateTask
-                  isOpen={isCreateTaskOpen}
-                  onToggle={() => {
-                    if (hasUnsavedChanges) {
-                      if (window.confirm('Hay cambios sin guardar. ¿Deseas continuar?')) {
-                        const { closeCreateTask, setHasUnsavedChanges } = useTasksPageStore.getState();
-                        closeCreateTask();
-                        setHasUnsavedChanges(false);
-                      }
-                    } else {
-                      const { closeCreateTask } = useTasksPageStore.getState();
-                      closeCreateTask();
-                    }
-                  }}
-                  onHasUnsavedChanges={(hasChanges) => {
-                    const { setHasUnsavedChanges } = useTasksPageStore.getState();
-                    setHasUnsavedChanges(hasChanges);
-                  }}
-                  onCreateClientOpen={() => {
-                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                    setClientSidebarData({ isEdit: false });
-                    setIsClientSidebarOpen(true);
-                  }}
-                  onEditClientOpen={(client) => {
-                    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                    setClientSidebarData({
-                      client: {
-                        ...client,
-                        projectCount: client.projects?.length || 0,
-                        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
-                      },
-                      isEdit: true,
-                    });
-                    setIsClientSidebarOpen(true);
-                  }}
-                  onTaskCreated={() => {
-                    const { closeCreateTask } = useTasksPageStore.getState();
+          {/* Renderizar CreateTask, EditTask, y ArchiveTable como contenedores principales */}
+          {isCreateTaskOpen ? (
+            <CreateTask
+              isOpen={isCreateTaskOpen}
+              onToggle={() => {
+                if (hasUnsavedChanges) {
+                  if (window.confirm('Hay cambios sin guardar. ¿Deseas continuar?')) {
+                    const { closeCreateTask, setHasUnsavedChanges } = useTasksPageStore.getState();
                     closeCreateTask();
-                  }}
-                  onShowSuccessAlert={handleShowSuccessAlert}
-                  onShowFailAlert={handleShowFailAlert}
-                />
-              ) : taskView === 'table' ? (
+                    setHasUnsavedChanges(false);
+                  }
+                } else {
+                  const { closeCreateTask } = useTasksPageStore.getState();
+                  closeCreateTask();
+                }
+              }}
+              onHasUnsavedChanges={(hasChanges) => {
+                const { setHasUnsavedChanges } = useTasksPageStore.getState();
+                setHasUnsavedChanges(hasChanges);
+              }}
+              onCreateClientOpen={() => {
+                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                setClientSidebarData({ isEdit: false });
+                setIsClientSidebarOpen(true);
+              }}
+              onEditClientOpen={(client) => {
+                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                setClientSidebarData({
+                  client: {
+                    ...client,
+                    projectCount: client.projects?.length || 0,
+                    createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
+                  },
+                  isEdit: true,
+                });
+                setIsClientSidebarOpen(true);
+              }}
+              onTaskCreated={() => {
+                const { closeCreateTask } = useTasksPageStore.getState();
+                closeCreateTask();
+              }}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
+            />
+          ) : isEditTaskOpen && editTaskId ? (
+            <EditTask
+              isOpen={isEditTaskOpen}
+              onToggle={() => {
+                const { closeEditTask } = useTasksPageStore.getState();
+                closeEditTask();
+              }}
+              taskId={editTaskId}
+              onHasUnsavedChanges={(hasChanges) => {
+                const { setHasUnsavedChanges } = useTasksPageStore.getState();
+                setHasUnsavedChanges(hasChanges);
+              }}
+              onCreateClientOpen={() => {
+                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                setClientSidebarData({ isEdit: false });
+                setIsClientSidebarOpen(true);
+              }}
+              onEditClientOpen={(client) => {
+                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+                setClientSidebarData({
+                  client: {
+                    ...client,
+                    projectCount: client.projects?.length || 0,
+                    createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
+                  },
+                  isEdit: true,
+                });
+                setIsClientSidebarOpen(true);
+              }}
+              onClientAlertChange={(alert) => {
+                if (alert && alert.type === 'success') {
+                  handleShowSuccessAlert(alert.message || '');
+                } else if (alert && alert.type === 'fail') {
+                  handleShowFailAlert(alert.error || alert.message || '');
+                }
+              }}
+              onShowSuccessAlert={handleShowSuccessAlert}
+              onShowFailAlert={handleShowFailAlert}
+            />
+          ) : isArchiveTableOpen ? (
+            <ArchiveTable
+              // Pasa los handlers necesarios conectados al store
+              onEditTaskOpen={(taskId: string) => {
+                console.log('[TasksPage] ArchiveTable onEditTaskOpen called', taskId);
+                const { openEditTask } = useTasksPageStore.getState();
+                openEditTask(taskId);
+              }}
+              onViewChange={(view: TaskView) => {
+                console.log('[TasksPage] ArchiveTable onViewChange called', view);
+                const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
+                setTaskView(view);
+                closeArchiveTable();
+              }}
+              onDeleteTaskOpen={(taskId: string) => {
+                console.log('[TasksPage] ArchiveTable onDeleteTaskOpen called', taskId);
+                const { openDeletePopup } = useTasksPageStore.getState();
+                openDeletePopup('task', taskId);
+              }}
+              onClose={() => {
+                console.log('[TasksPage] ArchiveTable onClose called');
+                const { closeArchiveTable } = useTasksPageStore.getState();
+                closeArchiveTable();
+              }}
+              onTaskArchive={async (task: unknown, action: 'archive' | 'unarchive') => {
+                console.log('[TasksPage] ArchiveTable onTaskArchive called', { task, action });
+                // TODO: Implement archive/unarchive functionality
+                return false;
+              }}
+              onDataRefresh={() => {
+                console.log('[TasksPage] ArchiveTable onDataRefresh called');
+                // TODO: Implement data refresh functionality
+              }}
+            />
+          ) : selectedContainer === 'tareas' && (
+            <>
+              {taskView === 'table' ? (
                 <TasksTableRenderer />
               ) : (
                 <TasksKanban
@@ -719,8 +719,6 @@ export default function TasksPage() {
       {/* Sidebars completamente independientes */}
       <IndependentMessageSidebarRenderer />
       <IndependentChatSidebarRenderer />
-      {/* Modales y popups */}
-      <TasksPageModals />
     </AuthProvider>
   );
 }
