@@ -101,6 +101,8 @@ interface TasksPageState {
   showSuccess: (message: string) => void;
   showFail: (message: string) => void;
   resetAlerts: () => void;
+  openConfirmExitPopup: () => void;
+  closeConfirmExitPopup: () => void;
 }
 
 export const useTasksPageStore = create<TasksPageState>((set) => ({
@@ -210,7 +212,10 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
     showFailAlert: false,
     successMessage: '',
     failMessage: ''
-  })
+  }),
+  
+  openConfirmExitPopup: () => set({ isConfirmExitOpen: true }),
+  closeConfirmExitPopup: () => set({ isConfirmExitOpen: false })
 }));
 
 // Selectors for specific state slices

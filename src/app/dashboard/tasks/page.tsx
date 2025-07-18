@@ -2,12 +2,7 @@
 
 import { useRef, useMemo, useCallback, useEffect, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
-// import {
-//   collection,
-//   doc,
-//   updateDoc,
-//   addDoc,
-// } from 'firebase/firestore';
+
 import Header from '@/components/ui/Header';
 import Marquee from '@/components/ui/Marquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
@@ -22,14 +17,14 @@ import ChatSidebar from '@/components/ChatSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
 import ConfigPage from '@/components/ConfigPage';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
-// import { db } from '@/lib/firebase';
-// import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
+
+import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
 import styles from '@/components/TasksPage.module.scss';
 
 import Dock from '@/components/Dock';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
@@ -40,6 +35,7 @@ import { useShallow } from 'zustand/react/shallow';
 import ArchiveTable from '@/components/ArchiveTable';
 import EditTask from '@/components/EditTask';
 import CreateTask from '@/components/CreateTask';
+import TasksPageModals from '@/components/TasksPageModals';
 
 
 // Componente completamente aislado para TasksTable - similar a MembersTable
@@ -74,33 +70,33 @@ interface User {
   status?: string;
 }
 
-// interface Task {
-//   id: string;
-//   clientId: string;
-//   project: string;
-//   name: string;
-//   description: string;
-//   status: string;
-//   priority: string;
-//   startDate: string | null;
-//   endDate: string | null;
-//   LeadedBy: string[];
-//   AssignedTo: string[];
-//   createdAt: string;
-//   CreatedBy?: string;
-//   lastActivity?: string;
-//   hasUnreadUpdates?: boolean;
-//   lastViewedBy?: { [userId: string]: string };
-//   archived?: boolean;
-//   archivedAt?: string;
-//   archivedBy?: string;
-// }
+interface Task {
+  id: string;
+  clientId: string;
+  project: string;
+  name: string;
+  description: string;
+  status: string;
+  priority: string;
+  startDate: string | null;
+  endDate: string | null;
+  LeadedBy: string[];
+  AssignedTo: string[];
+  createdAt: string;
+  CreatedBy?: string;
+  lastActivity?: string;
+  hasUnreadUpdates?: boolean;
+  lastViewedBy?: { [userId: string]: string };
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
+}
 
 function TasksPageContent() {
   // Solo log cuando realmente cambia algo importante
   // Debug logging disabled to reduce console spam
   const { user } = useUser();
-  // const { isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   
   // Usar el hook compartido que maneja Zustand
   const {
@@ -469,11 +465,8 @@ function TasksPageContent() {
               isOpen={isCreateTaskOpen}
               onToggle={() => {
                 if (hasUnsavedChanges) {
-                  if (window.confirm('Hay cambios sin guardar. ¿Deseas continuar?')) {
-                    const { closeCreateTask, setHasUnsavedChanges } = useTasksPageStore.getState();
-                    closeCreateTask();
-                    setHasUnsavedChanges(false);
-                  }
+                  const { openConfirmExitPopup } = useTasksPageStore.getState();
+                  openConfirmExitPopup();
                 } else {
                   const { closeCreateTask } = useTasksPageStore.getState();
                   closeCreateTask();
@@ -511,8 +504,13 @@ function TasksPageContent() {
             <EditTask
               isOpen={isEditTaskOpen}
               onToggle={() => {
-                const { closeEditTask } = useTasksPageStore.getState();
-                closeEditTask();
+                if (hasUnsavedChanges) {
+                  const { openConfirmExitPopup } = useTasksPageStore.getState();
+                  openConfirmExitPopup();
+                } else {
+                  const { closeEditTask } = useTasksPageStore.getState();
+                  closeEditTask();
+                }
               }}
               taskId={editTaskId}
               onHasUnsavedChanges={(hasChanges) => {
@@ -572,8 +570,25 @@ function TasksPageContent() {
               }}
               onTaskArchive={async (task: unknown, action: 'archive' | 'unarchive') => {
                 console.log('[TasksPage] ArchiveTable onTaskArchive called', { task, action });
-                // TODO: Implement archive/unarchive functionality
-                return false;
+                if (!user?.id || !isAdmin) {
+                  console.error('[TasksPage] User not authenticated or not admin');
+                  return false;
+                }
+
+                try {
+                  const taskData = task as Task;
+                  if (action === 'unarchive') {
+                    await unarchiveTask(taskData.id, user.id, isAdmin, taskData);
+                    console.log('[TasksPage] Task unarchived successfully:', taskData.id);
+                  } else {
+                    await archiveTask(taskData.id, user.id, isAdmin, taskData);
+                    console.log('[TasksPage] Task archived successfully:', taskData.id);
+                  }
+                  return true;
+                } catch (error) {
+                  console.error('[TasksPage] Error archiving/unarchiving task:', error);
+                  return false;
+                }
               }}
               onDataRefresh={() => {
                 console.log('[TasksPage] ArchiveTable onDataRefresh called');
@@ -667,6 +682,9 @@ function TasksPageContent() {
       
       {/* Contenido principal que se renderiza antes de que el loader se oculte */}
       {contentReady && mainContent}
+      
+      {/* Modales y popups */}
+      <TasksPageModals />
     </>
   );
 }

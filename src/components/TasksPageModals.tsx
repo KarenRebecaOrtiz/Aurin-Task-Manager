@@ -4,10 +4,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-import EditTask from './EditTask';
-import CreateTask from './CreateTask';
-import ArchiveTable from './ArchiveTable';
 import SimpleDeletePopup from './SimpleDeletePopup';
+import ConfirmExitPopup from './ConfirmExitPopup';
 import ClientOverlay from './ClientOverlay';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
@@ -17,10 +15,6 @@ export default function TasksPageModals() {
   console.log('[TasksPageModals] Render - Checking modal states');
   
   // Optimized selectors to prevent unnecessary re-renders
-  const isEditTaskOpen = useTasksPageStore(useShallow(state => state.isEditTaskOpen));
-  const isCreateTaskOpen = useTasksPageStore(useShallow(state => state.isCreateTaskOpen));
-  const isArchiveTableOpen = useTasksPageStore(useShallow(state => state.isArchiveTableOpen));
-  const editTaskId = useTasksPageStore(useShallow(state => state.editTaskId));
   const deleteTarget = useTasksPageStore(useShallow(state => state.deleteTarget));
   const isDeletePopupOpen = useTasksPageStore(useShallow(state => state.isDeletePopupOpen));
   const isDeleteClientOpen = useTasksPageStore(useShallow(state => state.isDeleteClientOpen));
@@ -28,7 +22,6 @@ export default function TasksPageModals() {
   const isClientSidebarOpen = useTasksPageStore(useShallow(state => state.isClientSidebarOpen));
   const clientSidebarData = useTasksPageStore(useShallow(state => state.clientSidebarData));
   const isClientLoading = useTasksPageStore(useShallow(state => state.isClientLoading));
-  const hasUnsavedChanges = useTasksPageStore(useShallow(state => state.hasUnsavedChanges));
   const deleteConfirm = useTasksPageStore(useShallow(state => state.deleteConfirm));
   const showSuccessAlert = useTasksPageStore(useShallow(state => state.showSuccessAlert));
   const showFailAlert = useTasksPageStore(useShallow(state => state.showFailAlert));
@@ -49,14 +42,13 @@ export default function TasksPageModals() {
     failMessage
   });
 
-
-
   // Action handlers
   const handleConfirmExit = () => {
     console.log('[TasksPageModals] handleConfirmExit called');
-    const { setIsConfirmExitOpen, closeCreateTask, setHasUnsavedChanges } = useTasksPageStore.getState();
+    const { setIsConfirmExitOpen, closeCreateTask, closeEditTask, setHasUnsavedChanges } = useTasksPageStore.getState();
     setIsConfirmExitOpen(false);
     closeCreateTask();
+    closeEditTask();
     setHasUnsavedChanges(false);
   };
 
@@ -92,157 +84,6 @@ export default function TasksPageModals() {
 
   return (
     <>
-      {/* EditTask Modal */}
-      {isEditTaskOpen && editTaskId && (
-        <EditTask
-          isOpen={isEditTaskOpen}
-          onToggle={() => {
-            const { closeEditTask } = useTasksPageStore.getState();
-            closeEditTask();
-          }}
-          taskId={editTaskId}
-          onHasUnsavedChanges={(hasChanges) => {
-            const { setHasUnsavedChanges } = useTasksPageStore.getState();
-            setHasUnsavedChanges(hasChanges);
-          }}
-          onCreateClientOpen={() => {
-            const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-            setClientSidebarData({ isEdit: false });
-            setIsClientSidebarOpen(true);
-          }}
-          onEditClientOpen={(client) => {
-            const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-            setClientSidebarData({
-              client: {
-                ...client,
-                projectCount: client.projects?.length || 0,
-                createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
-              },
-              isEdit: true,
-            });
-            setIsClientSidebarOpen(true);
-          }}
-          onClientAlertChange={(alert) => {
-            if (alert && alert.type === 'success') {
-              handleShowSuccessAlert(alert.message || '');
-            } else if (alert && alert.type === 'fail') {
-              handleShowFailAlert(alert.error || alert.message || '');
-            }
-          }}
-          onShowSuccessAlert={handleShowSuccessAlert}
-          onShowFailAlert={handleShowFailAlert}
-        />
-      )}
-
-      {/* CreateTask Modal */}
-      {isCreateTaskOpen && (
-        <CreateTask
-          isOpen={isCreateTaskOpen}
-          onToggle={() => {
-            if (hasUnsavedChanges) {
-              if (window.confirm('Hay cambios sin guardar. ¿Deseas continuar?')) {
-                const { closeCreateTask, setHasUnsavedChanges } = useTasksPageStore.getState();
-                closeCreateTask();
-                setHasUnsavedChanges(false);
-              }
-            } else {
-              const { closeCreateTask } = useTasksPageStore.getState();
-              closeCreateTask();
-            }
-          }}
-          onHasUnsavedChanges={(hasChanges) => {
-            const { setHasUnsavedChanges } = useTasksPageStore.getState();
-            setHasUnsavedChanges(hasChanges);
-          }}
-          onCreateClientOpen={() => {
-            const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-            setClientSidebarData({ isEdit: false });
-            setIsClientSidebarOpen(true);
-          }}
-          onEditClientOpen={(client) => {
-            const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-            setClientSidebarData({
-              client: {
-                ...client,
-                projectCount: client.projects?.length || 0,
-                createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
-              },
-              isEdit: true,
-            });
-            setIsClientSidebarOpen(true);
-          }}
-          onTaskCreated={() => {
-            const { closeCreateTask } = useTasksPageStore.getState();
-            closeCreateTask();
-          }}
-          onShowSuccessAlert={handleShowSuccessAlert}
-          onShowFailAlert={handleShowFailAlert}
-        />
-      )}
-
-      {/* ArchiveTable */}
-      {isArchiveTableOpen && (
-        <ArchiveTable
-          onEditTaskOpen={(taskId) => {
-            const { openEditTask } = useTasksPageStore.getState();
-            openEditTask(taskId);
-          }}
-          onViewChange={(view: 'table' | 'kanban') => {
-            const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
-            setTaskView(view);
-            closeArchiveTable();
-          }}
-          onDeleteTaskOpen={(taskId) => {
-            const { openDeletePopup } = useTasksPageStore.getState();
-            openDeletePopup('task', taskId);
-          }}
-          onClose={() => {
-            const { closeArchiveTable } = useTasksPageStore.getState();
-            closeArchiveTable();
-          }}
-          onTaskArchive={async () => {
-            // Task archive logic would go here
-            return true;
-          }}
-          onDataRefresh={() => {
-            // Data refresh logic would go here
-          }}
-        />
-      )}
-
-      {/* ClientSidebar */}
-      {isClientSidebarOpen && clientSidebarData && (
-        <ClientOverlay
-          isOpen={isClientSidebarOpen}
-          isEdit={clientSidebarData.isEdit}
-          initialForm={
-            clientSidebarData.isEdit && clientSidebarData.client
-              ? {
-                  id: clientSidebarData.client.id,
-                  name: clientSidebarData.client.name,
-                  imageFile: null,
-                  imagePreview: clientSidebarData.client.imageUrl,
-                  projects: clientSidebarData.client.projects.length
-                    ? clientSidebarData.client.projects
-                    : [''],
-                  deleteProjectIndex: null,
-                  deleteConfirm: '',
-                }
-              : {
-                  name: '',
-                  imageFile: null,
-                  imagePreview: '',
-                  projects: [''],
-                  deleteProjectIndex: null,
-                  deleteConfirm: '',
-                }
-          }
-          onFormSubmit={handleClientSubmit}
-          onClose={handleClientSidebarClose}
-          isClientLoading={isClientLoading}
-        />
-      )}
-
       {/* Alert Components */}
       {showSuccessAlert && (
         <SuccessAlert
@@ -346,26 +187,46 @@ export default function TasksPageModals() {
 
       {/* Confirm Exit Popup */}
       {isConfirmExitOpen && (
-        <div className={clientStyles.popupOverlay}>
-          <div className={clientStyles.deletePopup}>
-            <h2>¿Salir sin guardar?</h2>
-            <p>¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado.</p>
-            <div className={clientStyles.popupActions}>
-              <button
-                onClick={handleConfirmExit}
-                className={clientStyles.deleteConfirmButton}
-              >
-                Salir
-              </button>
-              <button
-                onClick={handleCancelExit}
-                className={clientStyles.cancelButton}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmExitPopup
+          isOpen={isConfirmExitOpen}
+          title="¿Salir sin guardar?"
+          description="¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado."
+          onConfirm={handleConfirmExit}
+          onCancel={handleCancelExit}
+        />
+      )}
+
+      {/* ClientSidebar */}
+      {isClientSidebarOpen && clientSidebarData && (
+        <ClientOverlay
+          isOpen={isClientSidebarOpen}
+          isEdit={clientSidebarData.isEdit}
+          initialForm={
+            clientSidebarData.isEdit && clientSidebarData.client
+              ? {
+                  id: clientSidebarData.client.id,
+                  name: clientSidebarData.client.name,
+                  imageFile: null,
+                  imagePreview: clientSidebarData.client.imageUrl,
+                  projects: clientSidebarData.client.projects.length
+                    ? clientSidebarData.client.projects
+                    : [''],
+                  deleteProjectIndex: null,
+                  deleteConfirm: '',
+                }
+              : {
+                  name: '',
+                  imageFile: null,
+                  imagePreview: '',
+                  projects: [''],
+                  deleteProjectIndex: null,
+                  deleteConfirm: '',
+                }
+          }
+          onFormSubmit={handleClientSubmit}
+          onClose={handleClientSidebarClose}
+          isClientLoading={isClientLoading}
+        />
       )}
     </>
   );

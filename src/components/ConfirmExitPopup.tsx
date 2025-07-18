@@ -3,9 +3,8 @@
 import { useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './DeletePopup.module.scss';
-import { useDeleteConfirm, useIsDeleting, useDeletePopupActions } from '@/stores/deletePopupStore';
 
-interface DeletePopupProps {
+interface ConfirmExitPopupProps {
   isOpen: boolean;
   title: string;
   description: string;
@@ -13,26 +12,14 @@ interface DeletePopupProps {
   onCancel: () => void;
 }
 
-const DeletePopup: React.FC<DeletePopupProps> = memo(({
+const ConfirmExitPopup: React.FC<ConfirmExitPopupProps> = memo(({
   isOpen,
   title,
   description,
   onConfirm,
   onCancel,
 }) => {
-  const deletePopupRef = useRef<HTMLDivElement>(null);
-  
-  // Optimized Zustand selectors
-  const deleteConfirm = useDeleteConfirm();
-  const isDeleting = useIsDeleting();
-  const { setDeleteConfirm, setIsDeleting, resetState } = useDeletePopupActions();
-
-  // Reset state when popup opens/closes
-  useEffect(() => {
-    if (!isOpen) {
-      resetState();
-    }
-  }, [isOpen, resetState]);
+  const confirmPopupRef = useRef<HTMLDivElement>(null);
 
   // Block scroll when popup is open
   useEffect(() => {
@@ -50,8 +37,8 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
   // Handle click outside to close
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (
-      deletePopupRef.current &&
-      !deletePopupRef.current.contains(event.target as Node) &&
+      confirmPopupRef.current &&
+      !confirmPopupRef.current.contains(event.target as Node) &&
       isOpen
     ) {
       onCancel();
@@ -66,18 +53,7 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, handleClickOutside]);
 
-  const handleConfirm = useCallback(async () => {
-    if (deleteConfirm.toLowerCase() === 'eliminar') {
-      setIsDeleting(true);
-      try {
-        await onConfirm();
-      } finally {
-        setIsDeleting(false);
-      }
-    }
-  }, [deleteConfirm, onConfirm, setIsDeleting]);
-
-  // Optimized animation variants - faster and smoother
+  // Optimized animation variants - same as DeletePopup
   const overlayVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1 },
@@ -107,10 +83,6 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
     tap: { scale: 0.98 }
   };
 
-  const inputVariants = {
-    focus: { scale: 1.01 }
-  };
-
   return (
     <AnimatePresence mode="wait">
       {isOpen && (
@@ -124,7 +96,7 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
         >
           <motion.div 
             className={styles.deletePopup} 
-            ref={deletePopupRef}
+            ref={confirmPopupRef}
             variants={modalVariants}
             initial="hidden"
             animate="visible"
@@ -140,32 +112,9 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
               >
                 <h2 className={styles.deletePopupTitle}>{title}</h2>
                 <p className={styles.deletePopupDescription}>
-                  {description} <strong>Esta acción no se puede deshacer.</strong>
+                  {description}
                 </p>
               </motion.div>
-              
-              <motion.input
-                type="text"
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="Escribe 'Eliminar' para confirmar"
-                className={styles.deleteConfirmInput}
-                autoFocus
-                disabled={isDeleting}
-                variants={inputVariants}
-                whileFocus="focus"
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, duration: 0.2, ease: 'easeOut' }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && deleteConfirm.toLowerCase() === 'eliminar') {
-                    handleConfirm();
-                  }
-                  if (e.key === 'Escape') {
-                    onCancel();
-                  }
-                }}
-              />
               
               <motion.div 
                 className={styles.deletePopupActions}
@@ -176,7 +125,6 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
                 <motion.button
                   className={styles.deleteCancelButton}
                   onClick={onCancel}
-                  disabled={isDeleting}
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
@@ -185,13 +133,12 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
                 </motion.button>
                 <motion.button
                   className={styles.deleteConfirmButton}
-                  onClick={handleConfirm}
-                  disabled={deleteConfirm.toLowerCase() !== 'eliminar' || isDeleting}
+                  onClick={onConfirm}
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
                 >
-                  {isDeleting ? 'Eliminando...' : 'Confirmar Eliminación'}
+                  Salir
                 </motion.button>
               </motion.div>
             </div>
@@ -202,6 +149,6 @@ const DeletePopup: React.FC<DeletePopupProps> = memo(({
   );
 });
 
-DeletePopup.displayName = 'DeletePopup';
+ConfirmExitPopup.displayName = 'ConfirmExitPopup';
 
-export default DeletePopup;
+export default ConfirmExitPopup; 
