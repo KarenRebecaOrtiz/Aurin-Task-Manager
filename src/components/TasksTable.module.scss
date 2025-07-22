@@ -148,7 +148,7 @@
   }
   
   .searchInput {
-    max-width: 90% !important;
+    max-width: 75% !important;
     height: 40px;
     padding: 8px 12px;
     font-size: 12px;
@@ -194,32 +194,21 @@
   }
   
   @media (max-width: 768px) {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: auto auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 12px;
     width: 100%;
     padding: 0px 20px;
-    
-    /* First row: filters */
-    .buttonWithTooltip:nth-child(3),
-    .buttonWithTooltip:nth-child(4),
-    .buttonWithTooltip:nth-child(5) {
-      grid-row: 1;
-    }
-    
-    /* Second row: buttons */
-    .buttonWithTooltip:nth-child(1),
-    .buttonWithTooltip:nth-child(2),
-    .buttonWithTooltip:nth-child(6) {
-      grid-row: 2;
-    }
+    justify-content: center;
+    align-items: center;
     
     .viewButton,
     .filter,
     .createButton,
     .filterButton {
-      width: 100%;
+      width: auto;
+      min-width: 120px;
     }
   }
 }

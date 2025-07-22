@@ -186,10 +186,16 @@
   /* Centrar en mobile */
   @media (max-width: 768px) {
     display: flex;
-    justify-content: center;
+    justify-content: space-evenly;
     align-items: center;
     width: 100%;
     margin: 0 auto;
+    max-width: none;
+  }
+  
+  @media (max-width: 819px) {
+    width: 100%;
+    justify-content: space-evenly;
   }
 }
 
@@ -200,7 +206,7 @@
   /* Centrar en mobile */
   @media (max-width: 768px) {
     padding-left: 0;
-    justify-content: center;
+    justify-content: space-evenly;
   }
 }
 

@@ -80,6 +80,18 @@ export default React.memo(function NotificationDropdown({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Bloquear scroll del body en mobile cuando el dropdown está abierto
+  useEffect(() => {
+    if (isMobile && isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, isOpen]);
+
   // Manejar drag en móvil
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (!isMobile) return;
@@ -395,8 +407,8 @@ export default React.memo(function NotificationDropdown({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.3 }}
               >
-                <div className={styles.dragBar} />
                 <div className={styles.title}>Notificaciones</div>
+                <div className={styles.dragBar} />
                 <motion.button 
                   className={styles.closeButton} 
                   onClick={onClose} 

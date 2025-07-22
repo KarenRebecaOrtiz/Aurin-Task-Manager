@@ -1,17 +1,36 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './ToDoDynamic.module.scss';
 import ToDoDropdown from './ui/ToDoDropdown';
 import { useTodos } from '@/hooks/useTodos';
+import { useShallow } from 'zustand/react/shallow';
+import { useToDoDropdownStore } from '@/stores/todoDropdownStore';
 
 export default function ToDoDynamic() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  
   const { todos } = useTodos();
+  const { 
+    isVisible, 
+    isOpen, 
+    dropdownPosition, 
+    setIsVisible, 
+    setIsOpen, 
+    setDropdownPosition, 
+    resetState 
+  } = useToDoDropdownStore(
+    useShallow((state) => ({
+      isVisible: state.isVisible,
+      isOpen: state.isOpen,
+      dropdownPosition: state.dropdownPosition,
+      setIsVisible: state.setIsVisible,
+      setIsOpen: state.setIsOpen,
+      setDropdownPosition: state.setDropdownPosition,
+      resetState: state.resetState,
+    }))
+  );
+  
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Calculate dropdown position when opening
   const handleToggleDropdown = useCallback((e: React.MouseEvent) => {
@@ -24,8 +43,16 @@ export default function ToDoDynamic() {
     const right = window.innerWidth - buttonRect.right;
 
     setDropdownPosition({ top, right });
-    setIsDropdownOpen(prev => !prev);
-  }, []);
+    setIsVisible(true);
+    setIsOpen(!isOpen);
+  }, [isOpen, setDropdownPosition, setIsVisible, setIsOpen]);
+
+  // Close dropdown
+  const handleCloseDropdown = useCallback(() => {
+    setIsOpen(false);
+    setIsVisible(false);
+    resetState();
+  }, [setIsOpen, setIsVisible, resetState]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -41,10 +68,10 @@ export default function ToDoDynamic() {
         return;
       }
       
-      setIsDropdownOpen(false);
+      handleCloseDropdown();
     };
 
-    if (isDropdownOpen) {
+    if (isOpen) {
       const timeoutId = setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside, true);
       }, 50);
@@ -54,7 +81,7 @@ export default function ToDoDynamic() {
         document.removeEventListener('mousedown', handleClickOutside, true);
       };
     }
-  }, [isDropdownOpen]);
+  }, [isOpen, handleCloseDropdown]);
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
   const remainingTodos = todos.length - completedTodos;
@@ -103,9 +130,10 @@ export default function ToDoDynamic() {
       </button>
 
       <ToDoDropdown
-        isVisible={true}
-        isOpen={isDropdownOpen}
+        isVisible={isVisible}
+        isOpen={isOpen}
         dropdownPosition={dropdownPosition}
+        onClose={handleCloseDropdown}
       />
     </>
   );

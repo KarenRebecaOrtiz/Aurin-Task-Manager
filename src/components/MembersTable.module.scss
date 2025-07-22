@@ -713,4 +713,9 @@
     .Table_row__ah8hJ {
         gap: 0;
     }
+    
+    /* Desactivar el ancho del 20% para la imagen en mobile */
+    .Table_cell__dP6Xg[style*="width: 20%"] {
+        width: auto !important;
+    }
 }

@@ -12,18 +12,20 @@
   position: relative;
   width: 50px;
   height: 50px;
-  border-radius: $radius-2xl !important;
+  border-radius: 16px !important;
   opacity: 0.8;
   z-index: 50;
-  padding: $spacing-sm;
-  @include flex-center;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
-  background: rgba(241, 245, 249, 0.7);
+  /* background: rgba(241, 245, 249, 0.7); */
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  @include neomorphic-shadow(light);
-  transition: $transition-base;
+  /* box-shadow: -8px -8px 16px rgba(255, 255, 255, 0.8), 8px 8px 16px rgba(0, 0, 0, 0.05), inset -4px -4px 8px rgba(255, 255, 255, 0.5), inset 4px 4px 8px rgba(209, 217, 230, 0.3); */
+  transition: all 0.3s ease;
 
   &:hover {
     transform: translateY(-2px) scale(1.02);
@@ -49,9 +51,9 @@
   }
 
   @include dark-mode {
-    background: rgba(30, 30, 30, 0.7);
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    background: rgb(0 0 0);
+    border-color: rgb(91 91 91);
+    /* box-shadow: inset -4px -4px 8px rgba(0, 0, 0, 0.7), inset 4px 4px 8px rgba(255, 255, 255, 0.03), -8px -8px 16px rgba(0, 0, 0, 0.5), 8px 8px 16px rgba(255, 255, 255, 0.02); */
 
     &:hover {
       transform: translateY(-2px) scale(1.02);
@@ -69,6 +71,12 @@
     svg {
       filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
     }
+  }
+
+  // Tamaño específico para mobile
+  @media (max-width: 768px) {
+    width: 64px;
+    height: 64px;
   }
 }
 

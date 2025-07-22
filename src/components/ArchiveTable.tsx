@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo, memo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, memo, useCallback, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -145,6 +145,20 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
   }) => {
     const { user } = useUser();
     const { isAdmin } = useAuth();
+    
+    // Hook para detectar el viewport
+    const [isMobile, setIsMobile] = useState(false);
+    
+    useEffect(() => {
+      const checkViewport = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      
+      checkViewport();
+      window.addEventListener('resize', checkViewport);
+      
+      return () => window.removeEventListener('resize', checkViewport);
+    }, []);
     
     // Usa useDataStore/useShallow para obtener tasks, users, clients, etc. directamente
     const tasks = useDataStore(useShallow(state => state.tasks));
@@ -537,32 +551,32 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       {
         key: 'clientId',
         label: 'Cuenta',
-        width: '10%',
+        width: isMobile ? '0%' : '10%',
         mobileVisible: false,
       },
       {
         key: 'name',
         label: 'Tarea',
-        width: '25%', 
+        width: isMobile ? '70%' : '25%', 
         mobileVisible: true,
       },
       {
         key: 'assignedTo',
         label: 'Asignados',
-        width: '20%',
+        width: isMobile ? '0%' : '20%',
         mobileVisible: false,
       },
       {
         key: 'archivedAt',
         label: 'Fecha de Archivado',
-        width: '20%',
+        width: isMobile ? '0%' : '20%',
         mobileVisible: false,
       },
       {
         key: 'action',
         label: 'Acciones',
-        width: '20%',
-        mobileVisible: false,
+        width: isMobile ? '30%' : '20%',
+        mobileVisible: isMobile, // Mostrar acciones en mobile
       },
     ];
 

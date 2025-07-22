@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useCallback, memo } from 'react';
+import { useEffect, useMemo, useCallback, memo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -55,6 +55,20 @@ const MembersTable: React.FC<MembersTableProps> = memo(
   ({ onMessageSidebarOpen, externalUsers, externalTasks, getUnreadCountForUser, markConversationAsRead }) => {
     const { user } = useUser();
     const { isLoading } = useAuth();
+    
+    // Hook para detectar el viewport
+    const [isMobile, setIsMobile] = useState(false);
+    
+    useEffect(() => {
+      const checkViewport = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      
+      checkViewport();
+      window.addEventListener('resize', checkViewport);
+      
+      return () => window.removeEventListener('resize', checkViewport);
+    }, []);
     
     // Optimizar selectores de dataStore para evitar re-renders innecesarios
     const users = useDataStore(useShallow(state => state.users));
@@ -201,7 +215,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       {
         key: 'imageUrl',
         label: '',
-        width: '20%',
+        width: isMobile ? '50%' : '20%',
         mobileVisible: true,
         render: (user: User) => (
           <UserAvatar
@@ -257,7 +271,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           <span className={styles.status}>{user.status || 'Sin estado'}</span>
         ),
       },
-    ], [activeProjectsCount, getUnreadCountForUser]);
+    ], [activeProjectsCount, getUnreadCountForUser, isMobile]);
 
     // Handle loading state
     if (isLoading || isLoadingUsers || isLoadingTasks) {
