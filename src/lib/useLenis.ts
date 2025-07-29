@@ -17,7 +17,6 @@ export function useLenis() {
       smoothWheel: true,
       syncTouch: false, // Replaced 'smoothTouch' with 'syncTouch'
       syncTouchLerp: 0.075, // Lerp for touch inertia
-      touchInertiaMultiplier: 35, // Strength of touch inertia
       wheelMultiplier: 1,
       touchMultiplier: 2,
       orientation: 'vertical',

@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useShallow } from 'zustand/react/shallow';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useUser } from '@clerk/nextjs';
 
 import SimpleDeletePopup from './SimpleDeletePopup';
 import ConfirmExitPopup from './ConfirmExitPopup';
@@ -13,6 +14,8 @@ import clientStyles from './ClientsTable.module.scss';
 
 export default function TasksPageModals() {
   console.log('[TasksPageModals] Render - Checking modal states');
+  
+  const { user } = useUser();
   
   // Optimized selectors to prevent unnecessary re-renders
   const deleteTarget = useTasksPageStore(useShallow(state => state.deleteTarget));
@@ -65,9 +68,46 @@ export default function TasksPageModals() {
     setClientSidebarData(null);
   };
 
-  const handleClientSubmit = async (form: { id?: string; name: string; imageFile: File; imagePreview: string; projects: string[] }) => {
+  const handleClientSubmit = async (form: { id?: string; name: string; imageFile: File | null; imagePreview: string; projects: string[] }) => {
     console.log('[TasksPageModals] handleClientSubmit called', form);
-    // Client submit logic would go here
+    
+    try {
+      const { setIsClientLoading } = useTasksPageStore.getState();
+      setIsClientLoading(true);
+      
+      const clientData = {
+        name: form.name,
+        imageUrl: form.imagePreview,
+        projectCount: form.projects.length,
+        projects: form.projects,
+        createdBy: user?.id || 'unknown',
+        createdAt: new Date().toISOString(),
+      };
+
+      if (clientSidebarData?.isEdit && form.id) {
+        // Update existing client
+        const clientRef = doc(db, 'clients', form.id);
+        await updateDoc(clientRef, {
+          ...clientData,
+          lastActivity: new Date().toISOString(),
+        });
+        console.log('[TasksPageModals] Client updated successfully');
+      } else {
+        // Create new client
+        const clientsRef = collection(db, 'clients');
+        await addDoc(clientsRef, clientData);
+        console.log('[TasksPageModals] Client created successfully');
+      }
+
+      handleClientSidebarClose();
+      handleShowSuccessAlert('Cliente guardado exitosamente');
+    } catch (error) {
+      console.error('[TasksPageModals] Error saving client:', error);
+      handleShowFailAlert('Error al guardar el cliente');
+    } finally {
+      const { setIsClientLoading } = useTasksPageStore.getState();
+      setIsClientLoading(false);
+    }
   };
 
   const handleShowSuccessAlert = (message: string) => {
