@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 import { getAI, GoogleAIBackend } from "@firebase/ai";
@@ -36,7 +36,31 @@ if (typeof window !== "undefined") {
   console.log("[Firebase] Running on server, skipping App Check and Messaging initialization.");
 }
 
-export const db = getFirestore(app);
+// Detectar Safari para aplicar configuración específica
+const isSafari = typeof window !== "undefined" && 
+  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+// Configuración optimizada para Safari - Resuelve errores de CORS y WebChannel
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  }),
+  experimentalForceLongPolling: true // ✅ Fuerza Long Polling en vez de WebChannel (soluciona Safari)
+});
+
+// Log para debugging
+if (typeof window !== "undefined") {
+  console.log("[Firebase] Browser detected:", isSafari ? "Safari" : "Other");
+  console.log("[Firebase] Using Long Polling for Firestore:", true);
+  
+  // Debugging adicional para Safari
+  if (isSafari) {
+    console.log("[Firebase][Safari] User Agent:", navigator.userAgent);
+    console.log("[Firebase][Safari] Window location:", window.location.href);
+    console.log("[Firebase][Safari] Protocol:", window.location.protocol);
+  }
+}
+
 export const storage = getStorage(app);
 export const auth = getAuth(app);
 export const ai = getAI(app, { backend: new GoogleAIBackend() });

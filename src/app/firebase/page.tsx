@@ -1,12 +1,8 @@
 'use client';
 import { useAuth } from '@clerk/nextjs';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
-import { firebaseConfig } from '../../lib/firebaseConfig';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase'; // ✅ Usando configuración centralizada optimizada para Safari
 import { useState } from 'react';
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 const getFirestoreData = async () => {
   const docRef = doc(db, 'example', 'example-document');

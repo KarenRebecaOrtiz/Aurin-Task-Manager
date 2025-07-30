@@ -47,6 +47,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           isAdmin: isAdminValue
         });
         
+        // 🔍 Debugging específico para Safari
+        if (typeof window !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+          console.log('[AuthContext][Safari] 🔍 User object:', user);
+          console.log('[AuthContext][Safari] 🔍 Session exists:', !!user);
+          console.log('[AuthContext][Safari] 🔍 User ID:', user.id);
+          console.log('[AuthContext][Safari] 🔍 Browser:', navigator.userAgent);
+          console.log('[AuthContext][Safari] 🔍 Public metadata:', user.publicMetadata);
+        }
+        
         setIsAdmin(isAdminValue);
         
         // Cache en sessionStorage para futuras verificaciones
@@ -63,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     checkAdminStatus();
-  }, [user?.id, user?.publicMetadata?.access]);
+  }, [user?.id, user?.publicMetadata?.access, user]);
 
   return (
     <AuthContext.Provider value={{ isAdmin, isLoading, error }}>

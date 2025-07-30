@@ -82,10 +82,14 @@ export function useSharedTasksState(userId: string | undefined) {
   const isInitialLoadComplete = useDataStore((state) => state.isInitialLoadComplete);
   const loadingProgress = useDataStore((state) => state.loadingProgress);
 
+  // State removed - Safari auto-fix now works without forcing re-renders
+
   // Refs para evitar re-renders innecesarios
   const tasksListenerRef = useRef<(() => void) | null>(null);
   const clientsListenerRef = useRef<(() => void) | null>(null);
   const hasInitializedRef = useRef(false);
+
+  // Safari auto-fix removed - functionality moved to SafariFirebaseAuthFix component
 
   // Setup tasks listener
   useEffect(() => {
@@ -150,7 +154,8 @@ export function useSharedTasksState(userId: string | undefined) {
         tasksListenerRef.current = null;
       }
     };
-  }, [userId, setTasks, setIsLoadingTasks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, setTasks, setIsLoadingTasks]); // setLoadingProgress and checkInitialLoadComplete stable
 
   // Setup clients listener
   useEffect(() => {
@@ -203,7 +208,8 @@ export function useSharedTasksState(userId: string | undefined) {
         clientsListenerRef.current = null;
       }
     };
-  }, [userId, setClients, setIsLoadingClients]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, [userId, setClients, setIsLoadingClients]); // setLoadingProgress and checkInitialLoadComplete stable
 
   // Setup users fetch - OPTIMIZADO
   useEffect(() => {
@@ -270,7 +276,8 @@ export function useSharedTasksState(userId: string | undefined) {
     return () => {
       // Cleanup no necesario ya que no hay listener
     };
-  }, [userId, setUsers, setIsLoadingUsers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, setUsers, setIsLoadingUsers]); // setLoadingProgress and checkInitialLoadComplete stable
 
   // Función para verificar si la carga inicial está completa
   const checkInitialLoadComplete = useCallback(() => {

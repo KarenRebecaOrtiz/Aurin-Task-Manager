@@ -1,0 +1,29 @@
+// 🔍 REGLAS TEMPORALES PARA DEBUGGING DE SAFARI
+// Reemplaza las reglas actuales en Firebase Console → Firestore → Rules temporalmente
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 🔍 REGLAS TEMPORALES MUY PERMISIVAS PARA DEBUGGING
+    // ⚠️ SOLO PARA TESTING - NO USAR EN PRODUCCIÓN
+    
+    match /{document=**} {
+      // Permitir todas las operaciones para usuarios autenticados
+      allow read, write: if request.auth != null;
+    }
+    
+    // Si las reglas simples de arriba no funcionan, probar esto:
+    // match /{document=**} {
+    //   allow read, write: if true; // ⚠️ MUY INSEGURO - SOLO PARA TESTING
+    // }
+  }
+}
+
+// 📝 INSTRUCCIONES:
+// 1. Copia estas reglas en Firebase Console → Tu proyecto → Firestore → Rules
+// 2. Publica las reglas
+// 3. Prueba en Safari
+// 4. Si funciona, el problema son las reglas complejas
+// 5. Si no funciona, el problema es de autenticación o configuración de Safari
+// 6. ¡NO OLVIDES RESTAURAR LAS REGLAS ORIGINALES DESPUÉS!

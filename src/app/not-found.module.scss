@@ -1,0 +1,185 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 NOT FOUND PAGE - OPTIMIZED WITH NEW SYSTEM
+// =================================================================
+
+.container {
+  padding: 1.3rem 0px;
+  max-width: 1200px;
+  margin: 0 auto;
+  z-index: 1;
+
+  &.dark {
+    background: $color-bg-dark;
+  }
+}
+
+.selector {
+  margin: 1.3rem 0rem;
+}
+
+.content {
+  color: $color-text-primary;
+  font-size: $text-base;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-normal;
+
+  &.dark {
+    color: $color-text-dark-primary;
+  }
+}
+
+.errorContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 60vh;
+  padding: 24px;
+  text-align: center;
+  background: #F7F9FA;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: -8px -8px 16px rgba(255, 255, 255, 0.8), 8px 8px 16px rgba(0, 0, 0, 0.05), inset -4px -4px 8px rgba(255, 255, 255, 0.5), inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+  
+  /* 🌑 Modo oscuro */
+  @include dark-mode {
+    background: $color-bg-dark;
+    border: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none !important;
+  }
+}
+
+.errorTitle {
+  font-family: var(--font-urbanist), "Urbanist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0D0D0D;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  
+  @include dark-mode {
+    color: $color-text-dark-primary;
+  }
+}
+
+.errorMessage {
+  @include typography($text-xl, $font-weight-normal, $color-text-secondary, center);
+  max-width: 600px;
+  margin: 0 auto;
+  
+  @include dark-mode {
+    @include typography($text-xl, $font-weight-normal, $color-text-dark-secondary, center);
+  }
+}
+
+.errorSubtitle {
+  @include typography($text-lg, $font-weight-medium, $color-text-secondary, center);
+  max-width: 600px;
+  margin: 0 auto;
+  margin-top: $spacing-lg;
+  
+  @include dark-mode {
+    @include typography($text-lg, $font-weight-medium, $color-text-dark-secondary, center);
+  }
+}
+
+.instructions {
+  @include typography($text-base, $font-weight-normal, $color-text-secondary, center);
+  max-width: 600px;
+  margin: 0 auto;
+  margin-top: $spacing-xl;
+  padding: $spacing-lg;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: $radius-lg;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  @include dark-mode {
+    @include typography($text-base, $font-weight-normal, $color-text-dark-secondary, center);
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+
+
+.fuzzyTextContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px 0;
+  
+  canvas {
+    width: 400px !important;
+    height: 120px !important;
+  }
+}
+
+.internal {
+  height: 2.75rem;
+  width: 2.75rem;
+}
+
+// Viñetado superior
+.vignetteTop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(
+    to bottom,
+    rgba($white, 0.8) 0%, // Blanco semi-opaco en la parte superior
+    rgba($white, 0) 100% // Transparente hacia abajo
+  );
+  pointer-events: none; // Permite clics a través del viñetado
+  z-index: 10; // Asegura que esté por encima del contenido, pero debajo de popups
+}
+
+:global(.dark) .vignetteBottom,  
+:global(.dark) .vignetteTop {
+  background: linear-gradient(
+    to bottom,
+    rgba($color-bg-dark, 0.087) 0%, // Negro semi-opaco en la parte superior
+    rgba($white, 0) 100% // Transparente hacia abajo
+  );
+}
+
+// Viñetado inferior
+.vignetteBottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100px; // Ajusta la altura según el efecto deseado
+  background: linear-gradient(
+    to top,
+    rgba($white, 0.8) 0%, // Blanco semi-opaco en la parte inferior
+    rgba($white, 0) 100% // Transparente hacia arriba
+  );
+  pointer-events: none; // Permite clics a través del viñetado
+  z-index: 10; // Asegura que esté por encima del contenido, pero debajo de popups
+}
+
+.cursorIcon {
+  width: 24px;
+  height: 24px;
+  color: #d3e048;
+}
+
+.cursorFollowContent {
+  background-color: #d3e048;
+  color: $color-text-primary;
+  padding: 4px 8px;
+  border-radius: $radius-sm;
+  font-size: $text-sm;
+  box-shadow: $shadow-simple-light;
+} 

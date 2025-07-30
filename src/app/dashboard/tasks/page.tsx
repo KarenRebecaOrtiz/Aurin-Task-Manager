@@ -4,7 +4,7 @@ import { useRef, useMemo, useCallback, useEffect, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 
 import Header from '@/components/ui/Header';
-import Marquee from '@/components/ui/Marquee';
+import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import OnboardingStepper from '@/components/OnboardingStepper';
 import Selector from '@/components/Selector';
@@ -17,6 +17,8 @@ import ChatSidebar from '@/components/ChatSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
 import ConfigPage from '@/components/ConfigPage';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
+import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
+// Safari debug components removed for production
 
 import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
 import styles from '@/components/TasksPage.module.scss';
@@ -431,7 +433,7 @@ function TasksPageContent() {
   // Renderizar el contenido principal
   const mainContent = (
     <div className={styles.container}>
-      <Marquee />
+      <OptimizedMarquee />
       <SyncUserToFirestore />
       
       <div ref={headerRef}>
@@ -737,6 +739,8 @@ export default function TasksPage() {
       {/* Sidebars completamente independientes */}
       <IndependentMessageSidebarRenderer />
       <IndependentChatSidebarRenderer />
+      {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
+      <SafariFirebaseAuthFix />
     </AuthProvider>
   );
 }

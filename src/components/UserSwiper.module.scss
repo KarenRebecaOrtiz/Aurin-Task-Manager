@@ -43,6 +43,39 @@
 .card {
   @include user-card-base;
   @include user-card-responsive;
+  
+  // Remove hover effects and cursor
+  cursor: default !important;
+  
+  &:hover {
+    transform: none !important;
+    background: rgba(241, 245, 249, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: none !important;
+  }
+  
+  &[role="button"]:active {
+    transform: none !important;
+    background: rgba(241, 245, 249, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: none !important;
+  }
+  
+  @include dark-mode {
+    &:hover {
+      background: $color-bg-dark-secondary !important;
+      border: none !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    
+    &[role="button"]:active {
+      background: $color-bg-dark-secondary !important;
+      border: none !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  }
 }
 
 .cardInfo {
@@ -58,6 +91,21 @@
 
 .cardAvatar {
   @include user-avatar;
+  
+  // Remove hover and click effects
+  cursor: default !important;
+  
+  &:hover {
+    transform: none !important;
+  }
+  
+  &:active {
+    transform: none !important;
+  }
+  
+  &:focus {
+    outline: none !important;
+  }
 }
 
 .avatarImage {
