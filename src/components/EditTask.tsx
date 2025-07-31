@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { doc, collection, setDoc, addDoc, getDoc, onSnapshot } from "firebase/firestore";
 import { gsap } from "gsap";
@@ -17,12 +17,14 @@ import { useFormPersistence } from "@/components/ui/use-form-persistence";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataStore } from '@/stores/dataStore';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
+import SearchableDropdown from "@/components/ui/SearchableDropdown";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -45,12 +47,7 @@ interface Client {
   createdBy: string;
 }
 
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
-}
+// User interface now imported from central types via dataStore
 
 // Esquema base sin validación condicional
 const baseFormSchema = z.object({
@@ -85,7 +82,7 @@ const createFormSchema = (includeMembers: boolean) => {
       return true;
     },
     {
-      message: "Debes seleccionar al menos un colaborador cuando incluyes miembros",
+      message: "Debes seleccionar al menos un colaborador",
       path: ["teamInfo", "AssignedTo"],
     }
   );
@@ -154,49 +151,41 @@ const EditTask: React.FC<EditTaskProps> = ({
   const router = useRouter();
   const { isAdmin, isLoading } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  // Use users from central dataStore instead of local state
+  const users = useDataStore(state => state.users);
   const [isSaving, setIsSaving] = useState(false);
-  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+const [currentStep, setCurrentStep] = useState(0);
+
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
-  const [isCollaboratorDropdownOpen, setIsCollaboratorDropdownOpen] = useState(false);
-  const [isLeaderDropdownOpen, setIsLeaderDropdownOpen] = useState(false);
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+
   const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const [isEndDateOpen, setIsEndDateOpen] = useState(false);
-  const [projectDropdownPosition, setProjectDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+
   const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-  const [collaboratorDropdownPosition, setCollaboratorDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-  const [leaderDropdownPosition, setLeaderDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-  const [clientDropdownPosition, setClientDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+
   const [startDatePosition, setStartDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [endDatePosition, setEndDatePosition] = useState<{ top: number; left: number } | null>(null);
-  const [searchCollaborator, setSearchCollaborator] = useState("");
-  const [searchLeader, setSearchLeader] = useState("");
-  const [searchClient, setSearchClient] = useState("");
+
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showFailAlert, setShowFailAlert] = useState(false);
   const [failErrorMessage, setFailErrorMessage] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [includeMembers, setIncludeMembers] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const projectDropdownRef = useRef<HTMLDivElement>(null);
+
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
-  const collaboratorInputRef = useRef<HTMLInputElement>(null);
-  const leaderInputRef = useRef<HTMLInputElement>(null);
-  const clientInputRef = useRef<HTMLInputElement>(null);
+
   const startDateInputRef = useRef<HTMLDivElement>(null);
   const endDateInputRef = useRef<HTMLDivElement>(null);
   const startDatePopperRef = useRef<HTMLDivElement>(null);
   const endDatePopperRef = useRef<HTMLDivElement>(null);
-  const projectDropdownPopperRef = useRef<HTMLDivElement>(null);
+
   const statusDropdownPopperRef = useRef<HTMLDivElement>(null);
   const priorityDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const collaboratorDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const leaderDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createFormSchema(includeMembers)),
@@ -296,13 +285,7 @@ const EditTask: React.FC<EditTaskProps> = ({
         left: rect.left + window.scrollX,
       });
     }
-    if (isProjectDropdownOpen && projectDropdownRef.current) {
-      const rect = projectDropdownRef.current.getBoundingClientRect();
-      setProjectDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
+
     if (isStatusDropdownOpen && statusDropdownRef.current) {
       const rect = statusDropdownRef.current.getBoundingClientRect();
       setStatusDropdownPosition({
@@ -315,48 +298,18 @@ const EditTask: React.FC<EditTaskProps> = ({
       setPriorityDropdownPosition({
         top: rect.bottom + window.scrollY + 4,
         left: rect.left + window.scrollX,
-      });
-    }
-    if (isCollaboratorDropdownOpen && collaboratorInputRef.current) {
-      const rect = collaboratorInputRef.current.getBoundingClientRect();
-      setCollaboratorDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
-    if (isLeaderDropdownOpen && leaderInputRef.current) {
-      const rect = leaderInputRef.current.getBoundingClientRect();
-      setLeaderDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
-    if (isClientDropdownOpen && clientInputRef.current) {
-      const rect = clientInputRef.current.getBoundingClientRect();
-      setClientDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
+              });
+      }
+
   }, [
     isStartDateOpen,
     isEndDateOpen,
-    isProjectDropdownOpen,
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
-    isCollaboratorDropdownOpen,
-    isLeaderDropdownOpen,
-    isClientDropdownOpen,
   ]);
 
   const animatePoppers = useCallback(() => {
-    if (isProjectDropdownOpen && projectDropdownPopperRef.current) {
-      gsap.fromTo(
-        projectDropdownPopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
+
     if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
       gsap.fromTo(
         statusDropdownPopperRef.current,
@@ -371,27 +324,7 @@ const EditTask: React.FC<EditTaskProps> = ({
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
       );
     }
-    if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
-      gsap.fromTo(
-        collaboratorDropdownPopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
-    if (isLeaderDropdownOpen && leaderDropdownPopperRef.current) {
-      gsap.fromTo(
-        leaderDropdownPopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
-    if (isClientDropdownOpen && clientDropdownPopperRef.current) {
-      gsap.fromTo(
-        clientDropdownPopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
+
     if (isStartDateOpen && startDatePopperRef.current) {
       gsap.fromTo(
         startDatePopperRef.current,
@@ -407,12 +340,8 @@ const EditTask: React.FC<EditTaskProps> = ({
       );
     }
   }, [
-    isProjectDropdownOpen,
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
-    isCollaboratorDropdownOpen,
-    isLeaderDropdownOpen,
-    isClientDropdownOpen,
     isStartDateOpen,
     isEndDateOpen,
   ]);
@@ -453,15 +382,7 @@ const EditTask: React.FC<EditTaskProps> = ({
   // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        projectDropdownRef.current &&
-        !projectDropdownRef.current.contains(event.target as Node) &&
-        projectDropdownPopperRef.current &&
-        !projectDropdownPopperRef.current.contains(event.target as Node) &&
-        isProjectDropdownOpen
-      ) {
-        setIsProjectDropdownOpen(false);
-      }
+
       if (
         statusDropdownRef.current &&
         !statusDropdownRef.current.contains(event.target as Node) &&
@@ -498,45 +419,15 @@ const EditTask: React.FC<EditTaskProps> = ({
       ) {
         setIsEndDateOpen(false);
       }
-      if (
-        collaboratorInputRef.current &&
-        !collaboratorInputRef.current.contains(event.target as Node) &&
-        collaboratorDropdownPopperRef.current &&
-        !collaboratorDropdownPopperRef.current.contains(event.target as Node) &&
-        isCollaboratorDropdownOpen
-      ) {
-        setIsCollaboratorDropdownOpen(false);
-      }
-      if (
-        clientInputRef.current &&
-        !clientInputRef.current.contains(event.target as Node) &&
-        clientDropdownPopperRef.current &&
-        !clientDropdownPopperRef.current.contains(event.target as Node) &&
-        isClientDropdownOpen
-      ) {
-        setIsClientDropdownOpen(false);
-      }
-      if (
-        leaderInputRef.current &&
-        !leaderInputRef.current.contains(event.target as Node) &&
-        leaderDropdownPopperRef.current &&
-        !leaderDropdownPopperRef.current.contains(event.target as Node) &&
-        isLeaderDropdownOpen
-      ) {
-        setIsLeaderDropdownOpen(false);
-      }
+
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [
-    isProjectDropdownOpen,
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
     isStartDateOpen,
     isEndDateOpen,
-    isCollaboratorDropdownOpen,
-    isClientDropdownOpen,
-    isLeaderDropdownOpen,
   ]);
 
   // Handle scroll to close dropdowns
@@ -545,21 +436,13 @@ const EditTask: React.FC<EditTaskProps> = ({
       if (
         isStartDateOpen ||
         isEndDateOpen ||
-        isProjectDropdownOpen ||
         isStatusDropdownOpen ||
-        isPriorityDropdownOpen ||
-        isCollaboratorDropdownOpen ||
-        isLeaderDropdownOpen ||
-        isClientDropdownOpen
+        isPriorityDropdownOpen
       ) {
         setIsStartDateOpen(false);
         setIsEndDateOpen(false);
-        setIsProjectDropdownOpen(false);
         setIsStatusDropdownOpen(false);
         setIsPriorityDropdownOpen(false);
-        setIsCollaboratorDropdownOpen(false);
-        setIsLeaderDropdownOpen(false);
-        setIsClientDropdownOpen(false);
       }
     }, 200);
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -567,12 +450,8 @@ const EditTask: React.FC<EditTaskProps> = ({
   }, [
     isStartDateOpen,
     isEndDateOpen,
-    isProjectDropdownOpen,
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
-    isCollaboratorDropdownOpen,
-    isLeaderDropdownOpen,
-    isClientDropdownOpen,
   ]);
 
   const animateClick = useCallback((element: HTMLElement) => {
@@ -586,36 +465,9 @@ const EditTask: React.FC<EditTaskProps> = ({
     });
   }, []);
 
-  const handleClientSelectDropdown = useCallback(
-    (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.clientId", clientId);
-      setSearchClient("");
-      setIsClientDropdownOpen(false);
-    },
-    [form, animateClick],
-  );
 
-  const handleClientRemove = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.clientId", "");
-      form.setValue("clientInfo.project", "");
-    },
-    [form, animateClick],
-  );
 
-  const handleProjectSelect = useCallback(
-    (project: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.project", project);
-      setIsProjectDropdownOpen(false);
-    },
-    [form, animateClick],
-  );
+
 
   const handleStatusSelect = useCallback(
     (status: string, e: React.MouseEvent<HTMLDivElement>) => {
@@ -637,93 +489,9 @@ const EditTask: React.FC<EditTaskProps> = ({
     [form, animateClick],
   );
 
-  const handleLeaderSelect = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      const currentLeaders = form.getValues("teamInfo.LeadedBy");
-      const isSelected = currentLeaders.includes(userId);
-      const newLeaders = isSelected
-        ? currentLeaders.filter((id) => id !== userId)
-        : [...currentLeaders, userId];
-      form.setValue("teamInfo.LeadedBy", newLeaders);
-      setSearchLeader("");
-      setIsLeaderDropdownOpen(false);
-    },
-    [form, animateClick],
-  );
 
-  const handleCollaboratorSelect = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      if (!form.getValues("teamInfo.LeadedBy").includes(userId)) {
-        const currentAssignedTo = form.getValues("teamInfo.AssignedTo");
-        const isSelected = currentAssignedTo.includes(userId);
-        const newAssignedTo = isSelected
-          ? currentAssignedTo.filter((id) => id !== userId)
-          : [...currentAssignedTo, userId];
-        form.setValue("teamInfo.AssignedTo", newAssignedTo);
-        setSearchCollaborator("");
-        setIsCollaboratorDropdownOpen(false);
-      }
-    },
-    [form, animateClick],
-  );
 
-  const handleLeaderRemove = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue(
-        "teamInfo.LeadedBy",
-        form.getValues("teamInfo.LeadedBy").filter((id) => id !== userId),
-      );
-    },
-    [form, animateClick],
-  );
 
-  const handleCollaboratorRemove = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue(
-        "teamInfo.AssignedTo",
-        form.getValues("teamInfo.AssignedTo").filter((id) => id !== userId),
-      );
-    },
-    [form, animateClick],
-  );
-
-  // Memoize form values to avoid unnecessary re-renders
-  const watchedLeadedBy = form.watch("teamInfo.LeadedBy");
-  const watchedAssignedTo = form.watch("teamInfo.AssignedTo");
-  const currentLeadedBy = form.getValues("teamInfo.LeadedBy");
-
-  const filteredCollaborators = useMemo(() => {
-    return users.filter(
-      (u) =>
-        !watchedLeadedBy.includes(u.id) &&
-        (u.fullName.toLowerCase().includes(searchCollaborator.toLowerCase()) ||
-         u.role.toLowerCase().includes(searchCollaborator.toLowerCase())),
-    );
-  }, [users, searchCollaborator, watchedLeadedBy]);
-
-  const filteredLeaders = useMemo(() => {
-    return users.filter(
-      (u) =>
-        u.fullName.toLowerCase().includes(searchLeader.toLowerCase()) ||
-        u.role.toLowerCase().includes(searchLeader.toLowerCase()),
-    );
-  }, [users, searchLeader]);
-
-  const filteredClients = useMemo(() => {
-    return clients.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchClient.toLowerCase()) ||
-        c.projects.some((project) => project.toLowerCase().includes(searchClient.toLowerCase())),
-    );
-  }, [clients, searchClient]);
 
   const onSubmit = async (values: FormValues) => {
     if (!user) {
@@ -878,86 +646,7 @@ const EditTask: React.FC<EditTaskProps> = ({
     return result;
   };
 
-  // Funciones para manejo de shortcuts de teclado específicas para cada tipo de input
-  const handleSearchInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, setter: (value: string) => void, currentValue: string, setDropdownOpen: (open: boolean) => void) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'a':
-          e.preventDefault();
-          e.currentTarget.select();
-          break;
-        case 'c':
-          e.preventDefault();
-          const targetC = e.currentTarget as HTMLInputElement;
-          if (targetC.selectionStart !== targetC.selectionEnd) {
-            const selectedText = currentValue.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-            navigator.clipboard.writeText(selectedText).catch(() => {
-              const textArea = document.createElement('textarea');
-              textArea.value = selectedText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-            });
-          }
-          break;
-        case 'v':
-          e.preventDefault();
-          const targetV = e.currentTarget as HTMLInputElement;
-          navigator.clipboard.readText().then(text => {
-            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-              const start = targetV.selectionStart;
-              const end = targetV.selectionEnd;
-              const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
-              setter(newValue);
-              setDropdownOpen(text.trim() !== "");
-              setTimeout(() => {
-                targetV.setSelectionRange(start + text.length, start + text.length);
-              }, 0);
-            } else {
-              setter(currentValue + text);
-            }
-          }).catch(() => {
-            document.execCommand('paste');
-          });
-          break;
-        case 'x':
-          e.preventDefault();
-          const targetX = e.currentTarget as HTMLInputElement;
-          if (targetX.selectionStart !== targetX.selectionEnd) {
-            const selectedText = currentValue.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-            navigator.clipboard.writeText(selectedText).then(() => {
-              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                const start = targetX.selectionStart;
-                const end = targetX.selectionEnd;
-                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
-                setter(newValue);
-                setDropdownOpen(newValue.trim() !== "");
-              } else {
-                setter('');
-              }
-            }).catch(() => {
-              const textArea = document.createElement('textarea');
-              textArea.value = selectedText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textArea);
-              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                const start = targetX.selectionStart;
-                const end = targetX.selectionEnd;
-                const newValue = currentValue.substring(0, start) + currentValue.substring(end);
-                setter(newValue);
-                setDropdownOpen(newValue.trim() !== "");
-              } else {
-                setter('');
-              }
-            });
-          }
-          break;
-      }
-    }
-  }, []);
+
 
   const handleFormInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, field: { value?: string; onChange: (value: string) => void }) => {
     if (e.ctrlKey || e.metaKey) {
@@ -1048,7 +737,7 @@ const EditTask: React.FC<EditTaskProps> = ({
         return;
       }
       const taskData = taskDoc.data();
-      if (taskData.CreatedBy !== user.id) {
+      if (!isAdmin && taskData.CreatedBy !== user.id) {
         console.warn('[EditTask] User not authorized to edit task:', taskId);
         router.push('/dashboard/tasks');
         return;
@@ -1082,7 +771,7 @@ const EditTask: React.FC<EditTaskProps> = ({
       console.error('[EditTask] Error fetching task:', error);
       router.push('/dashboard/tasks');
     }
-  }, [taskId, user?.id, router, form]);
+  }, [taskId, user?.id, router, form, isAdmin]);
 
   useEffect(() => {
     if (!taskId || !user?.id) return;
@@ -1105,53 +794,10 @@ const EditTask: React.FC<EditTaskProps> = ({
       },
     );
 
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Failed to fetch users');
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string };
-        }[] = await response.json();
-        
-        // Obtener datos de Firestore para cada usuario
-        const usersData: User[] = await Promise.all(
-          clerkUsers.map(async (clerkUser) => {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', clerkUser.id));
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: userDoc.exists() && userDoc.data().role
-                  ? userDoc.data().role
-                  : (clerkUser.publicMetadata.role || 'Sin rol'),
-              };
-            } catch (docError) {
-              console.warn('[EditTask] Error fetching user document:', {
-                userId: clerkUser.id,
-                error: docError instanceof Error ? docError.message : 'Unknown error',
-              });
-              return {
-                id: clerkUser.id,
-                imageUrl: clerkUser.imageUrl || '',
-                fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-                role: clerkUser.publicMetadata.role || 'Sin rol',
-              };
-            }
-          }),
-        );
-        setUsers(usersData);
-      } catch (error) {
-        console.error('[EditTask] Error fetching users:', error);
-      }
-    };
+    // Users are now managed centrally by useSharedTasksState
+    // No independent user fetching needed - use dataStore users
 
     fetchTask();
-    fetchUsers();
     return () => unsubscribeClients();
   }, [taskId, user?.id, router, fetchTask]);
 
@@ -1173,17 +819,15 @@ const EditTask: React.FC<EditTaskProps> = ({
             <div className={styles.header}>
               <div className={styles.headerTitle}>Editar Tarea</div>
               <div className={styles.headerProgress}>
-                <Wizard totalSteps={3}>
-                  <WizardProgress />
-                </Wizard>
-              </div>
+  <WizardProgress totalSteps={stepFields.length} currentStep={currentStep} />
+</div>
               <button className={styles.toggleButton} onClick={onToggle}>
                 <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
               </button>
             </div>
             <div className={styles.content}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <Wizard totalSteps={3}>
+                <Wizard totalSteps={stepFields.length} currentStep={currentStep} onStepChange={setCurrentStep}>
                   <WizardStep step={0} validator={() => validateStep(stepFields[0] as (keyof FormValues)[])}>
                     <div className={styles.section}>
                       <h2 className={styles.sectionTitle}>Información del Cliente</h2>
@@ -1211,96 +855,30 @@ const EditTask: React.FC<EditTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
                         </div>
-                        {/* Ocultar el input cuando ya hay una cuenta seleccionada */}
-                        {!form.watch("clientInfo.clientId") && (
-                          <input
-                            className={styles.input}
-                            value={searchClient}
-                            onChange={(e) => {
-                              setSearchClient(e.target.value);
-                              setIsClientDropdownOpen(e.target.value.trim() !== "");
-                            }}
-                            onBlur={() => {
-                              setTimeout(() => setIsClientDropdownOpen(false), 200);
-                            }}
-                            placeholder="Ej: Nombre de la cuenta"
-                            ref={clientInputRef}
-                            onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchClient, searchClient, setIsClientDropdownOpen)}
-                            onCopy={e => e.stopPropagation()}
-                            onPaste={e => e.stopPropagation()}
-                            onCut={e => e.stopPropagation()}
-                            onSelect={e => e.stopPropagation()}
-                          />
-                        )}
-                        {isClientDropdownOpen && !form.watch("clientInfo.clientId") &&
-                          createPortal(
-                            <div
-                              className={styles.dropdown}
-                              style={{
-                                top: clientDropdownPosition?.top,
-                                left: clientDropdownPosition?.left,
-                                position: "absolute",
-                                zIndex: 150000,
-                                width: clientInputRef.current?.offsetWidth,
-                              }}
-                              ref={clientDropdownPopperRef}
-                            >
-                              {filteredClients.length ? (
-                                filteredClients.map((client) => (
-                                  <div
-                                    key={client.id}
-                                    className={`${styles.dropdownItem} ${form.watch("clientInfo.clientId") === client.id ? styles.selectedItem : ''}`}
-                                    onClick={(e) => handleClientSelectDropdown(client.id, e)}
-                                  >
-                                    <div className={styles.dropdownItemContent}>
-                                      <div className={styles.avatarContainer}>
-                                        <Image
-                                          src={client.imageUrl || '/empty-image.png'}
-                                          alt={client.name}
-                                          width={32}
-                                          height={32}
-                                          className={styles.avatarImage}
-                                          onError={(e) => {
-                                            e.currentTarget.src = '/empty-image.png';
-                                          }}
-                                        />
-                                      </div>
-                                      <span>{client.name}</span>
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className={styles.emptyState}>
-                                  <span>
-                                    {isAdmin
-                                      ? "No hay coincidencias. Crea una nueva cuenta."
-                                      : "No hay coincidencias. Pide a un administrador que cree una cuenta."}
-                                  </span>
-                                </div>
-                              )}
-                            </div>,
-                            document.body,
-                          )}
-                        <div className={styles.tags}>
-                          {form.watch("clientInfo.clientId") && (
-                            (() => {
-                              const selectedClient = clients.find((c) => c.id === form.watch("clientInfo.clientId"));
-                              return selectedClient ? (
-                                <div key={selectedClient.id} className={styles.tag}>
-                                  <Image
-                                    src={selectedClient.imageUrl || '/empty-image.png'}
-                                    alt={selectedClient.name}
-                                    width={24}
-                                    height={24}
-                                    style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
-                                  />
-                                  {selectedClient.name}
-                                  <button onClick={(e) => handleClientRemove(e)}>X</button>
-                                </div>
-                              ) : null;
-                            })()
-                          )}
-                        </div>
+                        <SearchableDropdown
+                          items={clients.map(client => ({
+                            id: client.id,
+                            name: client.name,
+                            imageUrl: client.imageUrl,
+                            subtitle: `${client.projects.length} proyectos`
+                          }))}
+                          selectedItems={form.watch("clientInfo.clientId") ? [form.watch("clientInfo.clientId")] : []}
+                          onSelectionChange={(selectedIds) => {
+                            if (selectedIds.length > 0) {
+                              form.setValue("clientInfo.clientId", selectedIds[0]);
+                              form.setValue("clientInfo.project", "");
+                            } else {
+                              form.setValue("clientInfo.clientId", "");
+                              form.setValue("clientInfo.project", "");
+                            }
+                          }}
+                          placeholder="Ej: Nombre de la cuenta"
+                          searchPlaceholder="Buscar cuentas..."
+                          emptyMessage={isAdmin 
+                            ? "No hay coincidencias. Crea una nueva cuenta."
+                            : "No hay coincidencias. Pide a un administrador que cree una cuenta."
+                          }
+                        />
                         {form.formState.errors.clientInfo?.clientId && (
                           <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
                         )}
@@ -1325,58 +903,37 @@ const EditTask: React.FC<EditTaskProps> = ({
                       <div className={styles.formGroup}>
                         <label className={styles.label}>Carpeta*</label>
                         <div className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</div>
-                        <div className={styles.dropdownContainer} ref={projectDropdownRef}>
-                          <div
-                            className={styles.dropdownTrigger}
-                            onClick={(e) => {
-                              animateClick(e.currentTarget);
-                              setIsProjectDropdownOpen(!isProjectDropdownOpen);
-                            }}
-                          >
-                            <span>{form.watch("clientInfo.project") || "Seleccionar una Carpeta"}</span>
-                            <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                          </div>
-                          {isProjectDropdownOpen &&
-                            createPortal(
-                              <div
-                                className={styles.dropdownItems}
-                                style={{
-                                  top: projectDropdownPosition?.top,
-                                  left: projectDropdownPosition?.left,
-                                  position: "absolute",
-                                  zIndex: 150000,
-                                }}
-                                ref={projectDropdownPopperRef}
-                              >
-                                {(() => {
-                                  const selectedClient = clients.find(
-                                    (c) => c.id === form.getValues("clientInfo.clientId")
-                                  );
-                                  if (!selectedClient || !selectedClient.projects.length) {
-                                    return (
-                                      <div className={styles.emptyState}>
-                                        <span>
-                                          {isAdmin
-                                            ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
-                                            : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."}
-                                        </span>
-                                      </div>
-                                    );
-                                  }
-                                  return selectedClient.projects.map((project, index) => (
-                                    <div
-                                      key={`${project}-${index}`}
-                                      className={styles.dropdownItem}
-                                      onClick={(e) => handleProjectSelect(project, e)}
-                                    >
-                                      {project}
-                                    </div>
-                                  ));
-                                })()}
-                              </div>,
-                              document.body,
-                            )}
-                        </div>
+                        <SearchableDropdown
+                          items={(() => {
+                            const selectedClient = clients.find(
+                              (c) => c.id === form.getValues("clientInfo.clientId")
+                            );
+                            if (!selectedClient || !selectedClient.projects.length) {
+                              return [];
+                            }
+                            return selectedClient.projects.map((project, index) => ({
+                              id: `${project}-${index}`,
+                              name: project,
+                              svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><style>.cls-1{fill:#0072ff;}</style></defs><title>shapes folder</title><g id="Layer_2" data-name="Layer 2"><path class="cls-1" d="M52,16H34a5.27,5.27,0,0,1-3.77-1.59l-3.9-4A8,8,0,0,0,20.58,8H12a8,8,0,0,0-8,8V52a8,8,0,0,0,8,8H52a8,8,0,0,0,8-8V24A8,8,0,0,0,52,16ZM19,35a5,5,0,1,1,5,5A5,5,0,0,1,19,35ZM37.22,52H26.78a1.57,1.57,0,0,1-1.3-2.46L30.7,41.9a1.57,1.57,0,0,1,2.59,0l5.22,7.64A1.57,1.57,0,0,1,37.22,52ZM46,38a2,2,0,0,1-2,2H38a2,2,0,0,1-2-2V32a2,2,0,0,1,2-2H44a2,2,0,0,1,2,2Z"/></g></svg>`
+                            }));
+                          })()}
+                          selectedItems={form.watch("clientInfo.project") ? [form.watch("clientInfo.project")] : []}
+                          onSelectionChange={(selectedIds) => {
+                            if (selectedIds.length > 0) {
+                              form.setValue("clientInfo.project", selectedIds[0]);
+                            } else {
+                              form.setValue("clientInfo.project", "");
+                            }
+                          }}
+                          placeholder="Seleccionar una Carpeta"
+                          searchPlaceholder="Buscar carpeta..."
+                          emptyMessage={
+                            isAdmin
+                              ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
+                              : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."
+                          }
+                          disabled={!form.getValues("clientInfo.clientId")}
+                        />
                         {form.formState.errors.clientInfo?.project && (
                           <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
                         )}
@@ -1681,116 +1238,32 @@ const EditTask: React.FC<EditTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la persona principal responsable de la tarea.
                         </div>
-                        <input
-                          className={styles.input}
-                          value={searchLeader}
-                          onChange={(e) => {
-                            setSearchLeader(e.target.value);
-                          }}
-                          onFocus={() => {
-                            setIsLeaderDropdownOpen(true);
-                          }}
-                          onBlur={() => {
-                            setTimeout(() => setIsLeaderDropdownOpen(false), 200);
+                        <SearchableDropdown
+                          items={users.map(user => ({
+                            id: user.id,
+                            name: user.fullName,
+                            imageUrl: user.imageUrl,
+                            subtitle: user.role
+                          }))}
+                          selectedItems={form.watch("teamInfo.LeadedBy")}
+                          onSelectionChange={(selectedIds) => {
+                            form.setValue("teamInfo.LeadedBy", selectedIds);
                           }}
                           placeholder="Ej: John Doe"
-                          ref={leaderInputRef}
-                          onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchLeader, searchLeader, setIsLeaderDropdownOpen)}
-                          onCopy={e => e.stopPropagation()}
-                          onPaste={e => e.stopPropagation()}
-                          onCut={e => e.stopPropagation()}
-                          onSelect={e => e.stopPropagation()}
+                          searchPlaceholder="Buscar líderes..."
+                          multiple={true}
+                          emptyMessage={isAdmin 
+                            ? "No hay coincidencias. Invita a nuevos colaboradores."
+                            : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."
+                          }
                         />
-                        {isLeaderDropdownOpen &&
-                          createPortal(
-                            <div
-                              className={styles.dropdown}
-                              style={{
-                                top: leaderDropdownPosition?.top,
-                                left: leaderDropdownPosition?.left,
-                                position: "absolute",
-                                zIndex: 150000,
-                                width: leaderInputRef.current?.offsetWidth,
-                              }}
-                              ref={leaderDropdownPopperRef}
-                            >
-                              {filteredLeaders.length ? (
-                                filteredLeaders.map((u) => (
-                                  <div
-                                    key={u.id}
-                                    className={`${styles.dropdownItem} ${watchedLeadedBy.includes(u.id) ? styles.selectedItem : ''}`}
-                                    onClick={(e) => handleLeaderSelect(u.id, e)}
-                                  >
-                                    <div className={styles.dropdownItemContent}>
-                                      <div className={styles.avatarContainer}>
-                                        <Image
-                                          src={u.imageUrl || '/empty-image.png'}
-                                          alt={u.fullName}
-                                          width={32}
-                                          height={32}
-                                          className={styles.avatarImage}
-                                          onError={(e) => {
-                                            e.currentTarget.src = '/empty-image.png';
-                                          }}
-                                        />
-                                      </div>
-                                      <span>{u.fullName} ({u.role})</span>
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className={styles.emptyState}>
-                                  <span>
-                                    {isAdmin
-                                      ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                      : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
-                                  </span>
-                                </div>
-                              )}
-                            </div>,
-                            document.body,
-                          )}
-                        <div className={styles.tags}>
-                          {watchedLeadedBy.map((userId) => {
-                            const collaborator = users.find((u) => u.id === userId);
-                            return collaborator ? (
-                              <div key={userId} className={styles.tag}>
-                                <Image
-                                  src={collaborator.imageUrl || '/empty-image.png'}
-                                  alt={collaborator.fullName}
-                                  width={24}
-                                  height={24}
-                                  className={styles.tagAvatar}
-                                />
-                                {collaborator.fullName}
-                                <button onClick={(e) => handleLeaderRemove(userId, e)}>X</button>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
                         {form.formState.errors.teamInfo?.LeadedBy && (
                           <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
                         )}
-                        {isAdmin && (
-                          <div className={styles.addButtonWrapper}>
-                            <div className={styles.addButtonText}>
-                              ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
-                            </div>
-                            <button
-                              type="button"
-                              className={styles.addButton}
-                              onClick={(e) => {
-                                animateClick(e.currentTarget);
-                                onEditClientOpen(clients.find(c => c.id === form.getValues("clientInfo.clientId")) || { id: "", name: "", imageUrl: "", projects: [], createdBy: "" });
-                              }}
-                            >
-                              + Invitar Colaborador
-                            </button>
-                          </div>
-                        )}
+
                       </div>
                       
-                      {/* Checkbox para incluir miembros */}
+                      {/* Checkbox para incluir colaboradores */}
                       <div className={styles.formGroup}>
                         <div className={styles.checkboxContainer}>
                           <input
@@ -1801,7 +1274,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                             className={styles.checkbox}
                           />
                           <label htmlFor="includeMembers" className={styles.checkboxLabel}>
-                            ¿Deseas agregar miembros a esta tarea?
+                            ¿Deseas agregar colaboradores a esta tarea?
                           </label>
                         </div>
                       </div>
@@ -1817,121 +1290,33 @@ const EditTask: React.FC<EditTaskProps> = ({
                           >
                             <label className={styles.label}>Colaboradores*</label>
                             <div className={styles.sectionSubtitle}>
-                              Agrega a los miembros del equipo que trabajarán en la tarea.
+                              Agrega a los colaboradores del equipo que trabajarán en la tarea.
                             </div>
-                            <input
-                              className={styles.input}
-                              value={searchCollaborator}
-                              onChange={(e) => {
-                                setSearchCollaborator(e.target.value);
-                              }}
-                              onFocus={() => {
-                                setIsCollaboratorDropdownOpen(true);
-                              }}
-                              onBlur={() => {
-                                setTimeout(() => setIsCollaboratorDropdownOpen(false), 200);
+                            <SearchableDropdown
+                              items={users
+                                .filter(user => !form.watch("teamInfo.LeadedBy").includes(user.id))
+                                .map(user => ({
+                                  id: user.id,
+                                  name: user.fullName,
+                                  imageUrl: user.imageUrl,
+                                  subtitle: user.role
+                                }))}
+                              selectedItems={form.watch("teamInfo.AssignedTo") || []}
+                              onSelectionChange={(selectedIds) => {
+                                form.setValue("teamInfo.AssignedTo", selectedIds);
                               }}
                               placeholder="Ej: John Doe"
-                              ref={collaboratorInputRef}
-                              onKeyDown={(e) => handleSearchInputKeyDown(e, setSearchCollaborator, searchCollaborator, setIsCollaboratorDropdownOpen)}
-                              onCopy={e => e.stopPropagation()}
-                              onPaste={e => e.stopPropagation()}
-                              onCut={e => e.stopPropagation()}
-                              onSelect={e => e.stopPropagation()}
+                              searchPlaceholder="Buscar colaboradores..."
+                              multiple={true}
+                              emptyMessage={isAdmin 
+                                ? "No hay coincidencias. Invita a nuevos colaboradores."
+                                : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."
+                              }
                             />
-                            {isCollaboratorDropdownOpen &&
-                              createPortal(
-                                <div
-                                  className={styles.dropdown}
-                                  style={{
-                                    top: collaboratorDropdownPosition?.top,
-                                    left: collaboratorDropdownPosition?.left,
-                                    position: "absolute",
-                                    zIndex: 150000,
-                                    width: collaboratorInputRef.current?.offsetWidth,
-                                  }}
-                                  ref={collaboratorDropdownPopperRef}
-                                >
-                                  {filteredCollaborators.length ? (
-                                    filteredCollaborators.map((u) => (
-                                      <div
-                                        key={u.id}
-                                        className={`${styles.dropdownItem} ${
-                                          currentLeadedBy.includes(u.id) ? styles.disabled : ""
-                                        } ${watchedAssignedTo.includes(u.id) ? styles.selectedItem : ''}`}
-                                        onClick={(e) => {
-                                          if (!currentLeadedBy.includes(u.id)) {
-                                            handleCollaboratorSelect(u.id, e);
-                                          }
-                                        }}
-                                      >
-                                        <div className={styles.dropdownItemContent}>
-                                          <div className={styles.avatarContainer}>
-                                            <Image
-                                              src={u.imageUrl || '/empty-image.png'}
-                                              alt={u.fullName}
-                                              width={32}
-                                              height={32}
-                                              className={styles.avatarImage}
-                                              onError={(e) => {
-                                                e.currentTarget.src = '/empty-image.png';
-                                              }}
-                                            />
-                                          </div>
-                                          <span>{u.fullName} ({u.role})</span>
-                                        </div>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <div className={styles.emptyState}>
-                                      <span>
-                                        {isAdmin
-                                          ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                          : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>,
-                                document.body,
-                              )}
-                            <div className={styles.tags}>
-                              {watchedAssignedTo.map((userId) => {
-                                const collaborator = users.find((u) => u.id === userId);
-                                return collaborator ? (
-                                  <div key={userId} className={styles.tag}>
-                                    <Image
-                                      src={collaborator.imageUrl || '/empty-image.png'}
-                                      alt={collaborator.fullName}
-                                      width={24}
-                                      height={24}
-                                      className={styles.tagAvatar}
-                                    />
-                                    {collaborator.fullName}
-                                    <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
-                                  </div>
-                                ) : null;
-                              })}
-                            </div>
                             {form.formState.errors.teamInfo?.AssignedTo && (
                               <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
                             )}
-                            {isAdmin && (
-                              <div className={styles.addButtonWrapper}>
-                                <div className={styles.addButtonText}>
-                                  ¿No encuentras algún colaborador? <strong>Invita a uno nuevo.</strong>
-                                </div>
-                                <button
-                                  type="button"
-                                  className={styles.addButton}
-                                  onClick={(e) => {
-                                    animateClick(e.currentTarget);
-                                    onEditClientOpen(clients.find(c => c.id === form.getValues("clientInfo.clientId")) || { id: "", name: "", imageUrl: "", projects: [], createdBy: "" });
-                                  }}
-                                >
-                                  + Invitar Colaborador
-                                </button>
-                              </div>
-                            )}
+                 
                           </motion.div>
                         )}
                       </AnimatePresence>

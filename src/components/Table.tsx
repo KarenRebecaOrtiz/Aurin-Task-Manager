@@ -4,18 +4,15 @@ import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Table.module.scss';
+import TableHeader, { Column as TableHeaderColumn } from './ui/TableHeader';
 
 interface HasId {
   id: string;
 }
 
-interface Column<T> {
+interface Column<T> extends TableHeaderColumn<T> {
+  // Mantener compatibilidad con implementación anterior
   key: string;
-  label: string;
-  width: string;
-  mobileVisible?: boolean;
-  mobileWidth?: string;
-  render?: (item: T) => React.ReactNode;
 }
 
 interface TableProps<T extends HasId> {
@@ -29,10 +26,28 @@ interface TableProps<T extends HasId> {
   getRowClassName?: (item: T) => string;
   emptyStateType?: 'tasks' | 'archive' | 'clients' | 'members' | 'team';
   className?: string;
+  // Nuevas props para funcionalidad de visibilidad de columnas
+  visibleColumns?: string[];
+  onColumnVisibilityChange?: (columnKey: string, visible: boolean) => void;
+  enableColumnVisibility?: boolean; // Para habilitar/deshabilitar esta funcionalidad
 }
 
 const Table = memo(
-  <T extends HasId>({ data, columns, itemsPerPage = 10, sortKey, sortDirection, onSort, onRowClick, getRowClassName, emptyStateType, className }: TableProps<T>) => {
+  <T extends HasId>({ 
+    data, 
+    columns, 
+    itemsPerPage = 10, 
+    sortKey, 
+    sortDirection, 
+    onSort, 
+    onRowClick, 
+    getRowClassName, 
+    emptyStateType, 
+    className,
+    visibleColumns,
+    onColumnVisibilityChange,
+    enableColumnVisibility = false
+  }: TableProps<T>) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isMobile, setIsMobile] = useState(false);
     const tableRef = useRef<HTMLDivElement>(null);
@@ -81,6 +96,18 @@ const Table = memo(
       }
       return column.width;
     };
+
+    // Función para determinar si una columna está visible
+    const isColumnVisible = useCallback((columnKey: string): boolean => {
+      if (!enableColumnVisibility || !visibleColumns) return true;
+      return visibleColumns.includes(columnKey);
+    }, [enableColumnVisibility, visibleColumns]);
+
+    // Filtrar columnas visibles para renderizado
+    const visibleColumnsForRender = useMemo(() => {
+      if (!enableColumnVisibility) return columns;
+      return columns.filter(column => isColumnVisible(column.key));
+    }, [columns, enableColumnVisibility, isColumnVisible]);
 
     const handleSort = useCallback((key: string) => {
       if (
@@ -170,34 +197,21 @@ const Table = memo(
     return (
       <div className={`${styles.tableContainer} ${className || ''}`}>
         <div ref={tableRef} className={styles.table}>
-          <div className={styles.header}>
-            {columns.map((column) => (
-              <div
-                key={column.key}
-                className={`${styles.headerCell} ${
-                  column.key !== 'action' && !column.render ? styles.sortable : ''
-                } ${!column.mobileVisible ? styles.hideOnMobile : ''}`}
-                style={{ width: getColumnWidth(column) }}
-                onClick={() => handleSort(column.key)}
-                role={column.key !== 'action' && !column.render ? 'button' : undefined}
-                tabIndex={column.key !== 'action' && !column.render ? 0 : undefined}
-                onKeyDown={(e) =>
-                  e.key === 'Enter' && column.key !== 'action' && !column.render && handleSort(column.key)
-                }
-              >
-                <span>{column.label}</span>
-                {column.key === sortKey && column.key !== 'action' && (
-                  <span className={styles.sortIndicator}>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </div>
-            ))}
-          </div>
+          <TableHeader
+            columns={columns}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={onSort}
+            visibleColumns={enableColumnVisibility ? visibleColumns : undefined}
+            onColumnVisibilityChange={enableColumnVisibility ? onColumnVisibilityChange : undefined}
+            isMobile={isMobile}
+          />
           {paginatedData.length === 0 ? (
             <EmptyState />
           ) : (
             paginatedData.map((item, index) => (
               <div key={item.id || `row-${index}`} className={`${styles.row} ${getRowClassName?.(item) || ''}`}>
-                {columns.map((column) => (
+                {visibleColumnsForRender.map((column) => (
                   <div
                     key={column.key}
                     className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
@@ -270,7 +284,10 @@ const Table = memo(
       prevProps.onRowClick === nextProps.onRowClick &&
       prevProps.getRowClassName === nextProps.getRowClassName &&
       prevProps.emptyStateType === nextProps.emptyStateType &&
-      prevProps.className === nextProps.className
+      prevProps.className === nextProps.className &&
+      prevProps.visibleColumns === nextProps.visibleColumns &&
+      prevProps.onColumnVisibilityChange === nextProps.onColumnVisibilityChange &&
+      prevProps.enableColumnVisibility === nextProps.enableColumnVisibility
     );
   },
 );

@@ -8,9 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/lib/firebase';
 import ConfigDropdown from './ui/ConfigDropdown';
 import StackInput from './ui/StackInput';
+import PhoneCountrySelect from './ui/PhoneCountrySelect';
 import TeamsTable from './TeamsTable';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { gsap } from 'gsap';
+import { WebsiteInput } from './ui/WebsiteInput';
+import { BiographyInput } from './ui/BiographyInput';
 import styles from './ConfigPage.module.scss';
 
 interface Config {
@@ -35,6 +38,14 @@ interface Config {
   profilePhoto?: string;
   coverPhoto?: string;
   status?: string;
+  // Redes sociales
+  socialLinks?: {
+    github?: string;
+    linkedin?: string;
+    twitter?: string;
+    instagram?: string;
+    dribbble?: string;
+  };
 }
 
 interface ConfigForm extends Omit<Config, 'id'> {
@@ -45,6 +56,12 @@ interface ConfigForm extends Omit<Config, 'id'> {
   currentPassword?: string;
   newPassword?: string;
   confirmPassword?: string;
+  // Redes sociales individuales para el formulario
+  github?: string;
+  linkedin?: string;
+  twitter?: string;
+  instagram?: string;
+  dribbble?: string;
 }
 
 interface User {
@@ -221,164 +238,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     'Inteligencia Artificial', 'No-Code Builders', 'Project Management', 'UX/UI',
   ].sort();
 
-  const ladaOptions = [
-    // México
-    { value: '+52', label: '🇲🇽 +52', region: 'México' },
-    
-    // América del Norte
-    { value: '+1', label: '🇺🇸 +1', region: 'América del Norte' },
-    { value: '+1-809', label: '🇩🇴 +1-809', region: 'América del Norte' },
-    { value: '+1-787', label: '🇵🇷 +1-787', region: 'América del Norte' },
-    
-    // América Central
-    { value: '+502', label: '🇬🇹 +502', region: 'América Central' },
-    { value: '+503', label: '🇸🇻 +503', region: 'América Central' },
-    { value: '+504', label: '🇭🇳 +504', region: 'América Central' },
-    { value: '+505', label: '🇳🇮 +505', region: 'América Central' },
-    { value: '+506', label: '🇨🇷 +506', region: 'América Central' },
-    { value: '+507', label: '🇵🇦 +507', region: 'América Central' },
-    { value: '+501', label: '🇧🇿 +501', region: 'América Central' },
-    
-    // América del Sur
-    { value: '+54', label: '🇦🇷 +54', region: 'América del Sur' },
-    { value: '+55', label: '🇧🇷 +55', region: 'América del Sur' },
-    { value: '+56', label: '🇨🇱 +56', region: 'América del Sur' },
-    { value: '+57', label: '🇨🇴 +57', region: 'América del Sur' },
-    { value: '+58', label: '🇻🇪 +58', region: 'América del Sur' },
-    { value: '+51', label: '🇵🇪 +51', region: 'América del Sur' },
-    { value: '+593', label: '🇪🇨 +593', region: 'América del Sur' },
-    { value: '+595', label: '🇵🇾 +595', region: 'América del Sur' },
-    { value: '+598', label: '🇺🇾 +598', region: 'América del Sur' },
-    { value: '+591', label: '🇧🇴 +591', region: 'América del Sur' },
-    { value: '+592', label: '🇬🇾 +592', region: 'América del Sur' },
-    
-    // Europa Occidental
-    { value: '+44', label: '🇬🇧 +44', region: 'Europa Occidental' },
-    { value: '+33', label: '🇫🇷 +33', region: 'Europa Occidental' },
-    { value: '+49', label: '🇩🇪 +49', region: 'Europa Occidental' },
-    { value: '+34', label: '🇪🇸 +34', region: 'Europa Occidental' },
-    { value: '+39', label: '🇮🇹 +39', region: 'Europa Occidental' },
-    { value: '+31', label: '🇳🇱 +31', region: 'Europa Occidental' },
-    { value: '+32', label: '🇧🇪 +32', region: 'Europa Occidental' },
-    { value: '+351', label: '🇵🇹 +351', region: 'Europa Occidental' },
-    { value: '+41', label: '🇨🇭 +41', region: 'Europa Occidental' },
-    { value: '+43', label: '🇦🇹 +43', region: 'Europa Occidental' },
-    { value: '+30', label: '🇬🇷 +30', region: 'Europa Occidental' },
-    { value: '+353', label: '🇮🇪 +353', region: 'Europa Occidental' },
-    { value: '+46', label: '🇸🇪 +46', region: 'Europa Occidental' },
-    { value: '+47', label: '🇳🇴 +47', region: 'Europa Occidental' },
-    { value: '+45', label: '🇩🇰 +45', region: 'Europa Occidental' },
-    { value: '+358', label: '🇫🇮 +358', region: 'Europa Occidental' },
-    { value: '+420', label: '🇨🇿 +420', region: 'Europa Occidental' },
-    { value: '+48', label: '🇵🇱 +48', region: 'Europa Occidental' },
-    
-    // Europa del Este
-    { value: '+7', label: '🇷🇺 +7', region: 'Europa del Este' },
-    { value: '+380', label: '🇺🇦 +380', region: 'Europa del Este' },
-    { value: '+373', label: '🇲🇩 +373', region: 'Europa del Este' },
-    { value: '+374', label: '🇦🇲 +374', region: 'Europa del Este' },
-    { value: '+995', label: '🇬🇪 +995', region: 'Europa del Este' },
-    { value: '+994', label: '🇦🇿 +994', region: 'Europa del Este' },
-    { value: '+993', label: '🇹🇲 +993', region: 'Europa del Este' },
-    { value: '+992', label: '🇹🇯 +992', region: 'Europa del Este' },
-    { value: '+996', label: '🇰🇬 +996', region: 'Europa del Este' },
-    { value: '+998', label: '🇺🇿 +998', region: 'Europa del Este' },
-    
-    // Asia Oriental
-    { value: '+81', label: '🇯🇵 +81', region: 'Asia Oriental' },
-    { value: '+82', label: '🇰🇷 +82', region: 'Asia Oriental' },
-    { value: '+86', label: '🇨🇳 +86', region: 'Asia Oriental' },
-    { value: '+886', label: '🇹🇼 +886', region: 'Asia Oriental' },
-    { value: '+852', label: '🇭🇰 +852', region: 'Asia Oriental' },
-    { value: '+853', label: '🇲🇴 +853', region: 'Asia Oriental' },
-    { value: '+84', label: '🇻🇳 +84', region: 'Asia Oriental' },
-    { value: '+855', label: '🇰🇭 +855', region: 'Asia Oriental' },
-    { value: '+856', label: '🇱🇦 +856', region: 'Asia Oriental' },
-    { value: '+66', label: '🇹🇭 +66', region: 'Asia Oriental' },
-    { value: '+95', label: '🇲🇲 +95', region: 'Asia Oriental' },
-    { value: '+60', label: '🇲🇾 +60', region: 'Asia Oriental' },
-    { value: '+65', label: '🇸🇬 +65', region: 'Asia Oriental' },
-    { value: '+673', label: '🇧🇳 +673', region: 'Asia Oriental' },
-    
-    // Asia Meridional
-    { value: '+91', label: '🇮🇳 +91', region: 'Asia Meridional' },
-    { value: '+880', label: '🇧🇩 +880', region: 'Asia Meridional' },
-    { value: '+977', label: '🇳🇵 +977', region: 'Asia Meridional' },
-    { value: '+94', label: '🇱🇰 +94', region: 'Asia Meridional' },
-    { value: '+960', label: '🇲🇻 +960', region: 'Asia Meridional' },
-    { value: '+975', label: '🇧🇹 +975', region: 'Asia Meridional' },
-    { value: '+92', label: '🇵🇰 +92', region: 'Asia Meridional' },
-    { value: '+93', label: '🇦🇫 +93', region: 'Asia Meridional' },
-    { value: '+98', label: '🇮🇷 +98', region: 'Asia Meridional' },
-    { value: '+964', label: '🇮🇶 +964', region: 'Asia Meridional' },
-    { value: '+965', label: '🇰🇼 +965', region: 'Asia Meridional' },
-    { value: '+966', label: '🇸🇦 +966', region: 'Asia Meridional' },
-    { value: '+967', label: '🇾🇪 +967', region: 'Asia Meridional' },
-    { value: '+968', label: '🇴🇲 +968', region: 'Asia Meridional' },
-    { value: '+971', label: '🇦🇪 +971', region: 'Asia Meridional' },
-    { value: '+972', label: '🇮🇱 +972', region: 'Asia Meridional' },
-    { value: '+973', label: '🇧🇭 +973', region: 'Asia Meridional' },
-    { value: '+974', label: '🇶🇦 +974', region: 'Asia Meridional' },
-    { value: '+90', label: '🇹🇷 +90', region: 'Asia Meridional' },
-    
-    // África
-    { value: '+27', label: '🇿🇦 +27', region: 'África' },
-    { value: '+20', label: '🇪🇬 +20', region: 'África' },
-    { value: '+212', label: '🇲🇦 +212', region: 'África' },
-    { value: '+234', label: '🇳🇬 +234', region: 'África' },
-    { value: '+254', label: '🇰🇪 +254', region: 'África' },
-    { value: '+233', label: '🇬🇭 +233', region: 'África' },
-    { value: '+225', label: '🇨🇮 +225', region: 'África' },
-    { value: '+221', label: '🇸🇳 +221', region: 'África' },
-    { value: '+237', label: '🇨🇲 +237', region: 'África' },
-    { value: '+236', label: '🇨🇫 +236', region: 'África' },
-    { value: '+235', label: '🇹🇩 +235', region: 'África' },
-    { value: '+241', label: '🇬🇦 +241', region: 'África' },
-    { value: '+242', label: '🇨🇬 +242', region: 'África' },
-    { value: '+243', label: '🇨🇩 +243', region: 'África' },
-    { value: '+244', label: '🇦🇴 +244', region: 'África' },
-    { value: '+245', label: '🇬🇼 +245', region: 'África' },
-    { value: '+249', label: '🇸🇩 +249', region: 'África' },
-    { value: '+250', label: '🇷🇼 +250', region: 'África' },
-    { value: '+251', label: '🇪🇹 +251', region: 'África' },
-    { value: '+252', label: '🇸🇴 +252', region: 'África' },
-    { value: '+253', label: '🇩🇯 +253', region: 'África' },
-    { value: '+255', label: '🇹🇿 +255', region: 'África' },
-    { value: '+256', label: '🇺🇬 +256', region: 'África' },
-    { value: '+257', label: '🇧🇮 +257', region: 'África' },
-    { value: '+258', label: '🇲🇿 +258', region: 'África' },
-    { value: '+260', label: '🇿🇲 +260', region: 'África' },
-    { value: '+261', label: '🇲🇬 +261', region: 'África' },
-    { value: '+262', label: '🇷🇪 +262', region: 'África' },
-    { value: '+263', label: '🇿🇼 +263', region: 'África' },
-    { value: '+264', label: '🇳🇦 +264', region: 'África' },
-    { value: '+265', label: '🇲🇼 +265', region: 'África' },
-    { value: '+266', label: '🇱🇸 +266', region: 'África' },
-    { value: '+267', label: '🇧🇼 +267', region: 'África' },
-    { value: '+268', label: '🇸🇿 +268', region: 'África' },
-    { value: '+269', label: '🇰🇲 +269', region: 'África' },
-    
-    // Oceanía
-    { value: '+61', label: '🇦🇺 +61', region: 'Oceanía' },
-    { value: '+64', label: '🇳🇿 +64', region: 'Oceanía' },
-    { value: '+675', label: '🇵🇬 +675', region: 'Oceanía' },
-    { value: '+676', label: '🇹🇴 +676', region: 'Oceanía' },
-    { value: '+677', label: '🇸🇧 +677', region: 'Oceanía' },
-    { value: '+678', label: '🇻🇺 +678', region: 'Oceanía' },
-    { value: '+679', label: '🇫🇯 +679', region: 'Oceanía' },
-    { value: '+680', label: '🇵🇼 +680', region: 'Oceanía' },
-    { value: '+681', label: '🇼🇫 +681', region: 'Oceanía' },
-    { value: '+682', label: '🇨🇰 +682', region: 'Oceanía' },
-    { value: '+683', label: '🇳🇺 +683', region: 'Oceanía' },
-    { value: '+685', label: '🇼🇸 +685', region: 'Oceanía' },
-    { value: '+686', label: '🇰🇮 +686', region: 'Oceanía' },
-    { value: '+687', label: '🇳🇨 +687', region: 'Oceanía' },
-    { value: '+688', label: '🇹🇻 +688', region: 'Oceanía' },
-    { value: '+689', label: '🇵🇫 +689', region: 'Oceanía' },
-    { value: '+690', label: '🇹🇰 +690', region: 'Oceanía' },
-    { value: '+691', label: '🇫🇲 +691', region: 'Oceanía' },
-    { value: '+692', label: '🇲🇭 +692', region: 'Oceanía' },
-  ];
+
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -408,7 +268,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             phoneLada: data.phone?.startsWith('+') ? data.phone.split(' ')[0] : '+52',
             city: data.city || '',
             gender: data.gender || '',
-            portfolio: data.portfolio || '',
+            portfolio: data.portfolio?.replace(/^https?:\/\//, '') || '',
             stack: data.stack || [],
             teams: data.teams || [],
             profilePhoto: data.profilePhoto || currentUser.imageUrl || '',
@@ -419,6 +279,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             newPassword: '',
             confirmPassword: '',
             status: data.status || 'Disponible',
+            // Redes sociales
+            github: data.socialLinks?.github || '',
+            linkedin: data.socialLinks?.linkedin || '',
+            twitter: data.socialLinks?.twitter || '',
+            instagram: data.socialLinks?.instagram || '',
+            dribbble: data.socialLinks?.dribbble || '',
           });
         } else {
           setFormData({
@@ -449,6 +315,12 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             newPassword: '',
             confirmPassword: '',
             status: 'Disponible',
+            // Redes sociales
+            github: '',
+            linkedin: '',
+            twitter: '',
+            instagram: '',
+            dribbble: '',
           });
         }
         setLoading(false);
@@ -510,8 +382,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     if (formData?.birthDate && !/^\d{2}\/\d{2}\/\d{4}$/.test(formData.birthDate)) {
       newErrors.birthDate = 'La fecha debe tener el formato DD/MM/AAAA';
     }
-    if (formData?.portfolio && !/^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(formData.portfolio)) {
-      newErrors.portfolio = 'El portafolio debe ser una URL válida';
+    if (formData?.portfolio && !/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(formData.portfolio)) {
+      newErrors.portfolio = 'El portafolio debe ser una URL válida (sin https://)';
     }
     if (formData?.profilePhotoFile && formData.profilePhotoFile.size > 5 * 1024 * 1024) {
       newErrors.profilePhoto = 'La foto de perfil no debe exceder 5MB';
@@ -760,18 +632,25 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         phone: formData.phone ? `${formData.phoneLada} ${formData.phone}` : '',
         city: formData.city,
         gender: formData.gender,
-        portfolio: formData.portfolio,
+        portfolio: formData.portfolio ? `https://${formData.portfolio}` : '',
         stack: formData.stack,
         teams: formData.teams,
         profilePhoto: profilePhotoUrl,
         coverPhoto: coverPhotoUrl,
         status: formData.status || 'Disponible',
+        // Redes sociales
+        socialLinks: {
+          github: formData.github || '',
+          linkedin: formData.linkedin || '',
+          twitter: formData.twitter || '',
+          instagram: formData.instagram || '',
+          dribbble: formData.dribbble || '',
+        },
       });
 
       if (onShowSuccessAlert) onShowSuccessAlert('Perfil actualizado exitosamente');
       setIsEditing(false);
       localStorage.removeItem(LOCAL_STORAGE_KEY); // Limpiar caché al guardar
-      setTimeout(onClose, 1000);
     } catch (err) {
       if (onShowFailAlert) onShowFailAlert('Error al guardar los datos, por favor intenta de nuevo', err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -801,7 +680,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         phoneLada: config.phone?.startsWith('+') ? config.phone.split(' ')[0] : '+52',
         city: config.city || '',
         gender: config.gender || '',
-        portfolio: config.portfolio || '',
+                    portfolio: config.portfolio?.replace(/^https?:\/\//, '') || '',
         stack: config.stack || [],
         teams: config.teams || [],
         profilePhoto: config.profilePhoto || currentUser.imageUrl || '',
@@ -816,7 +695,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     });
     setErrors({});
     localStorage.removeItem(LOCAL_STORAGE_KEY);
-    onClose();
   };
 
   const toggleEdit = () => {
@@ -1061,16 +939,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
               <div className={styles.exampleMailCom}>{currentUser.primaryEmailAddress?.emailAddress}</div>
             </div>
           </div>
-          {isOwnProfile && (
+          {isOwnProfile && !isEditing && (
             <div className={styles.frame239191}>
-              <button className={styles.editButton} onClick={isEditing ? handleSubmit : toggleEdit}>
-                {isEditing ? 'Guardar Cambios' : 'Editar Perfil'}
+              <button className={styles.editButton} onClick={toggleEdit}>
+                Editar Perfil
               </button>
-              {isEditing && (
-                <button className={styles.discardButton} onClick={handleDiscard}>
-                  Descartar Cambios
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -1109,20 +982,19 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                 </div>
               </div>
               <div className={styles.fieldGroup}>
-                <div className={styles.frame239182}>
-                  <div className={styles.label}>Acerca de ti</div>
-                  <input
-                    type="text"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    placeholder="Breve descripción personal"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                    onKeyDown={(e) => handleInputKeyDown(e, 'description')}
-                  />
-                  {errors.description && <p className={styles.errorText}>{errors.description}</p>}
-                </div>
+                <BiographyInput
+                  value={formData.description}
+                  onChange={(value) => {
+                    setFormData((prev) => (prev ? { ...prev, description: value } : null));
+                    setErrors((prev) => ({ ...prev, description: undefined }));
+                  }}
+                  placeholder="Breve descripción personal"
+                  disabled={!isOwnProfile || !isEditing}
+                  maxLength={180}
+                  label="Acerca de ti"
+                  className={styles.input}
+                />
+                {errors.description && <p className={styles.errorText}>{errors.description}</p>}
               </div>
               <div className={styles.fieldGroupRow}>
                 <div className={styles.frame239182}>
@@ -1155,13 +1027,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                 <div className={styles.frame239182}>
                   <div className={styles.label}>Teléfono de Contacto</div>
                   <div className={styles.phoneInputContainer}>
-                    <ConfigDropdown
-                      options={ladaOptions}
+                    <PhoneCountrySelect
                       value={formData.phoneLada}
                       onChange={handlePhoneLadaChange}
-                      placeholder="Select Lada"
                       disabled={!isOwnProfile || !isEditing}
-                      className={styles.ladaSelect}
                     />
                     <input
                       type="text"
@@ -1210,15 +1079,15 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                 </div>
                 <div className={styles.frame239183}>
                   <div className={styles.label}>Portafolio en Línea</div>
-                  <input
-                    type="text"
-                    name="portfolio"
+                  <WebsiteInput
                     value={formData.portfolio}
-                    onChange={handleInputChange}
-                    placeholder="https://miportafolio.com"
-                    className={styles.input}
+                    onChange={(value) => {
+                      setFormData((prev) => (prev ? { ...prev, portfolio: value } : null));
+                      setErrors((prev) => ({ ...prev, portfolio: undefined }));
+                    }}
+                    placeholder="miportafolio.com"
                     disabled={!isOwnProfile || !isEditing}
-                    onKeyDown={(e) => handleInputKeyDown(e, 'portfolio')}
+                    className={styles.input}
                   />
                   {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
                 </div>
@@ -1242,6 +1111,92 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   className={styles.stackSelect}
                   maxSelections={40}
                 />
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Redes Sociales</h2>
+            <div className={styles.sectionContent}>
+              <div className={styles.fieldGroup}>
+                <div className={styles.stackDescription}>
+                  Agrega tus perfiles de redes sociales para que otros puedan conectarse contigo.
+                </div>
+                
+                {/* GitHub */}
+                <div className={styles.fieldGroupRow}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>GitHub</div>
+                    <input
+                      type="text"
+                      name="github"
+                      value={formData.github || ''}
+                      onChange={handleInputChange}
+                      placeholder="usuario-github"
+                      className={styles.input}
+                      disabled={!isOwnProfile || !isEditing}
+                    />
+                  </div>
+                  <div className={styles.frame239183}>
+                    <div className={styles.label}>LinkedIn</div>
+                    <input
+                      type="text"
+                      name="linkedin"
+                      value={formData.linkedin || ''}
+                      onChange={handleInputChange}
+                      placeholder="in/usuario-linkedin"
+                      className={styles.input}
+                      disabled={!isOwnProfile || !isEditing}
+                    />
+                  </div>
+                </div>
+
+                {/* Twitter & Instagram */}
+                <div className={styles.fieldGroupRow}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>Twitter / X</div>
+                    <input
+                      type="text"
+                      name="twitter"
+                      value={formData.twitter || ''}
+                      onChange={handleInputChange}
+                      placeholder="@usuario-twitter"
+                      className={styles.input}
+                      disabled={!isOwnProfile || !isEditing}
+                    />
+                  </div>
+                  <div className={styles.frame239183}>
+                    <div className={styles.label}>Instagram</div>
+                    <input
+                      type="text"
+                      name="instagram"
+                      value={formData.instagram || ''}
+                      onChange={handleInputChange}
+                      placeholder="@usuario-instagram"
+                      className={styles.input}
+                      disabled={!isOwnProfile || !isEditing}
+                    />
+                  </div>
+                </div>
+
+                {/* Dribbble */}
+                <div className={styles.fieldGroupRow}>
+                  <div className={styles.frame239182}>
+                    <div className={styles.label}>Dribbble</div>
+                    <input
+                      type="text"
+                      name="dribbble"
+                      value={formData.dribbble || ''}
+                      onChange={handleInputChange}
+                      placeholder="usuario-dribbble"
+                      className={styles.input}
+                      disabled={!isOwnProfile || !isEditing}
+                    />
+                  </div>
+                  <div className={styles.frame239183}>
+                    {/* Espacio vacío para mantener la estructura */}
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -1306,6 +1261,18 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
               </AnimatePresence>
             </motion.div>
           </motion.section>
+          
+          {/* Botones de acción al final */}
+          {isOwnProfile && isEditing && (
+            <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button className={styles.discardButton} onClick={handleDiscard}>
+                Descartar Cambios
+              </button>
+              <button className={styles.editButton} onClick={handleSubmit}>
+                Guardar Cambios
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

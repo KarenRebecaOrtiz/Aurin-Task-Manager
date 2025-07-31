@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { collection, onSnapshot, query, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useDataStore } from '@/stores/dataStore';
 
 // Type definitions
@@ -82,25 +82,77 @@ export function useSharedTasksState(userId: string | undefined) {
   const isInitialLoadComplete = useDataStore((state) => state.isInitialLoadComplete);
   const loadingProgress = useDataStore((state) => state.loadingProgress);
 
-  // State removed - Safari auto-fix now works without forcing re-renders
+  // Estado para rastrear si Firebase Auth está listo
+  const [isFirebaseAuthReady, setIsFirebaseAuthReady] = useState(false);
 
   // Refs para evitar re-renders innecesarios
   const tasksListenerRef = useRef<(() => void) | null>(null);
   const clientsListenerRef = useRef<(() => void) | null>(null);
   const hasInitializedRef = useRef(false);
 
-  // Safari auto-fix removed - functionality moved to SafariFirebaseAuthFix component
+  // Monitorear Firebase Auth readiness
+  useEffect(() => {
+    if (!userId) return;
+
+    // Check Firebase Auth readiness
+    
+    // Verificar si Firebase Auth ya está listo
+    if (auth.currentUser && auth.currentUser.uid === userId) {
+
+      setIsFirebaseAuthReady(true);
+      return;
+    }
+
+    // Listener para cambios en el estado de autenticación
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && user.uid === userId) {
+
+        setIsFirebaseAuthReady(true);
+      } else if (!user) {
+
+        setIsFirebaseAuthReady(false);
+      }
+    });
+
+    // Listener para el evento de Safari fix
+    const handleSafariAuthFixed = (event: CustomEvent) => {
+
+      if (event.detail?.userId === userId) {
+        setIsFirebaseAuthReady(true);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('safariFirebaseAuthFixed', handleSafariAuthFixed as EventListener);
+    }
+
+    // Timeout de seguridad - si después de 10 segundos no hay autenticación, forzar el inicio
+    const timeout = setTimeout(() => {
+      if (!auth.currentUser) {
+        console.warn('[useSharedTasksState] ⚠️ Firebase Auth timeout - proceeding anyway');
+        setIsFirebaseAuthReady(true);
+      }
+    }, 10000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('safariFirebaseAuthFixed', handleSafariAuthFixed as EventListener);
+      }
+    };
+  }, [userId]);
 
   // Setup tasks listener
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !isFirebaseAuthReady) return;
 
     // Cleanup previous listener
     if (tasksListenerRef.current) {
       tasksListenerRef.current();
     }
 
-    console.log('[useSharedTasksState] Setting up tasks listener with Zustand');
+
     setIsLoadingTasks(true);
 
     const tasksQuery = query(collection(db, 'tasks'));
@@ -143,6 +195,12 @@ export function useSharedTasksState(userId: string | undefined) {
         console.error('[useSharedTasksState] Error in tasks onSnapshot:', error);
         setTasks([]);
         setIsLoadingTasks(false);
+        
+        // Marcar como inicializado incluso con error para que el loader no se quede colgado
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          checkInitialLoadComplete();
+        }
       }
     );
 
@@ -155,18 +213,18 @@ export function useSharedTasksState(userId: string | undefined) {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, setTasks, setIsLoadingTasks]); // setLoadingProgress and checkInitialLoadComplete stable
+  }, [userId, isFirebaseAuthReady, setTasks, setIsLoadingTasks]); // setLoadingProgress and checkInitialLoadComplete stable
 
   // Setup clients listener
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !isFirebaseAuthReady) return;
 
     // Cleanup previous listener
     if (clientsListenerRef.current) {
       clientsListenerRef.current();
     }
 
-    console.log('[useSharedTasksState] Setting up clients listener with Zustand');
+
     setIsLoadingClients(true);
 
     const clientsQuery = query(collection(db, 'clients'));
@@ -197,6 +255,12 @@ export function useSharedTasksState(userId: string | undefined) {
         console.error('[useSharedTasksState] Error in clients onSnapshot:', error);
         setClients([]);
         setIsLoadingClients(false);
+        
+        // Marcar como inicializado incluso con error para que el loader no se quede colgado
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          checkInitialLoadComplete();
+        }
       }
     );
 
@@ -209,18 +273,18 @@ export function useSharedTasksState(userId: string | undefined) {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps  
-  }, [userId, setClients, setIsLoadingClients]); // setLoadingProgress and checkInitialLoadComplete stable
+  }, [userId, isFirebaseAuthReady, setClients, setIsLoadingClients]); // setLoadingProgress and checkInitialLoadComplete stable
 
   // Setup users fetch - OPTIMIZADO
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !isFirebaseAuthReady) return;
 
-    console.log('[useSharedTasksState] Setting up optimized users fetch');
+
     setIsLoadingUsers(true);
 
     const fetchUsers = async () => {
       try {
-        console.log('[useSharedTasksState] Starting optimized users fetch');
+    
         const response = await fetch('/api/users');
         if (!response.ok) {
           throw new Error(`Failed to fetch users: ${response.status}`);
@@ -254,7 +318,7 @@ export function useSharedTasksState(userId: string | undefined) {
           };
         });
 
-        console.log('[useSharedTasksState] Users fetched successfully:', usersData.length);
+  
         setUsers(usersData);
         setIsLoadingUsers(false);
         setLoadingProgress({ users: true });
@@ -268,6 +332,12 @@ export function useSharedTasksState(userId: string | undefined) {
         console.error('[useSharedTasksState] Error fetching users:', error);
         setUsers([]);
         setIsLoadingUsers(false);
+        
+        // Marcar como inicializado incluso con error para que el loader no se quede colgado
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true;
+          checkInitialLoadComplete();
+        }
       }
     };
 
@@ -277,38 +347,28 @@ export function useSharedTasksState(userId: string | undefined) {
       // Cleanup no necesario ya que no hay listener
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, setUsers, setIsLoadingUsers]); // setLoadingProgress and checkInitialLoadComplete stable
+  }, [userId, isFirebaseAuthReady, setUsers, setIsLoadingUsers]); // setLoadingProgress and checkInitialLoadComplete stable
 
   // Función para verificar si la carga inicial está completa
   const checkInitialLoadComplete = useCallback(() => {
-    // Verificar que no esté cargando Y que haya datos reales
-    const hasTasksData = tasks.length > 0;
-    const hasClientsData = clients.length > 0;
-    const hasUsersData = users.length > 0;
+    // Solo verificar si Firebase Auth está listo
+    if (!isFirebaseAuthReady) {
+
+      return;
+    }
+
+    // Verificar que no esté cargando
     const isNotLoading = !isLoadingTasks && !isLoadingClients && !isLoadingUsers;
     
-    // Solo marcar como completo si hay datos Y no está cargando
-    if (isNotLoading && hasTasksData && hasClientsData && hasUsersData) {
-      console.log('[useSharedTasksState] Initial load complete with data:', {
-        tasks: tasks.length,
-        clients: clients.length,
-        users: users.length
-      });
+    // Si ya no está cargando, marcar como completo independientemente de si hay datos
+    // Esto maneja el caso donde un usuario no tiene datos pero la carga está completa
+    if (isNotLoading) {
+      // Initial load complete
       setIsInitialLoadComplete(true);
     } else {
-      console.log('[useSharedTasksState] Still loading or missing data:', {
-        isLoadingTasks,
-        isLoadingClients,
-        isLoadingUsers,
-        hasTasksData,
-        hasClientsData,
-        hasUsersData,
-        tasksCount: tasks.length,
-        clientsCount: clients.length,
-        usersCount: users.length
-      });
+      // Still loading data...
     }
-  }, [isLoadingTasks, isLoadingClients, isLoadingUsers, tasks.length, clients.length, users.length, setIsInitialLoadComplete]);
+  }, [isLoadingTasks, isLoadingClients, isLoadingUsers, isFirebaseAuthReady, setIsInitialLoadComplete]);
 
   // Verificar cuando cambian los estados de carga
   useEffect(() => {

@@ -307,6 +307,12 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     const memoizedFilteredTasks = useMemo(() => {
       const filtered = archivedTasks.filter((task) => {
+        // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
+        const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
+        if (!canViewTask) {
+          return false;
+        }
+        
         const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesPriority = !priorityFilter || task.priority === priorityFilter;
         const matchesClient = !clientFilter || task.clientId === clientFilter;
@@ -319,7 +325,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return matchesSearch && matchesPriority && matchesClient && matchesUser;
       });
       return filtered;
-    }, [archivedTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds]);
+    }, [archivedTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
@@ -342,8 +348,13 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     // Handler reforzado para desarchivar - MEJORADO para actualización optimista
     const handleUnarchiveTask = useCallback(async (task: Task) => {
-      if (!isAdmin) {
-        console.warn('[ArchiveTable] Unarchive intentado por usuario no admin');
+      // ✅ CORREGIDO: Permitir desarchivar a admins Y creadores de la tarea
+      if (!isAdmin && task.CreatedBy !== userId) {
+        console.warn('[ArchiveTable] Unarchive intentado por usuario sin permisos:', { 
+          isAdmin, 
+          taskCreatedBy: task.CreatedBy, 
+          currentUserId: userId 
+        });
         return;
       }
 
@@ -389,7 +400,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           onDataRefresh();
         }
       }
-    }, [isAdmin, onDataRefresh, onTaskArchive, filteredTasks, setFilteredTasks, setUndoStack, setShowUndo, undoStack]);
+    }, [isAdmin, userId, onDataRefresh, onTaskArchive, filteredTasks, setFilteredTasks, setUndoStack, setShowUndo, undoStack]);
 
     // Función para deshacer - MEJORADA con actualización optimista
     const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
@@ -665,8 +676,17 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            // Solo admins pueden ver el ActionMenu en ArchiveTable
-            if (isAdmin) {
+            // Admins y creadores pueden ver el ActionMenu en ArchiveTable
+            const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
+            if (!shouldShowActionMenu) {
+              console.log('[ArchiveTable] ActionMenu hidden for task:', {
+                taskId: task.id,
+                taskCreatedBy: task.CreatedBy,
+                currentUserId: userId,
+                isAdmin
+              });
+            }
+            if (shouldShowActionMenu) {
               console.log('[ArchiveTable] Rendering action column:', {
                 taskId: task.id,
                 taskName: task.name,

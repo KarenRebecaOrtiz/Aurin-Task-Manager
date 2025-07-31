@@ -48,3 +48,17 @@
 .bullet {
   margin: 0 $spacing-sm;
 }
+
+// Dark mode support for advertising texts
+body.dark .marquee {
+  background-color: #d3e048; // Keep the same background color
+  color: $color-text-dark-primary;
+}
+
+body.dark .adviceItem {
+  color: black;
+}
+
+body.dark .marqueePart {
+  color: black;
+}

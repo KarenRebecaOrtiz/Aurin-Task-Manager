@@ -8,21 +8,23 @@ import { db } from '@/lib/firebase';
 import styles from './AvatarDropdown.module.scss';
 import { gsap } from 'gsap';
 import { createPortal } from 'react-dom';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
 import ThemeToggler from '@/components/ui/ThemeToggler';
 import { useTheme } from '@/contexts/ThemeContext';
+import ProfileCard from './ProfileCard';
 
 const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   
-  // Usar el hook de estado online
-  const { currentStatus: onlineStatus } = useOnlineStatus();
+  // Usar el hook de estado de disponibilidad
+  const { currentStatus: onlineStatus } = useAvailabilityStatus();
   const { isDarkMode } = useTheme();
 
   // Create portal container
@@ -126,6 +128,15 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
     setIsDropdownOpen(false);
   }, [signOut]);
 
+  const handleProfileClick = useCallback(() => {
+    setIsProfileOpen(true);
+    setIsDropdownOpen(false);
+  }, []);
+
+  const handleCloseProfile = useCallback(() => {
+    setIsProfileOpen(false);
+  }, []);
+
   // Get status color based on current status
   const getStatusColor = useCallback((status: string) => {
     switch (status) {
@@ -215,33 +226,46 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   }, [dropdownPosition, handleConfig, handleLogout, isDarkMode]);
 
   return (
-    <div className={styles.avatarContainer}>
-      <button
-        ref={buttonRef}
-        className={styles.avatarButton}
-        onClick={() => setIsDropdownOpen((prev) => !prev)}
-        aria-haspopup="true"
-        aria-expanded={isDropdownOpen}
-        aria-label="Abrir menú de usuario"
-      >
-        {profilePhoto ? (
-          <Image
-            src={profilePhoto}
-            alt="Profile"
-            width={40}
-            height={40}
-            className={styles.avatarImage}
+    <>
+      <div className={styles.avatarContainer}>
+        <button
+          ref={buttonRef}
+          className={styles.avatarButton}
+          onClick={() => setIsDropdownOpen((prev) => !prev)}
+          onDoubleClick={handleProfileClick}
+          aria-haspopup="true"
+          aria-expanded={isDropdownOpen}
+          aria-label="Abrir menú de usuario"
+          title="Clic para menú, doble clic para ver perfil"
+        >
+          {profilePhoto ? (
+            <Image
+              src={profilePhoto}
+              alt="Profile"
+              width={40}
+              height={40}
+              className={styles.avatarImage}
+            />
+          ) : (
+            <div className={styles.avatarPlaceholder}>U</div>
+          )}
+          <div
+            className={styles.statusDot}
+            style={{ backgroundColor: getStatusColor(onlineStatus) }}
           />
-        ) : (
-          <div className={styles.avatarPlaceholder}>U</div>
-        )}
-        <div
-          className={styles.statusDot}
-          style={{ backgroundColor: getStatusColor(onlineStatus) }}
+        </button>
+        {isDropdownOpen && portalContainer && createPortal(dropdownMenuContent, portalContainer)}
+      </div>
+      
+      {/* ProfileCard Modal */}
+      {isProfileOpen && user && (
+        <ProfileCard
+          userId={user.id}
+          imageUrl={profilePhoto || ''}
+          onClose={handleCloseProfile}
         />
-      </button>
-      {isDropdownOpen && portalContainer && createPortal(dropdownMenuContent, portalContainer)}
-    </div>
+      )}
+    </>
   );
 };
 

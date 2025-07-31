@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
 import styles from './UserSwiperSkeletonLoader.module.scss';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface UserSwiperSkeletonLoaderProps {
   className?: string;

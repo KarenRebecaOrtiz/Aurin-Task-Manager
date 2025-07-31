@@ -1,0 +1,215 @@
+/**
+ * SimpleTooltip Styles
+ * 
+ * Estilos SCSS limpios para tooltips sin dependencias externas.
+ * Utiliza CSS transforms para rendimiento óptimo y soporte completo para temas.
+ */
+
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.tooltipContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 9999;
+  padding: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.8);
+  animation: tooltipFadeIn 0.15s ease-out forwards;
+
+  // Posicionamiento según posición
+  &.top {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px) scale(0.8);
+    margin-bottom: 8px;
+
+    &.tooltipVisible {
+      transform: translateX(-50%) translateY(-8px) scale(1);
+    }
+  }
+
+  &.bottom {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px) scale(0.8);
+    margin-top: 8px;
+
+    &.tooltipVisible {
+      transform: translateX(-50%) translateY(8px) scale(1);
+    }
+  }
+
+  &.left {
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(-8px) scale(0.8);
+    margin-right: 8px;
+
+    &.tooltipVisible {
+      transform: translateY(-50%) translateX(-8px) scale(1);
+    }
+  }
+
+  &.right {
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(8px) scale(0.8);
+    margin-left: 8px;
+
+    &.tooltipVisible {
+      transform: translateY(-50%) translateX(8px) scale(1);
+    }
+  }
+}
+
+.tooltipContent {
+  padding: 8px 12px;
+  border-radius: $radius-md;
+  font-size: calc($text-sm * 0.8); // 20% más pequeño como solicitado
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 200px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+
+  // Tema claro (por defecto) - colores invertidos como solicitado
+  background: $color-bg-light;
+  color: $color-text-primary;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+
+  // Tema oscuro
+  @include dark-mode {
+    background: $color-bg-dark-secondary;
+    color: $color-text-dark-primary;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 
+      0 4px 24px rgba(0, 0, 0, 0.15),
+      0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.tooltipArrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+
+  &.arrow-top {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0 6px;
+    border-color: $color-bg-light transparent transparent transparent;
+
+    @include dark-mode {
+      border-color: $color-bg-dark-secondary transparent transparent transparent;
+    }
+  }
+
+  &.arrow-bottom {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent $color-bg-light transparent;
+
+    @include dark-mode {
+      border-color: transparent transparent $color-bg-dark-secondary transparent;
+    }
+  }
+
+  &.arrow-left {
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 0 6px 6px;
+    border-color: transparent transparent transparent $color-bg-light;
+
+    @include dark-mode {
+      border-color: transparent transparent transparent $color-bg-dark-secondary;
+    }
+  }
+
+  &.arrow-right {
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 6px 6px 0;
+    border-color: transparent $color-bg-light transparent transparent;
+
+    @include dark-mode {
+      border-color: transparent $color-bg-dark-secondary transparent transparent;
+    }
+  }
+}
+
+// Animaciones
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: var(--initial-transform, scale(0.8));
+  }
+  to {
+    opacity: 1;
+    transform: var(--final-transform, scale(1));
+  }
+}
+
+@keyframes tooltipFadeOut {
+  from {
+    opacity: 1;
+    transform: var(--final-transform, scale(1));
+  }
+  to {
+    opacity: 0;
+    transform: var(--initial-transform, scale(0.8));
+  }
+}
+
+// Estados de hover para mejor UX
+.tooltipContainer:hover .tooltip {
+  animation-delay: 0s;
+}
+
+// Responsive adjustments
+@include responsive(sm) {
+  .tooltipContent {
+    font-size: calc($text-xs * 0.9);
+    padding: 6px 10px;
+    max-width: 160px;
+  }
+
+  .tooltipArrow {
+    &.arrow-top,
+    &.arrow-bottom {
+      border-width: 5px 5px 0 5px;
+    }
+
+    &.arrow-left,
+    &.arrow-right {
+      border-width: 5px 0 5px 5px;
+    }
+  }
+}
+
+// Focus states para accesibilidad
+.tooltipContainer:focus-within .tooltip {
+  animation: tooltipFadeIn 0.15s ease-out forwards;
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .tooltipContent {
+    border-width: 2px;
+    border-color: currentColor;
+  }
+}

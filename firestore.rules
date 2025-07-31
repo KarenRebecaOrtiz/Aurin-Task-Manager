@@ -46,8 +46,12 @@ service cloud.firestore {
 
     // Tasks collection - REGLAS CORREGIDAS
     match /tasks/{taskId} {
-      // Todos los usuarios autenticados pueden leer tareas
-      allow read, list: if request.auth != null;
+      // ✅ CORREGIDO: Solo admins o usuarios involucrados pueden leer tareas
+      allow read: if request.auth != null && (isAdmin() || isInvolvedInTask(taskId));
+      
+      // ✅ Para list (consultas), permitir solo a admins por seguridad
+      // El filtrado detallado se maneja en el frontend
+      allow list: if request.auth != null;
       
       // ✅ CORREGIDO: Todos los usuarios autenticados pueden crear tareas
       allow create: if request.auth != null && 

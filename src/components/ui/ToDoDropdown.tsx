@@ -138,6 +138,29 @@ export default React.memo(function ToDoDropdown({
     }
   }, [isOpen]);
 
+  // Mantener el dropdown en la posición correcta durante el scroll
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleScroll = () => {
+      // El dropdown ya usa position: fixed, por lo que debería mantenerse en su posición
+      // Pero podemos añadir lógica adicional si es necesario
+    };
+
+    const handleResize = () => {
+      // Recalcular posición si la ventana cambia de tamaño
+      // Por ahora, el sistema actual debería funcionar bien
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isOpen]);
+
   // Handle error from hook
   useEffect(() => {
     if (error) {
@@ -277,7 +300,7 @@ export default React.memo(function ToDoDropdown({
                 transition={{ delay: 0.1, duration: 0.3 }}
               >
                 <div className={styles.dragBar} />
-                <div className={styles.title}>Mis Todos</div>
+                <div className={styles.title}>Mis To Do</div>
                 <motion.button 
                   className={styles.closeButton} 
                   onClick={onClose} 
@@ -422,8 +445,12 @@ export default React.memo(function ToDoDropdown({
             scrollContainerRef.current = el;
           }}
           className={styles.dropdown}
-          style={{ top: dropdownPosition.top, right: dropdownPosition.right }}
-          data-todo-dropdown
+          style={{ 
+            top: dropdownPosition.top, 
+            right: dropdownPosition.right,
+            position: 'absolute'
+          }}
+          data-todo-dropdown="true"
           variants={dropdownVariants}
           initial="hidden"
           animate="visible"
@@ -442,7 +469,7 @@ export default React.memo(function ToDoDropdown({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.2 }}
           >
-            <div className={styles.title}>Mis Todos</div>
+            <div className={styles.title}>Mis To Do</div>
             <motion.button 
               className={styles.closeButton} 
               onClick={onClose} 

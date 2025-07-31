@@ -23,7 +23,7 @@ export const useFilteredCollaborators = (
         
         return matchesSearch && notExcluded;
       })
-      .slice(0, 10); // Limitar a 10 resultados para performance
+      .slice(0, 50); // Aumentado a 50 resultados para mostrar más opciones
   }, [users, searchQuery, excludedUserIds]);
 };
 
@@ -39,7 +39,7 @@ export const useFilteredLeaders = (searchQuery: string) => {
         return !searchQuery || 
           user.fullName.toLowerCase().includes(searchQuery.toLowerCase());
       })
-      .slice(0, 10); // Limitar a 10 resultados para performance
+      .slice(0, 50); // Aumentado a 50 resultados para mostrar más opciones
   }, [users, searchQuery]);
 };
 
@@ -55,7 +55,7 @@ export const useFilteredClients = (searchQuery: string) => {
         return !searchQuery || 
           client.name.toLowerCase().includes(searchQuery.toLowerCase());
       })
-      .slice(0, 10); // Limitar a 10 resultados para performance
+      .slice(0, 50); // Aumentado a 50 resultados para mostrar más opciones
   }, [clients, searchQuery]);
 };
 

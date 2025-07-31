@@ -30,6 +30,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     if (savedTheme === 'dark') {
       setIsDarkMode(true);
       document.body.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.classList.add('dark');
+      document.body.style.setProperty('--theme-mode', 'dark');
+    } else {
+      document.body.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.classList.remove('dark');
+      document.body.style.setProperty('--theme-mode', 'light');
     }
   }, []);
 
@@ -37,11 +45,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     // Actualizar el tema en el body y localStorage
     if (isDarkMode) {
       document.body.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
     } else {
       document.body.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
+    
+    // Forzar re-render de estilos
+    document.body.style.setProperty('--theme-mode', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
   const toggleTheme = useCallback(() => {

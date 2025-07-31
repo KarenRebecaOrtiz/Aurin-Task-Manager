@@ -80,7 +80,7 @@ const Footer: React.FC = () => {
   };
 
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer}style={{zIndex: 1000}}>
       <div className={styles.info}>
         <p>
           Hecho con cariño para facilitarte el día <span>· v1.1.0 💛</span>

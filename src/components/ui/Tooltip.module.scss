@@ -1,0 +1,43 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/components' as *;
+
+.tooltipContent {
+  position: fixed;
+  z-index: 9999;
+  max-width: 280px;
+  border-radius: $radius-lg;
+  border: 1px solid $color-border-dark;
+  background: $color-bg-dark-secondary;
+  padding: $spacing-xs $spacing-sm;
+  font-size: calc($text-sm * 0.8);
+  color: $color-text-dark-primary;
+  box-shadow: $shadow-simple-dark;
+  user-select: none;
+  pointer-events: none;
+
+  @include dark-mode {
+    background: $color-bg-light;
+    border-color: $color-border-light;
+    color: $color-text-primary;
+    box-shadow: $shadow-simple-light;
+  }
+}
+
+.tooltipArrow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid $color-bg-dark-secondary;
+  filter: drop-shadow(0 1px 0 $color-border-dark);
+
+  @include dark-mode {
+    border-top-color: $color-bg-light;
+    filter: drop-shadow(0 1px 0 $color-border-light);
+  }
+}

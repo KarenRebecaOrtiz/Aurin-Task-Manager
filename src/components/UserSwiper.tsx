@@ -5,6 +5,7 @@ import Splide from "@splidejs/splide";
 import "@splidejs/splide/css/core";
 import styles from "./UserSwiper.module.scss";
 import UserAvatar from "./ui/UserAvatar";
+import LoadingDots from "./ui/LoadingDots";
 import { useUserSwiperData, useUserSwiperActions, User } from "@/stores/userSwiperStore";
 import { useUserSwiperSync } from "@/hooks/useUserSwiperSync";
 
@@ -62,7 +63,7 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   if (isLoading) {
     return (
       <div className={styles.loading}>
-        <div className={styles.loader}>Cargando...</div>
+        <LoadingDots text="Cargando usuarios" size="md" />
       </div>
     );
   }
@@ -78,6 +79,10 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
       aria-label="Usuarios activos"
     >
       <div className="splide__track">
+        {/* Vignette elements */}
+        <div className={styles.vignetteLeft}></div>
+        <div className={styles.vignetteRight}></div>
+        
         <ul className="splide__list">
           {clerkUsers.map((user) => (
             <li className="splide__slide" key={user.id}>

@@ -7,7 +7,12 @@
     @include flex-column;
     gap: $spacing-2xl;
     border-radius: 16px 26px 0px 0px;
+}
 
+:global(body.dark) .container,
+:global([data-theme="dark"]) .container {
+    background: $color-bg-dark !important;
+    color: $color-text-dark-primary !important;
 }
 
 .header {

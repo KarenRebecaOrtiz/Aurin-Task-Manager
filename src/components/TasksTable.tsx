@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
@@ -14,7 +14,7 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import UserSwiper from '@/components/UserSwiper';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
-import { getLastActivityTimestamp, archiveTask } from '@/lib/taskUtils';
+import { getLastActivityTimestamp, archiveTask, unarchiveTask } from '@/lib/taskUtils';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
@@ -238,6 +238,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Estado para visibilidad de columnas
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'clientId', 'name', 'notificationDot', 'assignedTo', 'status', 'priority', 'action'
+  ]);
+
   const clientDropdownRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -257,10 +262,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     }
   }, [effectiveTasks]);
 
-  // Inicializar filteredTasks cuando cambien las tareas efectivas
-  useEffect(() => {
-    setFilteredTasks(effectiveTasks);
-  }, [effectiveTasks, setFilteredTasks]);
+  // ARREGLADO: No sobrescribir filteredTasks con todas las tareas
+  // El filtrado se maneja en memoizedFilteredTasks y se aplica en el useEffect de abajo
+  // useEffect(() => {
+  //   setFilteredTasks(effectiveTasks);
+  // }, [effectiveTasks, setFilteredTasks]);
 
   // Usar el hook de notificaciones simplificado
   const { getUnreadCount, markAsViewed } = useTaskNotifications();
@@ -279,20 +285,20 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   useEffect(() => {
     if (!user?.id || effectiveClients.length > 0) return;
 
-    console.log('[TasksTable] Setting up clients listener');
+    // Setting up clients listener
     setIsLoadingClients(true);
 
     const clientsQuery = query(collection(db, 'clients'));
     const unsubscribeClients = onSnapshot(
       clientsQuery,
       (snapshot) => {
-        const clientsData: Client[] = snapshot.docs.map((doc) => ({
+        snapshot.docs.map((doc) => ({
           id: doc.id,
           name: doc.data().name || '',
           imageUrl: doc.data().imageUrl || '/empty-image.png',
         }));
 
-        console.log('[TasksTable] Clients onSnapshot update:', clientsData.length);
+        // Clients updated
         
         // Actualizar estado directamente sin caché
         setIsLoadingClients(false);
@@ -311,11 +317,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   // Users are now managed centrally by useSharedTasksState
   // No independent user fetching needed
 
-  useEffect(() => {
-    // Inicializar filteredTasks directamente con effectiveTasks
-    // NO comparar con JSON.stringify ya que esto interfiere con los filtros
-    setFilteredTasks(effectiveTasks);
-  }, [effectiveTasks, setFilteredTasks]);
+  // REMOVIDO: Este useEffect estaba sobrescribiendo el filtrado cada vez que cambiaban los users
+  // El filtrado se maneja en memoizedFilteredTasks y se aplica en el useEffect de la línea 392-394
 
   const getInvolvedUserIds = useCallback((task: Task) => {
     const ids = new Set<string>();
@@ -346,8 +349,25 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     setIsUserDropdownOpen(false);
   }, [setUserFilter, setIsUserDropdownOpen]);
 
+  // Función para manejar cambios de visibilidad de columnas
+  const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+    setVisibleColumns(prev => {
+      if (visible) {
+        // Agregar columna si no está presente
+        return prev.includes(columnKey) ? prev : [...prev, columnKey];
+      } else {
+        // Remover columna
+        return prev.filter(key => key !== columnKey);
+      }
+    });
+    
+    console.log(`[TasksTable] Column ${columnKey} visibility changed to: ${visible}`);
+  }, []);
+
   const memoizedFilteredTasks = useMemo(() => {
-    return effectiveTasks.filter((task) => {
+    // Filtering tasks...
+    
+    const filtered = effectiveTasks.filter((task) => {
       // Excluir tareas archivadas
       if (task.archived) {
         return false;
@@ -380,6 +400,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
       return matchesSearch && matchesPriority && matchesClient && matchesUser;
     });
+    
+    // Filtering complete
+    
+    return filtered;
   }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
   // Crear un ID estable para las tareas filtradas
@@ -395,7 +419,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   // Función para manejar el clic en una fila de tarea
   const handleTaskRowClick = async (task: Task) => {
-    console.log('[TasksTable] handleTaskRowClick called', { taskId: task.id, timestamp: new Date().toISOString() });
+    console.log('🔥 [TasksTable] TASK CLICKED - Before sidebar open:', { 
+      taskId: task.id, 
+      currentFilteredTasksCount: filteredTasks.length,
+      effectiveTasksCount: effectiveTasks.length,
+      timestamp: new Date().toISOString() 
+    });
     
     // Usar los action handlers configurados en TasksTableContainer
     const { openChatSidebar } = useTasksTableActionsStore.getState();
@@ -405,7 +434,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     
     // Abrir el sidebar inmediatamente (sin esperar markAsViewed)
     openChatSidebar(task, clientName);
-            // Debug logging disabled to reduce console spam
+    
+    console.log('🔥 [TasksTable] TASK CLICKED - After sidebar open:', { 
+      taskId: task.id,
+      currentFilteredTasksCount: filteredTasks.length,
+      effectiveTasksCount: effectiveTasks.length,
+      timestamp: new Date().toISOString() 
+    });
     
     // Marcar la tarea como vista después de abrir el sidebar (no bloquear)
     markAsViewed(task.id).catch(error => {
@@ -506,6 +541,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isUserDropdownOpen, setActionMenuOpenId, setIsPriorityDropdownOpen, setIsClientDropdownOpen, setIsUserDropdownOpen]);
 
   const handleSort = (key: string) => {
+    if (!key || key === '') {
+      // Remover ordenamiento
+      setSortKey('');
+      setSortDirection('asc');
+      console.log('[TasksTable] Removed sorting');
+      return;
+    }
+    
     if (key === sortKey) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -517,6 +560,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   const sortedTasks = useMemo(() => {
     const sorted = [...filteredTasks];
+    
+    // Si no hay sortKey o está vacío, retornar sin ordenar
+    if (!sortKey || sortKey === '') {
+      return sorted;
+    }
+    
     if (sortKey === 'lastActivity') {
       sorted.sort((a, b) => {
         const activityA = getLastActivityTimestamp(a);
@@ -531,19 +580,50 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           ? clientA.localeCompare(clientB)
           : clientB.localeCompare(clientA);
       });
+    } else if (sortKey === 'notificationDot') {
+      // Ordenamiento por número de notificaciones
+      sorted.sort((a, b) => {
+        const countA = getUnreadCount(a);
+        const countB = getUnreadCount(b);
+        return sortDirection === 'asc' ? countA - countB : countB - countA;
+      });
+    } else if (sortKey === 'assignedTo') {
+      // Ordenamiento por número de asignados y luego alfabético por primer asignado
+      sorted.sort((a, b) => {
+        const assignedCountA = (a.AssignedTo?.length || 0) + (a.LeadedBy?.length || 0);
+        const assignedCountB = (b.AssignedTo?.length || 0) + (b.LeadedBy?.length || 0);
+        
+        if (assignedCountA !== assignedCountB) {
+          return sortDirection === 'asc' ? assignedCountA - assignedCountB : assignedCountB - assignedCountA;
+        }
+        
+        // En caso de empate, ordenar por nombre del primer asignado
+        const firstAssignedA = effectiveUsers.find(u => a.AssignedTo?.[0] === u.id || a.LeadedBy?.[0] === u.id)?.fullName || '';
+        const firstAssignedB = effectiveUsers.find(u => b.AssignedTo?.[0] === u.id || b.LeadedBy?.[0] === u.id)?.fullName || '';
+        
+        return sortDirection === 'asc'
+          ? firstAssignedA.localeCompare(firstAssignedB)
+          : firstAssignedB.localeCompare(firstAssignedA);
+      });
     } else if (sortKey === 'status') {
-      const statusOrder = ['Por Iniciar', 'Diseño', 'Desarrollo', 'En Proceso', 'Finalizado', 'Backlog', 'Cancelado'];
+      // Ordenamiento personalizado para estados
+      const statusOrder = ['Por Iniciar', 'En Proceso', 'En Revisión', 'Finalizado', 'Archivado', 'Cancelado'];
       sorted.sort((a, b) => {
         const indexA = statusOrder.indexOf(normalizeStatus(a.status));
         const indexB = statusOrder.indexOf(normalizeStatus(b.status));
-        return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
+        const validIndexA = indexA === -1 ? statusOrder.length : indexA;
+        const validIndexB = indexB === -1 ? statusOrder.length : indexB;
+        return sortDirection === 'asc' ? validIndexA - validIndexB : validIndexB - validIndexA;
       });
     } else if (sortKey === 'priority') {
+      // Ordenamiento personalizado para prioridades
       const priorityOrder = ['Alta', 'Media', 'Baja'];
       sorted.sort((a, b) => {
         const indexA = priorityOrder.indexOf(a.priority);
         const indexB = priorityOrder.indexOf(b.priority);
-        return sortDirection === 'asc' ? indexA - indexB : indexB - indexA;
+        const validIndexA = indexA === -1 ? priorityOrder.length : indexA;
+        const validIndexB = indexB === -1 ? priorityOrder.length : indexB;
+        return sortDirection === 'asc' ? validIndexA - validIndexB : validIndexB - validIndexA;
       });
     } else if (sortKey === 'createdAt') {
       sorted.sort((a, b) => {
@@ -551,7 +631,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         const dateB = new Date(b.createdAt).getTime();
         return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
       });
+    } else if (sortKey === 'name') {
+      // Ordenamiento alfabético para nombres de tareas
+      sorted.sort((a, b) =>
+        sortDirection === 'asc'
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name)
+      );
     } else {
+      // Ordenamiento genérico para otras columnas
       sorted.sort((a, b) =>
         sortDirection === 'asc'
           ? String(a[sortKey as keyof Task]).localeCompare(String(b[sortKey as keyof Task]))
@@ -559,7 +647,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       );
     }
     return sorted;
-  }, [filteredTasks, sortKey, sortDirection, effectiveClients]);
+  }, [filteredTasks, sortKey, sortDirection, effectiveClients, effectiveUsers, getUnreadCount]);
 
   const animateClick = (element: HTMLElement) => {
     gsap.to(element, {
@@ -624,42 +712,50 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       label: 'Cuenta',
       width: '20%',
       mobileVisible: false,
+      sortable: true,
     },
     {
       key: 'name',
       label: 'Tarea',
       width: '60%', 
       mobileVisible: true,
+      sortable: true,
     },
     {
       key: 'notificationDot',
       label: '',
       width: '20%',
       mobileVisible: true,
+      sortable: true,
+      notificationCount: true,
     },
     {
       key: 'assignedTo',
       label: 'Asignados',
       width: '20%',
       mobileVisible: false,
+      sortable: true,
     },
     {
       key: 'status',
       label: 'Estado',
       width: '30%', 
       mobileVisible: false,
+      sortable: true,
     },
     {
       key: 'priority',
       label: 'Prioridad',
       width: '10%',
       mobileVisible: false,
+      sortable: true,
     },
     {
       key: 'action',
       label: 'Acciones',
       width: '10%',
       mobileVisible: false,
+      sortable: false, // Las acciones no son ordenables
     },
   ];
 
@@ -782,7 +878,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       return {
         ...col,
         render: (task: Task) => {
-          if (isAdmin) {
+          const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
+          if (!shouldShowActionMenu) {
+            console.log('[TasksTable] ActionMenu hidden for task:', {
+              taskId: task.id,
+              taskCreatedBy: task.CreatedBy,
+              currentUserId: userId,
+              isAdmin,
+              isCreator: task.CreatedBy === userId,
+              reason: `User is neither admin (${isAdmin}) nor creator (${task.CreatedBy === userId})`
+            });
+          }
+          if (shouldShowActionMenu) {
             return (
               <ActionMenu
                 task={task}
@@ -835,12 +942,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                 }}
               />
             );
-          } else {
-            console.log('❌ [DEBUG] Not rendering action menu - user is not admin:', {
-              taskId: task.id,
-              isAdmin,
-              userId
-            });
           }
           return null;
         },
@@ -893,20 +994,41 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   // Función para deshacer
   const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
-    if (!undoItem || !userId || !isAdmin) {
+    if (!undoItem || !userId) {
       console.error('Cannot undo: missing required data');
+      return;
+    }
+    
+    // ✅ CORREGIDO: Permitir deshacer a admins Y creadores de la tarea
+    const isTaskCreator = undoItem.task.CreatedBy === userId;
+    if (!isAdmin && !isTaskCreator) {
+      console.error('Cannot undo: user not authorized', {
+        isAdmin,
+        taskCreatedBy: undoItem.task.CreatedBy,
+        currentUserId: userId
+      });
       return;
     }
 
     try {
       if (undoItem.action === 'archive') {
-        // Desarchivar la tarea
-        await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
+        // Desarchivar la tarea (deshacer un archivado)
+        await unarchiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
         
         // Actualizar estado local
         setFilteredTasks(filteredTasks.map((t) => 
           t.id === undoItem.task.id 
             ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
+            : t
+        ));
+      } else if (undoItem.action === 'unarchive') {
+        // Archivar la tarea (deshacer un desarchivado)
+        await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
+        
+        // Actualizar estado local
+        setFilteredTasks(filteredTasks.map((t) => 
+          t.id === undoItem.task.id 
+            ? { ...t, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }
             : t
         ));
       }
@@ -1390,6 +1512,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         }}
         getRowClassName={getRowClassName}
         emptyStateType="tasks"
+        enableColumnVisibility={true}
+        visibleColumns={visibleColumns}
+        onColumnVisibilityChange={handleColumnVisibilityChange}
       />
       
       {/* Undo Notification */}
@@ -1429,7 +1554,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                 borderRadius: '50%',
                 animation: 'pulse 2s infinite'
               }} />
-              <span>Tarea archivada</span>
+              <span>
+                {undoStack[undoStack.length - 1]?.action === 'unarchive' 
+                  ? 'Tarea desarchivada' 
+                  : 'Tarea archivada'}
+              </span>
             </div>
             <button
               onClick={() => {

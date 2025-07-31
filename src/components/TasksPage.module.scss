@@ -5,11 +5,14 @@
 // 🔮 TASKS PAGE - OPTIMIZED WITH NEW SYSTEM
 // =================================================================
 
+// Smooth scrolling global styles - moved to globals.scss
+
 .container {
   padding: 1.3rem 0px;
   max-width: 1200px;
   margin: 0 auto;
   z-index: 1;
+  scroll-behavior: smooth;
 
   &.dark {
     background: $color-bg-dark;
@@ -25,6 +28,7 @@
   font-size: $text-base;
   font-family: $font-family-primary;
   font-weight: $font-weight-normal;
+  scroll-behavior: smooth;
 
   &.dark {
     color: $color-text-dark-primary;

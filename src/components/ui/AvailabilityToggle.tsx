@@ -1,11 +1,24 @@
+/**
+ * AvailabilityToggle Component
+ * 
+ * Componente de toggle para cambiar entre estados "Disponible" y "Ocupado".
+ * Forma parte de una aplicación web React/Next.js que gestiona disponibilidad de usuarios.
+ * 
+ * Funcionalidades:
+ * - Toggle visual entre Disponible (verde) y Ocupado (rojo)
+ * - Sincronización automática con Firestore
+ * - Estados de carga y disabled apropiados
+ * - Responsive design con SCSS
+ */
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
 import styles from './AvailabilityToggle.module.scss';
 
 const AvailabilityToggle = () => {
-  const { currentStatus, updateStatus } = useOnlineStatus();
+  const { currentStatus, updateStatus, isLoading: hookLoading } = useAvailabilityStatus();
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -15,21 +28,22 @@ const AvailabilityToggle = () => {
   }, []);
 
   const handleToggle = async () => {
-    if (isLoading || !mounted) return;
+    if (isLoading || hookLoading || !mounted) return;
 
     setIsLoading(true);
     try {
+      // Solo permitir toggle entre Disponible y Ocupado
       const newStatus = currentStatus === 'Disponible' ? 'Ocupado' : 'Disponible';
       await updateStatus(newStatus);
     } catch (error) {
-      console.error('Error updating availability status:', error);
+      console.error('[AvailabilityToggle] Error updating status:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // No renderizar hasta que esté montado en el cliente
-  if (!mounted) {
+  // No renderizar hasta que esté montado en el cliente o esté cargando
+  if (!mounted || hookLoading) {
     return (
       <div className={styles.container}>
         <div className={styles.switch}>
@@ -49,6 +63,7 @@ const AvailabilityToggle = () => {
   }
 
   const isAvailable = currentStatus === 'Disponible';
+  const isToggleDisabled = isLoading || hookLoading || currentStatus === 'Fuera';
 
   return (
     <div className={styles.container}>
@@ -58,7 +73,8 @@ const AvailabilityToggle = () => {
         className={styles.checkbox}
         checked={!isAvailable}
         onChange={handleToggle}
-        disabled={isLoading}
+        disabled={isToggleDisabled}
+        title={isToggleDisabled ? 'No disponible cuando está fuera de línea' : 'Cambiar entre Disponible y Ocupado'}
       />
       <label htmlFor="availability-toggle" className={styles.switch}>
         <svg

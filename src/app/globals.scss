@@ -5,10 +5,47 @@
   box-sizing: border-box;
 }
 
+// Smooth scrolling global styles
+html {
+  scroll-behavior: smooth;
+}
+
 body.no-scroll {
   overflow: hidden;
   position: fixed;
   width: 100%;
+}
+
+// Dark mode global overrides para asegurar que se apliquen
+body.dark,
+html.dark,
+[data-theme="dark"] {
+  background: #18181b !important;
+  color: #e4e4e7 !important;
+  
+  // Forzar estilos de tabla en dark mode
+  .TasksTable_container__q_pIb {
+    background: #18181b !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  .Table_table__dP6Xg {
+    background: #18181b !important;
+    box-shadow: none !important;
+  }
+  
+  .Table_row__ah8hJ {
+    background: #18181b !important;
+    border: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+  
+  .Table_row__ah8hJ:hover {
+    background: #27272a !important;
+  }
 }
 
 /* app/globals.css */
@@ -61,6 +98,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
 
   &::before {
     content: '';

@@ -13,8 +13,6 @@ import FailAlert from './FailAlert';
 import clientStyles from './ClientsTable.module.scss';
 
 export default function TasksPageModals() {
-  console.log('[TasksPageModals] Render - Checking modal states');
-  
   const { user } = useUser();
   
   // Optimized selectors to prevent unnecessary re-renders
@@ -30,20 +28,6 @@ export default function TasksPageModals() {
   const showFailAlert = useTasksPageStore(useShallow(state => state.showFailAlert));
   const successMessage = useTasksPageStore(useShallow(state => state.successMessage));
   const failMessage = useTasksPageStore(useShallow(state => state.failMessage));
-  
-  console.log('[TasksPageModals] Modal states:', {
-    deleteTarget,
-    isDeletePopupOpen,
-    isDeleteClientOpen,
-    isConfirmExitOpen,
-    isClientSidebarOpen,
-    isClientLoading,
-    deleteConfirm,
-    showSuccessAlert,
-    showFailAlert,
-    successMessage,
-    failMessage
-  });
 
   // Action handlers
   const handleConfirmExit = () => {

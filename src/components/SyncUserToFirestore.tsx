@@ -20,33 +20,19 @@ export default function SyncUserToFirestore() {
 
   useEffect(() => {
     if (!userId || !user || synced || retryCount > maxRetries) {
-      console.log('[SyncUserToFirestore] Skipping sync:', {
-        userId,
-        hasUser: !!user,
-        synced,
-        retryCount,
-        maxRetries,
-      });
+      // Skipping sync
       return;
     }
 
     const syncUser = async () => {
       try {
-        console.log('[SyncUserToFirestore] Starting user sync for:', {
-          userId,
-          clerkUserId: user.id,
-          email: user.emailAddresses[0]?.emailAddress,
-          publicMetadata: user.publicMetadata,
-        });
+        // Starting user sync
 
         const token = await getToken({ template: 'integration_firebase' });
         if (!token) {
           throw new Error('Failed to get Firebase token');
         }
-        console.log('[SyncUserToFirestore] Firebase token obtained:', {
-          userId,
-          tokenLength: token.length,
-        });
+        // Firebase token obtained
 
         // Add a small delay to ensure Clerk is ready
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -98,11 +84,8 @@ export default function SyncUserToFirestore() {
           console.error('[SyncUserToFirestore] User document not found after sync:', userId);
         }
 
-        const idToken = await userCredentials.user.getIdToken();
-        console.log('[SyncUserToFirestore] Firebase ID token obtained:', {
-          userId,
-          tokenLength: idToken.length,
-        });
+        await userCredentials.user.getIdToken();
+        // Firebase ID token obtained
 
         setSynced(true);
         setRetryCount(0);

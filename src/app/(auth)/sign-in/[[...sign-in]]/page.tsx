@@ -27,7 +27,7 @@ export default function SignInPage() {
                 fontSize: '14px',
               },
               inputPlaceholder: {
-                color: '#999999',
+                color: '#ffffff',
               },
               card: {
                 backgroundColor: '#121212',
@@ -52,7 +52,6 @@ export default function SignInPage() {
                 color: 'white !important',
               },
               formFieldInput: {
-                backgroundColor: '#121212',
                 border: '1px solid #ffffff40',
                 color: 'white !important',
               },

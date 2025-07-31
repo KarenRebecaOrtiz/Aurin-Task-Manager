@@ -37,7 +37,7 @@
   }
 
   @media (max-width: 1024px) {
-    max-width: calc(50% - #{$spacing-lg});
+    /* max-width: calc(50% - #{$spacing-lg}); */
   }
 
   @media (max-width: 768px) {

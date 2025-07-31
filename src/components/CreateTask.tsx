@@ -1,36 +1,51 @@
 'use client';
 
-import { useState, useEffect, useRef, memo, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { doc, collection, setDoc, addDoc, onSnapshot } from "firebase/firestore";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { motion, AnimatePresence } from "framer-motion";
-
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
-import { z } from "zod";
-import { useForm, Controller, Control, FieldValues } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import { toast } from "@/components/ui/use-toast";
 import { useFormPersistence } from "@/components/ui/use-form-persistence";
 import { db } from "@/lib/firebase";
 import { useAuth } from '@/contexts/AuthContext'; 
+import { useDataStore } from '@/stores/dataStore';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
-import { useDataStore } from '@/stores/dataStore';
-import { useShallow } from 'zustand/react/shallow';
-import { useFilteredCollaborators, useFilteredLeaders, useFilteredClients, useAnimationOptimizations } from '@/hooks/useCreateTaskOptimizations';
-import { useCreateTaskDropdowns, useCreateTaskSearch, useCreateTaskAlerts, useCreateTaskGeneral } from '@/stores/createTaskStore';
+import { z } from "zod";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { motion, AnimatePresence } from "framer-motion";
+import SearchableDropdown from "@/components/ui/SearchableDropdown";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Esquema base sin validación condicional
+const debounce = <T extends unknown[]>(func: (...args: T) => void, delay: number) => {
+  let timer: NodeJS.Timeout | null = null;
+  return (...args: T) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      func(...args);
+      timer = null;
+    }, delay);
+  };
+};
+
+interface Client {
+  id: string;
+  name: string;
+  imageUrl: string;
+  projects: string[];
+  createdBy: string;
+}
+
 const baseFormSchema = z.object({
   clientInfo: z.object({
     clientId: z.string().min(1, { message: "Selecciona una cuenta*" }),
@@ -49,11 +64,10 @@ const baseFormSchema = z.object({
   }),
   teamInfo: z.object({
     LeadedBy: z.array(z.string()).min(1, { message: "Selecciona al menos un líder*" }),
-    AssignedTo: z.array(z.string()),
+    AssignedTo: z.array(z.string()).optional(),
   }),
 });
 
-// Función para crear esquema dinámico basado en includeMembers
 const createFormSchema = (includeMembers: boolean) => {
   return baseFormSchema.refine(
     (data) => {
@@ -63,7 +77,7 @@ const createFormSchema = (includeMembers: boolean) => {
       return true;
     },
     {
-      message: "Debes seleccionar al menos un colaborador cuando incluyes miembros",
+      message: "Debes seleccionar al menos un colaborador",
       path: ["teamInfo", "AssignedTo"],
     }
   );
@@ -112,98 +126,10 @@ interface CreateTaskProps {
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
   onClientAlertChange?: (alert: { type: "success" | "fail"; message?: string; error?: string } | null) => void;
-  onTaskCreated?: () => void; // Nueva prop para manejar cuando se crea exitosamente la tarea
+  onTaskCreated?: () => void;
   onShowSuccessAlert?: (message: string) => void;
   onShowFailAlert?: (message: string, error?: string) => void;
 }
-
-// Interfaces necesarias
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-  projects: string[];
-  createdBy: string;
-}
-
-interface DropdownStates {
-  project: boolean;
-  status: boolean;
-  priority: boolean;
-  collaborator: boolean;
-  leader: boolean;
-  client: boolean;
-  startDate: boolean;
-  endDate: boolean;
-}
-
-
-
-// Componentes memoizados para evitar re-renders innecesarios
-const MemoizedTextInput = memo(({ 
-  name, 
-  control, 
-  placeholder, 
-  label, 
-  subtitle,
-  onKeyDown,
-  ...props 
-}: {
-  name: string;
-  control: Control<FieldValues>; // Arreglar tipo any
-  placeholder: string;
-  label: string;
-  subtitle?: string;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  [key: string]: unknown;
-}) => (
-  <div className={styles.formGroup}>
-    <label className={styles.label}>{label}</label>
-    {subtitle && <div className={styles.sectionSubtitle}>{subtitle}</div>}
-    <Controller
-      name={name}
-      control={control}
-      render={({ field }) => ( // Remover fieldState no usado
-        <input
-          className={styles.input}
-          placeholder={placeholder}
-          {...field}
-          onKeyDown={onKeyDown}
-          {...props}
-        />
-      )}
-    />
-  </div>
-));
-
-MemoizedTextInput.displayName = 'MemoizedTextInput';
-
-const MemoizedDropdown = memo(({ 
-  isOpen, 
-  onToggle, 
-  placeholder, 
-  label, 
-  children 
-}: {
-  isOpen: boolean;
-  onToggle: () => void;
-  placeholder: string;
-  label: string;
-  children: React.ReactNode;
-}) => (
-  <div className={styles.formGroup}>
-    <label className={styles.label}>{label}</label>
-    <div className={styles.dropdownContainer}>
-      <div className={styles.dropdownTrigger} onClick={onToggle}>
-        <span>{placeholder}</span>
-        <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-      </div>
-      {isOpen && children}
-    </div>
-  </div>
-));
-
-MemoizedDropdown.displayName = 'MemoizedDropdown';
 
 const CreateTask: React.FC<CreateTaskProps> = ({
   isOpen,
@@ -217,115 +143,74 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   onShowFailAlert,
 }) => {
   const { user } = useUser();
-  const { isAdmin, isLoading } = useAuth(); // Use AuthContext for isAdmin and isLoading
+  const { isAdmin, isLoading } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
+  const users = useDataStore(state => state.users);
   const [isSaving, setIsSaving] = useState(false);
-  // Estados migrados al store optimizado
-  const { dropdownStates, toggleDropdown } = useCreateTaskDropdowns();
-  const { searchStates, setSearchState } = useCreateTaskSearch();
-  const { alertStates, setAlertState } = useCreateTaskAlerts();
-  const { isMounted: storeIsMounted, includeMembers: storeIncludeMembers, setMounted: setStoreMounted, setIncludeMembers: setStoreIncludeMembers } = useCreateTaskGeneral();
-  
-  // Mapear estados del store a variables locales para compatibilidad
-  const isProjectDropdownOpen = dropdownStates.project;
-  const isStatusDropdownOpen = dropdownStates.status;
-  const isPriorityDropdownOpen = dropdownStates.priority;
-  const isCollaboratorDropdownOpen = dropdownStates.collaborator;
-  const isLeaderDropdownOpen = dropdownStates.leader;
-  const isClientDropdownOpen = dropdownStates.client;
-  const isStartDateOpen = dropdownStates.startDate;
-  const isEndDateOpen = dropdownStates.endDate;
-  
-  const searchCollaborator = searchStates.collaborator;
-  const searchLeader = searchStates.leader;
-  const searchClient = searchStates.client;
-  
-  const showSuccessAlert = alertStates.showSuccess;
-  const showFailAlert = alertStates.showFail;
-  const failErrorMessage = alertStates.failMessage;
-  
-  const isMounted = storeIsMounted;
-  const includeMembers = storeIncludeMembers;
-  
-  // Estados de posición mantenidos localmente por ahora
-  const [projectDropdownPosition, setProjectDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+
+
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
+
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+  const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+
   const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-  const [collaboratorDropdownPosition, setCollaboratorDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-  const [leaderDropdownPosition, setLeaderDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-  const [clientDropdownPosition, setClientDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+
   const [startDatePosition, setStartDatePosition] = useState<{ top: number; left: number } | null>(null);
   const [endDatePosition, setEndDatePosition] = useState<{ top: number; left: number } | null>(null);
+
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showFailAlert, setShowFailAlert] = useState(false);
+  const [failErrorMessage, setFailErrorMessage] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+  const [includeMembers, setIncludeMembers] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const projectDropdownRef = useRef<HTMLDivElement>(null);
+
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
-  const collaboratorInputRef = useRef<HTMLInputElement>(null);
-  const leaderInputRef = useRef<HTMLInputElement>(null);
-  const clientInputRef = useRef<HTMLInputElement>(null);
+
   const startDateInputRef = useRef<HTMLDivElement>(null);
   const endDateInputRef = useRef<HTMLDivElement>(null);
   const startDatePopperRef = useRef<HTMLDivElement>(null);
   const endDatePopperRef = useRef<HTMLDivElement>(null);
-  const projectDropdownPopperRef = useRef<HTMLDivElement>(null);
+
   const statusDropdownPopperRef = useRef<HTMLDivElement>(null);
   const priorityDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const collaboratorDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const leaderDropdownPopperRef = useRef<HTMLDivElement>(null);
-  const clientDropdownPopperRef = useRef<HTMLDivElement>(null);
 
-  // Consumir users del store global en lugar de hacer fetch directo
-  const { users } = useDataStore(
-    useShallow((state) => ({
-      users: state.users,
-    }))
-  );
-
-  // Memoizar el resolver para evitar recrearlo constantemente
-  const formResolver = useMemo(() => {
-    return zodResolver(createFormSchema(includeMembers));
-  }, [includeMembers]);
-
-  // Memoizar defaultValues para evitar recrearlos
-  const memoizedDefaultValues = useMemo(() => defaultValues, []);
 
   const form = useForm<FormValues>({
-    resolver: formResolver,
-    defaultValues: memoizedDefaultValues,
+    resolver: zodResolver(createFormSchema(includeMembers)),
+    defaultValues,
     mode: "onChange",
   });
 
   const { isLoading: hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
     form,
-    "create-task-wizard",
+    `create-task-wizard`,
     true,
   );
 
-  // Habilitar atajos de teclado
   useKeyboardShortcuts({ enabled: isOpen });
 
-  // Prevent hydration issues
   useEffect(() => {
-    setStoreMounted(true);
-  }, [setStoreMounted]);
+    setIsMounted(true);
+  }, []);
 
-  // Memoizar la función de validación para evitar re-renders
-  const validateForm = useCallback(() => {
+  useEffect(() => {
     form.clearErrors();
     form.trigger();
-  }, [form]);
+  }, [includeMembers, form]);
 
-  // Update resolver when includeMembers changes - OPTIMIZADO
-  useEffect(() => {
-    validateForm();
-  }, [includeMembers, validateForm]);
+  const defaultValuesRef = useRef(defaultValues);
 
-  // Memoizar la función de watch para evitar re-renders constantes
-  const handleFormChange = useCallback((value: Partial<FormValues>) => {
+  const checkForChanges = useCallback((value: Partial<FormValues>) => {
       saveFormData();
       const isChanged = Object.keys(value).some((key) => {
         const current = value[key as keyof FormValues];
-        const initial = defaultValues[key as keyof FormValues];
+      const initial = defaultValuesRef.current[key as keyof FormValues];
         if (Array.isArray(current) && Array.isArray(initial)) {
           return current.join() !== initial.join();
         }
@@ -334,22 +219,20 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       onHasUnsavedChanges(isChanged);
   }, [saveFormData, onHasUnsavedChanges]);
 
-  // Optimizar el watch del formulario
   useEffect(() => {
-    const subscription = form.watch(handleFormChange);
+    const subscription = form.watch(checkForChanges);
     return () => subscription.unsubscribe();
-  }, [form, handleFormChange]);
+  }, [form, checkForChanges]);
 
-  // Memoizar la función de reset para evitar re-renders
   const resetForm = useCallback(() => {
-      form.reset(defaultValues);
+    form.reset(defaultValuesRef.current);
       clearPersistedData();
-    setAlertState('showSuccess', false);
-    setAlertState('showFail', false);
+    setShowSuccessAlert(false);
+    setShowFailAlert(false);
       onHasUnsavedChanges(false);
-    toggleDropdown('startDate');
-    toggleDropdown('endDate');
-  }, [form, clearPersistedData, setAlertState, onHasUnsavedChanges, toggleDropdown]);
+    setIsStartDateOpen(false);
+    setIsEndDateOpen(false);
+  }, [form, clearPersistedData, onHasUnsavedChanges]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -357,6 +240,204 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     }
   }, [isOpen, resetForm]);
 
+  useEffect(() => {
+    if (onClientAlertChange) {
+      if (showSuccessAlert || showFailAlert) {
+        onClientAlertChange({
+          type: showSuccessAlert ? "success" : "fail",
+          message: showSuccessAlert
+            ? `La tarea "${form.getValues("basicInfo.name")}" se ha creado exitosamente.`
+            : "No se pudo crear la tarea.",
+          error: showFailAlert ? failErrorMessage : undefined,
+        });
+      } else {
+        onClientAlertChange(null);
+      }
+    }
+  }, [onClientAlertChange, showSuccessAlert, showFailAlert, failErrorMessage, form]);
+
+  const updatePositions = useCallback(() => {
+      if (isStartDateOpen && startDateInputRef.current) {
+        const rect = startDateInputRef.current.getBoundingClientRect();
+        setStartDatePosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+      if (isEndDateOpen && endDateInputRef.current) {
+        const rect = endDateInputRef.current.getBoundingClientRect();
+        setEndDatePosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+
+      if (isStatusDropdownOpen && statusDropdownRef.current) {
+        const rect = statusDropdownRef.current.getBoundingClientRect();
+        setStatusDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+      if (isPriorityDropdownOpen && priorityDropdownRef.current) {
+        const rect = priorityDropdownRef.current.getBoundingClientRect();
+        setPriorityDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+
+  }, [
+    isStartDateOpen,
+    isEndDateOpen,
+    isStatusDropdownOpen,
+    isPriorityDropdownOpen,
+  ]);
+
+  const animatePoppers = useCallback(() => {
+
+      if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
+        gsap.fromTo(
+          statusDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isPriorityDropdownOpen && priorityDropdownPopperRef.current) {
+        gsap.fromTo(
+          priorityDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+
+      if (isStartDateOpen && startDatePopperRef.current) {
+        gsap.fromTo(
+          startDatePopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isEndDateOpen && endDatePopperRef.current) {
+        gsap.fromTo(
+          endDatePopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+  }, [
+    isStatusDropdownOpen,
+    isPriorityDropdownOpen,
+    isStartDateOpen,
+    isEndDateOpen,
+  ]);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
+    if (containerRef.current) {
+      if (isOpen) {
+        gsap.fromTo(
+          containerRef.current,
+          { opacity: 0, height: 0 },
+          { opacity: 1, height: "auto", duration: 0.3, ease: "power2.out" },
+        );
+      } else {
+        gsap.to(containerRef.current, {
+          opacity: 0,
+          height: 0,
+          duration: 0.3,
+          ease: "power2.in",
+        });
+      }
+    }
+
+    updatePositions();
+    animatePoppers();
+
+    const handleResize = debounce(updatePositions, 100);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [
+    isOpen,
+    isMounted,
+    updatePositions,
+    animatePoppers,
+  ]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node) &&
+        statusDropdownPopperRef.current &&
+        !statusDropdownPopperRef.current.contains(event.target as Node) &&
+        isStatusDropdownOpen
+      ) {
+        setIsStatusDropdownOpen(false);
+      }
+      if (
+        priorityDropdownRef.current &&
+        !priorityDropdownRef.current.contains(event.target as Node) &&
+        priorityDropdownPopperRef.current &&
+        !priorityDropdownPopperRef.current.contains(event.target as Node) &&
+        isPriorityDropdownOpen
+      ) {
+        setIsPriorityDropdownOpen(false);
+      }
+      if (
+        startDateInputRef.current &&
+        !startDateInputRef.current.contains(event.target as Node) &&
+        startDatePopperRef.current &&
+        !startDatePopperRef.current.contains(event.target as Node) &&
+        isStartDateOpen
+      ) {
+        setIsStartDateOpen(false);
+      }
+      if (
+        endDateInputRef.current &&
+        !endDateInputRef.current.contains(event.target as Node) &&
+        endDatePopperRef.current &&
+        !endDatePopperRef.current.contains(event.target as Node) &&
+        isEndDateOpen
+      ) {
+        setIsEndDateOpen(false);
+      }
+
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [
+    isStatusDropdownOpen,
+    isPriorityDropdownOpen,
+    isStartDateOpen,
+    isEndDateOpen,
+  ]);
+
+  useEffect(() => {
+    const handleScroll = debounce(() => {
+      if (
+        isStartDateOpen ||
+        isEndDateOpen ||
+        isStatusDropdownOpen ||
+        isPriorityDropdownOpen
+      ) {
+        setIsStartDateOpen(false);
+        setIsEndDateOpen(false);
+        setIsStatusDropdownOpen(false);
+        setIsPriorityDropdownOpen(false);
+      }
+    }, 200);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [
+    isStartDateOpen,
+    isEndDateOpen,
+    isStatusDropdownOpen,
+    isPriorityDropdownOpen,
+  ]);
+  
   useEffect(() => {
     const clientsCollection = collection(db, "clients");
     const unsubscribe = onSnapshot(
@@ -378,368 +459,29 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (onClientAlertChange) {
-      if (showSuccessAlert || showFailAlert) {
-        onClientAlertChange({
-          type: showSuccessAlert ? "success" : "fail",
-          message: showSuccessAlert
-            ? `La tarea "${form.getValues("basicInfo.name")}" se ha creado exitosamente.`
-            : "No se pudo crear la tarea.",
-          error: showFailAlert ? failErrorMessage : undefined,
-        });
-      } else {
-        onClientAlertChange(null);
-      }
-    }
-  }, [onClientAlertChange, showSuccessAlert, showFailAlert, failErrorMessage, form]);
-
-  // SEPARAR EL useEffect MASIVO en múltiples useEffect más pequeños
-  // useEffect para animaciones del contenedor principal
-  useEffect(() => {
-    if (!isMounted || !containerRef.current) return;
-
-    if (isOpen) {
-      gsap.fromTo(
-        containerRef.current,
-        { opacity: 0, height: 0 },
-        { opacity: 1, height: "auto", duration: 0.3, ease: "power2.out" },
-      );
-    } else {
-      gsap.to(containerRef.current, {
-        opacity: 0,
-        height: 0,
-        duration: 0.3,
-        ease: "power2.in",
-      });
-    }
-  }, [isOpen, isMounted]);
-
-  // useEffect para posiciones de dropdowns
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const updatePositions = () => {
-      if (isStartDateOpen && startDateInputRef.current) {
-        const rect = startDateInputRef.current.getBoundingClientRect();
-        setStartDatePosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isEndDateOpen && endDateInputRef.current) {
-        const rect = endDateInputRef.current.getBoundingClientRect();
-        setEndDatePosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-    };
-
-    updatePositions();
-    window.addEventListener("resize", updatePositions);
-    return () => window.removeEventListener("resize", updatePositions);
-  }, [isMounted, isStartDateOpen, isEndDateOpen]);
-
-  // useEffect para posiciones de dropdowns de proyecto, estado y prioridad
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const updatePositions = () => {
-      if (isProjectDropdownOpen && projectDropdownRef.current) {
-        const rect = projectDropdownRef.current.getBoundingClientRect();
-        setProjectDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isStatusDropdownOpen && statusDropdownRef.current) {
-        const rect = statusDropdownRef.current.getBoundingClientRect();
-        setStatusDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isPriorityDropdownOpen && priorityDropdownRef.current) {
-        const rect = priorityDropdownRef.current.getBoundingClientRect();
-        setPriorityDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-    };
-
-    updatePositions();
-    window.addEventListener("resize", updatePositions);
-    return () => window.removeEventListener("resize", updatePositions);
-  }, [isMounted, isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen]);
-
-  // useEffect para posiciones de dropdowns de usuarios
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const updatePositions = () => {
-      if (isCollaboratorDropdownOpen && collaboratorInputRef.current) {
-        const rect = collaboratorInputRef.current.getBoundingClientRect();
-        setCollaboratorDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isLeaderDropdownOpen && leaderInputRef.current) {
-        const rect = leaderInputRef.current.getBoundingClientRect();
-        setLeaderDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-      if (isClientDropdownOpen && clientInputRef.current) {
-        const rect = clientInputRef.current.getBoundingClientRect();
-        setClientDropdownPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-        });
-      }
-    };
-
-    updatePositions();
-    window.addEventListener("resize", updatePositions);
-    return () => window.removeEventListener("resize", updatePositions);
-  }, [isMounted, isCollaboratorDropdownOpen, isLeaderDropdownOpen, isClientDropdownOpen]);
-
-  // useEffect para animaciones de poppers
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const animatePoppers = () => {
-      if (isProjectDropdownOpen && projectDropdownPopperRef.current) {
-        gsap.fromTo(
-          projectDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
-        gsap.fromTo(
-          statusDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isPriorityDropdownOpen && priorityDropdownPopperRef.current) {
-        gsap.fromTo(
-          priorityDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-    };
-
-    animatePoppers();
-  }, [isMounted, isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen]);
-
-  // useEffect para animaciones de poppers de usuarios
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const animatePoppers = () => {
-      if (isCollaboratorDropdownOpen && collaboratorDropdownPopperRef.current) {
-        gsap.fromTo(
-          collaboratorDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isLeaderDropdownOpen && leaderDropdownPopperRef.current) {
-        gsap.fromTo(
-          leaderDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isClientDropdownOpen && clientDropdownPopperRef.current) {
-        gsap.fromTo(
-          clientDropdownPopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-    };
-
-    animatePoppers();
-  }, [isMounted, isCollaboratorDropdownOpen, isLeaderDropdownOpen, isClientDropdownOpen]);
-
-  // useEffect para animaciones de date pickers
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const animatePoppers = () => {
-      if (isStartDateOpen && startDatePopperRef.current) {
-        gsap.fromTo(
-          startDatePopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-      if (isEndDateOpen && endDatePopperRef.current) {
-        gsap.fromTo(
-          endDatePopperRef.current,
-          { opacity: 0, y: -10, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-        );
-      }
-    };
-
-    animatePoppers();
-  }, [isMounted, isStartDateOpen, isEndDateOpen]);
-
-  // OPTIMIZAR EL useEffect DE CLICK OUTSIDE separándolo en múltiples useEffect
-  // useEffect para dropdowns de proyecto, estado y prioridad
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        projectDropdownRef.current &&
-        !projectDropdownRef.current.contains(event.target as Node) &&
-        projectDropdownPopperRef.current &&
-        !projectDropdownPopperRef.current.contains(event.target as Node) &&
-        isProjectDropdownOpen
-      ) {
-        toggleDropdown("project");
-      }
-      if (
-        statusDropdownRef.current &&
-        !statusDropdownRef.current.contains(event.target as Node) &&
-        statusDropdownPopperRef.current &&
-        !statusDropdownPopperRef.current.contains(event.target as Node) &&
-        isStatusDropdownOpen
-      ) {
-        toggleDropdown("status");
-      }
-      if (
-        priorityDropdownRef.current &&
-        !priorityDropdownRef.current.contains(event.target as Node) &&
-        priorityDropdownPopperRef.current &&
-        !priorityDropdownPopperRef.current.contains(event.target as Node) &&
-        isPriorityDropdownOpen
-      ) {
-        toggleDropdown("priority");
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isProjectDropdownOpen, isStatusDropdownOpen, isPriorityDropdownOpen, toggleDropdown]);
-
-  // useEffect para date pickers
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        startDateInputRef.current &&
-        !startDateInputRef.current.contains(event.target as Node) &&
-        startDatePopperRef.current &&
-        !startDatePopperRef.current.contains(event.target as Node) &&
-        isStartDateOpen
-      ) {
-        toggleDropdown("startDate");
-      }
-      if (
-        endDateInputRef.current &&
-        !endDateInputRef.current.contains(event.target as Node) &&
-        endDatePopperRef.current &&
-        !endDatePopperRef.current.contains(event.target as Node) &&
-        isEndDateOpen
-      ) {
-        toggleDropdown("endDate");
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isStartDateOpen, isEndDateOpen, toggleDropdown]);
-
-  // useEffect para dropdowns de usuarios
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        collaboratorInputRef.current &&
-        !collaboratorInputRef.current.contains(event.target as Node) &&
-        collaboratorDropdownPopperRef.current &&
-        !collaboratorDropdownPopperRef.current.contains(event.target as Node) &&
-        isCollaboratorDropdownOpen
-      ) {
-        toggleDropdown("collaborator");
-      }
-      if (
-        clientInputRef.current &&
-        !clientInputRef.current.contains(event.target as Node) &&
-        clientDropdownPopperRef.current &&
-        !clientDropdownPopperRef.current.contains(event.target as Node) &&
-        isClientDropdownOpen
-      ) {
-        toggleDropdown("client");
-      }
-      if (
-        leaderInputRef.current &&
-        !leaderInputRef.current.contains(event.target as Node) &&
-        leaderDropdownPopperRef.current &&
-        !leaderDropdownPopperRef.current.contains(event.target as Node) &&
-        isLeaderDropdownOpen
-      ) {
-        toggleDropdown("leader");
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isCollaboratorDropdownOpen, isClientDropdownOpen, isLeaderDropdownOpen, toggleDropdown]);
-
-  // Animaciones optimizadas usando hooks memoizados
-  const { animateClick } = useAnimationOptimizations();
-
-  // MEMOIZAR LOS CALLBACKS para evitar recrearlos constantemente
-  const memoizedToggleDropdown = useCallback((dropdown: keyof DropdownStates) => {
-    toggleDropdown(dropdown);
-  }, [toggleDropdown]);
+  const animateClick = useCallback((element: HTMLElement) => {
+    gsap.to(element, {
+      scale: 0.98,
+      opacity: 0.9,
+      duration: 0.15,
+      ease: "power1.out",
+      yoyo: true,
+      repeat: 1,
+    });
+  }, []);
 
 
 
-  // Funciones de manejo de dropdowns memoizadas - definidas directamente como en EditTask
-  const handleClientSelectDropdown = useCallback(
-    (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.clientId", clientId);
-      setSearchState("client", "");
-      memoizedToggleDropdown("client");
-    },
-    [form, animateClick, setSearchState, memoizedToggleDropdown],
-  );
 
-  const handleClientRemove = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.clientId", "");
-      form.setValue("clientInfo.project", "");
-    },
-    [form, animateClick],
-  );
-
-  const handleProjectSelect = useCallback(
-    (project: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue("clientInfo.project", project);
-      memoizedToggleDropdown("project");
-    },
-    [form, animateClick, memoizedToggleDropdown],
-  );
 
   const handleStatusSelect = useCallback(
     (status: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       animateClick(e.currentTarget);
       form.setValue("basicInfo.status", status as FormValues["basicInfo"]["status"]);
-      memoizedToggleDropdown("status");
+      setIsStatusDropdownOpen(false);
     },
-    [form, animateClick, memoizedToggleDropdown],
+    [form, animateClick],
   );
 
   const handlePrioritySelect = useCallback(
@@ -747,96 +489,14 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       e.stopPropagation();
       animateClick(e.currentTarget);
       form.setValue("basicInfo.priority", priority as FormValues["basicInfo"]["priority"]);
-      memoizedToggleDropdown("priority");
-    },
-    [form, animateClick, memoizedToggleDropdown],
-  );
-
-  const handleLeaderSelect = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      const currentLeaders = form.getValues("teamInfo.LeadedBy");
-      const isSelected = currentLeaders.includes(userId);
-      const newLeaders = isSelected
-        ? currentLeaders.filter((id) => id !== userId)
-        : [...currentLeaders, userId];
-      form.setValue("teamInfo.LeadedBy", newLeaders);
-      setSearchState("leader", "");
-      memoizedToggleDropdown("leader");
-    },
-    [form, animateClick, setSearchState, memoizedToggleDropdown],
-  );
-
-  const handleCollaboratorSelect = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      if (!form.getValues("teamInfo.LeadedBy").includes(userId)) {
-        const currentAssignedTo = form.getValues("teamInfo.AssignedTo");
-        const isSelected = currentAssignedTo.includes(userId);
-        const newAssignedTo = isSelected
-          ? currentAssignedTo.filter((id) => id !== userId)
-          : [...currentAssignedTo, userId];
-        form.setValue("teamInfo.AssignedTo", newAssignedTo);
-        setSearchState("collaborator", "");
-        memoizedToggleDropdown("collaborator");
-      }
-    },
-    [form, animateClick, setSearchState, memoizedToggleDropdown],
-  );
-
-  const handleLeaderRemove = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue(
-        "teamInfo.LeadedBy",
-        form.getValues("teamInfo.LeadedBy").filter((id) => id !== userId),
-      );
+      setIsPriorityDropdownOpen(false);
     },
     [form, animateClick],
   );
 
-  const handleCollaboratorRemove = useCallback(
-    (userId: string, e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      animateClick(e.currentTarget);
-      form.setValue(
-        "teamInfo.AssignedTo",
-        form.getValues("teamInfo.AssignedTo").filter((id) => id !== userId),
-      );
-    },
-    [form, animateClick],
-  );
 
-  // MEMOIZAR LOS VALORES DEL FORMULARIO que se usan constantemente
-  const watchedFormValues = useMemo(() => {
-    return {
-      clientId: form.watch("clientInfo.clientId"),
-      project: form.watch("clientInfo.project"),
-      name: form.watch("basicInfo.name"),
-      description: form.watch("basicInfo.description"),
-      objectives: form.watch("basicInfo.objectives"),
-      startDate: form.watch("basicInfo.startDate"),
-      endDate: form.watch("basicInfo.endDate"),
-      status: form.watch("basicInfo.status"),
-      priority: form.watch("basicInfo.priority"),
-      leadedBy: form.watch("teamInfo.LeadedBy"),
-      assignedTo: form.watch("teamInfo.AssignedTo"),
-    };
-  }, [form]);
 
-  // Filtros optimizados usando hooks memoizados
-  // MEMOIZAR LOS VALORES DEL FORMULARIO para evitar recálculos constantes
-  const watchedLeadedBy = watchedFormValues.leadedBy;
-  
-  const filteredCollaborators = useFilteredCollaborators(
-    searchCollaborator,
-    watchedLeadedBy || []
-  );
-  const filteredLeaders = useFilteredLeaders(searchLeader);
-  const filteredClients = useFilteredClients(searchClient);
+
 
   const onSubmit = async (values: FormValues) => {
     if (!user) {
@@ -872,7 +532,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       };
       await setDoc(taskDocRef, taskData);
 
-      // Actualizar la actividad de la tarea (aunque sea nueva, establece la actividad inicial)
       await updateTaskActivity(taskId, 'edit');
 
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
@@ -888,28 +547,25 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         });
       }
 
-      // Use parent alert handlers if available, otherwise use local state
       if (onShowSuccessAlert) {
         onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha creado exitosamente.`);
       } else {
-        setAlertState("showSuccess", true);
+        setShowSuccessAlert(true);
       }
       
       form.reset(defaultValues);
       clearPersistedData();
       setIsSaving(false);
       
-      // Llamar a onTaskCreated para cerrar el modal y mostrar TasksTable
       if (onTaskCreated) {
         setTimeout(() => {
           onTaskCreated();
-        }, 2000); // Esperar 2 segundos para que el usuario vea el mensaje de éxito
+        }, 2000); 
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear la tarea.";
       console.error("Error saving task:", errorMessage);
       
-      // Mensajes de error más específicos y útiles
       let userFriendlyTitle = "❌ Error al Crear Tarea";
       let userFriendlyDescription = "No pudimos crear tu tarea en este momento. ";
       
@@ -938,12 +594,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         variant: "error",
       });
       
-      // Use parent alert handlers if available, otherwise use local state
       if (onShowFailAlert) {
         onShowFailAlert("No se pudo crear la tarea.", errorMessage);
       } else {
-        setAlertState("showFail", true);
-        setAlertState("failMessage", errorMessage);
+        setShowFailAlert(true);
+        setFailErrorMessage(errorMessage);
       }
       
       setIsSaving(false);
@@ -951,7 +606,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   };
 
   const validateStep = async (fields: (keyof FormValues | string)[]) => {
-    // Validación especial para el paso 2 (equipo)
     if (fields.includes('teamInfo.AssignedTo') && includeMembers) {
       const assignedTo = form.getValues('teamInfo.AssignedTo');
       if (!assignedTo || assignedTo.length === 0) {
@@ -979,6 +633,85 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     return result;
   };
 
+
+
+  const handleFormInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, field: { value?: string; onChange: (value: string) => void }) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
+              field.onChange(newValue);
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              field.onChange((field.value || '') + text);
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            });
+          }
+          break;
+      }
+    }
+  }, []);
+
   if (isLoading || !isMounted) {
     return (
       <div className={`${styles.container} ${styles.open}`}>
@@ -997,9 +730,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             <div className={styles.header}>
               <div className={styles.headerTitle}>Crear Tarea</div>
               <div className={styles.headerProgress}>
-                <Wizard totalSteps={3}>
-                  <WizardProgress />
-                </Wizard>
+                <WizardProgress totalSteps={stepFields.length} currentStep={currentStep} />
               </div>
               <button className={styles.toggleButton} onClick={onToggle}>
                 <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
@@ -1007,7 +738,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
             </div>
             <div className={styles.content}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
-                <Wizard totalSteps={3}>
+                <Wizard totalSteps={stepFields.length} currentStep={currentStep} onStepChange={setCurrentStep}>
                   <WizardStep step={0} validator={() => validateStep(stepFields[0] as (keyof FormValues)[])}>
                     <div className={styles.section}>
                       <h2 className={styles.sectionTitle}>Información del Cliente</h2>
@@ -1018,7 +749,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                             type="button"
                             onClick={() => {
                               clearPersistedData();
-                              form.reset(defaultValues);
+                              form.reset(defaultValuesRef.current);
                               toast({
                                 title: "Progreso eliminado",
                                 description: "Se ha reiniciado el formulario.",
@@ -1035,186 +766,30 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
                         </div>
-                        {/* Ocultar el input cuando ya hay una cuenta seleccionada */}
-                        {!form.watch("clientInfo.clientId") && (
-                        <input
-                          className={styles.input}
-                          value={searchClient}
-                          onChange={(e) => {
-                              setSearchState("client", e.target.value);
-                              memoizedToggleDropdown("client");
-                          }}
-                          onBlur={() => {
-                              setTimeout(() => memoizedToggleDropdown("client"), 200);
-                          }}
-                          placeholder="Ej: Nombre de la cuenta"
-                          ref={clientInputRef}
-                          onKeyDown={(e) => {
-                            if (e.ctrlKey || e.metaKey) {
-                              switch (e.key.toLowerCase()) {
-                                case 'a':
-                                  e.preventDefault();
-                                  e.currentTarget.select();
-                                  break;
-                                case 'c':
-                                  e.preventDefault();
-                                  const selection = window.getSelection();
-                                  if (selection && selection.toString().length > 0) {
-                                    navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                      const textArea = document.createElement('textarea');
-                                      textArea.value = selection.toString();
-                                      document.body.appendChild(textArea);
-                                      textArea.select();
-                                      document.execCommand('copy');
-                                      document.body.removeChild(textArea);
-                                    });
-                                  }
-                                  break;
-                                case 'v':
-                                  e.preventDefault();
-                                  const targetV = e.currentTarget as HTMLInputElement | null;
-                                  navigator.clipboard.readText().then(text => {
-                                    if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                                      const start = targetV.selectionStart;
-                                      const end = targetV.selectionEnd;
-                                      const newValue = searchClient.substring(0, start) + text + searchClient.substring(end);
-                                        setSearchState("client", newValue);
-                                        memoizedToggleDropdown("client");
-                                      setTimeout(() => {
-                                        targetV.setSelectionRange(start + text.length, start + text.length);
-                                      }, 0);
-                                    } else {
-                                        setSearchState("client", searchClient + text);
-                                    }
-                                  }).catch(() => {
-                                    document.execCommand('paste');
-                                  });
-                                  break;
-                                case 'x':
-                                  e.preventDefault();
-                                  const cutSelection = window.getSelection();
-                                  if (cutSelection && cutSelection.toString().length > 0) {
-                                    navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                      const targetX = e.currentTarget as HTMLInputElement | null;
-                                      if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                        const start = targetX.selectionStart;
-                                        const end = targetX.selectionEnd;
-                                        const newValue = searchClient.substring(0, start) + searchClient.substring(end);
-                                          setSearchState("client", newValue);
-                                          memoizedToggleDropdown("client");
-                                      } else {
-                                          setSearchState("client", '');
-                                      }
-                                    }).catch(() => {
-                                      const textArea = document.createElement('textarea');
-                                      textArea.value = cutSelection.toString();
-                                      document.body.appendChild(textArea);
-                                      textArea.select();
-                                      document.execCommand('copy');
-                                      document.body.removeChild(textArea);
-                                      const targetX2 = e.currentTarget as HTMLInputElement | null;
-                                      if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
-                                        const start = targetX2.selectionStart;
-                                        const end = targetX2.selectionEnd;
-                                        const newValue = searchClient.substring(0, start) + searchClient.substring(end);
-                                          setSearchState("client", newValue);
-                                          memoizedToggleDropdown("client");
-                                      } else {
-                                          setSearchState("client", '');
-                                      }
-                                    });
-                                  }
-                                  break;
-                              }
+                        <SearchableDropdown
+                          items={clients.map(client => ({
+                            id: client.id,
+                            name: client.name,
+                            imageUrl: client.imageUrl,
+                            subtitle: `${client.projects.length} proyectos`
+                          }))}
+                          selectedItems={form.watch("clientInfo.clientId") ? [form.watch("clientInfo.clientId")] : []}
+                          onSelectionChange={(selectedIds) => {
+                            if (selectedIds.length > 0) {
+                              form.setValue("clientInfo.clientId", selectedIds[0]);
+                              form.setValue("clientInfo.project", "");
+                            } else {
+                              form.setValue("clientInfo.clientId", "");
+                              form.setValue("clientInfo.project", "");
                             }
                           }}
+                          placeholder="Ej: Nombre de la cuenta"
+                          searchPlaceholder="Buscar cuentas..."
+                          emptyMessage={isAdmin 
+                            ? "No hay coincidencias. Crea una nueva cuenta."
+                            : "No hay coincidencias. Pide a un administrador que cree una cuenta."
+                          }
                         />
-                        )}
-                        {isClientDropdownOpen && !form.watch("clientInfo.clientId") &&
-                          createPortal(
-                            <motion.div
-                              className={styles.dropdown}
-                              style={{
-                                top: clientDropdownPosition?.top,
-                                left: clientDropdownPosition?.left,
-                                position: "absolute",
-                                zIndex: 150000,
-                                width: clientInputRef.current?.offsetWidth,
-                              }}
-                              ref={clientDropdownPopperRef}
-                              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                              transition={{ duration: 0.3, ease: "easeOut" }}
-                            >
-                              {filteredClients.length ? (
-                                filteredClients.map((client) => (
-                                  <motion.div
-                                    key={client.id}
-                                    className={`${styles.dropdownItem} ${form.watch("clientInfo.clientId") === client.id ? styles.selectedItem : ''}`}
-                                    onClick={(e) => handleClientSelectDropdown(client.id, e)}
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.2, delay: 0.05 }}
-                                    whileHover={{
-                                      scale: 1.02,
-                                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                                      transition: { duration: 0.2, ease: "easeOut" }
-                                    }}
-                                    whileTap={{
-                                      scale: 0.98,
-                                      transition: { duration: 0.1 }
-                                    }}
-                                  >
-                                    <div className={styles.dropdownItemContent}>
-                                      <div className={styles.avatarContainer}>
-                                        <Image
-                                          src={client.imageUrl || '/empty-image.png'}
-                                          alt={client.name}
-                                          width={32}
-                                          height={32}
-                                          className={styles.avatarImage}
-                                          onError={(e) => {
-                                            e.currentTarget.src = '/empty-image.png';
-                                          }}
-                                        />
-                                  </div>
-                                      <span>{client.name}</span>
-                                    </div>
-                                  </motion.div>
-                                ))
-                              ) : (
-                                <div className={styles.emptyState}>
-                                  <span>
-                                    {isAdmin
-                                      ? "No hay coincidencias. Crea una nueva cuenta."
-                                      : "No hay coincidencias. Pide a un administrador que cree una cuenta."}
-                                  </span>
-                                </div>
-                              )}
-                            </motion.div>,
-                            document.body,
-                          )}
-                        <div className={styles.tags}>
-                          {form.watch("clientInfo.clientId") && (
-                            (() => {
-                              const selectedClient = clients.find((c) => c.id === form.watch("clientInfo.clientId"));
-                              return selectedClient ? (
-                                <div key={selectedClient.id} className={styles.tag}>
-                                  <Image
-                                    src={selectedClient.imageUrl || '/empty-image.png'}
-                                    alt={selectedClient.name}
-                                    width={24}
-                                    height={24}
-                                    style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
-                                  />
-                                  {selectedClient.name}
-                                  <button onClick={(e) => handleClientRemove(e)}>X</button>
-                                </div>
-                              ) : null;
-                            })()
-                          )}
-                        </div>
                         {form.formState.errors.clientInfo?.clientId && (
                           <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
                         )}
@@ -1239,94 +814,37 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                       <div className={styles.formGroup}>
                         <label className={styles.label}>Carpeta*</label>
                         <div className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</div>
-                        <div className={styles.dropdownContainer} ref={projectDropdownRef}>
-                          <div
-                            className={styles.dropdownTrigger}
-                            onClick={(e) => {
-                              animateClick(e.currentTarget);
-                              memoizedToggleDropdown("project");
-                            }}
-                          >
-                            <span>{form.watch("clientInfo.project") || "Seleccionar una Carpeta"}</span>
-                            <Image src="/chevron-down.svg" alt="Chevron" width={16} height={16} />
-                          </div>
-                          {isProjectDropdownOpen &&
-                            createPortal(
-                              <AnimatePresence>
-                                <motion.div
-                                  className={styles.dropdownItems}
-                                  style={{
-                                    top: projectDropdownPosition?.top,
-                                    left: projectDropdownPosition?.left,
-                                    position: "absolute",
-                                    zIndex: 150000,
-                                    width: projectDropdownRef.current?.offsetWidth,
-                                  }}
-                                  ref={projectDropdownPopperRef}
-                                  initial={{ opacity: 0, y: -16 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: -16 }}
-                                  transition={{ duration: 0.2, ease: "easeOut" }}
-                                >
-                                  {(() => {
-                                    const selectedClient = clients.find(
-                                      (c) => c.id === form.getValues("clientInfo.clientId")
-                                    );
-                                    if (!selectedClient || !selectedClient.projects.length) {
-                                      return (
-                                        <motion.div 
-                                          className={styles.emptyState}
-                                          initial={{ opacity: 0 }}
-                                          animate={{ opacity: 1 }}
-                                          transition={{ duration: 0.2 }}
-                                        >
-                                          <span>
-                                            {isAdmin
-                                              ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
-                                              : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."}
-                                          </span>
-                                        </motion.div>
-                                      );
-                                    }
-                                    return selectedClient.projects.map((project, index) => (
-                                      <motion.div
-                                        key={`${project}-${index}`}
-                                        className={styles.dropdownItem}
-                                        onClick={(e) => handleProjectSelect(project, e)}
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.2, delay: index * 0.05 }}
-                                        whileHover={{
-                                          scale: 1.02,
-                                          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                                          transition: { duration: 0.2, ease: "easeOut" }
-                                        }}
-                                        whileTap={{
-                                          scale: 0.98,
-                                          transition: { duration: 0.1 }
-                                        }}
-                                      >
-                                        <div className={styles.dropdownItemContent}>
-                                          <div className={styles.avatarContainer}>
-                                            <Image
-                                              src="/folder.svg"
-                                              alt="Folder"
-                                              width={20}
-                                              height={20}
-                                              className={styles.svgIcon}
-                                              style={{ objectFit: 'contain' }}
-                                            />
-                                          </div>
-                                          <span>{project}</span>
-                                        </div>
-                                      </motion.div>
-                                    ));
-                                  })()}
-                                </motion.div>
-                              </AnimatePresence>,
-                              document.body,
-                            )}
-                        </div>
+                        <SearchableDropdown
+                          items={(() => {
+                            const selectedClient = clients.find(
+                              (c) => c.id === form.getValues("clientInfo.clientId")
+                            );
+                            if (!selectedClient || !selectedClient.projects.length) {
+                              return [];
+                            }
+                            return selectedClient.projects.map((project, index) => ({
+                              id: `${project}-${index}`,
+                              name: project,
+                              svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><style>.cls-1{fill:#0072ff;}</style></defs><title>shapes folder</title><g id="Layer_2" data-name="Layer 2"><path class="cls-1" d="M52,16H34a5.27,5.27,0,0,1-3.77-1.59l-3.9-4A8,8,0,0,0,20.58,8H12a8,8,0,0,0-8,8V52a8,8,0,0,0,8,8H52a8,8,0,0,0,8-8V24A8,8,0,0,0,52,16ZM19,35a5,5,0,1,1,5,5A5,5,0,0,1,19,35ZM37.22,52H26.78a1.57,1.57,0,0,1-1.3-2.46L30.7,41.9a1.57,1.57,0,0,1,2.59,0l5.22,7.64A1.57,1.57,0,0,1,37.22,52ZM46,38a2,2,0,0,1-2,2H38a2,2,0,0,1-2-2V32a2,2,0,0,1,2-2H44a2,2,0,0,1,2,2Z"/></g></svg>`
+                            }));
+                          })()}
+                          selectedItems={form.watch("clientInfo.project") ? [form.watch("clientInfo.project")] : []}
+                          onSelectionChange={(selectedIds) => {
+                            if (selectedIds.length > 0) {
+                              form.setValue("clientInfo.project", selectedIds[0]);
+                            } else {
+                              form.setValue("clientInfo.project", "");
+                            }
+                          }}
+                          placeholder="Seleccionar una Carpeta"
+                          searchPlaceholder="Buscar carpeta..."
+                          emptyMessage={
+                            isAdmin
+                              ? "No hay carpetas disponibles. ¡Crea una nueva para organizar tus tareas!"
+                              : "No hay carpetas disponibles. Pide a un administrador que añada una para tu proyecto."
+                          }
+                          disabled={!form.getValues("clientInfo.clientId")}
+                        />
                         {form.formState.errors.clientInfo?.project && (
                           <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
                         )}
@@ -1365,82 +883,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Crear wireframe"
                                   {...field}
-                                  onKeyDown={(e) => {
-                                    if (e.ctrlKey || e.metaKey) {
-                                      switch (e.key.toLowerCase()) {
-                                        case 'a':
-                                          e.preventDefault();
-                                          e.currentTarget.select();
-                                          break;
-                                        case 'c':
-                                          e.preventDefault();
-                                          const selection = window.getSelection();
-                                          if (selection && selection.toString().length > 0) {
-                                            navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                              const textArea = document.createElement('textarea');
-                                              textArea.value = selection.toString();
-                                              document.body.appendChild(textArea);
-                                              textArea.select();
-                                              document.execCommand('copy');
-                                              document.body.removeChild(textArea);
-                                            });
-                                          }
-                                          break;
-                                        case 'v':
-                                          e.preventDefault();
-                                          const targetV = e.currentTarget as HTMLInputElement | null;
-                                          navigator.clipboard.readText().then(text => {
-                                            if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                                              const start = targetV.selectionStart;
-                                              const end = targetV.selectionEnd;
-                                              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
-                                              field.onChange(newValue);
-                                              setTimeout(() => {
-                                                targetV.setSelectionRange(start + text.length, start + text.length);
-                                              }, 0);
-                                            } else {
-                                              field.onChange((field.value || '') + text);
-                                            }
-                                          }).catch(() => {
-                                            document.execCommand('paste');
-                                          });
-                                          break;
-                                        case 'x':
-                                          e.preventDefault();
-                                          const cutSelection = window.getSelection();
-                                          if (cutSelection && cutSelection.toString().length > 0) {
-                                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                              const targetX = e.currentTarget as HTMLInputElement | null;
-                                              if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                                const start = targetX.selectionStart;
-                                                const end = targetX.selectionEnd;
-                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                                                field.onChange(newValue);
-                                              } else {
-                                                field.onChange('');
-                                              }
-                                            }).catch(() => {
-                                              const textArea = document.createElement('textarea');
-                                              textArea.value = cutSelection.toString();
-                                              document.body.appendChild(textArea);
-                                              textArea.select();
-                                              document.execCommand('copy');
-                                              document.body.removeChild(textArea);
-                                              const targetX2 = e.currentTarget as HTMLInputElement | null;
-                                              if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
-                                                const start = targetX2.selectionStart;
-                                                const end = targetX2.selectionEnd;
-                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                                                field.onChange(newValue);
-                                              } else {
-                                                field.onChange('');
-                                              }
-                                            });
-                                          }
-                                          break;
-                                      }
-                                    }
-                                  }}
+                                  onKeyDown={(e) => handleFormInputKeyDown(e, field)}
                                 />
                               )}
                             />
@@ -1458,82 +901,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Diseñar wireframes para la nueva app móvil"
                                   {...field}
-                                  onKeyDown={(e) => {
-                                    if (e.ctrlKey || e.metaKey) {
-                                      switch (e.key.toLowerCase()) {
-                                        case 'a':
-                                          e.preventDefault();
-                                          e.currentTarget.select();
-                                          break;
-                                        case 'c':
-                                          e.preventDefault();
-                                          const selection = window.getSelection();
-                                          if (selection && selection.toString().length > 0) {
-                                            navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                              const textArea = document.createElement('textarea');
-                                              textArea.value = selection.toString();
-                                              document.body.appendChild(textArea);
-                                              textArea.select();
-                                              document.execCommand('copy');
-                                              document.body.removeChild(textArea);
-                                            });
-                                          }
-                                          break;
-                                        case 'v':
-                                          e.preventDefault();
-                                          const targetV = e.currentTarget as HTMLInputElement | null;
-                                          navigator.clipboard.readText().then(text => {
-                                            if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                                              const start = targetV.selectionStart;
-                                              const end = targetV.selectionEnd;
-                                              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
-                                              field.onChange(newValue);
-                                              setTimeout(() => {
-                                                targetV.setSelectionRange(start + text.length, start + text.length);
-                                              }, 0);
-                                            } else {
-                                              field.onChange((field.value || '') + text);
-                                            }
-                                          }).catch(() => {
-                                            document.execCommand('paste');
-                                          });
-                                          break;
-                                        case 'x':
-                                          e.preventDefault();
-                                          const cutSelection = window.getSelection();
-                                          if (cutSelection && cutSelection.toString().length > 0) {
-                                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                              const targetX = e.currentTarget as HTMLInputElement | null;
-                                              if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                                const start = targetX.selectionStart;
-                                                const end = targetX.selectionEnd;
-                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                                                field.onChange(newValue);
-                                              } else {
-                                                field.onChange('');
-                                              }
-                                            }).catch(() => {
-                                              const textArea = document.createElement('textarea');
-                                              textArea.value = cutSelection.toString();
-                                              document.body.appendChild(textArea);
-                                              textArea.select();
-                                              document.execCommand('copy');
-                                              document.body.removeChild(textArea);
-                                              const targetX2 = e.currentTarget as HTMLInputElement | null;
-                                              if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
-                                                const start = targetX2.selectionStart;
-                                                const end = targetX2.selectionEnd;
-                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                                                field.onChange(newValue);
-                                              } else {
-                                                field.onChange('');
-                                              }
-                                            });
-                                          }
-                                          break;
-                                      }
-                                    }
-                                  }}
+                                  onKeyDown={(e) => handleFormInputKeyDown(e, field)}
                                 />
                               )}
                             />
@@ -1553,82 +921,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                   className={styles.input}
                                   placeholder="Ej: Aumentar la usabilidad del producto en un 20%"
                                   {...field}
-                                  onKeyDown={(e) => {
-                                    if (e.ctrlKey || e.metaKey) {
-                                      switch (e.key.toLowerCase()) {
-                                        case 'a':
-                                          e.preventDefault();
-                                          e.currentTarget.select();
-                                          break;
-                                        case 'c':
-                                          e.preventDefault();
-                                          const selection = window.getSelection();
-                                          if (selection && selection.toString().length > 0) {
-                                            navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                              const textArea = document.createElement('textarea');
-                                              textArea.value = selection.toString();
-                                              document.body.appendChild(textArea);
-                                              textArea.select();
-                                              document.execCommand('copy');
-                                              document.body.removeChild(textArea);
-                                            });
-                                          }
-                                          break;
-                                        case 'v':
-                                          e.preventDefault();
-                                          const targetV = e.currentTarget as HTMLInputElement | null;
-                                          navigator.clipboard.readText().then(text => {
-                                            if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                                              const start = targetV.selectionStart;
-                                              const end = targetV.selectionEnd;
-                                              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
-                                              field.onChange(newValue);
-                                              setTimeout(() => {
-                                                targetV.setSelectionRange(start + text.length, start + text.length);
-                                              }, 0);
-                                            } else {
-                                              field.onChange((field.value || '') + text);
-                                            }
-                                          }).catch(() => {
-                                            document.execCommand('paste');
-                                          });
-                                          break;
-                                        case 'x':
-                                          e.preventDefault();
-                                          const cutSelection = window.getSelection();
-                                          if (cutSelection && cutSelection.toString().length > 0) {
-                                            navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                              const targetX = e.currentTarget as HTMLInputElement | null;
-                                              if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                                const start = targetX.selectionStart;
-                                                const end = targetX.selectionEnd;
-                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                                                field.onChange(newValue);
-                                              } else {
-                                                field.onChange('');
-                                              }
-                                            }).catch(() => {
-                                              const textArea = document.createElement('textarea');
-                                              textArea.value = cutSelection.toString();
-                                              document.body.appendChild(textArea);
-                                              textArea.select();
-                                              document.execCommand('copy');
-                                              document.body.removeChild(textArea);
-                                              const targetX2 = e.currentTarget as HTMLInputElement | null;
-                                              if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
-                                                const start = targetX2.selectionStart;
-                                                const end = targetX2.selectionEnd;
-                                                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
-                                                field.onChange(newValue);
-                                              } else {
-                                                field.onChange('');
-                                              }
-                                            });
-                                          }
-                                          break;
-                                      }
-                                    }
-                                  }}
+                                  onKeyDown={(e) => handleFormInputKeyDown(e, field)}
                                 />
                               )}
                             />
@@ -1642,7 +935,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               <div
                                 ref={startDateInputRef}
                                 className={styles.dateInput}
-                                onClick={() => memoizedToggleDropdown("startDate")}
+                                onClick={() => setIsStartDateOpen(!isStartDateOpen)}
                                 style={{
                                   padding: "12px 16px",
                                   background: "rgba(255, 255, 255, 0.15)",
@@ -1681,7 +974,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       selected={form.watch("basicInfo.startDate") || undefined}
                                       onSelect={(date) => {
                                         form.setValue("basicInfo.startDate", date || null);
-                                        memoizedToggleDropdown("startDate");
+                                        setIsStartDateOpen(false);
                                       }}
                                       className={styles.customCalendar}
                                       style={{
@@ -1700,7 +993,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               <div
                                 ref={endDateInputRef}
                                 className={styles.dateInput}
-                                onClick={() => memoizedToggleDropdown("endDate")}
+                                onClick={() => setIsEndDateOpen(!isEndDateOpen)}
                                 style={{
                                   padding: "12px 16px",
                                   background: "rgba(255, 255, 255, 0.15)",
@@ -1739,7 +1032,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       selected={form.watch("basicInfo.endDate") || undefined}
                                       onSelect={(date) => {
                                         form.setValue("basicInfo.endDate", date || null);
-                                        memoizedToggleDropdown("endDate");
+                                        setIsEndDateOpen(false);
                                       }}
                                       className={styles.customCalendar}
                                       style={{
@@ -1763,7 +1056,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 className={styles.dropdownTrigger}
                                 onClick={(e) => {
                                   animateClick(e.currentTarget);
-                                  memoizedToggleDropdown("status");
+                                  setIsStatusDropdownOpen(!isStatusDropdownOpen);
                                 }}
                               >
                                 <span>{form.watch("basicInfo.status") || "Seleccionar"}</span>
@@ -1771,8 +1064,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               </div>
                               {isStatusDropdownOpen &&
                                 createPortal(
-                                  <AnimatePresence>
-                                    <motion.div
+                                  <div
                                       className={styles.dropdownItems}
                                       style={{
                                         top: statusDropdownPosition?.top,
@@ -1782,25 +1074,17 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         width: statusDropdownRef.current?.offsetWidth,
                                       }}
                                       ref={statusDropdownPopperRef}
-                                      initial={{ opacity: 0, y: -16 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      exit={{ opacity: 0, y: -16 }}
-                                      transition={{ duration: 0.2, ease: "easeOut" }}
                                     >
-                                      {["Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"].map((status, index) => (
-                                        <motion.div
+                                    {["Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"].map((status) => (
+                                      <div
                                           key={status}
                                           className={styles.dropdownItem}
                                           onClick={(e) => handleStatusSelect(status, e)}
-                                          initial={{ opacity: 0, x: -20 }}
-                                          animate={{ opacity: 1, x: 0 }}
-                                          transition={{ duration: 0.2, delay: index * 0.05 }}
                                         >
                                           {status}
-                                        </motion.div>
+                                      </div>
                                       ))}
-                                    </motion.div>
-                                  </AnimatePresence>,
+                                  </div>,
                                   document.body,
                                 )}
                             </div>
@@ -1817,7 +1101,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 className={styles.dropdownTrigger}
                                 onClick={(e) => {
                                   animateClick(e.currentTarget);
-                                  memoizedToggleDropdown("priority");
+                                  setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
                                 }}
                               >
                                 <span>{form.watch("basicInfo.priority") || "Seleccionar"}</span>
@@ -1825,8 +1109,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                               </div>
                               {isPriorityDropdownOpen &&
                                 createPortal(
-                                  <AnimatePresence>
-                                    <motion.div
+                                  <div
                                       className={styles.dropdownItems}
                                       style={{
                                         top: priorityDropdownPosition?.top,
@@ -1836,25 +1119,17 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         width: priorityDropdownRef.current?.offsetWidth,
                                       }}
                                       ref={priorityDropdownPopperRef}
-                                      initial={{ opacity: 0, y: -16 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      exit={{ opacity: 0, y: -16 }}
-                                      transition={{ duration: 0.2, ease: "easeOut" }}
                                     >
-                                      {["Baja", "Media", "Alta"].map((priority, index) => (
-                                        <motion.div
+                                    {["Baja", "Media", "Alta"].map((priority) => (
+                                      <div
                                           key={priority}
                                           className={styles.dropdownItem}
                                           onClick={(e) => handlePrioritySelect(priority, e)}
-                                          initial={{ opacity: 0, x: -20 }}
-                                          animate={{ opacity: 1, x: 0 }}
-                                          transition={{ duration: 0.2, delay: index * 0.05 }}
                                         >
                                           {priority}
-                                        </motion.div>
+                                      </div>
                                       ))}
-                                    </motion.div>
-                                  </AnimatePresence>,
+                                  </div>,
                                   document.body,
                                 )}
                             </div>
@@ -1874,404 +1149,87 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                         <div className={styles.sectionSubtitle}>
                           Selecciona la persona principal responsable de la tarea.
                         </div>
-                        <input
-                          className={styles.input}
-                          value={searchLeader}
-                          onChange={(e) => {
-                            setSearchState("leader", e.target.value);
-                            memoizedToggleDropdown("leader");
-                          }}
-                          onBlur={() => {
-                            setTimeout(() => memoizedToggleDropdown("leader"), 200);
+                        <SearchableDropdown
+                          items={users.map(user => ({
+                            id: user.id,
+                            name: user.fullName,
+                            imageUrl: user.imageUrl,
+                            subtitle: user.role
+                          }))}
+                          selectedItems={form.watch("teamInfo.LeadedBy")}
+                          onSelectionChange={(selectedIds) => {
+                            form.setValue("teamInfo.LeadedBy", selectedIds);
                           }}
                           placeholder="Ej: John Doe"
-                          ref={leaderInputRef}
-                          onKeyDown={(e) => {
-                            if (e.ctrlKey || e.metaKey) {
-                              switch (e.key.toLowerCase()) {
-                                case 'a':
-                                  e.preventDefault();
-                                  e.currentTarget.select();
-                                  break;
-                                case 'c':
-                                  e.preventDefault();
-                                  const selection = window.getSelection();
-                                  if (selection && selection.toString().length > 0) {
-                                    navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                      const textArea = document.createElement('textarea');
-                                      textArea.value = selection.toString();
-                                      document.body.appendChild(textArea);
-                                      textArea.select();
-                                      document.execCommand('copy');
-                                      document.body.removeChild(textArea);
-                                    });
-                                  }
-                                  break;
-                                case 'v':
-                                  e.preventDefault();
-                                  const targetV = e.currentTarget as HTMLInputElement | null;
-                                  navigator.clipboard.readText().then(text => {
-                                    if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                                      const start = targetV.selectionStart;
-                                      const end = targetV.selectionEnd;
-                                      const newValue = searchLeader.substring(0, start) + text + searchLeader.substring(end);
-                                      setSearchState("leader", newValue);
-                                      memoizedToggleDropdown("leader");
-                                      setTimeout(() => {
-                                        targetV.setSelectionRange(start + text.length, start + text.length);
-                                      }, 0);
-                                    } else {
-                                      setSearchState("leader", searchLeader + text);
-                                    }
-                                  }).catch(() => {
-                                    document.execCommand('paste');
-                                  });
-                                  break;
-                                case 'x':
-                                  e.preventDefault();
-                                  const cutSelection = window.getSelection();
-                                  if (cutSelection && cutSelection.toString().length > 0) {
-                                    navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                      const targetX = e.currentTarget as HTMLInputElement | null;
-                                      if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                        const start = targetX.selectionStart;
-                                        const end = targetX.selectionEnd;
-                                        const newValue = searchLeader.substring(0, start) + searchLeader.substring(end);
-                                        setSearchState("leader", newValue);
-                                        memoizedToggleDropdown("leader");
-                                      } else {
-                                        setSearchState("leader", '');
-                                      }
-                                    }).catch(() => {
-                                      const textArea = document.createElement('textarea');
-                                      textArea.value = cutSelection.toString();
-                                      document.body.appendChild(textArea);
-                                      textArea.select();
-                                      document.execCommand('copy');
-                                      document.body.removeChild(textArea);
-                                      const targetX2 = e.currentTarget as HTMLInputElement | null;
-                                      if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
-                                        const start = targetX2.selectionStart;
-                                        const end = targetX2.selectionEnd;
-                                        const newValue = searchLeader.substring(0, start) + searchLeader.substring(end);
-                                        setSearchState("leader", newValue);
-                                        memoizedToggleDropdown("leader");
-                                      } else {
-                                        setSearchState("leader", '');
-                                      }
-                                    });
-                                  }
-                                  break;
-                              }
-                            }
-                          }}
+                          searchPlaceholder="Buscar líderes..."
+                          multiple={true}
+                          emptyMessage={isAdmin 
+                            ? "No hay coincidencias. Invita a nuevos colaboradores."
+                            : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."
+                          }
                         />
-                        {isLeaderDropdownOpen &&
-                          createPortal(
-                            <motion.div
-                              className={styles.dropdown}
-                              style={{
-                                top: leaderDropdownPosition?.top,
-                                left: leaderDropdownPosition?.left,
-                                position: "absolute",
-                                zIndex: 150000,
-                                width: leaderInputRef.current?.offsetWidth,
-                              }}
-                              ref={leaderDropdownPopperRef}
-                              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                              transition={{ duration: 0.3, ease: "easeOut" }}
-                            >
-                              {filteredLeaders.length ? (
-                                filteredLeaders.map((u) => (
-                                  <motion.div
-                                    key={u.id}
-                                    className={styles.dropdownItem}
-                                    onClick={(e) => handleLeaderSelect(u.id, e)}
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.2, delay: 0.05 }}
-                                    whileHover={{
-                                      scale: 1.02,
-                                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                                      transition: { duration: 0.2, ease: "easeOut" }
-                                    }}
-                                    whileTap={{
-                                      scale: 0.98,
-                                      transition: { duration: 0.1 }
-                                    }}
-                                  >
-                                    <div className={styles.dropdownItemContent}>
-                                      <div className={styles.avatarContainer}>
-                                        <Image
-                                          src={u.imageUrl || '/empty-image.png'}
-                                          alt={u.fullName}
-                                          width={32}
-                                          height={32}
-                                          className={styles.avatarImage}
-                                          onError={(e) => {
-                                            e.currentTarget.src = '/empty-image.png';
-                                          }}
-                                        />
-                                        <div 
-                                          className={styles.statusDot} 
-                                          style={{ backgroundColor: '#178d00' }}
-                                        />
-                                  </div>
-                                      <span>{u.fullName} ({u.role})</span>
-                                    </div>
-                                    {Array.isArray(form.watch("teamInfo.LeadedBy")) && form.watch("teamInfo.LeadedBy").includes(u.id) && " (Seleccionado)"}
-                                  </motion.div>
-                                ))
-                              ) : (
-                                <div className={styles.emptyState}>
-                                  <span>
-                                    {isAdmin
-                                      ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                      : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
-                                  </span>
-                                </div>
-                              )}
-                            </motion.div>,
-                            document.body,
-                          )}
-                        <div className={styles.tags}>
-                          {Array.isArray(form.watch("teamInfo.LeadedBy")) && form.watch("teamInfo.LeadedBy").map((userId) => {
-                            const collaborator = users.find((u) => u.id === userId);
-                            return collaborator ? (
-                              <div key={userId} className={styles.tag}>
-                                <Image
-                                  src={collaborator.imageUrl || '/empty-image.png'}
-                                  alt={collaborator.fullName}
-                                  width={24}
-                                  height={24}
-                                  style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
-                                />
-                                {collaborator.fullName}
-                                <button onClick={(e) => handleLeaderRemove(userId, e)}>X</button>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
                         {form.formState.errors.teamInfo?.LeadedBy && (
                           <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
                         )}
+
                       </div>
                       
-                      {/* Checkbox para incluir miembros */}
                       <div className={styles.formGroup}>
                         <div className={styles.checkboxContainer}>
                           <input
                             type="checkbox"
                             id="includeMembers"
                             checked={includeMembers}
-                            onChange={(e) => setStoreIncludeMembers(e.target.checked)}
+                            onChange={(e) => setIncludeMembers(e.target.checked)}
                             className={styles.checkbox}
                           />
                           <label htmlFor="includeMembers" className={styles.checkboxLabel}>
-                            ¿Deseas agregar miembros a esta tarea?
+                            ¿Deseas agregar colaboradores a esta tarea?
                           </label>
                         </div>
                       </div>
                       
+                      <AnimatePresence>
                       {includeMembers && (
-                        <div className={styles.formGroup}>
+                          <motion.div 
+                            className={styles.formGroup}
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: "auto", scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                          >
                           <label className={styles.label}>Colaboradores*</label>
                           <div className={styles.sectionSubtitle}>
-                            Agrega a los miembros del equipo que trabajarán en la tarea.
+                              Agrega a los colaboradores del equipo que trabajarán en la tarea.
                           </div>
-                          <input
-                            className={styles.input}
-                            value={searchCollaborator}
-                            onChange={(e) => {
-                              setSearchState("collaborator", e.target.value);
-                              memoizedToggleDropdown("collaborator");
-                            }}
-                            onBlur={() => {
-                              setTimeout(() => memoizedToggleDropdown("collaborator"), 200);
+                          <SearchableDropdown
+                            items={users
+                              .filter(user => !form.watch("teamInfo.LeadedBy").includes(user.id))
+                              .map(user => ({
+                                id: user.id,
+                                name: user.fullName,
+                                imageUrl: user.imageUrl,
+                                subtitle: user.role
+                              }))}
+                            selectedItems={form.watch("teamInfo.AssignedTo") || []}
+                            onSelectionChange={(selectedIds) => {
+                              form.setValue("teamInfo.AssignedTo", selectedIds);
                             }}
                             placeholder="Ej: John Doe"
-                            ref={collaboratorInputRef}
-                            onKeyDown={(e) => {
-                              if (e.ctrlKey || e.metaKey) {
-                                switch (e.key.toLowerCase()) {
-                                  case 'a':
-                                    e.preventDefault();
-                                    e.currentTarget.select();
-                                    break;
-                                  case 'c':
-                                    e.preventDefault();
-                                    const selection = window.getSelection();
-                                    if (selection && selection.toString().length > 0) {
-                                      navigator.clipboard.writeText(selection.toString()).catch(() => {
-                                        const textArea = document.createElement('textarea');
-                                        textArea.value = selection.toString();
-                                        document.body.appendChild(textArea);
-                                        textArea.select();
-                                        document.execCommand('copy');
-                                        document.body.removeChild(textArea);
-                                      });
-                                    }
-                                    break;
-                                  case 'v':
-                                    e.preventDefault();
-                                    const targetV = e.currentTarget as HTMLInputElement | null;
-                                    navigator.clipboard.readText().then(text => {
-                                      if (targetV && typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                                        const start = targetV.selectionStart;
-                                        const end = targetV.selectionEnd;
-                                        const newValue = searchCollaborator.substring(0, start) + text + searchCollaborator.substring(end);
-                                        setSearchState("collaborator", newValue);
-                                        memoizedToggleDropdown("collaborator");
-                                        setTimeout(() => {
-                                          targetV.setSelectionRange(start + text.length, start + text.length);
-                                        }, 0);
-                                      } else {
-                                        setSearchState("collaborator", searchCollaborator + text);
-                                      }
-                                    }).catch(() => {
-                                      document.execCommand('paste');
-                                    });
-                                    break;
-                                  case 'x':
-                                    e.preventDefault();
-                                    const cutSelection = window.getSelection();
-                                    if (cutSelection && cutSelection.toString().length > 0) {
-                                      navigator.clipboard.writeText(cutSelection.toString()).then(() => {
-                                        const targetX = e.currentTarget as HTMLInputElement | null;
-                                        if (targetX && typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                          const start = targetX.selectionStart;
-                                          const end = targetX.selectionEnd;
-                                          const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
-                                          setSearchState("collaborator", newValue);
-                                          memoizedToggleDropdown("collaborator");
-                                        } else {
-                                          setSearchState("collaborator", '');
-                                        }
-                                      }).catch(() => {
-                                        const textArea = document.createElement('textarea');
-                                        textArea.value = cutSelection.toString();
-                                        document.body.appendChild(textArea);
-                                        textArea.select();
-                                        document.execCommand('copy');
-                                        document.body.removeChild(textArea);
-                                        const targetX2 = e.currentTarget as HTMLInputElement | null;
-                                        if (targetX2 && typeof targetX2.selectionStart === 'number' && typeof targetX2.selectionEnd === 'number') {
-                                          const start = targetX2.selectionStart;
-                                          const end = targetX2.selectionEnd;
-                                          const newValue = searchCollaborator.substring(0, start) + searchCollaborator.substring(end);
-                                          setSearchState("collaborator", newValue);
-                                          memoizedToggleDropdown("collaborator");
-                                        } else {
-                                          setSearchState("collaborator", '');
-                                        }
-                                      });
-                                    }
-                                    break;
-                                }
-                              }
-                            }}
+                            searchPlaceholder="Buscar colaboradores..."
+                            multiple={true}
+                            emptyMessage={isAdmin 
+                              ? "No hay coincidencias. Invita a nuevos colaboradores."
+                              : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."
+                            }
                           />
-                          {isCollaboratorDropdownOpen &&
-                            createPortal(
-                              <motion.div
-                                className={styles.dropdown}
-                                style={{
-                                  top: collaboratorDropdownPosition?.top,
-                                  left: collaboratorDropdownPosition?.left,
-                                  position: "absolute",
-                                  zIndex: 150000,
-                                  width: collaboratorInputRef.current?.offsetWidth,
-                                }}
-                                ref={collaboratorDropdownPopperRef}
-                                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                                transition={{ duration: 0.3, ease: "easeOut" }}
-                              >
-                                {filteredCollaborators.length ? (
-                                  filteredCollaborators.map((u) => (
-                                    <motion.div
-                                      key={u.id}
-                                      className={`${styles.dropdownItem} ${
-                                        form.getValues("teamInfo.LeadedBy").includes(u.id) ? styles.disabled : ""
-                                      }`}
-                                      onClick={(e) => {
-                                        if (!form.getValues("teamInfo.LeadedBy").includes(u.id)) {
-                                          handleCollaboratorSelect(u.id, e);
-                                        }
-                                      }}
-                                      initial={{ opacity: 0, y: -10 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      transition={{ duration: 0.2, delay: 0.05 }}
-                                      whileHover={!form.getValues("teamInfo.LeadedBy").includes(u.id) ? {
-                                        scale: 1.02,
-                                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                                        transition: { duration: 0.2, ease: "easeOut" }
-                                      } : {}}
-                                      whileTap={!form.getValues("teamInfo.LeadedBy").includes(u.id) ? {
-                                        scale: 0.98,
-                                        transition: { duration: 0.1 }
-                                      } : {}}
-                                    >
-                                      <div className={styles.dropdownItemContent}>
-                                        <div className={styles.avatarContainer}>
-                                          <Image
-                                            src={u.imageUrl || '/empty-image.png'}
-                                            alt={u.fullName}
-                                            width={32}
-                                            height={32}
-                                            className={styles.avatarImage}
-                                            onError={(e) => {
-                                              e.currentTarget.src = '/empty-image.png';
-                                            }}
-                                          />
-                                          <div 
-                                            className={styles.statusDot} 
-                                            style={{ backgroundColor: '#178d00' }}
-                                          />
-                                    </div>
-                                        <span>{u.fullName} ({u.role})</span>
-                                      </div>
-                                      {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").includes(u.id) && "(Seleccionado)"}
-                                    </motion.div>
-                                  ))
-                                ) : (
-                                  <div className={styles.emptyState}>
-                                    <span>
-                                      {isAdmin
-                                        ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                        : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."}
-                                    </span>
-                                  </div>
-                                )}
-                              </motion.div>,
-                              document.body,
-                            )}
-                          <div className={styles.tags}>
-                            {Array.isArray(form.watch("teamInfo.AssignedTo")) && form.watch("teamInfo.AssignedTo").map((userId) => {
-                              const collaborator = users.find((u) => u.id === userId);
-                              return collaborator ? (
-                                <div key={userId} className={styles.tag}>
-                                  <Image
-                                    src={collaborator.imageUrl || '/empty-image.png'}
-                                    alt={collaborator.fullName}
-                                    width={24}
-                                    height={24}
-                                    style={{ borderRadius: '50%', objectFit: 'cover', marginRight: 6 }}
-                                  />
-                                  {collaborator.fullName}
-                                  <button onClick={(e) => handleCollaboratorRemove(userId, e)}>X</button>
-                                </div>
-                              ) : null;
-                            })}
-                          </div>
                           {form.formState.errors.teamInfo?.AssignedTo && (
                             <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
                           )}
-                        </div>
+                 
+                          </motion.div>
                       )}
+                      </AnimatePresence>
                     </div>
                   </WizardStep>
                   <WizardActions onComplete={() => form.handleSubmit(onSubmit)()} />
@@ -2289,60 +1247,5 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     </>
   );
 };
-
-// Componentes memoizados para evitar re-renders innecesarios
-const MemoizedDropdownItem = memo(({ 
-  item, 
-  onClick, 
-  isSelected, 
-  isDisabled = false 
-}: { 
-  item: { id: string; name?: string; fullName?: string; imageUrl?: string; role?: string }; 
-  onClick: (e: React.MouseEvent<HTMLDivElement>) => void; 
-  isSelected?: boolean; 
-  isDisabled?: boolean; 
-}) => (
-  <motion.div
-    className={`${styles.dropdownItem} ${isDisabled ? styles.disabled : ""}`}
-    onClick={isDisabled ? undefined : onClick}
-    initial={{ opacity: 0, y: -10 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.2, delay: 0.05 }}
-    whileHover={!isDisabled ? {
-      scale: 1.02,
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-      transition: { duration: 0.2, ease: "easeOut" }
-    } : {}}
-    whileTap={!isDisabled ? {
-      scale: 0.98,
-      transition: { duration: 0.1 }
-    } : {}}
-  >
-    <div className={styles.dropdownItemContent}>
-      <div className={styles.avatarContainer}>
-        <Image
-          src={item.imageUrl || '/empty-image.png'}
-          alt={item.name || item.fullName}
-          width={32}
-          height={32}
-          className={styles.avatarImage}
-          onError={(e) => {
-            e.currentTarget.src = '/empty-image.png';
-          }}
-        />
-        <div 
-          className={styles.statusDot} 
-          style={{ backgroundColor: '#178d00' }}
-        />
-      </div>
-      <span>{item.name || item.fullName}</span>
-    </div>
-    {isSelected && "(Seleccionado)"}
-  </motion.div>
-));
-
-MemoizedDropdownItem.displayName = 'MemoizedDropdownItem';
-
-
 
 export default CreateTask;

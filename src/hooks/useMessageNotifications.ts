@@ -43,7 +43,7 @@ export const useMessageNotifications = () => {
       return;
     }
 
-    console.log('[useMessageNotifications] Setting up listener for user:', userId);
+    // Setting up listener
     setIsLoading(true);
 
     // Obtener todas las conversaciones donde el usuario es participante
@@ -136,7 +136,7 @@ export const useMessageNotifications = () => {
           return sortedNotifications;
         }
         
-        console.log('[useMessageNotifications] No changes detected, skipping update');
+        // No changes detected
         return prev; // No actualizar si no hay cambios
       });
       
@@ -148,7 +148,7 @@ export const useMessageNotifications = () => {
     });
 
     return () => {
-      console.log('[useMessageNotifications] Cleaning up listener');
+      // Cleaning up listener
       unsubscribe();
     };
   }, [userId]);

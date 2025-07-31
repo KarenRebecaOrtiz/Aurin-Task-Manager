@@ -1,203 +1,339 @@
-@use '@/app/styles/variables' as *;
-@use '@/app/styles/mixins' as *;
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
-
 // ==============================================================
-// 🔮 PROFILE CARD - OPTIMIZED WITH NEW MIXINS & COMPONENTS
+// 🔮 GLASSMORPHISM PROFILE CARD - NUEVO DISEÑO
 // =================================================================
 
-.ProfileCardOverlay {
-  @include profile-card-overlay;
-}
-
-.frame239189 {
-  @include profile-card-container;
-  @include profile-card-scrollbar;
-}
-
-.frame239197 {
-  @include profile-card-header;
-}
-
-.frame2 {
-  @include flex-between;
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
   align-items: center;
-  padding: $profile-card-padding;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
 
-  @media (min-width: 768px) {
-    padding: $spacing-lg 50px;
-  }
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $spacing-lg;
-    padding: $spacing-lg $profile-card-padding;
+  @media (prefers-color-scheme: dark) {
+    background: rgba(0, 0, 0, 0.6);
   }
 }
 
-.frame1 {
-  @include flex-center;
-  gap: $spacing-lg;
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 384px; // max-w-sm
+  margin: 0 auto;
 }
 
-.profilePhotoContainer {
+.closeButton {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: #666;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 1);
+    color: #333;
+    transform: scale(1.1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    background: rgba(30, 30, 30, 0.9);
+    color: #ccc;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      background: rgba(50, 50, 50, 1);
+      color: #fff;
+    }
+  }
+}
+
+.profileCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.5s ease;
+
+  @media (prefers-color-scheme: dark) {
+    background: rgba(30, 30, 30, 0.4);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.avatarContainer {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  padding: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+
+  @media (prefers-color-scheme: dark) {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+  text-align: center;
+
+  @media (prefers-color-scheme: dark) {
+    color: #fff;
+  }
+}
+
+.title {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3b82f6;
+  text-align: center;
+
+  @media (prefers-color-scheme: dark) {
+    color: #60a5fa;
+  }
+}
+
+.bio {
+  margin: 16px 0 0 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+
+  @media (prefers-color-scheme: dark) {
+    color: #9ca3af;
+  }
+}
+
+.divider {
+  width: 50%;
+  height: 1px;
+  margin: 24px 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+
+  @media (prefers-color-scheme: dark) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.socialLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.socialButtonContainer {
   position: relative;
 }
 
-.ellipse11 {
-  @include profile-card-avatar;
-}
-
-.frame239179 {
-  @include flex-column;
-  gap: 5px;
-}
-
-.mainName {
-  @include profile-card-name;
-}
-
-.exampleMailCom {
-  @include profile-card-email;
-}
-
-.ProfileCardCloseButton {
-  @include profile-card-close-button;
-}
-
-.content {
-  padding: $profile-card-padding;
-
-  @media (min-width: 768px) {
-    padding: $profile-card-padding-md;
-  }
-
-  @media (min-width: 1024px) {
-    padding: $profile-card-padding-lg;
-  }
-}
-
-.section {
-  margin-bottom: 30px;
-}
-
-.sectionTitle {
-  @include profile-card-section-title;
-}
-
-.sectionContent {
-  @include profile-card-section-content;
-}
-
-.sectionContentNoPadding {
-  @include profile-card-section-content;
-  padding: 0 !important;
-}
-
-.fieldGroup {
-  @include profile-card-field-group;
-}
-
-.fieldGroupRow {
-  @include profile-card-field-group-row;
-}
-
-.frame239182,
-.frame239183 {
-  @include flex-column;
-  gap: $spacing-sm;
-  flex: 1;
-}
-
-.label {
-  @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
-  margin-bottom: 5px;
-
-  @include dark-mode {
-    color: $color-text-dark-secondary;
-  }
-
-  @media (min-width: 768px) {
-    font-size: $text-base;
-  }
-
-  @media (min-width: 1024px) {
-    font-size: $text-base;
-  }
-}
-
-.input {
-  @include profile-card-input;
-}
-
-.stackDescription,
-.teamsDescription {
-  @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
-  margin-bottom: 10px;
-
-  @include dark-mode {
-    color: $color-text-dark-secondary;
-  }
-
-  @media (min-width: 768px) {
-    font-size: $text-base;
-  }
-}
-
-.ProfileCardPortfolioLink {
-  color: $color-info;
-  @include typography($text-xs, $font-weight-medium);
-  text-decoration: underline;
-  word-break: break-all;
+.socialButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: inherit;
 
   &:hover {
-    color: darken($color-info, 10%);
+    background: rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
   }
 
-  @include dark-mode {
-    color: lighten($color-info, 20%);
+  @media (prefers-color-scheme: dark) {
+    background: rgba(60, 60, 60, 0.5);
+
     &:hover {
-      color: $color-info;
+      background: rgba(80, 80, 80, 0.8);
     }
   }
+}
 
-  @media (min-width: 768px) {
-    font-size: $text-sm;
+.socialIcon {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(60, 60, 60, 0.7);
+  transition: all 0.2s ease;
+
+  @media (prefers-color-scheme: dark) {
+    color: rgba(200, 200, 200, 0.7);
   }
 
-  @media (min-width: 1024px) {
-    font-size: $text-base;
-  }
-}
+  .socialButton:hover & {
+    color: rgba(60, 60, 60, 1);
 
-.ProfileCardTags {
-  @include flex-center;
-  flex-wrap: wrap;
-  gap: $spacing-sm;
-  width: 100%;
-  justify-content: flex-start;
-  padding: 0;
-}
-
-.ProfileCardTag {
-  @include profile-card-tag;
-}
-
-.noDataMessage {
-  @include typography($text-sm, $font-weight-normal, $color-text-secondary, center);
-  padding: $spacing-lg;
-  background: $color-bg-glass;
-  border-radius: $radius-sm;
-  border: 1px dashed $color-border-light;
-
-  @include dark-mode {
-    color: $color-text-dark-secondary;
-    background: $color-bg-glass-dark;
-    border-color: $color-border-dark;
+    @media (prefers-color-scheme: dark) {
+      color: rgba(255, 255, 255, 1);
+    }
   }
 }
 
-.ProfileCardButton {
-  @include profile-card-button;
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.03);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  svg {
+    transition: transform 0.3s ease;
+  }
+
+  &:hover svg {
+    transform: rotate(45deg);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    background: #1d4ed8;
+  }
+}
+
+.tooltip {
+  position: absolute;
+  top: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 6px 12px;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: all 0.3s ease;
+
+  @media (prefers-color-scheme: dark) {
+    background: rgba(30, 30, 30, 0.9);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &.tooltipVisible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tooltipArrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+
+  @media (prefers-color-scheme: dark) {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.backgroundGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  z-index: -10;
+  transition: all 0.5s ease;
+  opacity: 0.3;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(168, 85, 247, 0.5) 100%);
+  filter: blur(32px);
+
+  @media (prefers-color-scheme: dark) {
+    opacity: 0.2;
+  }
+}
+
+// Estados de carga y error
+.loadingContainer,
+.errorContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #666;
+
+  @media (prefers-color-scheme: dark) {
+    color: #ccc;
+  }
 }

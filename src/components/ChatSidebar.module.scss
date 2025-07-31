@@ -19,9 +19,9 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  z-index: 1000;
+  z-index: 100001;
   transform: translateX(100%);
-  overflow: visible;
+  overflow: hidden;
   transition: all 0.3s ease-in-out;
   box-shadow:
     -5px 1px 11px rgba(0, 0, 0, 0.05),
@@ -1010,7 +1010,7 @@
   top: 100%;
   right: 0;
   width: 80px;
-  z-index: 10;
+  z-index: 100002;
   overflow: hidden;
   
   // 🔮 CRYSTALLIZED GLASS EFFECT
@@ -1058,7 +1058,9 @@
 }
 
 :global(body.dark) .actionButton {
-  filter: invert(100%) brightness(100%);
+  img {
+    filter: invert(1) grayscale(1) brightness(1.5);
+  }
 }
 
 .actionDropdownItem {
@@ -1119,38 +1121,123 @@
   }
 }
 
+:global(body.dark) .actionDropdown {
+  background: $zinc-800;
+  border: none;
+  box-shadow: none !important;
+}
+
 :global(body.dark) .actionDropdownItem {
-  color: #e5e7eb;
+  color: rgba(255, 255, 255, 0.532);
+  background: transparent;
+  border: none;
+  box-shadow: none !important;
+  transition: all 0.3s ease;
+
+  img:not([alt*="Eliminar"]) {
+    filter: invert(1) grayscale(1) brightness(1.5);
+  }
 
   &:hover:not(:disabled) {
-    background: #374151;
-    box-shadow:
-      inset -4px -4px 8px rgba(255, 255, 255, 0.08),
-      inset 4px 4px 8px rgba(0, 0, 0, 0.3);
+    background: $zinc-700;
+    color: $white;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: none;
   }
 
   &:active:not(:disabled) {
-    box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-      inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+    background: $zinc-600;
+    transform: scale(0.98);
+    box-shadow: none;
   }
 
   &:disabled {
     color: #6b7280;
-  }
-
-  &::before {
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.1),
-      transparent
-    );
+    background: transparent;
   }
 }
 
 // -----------------------------------
-// Contenedor de Edición de Mensajes
+// [ESTILOS UNIFICADOS PARA ACTION MENU - AÑADIDOS AL FINAL]
+
+.actionDropdown.unified {
+  background: rgba(241, 245, 249, 0.95);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    -8px -8px 16px rgba(255, 255, 255, 0.8),
+    8px 8px 16px rgba(0, 0, 0, 0.1),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.4),
+    inset 2px 2px 4px rgba(209, 217, 230, 0.2);
+  padding: 8px;
+  flex-direction: column;
+  gap: 8px;
+
+  .actionDropdownItem {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.6),
+      2px 2px 4px rgba(0, 0, 0, 0.05),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.3),
+      inset 1px 1px 2px rgba(209, 217, 230, 0.1);
+    
+    &:hover {
+      transform: translateY(-2px) scale(1.03);
+      background: rgba(255, 255, 255, 0.5);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.8),
+        4px 4px 8px rgba(0, 0, 0, 0.08),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 4px rgba(209, 217, 230, 0.2);
+    }
+
+    &.delete:hover {
+      background: rgba(239, 68, 68, 0.3) !important;
+      border-color: rgba(239, 68, 68, 0.4) !important;
+    }
+  }
+}
+
+:global(body.dark) .actionDropdown.unified {
+  background: rgba(39, 39, 42, 0.95);
+  box-shadow:
+    -8px -8px 16px rgba(255, 255, 255, 0.05),
+    8px 8px 16px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.02),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+
+  .actionDropdownItem {
+    background: rgba(75, 85, 99, 0.3);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.3),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+      inset 1px 1px 2px rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: rgba(75, 85, 99, 0.5);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.4),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    &.delete:hover {
+      background: rgba(239, 68, 68, 0.4) !important;
+      border-color: rgba(239, 68, 68, 0.5) !important;
+    }
+  }
+}
+
 // -----------------------------------
 .editContainer {
   background: #fef3c7;
@@ -2332,6 +2419,17 @@
     }
   }
 
+  &.noData {
+    color: #9ca3af;
+    opacity: 0.7;
+    font-style: italic;
+    
+    &:hover {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+  }
+
   &::before {
     content: '';
     position: absolute;
@@ -2371,6 +2469,17 @@
 
   &:disabled {
     color: #6b7280;
+  }
+
+  &.noData {
+    color: #6b7280;
+    opacity: 0.7;
+    font-style: italic;
+    
+    &:hover {
+      background: #374151;
+      color: #9ca3af;
+    }
   }
 
   &::before {

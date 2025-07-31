@@ -1,7 +1,7 @@
 // src/components/ChatSidebar.tsx
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo, forwardRef, Dispatch, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, memo, forwardRef, Dispatch, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
@@ -118,8 +118,39 @@ const MessageItem = memo(
       } = props;
 
       const actionMenuRef = useRef<HTMLDivElement>(null);
+      const actionButtonRef = useRef<HTMLButtonElement>(null);
       const messageRef = useRef<HTMLDivElement>(null);
       const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+      const [isMenuPositioned, setIsMenuPositioned] = useState(false);
+
+      const updateMenuPosition = useCallback(() => {
+        console.log('[ActionMenu] updateMenuPosition called');
+        if (actionButtonRef.current) {
+          const rect = actionButtonRef.current.getBoundingClientRect();
+          console.log('[ActionMenu] Button rect:', rect);
+          const position = {
+            top: rect.bottom + window.scrollY,
+            left: rect.left + window.scrollX,
+          };
+          console.log('[ActionMenu] Calculated position:', position);
+          setActionMenuPosition(position);
+        } else {
+          console.log('[ActionMenu] actionButtonRef.current is null');
+        }
+      }, []);
+
+      useLayoutEffect(() => {
+        console.log('[ActionMenu] useLayoutEffect triggered for message:', message.id);
+        console.log('[ActionMenu] actionMenuOpenId:', actionMenuOpenId);
+        if (actionMenuOpenId === message.id) {
+          console.log('[ActionMenu] Menu should be positioned for this message');
+          updateMenuPosition();
+          setIsMenuPositioned(true);
+        } else {
+          console.log('[ActionMenu] Menu should NOT be positioned for this message');
+          setIsMenuPositioned(false);
+        }
+      }, [actionMenuOpenId, message.id, updateMenuPosition]);
 
       const handleCopyMessage = useCallback(async (messageText: string) => {
         try {
@@ -294,15 +325,15 @@ const MessageItem = memo(
                 {!message.isPending && (
                   <div className={styles.actionContainer}>
                     <motion.button
+                      ref={actionButtonRef}
                       className={styles.actionButton}
                       onClick={(e) => {
                         e.stopPropagation();
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setActionMenuPosition({
-                          top: rect.bottom + window.scrollY,
-                          left: rect.left   // Use left instead of right based on the element position
-                        });
-                        setActionMenuOpenId(actionMenuOpenId === message.id ? null : message.id);
+                        console.log('[ActionMenu] Button clicked for message:', message.id);
+                        console.log('[ActionMenu] Current actionMenuOpenId:', actionMenuOpenId);
+                        const newActionMenuOpenId = actionMenuOpenId === message.id ? null : message.id;
+                        console.log('[ActionMenu] Setting actionMenuOpenId to:', newActionMenuOpenId);
+                        setActionMenuOpenId(newActionMenuOpenId);
                       }}
                       whileTap={{ scale: 0.95, opacity: 0.8 }}
                       transition={{ duration: 0.15, ease: 'easeOut' }}
@@ -328,9 +359,9 @@ const MessageItem = memo(
               renderMessageContent()
             )}
           </div>
-          {actionMenuOpenId === message.id && ReactDOM.createPortal(
+                    {isMenuPositioned && actionMenuOpenId === message.id && ReactDOM.createPortal(
             <motion.div
-              className={styles.actionDropdown}
+              className={`${styles.actionDropdown} ${styles.unified}`}
               ref={actionMenuRef}
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -340,7 +371,8 @@ const MessageItem = memo(
                 position: 'absolute',
                 top: actionMenuPosition.top,
                 left: actionMenuPosition.left,
-                zIndex: 1000,
+                opacity: isMenuPositioned ? 1 : 0,
+                zIndex: 100002,
               }}
             >
               <div className={styles.actionDropdownContent}>
@@ -894,7 +926,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           return msgDate >= startDate;
         });
         if (filteredMessages.length === 0) {
-          alert('No hay mensajes en el intervalo de tiempo seleccionado.');
+          // Mostrar mensaje más elegante usando el sistema de notificaciones existente
+          const intervalLabel = intervalLabels[interval as keyof typeof intervalLabels] || interval;
+          const message = `📊 No hay actividad registrada en los últimos ${intervalLabel.toLowerCase()}. El resumen estaría vacío.`;
+          
+          // Enviar el mensaje como una notificación en el chat
+          await handleSendMessage({
+            text: message,
+            senderId: 'system',
+            senderName: 'Sistema',
+            timestamp: new Date(),
+            read: true,
+            clientId: task.clientId,
+          });
           return;
         }
         const chatContext = filteredMessages
@@ -985,7 +1029,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
       } finally {
         setIsGeneratingSummary(false);
       }
-    }, [user?.id, messages, isGeneratingSummary, handleSendMessage]);
+    }, [user?.id, messages, isGeneratingSummary, handleSendMessage, task.clientId]);
 
     const hasDataForInterval = useCallback((interval: string) => {
       if (!messages.length) return false;
@@ -1261,61 +1305,67 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                 >
                   <motion.button
                     type="button"
-                    className={styles.dropdownItem}
+                    className={`${styles.dropdownItem} ${!hasDataForInterval('1day') ? styles.noData : ''}`}
                     onClick={() => handleGenerateSummary('1day')}
-                    disabled={isGeneratingSummary || !hasDataForInterval('1day')}
+                    disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title={!hasDataForInterval('1day') ? 'No hay datos para este período' : 'Generar resumen de 1 día'}
                   >
                     📅 1 día
                   </motion.button>
                   <motion.button
                     type="button"
-                    className={styles.dropdownItem}
+                    className={`${styles.dropdownItem} ${!hasDataForInterval('3days') ? styles.noData : ''}`}
                     onClick={() => handleGenerateSummary('3days')}
-                    disabled={isGeneratingSummary || !hasDataForInterval('3days')}
+                    disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title={!hasDataForInterval('3days') ? 'No hay datos para este período' : 'Generar resumen de 3 días'}
                   >
                     📅 3 días
                   </motion.button>
                   <motion.button
                     type="button"
-                    className={styles.dropdownItem}
+                    className={`${styles.dropdownItem} ${!hasDataForInterval('1week') ? styles.noData : ''}`}
                     onClick={() => handleGenerateSummary('1week')}
-                    disabled={isGeneratingSummary || !hasDataForInterval('1week')}
+                    disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title={!hasDataForInterval('1week') ? 'No hay datos para este período' : 'Generar resumen de 1 semana'}
                   >
                     📅 1 semana
                   </motion.button>
                   <motion.button
                     type="button"
-                    className={styles.dropdownItem}
+                    className={`${styles.dropdownItem} ${!hasDataForInterval('1month') ? styles.noData : ''}`}
                     onClick={() => handleGenerateSummary('1month')}
-                    disabled={isGeneratingSummary || !hasDataForInterval('1month')}
+                    disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title={!hasDataForInterval('1month') ? 'No hay datos para este período' : 'Generar resumen de 1 mes'}
                   >
                     📅 1 mes
                   </motion.button>
                   <motion.button
                     type="button"
-                    className={styles.dropdownItem}
+                    className={`${styles.dropdownItem} ${!hasDataForInterval('6months') ? styles.noData : ''}`}
                     onClick={() => handleGenerateSummary('6months')}
-                    disabled={isGeneratingSummary || !hasDataForInterval('6months')}
+                    disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title={!hasDataForInterval('6months') ? 'No hay datos para este período' : 'Generar resumen de 6 meses'}
                   >
                     📅 6 meses
                   </motion.button>
                   <motion.button
                     type="button"
-                    className={styles.dropdownItem}
+                    className={`${styles.dropdownItem} ${!hasDataForInterval('1year') ? styles.noData : ''}`}
                     onClick={() => handleGenerateSummary('1year')}
-                    disabled={isGeneratingSummary || !hasDataForInterval('1year')}
+                    disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title={!hasDataForInterval('1year') ? 'No hay datos para este período' : 'Generar resumen de 1 año'}
                   >
                     📅 1 año
                   </motion.button>
@@ -1660,7 +1710,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
 );
 
 // Log adicional para verificar que el componente se exporta correctamente
-console.log('[ChatSidebar] ✅ Component definition completed');
+// ChatSidebar component loaded
 
 ChatSidebar.displayName = 'ChatSidebar';
 

@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
 import styles from './SkeletonLoader.module.scss';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface SkeletonLoaderProps {
   type: 'tasks' | 'clients' | 'members' | 'kanban' | 'config';

@@ -135,7 +135,7 @@ const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
         <div
           className={`${styles.followingTooltip} ${isHovered ? styles.visible : styles.hidden}`}
           style={{
-            top: `${cursorPosition.y + 100}px`,
+            top: `${cursorPosition.y + 50}px`,
             left: `${cursorPosition.x}px`,
             transform: `rotateZ(${rotation}deg) translate(-50%, -50%)`,
           }}

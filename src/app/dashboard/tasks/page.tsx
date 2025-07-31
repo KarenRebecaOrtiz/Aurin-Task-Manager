@@ -18,6 +18,7 @@ import MessageSidebar from '@/components/MessageSidebar';
 import ConfigPage from '@/components/ConfigPage';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
 import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
+
 // Safari debug components removed for production
 
 import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
@@ -572,8 +573,20 @@ function TasksPageContent() {
               }}
               onTaskArchive={async (task: unknown, action: 'archive' | 'unarchive') => {
                 console.log('[TasksPage] ArchiveTable onTaskArchive called', { task, action });
-                if (!user?.id || !isAdmin) {
-                  console.error('[TasksPage] User not authenticated or not admin');
+                if (!user?.id) {
+                  console.error('[TasksPage] User not authenticated');
+                  return false;
+                }
+                
+                // ✅ CORREGIDO: Permitir archivar/desarchivar a admins Y creadores de la tarea
+                const taskData = task as Task;
+                const isTaskCreator = taskData.CreatedBy === user.id;
+                if (!isAdmin && !isTaskCreator) {
+                  console.error('[TasksPage] User not authorized to archive/unarchive this task:', {
+                    isAdmin,
+                    taskCreatedBy: taskData.CreatedBy,
+                    currentUserId: user.id
+                  });
                   return false;
                 }
 
@@ -597,7 +610,7 @@ function TasksPageContent() {
                 // TODO: Implement data refresh functionality
               }}
             />
-          ) : selectedContainer === 'tareas' && (
+          ) : selectedContainer === 'tareas' ? (
             <>
               {taskView === 'table' ? (
                 <TasksTableRenderer />
@@ -616,7 +629,7 @@ function TasksPageContent() {
                 />
               )}
             </>
-          )}
+          ) : null}
 
           {selectedContainer === 'cuentas' && (
             <ClientsTable
@@ -666,6 +679,8 @@ function TasksPageContent() {
       <div className={styles.vignetteBottom} />
       <Dock />
       <Footer />
+      
+
     </div>
   );
 
@@ -678,7 +693,7 @@ function TasksPageContent() {
         loadingProgress={loadingProgress}
         isVisible={showLoader}
         onAnimationComplete={() => {
-          console.log('Loader animation completed');
+          // Loader animation completed
         }}
       />
       
@@ -731,8 +746,6 @@ const IndependentChatSidebarRenderer = () => {
 };
 
 export default function TasksPage() {
-  console.log('[TasksPage] Render');
-  
   return (
     <AuthProvider>
       <TasksPageContent />

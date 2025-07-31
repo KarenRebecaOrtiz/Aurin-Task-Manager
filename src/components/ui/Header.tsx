@@ -12,7 +12,8 @@ import { Timestamp } from 'firebase/firestore';
 import AvatarDropdown from '../AvatarDropdown';
 import NotificationDropdown from './NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/contexts/ThemeContext';
+import SimpleTooltip from './SimpleTooltip';
 
 // Coordenadas de la oficina y radio
 const OFFICE_LOCATION = {
@@ -578,7 +579,10 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
       <div className={styles.logoAndWelcomeContainer}>
-        <div className={styles.logoContainer}>
+        <div 
+          className={styles.logoContainer}
+          onClick={() => onChangeContainer('tareas')}
+        >
           <Image
             src={isDarkMode ? '/logoDark.svg' : '/logoLight.svg'}
             alt="Logo"
@@ -698,33 +702,35 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className={styles.notificationContainer}>
-            <button
-              ref={notificationButtonRef}
-              className={styles.notificationButton}
-              onClick={toggleNotifications}
-              aria-label="Abrir notificaciones"
-              aria-expanded={isNotificationsOpen}
-              aria-controls="notification-dropdown"
-            >
-              {hasUnread && !hasViewedNotifications ? (
-                <div className={styles.notification}>
-                  <div className={styles.bellContainer}>
-                    <div className={styles.bell}></div>
+            <SimpleTooltip text="Notificaciones">
+              <button
+                ref={notificationButtonRef}
+                className={styles.notificationButton}
+                onClick={toggleNotifications}
+                aria-label="Abrir notificaciones"
+                aria-expanded={isNotificationsOpen}
+                aria-controls="notification-dropdown"
+              >
+                {hasUnread && !hasViewedNotifications ? (
+                  <div className={styles.notification}>
+                    <div className={styles.bellContainer}>
+                      <div className={styles.bell}></div>
+                    </div>
+                    {unreadCount > 0 && (
+                      <span className={styles.notificationCount} aria-live="polite">{unreadCount}</span>
+                    )}
                   </div>
-                  {unreadCount > 0 && (
-                    <span className={styles.notificationCount} aria-live="polite">{unreadCount}</span>
-                  )}
-                </div>
-              ) : (
-                <Image
-                  src="/EmptyNotification.svg"
-                  alt="Notificaciones"
-                  width={24}
-                  height={24}
-                  style={{ width: 'auto', height: 'auto' }}
-                />
-              )}
-            </button>
+                ) : (
+                  <Image
+                    src="/EmptyNotification.svg"
+                    alt="Notificaciones"
+                    width={24}
+                    height={24}
+                    style={{ width: 'auto', height: 'auto' }}
+                  />
+                )}
+              </button>
+            </SimpleTooltip>
             <NotificationDropdown
               isVisible={isNotificationsVisible}
               isOpen={isNotificationsOpen}

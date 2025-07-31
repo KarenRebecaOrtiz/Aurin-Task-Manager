@@ -7,6 +7,7 @@ import ToDoDropdown from './ui/ToDoDropdown';
 import { useTodos } from '@/hooks/useTodos';
 import { useShallow } from 'zustand/react/shallow';
 import { useToDoDropdownStore } from '@/stores/todoDropdownStore';
+import SimpleTooltip from './ui/SimpleTooltip';
 
 export default function ToDoDynamic() {
   const { todos } = useTodos();
@@ -88,46 +89,48 @@ export default function ToDoDynamic() {
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        className={styles.todoButton}
-        onClick={handleToggleDropdown}
-        aria-label="Abrir lista de todos"
-        title="Mis Todos"
-        data-todo-button
-      >
-        <AnimatePresence mode="wait">
-          {remainingTodos > 0 ? (
-            <motion.span
-              key="number"
-              className={styles.todoNumber}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              {remainingTodos}
-            </motion.span>
-          ) : (
-            <motion.svg
-              key="icon"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-            >
-              <path d="M9 11l3 3L22 4"></path>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-            </motion.svg>
-          )}
-        </AnimatePresence>
-      </button>
+      <SimpleTooltip text="Mis To Do">
+        <button
+          ref={buttonRef}
+          className={styles.todoButton}
+          onClick={handleToggleDropdown}
+          aria-label="Abrir lista de todos"
+          title="Mis Todos"
+          data-todo-button
+        >
+          <AnimatePresence mode="wait">
+            {remainingTodos > 0 ? (
+              <motion.span
+                key="number"
+                className={styles.todoNumber}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+              >
+                {remainingTodos}
+              </motion.span>
+            ) : (
+              <motion.svg
+                key="icon"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+              >
+                <path d="M9 11l3 3L22 4"></path>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </motion.svg>
+            )}
+          </AnimatePresence>
+        </button>
+      </SimpleTooltip>
 
       <ToDoDropdown
         isVisible={isVisible}

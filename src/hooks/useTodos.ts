@@ -45,7 +45,7 @@ export const useTodos = () => {
       return;
     }
 
-    console.log('[useTodos] Loading todos for user:', user.id);
+    // Loading todos
     setIsLoading(true);
     setError(null);
 
@@ -66,7 +66,7 @@ export const useTodos = () => {
         orderBy('completedDate', 'desc')
       );
 
-      console.log('[useTodos] Setting up active todos listener');
+      // Setting up active todos listener
       const unsubscribeActive = onSnapshot(
         activeTodosQuery,
         (snapshot) => {
@@ -74,7 +74,7 @@ export const useTodos = () => {
             id: doc.id,
             ...doc.data(),
           } as Todo));
-          console.log('[useTodos] Active todos loaded:', activeTodosData.length);
+          // Active todos loaded
           setTodos(activeTodosData);
           setIsLoading(false);
         },
@@ -107,7 +107,7 @@ export const useTodos = () => {
         }
       );
 
-      console.log('[useTodos] Setting up completed todos listener');
+      // Setting up completed todos listener
       const unsubscribeCompleted = onSnapshot(
         completedTodosQuery,
         (snapshot) => {
@@ -115,7 +115,7 @@ export const useTodos = () => {
             id: doc.id,
             ...doc.data(),
           } as Todo));
-          console.log('[useTodos] Completed todos loaded:', completedTodosData.length);
+          // Completed todos loaded
           setCompletedTodos(completedTodosData);
         },
         (error) => {
@@ -144,7 +144,7 @@ export const useTodos = () => {
       );
 
       return () => {
-        console.log('[useTodos] Cleaning up listeners');
+        // Cleaning up listeners
         unsubscribeActive();
         unsubscribeCompleted();
       };

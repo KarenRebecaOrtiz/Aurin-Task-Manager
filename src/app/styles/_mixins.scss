@@ -303,7 +303,7 @@
 // =================================================================
 
 @mixin dark-mode {
-  :global(body.dark) & {
+  :global(body.dark) {
     @content;
   }
 }

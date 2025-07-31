@@ -90,11 +90,11 @@ $zinc-600: #52525b;
 .container {
   @include crystal-surface();
   width: 100%;
+  min-height: 900px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  min-height: 600px;
   position: relative;
 
   &.saving .section { opacity: 0.5; }

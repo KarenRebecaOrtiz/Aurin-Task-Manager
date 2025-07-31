@@ -76,14 +76,9 @@ const TasksTableContainer = ({
         openChatSidebar(task, clientName);
       },
     });
-  }, [
-    setActionHandlers,
-    openCreateTask,
-    openEditTask,
-    openDeletePopup,
-    openArchiveTable,
-    setTaskView,
-  ]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Las funciones de store son estables, no necesitan dependencias.
+  // Incluirlas causaría re-renders innecesarios que rompen el filtrado.
 
   return (
     <TasksTable 

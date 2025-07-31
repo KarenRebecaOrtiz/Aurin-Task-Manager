@@ -8,7 +8,8 @@ interface UsersSyncProviderProps {
 
 export const UsersSyncProvider: React.FC<UsersSyncProviderProps> = ({ children }) => {
   // Inicializar sincronización de usuarios
-  useUsersSync();
+  // TEMPORALMENTE DESACTIVADO: useUsersSync duplica el fetching con useSharedTasksState
+  // useUsersSync();
   
   return <>{children}</>;
 }; 

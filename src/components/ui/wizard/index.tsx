@@ -9,6 +9,8 @@ import styles from "./wizard.module.scss";
 interface WizardProps {
   totalSteps: number;
   children: React.ReactNode;
+  currentStep?: number;
+  onStepChange?: (step: number) => void;
 }
 
 interface WizardStepChildProps {
@@ -31,8 +33,10 @@ interface WizardActionsChildProps {
   prevStep?: () => void;
 }
 
-const Wizard: React.FC<WizardProps> = ({ totalSteps, children }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+const Wizard: React.FC<WizardProps> = ({ totalSteps, children, currentStep: externalCurrentStep, onStepChange }) => {
+  const [internalCurrentStep, setInternalCurrentStep] = useState(0);
+  const currentStep = externalCurrentStep !== undefined ? externalCurrentStep : internalCurrentStep;
+  const setCurrentStep = onStepChange || setInternalCurrentStep;
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [validators, setValidators] = useState<(() => Promise<boolean>)[]>([]);
   const [direction, setDirection] = useState<"next" | "prev" | null>(null);

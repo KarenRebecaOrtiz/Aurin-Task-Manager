@@ -17,8 +17,6 @@ export const useMessageDrag = ({ onReplyActivated }: UseMessageDragProps) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('[MessageDrag] Drag start for message:', messageId);
-    
     // Guardar posición inicial
     if ('touches' in e) {
       messageDragStartX.current = e.touches[0].clientX;
@@ -47,8 +45,6 @@ export const useMessageDrag = ({ onReplyActivated }: UseMessageDragProps) => {
     const deltaX = messageDragStartX.current - currentX;
     const deltaY = Math.abs(messageDragStartY.current - currentY);
     
-    console.log('[MessageDrag] Drag move - deltaX:', deltaX, 'deltaY:', deltaY);
-    
     // Solo permitir drag horizontal si el movimiento vertical es menor
     if (deltaY < 50) {
       const maxOffset = 80; // Máximo desplazamiento
@@ -57,7 +53,6 @@ export const useMessageDrag = ({ onReplyActivated }: UseMessageDragProps) => {
       if (Math.abs(deltaX) > 0) {
         const clampedOffset = Math.max(-maxOffset, Math.min(deltaX, maxOffset));
         setDragOffset(clampedOffset);
-        console.log('[MessageDrag] Drag offset set to:', clampedOffset);
       } else {
         setDragOffset(0);
       }
@@ -67,14 +62,11 @@ export const useMessageDrag = ({ onReplyActivated }: UseMessageDragProps) => {
   const handleMessageDragEnd = useCallback(() => {
     if (!isDraggingMessageRef.current || !draggedMessageId) return;
     
-    console.log('[MessageDrag] Drag end - final offset:', dragOffset);
-    
     const threshold = 60; // Umbral para activar la respuesta
     
     // Activar respuesta si se arrastra hacia la izquierda más allá del umbral
     if (dragOffset >= threshold) {
       onReplyActivated(draggedMessageId);
-      console.log('[MessageDrag] Reply activated for message:', draggedMessageId);
     }
     
     // Resetear estados con animación
