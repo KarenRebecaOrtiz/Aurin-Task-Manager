@@ -14,6 +14,7 @@ import NotificationDropdown from './NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import SimpleTooltip from './SimpleTooltip';
+import { useTasksPageStore } from '@/stores/tasksPageStore';
 
 // Coordenadas de la oficina y radio
 const OFFICE_LOCATION = {
@@ -89,6 +90,9 @@ interface HeaderProps {
   onNotificationClick: (notification: Notification) => void;
   onLimitNotifications: (notifications: Notification[]) => void;
   onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
+  isCreateTaskOpen?: boolean;
+  isEditTaskOpen?: boolean;
+  hasUnsavedChanges?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -99,6 +103,9 @@ const Header: React.FC<HeaderProps> = ({
   onNotificationClick,
   onLimitNotifications,
   onChangeContainer,
+  isCreateTaskOpen = false,
+  isEditTaskOpen = false,
+  hasUnsavedChanges = false,
 }) => {
   const { user, isLoaded } = useUser();
   const { isAdmin } = useAuth();
@@ -549,6 +556,27 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   /* ────────────────────────────────────────────
+     CONTAINER CHANGE HANDLER WITH UNSAVED CHANGES CHECK
+  ──────────────────────────────────────────── */
+  const handleContainerChange = useCallback((newContainer: 'tareas' | 'cuentas' | 'miembros' | 'config') => {
+    // Si estamos en CreateTask o EditTask, verificar cambios no guardados
+    if (isCreateTaskOpen || isEditTaskOpen) {
+      if (hasUnsavedChanges) {
+        // Si hay cambios no guardados, almacenar el container pendiente y abrir el popup de confirmación
+        const { openConfirmExitPopup, setPendingContainer } = useTasksPageStore.getState();
+        setPendingContainer(newContainer);
+        openConfirmExitPopup();
+      } else {
+        // Si no hay cambios no guardados, cambiar container directamente
+        onChangeContainer(newContainer);
+      }
+    } else {
+      // Comportamiento normal cuando no estamos en modales
+      onChangeContainer(newContainer);
+    }
+  }, [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges, onChangeContainer]);
+
+  /* ────────────────────────────────────────────
      NOTIFICATION BUTTON HANDLERS
   ──────────────────────────────────────────── */
   const toggleNotifications = useCallback(() => {
@@ -581,7 +609,7 @@ const Header: React.FC<HeaderProps> = ({
       <div className={styles.logoAndWelcomeContainer}>
         <div 
           className={styles.logoContainer}
-          onClick={() => onChangeContainer('tareas')}
+          onClick={() => handleContainerChange('tareas')}
         >
           <Image
             src={isDarkMode ? '/logoDark.svg' : '/logoLight.svg'}
@@ -608,7 +636,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         <div className={styles.lefContainer}style={{justifyContent: 'start'}}>
           <div className={styles.AvatarMobile}>
-            <AvatarDropdown onChangeContainer={onChangeContainer} />
+            <AvatarDropdown onChangeContainer={handleContainerChange} />
           </div>
           <div className={styles.frame14}>
             <div className={styles.title}>
@@ -684,7 +712,7 @@ const Header: React.FC<HeaderProps> = ({
                   officeStatus === 'En la oficina'
                     ? '#28a745'
                     : officeStatus === 'Fuera de la oficina'
-                    ? '#dc3545'
+                    ? isDarkMode ? '#ff6f00' : '#dc3545'
                     : '#ff6f00',
               }}
               className={styles.ClockOfficeStatuHidden}
@@ -742,7 +770,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className={styles.AvatarDesktop}>
-            <AvatarDropdown onChangeContainer={onChangeContainer} />
+            <AvatarDropdown onChangeContainer={handleContainerChange} />
           </div>
         </div>
         <div className={styles.adviceContainer}>

@@ -2,6 +2,8 @@
 @use '@/app/styles/mixins' as *;
 @use '@/app/styles/components' as *;
 
+
+
 .tableContainer {
   width: 100%;
   display: block;
@@ -11,19 +13,27 @@
 
 /* ESTADOS VACÍOS */
 .emptyStateTitle {
-  @include typography-title($text-xl, $font-weight-semibold, $color-text-primary, center);
+  font-family: $font-family-table;
+  font-size: $text-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
   padding-top: $spacing-xl;
   margin-bottom: $spacing-sm;
   
-  @include dark-mode {
+  :global(body.dark) & {
     color: rgba(255, 255, 255, 0.733);
   }
 }
 
 .emptyStateSubtitle {
-  @include typography-subtitle($text-base, $font-weight-normal, $color-text-secondary, center);
+  font-family: $font-family-table;
+  font-size: $text-base;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
+  text-align: center;
   
-  @include dark-mode {
+  :global(body.dark) & {
     color: rgba(255, 255, 255, 0.733);
   }
 }
@@ -39,18 +49,12 @@
   background: $color-bg-light;
   border-radius: $radius-2xl;
   padding: $spacing-lg;
-  @include neomorphic-shadow(light);
+  box-shadow: $shadow-neomorphic-light;
   
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-dark;
     box-shadow: none;
   }
-}
-
-:global(body.dark) .table,
-:global([data-theme="dark"]) .table {
-  background: $color-bg-dark !important;
-  box-shadow: none !important;
 }
 
 /* CABECERA */
@@ -58,14 +62,17 @@
   @include flex-center;
   border-bottom: 1px solid $color-border-light;
   
-  @include dark-mode {
+  :global(body.dark) & {
     border-bottom: 1px solid $color-border-dark;
   }
 }
 
 .headerCell {
   padding: $spacing-md $spacing-2xl;
-  @include typography(11px, $font-weight-semibold, $color-text-primary);
+  font-family: $font-family-table;
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
@@ -80,7 +87,7 @@
     cursor: pointer;
   }
   
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
   }
   
@@ -100,8 +107,11 @@
   z-index: 0;
   cursor: pointer;
   margin: 10px 10px 0px 0px;
-  @include glassmorphism(rgba(255, 255, 255, 0.08));
-  @include neomorphic-shadow(light);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: $shadow-neomorphic-light;
   transition: $transition-base;
 
   /* Hover mejorado */
@@ -112,7 +122,7 @@
   }
   
   /* 🌑 Modo oscuro */
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-dark;
     border: none;
     backdrop-filter: none;
@@ -127,37 +137,22 @@
   }
 }
 
-:global(body.dark) .row,
-:global([data-theme="dark"]) .row {
-  background: $color-bg-dark !important;
-  border: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: none !important;
-  
-  &:hover {
-    background: $zinc-800 !important;
-    box-shadow: none !important;
-    transform: translateY(-3px);
-  }
-  
-  /* Mobile padding */
-  @media (max-width: 768px) {
-    padding: 20px;
-  }
-}
+
 
 /* CELDAS */
 .cell {
   padding: $spacing-md $spacing-2xl;
-  @include typography($text-sm, $font-weight-normal, $color-text-primary);
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-normal;
+  color: $color-text-primary;
   line-height: $leading-normal;
   display: flex;
   align-items: center;
   max-width: 250px!important;
   justify-content: flex-start;
   
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
     
     img[src*=".svg"] {
@@ -177,15 +172,24 @@
 }
 
 .actionButton {
-  @include button-base($height: auto, $padding: $spacing-sm, $radius: $radius-sm);
-  background: none;
+  height: auto;
+  padding: $spacing-sm;
+  border-radius: $radius-sm;
   border: none;
+  cursor: pointer;
+  @include flex-center;
+  gap: $spacing-xs;
+  transition: $transition-fast;
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  background: none;
   
   &:hover {
     background-color: $zinc-100;
   }
   
-  @include dark-mode {
+  :global(body.dark) & {
     &:hover {
       background-color: $zinc-800;
     }
@@ -199,9 +203,9 @@
 /* IMÁGENES */
 .TasksTable_clientImage__aZq2W {
   border-radius: $radius-full;
-  @include neomorphic-shadow(light);
+  box-shadow: $shadow-neomorphic-light;
   
-  @include dark-mode {
+  :global(body.dark) & {
     box-shadow: none !important;
   }
 }
@@ -262,7 +266,9 @@
   border: none;
   @include flex-center;
   cursor: pointer;
-  @include neomorphic-inset(light);
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
   transition: $transition-fast;
   
   &:disabled {
@@ -274,9 +280,11 @@
     background: #e6e8ea;
   }
   
-  @include dark-mode {
+  :global(body.dark) & {
     background: $black;
-    @include neomorphic-inset(dark);
+    box-shadow:
+      inset -2px -2px 4px rgba(0, 0, 0, 0.3),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.02);
     
     &:not(:disabled):hover {
       background: $zinc-900;
@@ -289,10 +297,13 @@
 }
 
 .pageInfo {
-  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
   margin: 0 $spacing-sm;
   
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
   }
 }

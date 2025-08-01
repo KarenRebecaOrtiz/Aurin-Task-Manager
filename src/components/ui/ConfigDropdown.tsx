@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
+import Image from 'next/image';
 import styles from './ConfigDropdown.module.scss';
 
 interface Option {
@@ -144,7 +145,7 @@ const ConfigDropdown: React.FC<ConfigDropdownProps> = ({
   const DropdownMenu = () => {
     // Agrupar opciones por región
     const groupedOptions = options.reduce((acc, option) => {
-      const region = option.region || 'Otros';
+      const region = option.region || 'Equipos';
       if (!acc[region]) {
         acc[region] = [];
       }
@@ -196,7 +197,7 @@ const ConfigDropdown: React.FC<ConfigDropdownProps> = ({
         onClick={handleToggle}
       >
         <span>{getDisplayValue()}</span>
-        <span className={styles.arrow}>{isOpen ? '▲' : '▼'}</span>
+        <Image src="/chevron-down.svg" alt="arrow" width={16} height={16} />
       </div>
       {isOpen && portalContainer && createPortal(<DropdownMenu />, portalContainer)}
     </div>

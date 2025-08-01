@@ -134,11 +134,34 @@
     }
   }
 
+
   :global(body.dark) .searchInput  {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: rgba(224, 224, 224, 0.202);
-    box-shadow:none;
-    color: white!important;
+    background: #27272a;
+    border: none;
+    box-shadow: none;
+    color: white !important;
+
+    &::placeholder {
+      color: #efefef;
+    }
+
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+    
+    }
+
+    &:focus {
+      background: rgba(39, 39, 42, 0.9);
+      border-color: #60a5fa;
+     
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+     
+    }
   }
   
 .inviteButton {
@@ -188,7 +211,7 @@
   @include typography($text-base, $font-weight-normal, $color-text-primary, center);
   color: #dc3545;
   
-  @include dark-mode {
+  :global(body.dark) & {
     @include typography($text-base, $font-weight-normal, $color-text-dark-primary, center);
     color: #ff6b6b;
   }
@@ -276,7 +299,7 @@
     gap: $spacing-lg;
     width: 100%;
     
-    @include dark-mode {
+    :global(body.dark) & {
         background-color: $color-bg-dark-secondary;
     }
 }
@@ -284,7 +307,7 @@
 .inviteTitle {
     @include typography-title($text-sm, $font-weight-bold, $color-text-primary, center);
     
-    @include dark-mode {
+    :global(body.dark) & {
         color: $color-text-dark-primary;
     }
 }
@@ -292,7 +315,7 @@
 .inviteSubtitle {
     @include typography-subtitle($text-sm, $font-weight-normal, $color-text-secondary, center);
     
-    @include dark-mode {
+    :global(body.dark) & {
         color: $color-text-dark-secondary;
     }
 }
@@ -306,7 +329,7 @@
 .inviteLabel {
     @include typography($text-sm, $font-weight-bold, $color-text-primary, center);
     
-    @include dark-mode {
+    :global(body.dark) & {
         color: $color-text-dark-primary;
     }
 }
@@ -328,7 +351,7 @@
         color: rgba(12.75, 12.75, 12.75, 0.6);
     }
     
-    @include dark-mode {
+    :global(body.dark) & {
         background: $color-bg-dark-tertiary;
         border-color: $color-border-dark;
         color: $color-text-dark-primary;
@@ -348,7 +371,7 @@
         cursor: not-allowed;
     }
     
-    @include dark-mode {
+    :global(body.dark) & {
         background: $color-bg-dark-tertiary;
         border-color: $color-bg-dark-tertiary;
         color: $color-text-dark-primary;
@@ -560,7 +583,7 @@
 .profileTitle {
     @include typography-title($text-base, $font-weight-bold, $color-text-primary, center);
     
-    @include dark-mode {
+    :global(body.dark) & {
         color: $color-text-dark-primary;
     }
 }
@@ -573,7 +596,7 @@
 .profileUsername {
     @include typography-title($text-base, $font-weight-bold, $color-text-primary, center);
     
-    @include dark-mode {
+    :global(body.dark) & {
         color: $color-text-dark-primary;
     }
 }
@@ -587,7 +610,7 @@
 .profileLabel {
     @include typography($text-sm, $font-weight-bold, $color-text-secondary);
     
-    @include dark-mode {
+    :global(body.dark) & {
         color: $color-text-dark-secondary;
     }
 }
@@ -595,7 +618,7 @@
 .profileValue {
     @include typography($text-sm, $font-weight-normal, rgba(12.75, 12.75, 12.75, 0.6));
     
-    @include dark-mode {
+    :global(body.dark) & {
         color: $color-text-dark-primary;
     }
 }
@@ -605,7 +628,7 @@
     max-width: 320px;
     @include button-primary($color-btn-primary, $white, $color-btn-primary-hover);
     
-    @include dark-mode {
+    :global(body.dark) & {
         background: $color-bg-dark-tertiary;
         border-color: $color-bg-dark-tertiary;
         color: $color-text-dark-primary;
@@ -675,7 +698,7 @@
         @include neomorphic-inset(light);
     }
 
-    @include dark-mode {
+    :global(body.dark) & {
         background: $zinc-800;
         color: rgba(255, 255, 255, 0.532);
         border: none;

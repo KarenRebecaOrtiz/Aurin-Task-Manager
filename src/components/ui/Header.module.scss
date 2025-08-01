@@ -236,7 +236,7 @@
     gap: $spacing-sm;
     @include typography($text-xl, $font-weight-semibold, $color-text-primary);
   
-    @include dark-mode {
+    :global(body.dark) & {
       color: $color-text-dark-primary;
     }
   
@@ -244,7 +244,7 @@
       color: $color-text-primary;
       @include typography($text-2xl, $font-weight-bold, $color-text-primary);
   
-      @include dark-mode {
+      :global(body.dark) & {
         color: $color-text-dark-primary;
       }
     }
@@ -258,7 +258,7 @@
       color: $color-text-secondary;
       @include typography($text-base, $font-weight-normal, $color-text-secondary);
   
-      @include dark-mode {
+      :global(body.dark) & {
         color: $color-text-dark-secondary;
       }
     }
@@ -318,21 +318,37 @@
       @include neomorphic-inset(light);
     }
   
-    @include dark-mode {
-      background: $color-bg-glass-dark;
-      border-color: rgba(255, 255, 255, 0.1);
-      @include neomorphic-shadow(dark);
+    :global(body.dark) & {
+      background: rgba(30, 30, 30, 0.8);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 
+        -6px -6px 12px rgba(0, 0, 0, 0.3),
+        6px 6px 12px rgba(0, 0, 0, 0.2),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+        inset 4px 4px 8px rgba(0, 0, 0, 0.1);
   
       &:hover {
-        background: $color-bg-glass-dark-hover;
-        border-color: rgba(255, 255, 255, 0.2);
-        @include neomorphic-shadow-hover(dark);
+        transform: translateY(-2px) scale(1.05);
+        background: rgba(30, 30, 30, 0.9);
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 
+          -8px -8px 16px rgba(0, 0, 0, 0.4),
+          8px 8px 16px rgba(0, 0, 0, 0.3),
+          inset -4px -4px 8px rgba(255, 255, 255, 0.08),
+          inset 4px 4px 8px rgba(0, 0, 0, 0.15);
       }
   
       &:active {
-        background: rgba(39, 39, 42, 0.6);
+        transform: translateY(0) scale(0.98);
+        background: rgba(30, 30, 30, 0.6);
         border-color: rgba(255, 255, 255, 0.05);
-        @include neomorphic-inset(dark);
+        box-shadow: 
+          inset -4px -4px 8px rgba(255, 255, 255, 0.03),
+          inset 4px 4px 8px rgba(0, 0, 0, 0.3);
+      }
+  
+      svg {
+        filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
       }
     }
   
@@ -386,7 +402,7 @@
         inset 2px 2px 4px rgba(0, 0, 0, 0.1);
     }
   
-    @include dark-mode {
+    :global(body.dark) & {
       background: $color-bg-glass-dark;
       border-color: rgba(255, 255, 255, 0.1);
       @include neomorphic-shadow(dark);
@@ -726,6 +742,39 @@
         inset -2px -2px 4px rgba(255, 255, 255, 0.4),
         inset 2px 2px 4px rgba(209, 217, 230, 0.2);
     }
+    :global(body.dark) & {
+      background: rgba(30, 30, 30, 0.8);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 
+        -6px -6px 12px rgba(0, 0, 0, 0.3),
+        6px 6px 12px rgba(0, 0, 0, 0.2),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+        inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+  
+      &:hover {
+        transform: translateY(-2px) scale(1.05);
+        background: rgba(30, 30, 30, 0.9);
+        border-color: rgba(255, 255, 255, 0.3);
+        box-shadow: 
+          -8px -8px 16px rgba(0, 0, 0, 0.4),
+          8px 8px 16px rgba(0, 0, 0, 0.3),
+          inset -4px -4px 8px rgba(255, 255, 255, 0.08),
+          inset 4px 4px 8px rgba(0, 0, 0, 0.15);
+      }
+  
+      &:active {
+        transform: translateY(0) scale(0.98);
+        background: rgba(30, 30, 30, 0.6);
+        border-color: rgba(255, 255, 255, 0.05);
+        box-shadow: 
+          inset -4px -4px 8px rgba(255, 255, 255, 0.03),
+          inset 4px 4px 8px rgba(0, 0, 0, 0.3);
+      }
+  
+      svg {
+        filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+      }
+    }
 
   }
   :global(body.dark) .notificationContainer .notificationButton img{
@@ -733,10 +782,9 @@
   } 
   :global(body.dark) .Clock,
   :global(body.dark) .notificationButton {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: rgba(255, 255, 255, 0.356);
-    box-shadow:none;
-  
+    background: rgba(30, 30, 30, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: -6px -6px 12px rgba(0, 0, 0, 0.3), 6px 6px 12px rgba(0, 0, 0, 0.2), inset -4px -4px 8px rgba(255, 255, 255, 0.05), inset 4px 4px 8px rgba(0, 0, 0, 0.1);
   }
   
   .ClockOfficeStatus {
@@ -1389,7 +1437,7 @@
     @include neomorphic-shadow-hover(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-glass-dark;
     border-color: rgba(255, 255, 255, 0.1);
     @include neomorphic-shadow(dark);
@@ -1407,7 +1455,7 @@
   padding: $spacing-lg;
   border-bottom: 1px solid $color-border-light;
 
-  @include dark-mode {
+  :global(body.dark) & {
     border-color: $color-border-dark;
   }
 }
@@ -1459,7 +1507,7 @@
     @include neomorphic-inset(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-glass-dark;
     border-color: rgba(255, 255, 255, 0.1);
     @include neomorphic-shadow(dark);

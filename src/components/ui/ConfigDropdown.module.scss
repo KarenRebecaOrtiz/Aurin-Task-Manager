@@ -69,30 +69,18 @@
     background: rgba(30, 30, 30, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
     color: #d1d5db;
-    box-shadow:
-      6px 6px 12px rgba(0, 0, 0, 0.5),
-      -6px -6px 12px rgba(255, 255, 255, 0.05),
-      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-      inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+    box-shadow: none;
 
     &:hover {
       background: rgba(30, 30, 30, 0.85);
       border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:
-        4px 4px 10px rgba(0, 0, 0, 0.6),
-        -4px -4px 10px rgba(255, 255, 255, 0.03),
-        inset -6px -6px 12px rgba(0, 0, 0, 0.45),
-        inset 6px 6px 12px rgba(255, 255, 255, 0.04);
+      box-shadow: none;
     }
 
     &:active {
       background: rgba(30, 30, 30, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      box-shadow:
-        inset 2px 2px 6px rgba(0, 0, 0, 0.35),
-        inset -2px -2px 6px rgba(255, 255, 255, 0.02),
-        2px 2px 6px rgba(0, 0, 0, 0.45),
-        -2px -2px 6px rgba(255, 255, 255, 0.04);
+      box-shadow: none;
     }
   }
 
@@ -109,6 +97,18 @@
 
 .arrow {
   font-size: 12px;
+}
+
+.trigger {
+  img {
+    transition: filter 0.3s ease;
+  }
+
+  :global(body.dark) & {
+    img {
+      filter: invert(1);
+    }
+  }
 }
 
 .dropdownMenu {
@@ -155,11 +155,7 @@
   :global(.dark) & {
     background: rgba(39, 39, 42, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      -8px -8px 16px rgba(255, 255, 255, 0.05),
-      8px 8px 16px rgba(0, 0, 0, 0.5),
-      inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-      inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+    box-shadow: none;
 
     &::-webkit-scrollbar-track {
       background: rgba(39, 39, 42, 0.3);
@@ -210,9 +206,7 @@
     color: #d1d5db;
     &:hover {
       background: rgba(39, 39, 42, 0.85);
-      box-shadow:
-        -6px -6px 12px rgba(255, 255, 255, 0.06),
-        6px 6px 12px rgba(0, 0, 0, 0.55);
+      box-shadow: none;
     }
 
     &.selected {
@@ -234,7 +228,7 @@
   margin: 0;
 
   :global(.dark) & {
-    color: #94a3b8;
+    color: #d1d5db;
     background: rgba(39, 39, 42, 0.3);
     border-bottom-color: rgba(148, 163, 184, 0.1);
   }

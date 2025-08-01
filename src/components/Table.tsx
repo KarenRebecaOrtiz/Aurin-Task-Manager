@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Table.module.scss';
 import TableHeader, { Column as TableHeaderColumn } from './ui/TableHeader';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface HasId {
   id: string;
@@ -51,6 +52,11 @@ const Table = memo(
     const [currentPage, setCurrentPage] = useState(1);
     const [isMobile, setIsMobile] = useState(false);
     const tableRef = useRef<HTMLDivElement>(null);
+    const { isDarkMode } = useTheme();
+
+
+
+
 
     const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -196,6 +202,7 @@ const Table = memo(
 
     return (
       <div className={`${styles.tableContainer} ${className || ''}`}>
+
         <div ref={tableRef} className={styles.table}>
           <TableHeader
             columns={columns}

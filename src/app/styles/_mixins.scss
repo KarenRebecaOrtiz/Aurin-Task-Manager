@@ -681,7 +681,7 @@
     @include neomorphic-inset(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-dark-secondary;
     border: none;
     box-shadow: none;
@@ -966,8 +966,8 @@
     @include typography($text-base, $font-weight-semibold, $color-text-primary, left);
   }
 
-  @include dark-mode {
-    color: $white !important;
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
   }
 }
 
@@ -981,6 +981,10 @@
 
   @media (min-width: 768px) {
     @include typography($text-sm, $font-weight-medium, $color-text-secondary, left);
+  }
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
   }
 }
 

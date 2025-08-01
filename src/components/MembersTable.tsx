@@ -59,6 +59,11 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     // Hook para detectar el viewport
     const [isMobile, setIsMobile] = useState(false);
     
+    // Estado para visibilidad de columnas
+    const [visibleColumns, setVisibleColumns] = useState<string[]>([
+      'imageUrl', 'fullName', 'messageNotifications', 'role', 'activeProjects', 'status'
+    ]);
+    
     useEffect(() => {
       const checkViewport = () => {
         setIsMobile(window.innerWidth < 768);
@@ -210,6 +215,55 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       [sortDirection, sortKey, setSortKey, setSortDirection],
     );
 
+    // Ordenar usuarios
+    const sortedUsers = useMemo(() => {
+      const usersToSort = memoizedFilteredUsers.filter(u => 
+        filteredUsers.includes(u.id)
+      );
+      
+      if (!sortKey || sortKey === '') {
+        return usersToSort;
+      }
+
+      return [...usersToSort].sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+
+        switch (sortKey) {
+          case 'fullName':
+            aValue = a.fullName.toLowerCase();
+            bValue = b.fullName.toLowerCase();
+            break;
+          case 'role':
+            aValue = a.role.toLowerCase();
+            bValue = b.role.toLowerCase();
+            break;
+          case 'activeProjects':
+            aValue = activeProjectsCount[a.id] || 0;
+            bValue = activeProjectsCount[b.id] || 0;
+            break;
+          case 'status':
+            aValue = (a.status || 'Sin estado').toLowerCase();
+            bValue = (b.status || 'Sin estado').toLowerCase();
+            break;
+          case 'messageNotifications':
+            // Ordenar por número de notificaciones no leídas
+            aValue = getUnreadCountForUser ? getUnreadCountForUser(a.id) : 0;
+            bValue = getUnreadCountForUser ? getUnreadCountForUser(b.id) : 0;
+            break;
+          default:
+            aValue = a.fullName.toLowerCase();
+            bValue = b.fullName.toLowerCase();
+        }
+
+        if (sortDirection === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+    }, [memoizedFilteredUsers, filteredUsers, sortKey, sortDirection, activeProjectsCount, getUnreadCountForUser]);
+
     // Definir columnas (memoizado y optimizado)
     const columns = useMemo(() => [
       {
@@ -273,6 +327,21 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       },
     ], [activeProjectsCount, getUnreadCountForUser, isMobile]);
 
+    // Función para manejar cambios de visibilidad de columnas
+    const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+      setVisibleColumns(prev => {
+        if (visible) {
+          // Agregar columna si no está presente
+          return prev.includes(columnKey) ? prev : [...prev, columnKey];
+        } else {
+          // Remover columna
+          return prev.filter(key => key !== columnKey);
+        }
+      });
+      
+      console.log(`[MembersTable] Column ${columnKey} visibility changed to: ${visible}`);
+    }, []);
+
     // Handle loading state
     if (isLoading || isLoadingUsers || isLoadingTasks) {
       return (
@@ -304,9 +373,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           </div>
         </div>
         <Table
-          data={memoizedFilteredUsers.filter(u => 
-            filteredUsers.includes(u.id)
-          )}
+          data={sortedUsers}
           columns={columns}
           itemsPerPage={10}
           sortKey={sortKey}
@@ -314,6 +381,9 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           onSort={handleSort}
           onRowClick={handleRowClick}
           emptyStateType="members"
+          enableColumnVisibility={true}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={handleColumnVisibilityChange}
         />
       </div>
     );

@@ -4,11 +4,11 @@ import { useLayoutEffect, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import styles from './Selector.module.scss';
 
-type Container = 'tareas' | 'cuentas' | 'miembros';
+type Container = 'tareas' | 'cuentas' | 'miembros' | null;
 
 interface SelectorProps {
-  selectedContainer: Container;
-  setSelectedContainer: (c: Container) => void;
+  selectedContainer: Container | null;
+  setSelectedContainer: (c: Container | null) => void;
   options: { value: string; label: string }[];
 }
 
@@ -28,6 +28,15 @@ export default function Selector({
 
   /* ------------- tema (oscuro / claro) ------------ */
   const [isDark, setIsDark] = useState(false);
+
+  // Ocultar el indicador inicialmente si no hay selección
+  useEffect(() => {
+    if (indicatorRef.current && !selectedContainer) {
+      indicatorRef.current.style.display = 'none';
+      indicatorRef.current.style.opacity = '0';
+      indicatorRef.current.style.transform = 'scale(0)';
+    }
+  }, []);
 
   useEffect(() => {
     const computeDark = () =>
@@ -51,8 +60,44 @@ export default function Selector({
   /* ------------- GSAP: “liquid glass” slide ------------- */
   useLayoutEffect(() => {
     if (!menubarRef.current || !indicatorRef.current) return;
+    
+    // Si no hay elemento seleccionado, ocultar completamente el indicador
+    if (!selectedContainer) {
+      gsap.to(indicatorRef.current, {
+        opacity: 0,
+        scale: 0,
+        duration: 0.3,
+        ease: 'power2.out',
+        onComplete: () => {
+          if (indicatorRef.current) {
+            indicatorRef.current.style.display = 'none';
+          }
+        }
+      });
+      return;
+    }
+    
     const activeBtn = btnRefs.current.find(b => b.dataset.container === selectedContainer);
-    if (!activeBtn) return;
+    if (!activeBtn) {
+      // Si no se encuentra el botón activo, ocultar el indicador
+      gsap.to(indicatorRef.current, {
+        opacity: 0,
+        scale: 0,
+        duration: 0.3,
+        ease: 'power2.out',
+        onComplete: () => {
+          if (indicatorRef.current) {
+            indicatorRef.current.style.display = 'none';
+          }
+        }
+      });
+      return;
+    }
+
+    // Mostrar el indicador antes de animarlo
+    if (indicatorRef.current) {
+      indicatorRef.current.style.display = 'block';
+    }
 
     const btnRect = activeBtn.getBoundingClientRect();
     const barRect = menubarRef.current.getBoundingClientRect();
@@ -67,6 +112,8 @@ export default function Selector({
       y,
       width: w,
       height: h,
+      opacity: 1,
+      scale: 1,
       duration: 0.45,
       ease: 'power3.out',
       borderRadius: 12,
@@ -80,7 +127,7 @@ export default function Selector({
     const color   = isDark ? '#ffffff' : '#09090b';
 
     btnRefs.current.forEach(btn => {
-      const isActive = btn.dataset.container === selectedContainer;
+      const isActive = selectedContainer && btn.dataset.container === selectedContainer;
       gsap.to(btn, {
         backgroundColor: isActive ? active : inactive,
         color,

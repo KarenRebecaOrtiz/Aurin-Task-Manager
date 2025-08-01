@@ -32,17 +32,24 @@ export default function TasksPageModals() {
   // Action handlers
   const handleConfirmExit = () => {
     console.log('[TasksPageModals] handleConfirmExit called');
-    const { setIsConfirmExitOpen, closeCreateTask, closeEditTask, setHasUnsavedChanges } = useTasksPageStore.getState();
+    const { setIsConfirmExitOpen, closeCreateTask, closeEditTask, setHasUnsavedChanges, pendingContainer, setContainer, setPendingContainer } = useTasksPageStore.getState();
     setIsConfirmExitOpen(false);
     closeCreateTask();
     closeEditTask();
     setHasUnsavedChanges(false);
+    
+    // Si hay un container pendiente, cambiar a él
+    if (pendingContainer) {
+      setContainer(pendingContainer);
+      setPendingContainer(null);
+    }
   };
 
   const handleCancelExit = () => {
     console.log('[TasksPageModals] handleCancelExit called');
-    const { setIsConfirmExitOpen } = useTasksPageStore.getState();
+    const { setIsConfirmExitOpen, setPendingContainer } = useTasksPageStore.getState();
     setIsConfirmExitOpen(false);
+    setPendingContainer(null);
   };
 
   const handleClientSidebarClose = () => {

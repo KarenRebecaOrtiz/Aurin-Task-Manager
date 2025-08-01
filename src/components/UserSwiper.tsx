@@ -8,6 +8,7 @@ import UserAvatar from "./ui/UserAvatar";
 import LoadingDots from "./ui/LoadingDots";
 import { useUserSwiperData, useUserSwiperActions, User } from "@/stores/userSwiperStore";
 import { useUserSwiperSync } from "@/hooks/useUserSwiperSync";
+import { useTasksPageStore } from "@/stores/tasksPageStore";
 
 interface UserSwiperProps {
   onOpenProfile: (user: { id: string; imageUrl: string }) => void;
@@ -25,6 +26,13 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   // ✅ Consumir datos del userSwiperStore optimizado
   const { clerkUsers, isLoading } = useUserSwiperData();
   const { getStoreUserById } = useUserSwiperActions();
+
+  // ✅ Usar el store de TasksPage para el ProfileCard modal
+  const { openProfileCard } = useTasksPageStore();
+
+  const handleOpenProfile = (user: { id: string; imageUrl: string }) => {
+    openProfileCard(user.id, user.imageUrl);
+  };
 
   useEffect(() => {
     if (splideRef.current && clerkUsers.length > 0) {
@@ -73,75 +81,95 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   }
 
   return (
-    <section
-      ref={splideRef}
-      className={`splide ${styles.swiperContainer} ${className || ""}`}
-      aria-label="Usuarios activos"
-    >
-      <div className="splide__track">
-        {/* Vignette elements */}
-        <div className={styles.vignetteLeft}></div>
-        <div className={styles.vignetteRight}></div>
-        
-        <ul className="splide__list">
-          {clerkUsers.map((user) => (
-            <li className="splide__slide" key={user.id}>
-              <div
-                className={styles.card}
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  const storeUser = getStoreUserById(user.id);
-                  if (!storeUser) return;
-                  onMessageSidebarOpen({
-                    id: storeUser.id,
-                    imageUrl: storeUser.imageUrl,
-                    fullName: storeUser.fullName,
-                    role: storeUser.role,
-                  });
-                }}
-                aria-label={`Enviar mensaje a ${user.firstName || "Usuario"}`}
-              >
-                <div className={styles.cardInfo}>
-                  <div className={styles.avatarWrapper}>
+    <>
+      <section
+        ref={splideRef}
+        className={`splide ${styles.swiperContainer} ${className || ""}`}
+        aria-label="Usuarios activos"
+      >
+        <div className="splide__track">
+          {/* Vignette elements */}
+          <div className={styles.vignetteLeft}></div>
+          <div className={styles.vignetteRight}></div>
+          
+          <ul className="splide__list">
+            {clerkUsers.map((user) => (
+              <li className="splide__slide" key={user.id}>
+                <div
+                  className={styles.card}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    const storeUser = getStoreUserById(user.id);
+                    if (!storeUser) return;
+                    onMessageSidebarOpen({
+                      id: storeUser.id,
+                      imageUrl: storeUser.imageUrl,
+                      fullName: storeUser.fullName,
+                      role: storeUser.role,
+                    });
+                  }}
+                  aria-label={`Enviar mensaje a ${user.firstName || "Usuario"}`}
+                >
+                  <div className={styles.cardInfo}>
+                    <div className={styles.avatarWrapper}>
+                      <button
+                        className={styles.cardAvatar}
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenProfile({
+                            id: user.id,
+                            imageUrl: user.imageUrl || "",
+                          });
+                        }}
+                        aria-label={`Ver perfil de ${user.firstName || "Usuario"}`}
+                      >
+                        <UserAvatar
+                          userId={user.id}
+                          imageUrl={user.imageUrl}
+                          userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario"}
+                          size="medium"
+                          showStatus={true}
+                        />
+                      </button>
+                    </div>
+                    <div className={styles.cardText}>
+                      <div className={styles.cardTitle}>
+                        {(user.firstName || user.lastName)
+                          ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                          : "Sin nombre"}
+                      </div>
+                      <div className={styles.cardStatus}>
+                        {user.role === 'user' ? 'No Especificado' : (user.role || 'Sin rol')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.cardActions}>
                     <button
-                      className={styles.cardAvatar}
-                      tabIndex={0}
+                      className={styles.viewProfileButton}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onOpenProfile({
+                        handleOpenProfile({
                           id: user.id,
                           imageUrl: user.imageUrl || "",
                         });
                       }}
                       aria-label={`Ver perfil de ${user.firstName || "Usuario"}`}
                     >
-                      <UserAvatar
-                        userId={user.id}
-                        imageUrl={user.imageUrl}
-                        userName={`${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario"}
-                        size="medium"
-                        showStatus={true}
-                      />
+                      Ver Perfil
                     </button>
                   </div>
-                  <div className={styles.cardText}>
-                    <div className={styles.cardTitle}>
-                      {(user.firstName || user.lastName)
-                        ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-                        : "Sin nombre"}
-                    </div>
-                    <div className={styles.cardStatus}>
-                      {user.role === 'user' ? 'No Especificado' : (user.role || 'Sin rol')}
-                    </div>
-                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+      
+      {/* ProfileCard Modal */}
+      {/* The ProfileCard component is now managed by useTasksPageStore */}
+    </>
   );
 };
 

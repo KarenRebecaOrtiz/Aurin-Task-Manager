@@ -44,6 +44,7 @@ interface TasksPageState {
   // Form states
   hasUnsavedChanges: boolean;
   deleteConfirm: string;
+  pendingContainer: 'tareas' | 'cuentas' | 'miembros' | 'config' | null;
   
   // Alert states
   showSuccessAlert: boolean;
@@ -54,6 +55,13 @@ interface TasksPageState {
   // Loader states
   showLoader: boolean;
   contentReady: boolean;
+  
+  // ProfileCard Modal
+  isProfileCardOpen: boolean;
+  profileCardData: {
+    userId: string;
+    imageUrl: string;
+  } | null;
   
   // Actions
   setContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
@@ -78,6 +86,7 @@ interface TasksPageState {
   // Form actions
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setDeleteConfirm: (confirm: string) => void;
+  setPendingContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config' | null) => void;
   
   // Alert actions
   setShowSuccessAlert: (show: boolean) => void;
@@ -88,6 +97,10 @@ interface TasksPageState {
   // Loader actions
   setShowLoader: (show: boolean) => void;
   setContentReady: (ready: boolean) => void;
+  
+  // ProfileCard Modal Actions
+  openProfileCard: (userId: string, imageUrl: string) => void;
+  closeProfileCard: () => void;
   
   // Convenience actions
   openEditTask: (taskId: string) => void;
@@ -126,6 +139,7 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   
   hasUnsavedChanges: false,
   deleteConfirm: '',
+  pendingContainer: null,
   
   showSuccessAlert: false,
   showFailAlert: false,
@@ -134,6 +148,10 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   
   showLoader: true,
   contentReady: false,
+  
+  // ProfileCard Modal
+  isProfileCardOpen: false,
+  profileCardData: null,
   
   // Actions
   setContainer: (container) => set({ container }),
@@ -155,6 +173,7 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   
   setHasUnsavedChanges: (hasChanges) => set({ hasUnsavedChanges: hasChanges }),
   setDeleteConfirm: (confirm) => set({ deleteConfirm: confirm }),
+  setPendingContainer: (container) => set({ pendingContainer: container }),
   
   setShowSuccessAlert: (show) => set({ showSuccessAlert: show }),
   setShowFailAlert: (show) => set({ showFailAlert: show }),
@@ -163,6 +182,21 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   
   setShowLoader: (show) => set({ showLoader: show }),
   setContentReady: (ready) => set({ contentReady: ready }),
+  
+  // ProfileCard Modal Actions
+  openProfileCard: (userId, imageUrl) => {
+    set({
+      isProfileCardOpen: true,
+      profileCardData: { userId, imageUrl }
+    });
+  },
+
+  closeProfileCard: () => {
+    set({
+      isProfileCardOpen: false,
+      profileCardData: null
+    });
+  },
   
   // Convenience actions
   openEditTask: (taskId) => set({ 

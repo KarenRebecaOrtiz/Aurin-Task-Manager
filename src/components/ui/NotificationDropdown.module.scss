@@ -67,16 +67,14 @@
       inset 2px 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgb(31 31 31);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: -8px -8px 16px rgba(255, 255, 255, 0.05), 8px 8px 16px rgba(0, 0, 0, 0.5), inset -4px -4px 8px rgba(0, 0, 0, 0.4), inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+    box-shadow: none;
 
     &::-webkit-scrollbar-thumb {
       background: rgba(75, 85, 99, 0.7);
-      box-shadow:
-        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
-        inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+      box-shadow: none;
     }
   }
 
@@ -107,7 +105,7 @@
 :global(body.dark) .dropdown {
   background: rgb(31 31 31);
   border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: -8px -8px 16px rgba(255, 255, 255, 0.05), 8px 8px 16px rgba(0, 0, 0, 0.5), inset -4px -4px 8px rgba(0, 0, 0, 0.4), inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+  box-shadow: none;
 }
 
 .header {
@@ -116,7 +114,7 @@
   padding: $spacing-lg $spacing-xl $spacing-md $spacing-xl;
   border-bottom: 1px solid $color-border-light;
   background: transparent;
-  @include dark-mode {
+  :global(body.dark) & {
     border-bottom: 1px solid $color-border-dark;
   }
   
@@ -130,7 +128,7 @@
     top: 0;
     z-index: 10;
     
-    @include dark-mode {
+    :global(body.dark) & {
       background: rgba(39, 39, 42, 0.95);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
@@ -139,7 +137,7 @@
 
 .title {
   @include typography($text-base, $font-weight-bold, $color-text-primary, left);
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
@@ -154,7 +152,7 @@
   &:hover {
     background: $zinc-100;
   }
-  @include dark-mode {
+  :global(body.dark) & {
     filter: invert(1) brightness(1);
     &:hover {
       background: $color-bg-dark-tertiary;
@@ -232,36 +230,37 @@
 
   // Estilos para diferentes tipos de notificaciones - removidos los pseudo-elementos absolutos
 
-  @include dark-mode {
-    background: rgba(39, 39, 42, 0.7);
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      -6px -6px 12px rgba(0, 0, 0, 0.3),
+      6px 6px 12px rgba(0, 0, 0, 0.2),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+      inset 4px 4px 8px rgba(0, 0, 0, 0.1);
 
     &:hover {
-      background: rgba(39, 39, 42, 0.85);
-      border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:
-        -6px -6px 12px rgba(255, 255, 255, 0.06),
-        6px 6px 12px rgba(0, 0, 0, 0.55),
-        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+      transform: translateY(-2px) scale(1.05);
+      background: rgba(30, 30, 30, 0.9);
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 
+        -8px -8px 16px rgba(0, 0, 0, 0.4),
+        8px 8px 16px rgba(0, 0, 0, 0.3),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.08),
+        inset 4px 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     &:active {
-      background: rgba(39, 39, 42, 0.6);
+      transform: translateY(0) scale(0.98);
+      background: rgba(30, 30, 30, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      box-shadow:
-        inset -2px -2px 6px rgba(0, 0, 0, 0.35),
-        inset 2px 2px 6px rgba(255, 255, 255, 0.02),
-        -2px -2px 6px rgba(255, 255, 255, 0.03),
-        2px 2px 6px rgba(0, 0, 0, 0.4);
+      box-shadow: 
+        inset -4px -4px 8px rgba(255, 255, 255, 0.03),
+        inset 4px 4px 8px rgba(0, 0, 0, 0.3);
     }
 
-    &.read {
-      opacity: 0.5;
-    }
-
-    &.unread {
-      background: rgba(39, 39, 42, 0.85);
-      border-left: 4px solid $color-info;
+    svg {
+      filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
     }
   }
 
@@ -293,12 +292,10 @@
     -2px -2px 4px #ffffff,
     2px 2px 4px rgba(0, 0, 0, 0.04);
 
-  @include dark-mode {
+  :global(body.dark) & {
     border: 1px solid #4b5563;
     background: #27272a;
-    box-shadow:
-      -2px -2px 4px rgba(255, 255, 255, 0.03),
-      2px 2px 4px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
   }
 }
 
@@ -324,7 +321,7 @@
     text-decoration: underline;
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: #d1d5db;
   }
 }
@@ -333,7 +330,7 @@
   font-size: 12px;
   color: #515157;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: #9ca3af;
   }
 }
@@ -360,7 +357,7 @@
   padding: $spacing-2xl 0;
   color: $color-text-muted;
   @include typography($text-base, $font-weight-normal, $color-text-muted, center);
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-muted;
   }
 }
@@ -372,7 +369,7 @@
   background: $zinc-300;
   border-radius: $radius-full;
   margin: $spacing-md auto $spacing-lg auto;
-  @include dark-mode {
+  :global(body.dark) & {
     background: $zinc-700;
   }
   
@@ -382,7 +379,7 @@
     margin: 0 auto $spacing-xl auto;
     background: rgba(156, 163, 175, 0.6);
     
-    @include dark-mode {
+    :global(body.dark) & {
       background: rgba(75, 85, 99, 0.6);
     }
   }
@@ -408,7 +405,7 @@
     @include typography($text-sm, $font-weight-medium, $color-text-secondary, center);
   }
   
-  @include dark-mode {
+  :global(body.dark) & {
     .spinner {
       border-color: $color-border-dark;
       border-top-color: $color-info;
@@ -546,12 +543,13 @@
     transition: none;
   }
   
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgba(39, 39, 42, 0.8);
     border-color: rgba(255, 255, 255, 0.1);
     
     &:hover {
       background: rgba(39, 39, 42, 0.95);
+      box-shadow: none;
     }
     
     &.unread {

@@ -149,6 +149,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     // Hook para detectar el viewport
     const [isMobile, setIsMobile] = useState(false);
     
+    // Estado para visibilidad de columnas
+    const [visibleColumns, setVisibleColumns] = useState<string[]>([
+      'clientId', 'name', 'notificationDot', 'assignedTo', 'status', 'priority', 'action'
+    ]);
+    
     useEffect(() => {
       const checkViewport = () => {
         setIsMobile(window.innerWidth < 768);
@@ -556,6 +561,21 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       }
       return className;
     };
+
+    // Función para manejar cambios de visibilidad de columnas
+    const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+      setVisibleColumns(prev => {
+        if (visible) {
+          // Agregar columna si no está presente
+          return prev.includes(columnKey) ? prev : [...prev, columnKey];
+        } else {
+          // Remover columna
+          return prev.filter(key => key !== columnKey);
+        }
+      });
+      
+      console.log(`[ArchiveTable] Column ${columnKey} visibility changed to: ${visible}`);
+    }, []);
 
     // Configurar columnas de la tabla - ESPECÍFICO PARA ARCHIVETABLE
     const baseColumns = [
@@ -1106,6 +1126,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           }}
           getRowClassName={getRowClassName}
           emptyStateType="archive"
+          enableColumnVisibility={true}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={handleColumnVisibilityChange}
         />
         
         {/* Undo Notification */}

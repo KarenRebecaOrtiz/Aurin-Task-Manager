@@ -5,6 +5,7 @@ import { useId } from "react";
 import { useCharacterLimit } from "@/components/hooks/use-character-limit";
 import { Textarea } from "./Textarea";
 import { Label } from "./Label";
+import styles from "./BiographyInput.module.scss";
 
 interface BiographyInputProps {
   value?: string;
@@ -44,13 +45,8 @@ const BiographyInput = React.forwardRef<HTMLTextAreaElement, BiographyInputProps
     };
 
     return (
-      <div style={{
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px'
-      }}>
-        <Label htmlFor={`${id}-biography`}>{label}</Label>
+      <div className={styles.biographyContainer}>
+        <Label htmlFor={`${id}-biography`} className={styles.biographyLabel}>{label}</Label>
         <Textarea
           ref={ref}
           id={`${id}-biography`}
@@ -59,44 +55,16 @@ const BiographyInput = React.forwardRef<HTMLTextAreaElement, BiographyInputProps
           maxLength={maxLength}
           onChange={handleTextareaChange}
           disabled={disabled}
-          className={className}
+          className={`${styles.biographyTextarea} ${className || ''}`}
           aria-describedby={`${id}-description`}
-          style={{
-            width: '100%',
-            minHeight: '100px',
-            display: 'flex',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            background: 'rgba(241, 245, 249, 0.8)',
-            padding: '8px 12px',
-            fontSize: '14px',
-            color: '#0F172A',
-            boxShadow: '-4px -4px 8px rgba(255, 255, 255, 0.8), 4px 4px 8px rgba(0, 0, 0, 0.05), inset -2px -2px 4px rgba(255, 255, 255, 0.9), inset 2px 2px 6px rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.3s ease',
-            outline: 'none',
-            resize: 'vertical'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.2), -4px -4px 8px rgba(255, 255, 255, 0.8), 4px 4px 8px rgba(0, 0, 0, 0.05)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            e.currentTarget.style.boxShadow = '-4px -4px 8px rgba(255, 255, 255, 0.8), 4px 4px 8px rgba(0, 0, 0, 0.05), inset -2px -2px 4px rgba(255, 255, 255, 0.9), inset 2px 2px 6px rgba(0, 0, 0, 0.05)';
-          }}
         />
         <p
           id={`${id}-description`}
-          style={{
-            marginTop: '8px',
-            textAlign: 'right',
-            fontSize: '14px',
-            color: 'rgba(100, 116, 139, 0.5)'
-          }}
+          className={styles.biographyCounter}
           role="status"
           aria-live="polite"
         >
-          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{limit - characterCount}</span> caracteres restantes
+          <span>{limit - characterCount}</span> caracteres restantes
         </p>
       </div>
     );

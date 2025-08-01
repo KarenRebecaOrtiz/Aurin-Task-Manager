@@ -36,9 +36,9 @@
   
     /* ——— 🌙 Modo oscuro ——— */
     :global(.dark) & {
-      background: rgba(39, 39, 42, 0.1);
+      background: #27272a;
       border-color: rgba(255, 255, 255, 0.1);
-      box-shadow: var(--shadow-dark);
+      box-shadow: none;
     }
   
     /* ——— Responsividad ——— */
@@ -89,25 +89,16 @@
   
     /* ——— 🌙 Modo oscuro ——— */
     :global(.dark) & {
-      background: rgba(39, 39, 42, 0.7);
-      border-radius:5px; 
-
+      background: #27272a;
+      border-radius: 5px;
       border-color: rgba(255, 255, 255, 0.1);
-      box-shadow:
-        -8px -8px 16px rgba(0, 0, 0, 0.5),
-        8px 8px 16px rgba(255, 255, 255, 0.05),
-        inset -4px -4px 8px rgba(0, 0, 0, 0.4),
-        inset 4px 4px 8px rgba(255, 255, 255, 0.03);
+      box-shadow: none;
   
       &:hover {
-        background: rgba(39, 39, 42, 0.85);
+        background: #27272a;
         border-color: rgba(255, 255, 255, 0.2);
         transform: translateY(-2px) scale(1.25);
-        box-shadow:
-          -10px -10px 20px rgba(0, 0, 0, 0.6),
-          10px 10px 20px rgba(255, 255, 255, 0.07),
-          inset -6px -6px 12px rgba(0, 0, 0, 0.45),
-          inset 6px 6px 12px rgba(255, 255, 255, 0.04);
+        box-shadow: none;
       }
     }
   }
@@ -189,9 +180,9 @@
   }
   
   :global(.dark) .dockItemTooltip {
-    background: var(--color-dark-hover);
+    background: #27272a;
     color: #E5E7EB;
-    box-shadow: var(--shadow-dark);
+    box-shadow: none;
   }
   
   .dockItem:hover .dockItemTooltip {

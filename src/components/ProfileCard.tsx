@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import UserAvatar from './ui/UserAvatar';
 import styles from './ProfileCard.module.scss';
 
 interface SocialLink {
@@ -291,14 +292,12 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
             {/* Glassmorphism Profile Card */}
             <div className={styles.profileCard}>
               <div className={styles.avatarContainer}>
-                <img 
-                  src={avatarUrl} 
-                  alt={`${profile.fullName}'s Avatar`}
-                  className={styles.avatar}
-                  onError={(e) => { 
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/empty-image.png';
-                  }}
+                <UserAvatar 
+                  userId={userId}
+                  imageUrl={avatarUrl}
+                  userName={profile.fullName || 'Usuario'}
+                  size="xlarge"
+                  showStatus={true}
                 />
               </div>
 
@@ -306,8 +305,85 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
               <p className={styles.title}>{profile.role || 'Sin rol'}</p>
               <p className={styles.bio}>{profile.description || 'Sin descripción disponible'}</p>
 
+              {/* Información de Contacto */}
+              {(profile.phone || profile.city || profile.birthDate || profile.gender || profile.portfolio) && (
+                <div className={styles.contactInfo}>
+                  {profile.phone && (
+                    <div className={styles.contactItem}>
+                      <span className={styles.contactLabel}>Teléfono:</span>
+                      <span className={styles.contactValue}>{profile.phone}</span>
+                    </div>
+                  )}
+                  {profile.city && (
+                    <div className={styles.contactItem}>
+                      <span className={styles.contactLabel}>Ubicación:</span>
+                      <span className={styles.contactValue}>{profile.city}</span>
+                    </div>
+                  )}
+                  {profile.birthDate && (
+                    <div className={styles.contactItem}>
+                      <span className={styles.contactLabel}>Fecha de Nacimiento:</span>
+                      <span className={styles.contactValue}>{profile.birthDate}</span>
+                    </div>
+                  )}
+                  {profile.gender && (
+                    <div className={styles.contactItem}>
+                      <span className={styles.contactLabel}>Género:</span>
+                      <span className={styles.contactValue}>{profile.gender}</span>
+                    </div>
+                  )}
+                  {profile.portfolio && (
+                    <div className={styles.contactItem}>
+                      <span className={styles.contactLabel}>Portafolio:</span>
+                      <a 
+                        href={profile.portfolio.startsWith('http') ? profile.portfolio : `https://${profile.portfolio}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.portfolioLink}
+                      >
+                        {profile.portfolio.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Stack de Tecnologías */}
+              {profile.stack && profile.stack.length > 0 && (
+                <div className={styles.stackSection}>
+                  <h3 className={styles.sectionTitle}>Stack de Tecnologías</h3>
+                  <div className={styles.stackTags}>
+                    {profile.stack.slice(0, 10).map((tech, index) => (
+                      <span key={index} className={styles.stackTag}>
+                        {tech}
+                      </span>
+                    ))}
+                    {profile.stack.length > 10 && (
+                      <span className={styles.stackMore}>
+                        +{profile.stack.length - 10} más
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Equipos */}
+              {profile.teams && profile.teams.length > 0 && (
+                <div className={styles.teamsSection}>
+                  <h3 className={styles.sectionTitle}>Equipos</h3>
+                  <div className={styles.teamsTags}>
+                    {profile.teams.map((team, index) => (
+                      <span key={index} className={styles.teamTag}>
+                        {team}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className={styles.divider} />
 
+              {/* Redes Sociales - Solo si existen */}
               {socialLinks.length > 0 && (
                 <div className={styles.socialLinks}>
                   {socialLinks.map((item) => (

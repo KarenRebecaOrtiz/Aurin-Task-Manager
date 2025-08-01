@@ -10,7 +10,7 @@ interface UserAvatarProps {
   userId: string;
   imageUrl?: string;
   userName?: string;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'medium' | 'large' | 'xlarge';
   showStatus?: boolean;
 }
 
@@ -64,6 +64,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         return { width: 32, height: 32 };
       case 'large':
         return { width: 55, height: 55 };
+      case 'xlarge':
+        return { width: 96, height: 96 };
       case 'medium':
       default:
         return { width: 46, height: 46 }; // Original size used in sidebars

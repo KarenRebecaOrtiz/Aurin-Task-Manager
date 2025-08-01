@@ -23,7 +23,6 @@ interface SearchableDropdownProps {
   disabled?: boolean;
   multiple?: boolean;
   maxItems?: number;
-  maxDisplayItems?: number;
   emptyMessage?: string;
   className?: string;
 }
@@ -37,7 +36,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   disabled = false,
   multiple = false,
   maxItems,
-  maxDisplayItems = 8,
   emptyMessage = "No hay elementos disponibles",
   className = "",
 }) => {
@@ -73,7 +71,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.subtitle && item.subtitle.toLowerCase().includes(searchTerm.toLowerCase()))
     )
-  ).slice(0, maxDisplayItems);
+  );
 
   const handleItemClick = useCallback((itemId: string) => {
     if (multiple) {
@@ -163,41 +161,36 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       
       {hasSelection && multiple && (
         <div className={styles.selectedTags}>
-                                    {selectedItemsData.slice(0, 3).map(item => (
-                            <div key={item.id} className={styles.tag}>
-                              {item.imageUrl && (
-                                <Image
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  width={16}
-                                  height={16}
-                                  className={styles.tagImage}
-                                  onError={(e) => {
-                                    e.currentTarget.src = '/empty-image.png';
-                                  }}
-                                />
-                              )}
-                              {item.svgIcon && (
-                                <div 
-                                  className={styles.tagSvg}
-                                  dangerouslySetInnerHTML={{ __html: item.svgIcon }}
-                                />
-                              )}
-                              <span className={styles.tagText}>{item.name}</span>
-                              <button
-                                type="button"
-                                className={styles.tagRemove}
-                                onClick={(e) => handleRemoveItem(item.id, e)}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-          {selectedItemsData.length > 3 && (
-            <div className={styles.tagMore}>
-              +{selectedItemsData.length - 3}
+          {selectedItemsData.map(item => (
+            <div key={item.id} className={styles.tag}>
+              {item.imageUrl && (
+                <Image
+                  src={item.imageUrl}
+                  alt={item.name}
+                  width={16}
+                  height={16}
+                  className={styles.tagImage}
+                  onError={(e) => {
+                    e.currentTarget.src = '/empty-image.png';
+                  }}
+                />
+              )}
+              {item.svgIcon && (
+                <div 
+                  className={styles.tagSvg}
+                  dangerouslySetInnerHTML={{ __html: item.svgIcon }}
+                />
+              )}
+              <span className={styles.tagText}>{item.name}</span>
+              <button
+                type="button"
+                className={styles.tagRemove}
+                onClick={(e) => handleRemoveItem(item.id, e)}
+              >
+                ×
+              </button>
             </div>
-          )}
+          ))}
         </div>
       )}
 

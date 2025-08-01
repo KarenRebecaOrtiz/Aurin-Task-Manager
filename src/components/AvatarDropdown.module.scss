@@ -56,7 +56,7 @@
       6px 6px 12px rgba(0, 0, 0, 0.08);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgba(30, 30, 30, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
     @include neomorphic-shadow(dark);
@@ -108,7 +108,7 @@
   text-align: left;
   justify-content: flex-start;
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgba(30, 30, 30, 0.7);
     color: $color-text-dark-secondary;
     @include neomorphic-inset(dark);
@@ -129,7 +129,7 @@
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
   z-index: 10;
 
-  @include dark-mode {
+  :global(body.dark) & {
     border-color: rgba(30, 30, 30, 0.7);
     box-shadow: 0 0 4px rgba(255, 255, 255, 0.1);
   }
@@ -162,7 +162,7 @@
   min-width: 220px;
   padding: 0;
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgba(24, 24, 27, 0.92);
     color: $color-text-dark-primary;
     box-shadow: $shadow-popup-dark;
@@ -209,7 +209,7 @@
     transform: scale(0.98);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: transparent;
     color: $color-text-dark-primary;
     box-shadow: none;
@@ -267,7 +267,7 @@
 .statusOption.Disponible {
   background-color: $color-success !important;
   color: $white !important;
-  @include dark-mode {
+  :global(body.dark) & {
     background-color: $color-success !important;
     color: $white !important;
   }
@@ -275,7 +275,7 @@
 .statusOption.Ocupado {
   background-color: $color-error !important;
   color: $white !important;
-  @include dark-mode {
+  :global(body.dark) & {
     background-color: $color-error !important;
     color: $white !important;
   }
@@ -283,7 +283,7 @@
 .statusOption.Por_terminar {
   background-color: $color-warning !important;
   color: $white !important;
-  @include dark-mode {
+  :global(body.dark) & {
     background-color: $color-warning !important;
     color: $white !important;
   }
@@ -291,7 +291,7 @@
 .statusOption.Fuera {
   background-color: $zinc-500 !important;
   color: $white !important;
-  @include dark-mode {
+  :global(body.dark) & {
     background-color: $zinc-500 !important;
     color: $white !important;
   }
@@ -305,7 +305,7 @@
   height: 16px;
   filter: brightness(0.2);
 
-  @include dark-mode {
+  :global(body.dark) & {
     filter: invert(1) brightness(1.2);
     color: $color-text-dark-primary;
   }
@@ -320,7 +320,7 @@
   background: rgba(209, 217, 230, 0.5);
   margin: $spacing-xs 0;
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgba(255,255,255,0.08);
   }
 }
@@ -336,7 +336,7 @@
   transition: color 0.3s ease;
   text-align: left;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-muted;
   }
 }

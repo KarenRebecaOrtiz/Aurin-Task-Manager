@@ -27,6 +27,24 @@ interface TeamsTableProps {
 const TeamsTable = ({ teams, currentUserId, onRemoveTeam, isEditing }: TeamsTableProps) => {
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
+  const getTeamDescription = (teamName: string): string => {
+    const descriptions: { [key: string]: string } = {
+      'Análisis de Datos': 'Especialistas en extracción, procesamiento y análisis de datos para generar insights valiosos.',
+      'Arquitectura': 'Profesionales que diseñan y planifican estructuras y espacios arquitectónicos.',
+      'Arte': 'Creadores visuales y artistas que desarrollan contenido creativo y expresivo.',
+      'Desarrollo': 'Programadores y desarrolladores que construyen aplicaciones y sistemas tecnológicos.',
+      'Cloud Computing': 'Expertos en servicios en la nube, infraestructura y tecnologías cloud.',
+      'DevOps': 'Profesionales que automatizan y optimizan procesos de desarrollo y operaciones.',
+      'Diseño gráfico': 'Diseñadores que crean identidades visuales y material gráfico impactante.',
+      'Inteligencia Artificial': 'Especialistas en machine learning, IA y algoritmos inteligentes.',
+      'No-Code Builders': 'Desarrolladores que crean aplicaciones sin código usando plataformas visuales.',
+      'Project Management': 'Gestores de proyectos que coordinan equipos y aseguran la entrega exitosa.',
+      'UX/UI': 'Diseñadores de experiencia de usuario que crean interfaces intuitivas y atractivas.'
+    };
+    
+    return descriptions[teamName] || 'Equipo especializado en su área de expertise.';
+  };
+
   const toggleTeamExpansion = (teamName: string) => {
     const newExpanded = new Set(expandedTeams);
     if (newExpanded.has(teamName)) {
@@ -89,19 +107,26 @@ const TeamsTable = ({ teams, currentUserId, onRemoveTeam, isEditing }: TeamsTabl
         return (
           <div key={team.name} className={styles.teamCard}>
             <div className={styles.teamHeader}>
-              <h3 className={styles.teamTitle}>{team.name}</h3>
-              <div className={styles.teamMemberCount}>
-                {memberCount} miembro{memberCount !== 1 ? 's' : ''}
+              <div className={styles.teamHeaderTop}>
+                <h3 className={styles.teamTitle}>{team.name}</h3>
+                <div className={styles.teamHeaderActions}>
+                  <div className={styles.teamMemberCount}>
+                    {memberCount} miembro{memberCount !== 1 ? 's' : ''}
+                  </div>
+                  {isEditing && onRemoveTeam && (
+                    <button
+                      className={styles.removeTeamButton}
+                      onClick={() => onRemoveTeam(team.name)}
+                      title="Eliminar equipo"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
-              {isEditing && onRemoveTeam && (
-                <button
-                  className={styles.removeTeamButton}
-                  onClick={() => onRemoveTeam(team.name)}
-                  title="Eliminar equipo"
-                >
-                  ✕
-                </button>
-              )}
+              <div className={styles.teamDescription}>
+                {getTeamDescription(team.name)}
+              </div>
             </div>
             
             {memberCount > 0 && (
@@ -128,9 +153,9 @@ const TeamsTable = ({ teams, currentUserId, onRemoveTeam, isEditing }: TeamsTabl
             )}
             
             {memberCount === 0 && (
-              <div className={styles.noMembersMessage}>
-                No hay otros miembros visibles en este equipo
-              </div>
+                              <div className={styles.noMembersMessage}>
+                  Parece que aún no hay más miembros visibles en este equipo
+                </div>
             )}
           </div>
         );

@@ -80,33 +80,21 @@
   :global(.dark) & {
     background: rgba(30, 30, 30, 0.7); /* Semi-transparent #1E1E1E */
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      /* Outset: Dark neomorphic */
-      2px 2px 4px rgba(0, 0, 0, 0.5),
-      -2px -2px 4px rgba(255, 255, 255, 0.05),
-      /* Inset: Carved effect */
-      inset -2px -2px 4px rgba(0, 0, 0, 0.4),
-      inset 2px 2px 4px rgba(255, 255, 255, 0.03);
+    box-shadow:none;
 
     &:hover {
       transform: translateY(-1px) scale(1.05);
       background: rgba(30, 30, 30, 0.85);
       border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:
-        2px 2px 4px rgba(0, 0, 0, 0.6),
-        -2px -2px 4px rgba(255, 255, 255, 0.03),
-        inset -3px -3px 6px rgba(0, 0, 0, 0.45),
-        inset 3px 3px 6px rgba(255, 255, 255, 0.04);
+      box-shadow:none;
+
     }
 
     &:active {
       background: rgba(30, 30, 30, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      box-shadow:
-        inset 1px 1px 3px rgba(0, 0, 0, 0.35),
-        inset -1px -1px 3px rgba(255, 255, 255, 0.02),
-        1px 1px 3px rgba(0, 0, 0, 0.45),
-        -1px -1px 3px rgba(255, 255, 255, 0.04);
+      box-shadow:none;
+
     }
   }
 
@@ -133,13 +121,9 @@
     inset 2px 2px 4px rgba(59, 130, 246, 0.3); /* Match primary color */
 
   :global(.dark) & {
-    background: rgba(59, 130, 246, 0.8);
+    background:cfde48;
     border-color: rgba(255, 255, 255, 0.15);
-    box-shadow:
-      2px 2px 4px rgba(0, 0, 0, 0.5),
-      -2px -2px 4px rgba(255, 255, 255, 0.05),
-      inset -2px -2px 4px rgba(0, 0, 0, 0.4),
-      inset 2px 2px 4px rgba(59, 130, 246, 0.2);
+    box-shadow:none;
   }
 }
 
@@ -187,8 +171,8 @@
 
 :global(body.dark) .wizardButton:hover:not(:disabled),
 :global(body.dark) .wizardButton {
-  background: rgba(21, 21, 21, 0.8);
-  color: white;
+  background: white;
+  color: black;
   border-color: rgba(255, 255, 255, 0.356);
   box-shadow:none;
 
@@ -220,8 +204,4 @@
     width: 100%;
     justify-content: center;
   }
-}
-
-:global(body.dark) .wizardButton img[src*=".svg"] {
-  filter: invert(1) grayscale(1) brightness(1.5) !important;
 }

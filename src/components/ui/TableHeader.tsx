@@ -154,13 +154,43 @@ const TableHeader = <T,>({
         const sortable = isColumnSortable(column);
         const visible = isColumnVisible(column.key);
         const sortState = getSortState(column.key);
+        const hasLabel = column.label && column.label.trim() !== '';
+        const hasTooltip = sortable && getSortTooltip(column.key, column.label).trim() !== '';
+
+        // Si no hay label y no es ordenable, no mostrar la celda
+        if (!hasLabel && !sortable) {
+          return null;
+        }
+
+        // Si no hay label, mostrar como celda no interactiva
+        if (!hasLabel) {
+          return (
+            <div
+              key={column.key}
+              className={`
+                ${styles.headerCell} 
+                ${!column.mobileVisible ? styles.hideOnMobile : ''}
+                ${!visible ? styles.hidden : ''}
+              `}
+              style={{
+                width: getColumnWidth(column),
+                opacity: visible ? 1 : 0.3,
+              }}
+            >
+              <div className={styles.sortContainer}>
+                {/* Sin contenido */}
+              </div>
+            </div>
+          );
+        }
 
         return (
           <SimpleTooltip
             key={column.key}
-            text={sortable ? getSortTooltip(column.key, column.label) : ''}
+            text={hasTooltip ? getSortTooltip(column.key, column.label) : ''}
             position="top"
             delay={300}
+            disabled={!hasTooltip}
           >
             <div
               className={`
@@ -185,7 +215,7 @@ const TableHeader = <T,>({
                   : 'none'
               }
               aria-label={
-                sortable ? getSortTooltip(column.key, column.label) : undefined
+                hasTooltip ? getSortTooltip(column.key, column.label) : undefined
               }
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && sortable) {
@@ -200,65 +230,55 @@ const TableHeader = <T,>({
               {onColumnVisibilityChange &&
                 column.key !== 'action' &&
                 column.key !== 'notificationDot' && (
-                  <SimpleTooltip
-                    text={
-                      visible
-                        ? `Ocultar columna ${column.label}`
-                        : `Mostrar columna ${column.label}`
-                    }
-                    position="top"
-                    delay={300}
-                  >
-                    <div className={styles.visibilityContainer}>
-                      <button
-                        className={styles.visibilityButton}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleColumnVisibilityToggle(column.key);
+                  <div className={styles.visibilityContainer}>
+                    <button
+                      className={styles.visibilityButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleColumnVisibilityToggle(column.key);
+                      }}
+                      aria-label={
+                        visible
+                          ? `Ocultar columna ${column.label}`
+                          : `Mostrar columna ${column.label}`
+                      }
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'absolute',
+                        top: '50%',
+                        right: '2px',
+                        transform: 'translateY(-50%)',
+                        zIndex: 10
+                      }}
+                    >
+                      <motion.div
+                        animate={{
+                          scale: visible ? 1 : 0.8,
+                          opacity: visible ? 1 : 0.5,
                         }}
-                        aria-label={
-                          visible
-                            ? `Ocultar columna ${column.label}`
-                            : `Mostrar columna ${column.label}`
-                        }
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'absolute',
-                          top: '50%',
-                          right: '2px',
-                          transform: 'translateY(-50%)',
-                          zIndex: 10
-                        }}
+                        transition={{ duration: 0.15 }}
                       >
-                        <motion.div
-                          animate={{
-                            scale: visible ? 1 : 0.8,
-                            opacity: visible ? 1 : 0.5,
+                        <Image
+                          src={visible ? '/eye.svg' : '/eye-closed.svg'}
+                          alt={
+                            visible ? 'Ocultar columna' : 'Mostrar columna'
+                          }
+                          width={7}
+                          height={7}
+                          className={styles.eyeIcon}
+                          style={{ 
+                            width: '15px', 
+                            height: '15px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                           }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          <Image
-                            src={visible ? '/eye.svg' : '/eye-closed.svg'}
-                            alt={
-                              visible ? 'Ocultar columna' : 'Mostrar columna'
-                            }
-                            width={7}
-                            height={7}
-                            className={styles.eyeIcon}
-                            style={{ 
-                              width: '15px', 
-                              height: '15px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          />
-                        </motion.div>
-                      </button>
-                    </div>
-                  </SimpleTooltip>
+                        />
+                      </motion.div>
+                    </button>
+                  </div>
                 )}
             </div>
           </SimpleTooltip>

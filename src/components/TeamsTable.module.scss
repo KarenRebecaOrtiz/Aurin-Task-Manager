@@ -1,5 +1,6 @@
 @use '@/app/styles/variables' as *;
 @use '@/app/styles/mixins' as *;
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap');
 
 // ==============================================================
 // 🔮 TEAMS TABLE - OPTIMIZED WITH NEW MIXINS & COMPONENTS
@@ -22,17 +23,18 @@
   @include neomorphic-shadow(light);
   transition: $transition-base;
 
-  @include dark-mode {
-    background: $profile-card-section-content-bg-dark;
-    @include neomorphic-shadow(dark);
+  :global(body.dark) & {
+    background: #252527;
+    border-radius: 20px;
+    box-shadow: none;
   }
 
   &:hover {
     transform: translateY(-2px);
     @include neomorphic-shadow-hover(light);
 
-    @include dark-mode {
-      @include neomorphic-shadow-hover(dark);
+    :global(body.dark) & {
+      box-shadow: none;
     }
   }
 
@@ -47,14 +49,35 @@
 }
 
 .teamHeader {
-  @include flex-between;
-  align-items: flex-start;
+  @include flex-column;
   margin-bottom: $spacing-md;
   padding-bottom: $spacing-sm;
   border-bottom: 1px solid $color-border-light;
 
-  @include dark-mode {
+  :global(body.dark) & {
     border-color: $color-border-dark;
+  }
+}
+
+.teamHeaderTop {
+  @include flex-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-xs;
+}
+
+.teamHeaderActions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.teamDescription {
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary);
+  line-height: 1.4;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
   }
 }
 
@@ -63,7 +86,7 @@
   margin: 0;
   flex: 1;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 
@@ -80,11 +103,11 @@
   border: 1px solid $profile-card-tag-border;
   @include neomorphic-shadow(light);
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
     background: $profile-card-tag-bg-dark;
     border-color: $profile-card-tag-border-dark;
-    @include neomorphic-shadow(dark);
+    box-shadow: none;
   }
 }
 
@@ -107,7 +130,7 @@
     transform: translateY(-1px);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-glass-dark;
     color: $color-text-dark-primary;
     border-color: $color-border-dark;
@@ -125,9 +148,9 @@
   background: $white;
   @include neomorphic-shadow(light);
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-dark-secondary;
-    @include neomorphic-shadow(dark);
+    box-shadow: none;
   }
 }
 
@@ -143,9 +166,9 @@
   border: 2px solid $color-border-light;
   @include neomorphic-shadow(light);
 
-  @include dark-mode {
+  :global(body.dark) & {
     border-color: $color-border-dark;
-    @include neomorphic-shadow(dark);
+    box-shadow: none;
   }
 }
 
@@ -156,7 +179,7 @@
   border-radius: $radius-sm;
   border: 1px dashed $color-border-light;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
     background: $color-bg-glass-dark;
     border-color: $color-border-dark;
@@ -171,7 +194,7 @@
   border: 1px dashed $color-border-light;
   width: 100%;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-secondary;
     background: $color-bg-glass-dark;
     border-color: $color-border-dark;
@@ -196,7 +219,7 @@
     background: #f5c6cb;
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: #dc2626;
     color: #fef2f2;
     

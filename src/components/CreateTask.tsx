@@ -8,6 +8,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
+import { es } from "date-fns/locale";
 import "react-day-picker/style.css";
 import styles from "@/components/CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
@@ -936,16 +937,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 ref={startDateInputRef}
                                 className={styles.dateInput}
                                 onClick={() => setIsStartDateOpen(!isStartDateOpen)}
-                                style={{
-                                  padding: "12px 16px",
-                                  background: "rgba(255, 255, 255, 0.15)",
-                                  backdropFilter: "blur(10px)",
-                                  borderRadius: "12px",
-                                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                                  boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                  cursor: "pointer",
-                                  fontSize: "14px",
-                                }}
                               >
                                 {form.watch("basicInfo.startDate")
                                   ? form.watch("basicInfo.startDate")!.toLocaleDateString("es-ES")
@@ -960,13 +951,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       position: "absolute",
                                       top: startDatePosition?.top,
                                       left: startDatePosition?.left,
-                                      zIndex: 150000,
-                                      background: "rgba(255, 255, 255, 0.15)",
-                                      backdropFilter: "blur(10px)",
-                                      borderRadius: "12px",
-                                      border: "1px solid rgba(255, 255, 255, 0.2)",
-                                      boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                      padding: "1rem",
                                     }}
                                   >
                                     <DayPicker
@@ -976,6 +960,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         form.setValue("basicInfo.startDate", date || null);
                                         setIsStartDateOpen(false);
                                       }}
+                                      locale={es}
                                       className={styles.customCalendar}
                                       style={{
                                         background: "transparent",
@@ -994,16 +979,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                 ref={endDateInputRef}
                                 className={styles.dateInput}
                                 onClick={() => setIsEndDateOpen(!isEndDateOpen)}
-                                style={{
-                                  padding: "12px 16px",
-                                  background: "rgba(255, 255, 255, 0.15)",
-                                  backdropFilter: "blur(10px)",
-                                  borderRadius: "12px",
-                                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                                  boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                  cursor: "pointer",
-                                  fontSize: "14px",
-                                }}
                               >
                                 {form.watch("basicInfo.endDate")
                                   ? form.watch("basicInfo.endDate")!.toLocaleDateString("es-ES")
@@ -1018,13 +993,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                       position: "absolute",
                                       top: endDatePosition?.top,
                                       left: endDatePosition?.left,
-                                      zIndex: 150000,
-                                      background: "rgba(255, 255, 255, 0.15)",
-                                      backdropFilter: "blur(10px)",
-                                      borderRadius: "12px",
-                                      border: "1px solid rgba(255, 255, 255, 0.2)",
-                                      boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
-                                      padding: "1rem",
                                     }}
                                   >
                                     <DayPicker
@@ -1034,6 +1002,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                                         form.setValue("basicInfo.endDate", date || null);
                                         setIsEndDateOpen(false);
                                       }}
+                                      locale={es}
                                       className={styles.customCalendar}
                                       style={{
                                         background: "transparent",

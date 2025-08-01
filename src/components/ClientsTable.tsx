@@ -15,6 +15,8 @@ import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { clientsTableStore } from '@/stores/clientsTableStore';
 import { Client } from '@/types';
+import { useState } from 'react';
+import { useDataStore } from '@/stores/dataStore'; // Import useDataStore
 
 // Cache global persistente para ClientsTable
 const clientsTableCache = {
@@ -87,6 +89,11 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
     // Estados optimizados con refs para evitar re-renders
     const clientsRef = useRef<Client[]>([]);
     
+    // Estado para visibilidad de columnas
+    const [visibleColumns, setVisibleColumns] = useState<string[]>([
+      'imageUrl', 'name', 'projectCount', 'action'
+    ]);
+
     // Zustand selectors agrupados
     const {
       clients,
@@ -123,11 +130,15 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       }))
     );
 
+    // Obtener tasks desde dataStore para contar proyectos
+    const tasks = useDataStore(useShallow(state => state.tasks));
+
     const userId = useMemo(() => user?.id || '', [user]);
     const actionMenuRef = useRef<HTMLDivElement>(null);
 
     // Use external data if provided, otherwise use internal state
     const effectiveClients = externalClients || clients;
+    const effectiveTasks = tasks;
 
     // Setup de clients con cache optimizado - siempre cargar internamente
     useEffect(() => {
@@ -273,6 +284,41 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       [sortDirection, setSortKey, setSortDirection],
     );
 
+    // Ordenar clientes
+    const sortedClients = useMemo(() => {
+      if (!sortKey || sortKey === '') {
+        return filteredClients;
+      }
+
+      return [...filteredClients].sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+
+        switch (sortKey) {
+          case 'name':
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+            break;
+          case 'projectCount':
+            // Contar proyectos asignados a este cliente
+            const aProjectCount = effectiveTasks?.filter(task => task.clientId === a.id).length || 0;
+            const bProjectCount = effectiveTasks?.filter(task => task.clientId === b.id).length || 0;
+            aValue = aProjectCount;
+            bValue = bProjectCount;
+            break;
+          default:
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+        }
+
+        if (sortDirection === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+    }, [filteredClients, sortKey, sortDirection, effectiveTasks]);
+
     const animateClick = useCallback((element: HTMLElement) => {
       gsap.to(element, {
         scale: 0.95,
@@ -388,6 +434,21 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         }),
       [baseColumns, onEditOpen, onDeleteOpen, userId, isAdmin, isLoading, animateClick, setActionMenuOpenId],
     );
+
+    // Función para manejar cambios de visibilidad de columnas
+    const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+      setVisibleColumns(prev => {
+        if (visible) {
+          // Agregar columna si no está presente
+          return prev.includes(columnKey) ? prev : [...prev, columnKey];
+        } else {
+          // Remover columna
+          return prev.filter(key => key !== columnKey);
+        }
+      });
+      
+      console.log(`[ClientsTable] Column ${columnKey} visibility changed to: ${visible}`);
+    }, []);
 
     // Handle loading state - mostrar loader mientras cargan los datos
     if (isLoading || isDataLoading) {
@@ -720,7 +781,7 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
               )}
             </div>
             <Table
-              data={filteredClients}
+              data={sortedClients}
               columns={columns}
               itemsPerPage={10}
               sortKey={sortKey}
@@ -728,6 +789,9 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
               onSort={handleSort}
               emptyStateType="clients"
               className="clients-table"
+              enableColumnVisibility={true}
+              visibleColumns={visibleColumns}
+              onColumnVisibilityChange={handleColumnVisibilityChange}
             />
           </>
         )}

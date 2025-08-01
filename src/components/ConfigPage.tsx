@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/lib/firebase';
 import ConfigDropdown from './ui/ConfigDropdown';
-import StackInput from './ui/StackInput';
+import SearchableDropdown from './ui/SearchableDropdown';
 import PhoneCountrySelect from './ui/PhoneCountrySelect';
 import TeamsTable from './TeamsTable';
 import SkeletonLoader from '@/components/SkeletonLoader';
@@ -15,6 +15,19 @@ import { gsap } from 'gsap';
 import { WebsiteInput } from './ui/WebsiteInput';
 import { BiographyInput } from './ui/BiographyInput';
 import styles from './ConfigPage.module.scss';
+
+// Componentes de iconos de redes sociales con soporte para dark mode
+const SocialIcon: React.FC<{ icon: string; alt: string; className?: string }> = ({ icon, alt, className }) => (
+  <div className={`${styles.socialIcon} ${className || ''}`}>
+    <Image
+      src={icon}
+      alt={alt}
+      width={16}
+      height={16}
+      className={styles.socialIconSvg}
+    />
+  </div>
+);
 
 interface Config {
   id: string;
@@ -404,6 +417,83 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
       prev ? { ...prev, [name]: type === 'checkbox' ? checked : value } : null
     );
     setErrors((prev) => ({ ...prev, [name]: undefined }));
+  }, []);
+
+  const handleFormInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, field: { value?: string; onChange: (value: string) => void }) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const newValue = (field.value || '').substring(0, start) + text + (field.value || '').substring(end);
+              field.onChange(newValue);
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              field.onChange((field.value || '') + text);
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = (field.value || '').substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = (field.value || '').substring(0, start) + (field.value || '').substring(end);
+                field.onChange(newValue);
+              } else {
+                field.onChange('');
+              }
+            });
+          }
+          break;
+      }
+    }
   }, []);
 
   const handleStackChange = useCallback((selectedValues: string[]) => {
@@ -949,8 +1039,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         </div>
         <div className={styles.content}>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Información General</h2>
             <div className={styles.sectionContent}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>Información General</h2>
+                <div className={styles.stackDescription}>
+                  Completa tu información personal básica para que otros puedan conocerte mejor.
+                </div>
+              </div>
               <div className={styles.fieldGroup}>
                 <div className={styles.frame239182}>
                   <div className={styles.label}>Nombre Completo</div>
@@ -1096,107 +1191,160 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Stack</h2>
             <div className={styles.sectionContent}>
-              <div className={styles.fieldGroup}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>Stack</h2>
                 <div className={styles.stackDescription}>
                   Selecciona las tecnologías y herramientas que usas frecuentemente.
                 </div>
-                <StackInput
-                  options={uniqueTechnologies}
-                  value={formData.stack || []}
-                  onChange={handleStackChange}
-                  placeholder="Escribe una tecnología..."
+              </div>
+              <div className={styles.fieldGroup}>
+                <SearchableDropdown
+                  items={uniqueTechnologies.map(tech => ({
+                    id: tech,
+                    name: tech
+                  }))}
+                  selectedItems={formData.stack || []}
+                  onSelectionChange={handleStackChange}
+                  placeholder="Selecciona tecnologías..."
+                  searchPlaceholder="Buscar tecnologías..."
                   disabled={!isOwnProfile || !isEditing}
+                  multiple={true}
+                  maxItems={40}
+                  emptyMessage="No se encontraron tecnologías"
                   className={styles.stackSelect}
-                  maxSelections={40}
                 />
               </div>
             </div>
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Redes Sociales</h2>
             <div className={styles.sectionContent}>
+              <h2 className={styles.sectionTitle}>Redes Sociales</h2>
               <div className={styles.fieldGroup}>
                 <div className={styles.stackDescription}>
                   Agrega tus perfiles de redes sociales para que otros puedan conectarse contigo.
                 </div>
-                
-                {/* GitHub */}
-                <div className={styles.fieldGroupRow}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.label}>GitHub</div>
-                    <input
-                      type="text"
-                      name="github"
-                      value={formData.github || ''}
-                      onChange={handleInputChange}
-                      placeholder="usuario-github"
-                      className={styles.input}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                  </div>
-                  <div className={styles.frame239183}>
-                    <div className={styles.label}>LinkedIn</div>
-                    <input
-                      type="text"
-                      name="linkedin"
-                      value={formData.linkedin || ''}
-                      onChange={handleInputChange}
-                      placeholder="in/usuario-linkedin"
-                      className={styles.input}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                  </div>
+              </div>
+              
+              {/* GitHub - Contenedor individual */}
+              <div className={styles.socialContainer}>
+                <div className={styles.label}>
+                  <SocialIcon icon="/github.svg" alt="GitHub" />
+                  GitHub
                 </div>
+                <input
+                  type="text"
+                  name="github"
+                  value={formData.github || ''}
+                  onChange={handleInputChange}
+                  placeholder="usuario-github"
+                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
+                  disabled={!isOwnProfile || !isEditing}
+                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                    value: formData.github || '', 
+                    onChange: (value) => {
+                      const event = { target: { name: 'github', value } } as React.ChangeEvent<HTMLInputElement>;
+                      handleInputChange(event);
+                    }
+                  })}
+                />
+              </div>
 
-                {/* Twitter & Instagram */}
-                <div className={styles.fieldGroupRow}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.label}>Twitter / X</div>
-                    <input
-                      type="text"
-                      name="twitter"
-                      value={formData.twitter || ''}
-                      onChange={handleInputChange}
-                      placeholder="@usuario-twitter"
-                      className={styles.input}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                  </div>
-                  <div className={styles.frame239183}>
-                    <div className={styles.label}>Instagram</div>
-                    <input
-                      type="text"
-                      name="instagram"
-                      value={formData.instagram || ''}
-                      onChange={handleInputChange}
-                      placeholder="@usuario-instagram"
-                      className={styles.input}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                  </div>
+              {/* LinkedIn - Contenedor individual */}
+              <div className={styles.socialContainer}>
+                <div className={styles.label}>
+                  <SocialIcon icon="/linkedin.svg" alt="LinkedIn" />
+                  LinkedIn
                 </div>
+                <input
+                  type="text"
+                  name="linkedin"
+                  value={formData.linkedin || ''}
+                  onChange={handleInputChange}
+                  placeholder="in/usuario-linkedin"
+                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
+                  disabled={!isOwnProfile || !isEditing}
+                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                    value: formData.linkedin || '', 
+                    onChange: (value) => {
+                      const event = { target: { name: 'linkedin', value } } as React.ChangeEvent<HTMLInputElement>;
+                      handleInputChange(event);
+                    }
+                  })}
+                />
+              </div>
 
-                {/* Dribbble */}
-                <div className={styles.fieldGroupRow}>
-                  <div className={styles.frame239182}>
-                    <div className={styles.label}>Dribbble</div>
-                    <input
-                      type="text"
-                      name="dribbble"
-                      value={formData.dribbble || ''}
-                      onChange={handleInputChange}
-                      placeholder="usuario-dribbble"
-                      className={styles.input}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                  </div>
-                  <div className={styles.frame239183}>
-                    {/* Espacio vacío para mantener la estructura */}
-                  </div>
+              {/* Twitter - Contenedor individual */}
+              <div className={styles.socialContainer}>
+                <div className={styles.label}>
+                  <SocialIcon icon="/twitter.svg" alt="Twitter" />
+                  Twitter / X
                 </div>
+                <input
+                  type="text"
+                  name="twitter"
+                  value={formData.twitter || ''}
+                  onChange={handleInputChange}
+                  placeholder="@usuario-twitter"
+                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
+                  disabled={!isOwnProfile || !isEditing}
+                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                    value: formData.twitter || '', 
+                    onChange: (value) => {
+                      const event = { target: { name: 'twitter', value } } as React.ChangeEvent<HTMLInputElement>;
+                      handleInputChange(event);
+                    }
+                  })}
+                />
+              </div>
+
+              {/* Instagram - Contenedor individual */}
+              <div className={styles.socialContainer}>
+                <div className={styles.label}>
+                  <SocialIcon icon="/instagram.svg" alt="Instagram" />
+                  Instagram
+                </div>
+                <input
+                  type="text"
+                  name="instagram"
+                  value={formData.instagram || ''}
+                  onChange={handleInputChange}
+                  placeholder="@usuario-instagram"
+                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
+                  disabled={!isOwnProfile || !isEditing}
+                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                    value: formData.instagram || '', 
+                    onChange: (value) => {
+                      const event = { target: { name: 'instagram', value } } as React.ChangeEvent<HTMLInputElement>;
+                      handleInputChange(event);
+                    }
+                  })}
+                />
+              </div>
+
+              {/* Dribbble - Contenedor individual */}
+              <div className={styles.socialContainer}>
+                <div className={styles.label}>
+                  <SocialIcon icon="/dribble.svg" alt="Dribbble" />
+                  Dribbble
+                </div>
+                <input
+                  type="text"
+                  name="dribbble"
+                  value={formData.dribbble || ''}
+                  onChange={handleInputChange}
+                  placeholder="usuario-dribbble"
+                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
+                  disabled={!isOwnProfile || !isEditing}
+                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                    value: formData.dribbble || '', 
+                    onChange: (value) => {
+                      const event = { target: { name: 'dribbble', value } } as React.ChangeEvent<HTMLInputElement>;
+                      handleInputChange(event);
+                    }
+                  })}
+                />
               </div>
             </div>
           </section>
@@ -1207,17 +1355,19 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             initial="hidden"
             animate="visible"
           >
-            <h2 className={styles.sectionTitle}>Equipos</h2>
             <motion.div 
               className={styles.sectionContent}
               variants={containerVariants}
               initial="hidden"
               animate="visible"
             >
-              <div className={styles.fieldGroup} style={{flexDirection: 'row', justifyContent:'space-between', width:"100%"}}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>Equipos</h2>
                 <div className={styles.teamsDescription}>
                   Escribe y selecciona aquí tus equipos (máximo 3)
                 </div>
+              </div>
+              <div className={styles.fieldGroup} style={{flexDirection: 'row', justifyContent:'space-between', width:"100%"}}>
                 <ConfigDropdown
                   options={teamsOptions.map((team) => ({ value: team, label: team }))}
                   value={formData.teams || []}

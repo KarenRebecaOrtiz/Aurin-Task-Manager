@@ -45,6 +45,17 @@
   }
 }
 
+.xlarge {
+  width: 96px;
+  height: 96px;
+  
+  .statusDot {
+    width: 16px;
+    height: 16px;
+    border-width: 3px;
+  }
+}
+
 /* Avatar image */
 .avatarImage {
   border-radius: 50%;
@@ -115,6 +126,10 @@
   &.large {
     font-size: 18px;
   }
+
+  &.xlarge {
+    font-size: 32px;
+  }
 }
 
 /* Status dot */
@@ -138,6 +153,11 @@
   .large .statusDot {
     width: 16px;
     height: 16px;
+  }
+  
+  .xlarge .statusDot {
+    width: 20px;
+    height: 20px;
   }
   
   .medium .statusDot {

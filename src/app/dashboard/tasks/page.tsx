@@ -16,6 +16,7 @@ import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
 import ConfigPage from '@/components/ConfigPage';
+import ProfileCard from '@/components/ProfileCard';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
 import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
 
@@ -127,7 +128,6 @@ function TasksPageContent() {
 
   // Memoized values
   const memoizedUsers = useMemo(() => users, [users]);
-  const selectedContainer = container;
 
   // Nuevo: obtener isArchiveTableOpen del store
   const isArchiveTableOpen = useTasksPageStore(useShallow(state => state.isArchiveTableOpen));
@@ -135,6 +135,14 @@ function TasksPageContent() {
   const editTaskId = useTasksPageStore(useShallow(state => state.editTaskId));
   const isCreateTaskOpen = useTasksPageStore(useShallow(state => state.isCreateTaskOpen));
   const hasUnsavedChanges = useTasksPageStore(useShallow(state => state.hasUnsavedChanges));
+
+  // Si estamos en CreateTask o EditTask, no mostrar ningún elemento activo en el selector
+  const selectedContainer = (isCreateTaskOpen || isEditTaskOpen) ? null : container;
+
+  // ProfileCard Modal state
+  const isProfileCardOpen = useTasksPageStore(useShallow(state => state.isProfileCardOpen));
+  const profileCardData = useTasksPageStore(useShallow(state => state.profileCardData));
+  const closeProfileCard = useTasksPageStore(useShallow(state => state.closeProfileCard));
 
 
   // TasksTable aislado - no memoizar aquí para evitar re-renders del padre
@@ -161,9 +169,34 @@ function TasksPageContent() {
 
   const handleContainerChange = useCallback((newContainer: Container) => {
     console.log('[TasksPage] handleContainerChange called', newContainer);
-    const { setContainer } = useTasksPageStore.getState();
-    setContainer(newContainer);
-  }, []);
+    
+    // Si estamos en CreateTask o EditTask, verificar cambios no guardados
+    if (isCreateTaskOpen || isEditTaskOpen) {
+      if (hasUnsavedChanges) {
+        // Si hay cambios no guardados, almacenar el container pendiente y abrir el popup de confirmación
+        const { openConfirmExitPopup, setPendingContainer } = useTasksPageStore.getState();
+        setPendingContainer(newContainer);
+        openConfirmExitPopup();
+      } else {
+        // Si no hay cambios no guardados, cerrar el modal y cambiar container
+        const { closeCreateTask, closeEditTask, setContainer } = useTasksPageStore.getState();
+        
+        // Cerrar el modal correspondiente
+        if (isCreateTaskOpen) {
+          closeCreateTask();
+        } else if (isEditTaskOpen) {
+          closeEditTask();
+        }
+        
+        // Cambiar el container después de cerrar el modal
+        setContainer(newContainer);
+      }
+    } else {
+      // Comportamiento normal cuando no estamos en modales
+      const { setContainer } = useTasksPageStore.getState();
+      setContainer(newContainer);
+    }
+  }, [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges]);
 
   const handleOnboardingComplete = useCallback(() => {
     console.log('[TasksPage] handleOnboardingComplete called');
@@ -446,6 +479,9 @@ function TasksPageContent() {
           onNotificationClick={handleNotificationClick}
           onLimitNotifications={() => {}}
           onChangeContainer={handleContainerChange}
+          isCreateTaskOpen={isCreateTaskOpen}
+          isEditTaskOpen={isEditTaskOpen}
+          hasUnsavedChanges={hasUnsavedChanges}
         />
       </div>
       <OnboardingStepper onComplete={handleOnboardingComplete} />
@@ -680,6 +716,14 @@ function TasksPageContent() {
       <Dock />
       <Footer />
       
+      {/* ProfileCard Modal - Rendered as portal at page level */}
+      {isProfileCardOpen && profileCardData && (
+        <ProfileCard
+          userId={profileCardData.userId}
+          imageUrl={profileCardData.imageUrl}
+          onClose={closeProfileCard}
+        />
+      )}
 
     </div>
   );

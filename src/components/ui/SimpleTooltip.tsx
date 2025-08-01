@@ -51,8 +51,7 @@ export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
         case 'top':
           newCoords = {
             // Posicionar justo encima del elemento trigger
-            top: rect.top - 32, // 32px de espacio entre el tooltip y el elemento
-            // Centrar horizontalmente en el elemento trigger
+            top: rect.top - 32, 
             left: rect.left + rect.width / 2,
           };
           break;
@@ -149,7 +148,7 @@ export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
             role="tooltip"
             className={`${styles.tooltip} ${styles[position]} ${className}`}
             style={{
-              top: `${coords.top + 40}px`,
+              top: `${coords.top + 50}px`,
               left: `${coords.left}px`,
             }}
 

@@ -34,6 +34,7 @@
 
 .splide__list {
   overflow: visible !important;
+  padding: 20px 0px;
 }
 
 .splide__slide {
@@ -53,8 +54,8 @@
   pointer-events: none;
   background: linear-gradient(to right, #f2f5f8 0%, rgba(242, 245, 248, 0.8) 30%, rgba(242, 245, 248, 0.4) 60%, transparent 100%);
   
-  @include dark-mode {
-    background: linear-gradient(to right, rgba(26, 26, 26, 1) 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
+  :global(body.dark) & {
+    background: linear-gradient(to right, rgba(28, 28, 28, 30) 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
   }
   
   @media (min-width: 768px) {
@@ -80,8 +81,8 @@
   pointer-events: none;
   background: linear-gradient(to left, #f2f5f8 0%, rgba(242, 245, 248, 0.8) 30%, rgba(242, 245, 248, 0.4) 60%, transparent 100%);
   
-  @include dark-mode {
-    background: linear-gradient(to left, rgba(26, 26, 26, 1) 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
+  :global(body.dark) & {
+    background: linear-gradient(to left, rgba(28, 28, 28, 30) 0%, rgba(26, 26, 26, 0.8) 30%, rgba(26, 26, 26, 0.4) 60%, transparent 100%);
   }
   
   @media (min-width: 768px) {
@@ -103,7 +104,9 @@
 .card {
   @include user-card-base;
   @include user-card-responsive;
-  
+  padding: 15px;
+
+
   // Remove hover effects and cursor
   cursor: default !important;
   
@@ -121,16 +124,20 @@
     box-shadow: none !important;
   }
   
-  @include dark-mode {
+  :global(body.dark) & {
+    background: $color-bg-dark-secondary;
+    border: none;
+    color: $white;
+    
     &:hover {
-      background: $color-bg-dark-secondary !important;
+      background: $color-bg-dark-tertiary !important;
       border: none !important;
       transform: none !important;
       box-shadow: none !important;
     }
     
     &[role="button"]:active {
-      background: $color-bg-dark-secondary !important;
+      background: rgba(39, 39, 42, 0.6) !important;
       border: none !important;
       transform: none !important;
       box-shadow: none !important;
@@ -204,6 +211,86 @@
 }
 
 // ==============================================================
+// 🔮 CARD ACTIONS - VER PERFIL BUTTON
+// =================================================================
+.cardActions {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.viewProfileButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  margin: 10px 0;
+  width: 100%;
+  padding: 5px 19px;
+  border-radius: 16px;
+  font-family: "Urbanist", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  /* Estilo secundario (Descartar Cambios) */
+  background: rgba(241, 245, 249, 0.7);
+  color: #0F172A;
+  box-shadow:
+    -8px -8px 16px rgba(255, 255, 255, 0.9),
+    8px 8px 16px rgba(0, 0, 0, 0.08),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow:
+      -6px -6px 12px rgba(255, 255, 255, 0.9),
+      6px 6px 12px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    box-shadow:
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.3);
+  }
+
+  /* Dark mode secundario */
+  :global(body.dark) & {
+    background: #27272a;
+    color: #c3c3c3;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+
+    &:hover {
+      background: #2d2d30;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+    }
+
+    &:active {
+      background: #1f1f23;
+      box-shadow: none;
+    }
+  }
+}
+
+// ==============================================================
 // 🔮 LOADING STATES - USING EXISTING COMPONENTS
 // =================================================================
 .loading {
@@ -230,7 +317,7 @@
   @include typography($text-base, $font-weight-normal, $color-text-primary, center);
   color: #dc3545;
   
-  @include dark-mode {
+  :global(body.dark) & {
     @include typography($text-base, $font-weight-normal, $color-text-dark-primary, center);
     color: #ff6b6b;
   }

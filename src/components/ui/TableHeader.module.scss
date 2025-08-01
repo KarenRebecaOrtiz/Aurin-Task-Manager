@@ -7,7 +7,7 @@
   @include flex-center;
   border-bottom: 1px solid $color-border-light;
   
-  @include dark-mode {
+  :global(body.dark) & {
     border-bottom: 1px solid $color-border-dark;
   }
 }
@@ -44,7 +44,7 @@
     color: rgb(59, 130, 246);
     border-radius: $radius-md;
     
-    @include dark-mode {
+    :global(body.dark) & {
       background: rgba(59, 130, 246, 0.1);
       color: rgb(96, 165, 250);
     }
@@ -58,7 +58,7 @@
       background: rgba(59, 130, 246, 0.04); // Reducido de 0.08
       transform: translateY(0); // Eliminado el efecto de elevación
       
-      @include dark-mode {
+      :global(body.dark) & {
         background: rgba(59, 130, 246, 0.08); // Reducido de 0.12
       }
     }
@@ -67,14 +67,14 @@
       transform: translateY(0);
       background: rgba(59, 130, 246, 0.12);
       
-      @include dark-mode {
+      :global(body.dark) & {
         background: rgba(59, 130, 246, 0.18);
       }
     }
   }
   
-  @include dark-mode {
-    color: $color-text-dark-secondary;
+  :global(body.dark) & {
+    color: #c3c3c3;
   }
   
   /* Quitar padding en mobile */
@@ -129,7 +129,7 @@
 .arrowIcon {
   transition: all 0.15s ease;
   
-  @include dark-mode {
+  :global(body.dark) & {
     filter: invert(1) brightness(0.8);
   }
 }
@@ -164,7 +164,7 @@
     opacity: 0.8;
     transform: scale(1.05);
     
-    @include dark-mode {
+    :global(body.dark) & {
       background: rgba(255, 255, 255, 0.05);
     }
   }
@@ -173,7 +173,7 @@
     transform: scale(0.95);
     background: rgba(0, 0, 0, 0.1);
     
-    @include dark-mode {
+    :global(body.dark) & {
       background: rgba(255, 255, 255, 0.1);
     }
   }
@@ -192,7 +192,7 @@
   align-items: center;
   justify-content: center;
   
-  @include dark-mode {
+  :global(body.dark) & {
     filter: invert(1) brightness(0.7);
   }
 }
@@ -213,7 +213,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgba(255, 255, 255, 0.9);
     color: rgba(0, 0, 0, 0.9);
     border: 1px solid rgba(0, 0, 0, 0.1);
@@ -231,7 +231,7 @@
   border-right: 6px solid transparent;
   border-top: 6px solid rgba(0, 0, 0, 0.9);
   
-  @include dark-mode {
+  :global(body.dark) & {
     border-top-color: rgba(255, 255, 255, 0.9);
   }
 }
@@ -265,7 +265,7 @@
     .columnLabel {
       color: rgb(99, 102, 241);
       
-      @include dark-mode {
+      :global(body.dark) & {
         color: rgb(129, 140, 248);
       }
     }
@@ -276,7 +276,7 @@
     .columnLabel {
       color: rgb(239, 68, 68);
       
-      @include dark-mode {
+      :global(body.dark) & {
         color: rgb(248, 113, 113);
       }
     }

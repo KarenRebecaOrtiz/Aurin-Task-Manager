@@ -177,7 +177,7 @@
 .menubar {
   @include menubar-base;
   
-  @include dark-mode {
+  :global(body.dark) & {
     background: $zinc-800;
     border: none;
     box-shadow: none;
@@ -213,7 +213,7 @@
 .menuItem {
   @include menubar-item;
   
-  @include dark-mode {
+  :global(body.dark) & {
     background: transparent;
     color: rgba(255, 255, 255, 0.532);
     border: none;
@@ -249,7 +249,7 @@
 .indicator {
   @include indicator-base;
   
-  @include dark-mode {
+  :global(body.dark) & {
     background: $zinc-700;
     border: none;
     box-shadow: none;
