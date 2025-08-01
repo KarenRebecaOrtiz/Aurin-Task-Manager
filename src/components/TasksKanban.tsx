@@ -11,7 +11,7 @@ import { db } from '@/lib/firebase';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksKanban.module.scss';
 import avatarStyles from './ui/AvatarGroup.module.scss';
-import UserSwiper from '@/components/UserSwiper';
+
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1230,9 +1230,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
             50% { opacity: 0.5; }
           }
         `}</style>
-        <div className={styles.swiperContainer}>
-          <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
-        </div>
+
         <div className={styles.header} style={{margin:'30px 0px'}}>
           <div className={styles.searchWrapper}>
             <div className={styles.searchInput} style={{ opacity: 0.5, pointerEvents: 'none' }}>
@@ -1257,9 +1255,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
 
   return (
     <div className={styles.container} ref={containerRef}>
-      <div className={styles.swiperContainer}>
-        <UserSwiper onOpenProfile={onOpenProfile} onMessageSidebarOpen={onMessageSidebarOpen} />
-      </div>
+
       <TasksKanbanHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
