@@ -15,6 +15,7 @@ import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { membersTableStore } from '@/stores/membersTableStore';
 import { useDataStore } from '@/stores/dataStore';
+import { useTasksPageStore } from '@/stores/tasksPageStore';
 
 interface User {
   id: string;
@@ -63,6 +64,13 @@ const MembersTable: React.FC<MembersTableProps> = memo(
     const [visibleColumns, setVisibleColumns] = useState<string[]>([
       'imageUrl', 'fullName', 'messageNotifications', 'role', 'activeProjects', 'status'
     ]);
+
+    // Estado para el tooltip personalizado
+    const [tooltipState, setTooltipState] = useState({
+      isVisible: false,
+      text: '',
+      position: { x: 0, y: 0 }
+    });
     
     useEffect(() => {
       const checkViewport = () => {
@@ -73,6 +81,24 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       window.addEventListener('resize', checkViewport);
       
       return () => window.removeEventListener('resize', checkViewport);
+    }, []);
+
+    // Función para mostrar el tooltip
+    const showTooltip = useCallback((event: React.MouseEvent, text: string) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      setTooltipState({
+        isVisible: true,
+        text,
+        position: {
+          x: rect.left + rect.width / 2,
+          y: rect.top - 10
+        }
+      });
+    }, []);
+
+    // Función para ocultar el tooltip
+    const hideTooltip = useCallback(() => {
+      setTooltipState(prev => ({ ...prev, isVisible: false }));
     }, []);
     
     // Optimizar selectores de dataStore para evitar re-renders innecesarios
@@ -133,6 +159,27 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         handleMessageSidebarOpen(u);
       }
     }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen]);
+
+    // Handler para abrir ProfileCard - similar a UserSwiper
+    const handleOpenProfile = useCallback((user: User) => {
+      const { openProfileCard } = useTasksPageStore.getState();
+      openProfileCard(user.id, user.imageUrl);
+    }, []);
+
+    // Handler para el click en el avatar - evita que se propague al row click
+    const handleAvatarClick = useCallback((e: React.MouseEvent, user: User) => {
+      e.stopPropagation();
+      handleOpenProfile(user);
+    }, [handleOpenProfile]);
+
+    // Handler para el hover del avatar con tooltip
+    const handleAvatarMouseEnter = useCallback((e: React.MouseEvent) => {
+      showTooltip(e, 'Ver Perfil');
+    }, [showTooltip]);
+
+    const handleAvatarMouseLeave = useCallback(() => {
+      hideTooltip();
+    }, [hideTooltip]);
     
     // Los datos vienen de dataStore - no necesitamos hacer fetch aquí
     // Solo sincronizar el estado de loading
@@ -272,13 +319,22 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         width: isMobile ? '50%' : '20%',
         mobileVisible: true,
         render: (user: User) => (
-          <UserAvatar
-            userId={user.id}
-            imageUrl={user.imageUrl}
-            userName={user.fullName}
-            size="medium"
-            showStatus={true}
-          />
+          <button
+            className={styles.avatarButton}
+            onClick={(e) => handleAvatarClick(e, user)}
+            onMouseEnter={handleAvatarMouseEnter}
+            onMouseLeave={handleAvatarMouseLeave}
+            aria-label={`Ver perfil de ${user.fullName}`}
+            type="button"
+          >
+            <UserAvatar
+              userId={user.id}
+              imageUrl={user.imageUrl}
+              userName={user.fullName}
+              size="medium"
+              showStatus={true}
+            />
+          </button>
         ),
       },
       {
@@ -325,7 +381,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           <span className={styles.status}>{user.status || 'Sin estado'}</span>
         ),
       },
-    ], [activeProjectsCount, getUnreadCountForUser, isMobile]);
+    ], [activeProjectsCount, getUnreadCountForUser, isMobile, handleAvatarClick, handleAvatarMouseEnter, handleAvatarMouseLeave]);
 
     // Función para manejar cambios de visibilidad de columnas
     const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
@@ -385,6 +441,20 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           visibleColumns={visibleColumns}
           onColumnVisibilityChange={handleColumnVisibilityChange}
         />
+        
+        {/* Tooltip personalizado */}
+        {tooltipState.isVisible && (
+          <div
+            className={styles.customTooltip}
+            style={{
+              left: `${tooltipState.position.x}px`,
+              top: `${tooltipState.position.y}px`,
+            }}
+          >
+            {tooltipState.text}
+            <div className={styles.tooltipArrow} />
+          </div>
+        )}
       </div>
     );
   },

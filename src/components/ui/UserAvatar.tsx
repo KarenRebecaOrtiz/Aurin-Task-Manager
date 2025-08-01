@@ -10,7 +10,7 @@ interface UserAvatarProps {
   userId: string;
   imageUrl?: string;
   userName?: string;
-  size?: 'small' | 'medium' | 'large' | 'xlarge';
+  size?: 'tiny' | 'small' | 'medium' | 'large' | 'xlarge';
   showStatus?: boolean;
 }
 
@@ -60,6 +60,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   // Get dimensions based on size
   const getDimensions = () => {
     switch (size) {
+      case 'tiny':
+        return { width: 20, height: 20 };
       case 'small':
         return { width: 32, height: 32 };
       case 'large':

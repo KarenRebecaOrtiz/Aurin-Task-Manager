@@ -112,10 +112,10 @@ export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
     ref: (node: HTMLElement | null) => {
       triggerRef.current = node;
       // Manejar la ref original del hijo si existe
-      const childRef = (children as React.ReactElement & { ref?: unknown }).ref;
+      const childRef = (children.props as { ref?: React.Ref<HTMLElement> }).ref;
       if (typeof childRef === 'function') {
-        (childRef as (node: HTMLElement | null) => void)(node);
-      } else if (childRef && typeof childRef === 'object' && 'current' in childRef) {
+        childRef(node);
+      } else if (childRef && 'current' in childRef) {
         (childRef as React.MutableRefObject<HTMLElement | null>).current = node;
       }
     },
@@ -151,7 +151,6 @@ export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
               top: `${coords.top + 50}px`,
               left: `${coords.left}px`,
             }}
-
           >
             <div className={styles.tooltipContent}>{text}</div>
             <div className={`${styles.tooltipArrow}`} />

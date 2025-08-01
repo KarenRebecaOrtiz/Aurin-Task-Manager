@@ -40,6 +40,7 @@ import ArchiveTable from '@/components/ArchiveTable';
 import EditTask from '@/components/EditTask';
 import CreateTask from '@/components/CreateTask';
 import TasksPageModals from '@/components/TasksPageModals';
+import OnlineUsersPortal from '@/components/ui/OnlineUsersPortal';
 
 
 // Componente completamente aislado para TasksTable - similar a MembersTable
@@ -796,6 +797,8 @@ export default function TasksPage() {
       {/* Sidebars completamente independientes */}
       <IndependentMessageSidebarRenderer />
       <IndependentChatSidebarRenderer />
+      {/* Portal de usuarios online */}
+      <OnlineUsersPortal maxVisible={5} />
       {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
       <SafariFirebaseAuthFix />
     </AuthProvider>

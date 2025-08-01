@@ -151,7 +151,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     
     // Estado para visibilidad de columnas
     const [visibleColumns, setVisibleColumns] = useState<string[]>([
-      'clientId', 'name', 'notificationDot', 'assignedTo', 'status', 'priority', 'action'
+      'clientId', 'name', 'notificationDot', 'assignedTo', 'status', 'priority', 'archivedAt', 'action'
     ]);
     
     useEffect(() => {

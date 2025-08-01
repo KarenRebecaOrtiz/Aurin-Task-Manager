@@ -21,7 +21,7 @@
   gap: $spacing-lg;
   min-height: calc(100vh - 200px);
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-dark;
     border: none;
     box-shadow: none;
@@ -75,7 +75,7 @@
     @include neomorphic-inset(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: #27272a;
     border-color: none;
     border: none;
@@ -167,7 +167,7 @@
     gap: 6px;
   }
   
-  @include dark-mode {
+  :global(body.dark) & {
     img[src*=".svg"] {
       filter: invert(1) grayscale(1) brightness(1.5) !important;
     }
@@ -177,7 +177,7 @@
 .createButton {
   @include button-primary($color-btn-primary, $white, $color-btn-primary-hover);
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-btn-primary-dark;
     color: $black;
 
@@ -202,7 +202,7 @@
 }
 
 .viewButton {
-  @include dark-mode {
+  :global(body.dark) & {
     background: $zinc-800;
     border: none;
     box-shadow: none;
@@ -264,7 +264,7 @@
     transform: rotate(180deg);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $zinc-800;
     border: none;
     box-shadow: none;
@@ -303,7 +303,7 @@
   padding: $spacing-sm 0;
   border: 1px solid $color-border-subtle;
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $zinc-800;
     border: none;
     box-shadow: none !important;
@@ -350,7 +350,7 @@
     @include neomorphic-inset(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: transparent;
     border: none;
     box-shadow: none !important;
@@ -439,7 +439,7 @@
       inset 2px 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-glass-dark;
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: none !important;
@@ -457,7 +457,7 @@
     border-color: rgba(59, 130, 246, 0.3);
     @include neomorphic-shadow-hover(light);
 
-    @include dark-mode {
+    :global(body.dark) & {
       background: $color-bg-glass-dark-hover;
       border-color: rgba(59, 130, 246, 0.5);
       box-shadow: none !important;
@@ -479,7 +479,7 @@
   border-top-left-radius: $radius-lg;
   border-top-right-radius: $radius-lg;
 
-  @include dark-mode {
+  :global(body.dark) & {
     border-bottom-color: $color-border-dark-secondary;
     background: $color-bg-dark-secondary;
   }
@@ -488,7 +488,7 @@
 .columnTitle {
   @include typography($text-sm, $font-weight-semibold, $color-text-primary);
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
@@ -551,7 +551,7 @@
     @include neomorphic-inset(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-glass-dark;
     color: $color-text-dark-primary;
     border-color: rgba(255, 255, 255, 0.1);
@@ -588,7 +588,7 @@
   background-color: #f6f8facf;
   @include crystallized-scrollbar;
   
-  @include dark-mode {
+  :global(body.dark) & {
     background-color: rgba(39, 39, 42, 0.3);
   }
 }
@@ -643,7 +643,7 @@
     @include neomorphic-inset(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: $color-bg-glass-dark;
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: none !important;
@@ -820,7 +820,7 @@
     @include neomorphic-shadow-hover(light);
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     &:active {
       box-shadow: none !important;
     }
@@ -859,7 +859,7 @@
   font-weight: 500;
   opacity: 0.8;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
     
     img {
@@ -872,7 +872,7 @@
   @include typography($text-sm, $font-weight-medium, $color-text-primary);
   line-height: 1.4;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
@@ -897,7 +897,7 @@
 .noClient {
   @include typography($text-xs, $font-weight-normal, $color-text-muted);
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-muted;
   }
 }
@@ -905,7 +905,7 @@
 .noAssigned {
   @include typography($text-xs, $font-weight-normal, $color-text-muted);
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-muted;
   }
 }
@@ -914,7 +914,7 @@
   @include flex-center;
   gap: $spacing-xs;
   
-  @include dark-mode {
+  :global(body.dark) & {
     img[src*=".svg"] {
       @include image-filter-dark;
     }
@@ -924,7 +924,7 @@
 .priority-Alta {
   color: $color-text-primary;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
@@ -932,7 +932,7 @@
 .priority-Media {
   color: $color-text-primary;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
@@ -940,7 +940,7 @@
 .priority-Baja {
   color: $color-text-primary;
 
-  @include dark-mode {
+  :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
@@ -959,7 +959,7 @@
     font-size: 10px;
   }
 
-  @include dark-mode {
+  :global(body.dark) & {
     background: rgba(59, 130, 246, 0.2);
     color: #60a5fa;
   }

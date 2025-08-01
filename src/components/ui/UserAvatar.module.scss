@@ -12,6 +12,21 @@
 }
 
 /* Size variants */
+.tiny {
+  width: 30px;
+  height: 30px;
+  
+  .statusDot {
+    width: 6px;
+    height: 6px;
+    border-width: 1px;
+  }
+  
+  .avatarPlaceholder {
+    font-size: 10px;
+  }
+}
+
 .small {
   width: 32px;
   height: 32px;

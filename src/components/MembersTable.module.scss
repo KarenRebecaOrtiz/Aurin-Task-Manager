@@ -730,6 +730,151 @@
     height: 100%;
 }
 
+/* ==============================================================
+   🔮 AVATAR BUTTON STYLES
+   ================================================================= */
+.avatarButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: visible; /* Cambiado de hidden a visible para permitir el bubble status */
+
+    /* Efecto hover con resplandor */
+    &:hover {
+        transform: scale(1.05);
+        box-shadow: 
+            0 0 0 2px rgba(59, 130, 246, 0.2),
+            0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+
+    /* Efecto active */
+    &:active {
+        transform: scale(0.95);
+        box-shadow: 
+            0 0 0 3px rgba(59, 130, 246, 0.3),
+            0 2px 8px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Focus para accesibilidad */
+    &:focus {
+        outline: none;
+        box-shadow: 
+            0 0 0 3px rgba(59, 130, 246, 0.4),
+            0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Efecto de ripple al hacer click */
+    &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.3s ease, height 0.3s ease;
+        pointer-events: none;
+        z-index: 1; /* Asegurar que esté por debajo del avatar */
+    }
+
+    &:active::before {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Dark mode */
+    :global(body.dark) & {
+        &:hover {
+            box-shadow: 
+                0 0 0 2px rgba(96, 165, 250, 0.3),
+                0 4px 12px rgba(96, 165, 250, 0.2);
+        }
+
+        &:active {
+            box-shadow: 
+                0 0 0 3px rgba(96, 165, 250, 0.4),
+                0 2px 8px rgba(96, 165, 250, 0.25);
+        }
+
+        &:focus {
+            box-shadow: 
+                0 0 0 3px rgba(96, 165, 250, 0.5),
+                0 4px 12px rgba(96, 165, 250, 0.3);
+        }
+
+        &::before {
+            background: rgba(96, 165, 250, 0.4);
+        }
+    }
+}
+
+/* ==============================================================
+   🔮 CUSTOM TOOLTIP STYLES
+   ================================================================= */
+.customTooltip {
+    position: fixed;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: $font-family-primary;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%);
+    animation: tooltipFadeIn 0.2s ease-out;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    /* Dark mode */
+    :global(body.dark) & {
+        background: rgba(0, 0, 0, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.tooltipArrow {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, 0.9);
+
+    /* Dark mode */
+    :global(body.dark) & {
+        border-top-color: rgba(0, 0, 0, 0.95);
+    }
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
 /* Mobile-specific styling for table columns */
 @media (max-width: 768px) {
     /* Add gap between image and name columns */
@@ -745,5 +890,16 @@
     /* Desactivar el ancho del 20% para la imagen en mobile */
     .Table_cell__dP6Xg[style*="width: 20%"] {
         width: auto !important;
+    }
+
+    /* Ajustar el botón del avatar en mobile */
+    .avatarButton {
+        &:hover {
+            transform: scale(1.02);
+        }
+
+        &:active {
+            transform: scale(0.98);
+        }
     }
 }

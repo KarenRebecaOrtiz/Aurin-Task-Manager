@@ -130,14 +130,14 @@
     color: $white;
     
     &:hover {
-      background: $color-bg-dark-tertiary !important;
+      background:#3d3c3c !important;
       border: none !important;
       transform: none !important;
       box-shadow: none !important;
     }
     
     &[role="button"]:active {
-      background: rgba(39, 39, 42, 0.6) !important;
+      background: #3d3c3c !important;
       border: none !important;
       transform: none !important;
       box-shadow: none !important;
