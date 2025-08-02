@@ -176,7 +176,7 @@ export const useNotifications = () => {
       console.log('[useNotifications] Cleaning up listener');
       unsubscribe();
     };
-  }, [userId, loadFromCache, saveToCache, processOfflineQueue]);
+  }, [userId, loadFromCache, saveToCache, processOfflineQueue, notifications.length]);
 
   const markNotificationAsRead = useCallback(async (notificationId: string) => {
     try {

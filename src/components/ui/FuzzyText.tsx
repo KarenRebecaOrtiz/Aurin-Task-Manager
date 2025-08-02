@@ -35,20 +35,20 @@ const FuzzyText = React.forwardRef<
   const { resolvedTheme } = useTheme()
   const textColorRef = useRef<string>("")
   
-  // Get the computed color from CSS variables
-  const getComputedColor = () => {
-    if (color) return color
-    
-    // Create temporary element to compute the actual color value
-    const tempEl = document.createElement("div")
-    tempEl.style.color = "var(--foreground)"
-    document.body.appendChild(tempEl)
-    const computedColor = window.getComputedStyle(tempEl).color
-    document.body.removeChild(tempEl)
-    return computedColor
-  }
-
   useEffect(() => {
+    // Get the computed color from CSS variables
+    const getComputedColor = () => {
+      if (color) return color
+      
+      // Create temporary element to compute the actual color value
+      const tempEl = document.createElement("div")
+      tempEl.style.color = "var(--foreground)"
+      document.body.appendChild(tempEl)
+      const computedColor = window.getComputedStyle(tempEl).color
+      document.body.removeChild(tempEl)
+      return computedColor
+    }
+
     let animationFrameId: number
     let isCancelled = false
     const canvas = canvasRef.current as HTMLCanvasElement & { cleanupFuzzyText?: () => void }

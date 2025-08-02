@@ -1,6 +1,6 @@
 'use client';
 
-import { useUsersSync } from '@/hooks/useUsersSync';
+
 
 interface UsersSyncProviderProps {
   children: React.ReactNode;

@@ -180,9 +180,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     openEditTask,
     openDeleteTask,
     openArchiveTable,
-    changeView,
-    openProfile,
-    openMessageSidebar
+    changeView
   } = useTasksTableActionsStore();
   
   // ✅ Optimizar selectores de dataStore con useShallow para evitar re-renders

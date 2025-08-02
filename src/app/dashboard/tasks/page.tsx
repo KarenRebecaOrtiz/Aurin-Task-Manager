@@ -642,10 +642,6 @@ function TasksPageContent() {
                 <TasksKanban
                   onNewTaskOpen={handleNewTaskOpen}
                   onEditTaskOpen={handleTasksKanbanEditTask}
-                  onMessageSidebarOpen={handleMessageSidebarOpen}
-                  onOpenProfile={() => {
-                    // Profile functionality removed
-                  }}
                   onViewChange={handleTasksKanbanViewChange}
                   onDeleteTaskOpen={handleTasksKanbanDeleteTask}
                   onArchiveTableOpen={handleTasksKanbanArchiveTableOpen}

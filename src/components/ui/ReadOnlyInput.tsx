@@ -3,7 +3,7 @@
 import * as React from "react";
 import styles from "../ConfigPage.module.scss";
 
-interface ReadOnlyInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface ReadOnlyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value?: string;
   onChange?: (value: string) => void;
   placeholder?: string;

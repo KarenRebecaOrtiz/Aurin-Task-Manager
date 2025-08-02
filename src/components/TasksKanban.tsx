@@ -125,8 +125,6 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUser
 interface TasksKanbanProps {
   onNewTaskOpen: () => void;
   onEditTaskOpen: (taskId: string) => void;
-  onMessageSidebarOpen: (user: User) => void;
-  onOpenProfile: (user: { id: string; imageUrl: string }) => void;
   onViewChange: (view: TaskView) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onArchiveTableOpen: () => void;
@@ -699,8 +697,6 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
 const TasksKanban: React.FC<TasksKanbanProps> = ({
   onNewTaskOpen,
   onEditTaskOpen,
-  onMessageSidebarOpen,
-  onOpenProfile,
   onViewChange,
   onDeleteTaskOpen,
   onArchiveTableOpen,

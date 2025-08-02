@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export type AvailabilityStatus = 'Disponible' | 'Ocupado' | 'Por terminar' | 'Fuera';
@@ -75,7 +75,7 @@ export const useAvailabilityStatus = () => {
     if (!user?.id) return;
     
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         status: newStatus,
         lastOnlineAt: new Date().toISOString(),
         isOnline: tabCountRef.current > 0

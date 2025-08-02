@@ -61,14 +61,14 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children, currentStep: exte
       setDirection("next");
       setCurrentStep(currentStep + 1);
     }
-  }, [currentStep, totalSteps, validators]);
+  }, [currentStep, totalSteps, validators, setCurrentStep]);
 
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
       setDirection("prev");
       setCurrentStep(currentStep - 1);
     }
-  }, [currentStep]);
+  }, [currentStep, setCurrentStep]);
 
   const goToStep = useCallback(
     async (step: number) => {
@@ -82,7 +82,7 @@ const Wizard: React.FC<WizardProps> = ({ totalSteps, children, currentStep: exte
         setCurrentStep(step);
       }
     },
-    [completedSteps, currentStep, validators],
+    [completedSteps, currentStep, validators, setCurrentStep],
   );
 
   useEffect(() => {

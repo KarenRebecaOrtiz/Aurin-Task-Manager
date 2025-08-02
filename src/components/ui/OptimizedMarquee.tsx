@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion } from 'framer-motion';
@@ -27,7 +27,7 @@ interface OptimizedMarqueeProps {
 const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
   speed = 30,
   showTooltip = true,
-  tooltipText = "¡Consejos útiles! 💡",
+
   fontSize = "1rem",
   textColor = "",
   hoverColor = "#000000",

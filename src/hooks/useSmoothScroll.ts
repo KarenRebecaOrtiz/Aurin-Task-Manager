@@ -98,8 +98,7 @@ export const useSmoothScroll = () => {
    */
   const scrollToBottom = useCallback((options: SmoothScrollOptions = {}) => {
     const {
-      duration = 800,
-      easing = 'ease-in-out'
+      duration = 800
     } = options;
 
     const scrollHeight = document.documentElement.scrollHeight;
@@ -137,8 +136,7 @@ export const useSmoothScroll = () => {
     options: SmoothScrollOptions = {}
   ) => {
     const {
-      duration = 400,
-      easing = 'ease-out'
+      duration = 400
     } = options;
 
     const startPosition = window.pageYOffset;

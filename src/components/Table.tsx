@@ -5,7 +5,7 @@ import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Table.module.scss';
 import TableHeader, { Column as TableHeaderColumn } from './ui/TableHeader';
-import { useTheme } from '@/contexts/ThemeContext';
+
 
 interface HasId {
   id: string;
@@ -52,7 +52,7 @@ const Table = memo(
     const [currentPage, setCurrentPage] = useState(1);
     const [isMobile, setIsMobile] = useState(false);
     const tableRef = useRef<HTMLDivElement>(null);
-    const { isDarkMode } = useTheme();
+
 
 
 
@@ -115,14 +115,7 @@ const Table = memo(
       return columns.filter(column => isColumnVisible(column.key));
     }, [columns, enableColumnVisibility, isColumnVisible]);
 
-    const handleSort = useCallback((key: string) => {
-      if (
-        onSort &&
-        columns.find((col) => col.key === key && col.key !== 'action' && !col.render)
-      ) {
-        onSort(key);
-      }
-    }, [onSort, columns]);
+
 
     const handleCellClick = useCallback((item: T, column: Column<T>, e: React.MouseEvent) => {
       if (column.key === 'action') {

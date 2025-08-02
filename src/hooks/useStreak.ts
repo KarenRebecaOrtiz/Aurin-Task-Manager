@@ -60,7 +60,7 @@ export const useStreak = (targetUserId?: string) => {
       const docSnap = await getDoc(userDocRef);
       const currentData = docSnap.exists() ? docSnap.data() : {};
       
-      let newStreakData = {
+      const newStreakData = {
         currentStreak: currentData.currentStreak || 0,
         longestStreak: currentData.longestStreak || 0,
         lastAccessDate: currentData.lastAccessDate || null,

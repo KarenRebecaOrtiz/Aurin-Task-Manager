@@ -55,7 +55,7 @@ export default function Selector({
       obs.disconnect();
       window.removeEventListener('storage', storageListener);
     };
-  }, []);
+  }, [selectedContainer]);
 
   /* ------------- GSAP: “liquid glass” slide ------------- */
   useLayoutEffect(() => {
