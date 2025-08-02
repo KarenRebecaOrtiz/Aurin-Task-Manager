@@ -214,106 +214,112 @@ export const Badge = ({ role, link }: BadgeProps) => {
             <filter id="blur1">
               <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
             </filter>
+            <filter id="grayscale">
+              <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0" />
+            </filter>
             <mask id="badgeMask">
-              <rect width="60" height="15" fill="white" rx="4" />
+              <rect width="60" height="15" fill="white" rx="5" />
             </mask>
+            <clipPath id="badgeClip">
+              <rect width="60" height="15" rx="5" />
+            </clipPath>
           </defs>
-          <rect width="60" height="15" rx="4" fill={backgroundColor[1]} />
-          <rect x="1" y="1" width="58" height="13" rx="3" fill="transparent" stroke="#bbb" strokeWidth="0.5" />
-          <text fontFamily="Helvetica-Bold, Helvetica" fontSize="6" fontWeight="bold" fill="#666" x="30" y="10" textAnchor="middle">
+          <rect width="60" height="15" rx="5" fill={backgroundColor[1]} filter="url(#grayscale)" clipPath="url(#badgeClip)" />
+          <rect x="1" y="1" width="58" height="13" rx="4" fill="transparent" stroke="#bbb" strokeWidth="0.5" clipPath="url(#badgeClip)" />
+          <text fontFamily="Helvetica-Bold, Helvetica" fontSize="6" fontWeight="bold" fill="#666" x="30" y="10" textAnchor="middle" clipPath="url(#badgeClip)">
             {role}
           </text>
-          <g style={{ mixBlendMode: "overlay" }} mask="url(#badgeMask)">
-            <g style={{
-              transform: `rotate(${firstOverlayPosition}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation1 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="hsl(358, 100%, 62%)" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 10}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation2 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="hsl(30, 100%, 50%)" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 20}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation3 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="hsl(60, 100%, 50%)" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 30}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation4 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="hsl(96, 100%, 50%)" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 40}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation5 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="hsl(233, 85%, 47%)" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 50}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation6 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="hsl(271, 85%, 47%)" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 60}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation7 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="hsl(300, 20%, 35%)" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 70}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation8 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="transparent" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 80}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation9 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="transparent" filter="url(#blur1)" opacity="0.5" />
-            </g>
-            <g style={{
-              transform: `rotate(${firstOverlayPosition + 90}deg)`,
-              transformOrigin: "center center",
-              transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
-              animation: disableOverlayAnimation ? "none" : "overlayAnimation10 5s infinite",
-              willChange: "transform"
-            }}>
-              <polygon points="0,0 130,27 130,0 0,27" fill="white" filter="url(#blur1)" opacity="0.5" />
-            </g>
+                      <g style={{ mixBlendMode: "overlay" }} mask="url(#badgeMask)" clipPath="url(#badgeClip)">
+              <g style={{
+                transform: `rotate(${firstOverlayPosition}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation1 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="hsl(358, 100%, 62%)" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+                          <g style={{
+                transform: `rotate(${firstOverlayPosition + 10}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation2 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="hsl(30, 100%, 50%)" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+                          <g style={{
+                transform: `rotate(${firstOverlayPosition + 20}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation3 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="hsl(60, 100%, 50%)" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+              <g style={{
+                transform: `rotate(${firstOverlayPosition + 30}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation4 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="hsl(96, 100%, 50%)" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+              <g style={{
+                transform: `rotate(${firstOverlayPosition + 40}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation5 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="hsl(233, 85%, 47%)" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+              <g style={{
+                transform: `rotate(${firstOverlayPosition + 50}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation6 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="hsl(271, 85%, 47%)" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+              <g style={{
+                transform: `rotate(${firstOverlayPosition + 60}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation7 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="hsl(300, 20%, 35%)" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+              <g style={{
+                transform: `rotate(${firstOverlayPosition + 70}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation8 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="transparent" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+              <g style={{
+                transform: `rotate(${firstOverlayPosition + 80}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation9 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="transparent" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
+              <g style={{
+                transform: `rotate(${firstOverlayPosition + 90}deg)`,
+                transformOrigin: "center center",
+                transition: !disableInOutOverlayAnimation ? "transform 200ms ease-out" : "none",
+                animation: disableOverlayAnimation ? "none" : "overlayAnimation10 5s infinite",
+                willChange: "transform"
+              }}>
+                <polygon points="0,0 130,27 130,0 0,27" fill="white" filter="url(#blur1) url(#grayscale)" opacity="0.5" />
+              </g>
           </g>
         </svg>
       </div>

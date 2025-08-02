@@ -8,6 +8,8 @@ import { db } from '@/lib/firebase';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import UserAvatar from './ui/UserAvatar';
 import Badge from './Badge';
+import StreakCounter from './ui/StreakCounter';
+
 import styles from './ProfileCard.module.scss';
 
 interface SocialLink {
@@ -46,6 +48,7 @@ interface ProfileCardProps {
   userId: string;
   imageUrl: string;
   onClose: () => void;
+  onChangeContainer?: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
 }
 
 // Iconos SVG simples para redes sociales
@@ -77,7 +80,7 @@ const SocialIcons = {
   ),
 };
 
-const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
+const ProfileCard = ({ userId, imageUrl, onClose, onChangeContainer }: ProfileCardProps) => {
   const { user: currentUser, isLoaded } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -190,6 +193,16 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
     
     // Cerrar el profile card
     handleCloseButtonClick();
+  };
+
+  const handleConfigClick = () => {
+    // Cerrar el ProfileCard primero
+    handleCloseButtonClick();
+    
+    // Luego cambiar al contenedor de configuración
+    if (onChangeContainer) {
+      onChangeContainer('config');
+    }
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -326,13 +339,48 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                   <div className={styles.nameAndBadgeContainer}>
                     <h2 className={styles.name}>{profile.fullName || 'Sin nombre'}</h2>
                     
-                    {/* Badge del rol */}
-                    {profile.role && (
-                      <div className={styles.badgeContainer}>
-                        <Badge role={profile.role} />
-                      </div>
-                    )}
+                    <div className={styles.actionButtons}>
+                      {/* Streak Counter (visible en todos los perfiles) */}
+                      <StreakCounter className={styles.streakCounter} userId={userId} />
+                      
+                      {/* Botón de configuración (solo si es mi perfil) */}
+                      {userId === currentUser?.id && (
+                        <button
+                          className={styles.configButton}
+                          onClick={handleConfigClick}
+                          aria-label="Configurar perfil"
+                          title="Configurar perfil"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                          </svg>
+                        </button>
+                      )}
+                      
+                      {/* Botón de enviar mensaje a la derecha del nombre */}
+                      {userId !== currentUser?.id && (
+                        <button
+                          className={styles.messageButton}
+                          onClick={handleContactClick}
+                          aria-label={`Enviar mensaje a ${profile.fullName || 'usuario'}`}
+                          title="Enviar mensaje"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M22 2L11 13"/>
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Badge del rol en su propio contenedor */}
+                  {profile.role && (
+                    <div className={styles.badgeContainer}>
+                      <Badge role={profile.role} />
+                    </div>
+                  )}
                 </div>
                 
                 <p className={styles.bio}>{profile.description || 'Sin descripción disponible'}</p>
@@ -423,19 +471,16 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                   ))}
                 </div>
               )}
-
-              <ActionButton 
-                onContact={handleContactClick} 
-                isOwnProfile={userId === currentUser?.id}
-              />
             </div>
-            </div>
+          </div>
             
             <div className={styles.backgroundGlow} />
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+    
+
   );
 };
 
@@ -463,25 +508,6 @@ const SocialButton: React.FC<SocialButtonProps> = ({ item, setHoveredItem, hover
     </a>
     <Tooltip item={item} hoveredItem={hoveredItem} />
   </div>
-);
-
-interface ActionButtonProps {
-  onContact: () => void;
-  isOwnProfile: boolean;
-}
-
-const ActionButton: React.FC<ActionButtonProps> = ({ onContact, isOwnProfile }) => (
-  <button
-    onClick={onContact}
-    className={styles.actionButton}
-    disabled={isOwnProfile}
-  >
-    <span>{isOwnProfile ? 'Es tu perfil' : 'Enviar Mensaje'}</span>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m7 7 10 10" />
-      <path d="m17 7-10 10" />
-    </svg>
-  </button>
 );
 
 interface TooltipProps {

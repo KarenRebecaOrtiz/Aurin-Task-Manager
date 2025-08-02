@@ -97,6 +97,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const allMessages = React.useMemo(() => {
     const optimisticArray = Object.values(optimisticMessages);
     
+    console.log('[MessageSidebar] Debug - paginatedMessages count:', paginatedMessages.length);
+    console.log('[MessageSidebar] Debug - optimisticMessages count:', optimisticArray.length);
+    
     // Crear un mapa de mensajes optimistas por clientId para evitar duplicados
     const optimisticMap = new Map(optimisticArray.map(msg => [msg.clientId, msg]));
     
@@ -112,21 +115,34 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     
     const allCombined = [...combinedMessages, ...newOptimisticMessages];
     
+    console.log('[MessageSidebar] Debug - allCombined count:', allCombined.length);
+    
+    // Ordenar por timestamp de forma ascendente (más antiguos primero) para mostrar correctamente
     return allCombined.sort((a, b) => {
       const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : 
         (a.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
       const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : 
         (b.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
-      return bTime - aTime;
+      return aTime - bTime; // Cambiar a orden ascendente
     });
   }, [paginatedMessages, optimisticMessages]);
 
-  // Agrupación por fecha con DatePill
+  // Agrupación por fecha con DatePill - corregir el orden
   const groupedMessages = React.useMemo(() => {
     const groups: { date: string; messages: Message[]; groupIndex: number }[] = [];
     let lastDate = '';
     let groupIndex = 0;
-    allMessages.forEach((msg) => {
+    
+    // Ordenar mensajes por fecha de forma ascendente para agrupación correcta
+    const sortedMessages = [...allMessages].sort((a, b) => {
+      const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : 
+        (a.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
+      const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : 
+        (b.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
+      return aTime - bTime;
+    });
+    
+    sortedMessages.forEach((msg) => {
       const date = msg.timestamp
         ? (msg.timestamp instanceof Date
             ? msg.timestamp
@@ -303,6 +319,32 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
 
   }, [isOpen, senderId, receiver.id, conversationId, user?.id]);
+
+  // Efecto para limpiar mensajes optimistas cuando se confirman desde el servidor
+  useEffect(() => {
+    if (paginatedMessages.length > 0 && Object.keys(optimisticMessages).length > 0) {
+      const optimisticIds = Object.keys(optimisticMessages);
+      const serverIds = paginatedMessages.map(msg => msg.clientId);
+      
+      // Encontrar mensajes optimistas que ya están en el servidor
+      const confirmedOptimisticIds = optimisticIds.filter(id => serverIds.includes(id));
+      
+      if (confirmedOptimisticIds.length > 0) {
+        console.log('[MessageSidebar] Cleaning up confirmed optimistic messages:', confirmedOptimisticIds);
+        confirmedOptimisticIds.forEach(id => {
+          usePrivateMessageStore.getState().removeOptimisticMessage(id);
+        });
+      }
+    }
+  }, [paginatedMessages, optimisticMessages]);
+
+  // Efecto para forzar la recarga de mensajes cuando se abre el sidebar
+  useEffect(() => {
+    if (isOpen && conversationId) {
+      console.log('[MessageSidebar] Sidebar opened, ensuring messages are loaded for conversation:', conversationId);
+      // El hook usePrivateMessagePagination ya maneja la carga automática
+    }
+  }, [isOpen, conversationId]);
 
   const handleDeleteMessage = async (messageId: string) => {
     try {

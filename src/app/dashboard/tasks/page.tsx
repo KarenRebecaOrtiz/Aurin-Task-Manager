@@ -779,6 +779,12 @@ const ProfileCardRenderer = () => {
   const isProfileCardOpen = useTasksPageStore(useShallow(state => state.isProfileCardOpen));
   const profileCardData = useTasksPageStore(useShallow(state => state.profileCardData));
   const closeProfileCard = useTasksPageStore(useShallow(state => state.closeProfileCard));
+  
+  // Función para cambiar contenedor usando el store
+  const handleContainerChange = useCallback((newContainer: Container) => {
+    const { setContainer } = useTasksPageStore.getState();
+    setContainer(newContainer);
+  }, []);
 
   if (!isProfileCardOpen || !profileCardData) {
     return null;
@@ -789,6 +795,7 @@ const ProfileCardRenderer = () => {
       userId={profileCardData.userId}
       imageUrl={profileCardData.imageUrl}
       onClose={closeProfileCard}
+      onChangeContainer={handleContainerChange}
     />
   );
 };

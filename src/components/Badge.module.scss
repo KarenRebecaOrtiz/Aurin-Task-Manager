@@ -6,6 +6,8 @@
   width: 90px;
   height: auto;
   cursor: pointer;
+  border-radius: 5px;
+  overflow: hidden;
   
   @media (min-width: 640px) {
     width: 130px;

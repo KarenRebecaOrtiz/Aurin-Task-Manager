@@ -81,7 +81,7 @@
   border: 1px solid $color-border-subtle;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  background: $color-bg-glass;
+  background: white;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.5s ease;
   overflow: hidden;
@@ -171,9 +171,21 @@
 .nameAndBadgeContainer {
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: start;
   flex: 1;
-  text-align: center;
+  gap: 12px;
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.streakCounter {
+  // El StreakCounter tiene sus propios estilos
+  // Solo necesitamos asegurar que se integre bien
 }
 
 .avatar {
@@ -188,7 +200,6 @@
   font-weight: bold;
   color: $color-text-primary;
   margin: 0;
-  text-align: center;
 
   :global(body.dark) & {
     color: $color-text-dark-primary;
@@ -238,8 +249,106 @@
   }
 }
 
+
+
+.messageButton,
+.configButton {
+  /* Estilos base compartidos */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
+  padding: 12px;
+  border-radius: 12px;
+  font-family: "Urbanist", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  /* Estilo cristalizado como dropdownTrigger */
+  background: $color-bg-glass;
+  color: $color-text-primary;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    background: $color-bg-glass-hover;
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -6px -6px 10px rgba(255, 255, 255, 0.85),
+      6px 6px 10px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -4px -4px 6px rgba(255, 255, 255, 0.7),
+      inset 4px 4px 6px rgba(0, 0, 0, 0.15),
+      -2px -2px 4px rgba(255, 255, 255, 0.8),
+      2px 2px 4px rgba(0, 0, 0, 0.03);
+  }
+
+  /* Dark mode */
+  :global(body.dark) & {
+    background: $color-bg-glass-dark;
+    color: $color-text-dark-primary;
+    border-color: $color-border-dark;
+    box-shadow:
+      -4px -4px 8px rgba(0, 0, 0, 0.3),
+      4px 4px 8px rgba(255, 255, 255, 0.05),
+      inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.03);
+
+    &:hover {
+      background: $color-bg-glass-dark-hover;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -6px -6px 10px rgba(0, 0, 0, 0.4),
+        6px 6px 10px rgba(255, 255, 255, 0.08),
+        inset -2px -2px 6px rgba(0, 0, 0, 0.5),
+        inset 2px 2px 6px rgba(255, 255, 255, 0.05);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.7);
+      box-shadow:
+        inset -4px -4px 6px rgba(0, 0, 0, 0.6),
+        inset 4px 4px 6px rgba(255, 255, 255, 0.02),
+        -2px -2px 4px rgba(0, 0, 0, 0.4),
+        2px 2px 4px rgba(255, 255, 255, 0.03);
+    }
+  }
+
+  svg {
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+  }
+
+  &:hover svg {
+    transform: rotate(45deg);
+  }
+}
+
 .divider {
-  width: 50%;
+  width: 100%;
   height: 1px;
   margin: 24px 0;
   border-radius: 999px;
@@ -256,16 +365,16 @@
   flex-direction: column;
   gap: 8px;
   margin: 16px 0;
-  padding: 16px;
+  padding: 16px 0px;
   border-radius: 12px;
-  background: rgb(237 240 249);
+  background: white;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid $color-border-subtle;
 
   :global(body.dark) & {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: $color-border-dark;
+    background: rgb(17 17 17);
+    border-color: rgb(17 17 17);
   }
 }
 
@@ -484,139 +593,7 @@
   }
 }
 
-.actionButton {
-  /* Estilos base compartidos */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 140px;
-  height: 48px;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-family: "Urbanist", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background 0.3s ease,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease,
-    transform 0.3s ease;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 
-  /* Estilo cristalizado como dropdownTrigger */
-  background: $color-bg-glass;
-  color: $color-text-primary;
-  box-shadow:
-    -4px -4px 8px rgba(255, 255, 255, 0.8),
-    4px 4px 8px rgba(0, 0, 0, 0.05),
-    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
-
-  &:hover {
-    transform: translateY(-2px) scale(1.02);
-    background: $color-bg-glass-hover;
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow:
-      -6px -6px 10px rgba(255, 255, 255, 0.85),
-      6px 6px 10px rgba(0, 0, 0, 0.08),
-      inset -2px -2px 6px rgba(255, 255, 255, 0.95),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.06);
-  }
-
-  &:active {
-    transform: scale(0.98);
-    background: rgba(241, 245, 249, 0.6);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow:
-      inset -4px -4px 6px rgba(255, 255, 255, 0.7),
-      inset 4px 4px 6px rgba(0, 0, 0, 0.15),
-      -2px -2px 4px rgba(255, 255, 255, 0.8),
-      2px 2px 4px rgba(0, 0, 0, 0.03);
-  }
-
-  /* Dark mode */
-  :global(body.dark) & {
-    background: $color-bg-glass-dark;
-    color: $color-text-dark-primary;
-    border-color: $color-border-dark;
-    box-shadow:
-      -4px -4px 8px rgba(0, 0, 0, 0.3),
-      4px 4px 8px rgba(255, 255, 255, 0.05),
-      inset -2px -2px 4px rgba(0, 0, 0, 0.4),
-      inset 2px 2px 6px rgba(255, 255, 255, 0.03);
-
-    &:hover {
-      background: $color-bg-glass-dark-hover;
-      border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:
-        -6px -6px 10px rgba(0, 0, 0, 0.4),
-        6px 6px 10px rgba(255, 255, 255, 0.08),
-        inset -2px -2px 6px rgba(0, 0, 0, 0.5),
-        inset 2px 2px 6px rgba(255, 255, 255, 0.05);
-    }
-
-    &:active {
-      background: rgba(39, 39, 42, 0.7);
-      box-shadow:
-        inset -4px -4px 6px rgba(0, 0, 0, 0.6),
-        inset 4px 4px 6px rgba(255, 255, 255, 0.02),
-        -2px -2px 4px rgba(0, 0, 0, 0.4),
-        2px 2px 4px rgba(255, 255, 255, 0.03);
-    }
-  }
-
-  svg {
-    transition: transform 0.3s ease;
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
-  }
-
-  &:hover svg {
-    transform: rotate(45deg);
-  }
-
-  /* Estilos para botón deshabilitado (propio perfil) */
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    transform: none;
-    
-    &:hover {
-      transform: none;
-      background: $color-bg-glass;
-      border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:
-        -4px -4px 8px rgba(255, 255, 255, 0.8),
-        4px 4px 8px rgba(0, 0, 0, 0.05),
-        inset -2px -2px 4px rgba(255, 255, 255, 0.9),
-        inset 2px 2px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    &:active {
-      transform: none;
-    }
-
-    svg {
-      transform: none;
-      filter: none;
-    }
-
-    :global(body.dark) & {
-      &:hover {
-        background: $color-bg-glass-dark;
-        border-color: $color-border-dark;
-        box-shadow:
-          -4px -4px 8px rgba(0, 0, 0, 0.3),
-          4px 4px 8px rgba(255, 255, 255, 0.05),
-          inset -2px -2px 4px rgba(0, 0, 0, 0.4),
-          inset 2px 2px 6px rgba(255, 255, 255, 0.03);
-      }
-    }
-  }
-}
 
 .tooltip {
   position: absolute;
