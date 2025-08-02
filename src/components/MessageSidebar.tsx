@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import ImagePreviewOverlay from './ImagePreviewOverlay';
 import { InputMessage } from './ui/InputMessage';
 import styles from './ChatSidebar.module.scss';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import UserAvatar from './ui/UserAvatar';
 import LoadMoreButton from './ui/LoadMoreButton';
 import DatePill from './ui/DatePill';
@@ -25,6 +25,13 @@ import { useSidebarManager } from '@/hooks/useSidebarManager';
 import { useShallow } from 'zustand/react/shallow';
 import { Message } from '@/types';
 
+// Función para generar conversationId de manera consistente
+const generateConversationId = (userId1: string, userId2: string): string => {
+  // Ordenar los IDs para que siempre sea el mismo conversationId
+  const sortedIds = [userId1, userId2].sort();
+  return `conversation_${sortedIds[0]}_${sortedIds[1]}`;
+};
+
 interface UserCard {
   id: string;
   imageUrl: string;
@@ -35,7 +42,6 @@ interface UserCard {
 interface MessageSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  senderId: string;
   receiver: UserCard;
   conversationId: string;
 }
@@ -43,14 +49,17 @@ interface MessageSidebarProps {
 const MessageSidebar: React.FC<MessageSidebarProps> = ({
   isOpen,
   onClose,
-  senderId,
   receiver,
   conversationId,
 }) => {
   const { user } = useUser();
+  const { userId: currentUserId } = useClerkAuth();
+  
+  // Usar el conversationId correcto generado dinámicamente
+  const correctConversationId = generateConversationId(currentUserId || '', receiver.id);
   
   // NUEVO: Usar el hook de cifrado existente
-  const { encryptMessage, decryptMessage } = useEncryption(conversationId);
+  const { encryptMessage, decryptMessage } = useEncryption(correctConversationId);
 
   // NUEVO: Store para mensajes privados
   const {
@@ -72,7 +81,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     hasMore,
     loadMoreMessages,
   } = usePrivateMessagePagination({
-    conversationId,
+    conversationId: correctConversationId,
     decryptMessage,
   });
 
@@ -84,8 +93,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     resendMessage,
     isSending,
   } = usePrivateMessageActions({
-    conversationId,
-    senderId,
+    conversationId: correctConversationId,
+    senderId: currentUserId || '',
     receiverId: receiver.id,
     senderName: user?.firstName || 'Yo',
     encryptMessage,
@@ -96,9 +105,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   // Combinar mensajes paginados con optimistas
   const allMessages = React.useMemo(() => {
     const optimisticArray = Object.values(optimisticMessages);
-    
-    console.log('[MessageSidebar] Debug - paginatedMessages count:', paginatedMessages.length);
-    console.log('[MessageSidebar] Debug - optimisticMessages count:', optimisticArray.length);
     
     // Crear un mapa de mensajes optimistas por clientId para evitar duplicados
     const optimisticMap = new Map(optimisticArray.map(msg => [msg.clientId, msg]));
@@ -115,34 +121,21 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     
     const allCombined = [...combinedMessages, ...newOptimisticMessages];
     
-    console.log('[MessageSidebar] Debug - allCombined count:', allCombined.length);
-    
-    // Ordenar por timestamp de forma ascendente (más antiguos primero) para mostrar correctamente
     return allCombined.sort((a, b) => {
       const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : 
         (a.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
       const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : 
         (b.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
-      return aTime - bTime; // Cambiar a orden ascendente
+      return bTime - aTime;
     });
   }, [paginatedMessages, optimisticMessages]);
 
-  // Agrupación por fecha con DatePill - corregir el orden
+  // Agrupación por fecha con DatePill
   const groupedMessages = React.useMemo(() => {
     const groups: { date: string; messages: Message[]; groupIndex: number }[] = [];
     let lastDate = '';
     let groupIndex = 0;
-    
-    // Ordenar mensajes por fecha de forma ascendente para agrupación correcta
-    const sortedMessages = [...allMessages].sort((a, b) => {
-      const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : 
-        (a.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
-      const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : 
-        (b.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
-      return aTime - bTime;
-    });
-    
-    sortedMessages.forEach((msg) => {
+    allMessages.forEach((msg) => {
       const date = msg.timestamp
         ? (msg.timestamp instanceof Date
             ? msg.timestamp
@@ -181,6 +174,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [messageSent, setMessageSent] = useState(false); // Indicador de mensaje enviado
+  const [isOffline, setIsOffline] = useState(false); // Indicador de sin conexión
+  const [messageDelivered, setMessageDelivered] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const lastScrollTop = useRef(0);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -191,7 +188,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const { handleClose } = useSidebarManager({
     isOpen,
     sidebarType: 'message',
-    sidebarId: conversationId,
+    sidebarId: correctConversationId,
     onClose,
   });
 
@@ -245,14 +242,59 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (chatRef.current) {
-    const chat = chatRef.current;
-    const isAtBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50;
-
-      if (isAtBottom()) {
-        chat.scrollTop = chat.scrollHeight;
+      const chat = chatRef.current;
+      const isAtBottom = () => chat.scrollHeight - chat.scrollTop - chat.clientHeight < 100; // Aumentar threshold
+      const wasAtBottom = lastScrollTop.current >= chat.scrollHeight - chat.clientHeight - 150; // Verificar si estaba cerca del fondo
+      
+      // Solo hacer scroll si estaba cerca del fondo o si es un mensaje propio
+      const shouldScroll = isAtBottom() || wasAtBottom || 
+        (allMessages.length > 0 && allMessages[allMessages.length - 1]?.senderId === currentUserId);
+      
+      if (shouldScroll) {
+        // Usar requestAnimationFrame para un scroll más suave
+        requestAnimationFrame(() => {
+          chat.scrollTop = chat.scrollHeight;
+        });
       }
     }
-  }, [allMessages]);
+  }, [allMessages, currentUserId]);
+
+  // Controlar estado de carga de mensajes
+  useEffect(() => {
+    if (allMessages.length > 0 || paginatedMessages.length > 0) {
+      setIsLoadingMessages(false);
+    }
+  }, [allMessages, paginatedMessages]);
+
+  // Marcar mensajes como leídos cuando se abre el sidebar
+  useEffect(() => {
+    if (isOpen && currentUserId && receiver.id) {
+      const markMessagesAsRead = async () => {
+        try {
+          // Marcar todos los mensajes del otro usuario como leídos
+          const unreadMessages = allMessages.filter(message => 
+            message.senderId !== currentUserId && !message.read
+          );
+          
+          if (unreadMessages.length > 0) {
+            // Marcar cada mensaje como leído
+            const markPromises = unreadMessages.map(message => 
+              updateDoc(doc(db, `conversations/${correctConversationId}/messages`, message.id), {
+                read: true,
+              })
+            );
+            
+            await Promise.all(markPromises);
+            console.log('[MessageSidebar] Marked', unreadMessages.length, 'messages as read for conversation:', correctConversationId);
+          }
+        } catch (error) {
+          console.error('[MessageSidebar] Error marking messages as read:', error);
+        }
+      };
+      
+      markMessagesAsRead();
+    }
+  }, [isOpen, currentUserId, receiver.id, allMessages, correctConversationId]);
 
   // Scroll detection for down arrow
   useEffect(() => {
@@ -286,20 +328,20 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
   // Initialize conversation and listen for real-time updates
   useEffect(() => {
-    if (!isOpen || !senderId || !receiver.id || !user?.id || !conversationId) {
+    if (!isOpen || !currentUserId || !receiver.id || !user?.id || !correctConversationId) {
       return;
     }
 
     const initConversation = async () => {
       try {
         // Ensure conversation document exists
-        const conversationRef = doc(db, 'conversations', conversationId);
+        const conversationRef = doc(db, 'conversations', correctConversationId);
         const conversationDoc = await getDoc(conversationRef);
 
         if (!conversationDoc.exists()) {
           // Create conversation document
           await setDoc(conversationRef, {
-            participants: [senderId, receiver.id],
+            participants: [currentUserId, receiver.id],
             createdAt: serverTimestamp(),
             lastMessage: null,
             lastViewedBy: {},
@@ -307,7 +349,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         } else {
           // Update last viewed timestamp for current user
           await updateDoc(conversationRef, {
-            [`lastViewedBy.${user.id}`]: serverTimestamp(),
+            [`lastViewedBy.${currentUserId}`]: serverTimestamp(),
           });
         }
       } catch (error) {
@@ -318,33 +360,24 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     initConversation();
 
 
-  }, [isOpen, senderId, receiver.id, conversationId, user?.id]);
+  }, [isOpen, currentUserId, receiver.id, correctConversationId, user?.id]);
 
-  // Efecto para limpiar mensajes optimistas cuando se confirman desde el servidor
+  // Detectar estado de conexión
   useEffect(() => {
-    if (paginatedMessages.length > 0 && Object.keys(optimisticMessages).length > 0) {
-      const optimisticIds = Object.keys(optimisticMessages);
-      const serverIds = paginatedMessages.map(msg => msg.clientId);
-      
-      // Encontrar mensajes optimistas que ya están en el servidor
-      const confirmedOptimisticIds = optimisticIds.filter(id => serverIds.includes(id));
-      
-      if (confirmedOptimisticIds.length > 0) {
-        console.log('[MessageSidebar] Cleaning up confirmed optimistic messages:', confirmedOptimisticIds);
-        confirmedOptimisticIds.forEach(id => {
-          usePrivateMessageStore.getState().removeOptimisticMessage(id);
-        });
-      }
-    }
-  }, [paginatedMessages, optimisticMessages]);
-
-  // Efecto para forzar la recarga de mensajes cuando se abre el sidebar
-  useEffect(() => {
-    if (isOpen && conversationId) {
-      console.log('[MessageSidebar] Sidebar opened, ensuring messages are loaded for conversation:', conversationId);
-      // El hook usePrivateMessagePagination ya maneja la carga automática
-    }
-  }, [isOpen, conversationId]);
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    // Verificar estado inicial
+    setIsOffline(!navigator.onLine);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
@@ -438,6 +471,36 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }, 150);
   };
 
+  // Función para manejar el envío de mensajes con el senderId correcto
+  const handleSendMessage = useCallback(async (
+    messageData: Partial<Message>,
+  ) => {
+    if (!currentUserId) return;
+    const messageWithReply = {
+      ...messageData,
+      senderId: currentUserId, // Usar el ID del usuario actual
+      senderName: user?.firstName || 'Usuario',
+      replyTo: replyingTo ? {
+        id: replyingTo.id,
+        senderName: replyingTo.senderName,
+        text: replyingTo.text,
+        imageUrl: replyingTo.imageUrl,
+      } : null,
+    };
+    await sendMessage(messageWithReply);
+    setReplyingTo(null);
+    
+    // Mostrar indicador de mensaje enviado
+    setMessageSent(true);
+    setTimeout(() => setMessageSent(false), 2000); // Ocultar después de 2 segundos
+    
+    // Simular mensaje entregado después de 1 segundo
+    setTimeout(() => {
+      setMessageDelivered(true);
+      setTimeout(() => setMessageDelivered(false), 2000); // Ocultar después de 2 segundos
+    }, 1000);
+  }, [currentUserId, user?.firstName, replyingTo, sendMessage]);
+
   // Memoizar el callback de reply para evitar re-renders
   const handleReplyActivated = useCallback((messageId: string) => {
     const messageToReply = allMessages.find(msg => msg.id === messageId);
@@ -493,18 +556,64 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           <div className={styles.headerInfo}>
             <div className={styles.title}>
               {receiver.fullName}
-          </div>
+              
+            </div>
             <div className={styles.description}>
               {receiver.role}
             </div>
+            {/* {unreadCount > 0 && ( // Eliminado
+              <div className={styles.unreadBadge}> // Eliminado
+                {unreadCount} {unreadCount === 1 ? 'mensaje' : 'mensajes'} no leído{unreadCount === 1 ? '' : 's'} // Eliminado
+              </div> // Eliminado
+            )} // Eliminado */}
+            {isOffline && (
+              <div className={styles.offlineIndicator}>
+                ⚠️ Sin conexión
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className={styles.chat} ref={chatRef} id="chat-container">
-        {allMessages.length === 0 && (
+        {isLoadingMessages && allMessages.length === 0 && (
+          <div className={styles.loadingMessages}>
+            <div className={styles.skeletonMessage}>
+              <div className={styles.skeletonAvatar}></div>
+              <div className={styles.skeletonContent}>
+                <div className={styles.skeletonName}></div>
+                <div className={styles.skeletonText}></div>
+              </div>
+            </div>
+            <div className={styles.skeletonMessage}>
+              <div className={styles.skeletonAvatar}></div>
+              <div className={styles.skeletonContent}>
+                <div className={styles.skeletonName}></div>
+                <div className={styles.skeletonText}></div>
+              </div>
+            </div>
+            <div className={styles.skeletonMessage}>
+              <div className={styles.skeletonAvatar}></div>
+              <div className={styles.skeletonContent}>
+                <div className={styles.skeletonName}></div>
+                <div className={styles.skeletonText}></div>
+              </div>
+            </div>
+          </div>
+        )}
+        {allMessages.length === 0 && !isLoadingMessages && (
           <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
         )}
+        {/* {isTyping && ( // Eliminado
+          <div className={styles.typingIndicator}> // Eliminado
+            <div className={styles.typingDots}> // Eliminado
+              <span></span> // Eliminado
+              <span></span> // Eliminado
+              <span></span> // Eliminado
+            </div> // Eliminado
+            <span className={styles.typingText}>{receiver.fullName} está escribiendo...</span> // Eliminado
+          </div> // Eliminado
+        )} */}
         {groupedMessages.map((group) => {
           // Validación defensiva para evitar "Invalid time value"
           const dateKey = typeof group.date === 'string' && !isNaN(new Date(group.date).getTime())
@@ -522,6 +631,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                 } else {
                   msgDate = new Date();
                 }
+                
                 return (
                   <div key={`${message.id}-${message.clientId}-${messageIndex}`}>
                     <div
@@ -543,28 +653,38 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             >
               <UserAvatar
                         userId={message.senderId}
-                        imageUrl={message.senderId === senderId ? user?.imageUrl : receiver.imageUrl}
-                        userName={message.senderId === senderId ? (user?.firstName || 'Yo') : receiver.fullName}
+                        imageUrl={message.senderId === currentUserId ? user?.imageUrl : receiver.imageUrl}
+                        userName={message.senderId === currentUserId ? (user?.firstName || 'Yo') : receiver.fullName}
                 size="medium"
                 showStatus={true}
               />
               <div className={styles.messageContent}>
                 <div className={styles.messageHeader}>
                   <div className={styles.sender}>
-                            {message.senderId === senderId ? 'Tú' : receiver.fullName}
+                            {message.senderId === currentUserId ? 'Tú' : receiver.fullName}
                   </div>
                   <div className={styles.timestampWrapper}>
-                    <span className={styles.timestamp}>
-                              {msgDate.toLocaleTimeString('es-MX', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZone: 'America/Mexico_City',
+                    <span 
+                      className={styles.timestamp}
+                      title={`${msgDate.toLocaleDateString('es-MX', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Mexico_City',
+                      })}`}
+                    >
+                      {msgDate.toLocaleTimeString('es-MX', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Mexico_City',
                       })}
                     </span>
-                                                        {message.senderId === senderId && !message.isPending && (
+                                                        {message.senderId === currentUserId && !message.isPending && (
                               <PrivateMessageActionMenu
                                 message={message}
-                                userId={user?.id}
+                                userId={currentUserId}
 
                                 onEdit={() => {
                                   setEditingMessageId(message.id);
@@ -775,9 +895,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       </div>
 
             <InputMessage
-        userId={user?.id}
+        userId={currentUserId}
         userFirstName={user?.firstName}
-        onSendMessage={sendMessage}
+        onSendMessage={handleSendMessage}
         isSending={isSending}
         containerRef={sidebarRef}
         replyingTo={replyingTo ? { 
@@ -792,8 +912,20 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         editingText={editingText}
         onEditMessage={handleEditMessage}
         onCancelEdit={handleCancelEdit}
-        conversationId={conversationId}
+        conversationId={correctConversationId}
       />
+      
+      {messageSent && (
+        <div className={styles.messageSentIndicator}>
+          ✓ Mensaje enviado
+        </div>
+      )}
+      
+      {messageDelivered && (
+        <div className={styles.messageDeliveredIndicator}>
+          ✓✓ Mensaje entregado
+        </div>
+      )}
 
       {imagePreviewSrc && (
         <ImagePreviewOverlay

@@ -1,20 +1,10 @@
 'use client';
 import { SignIn } from '@clerk/nextjs';
 import { useState, useEffect, useRef, useId } from 'react';
+import Image from 'next/image';
 import styles from './SignIn.module.scss';
 
 // --- ANIMATED BACKGROUND COMPONENT ---
-interface AnimationConfig {
-  preview?: boolean;
-  scale: number;
-  speed: number;
-}
-
-interface NoiseConfig {
-  opacity: number;
-  scale: number;
-}
-
 function mapRange(
   value: number,
   fromLow: number,
@@ -149,15 +139,9 @@ export interface Testimonial {
 }
 
 // --- SUB-COMPONENTS ---
-const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className={styles.glassInputWrapper}>
-    {children}
-  </div>
-);
-
 const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, delay: string }) => (
   <div className={`${styles.testimonialCard} ${styles.animateTestimonial} ${delay}`}>
-    <img src={testimonial.avatarSrc} className={styles.avatar} alt="avatar" />
+    <Image src={testimonial.avatarSrc} alt="avatar" width={50} height={50} className={styles.avatar} />
     <div className={styles.content}>
       <p className={styles.name}>{testimonial.name}</p>
       <p className={styles.handle}>{testimonial.handle}</p>

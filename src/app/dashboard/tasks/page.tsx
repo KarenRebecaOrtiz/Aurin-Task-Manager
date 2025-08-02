@@ -33,6 +33,14 @@ import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
 import { useMessageNotifications } from '@/hooks/useMessageNotifications';
+
+// Función para generar conversationId de manera consistente (igual que en MessageSidebar)
+const generateConversationId = (userId1: string, userId2: string): string => {
+  // Ordenar los IDs para que siempre sea el mismo conversationId
+  const sortedIds = [userId1, userId2].sort();
+  return `conversation_${sortedIds[0]}_${sortedIds[1]}`;
+};
+
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -336,17 +344,21 @@ function TasksPageContent() {
   // Mover useMessageNotifications aquí para evitar re-renders en MembersTable
   const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
   
-  const handleMessageSidebarOpen = useCallback((user: User) => {
+  const handleMessageSidebarOpen = useCallback((receiverUser: User) => {
     // Usar getState() para evitar re-renders reactivos
     const { openMessageSidebar } = useSidebarStateStore.getState();
-    const conversationId = `conversation_${user.id}_${user?.id}`;
-    openMessageSidebar(user?.id || '', {
-      id: user.id,
-      imageUrl: user.imageUrl,
-      fullName: user.fullName,
-      role: user.role,
+    
+    // Usar el mismo conversationId que usa MessageSidebar
+    const currentUserId = user?.id; // Usuario actual (logueado)
+    const receiverId = receiverUser.id; // Usuario receptor
+    const conversationId = generateConversationId(currentUserId || '', receiverId);
+    openMessageSidebar(currentUserId || '', {
+      id: receiverId,
+      imageUrl: receiverUser.imageUrl,
+      fullName: receiverUser.fullName,
+      role: receiverUser.role,
     }, conversationId);
-  }, []);
+  }, [user?.id]);
 
   const handleCreateClientOpen = useCallback(() => {
     const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
@@ -732,7 +744,6 @@ const IndependentMessageSidebarRenderer = () => {
       key="message-sidebar"
               isOpen={true}
       onClose={closeMessageSidebar}
-              senderId={user.id}
       receiver={messageSidebar.receiver}
       conversationId={messageSidebar.conversationId || ''}
     />

@@ -104,7 +104,7 @@ export const usePrivateMessagePagination = ({
       }
       const messagesQuery = query(
         collection(db, `conversations/${conversationId}/messages`),
-        orderBy('timestamp', 'asc'),
+        orderBy('timestamp', 'desc'),
         limit(pageSize)
       );
       const snapshot = await getDocs(messagesQuery);
@@ -144,7 +144,7 @@ export const usePrivateMessagePagination = ({
       const sortedMessages = newMessages.sort((a, b) => {
         const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : a.timestamp?.getTime() || 0;
         const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : b.timestamp?.getTime() || 0;
-        return aTime - bTime; // Cambiar a orden ascendente (más antiguos primero)
+        return bTime - aTime;
       });
       setMessages(sortedMessages);
       setHasMore(snapshot.docs.length === pageSize);
@@ -166,7 +166,7 @@ export const usePrivateMessagePagination = ({
     try {
       const messagesQuery = query(
         collection(db, `conversations/${conversationId}/messages`),
-        orderBy('timestamp', 'asc'),
+        orderBy('timestamp', 'desc'),
         startAfter(lastDocRef.current),
         limit(pageSize)
       );
@@ -207,7 +207,7 @@ export const usePrivateMessagePagination = ({
       const sortedNewMessages = newMessages.sort((a, b) => {
         const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : a.timestamp?.getTime() || 0;
         const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : b.timestamp?.getTime() || 0;
-        return aTime - bTime; // Cambiar a orden ascendente
+        return bTime - aTime;
       });
       setMessages((prev) => {
         const existingIds = new Set(prev.map(msg => msg.id));
@@ -229,9 +229,8 @@ export const usePrivateMessagePagination = ({
     if (!conversationId) return;
 
     console.log('[usePrivateMessagePagination] Setting up real-time listener for conversation:', conversationId);
-    console.log('[usePrivateMessagePagination] Current messages count:', messages.length);
     
-    const q = query(collection(db, `conversations/${conversationId}/messages`), orderBy('timestamp', 'asc'));
+    const q = query(collection(db, `conversations/${conversationId}/messages`), orderBy('timestamp', 'desc'));
     
     // Debounce para batching de updates
     let pendingChanges: Array<{ type: 'added' | 'modified' | 'removed'; doc: DocumentSnapshot }> = [];
@@ -243,7 +242,6 @@ export const usePrivateMessagePagination = ({
       
       isProcessing = true;
       console.log('[usePrivateMessagePagination] Processing batch changes:', pendingChanges.length);
-      console.log('[usePrivateMessagePagination] Changes types:', pendingChanges.map(c => c.type));
       
       // Deduplicar cambios para evitar actualizaciones múltiples del mismo mensaje
       const uniqueChanges = pendingChanges.reduce((acc, change) => {
@@ -253,8 +251,6 @@ export const usePrivateMessagePagination = ({
         }
         return acc;
       }, new Map());
-      
-      console.log('[usePrivateMessagePagination] Unique changes:', uniqueChanges.size);
       
       // Procesar cambios únicos en batch
       const processedIds = new Set<string>();

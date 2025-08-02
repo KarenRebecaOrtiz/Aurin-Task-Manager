@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useCallback, memo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, query, getDocs, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import Table from './Table';
 import styles from './MembersTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +14,13 @@ import { useShallow } from 'zustand/react/shallow';
 import { membersTableStore } from '@/stores/membersTableStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
+
+// Función para generar conversationId de manera consistente (igual que en MessageSidebar)
+const generateConversationId = (userId1: string, userId2: string): string => {
+  // Ordenar los IDs para que siempre sea el mismo conversationId
+  const sortedIds = [userId1, userId2].sort();
+  return `conversation_${sortedIds[0]}_${sortedIds[1]}`;
+};
 
 interface User {
   id: string;
@@ -150,18 +155,10 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         if (getUnreadCountForUser && markConversationAsRead) {
           const unreadCount = getUnreadCountForUser(u.id);
           if (unreadCount > 0) {
-            // Buscar la conversación y marcarla como leída
-            const conversationsQuery = query(
-              collection(db, 'conversations'),
-              where('participants', 'array-contains', user?.id),
-              where('participants', 'array-contains', u.id)
-            );
+            // Usar el mismo conversationId que usa MessageSidebar
+            const conversationId = generateConversationId(user?.id || '', u.id);
             try {
-              const conversationsSnapshot = await getDocs(conversationsQuery);
-              if (!conversationsSnapshot.empty) {
-                const conversationId = conversationsSnapshot.docs[0].id;
-                await markConversationAsRead(conversationId);
-              }
+              await markConversationAsRead(conversationId);
             } catch (error) {
               console.error('[MembersTable] Error marking conversation as read:', error);
             }
