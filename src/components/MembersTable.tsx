@@ -130,12 +130,23 @@ const MembersTable: React.FC<MembersTableProps> = memo(
       onMessageSidebarOpen(user);
     }, [onMessageSidebarOpen]);
 
+    // Handler para abrir ProfileCard - similar a UserSwiper
+    const handleOpenProfile = useCallback((user: User) => {
+      const { openProfileCard } = useTasksPageStore.getState();
+      openProfileCard(user.id, user.imageUrl);
+    }, []);
+
     // Memoizar el callback de row click para evitar re-renders
     const handleRowClick = useCallback(async (u: User, columnKey: string) => {
       // Debug logging disabled to reduce console spam
-      if (['imageUrl', 'fullName', 'role', 'activeProjects', 'status', 'messageNotifications'].includes(columnKey) &&
-          u.id !== user?.id) {
-        // Marcar la conversación como leída antes de abrir el sidebar (solo si las funciones están disponibles)
+      if (['imageUrl', 'fullName', 'role', 'activeProjects', 'status', 'messageNotifications'].includes(columnKey)) {
+        // Si es tu propio perfil, abrir ProfileCard en lugar de chat
+        if (u.id === user?.id) {
+          handleOpenProfile(u);
+          return;
+        }
+        
+        // Para otros usuarios, abrir chat y marcar como leída si es necesario
         if (getUnreadCountForUser && markConversationAsRead) {
           const unreadCount = getUnreadCountForUser(u.id);
           if (unreadCount > 0) {
@@ -158,13 +169,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         }
         handleMessageSidebarOpen(u);
       }
-    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen]);
-
-    // Handler para abrir ProfileCard - similar a UserSwiper
-    const handleOpenProfile = useCallback((user: User) => {
-      const { openProfileCard } = useTasksPageStore.getState();
-      openProfileCard(user.id, user.imageUrl);
-    }, []);
+    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen, handleOpenProfile]);
 
     // Handler para el click en el avatar - evita que se propague al row click
     const handleAvatarClick = useCallback((e: React.MouseEvent, user: User) => {

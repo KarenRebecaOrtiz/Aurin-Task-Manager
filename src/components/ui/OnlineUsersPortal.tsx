@@ -14,6 +14,14 @@ interface OnlineUsersPortalProps {
   className?: string;
 }
 
+interface User {
+  id: string;
+  imageUrl: string;
+  fullName: string;
+  role?: string;
+  status?: string;
+}
+
 const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({ 
   maxVisible = 3,
   className 
@@ -34,8 +42,11 @@ const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({
   const hiddenCount = onlineUsers.length - visibleUsers.length;
 
   // Handler para abrir chat con el usuario
-  const handleSendMessage = useCallback((user: any) => {
+  const handleSendMessage = useCallback((user: User) => {
     if (!currentUser) return;
+    
+    // No permitir enviar mensaje a ti mismo
+    if (user.id === currentUser.id) return;
     
     const conversationId = `conversation_${currentUser.id}_${user.id}`;
     const { openMessageSidebar } = useSidebarStateStore.getState();
@@ -48,10 +59,15 @@ const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({
   }, [currentUser]);
 
   // Handler para abrir ProfileCard
-  const handleOpenProfile = useCallback((user: any) => {
+  const handleOpenProfile = useCallback((user: User) => {
     const { openProfileCard } = useTasksPageStore.getState();
     openProfileCard(user.id, user.imageUrl);
   }, []);
+
+  // Handler para hacer click en avatar
+  const handleAvatarClick = useCallback((user: User) => {
+    handleOpenProfile(user);
+  }, [handleOpenProfile]);
 
   // Solo renderizar si hay usuarios online
   if (onlineUsers.length === 0) {
@@ -66,6 +82,16 @@ const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({
             key={user.id}
             className={`${styles.avatarWrapper} ${index > 0 ? styles.overlapped : ''}`}
             style={{ zIndex: visibleUsers.length - index }}
+            onClick={() => handleAvatarClick(user)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleAvatarClick(user);
+              }
+            }}
+            title={`Ver perfil de ${user.fullName}`}
           >
             <UserAvatar
               userId={user.id}
@@ -105,19 +131,22 @@ const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({
                 />
                 <span className={styles.tooltipUserName}>
                   {user.fullName}
+                  {user.id === currentUser?.id && ' (Tú)'}
                 </span>
                 <div className={styles.tooltipUserActions}>
-                  <button
-                    className={styles.actionButton}
-                    onClick={() => handleSendMessage(user)}
-                    aria-label={`Enviar mensaje a ${user.fullName}`}
-                    title="Enviar mensaje"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M22 2L11 13"/>
-                      <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
-                    </svg>
-                  </button>
+                  {user.id !== currentUser?.id && (
+                    <button
+                      className={styles.actionButton}
+                      onClick={() => handleSendMessage(user)}
+                      aria-label={`Enviar mensaje a ${user.fullName}`}
+                      title="Enviar mensaje"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 2L11 13"/>
+                        <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+                      </svg>
+                    </button>
+                  )}
                   <button
                     className={styles.actionButton}
                     onClick={() => handleOpenProfile(user)}

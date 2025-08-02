@@ -7,6 +7,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import UserAvatar from './ui/UserAvatar';
+import Badge from './Badge';
 import styles from './ProfileCard.module.scss';
 
 interface SocialLink {
@@ -115,7 +116,8 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
   };
 
   useEffect(() => {
-    if (!isLoaded || !userId || !currentUser || userId === currentUser.id) {
+    
+    if (!isLoaded || !userId || !currentUser) {
       setLoading(false);
       return;
     }
@@ -171,6 +173,13 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
   const handleContactClick = () => {
     if (!profile || !currentUser) return;
     
+    // No permitir enviar mensaje a ti mismo
+    if (userId === currentUser.id) {
+      // Simplemente cerrar el modal si es tu propio perfil
+      handleCloseButtonClick();
+      return;
+    }
+    
     const conversationId = `conversation_${currentUser.id}_${profile.id}`;
     openMessageSidebar(currentUser.id, {
       id: profile.id,
@@ -224,7 +233,7 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
     );
   }
 
-  if (!profile || userId === currentUser?.id) {
+  if (!profile) {
     return (
       <AnimatePresence>
         {isVisible && (
@@ -291,7 +300,18 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
             
             {/* Glassmorphism Profile Card */}
             <div className={styles.profileCard}>
-              <div className={styles.avatarContainer}>
+              {/* Cover Photo Section */}
+              <div className={styles.coverPhotoSection}>
+                <div 
+                  className={styles.coverPhoto}
+                  style={{ 
+                    backgroundImage: `url(${profile.coverPhoto || '/empty-cover.png'})` 
+                  }}
+                />
+              </div>
+              
+              {/* Profile Photo Overlay */}
+              <div className={styles.profilePhotoOverlay}>
                 <UserAvatar 
                   userId={userId}
                   imageUrl={avatarUrl}
@@ -300,10 +320,22 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                   showStatus={true}
                 />
               </div>
-
-              <h2 className={styles.name}>{profile.fullName || 'Sin nombre'}</h2>
-              <p className={styles.title}>{profile.role || 'Sin rol'}</p>
-              <p className={styles.bio}>{profile.description || 'Sin descripción disponible'}</p>
+              
+              <div className={styles.contentSection}>
+                <div className={styles.headerSection}>
+                  <div className={styles.nameAndBadgeContainer}>
+                    <h2 className={styles.name}>{profile.fullName || 'Sin nombre'}</h2>
+                    
+                    {/* Badge del rol */}
+                    {profile.role && (
+                      <div className={styles.badgeContainer}>
+                        <Badge role={profile.role} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <p className={styles.bio}>{profile.description || 'Sin descripción disponible'}</p>
 
               {/* Información de Contacto */}
               {(profile.phone || profile.city || profile.birthDate || profile.gender || profile.portfolio) && (
@@ -353,16 +385,11 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                 <div className={styles.stackSection}>
                   <h3 className={styles.sectionTitle}>Stack de Tecnologías</h3>
                   <div className={styles.stackTags}>
-                    {profile.stack.slice(0, 10).map((tech, index) => (
+                    {profile.stack.map((tech, index) => (
                       <span key={index} className={styles.stackTag}>
                         {tech}
                       </span>
                     ))}
-                    {profile.stack.length > 10 && (
-                      <span className={styles.stackMore}>
-                        +{profile.stack.length - 10} más
-                      </span>
-                    )}
                   </div>
                 </div>
               )}
@@ -397,7 +424,11 @@ const ProfileCard = ({ userId, imageUrl, onClose }: ProfileCardProps) => {
                 </div>
               )}
 
-              <ActionButton onContact={handleContactClick} />
+              <ActionButton 
+                onContact={handleContactClick} 
+                isOwnProfile={userId === currentUser?.id}
+              />
+            </div>
             </div>
             
             <div className={styles.backgroundGlow} />
@@ -436,14 +467,16 @@ const SocialButton: React.FC<SocialButtonProps> = ({ item, setHoveredItem, hover
 
 interface ActionButtonProps {
   onContact: () => void;
+  isOwnProfile: boolean;
 }
 
-const ActionButton: React.FC<ActionButtonProps> = ({ onContact }) => (
+const ActionButton: React.FC<ActionButtonProps> = ({ onContact, isOwnProfile }) => (
   <button
     onClick={onContact}
     className={styles.actionButton}
+    disabled={isOwnProfile}
   >
-    <span>Enviar Mensaje</span>
+    <span>{isOwnProfile ? 'Es tu perfil' : 'Enviar Mensaje'}</span>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="m7 7 10 10" />
       <path d="m17 7-10 10" />

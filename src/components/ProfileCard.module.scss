@@ -21,14 +21,14 @@
   padding: 16px;
 
   :global(body.dark) & {
-    background: rgb(255 255 255 / 16%)
+    background: rgba(0, 0, 0, 0.4);
   }
 }
 
 .card {
   position: relative;
   width: 100%;
-  max-width: 384px; // max-w-sm
+  max-width: 684px; // max-w-sm
   margin: 0 auto;
 }
 
@@ -47,7 +47,7 @@
   justify-content: center;
   font-size: 16px;
   font-weight: bold;
-  color: #666;
+  color: $color-text-secondary;
   cursor: pointer;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -55,18 +55,18 @@
 
   &:hover {
     background: rgba(255, 255, 255, 1);
-    color: #333;
+    color: $color-text-primary;
     transform: scale(1.1);
   }
 
   :global(body.dark) & {
     background: rgba(30, 30, 30, 0.9);
-    color: #c3c3c3;
-    border-color: rgba(255, 255, 255, 0.1);
+    color: $color-text-dark-secondary;
+    border-color: $color-border-dark;
 
     &:hover {
       background: rgba(50, 50, 50, 1);
-      color: #fff;
+      color: $color-text-dark-primary;
     }
   }
 }
@@ -75,19 +75,69 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 32px;
+  align-items: start;
+  padding: 0px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid $color-border-subtle;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  background: rgb(255, 254, 254);
+  background: $color-bg-glass;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.5s ease;
+  overflow: hidden;
 
   :global(body.dark) & {
-    background: rgb(255, 255, 255);
-    border-color: rgba(255, 255, 255, 0.05);
+    background: rgb(17 17 17);
+    border-color: #5555553d;
+    box-shadow: none!important;
+  }
+}
+
+.coverPhotoSection {
+  position: relative;
+  width: 100%;
+  height: 128px;
+  overflow: hidden;
+}
+
+.coverPhoto {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: $color-bg-light;
+}
+
+.profilePhotoOverlay {
+  position: relative;
+  margin-top: -40px;
+  margin-left: 20px;
+  z-index: 10;
+
+  
+  @media (max-width: 640px) {
+    margin-left: 0;
+    align-self: flex-start;
+    margin-left: 32px;
+  }
+}
+
+.contentSection {
+  padding: 0 32px 32px 32px;
+  width: 100%;
+}
+
+.headerSection {
+  display: flex;
+  flex-direction: row;
+  align-items: start;
+  justify-content: start;
+  width: 100%;
+  
+  @media (max-width: 640px) {
+    align-items: start;
+    text-align: center;
   }
 }
 
@@ -95,9 +145,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  
+  
+  flex-shrink: 0;
+  
+  @media (max-width: 640px) {
+    margin-bottom: 0;
+  }
+}
+
+.headerSection {
+  display: flex;
+  align-items: start;
+  flex-direction: row;
+  gap: 20px;
   width: 100%;
-  height: auto;
+  
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: start;
+    gap: 16px;
+  }
+}
+
+.nameAndBadgeContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  flex: 1;
+  text-align: center;
 }
 
 .avatar {
@@ -110,12 +186,12 @@
 .name {
   font-size: 24px;
   font-weight: bold;
-  color: #333;
+  color: $color-text-primary;
   margin: 0;
   text-align: center;
 
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: $color-text-dark-primary;
   }
 }
 
@@ -123,24 +199,42 @@
   margin: 4px 0 0 0;
   font-size: 14px;
   font-weight: 500;
-  color: #151515;
+  color: $color-text-primary;
   text-align: center;
   text-transform: uppercase;
 
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: $color-text-dark-primary;
   }
 }
 
 .bio {
-  margin: 16px 0 0 0;
-  text-align: center;
+  text-align: start;
   font-size: 14px;
   line-height: 1.5;
-  color: #6b7280;
+  color: $color-text-secondary;
 
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: $color-text-dark-secondary;
+  }
+}
+
+.badgeContainer {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0;
+  
+  // Asegurar que el badge se vea bien en el contexto del ProfileCard
+  .badge {
+    transform: scale(0.8);
+    
+    @media (min-width: 640px) {
+      transform: scale(0.9);
+    }
+  }
+  
+  @media (max-width: 640px) {
+    justify-content: center;
   }
 }
 
@@ -149,10 +243,10 @@
   height: 1px;
   margin: 24px 0;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.1);
+  background: $color-border-light;
 
   :global(body.dark) & {
-    background: rgba(255, 255, 255, 0.1);
+    background: $color-border-dark;
   }
 }
 
@@ -164,14 +258,14 @@
   margin: 16px 0;
   padding: 16px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(237 240 249);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid $color-border-subtle;
 
   :global(body.dark) & {
     background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.05);
+    border-color: $color-border-dark;
   }
 }
 
@@ -185,25 +279,25 @@
 
 .contactLabel {
   font-weight: 600;
-  color: #64748b;
+  color: $color-text-secondary;
   min-width: 120px;
 
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: $color-text-dark-secondary;
   }
 }
 
 .contactValue {
-  color: #1e293b;
+  color: $color-text-primary;
   font-weight: 500;
 
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: $color-text-dark-primary;
   }
 }
 
 .portfolioLink {
-  color: #3b82f6;
+  color: $color-info;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
@@ -230,12 +324,12 @@
 .sectionTitle {
   font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
+  color: $color-text-primary;
   margin-bottom: 12px;
   text-align: center;
 
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: $color-text-dark-primary;
   }
 }
 
@@ -249,7 +343,7 @@
 .stackTag {
   padding: 6px 12px;
   background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  color: $color-info;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
@@ -275,7 +369,7 @@
 .stackMore {
   padding: 6px 12px;
   background: rgba(100, 116, 139, 0.1);
-  color: #64748b;
+  color: $color-text-secondary;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
@@ -283,7 +377,7 @@
 
   :global(body.dark) & {
     background: rgba(100, 116, 139, 0.2);
-    color: #c3c3c3;
+    color: $color-text-dark-secondary;
     border-color: rgba(100, 116, 139, 0.3);
   }
 }
@@ -303,7 +397,7 @@
 .teamTag {
   padding: 6px 12px;
   background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
+  color: $color-success;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
@@ -414,8 +508,8 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 
   /* Estilo cristalizado como dropdownTrigger */
-  background: rgba(241, 245, 249, 0.8);
-  color: #1e293b;
+  background: $color-bg-glass;
+  color: $color-text-primary;
   box-shadow:
     -4px -4px 8px rgba(255, 255, 255, 0.8),
     4px 4px 8px rgba(0, 0, 0, 0.05),
@@ -424,7 +518,7 @@
 
   &:hover {
     transform: translateY(-2px) scale(1.02);
-    background: rgba(241, 245, 249, 0.85);
+    background: $color-bg-glass-hover;
     border-color: rgba(255, 255, 255, 0.4);
     box-shadow:
       -6px -6px 10px rgba(255, 255, 255, 0.85),
@@ -446,9 +540,9 @@
 
   /* Dark mode */
   :global(body.dark) & {
-    background: rgba(39, 39, 42, 0.8);
-    color: #c3c3c3;
-    border-color: rgba(255, 255, 255, 0.1);
+    background: $color-bg-glass-dark;
+    color: $color-text-dark-primary;
+    border-color: $color-border-dark;
     box-shadow:
       -4px -4px 8px rgba(0, 0, 0, 0.3),
       4px 4px 8px rgba(255, 255, 255, 0.05),
@@ -456,7 +550,7 @@
       inset 2px 2px 6px rgba(255, 255, 255, 0.03);
 
     &:hover {
-      background: rgba(39, 39, 42, 0.9);
+      background: $color-bg-glass-dark-hover;
       border-color: rgba(255, 255, 255, 0.2);
       box-shadow:
         -6px -6px 10px rgba(0, 0, 0, 0.4),
@@ -483,6 +577,45 @@
   &:hover svg {
     transform: rotate(45deg);
   }
+
+  /* Estilos para botón deshabilitado (propio perfil) */
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    
+    &:hover {
+      transform: none;
+      background: $color-bg-glass;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.8),
+        4px 4px 8px rgba(0, 0, 0, 0.05),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+        inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    &:active {
+      transform: none;
+    }
+
+    svg {
+      transform: none;
+      filter: none;
+    }
+
+    :global(body.dark) & {
+      &:hover {
+        background: $color-bg-glass-dark;
+        border-color: $color-border-dark;
+        box-shadow:
+          -4px -4px 8px rgba(0, 0, 0, 0.3),
+          4px 4px 8px rgba(255, 255, 255, 0.05),
+          inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+          inset 2px 2px 6px rgba(255, 255, 255, 0.03);
+      }
+    }
+  }
 }
 
 .tooltip {
@@ -501,7 +634,7 @@
   white-space: nowrap;
   pointer-events: none;
   background: rgba(255, 255, 255, 0.9);
-  color: #333;
+  color: $color-text-primary;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   opacity: 0;
   transform: translateX(-50%) translateY(8px);
@@ -509,8 +642,8 @@
 
   :global(body.dark) & {
     background: rgba(30, 30, 30, 0.9);
-    color: #c3c3c3;
-    border-color: rgba(255, 255, 255, 0.05);
+    color: $color-text-dark-primary;
+    border-color: $color-border-dark;
   }
 
   &.tooltipVisible {
@@ -532,7 +665,7 @@
 
   :global(body.dark) & {
     background: rgba(30, 30, 30, 0.9);
-    border-color: rgba(255, 255, 255, 0.05);
+    border-color: $color-border-dark;
   }
 }
 
@@ -558,9 +691,9 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
-  color: #666;
+  color: $color-text-secondary;
 
   :global(body.dark) & {
-    color: #c3c3c3;
+    color: $color-text-dark-secondary;
   }
 }

@@ -52,6 +52,7 @@ html.dark,
 
 :root {
   --primary: #4CAF50;
+  --primary-foreground: #FFFFFF;
   --background: #FFFFFF;
   --foreground: #121212;
   --border: #D1D5DB;
@@ -63,6 +64,7 @@ html.dark,
   --popover: #ffffff;
   --popover-foreground: #1f2937;
   --accent: #f9fafb;
+  --secondary: #f3f4f6;
 }
 
 [data-theme='dark'] {
@@ -76,6 +78,8 @@ html.dark,
   --popover: #1f2937;
   --popover-foreground: #f9fafb;
   --accent: #374151;
+  --primary-foreground: #FFFFFF;
+  --secondary: #374151;
 }
 
 * {
@@ -146,6 +150,35 @@ body {
   height: 200px;
   pointer-events: none;
   z-index: 2000;
+}
+
+// Redondear favicons
+link[rel="icon"],
+link[rel="apple-touch-icon"],
+link[rel="shortcut icon"] {
+  border-radius: 50% !important;
+}
+
+// También aplicar a imágenes de favicon en el DOM
+img[src*="favicon"],
+img[src*="apple-touch-icon"],
+img[src*="android-chrome"] {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+// Estilos para favicon en la pestaña del navegador
+::selection {
+  background: rgba(211, 223, 72, 0.3);
+}
+
+// Asegurar que los favicons se vean redondeados en todos los contextos
+.favicon,
+.icon,
+[class*="favicon"],
+[class*="icon"] {
+  border-radius: 50% !important;
+  overflow: hidden !important;
 }
 
 .vignetteTop {

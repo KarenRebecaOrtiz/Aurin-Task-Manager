@@ -1,169 +1,478 @@
-// src/app/(auth)/sign-in/[[...sign-in]]/SignIn.module.scss
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&display=swap');
+
+// Animaciones
+@keyframes fadeSlideIn {
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+@keyframes slideRightIn {
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateX(0px);
+  }
+}
+
+@keyframes testimonialIn {
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px) scale(1);
+  }
+}
+
+// Clases de animación
+.animateElement {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(30px);
+  animation: fadeSlideIn 0.6s ease-out forwards;
+}
+
+.animateSlideRight {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateX(30px);
+  animation: slideRightIn 0.6s ease-out forwards;
+}
+
+.animateTestimonial {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(30px) scale(0.9);
+  animation: testimonialIn 0.6s ease-out forwards;
+}
+
+// Delays de animación
+.animateDelay100 { animation-delay: 0.1s; }
+.animateDelay200 { animation-delay: 0.2s; }
+.animateDelay300 { animation-delay: 0.3s; }
+.animateDelay400 { animation-delay: 0.4s; }
+.animateDelay500 { animation-delay: 0.5s; }
+.animateDelay600 { animation-delay: 0.6s; }
+.animateDelay700 { animation-delay: 0.7s; }
+.animateDelay800 { animation-delay: 0.8s; }
+.animateDelay900 { animation-delay: 0.9s; }
+.animateDelay1000 { animation-delay: 1s; }
+.animateDelay1200 { animation-delay: 1.2s; }
+.animateDelay1400 { animation-delay: 1.4s; }
+
+// Container principal
 .container {
   display: flex;
   height: 100vh;
-  .leftColumn {
-    flex: 1;
-    background: url('/aurin.jpg') no-repeat center/cover;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 2rem;
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      color: #fff;
-    }
-    p {
-      font-size: 1.2rem;
-      color: #fff;
-    }
-  }
-
-  .rightColumn {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: var(--foreground);
-  }
+  background: #000000;
+  font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 100vw;
+  
   @media (max-width: 768px) {
-    .leftColumn {
-      display: none;
-    }
-    .rightColumn {
-      flex: 1;
-    }
+    flex-direction: column;
   }
 }
 
-.cl-internal-h2kts3{
-  border-radius: 100px;
-}
-
-.clerkCard , .cl-internal-1p733cp {
-  background: transparent !important;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
-}
-
-.clerkHeaderTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--foreground);
-  margin-bottom: 0.5rem;
-}
-
-.clerkHeaderSubtitle {
-  font-size: 1rem;
-  color: var(--foreground);
-  opacity: 0.7;
-  margin-bottom: 1.5rem;
-}
-
-.clerkButton {
-  background: var(--primary);
-  color: var(--foreground);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: opacity 0.2s;
-  &:hover {
-    opacity: 0.9;
-  }
-}
-
-.clerkButtonSecondary {
-  background: transparent;
-  color: var(--primary);
-  border: 1px solid var(--primary);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.2s;
-  &:hover {
-    background: var(--primary);
-    color: var(--foreground);
-  }
-}
-
-.clerkInput {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.5rem;
-  font-size: 1rem;
-  color: var(--foreground);
-  background: var(--background);
-  &:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-  }
-}
-
-.clerkLabel {
-  font-size: 0.875rem;
-  color: var(--foreground);
-  margin-bottom: 0.25rem;
-  font-weight: 500;
-}
-
-.clerkError {
-  color: #ef4444;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.clerkSocialButtons {
+// Columna izquierda - formulario
+.leftColumn {
+  flex: 1;
   display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-  button {
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.5rem;
-    cursor: pointer;
-    &:hover {
-      background: var(--primary);
-      color: var(--foreground);
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #000000;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  
+  .formContainer {
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+    z-index: 10;
+    
+    .formContent {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .title {
+      font-size: 2.5rem;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      font-weight: 300;
+      letter-spacing: -0.025em;
     }
   }
 }
 
-.clerkFooter {
-  margin-top: 1.5rem;
+// Estilos para el fondo animado
+.animatedBackground {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.backgroundLayer {
+  position: absolute;
+  inset: -50px;
+  width: calc(100% + 100px);
+  height: calc(100% + 100px);
+}
+
+.maskLayer {
+  width: 100%;
+  height: 100%;
+}
+
+.noiseLayer {
+  position: absolute;
+  inset: 0;
+}
+
+// Estilos para el overlay de carga
+.loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.loadingSpinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: white;
   text-align: center;
 }
 
-.clerkFooterLink {
-  color: var(--primary);
-  font-size: 0.875rem;
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #d3df48;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loadingText {
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Columna derecha - imagen hero
+.rightColumn {
+  flex: 1;
+  position: relative;
+  padding: 1rem;
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+  
+  .heroImage {
+    position: absolute;
+    inset: 1rem;
+    border-radius: 1.5rem;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  
+  .testimonialsContainer {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    padding: 0 2rem;
+    width: 100%;
+    justify-content: center;
+    
+    .testimonialCard {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      border-radius: 1.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1.25rem;
+      width: 16rem;
+      
+      .avatar {
+        height: 2.5rem;
+        width: 2.5rem;
+        object-fit: cover;
+        border-radius: 1rem;
+      }
+      
+      .content {
+        font-size: 0.875rem;
+        line-height: 1.4;
+        
+        .name {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          font-weight: 500;
+        }
+        
+        .handle {
+          color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .text {
+          margin-top: 0.25rem;
+          color: white;
+        }
+      }
+    }
+  }
+}
+
+// Estilos para inputs glassmorphism
+.glassInputWrapper {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+  
+  &:focus-within {
+    border-color: rgba(139, 92, 246, 0.7);
+    background: rgba(139, 92, 246, 0.1);
+  }
+}
+
+
+
+// Estilos específicos para Clerk
+.cl-internal-h2kts3 {
+  border-radius: 100px;
+}
+
+.clerkCard, .cl-internal-1p733cp {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  width: 100% !important;
+  max-width: none !important;
+  position: relative;
+  z-index: 10;
+}
+
+// Quitar box-shadow del contenedor principal de Clerk
+.cl-internal-4zauzq {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+// Ocultar logo y cambiar texto del título
+.cl-logoBox {
+  display: none !important;
+}
+
+.cl-headerTitle {
+  font-weight: bold !important;
+  
+  &::before {
+    content: "Sign in to Aurin" !important;
+    font-weight: bold !important;
+  }
+  
+  // Ocultar el texto original
+  span, div {
+    display: none !important;
+  }
+}
+
+// Redondear el favicon
+.cl-logoImage {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+// También aplicar a cualquier imagen de logo que pueda aparecer
+.cl-logoBox img,
+.cl-logoImage img {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+// Animaciones para elementos internos de Clerk
+.cl-formField {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(30px);
+  animation: fadeSlideIn 0.6s ease-out 0.4s both;
+}
+
+.cl-formButtonPrimary {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(30px);
+  animation: fadeSlideIn 0.6s ease-out 0.6s both;
+}
+
+.cl-headerTitle {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(30px);
+  animation: fadeSlideIn 0.6s ease-out 0.2s both;
+}
+
+.cl-headerSubtitle {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(30px);
+  animation: fadeSlideIn 0.6s ease-out 0.3s both;
+}
+
+.cl-footer {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(30px);
+  animation: fadeSlideIn 0.6s ease-out 0.7s both;
+}
+
+
+
+
+
+// Estilos para links
+.link {
+  color: white;
   text-decoration: none;
-  cursor: pointer; // Asegura interactividad
+  transition: all 0.2s ease;
+  
   &:hover {
     text-decoration: underline;
   }
 }
 
-.clerkLogo {
-  max-width: 100px;
-  margin-bottom: 1rem;
-}.clerkFooterLink {
-  color: var(--primary);
+// Estilos para labels
+.label {
   font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+
+
+
+
+
+
+// Estilos para links
+.link {
+  color: white;
   text-decoration: none;
-  cursor: pointer;
+  transition: all 0.2s ease;
+  
   &:hover {
     text-decoration: underline;
   }
 }
+
+// Estilos para labels
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+// Estilos para el contenedor de formulario
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+
+
+
+
+
+
+
+
+// Estilos para el contenedor de password
+.passwordContainer {
+  position: relative;
+  
+  .passwordToggle {
+    position: absolute;
+    inset-y: 0;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: color 0.2s ease;
+    font-size: 1.25rem;
+    
+    &:hover {
+      color: white;
+    }
+  }
+}
+
+// Estilos para el contenedor de testimonios responsivo
+.testimonialsResponsive {
+  @media (max-width: 1280px) {
+    .testimonialCard:nth-child(2) {
+      display: none;
+    }
+  }
+  
+  @media (max-width: 1536px) {
+    .testimonialCard:nth-child(3) {
+      display: none;
+    }
+  }
+}
+

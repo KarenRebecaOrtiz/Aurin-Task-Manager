@@ -140,11 +140,10 @@ function TasksPageContent() {
   // Si estamos en CreateTask o EditTask, no mostrar ningún elemento activo en el selector
   const selectedContainer = (isCreateTaskOpen || isEditTaskOpen) ? null : container;
 
-  // ProfileCard Modal state
-  const isProfileCardOpen = useTasksPageStore(useShallow(state => state.isProfileCardOpen));
-  const profileCardData = useTasksPageStore(useShallow(state => state.profileCardData));
-  const closeProfileCard = useTasksPageStore(useShallow(state => state.closeProfileCard));
-
+  // ProfileCard Modal state - Comentado temporalmente hasta que se implemente
+  // const isProfileCardOpen = useTasksPageStore(useShallow(state => state.isProfileCardOpen));
+  // const profileCardData = useTasksPageStore(useShallow(state => state.profileCardData));
+  // const closeProfileCard = useTasksPageStore(useShallow(state => state.closeProfileCard));
 
   // TasksTable aislado - no memoizar aquí para evitar re-renders del padre
 
@@ -164,12 +163,10 @@ function TasksPageContent() {
 
   // Event handlers - TODOS MEMOIZADOS
   const handleNotificationClick = useCallback(() => {
-    console.log('[TasksPage] handleNotificationClick called');
     // Handle notification click
   }, []);
 
   const handleContainerChange = useCallback((newContainer: Container) => {
-    console.log('[TasksPage] handleContainerChange called', newContainer);
     
     // Si estamos en CreateTask o EditTask, verificar cambios no guardados
     if (isCreateTaskOpen || isEditTaskOpen) {
@@ -200,74 +197,59 @@ function TasksPageContent() {
   }, [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges]);
 
   const handleOnboardingComplete = useCallback(() => {
-    console.log('[TasksPage] handleOnboardingComplete called');
     // Handle onboarding complete
   }, []);
 
   // Callbacks para TasksTable - MEMOIZADOS SIN DEPENDENCIAS
   const handleNewTaskOpen = useCallback(() => {
-    console.log('[TasksPage] handleNewTaskOpen called');
     const { openCreateTask } = useTasksPageStore.getState();
-    console.log('[TasksPage] openCreateTask function obtained');
     openCreateTask();
-    console.log('[TasksPage] openCreateTask executed');
   }, []);
 
   // Callbacks para TasksKanban - MEMOIZADOS SIN DEPENDENCIAS
   const handleTasksKanbanEditTask = useCallback((taskId: string) => {
-    console.log('[TasksPage] handleTasksKanbanEditTask called', taskId);
     const { openEditTask } = useTasksPageStore.getState();
     openEditTask(taskId);
   }, []);
 
   const handleTasksKanbanDeleteTask = useCallback((taskId: string) => {
-    console.log('[TasksPage] handleTasksKanbanDeleteTask called', taskId);
     const { openDeletePopup } = useTasksPageStore.getState();
-    console.log('[TasksPage] Calling openDeletePopup with:', { type: 'task', id: taskId });
     openDeletePopup('task', taskId);
-    console.log('[TasksPage] openDeletePopup called successfully');
   }, []);
 
   const handleTasksKanbanArchiveTableOpen = useCallback(() => {
-    console.log('[TasksPage] handleTasksKanbanArchiveTableOpen called');
     const { openArchiveTable } = useTasksPageStore.getState();
     openArchiveTable();
   }, []);
 
   const handleTasksKanbanViewChange = useCallback((view: TaskView) => {
-    console.log('[TasksPage] handleTasksKanbanViewChange called', view);
     const { setTaskView } = useTasksPageStore.getState();
     setTaskView(view);
   }, []);
 
   // Callbacks para ArchiveTable - MEMOIZADOS SIN DEPENDENCIAS
   // const handleArchiveTableEditTask = useCallback((taskId: string) => {
-  //   console.log('[TasksPage] handleArchiveTableEditTask called', taskId);
   //   const { openEditTask } = useTasksPageStore.getState();
   //   openEditTask(taskId);
   // }, []);
 
   // const handleArchiveTableViewChange = useCallback((view: TaskView) => {
-  //   console.log('[TasksPage] handleArchiveTableViewChange called', view);
   //   const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
   //   setTaskView(view);
   //   closeArchiveTable();
   // }, []);
 
   // const handleArchiveTableDeleteTask = useCallback((taskId: string) => {
-  //   console.log('[TasksPage] handleArchiveTableDeleteTask called', taskId);
   //   const { openDeletePopup } = useTasksPageStore.getState();
   //   openDeletePopup('task', taskId);
   // }, []);
 
   // const handleArchiveTableClose = useCallback(() => {
-  //   console.log('[TasksPage] handleArchiveTableClose called');
   //   const { closeArchiveTable } = useTasksPageStore.getState();
   //   closeArchiveTable();
   // }, []);
 
   // const handleTaskArchive = useCallback(async (task: Task, action: 'archive' | 'unarchive'): Promise<boolean> => {
-  //   console.log('[TasksPage] handleTaskArchive called', { taskId: task.id, action });
   //   if (!user?.id || !isAdmin) return false;
 
   //   try {
@@ -284,7 +266,6 @@ function TasksPageContent() {
   // }, [user?.id, isAdmin]);
 
   // const handleArchiveTableTaskUpdate = useCallback((task: Task) => {
-  //   console.log('[TasksPage] handleArchiveTableTaskUpdate called', task.id);
   //   if (!user?.id) return;
 
   //   try {
@@ -299,7 +280,6 @@ function TasksPageContent() {
   // }, [user?.id]);
 
   // const handleDataRefresh = useCallback(async () => {
-  //   console.log('[TasksPage] handleDataRefresh called');
   //   if (!user?.id) return;
 
   //   try {
@@ -317,20 +297,18 @@ function TasksPageContent() {
   //   }
   // }, [user?.id]);
 
-  const handleClientsTableCacheUpdate = useCallback((updatedClients: Client[]) => {
-    console.log('[TasksPage] handleClientsTableCacheUpdate called', updatedClients.length);
+  const handleClientsTableCacheUpdate = useCallback((_updatedClients: Client[]) => {
     // Actualizar el cache global si es necesario
-    console.log('[TasksPage] Clients cache updated:', updatedClients.length);
+    // TODO: Implementar actualización del cache cuando sea necesario
+    console.log('Cache update requested for clients:', _updatedClients.length);
   }, []);
 
   const handleShowSuccessAlert = useCallback((message: string) => {
-    console.log('[TasksPage] handleShowSuccessAlert called', message);
     const { showSuccess } = useTasksPageStore.getState();
     showSuccess(message);
   }, []);
 
   const handleShowFailAlert = useCallback((message: string) => {
-    console.log('[TasksPage] handleShowFailAlert called', message);
     const { showFail } = useTasksPageStore.getState();
     showFail(message);
   }, []);
@@ -359,7 +337,6 @@ function TasksPageContent() {
   const { getUnreadCountForUser, markConversationAsRead } = useMessageNotifications();
   
   const handleMessageSidebarOpen = useCallback((user: User) => {
-    console.log('[TasksPage] handleMessageSidebarOpen called', user.id);
     // Usar getState() para evitar re-renders reactivos
     const { openMessageSidebar } = useSidebarStateStore.getState();
     const conversationId = `conversation_${user.id}_${user?.id}`;
@@ -372,21 +349,25 @@ function TasksPageContent() {
   }, []);
 
   const handleCreateClientOpen = useCallback(() => {
-    console.log('[TasksPage] handleCreateClientOpen called');
     const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
     setClientSidebarData({ isEdit: false });
     setIsClientSidebarOpen(true);
   }, []);
 
   const handleEditClientOpen = useCallback((client: Client) => {
-    console.log('[TasksPage] handleEditClientOpen called', client.id);
     const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-    setClientSidebarData({ client, isEdit: true });
+    setClientSidebarData({
+      client: {
+        ...client,
+        projectCount: client.projects?.length || 0,
+        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
+      },
+      isEdit: true,
+    });
     setIsClientSidebarOpen(true);
   }, []);
 
   const handleDeleteClientOpen = useCallback((clientId: string) => {
-    console.log('[TasksPage] handleDeleteClientOpen called', clientId);
     const { setIsDeleteClientOpen } = useTasksPageStore.getState();
     setIsDeleteClientOpen(clientId);
   }, []);
@@ -588,28 +569,23 @@ function TasksPageContent() {
             <ArchiveTable
               // Pasa los handlers necesarios conectados al store
               onEditTaskOpen={(taskId: string) => {
-                console.log('[TasksPage] ArchiveTable onEditTaskOpen called', taskId);
                 const { openEditTask } = useTasksPageStore.getState();
                 openEditTask(taskId);
               }}
               onViewChange={(view: TaskView) => {
-                console.log('[TasksPage] ArchiveTable onViewChange called', view);
                 const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
                 setTaskView(view);
                 closeArchiveTable();
               }}
               onDeleteTaskOpen={(taskId: string) => {
-                console.log('[TasksPage] ArchiveTable onDeleteTaskOpen called', taskId);
                 const { openDeletePopup } = useTasksPageStore.getState();
                 openDeletePopup('task', taskId);
               }}
               onClose={() => {
-                console.log('[TasksPage] ArchiveTable onClose called');
                 const { closeArchiveTable } = useTasksPageStore.getState();
                 closeArchiveTable();
               }}
               onTaskArchive={async (task: unknown, action: 'archive' | 'unarchive') => {
-                console.log('[TasksPage] ArchiveTable onTaskArchive called', { task, action });
                 if (!user?.id) {
                   console.error('[TasksPage] User not authenticated');
                   return false;
@@ -643,7 +619,6 @@ function TasksPageContent() {
                 }
               }}
               onDataRefresh={() => {
-                console.log('[TasksPage] ArchiveTable onDataRefresh called');
                 // TODO: Implement data refresh functionality
               }}
             />
@@ -657,7 +632,6 @@ function TasksPageContent() {
                   onEditTaskOpen={handleTasksKanbanEditTask}
                   onMessageSidebarOpen={handleMessageSidebarOpen}
                   onOpenProfile={() => {
-                    console.log('[TasksPage] handleOpenProfile called');
                     // Profile functionality removed
                   }}
                   onViewChange={handleTasksKanbanViewChange}
@@ -718,14 +692,7 @@ function TasksPageContent() {
       <Footer />
       
       {/* ProfileCard Modal - Rendered as portal at page level */}
-      {isProfileCardOpen && profileCardData && (
-        <ProfileCard
-          userId={profileCardData.userId}
-          imageUrl={profileCardData.imageUrl}
-          onClose={closeProfileCard}
-        />
-      )}
-
+      {/* Removed to avoid duplication - now handled by ProfileCardRenderer */}
     </div>
   );
 
@@ -801,6 +768,27 @@ export default function TasksPage() {
       <OnlineUsersPortal maxVisible={5} />
       {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
       <SafariFirebaseAuthFix />
+      {/* ProfileCard Modal - Renderizado a nivel de página */}
+      <ProfileCardRenderer />
     </AuthProvider>
   );
 }
+
+// Componente independiente para ProfileCard
+const ProfileCardRenderer = () => {
+  const isProfileCardOpen = useTasksPageStore(useShallow(state => state.isProfileCardOpen));
+  const profileCardData = useTasksPageStore(useShallow(state => state.profileCardData));
+  const closeProfileCard = useTasksPageStore(useShallow(state => state.closeProfileCard));
+
+  if (!isProfileCardOpen || !profileCardData) {
+    return null;
+  }
+
+  return (
+    <ProfileCard
+      userId={profileCardData.userId}
+      imageUrl={profileCardData.imageUrl}
+      onClose={closeProfileCard}
+    />
+  );
+};

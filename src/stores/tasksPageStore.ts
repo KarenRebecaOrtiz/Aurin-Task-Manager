@@ -118,7 +118,7 @@ interface TasksPageState {
   closeConfirmExitPopup: () => void;
 }
 
-export const useTasksPageStore = create<TasksPageState>((set) => ({
+export const useTasksPageStore = create<TasksPageState>((set, get) => ({
   // Initial state
   container: 'tareas',
   taskView: 'table',

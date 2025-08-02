@@ -11,7 +11,7 @@ import { useUserSwiperSync } from "@/hooks/useUserSwiperSync";
 import { useTasksPageStore } from "@/stores/tasksPageStore";
 
 interface UserSwiperProps {
-  onOpenProfile: (user: { id: string; imageUrl: string }) => void;
+  onOpenProfile?: (user: { id: string; imageUrl: string }) => void;
   onMessageSidebarOpen: (user: User) => void;
   className?: string;
 }
@@ -31,7 +31,11 @@ const UserSwiper = ({ onOpenProfile, onMessageSidebarOpen, className }: UserSwip
   const { openProfileCard } = useTasksPageStore();
 
   const handleOpenProfile = (user: { id: string; imageUrl: string }) => {
-    openProfileCard(user.id, user.imageUrl);
+    if (onOpenProfile) {
+      onOpenProfile(user);
+    } else {
+      openProfileCard(user.id, user.imageUrl);
+    }
   };
 
   useEffect(() => {
