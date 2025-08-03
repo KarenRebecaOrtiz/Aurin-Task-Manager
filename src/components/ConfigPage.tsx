@@ -14,6 +14,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import { gsap } from 'gsap';
 import { WebsiteInput } from './ui/WebsiteInput';
 import { BiographyInput } from './ui/BiographyInput';
+import LocationDropdown from './ui/LocationDropdown';
 import styles from './ConfigPage.module.scss';
 
 // Componentes de iconos de redes sociales con soporte para dark mode
@@ -28,6 +29,14 @@ const SocialIcon: React.FC<{ icon: string; alt: string; className?: string }> = 
     />
   </div>
 );
+
+export interface PersonalLocation {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  radius: number;
+}
 
 interface Config {
   id: string;
@@ -51,6 +60,11 @@ interface Config {
   profilePhoto?: string;
   coverPhoto?: string;
   status?: string;
+  // Ubicaciones personalizadas
+  personalLocations?: {
+    home?: PersonalLocation;
+    secondary?: PersonalLocation;
+  };
   // Redes sociales
   socialLinks?: {
     github?: string;
@@ -69,6 +83,9 @@ interface ConfigForm extends Omit<Config, 'id'> {
   currentPassword?: string;
   newPassword?: string;
   confirmPassword?: string;
+  // Ubicaciones personalizadas para el formulario
+  homeLocation?: PersonalLocation;
+  secondaryLocation?: PersonalLocation;
   // Redes sociales individuales para el formulario
   github?: string;
   linkedin?: string;
@@ -292,6 +309,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             newPassword: '',
             confirmPassword: '',
             status: data.status || 'Disponible',
+            // Ubicaciones personalizadas
+            homeLocation: data.personalLocations?.home,
+            secondaryLocation: data.personalLocations?.secondary,
             // Redes sociales
             github: data.socialLinks?.github || '',
             linkedin: data.socialLinks?.linkedin || '',
@@ -328,6 +348,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             newPassword: '',
             confirmPassword: '',
             status: 'Disponible',
+            // Ubicaciones personalizadas
+            homeLocation: undefined,
+            secondaryLocation: undefined,
             // Redes sociales
             github: '',
             linkedin: '',
@@ -728,6 +751,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         profilePhoto: profilePhotoUrl,
         coverPhoto: coverPhotoUrl,
         status: formData.status || 'Disponible',
+        // Ubicaciones personalizadas
+        personalLocations: {
+          home: formData.homeLocation || null,
+          secondary: formData.secondaryLocation || null,
+        },
         // Redes sociales
         socialLinks: {
           github: formData.github || '',
@@ -781,6 +809,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         newPassword: '',
         confirmPassword: '',
         status: config.status || 'Disponible',
+        // Ubicaciones personalizadas
+        homeLocation: config.personalLocations?.home,
+        secondaryLocation: config.personalLocations?.secondary,
       };
     });
     setErrors({});
@@ -1186,6 +1217,43 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   />
                   {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.sectionContent}>
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>Ubicaciones Personalizadas</h2>
+                <div className={styles.stackDescription}>
+                  Configura tus ubicaciones para que el sistema pueda detectar automáticamente dónde te encuentras.
+                </div>
+              </div>
+              
+              <div className={styles.fieldGroup}>
+                <LocationDropdown
+                  value={formData.homeLocation}
+                  onChange={(location) => {
+                    setFormData((prev) => (prev ? { ...prev, homeLocation: location } : null));
+                  }}
+                  placeholder="Busca tu dirección de casa..."
+                  label="Casa"
+                  disabled={!isOwnProfile || !isEditing}
+                  required={false}
+                />
+              </div>
+              
+              <div className={styles.fieldGroup}>
+                <LocationDropdown
+                  value={formData.secondaryLocation}
+                  onChange={(location) => {
+                    setFormData((prev) => (prev ? { ...prev, secondaryLocation: location } : null));
+                  }}
+                  placeholder="Busca tu ubicación secundaria (café, coworking, etc.)..."
+                  label="Ubicación Secundaria"
+                  disabled={!isOwnProfile || !isEditing}
+                  required={false}
+                />
               </div>
             </div>
           </section>

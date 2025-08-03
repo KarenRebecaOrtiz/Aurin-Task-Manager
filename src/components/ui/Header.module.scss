@@ -682,105 +682,10 @@
     opacity: 0;
   }
   
-  .Clock {
-    /* ——— Dimensiones generales ——— */
-    width: 100%;
-    height: 100%;
-    padding: 5px 20px;
-  
-    /* ——— Capa base cristalizada ——— */
-    background: rgba(241, 245, 249, 0.7); /* Semi-transparent F1F5F9 */
-    border-radius: 16px;
-    backdrop-filter: blur(8px); /* Frosted glass effect */
-    -webkit-backdrop-filter: blur(8px); /* Safari support */
-    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for glass edge */
-  
-    /* ——— Sombras cristalizadas (inspiradas en el toggler) ——— */
-    box-shadow:
-      /* Outset: Neomorphic highlight and shadow */
-      -8px -8px 16px rgba(255, 255, 255, 0.9),
-      8px 8px 16px rgba(0, 0, 0, 0.08),
-      /* Inset: Toggler-like carved effect */
-      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
-      inset 4px 4px 8px rgba(209, 217, 230, 0.3); /* #d1d9e6 */
-  
-    /* ——— Layout interno ——— */
-    justify-content: center;
-    align-items: center;
-  
-    /* ——— Transiciones y micro-interacciones ——— */
-    transition:
-      box-shadow 0.3s ease,
-      background 0.3s ease,
-      transform 0.3s ease,
-      border-color 0.3s ease;
-  
-    /* ——— Hover: Levitar con brillo cristalino ——— */
-    &:hover {
-      transform: translateY(-2px) scale(1.02);
-      background: rgba(241, 245, 249, 0.85);
-      border-color: rgba(255, 255, 255, 0.4);
-      box-shadow:
-        /* Outset: Stronger highlight and shadow */
-        -10px -10px 20px rgba(255, 255, 255, 0.95),
-        10px 10px 20px rgba(0, 0, 0, 0.12),
-        /* Inset: Enhanced carved effect */
-        inset -6px -6px 12px rgba(255, 255, 255, 0.6),
-        inset 6px 6px 12px rgba(209, 217, 230, 0.4);
-    }
-  
-    /* ——— Active: Presionado con efecto hundido ——— */
-    &:active {
-      transform: translateY(0);
-      background: rgba(241, 245, 249, 0.6);
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow:
-        /* Outset: Reduced shadows */
-        -4px -4px 8px rgba(255, 255, 255, 0.85),
-        4px 4px 8px rgba(0, 0, 0, 0.06),
-        /* Inset: Stronger carved effect */
-        inset -2px -2px 4px rgba(255, 255, 255, 0.4),
-        inset 2px 2px 4px rgba(209, 217, 230, 0.2);
-    }
-    :global(body.dark) & {
-      background: rgba(30, 30, 30, 0.8);
-      border-color: rgba(255, 255, 255, 0.2);
-      box-shadow: 
-        -6px -6px 12px rgba(0, 0, 0, 0.3),
-        6px 6px 12px rgba(0, 0, 0, 0.2),
-        inset -4px -4px 8px rgba(255, 255, 255, 0.05),
-        inset 4px 4px 8px rgba(0, 0, 0, 0.1);
-  
-      &:hover {
-        transform: translateY(-2px) scale(1.05);
-        background: rgba(30, 30, 30, 0.9);
-        border-color: rgba(255, 255, 255, 0.3);
-        box-shadow: 
-          -8px -8px 16px rgba(0, 0, 0, 0.4),
-          8px 8px 16px rgba(0, 0, 0, 0.3),
-          inset -4px -4px 8px rgba(255, 255, 255, 0.08),
-          inset 4px 4px 8px rgba(0, 0, 0, 0.15);
-      }
-  
-      &:active {
-        transform: translateY(0) scale(0.98);
-        background: rgba(30, 30, 30, 0.6);
-        border-color: rgba(255, 255, 255, 0.05);
-        box-shadow: 
-          inset -4px -4px 8px rgba(255, 255, 255, 0.03),
-          inset 4px 4px 8px rgba(0, 0, 0, 0.3);
-      }
-  
-      svg {
-        filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
-      }
-    }
 
-  }
   :global(body.dark) .notificationContainer .notificationButton img{
     filter: invert(100%) brightness(100%);
   } 
-  :global(body.dark) .Clock,
   :global(body.dark) .notificationButton {
     background: rgba(30, 30, 30, 0.8);
     border-color: rgba(255, 255, 255, 0.2);
@@ -960,18 +865,9 @@
       gap: 5px;
     }
 
-    .Clock{
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      gap: 5px;
-    }
 
-    .ClockOfficeStatuHidden {
-      display: none!important;
-    }
+
+
 
     .AvatarMobile {
       display: block;
@@ -992,12 +888,7 @@
     }
   }
 
-  /* Ocultar ClockOfficeStatuHidden en pantallas menores a 920px */
-  @media screen and (max-width: 919px) {
-    .ClockOfficeStatuHidden {
-      display: none !important;
-    }
-  }
+
   
   /* ==============================================================
      PUNTITO VERDE PARA EmptyNotification

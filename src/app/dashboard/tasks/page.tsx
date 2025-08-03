@@ -30,6 +30,7 @@ import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
+import { usePersonalLocations } from '@/hooks/usePersonalLocations';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
 import { useMessageNotifications } from '@/hooks/useMessageNotifications';
@@ -119,6 +120,9 @@ function TasksPageContent() {
     isInitialLoadComplete,
     loadingProgress
   } = useSharedTasksState(user?.id);
+
+  // Obtener ubicaciones personalizadas del usuario
+  const { personalLocations } = usePersonalLocations();
   
 
   
@@ -476,6 +480,7 @@ function TasksPageContent() {
           isCreateTaskOpen={isCreateTaskOpen}
           isEditTaskOpen={isEditTaskOpen}
           hasUnsavedChanges={hasUnsavedChanges}
+          personalLocations={personalLocations}
         />
       </div>
       <OnboardingStepper onComplete={handleOnboardingComplete} />
