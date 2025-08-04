@@ -253,14 +253,33 @@
 }
 
 .viewButton {
+  // Subtle blue tint for view change button while maintaining glassmorphism
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  
+  &:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+  
+  &:active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+  
   :global(body.dark) & {
-    background: $zinc-800;
-    border: none;
-    box-shadow: none;
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.2);
     color: $white !important;
     
-    img[src*=".svg"] {
-      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    &:hover {
+      background: rgba(59, 130, 246, 0.18);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    &:active {
+      background: rgba(59, 130, 246, 0.22);
+      border-color: rgba(59, 130, 246, 0.35);
     }
   }
 }

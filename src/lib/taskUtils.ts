@@ -474,3 +474,133 @@ export async function initializeUnreadUpdates() {
     console.error('[taskUtils] Error initializing unread updates:', error);
   }
 }
+
+// Función para limpiar status corruptos (IDs random) en la base de datos
+export async function cleanCorruptStatuses() {
+  try {
+    console.log('[taskUtils] Starting cleanup of corrupt statuses...');
+    
+    const tasksQuery = query(collection(db, 'tasks'));
+    const snapshot = await getDocs(tasksQuery);
+    
+    const batch = writeBatch(db);
+    let cleanedCount = 0;
+    let totalTasks = 0;
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const status = data.status;
+      totalTasks++;
+      
+      // Detectar si es un ID random (base64-like string de ~20+ caracteres)
+      if (status && /^[A-Za-z0-9+/=]{20,}$/.test(status)) {
+        batch.update(docSnap.ref, { status: 'Por Iniciar' });
+        cleanedCount++;
+        console.log('[taskUtils] Cleaning status for task:', {
+          taskId: docSnap.id,
+          taskName: data.name || 'Unknown',
+          oldStatus: status,
+          newStatus: 'Por Iniciar'
+        });
+      }
+    });
+    
+    if (cleanedCount > 0) {
+      await batch.commit();
+      console.log(`[taskUtils] Cleanup complete: ${cleanedCount} corrupt statuses fixed out of ${totalTasks} total tasks`);
+    } else {
+      console.log(`[taskUtils] No corrupt statuses found in ${totalTasks} tasks`);
+    }
+    
+    return { cleanedCount, totalTasks };
+  } catch (error) {
+    console.error('[taskUtils] Error cleaning corrupt statuses:', error);
+    throw new Error(`Failed to clean corrupt statuses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Función para obtener estadísticas de status corruptos (sin modificar)
+export async function getCorruptStatusStats() {
+  try {
+    const tasksQuery = query(collection(db, 'tasks'));
+    const snapshot = await getDocs(tasksQuery);
+    
+    let totalTasks = 0;
+    let corruptTasks = 0;
+    const corruptExamples: Array<{ id: string; name: string; status: string }> = [];
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const status = data.status;
+      totalTasks++;
+      
+      if (status && /^[A-Za-z0-9+/=]{20,}$/.test(status)) {
+        corruptTasks++;
+        if (corruptExamples.length < 5) { // Solo mostrar primeros 5 ejemplos
+          corruptExamples.push({
+            id: docSnap.id,
+            name: data.name || 'Unknown',
+            status: status
+          });
+        }
+      }
+    });
+    
+    console.log('[taskUtils] Corrupt status statistics:', {
+      totalTasks,
+      corruptTasks,
+      percentage: totalTasks > 0 ? ((corruptTasks / totalTasks) * 100).toFixed(2) + '%' : '0%',
+      examples: corruptExamples
+    });
+    
+    return { totalTasks, corruptTasks, corruptExamples };
+  } catch (error) {
+    console.error('[taskUtils] Error getting corrupt status stats:', error);
+    throw new Error(`Failed to get corrupt status stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Función para limpiar status que son Objects en lugar de strings
+export async function cleanObjectStatuses() {
+  try {
+    console.log('[taskUtils] Starting cleanup of Object statuses...');
+    
+    const tasksQuery = query(collection(db, 'tasks'));
+    const snapshot = await getDocs(tasksQuery);
+    
+    const batch = writeBatch(db);
+    let cleanedCount = 0;
+    let totalTasks = 0;
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const status = data.status;
+      totalTasks++;
+      
+      // Detectar si el status es un Object en lugar de string
+      if (status && typeof status === 'object' && status !== null) {
+        batch.update(docSnap.ref, { status: 'Por Iniciar' });
+        cleanedCount++;
+        console.log('[taskUtils] Cleaning Object status for task:', {
+          taskId: docSnap.id,
+          taskName: data.name || 'Unknown',
+          oldStatus: status,
+          statusType: typeof status,
+          newStatus: 'Por Iniciar'
+        });
+      }
+    });
+    
+    if (cleanedCount > 0) {
+      await batch.commit();
+      console.log(`[taskUtils] Object status cleanup complete: ${cleanedCount} Object statuses fixed out of ${totalTasks} total tasks`);
+    } else {
+      console.log(`[taskUtils] No Object statuses found in ${totalTasks} tasks`);
+    }
+    
+    return { cleanedCount, totalTasks };
+  } catch (error) {
+    console.error('[taskUtils] Error cleaning Object statuses:', error);
+    throw new Error(`Failed to clean Object statuses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}

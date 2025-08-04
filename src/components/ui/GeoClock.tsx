@@ -47,18 +47,18 @@ const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: numbe
 };
 
 // Función para verificar si está dentro del horario de oficina (lunes a viernes)
-const isOfficeHours = (date: Date): boolean => {
-  const cdmxTime = new Date(
-    date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }),
-  );
-  const hours = cdmxTime.getHours();
-  const day = cdmxTime.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
-  // Solo lunes a viernes (1 a 5)
-  if (day === 0 || day === 6) {
-    return false;
-  }
-  return hours >= OFFICE_HOURS.start && hours < OFFICE_HOURS.end;
-};
+// const isOfficeHours = (date: Date): boolean => {
+//   const cdmxTime = new Date(
+//     date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }),
+//   );
+//   const hours = cdmxTime.getHours();
+//   const day = cdmxTime.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+//   // Solo lunes a viernes (1 a 5)
+//   if (day === 0 || day === 6) {
+//     return false;
+//   }
+//   return hours >= OFFICE_HOURS.start && hours < OFFICE_HOURS.end;
+// };
 
 interface GeoClockProps {
   personalLocations?: {
@@ -298,7 +298,7 @@ const GeoClock: React.FC<GeoClockProps> = ({ personalLocations }) => {
       window.removeEventListener('storage', onStorage);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [personalLocations?.home, personalLocations?.secondary]);
 
   const date = time
     ? time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })

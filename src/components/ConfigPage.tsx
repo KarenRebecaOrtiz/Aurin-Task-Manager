@@ -1,7 +1,6 @@
 'use client';
 
-import { useUser, useSession, useReverification } from '@clerk/nextjs';
-import { useClerk } from '@clerk/nextjs';
+import { useUser, useSession } from '@clerk/nextjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
@@ -151,10 +150,17 @@ const tableVariants = {
 const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessAlert, onShowFailAlert }) => {
   const { user: currentUser, isLoaded } = useUser();
   const { session: currentSession } = useSession();
-  const { signOut } = useClerk();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sessions, setSessions] = useState<any[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [passwordMatchError, setPasswordMatchError] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
   const [formData, setFormData] = useState<ConfigForm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -698,26 +704,85 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     }
   }, [currentUser, isLoaded, onShowFailAlert]);
 
-  // Función para revocar sesión con reverificación según tu documentación
-  const performRevokeWithReverification = useReverification(async (sessionId: string) => {
-    const sessionToRevoke = sessions.find((s) => s.id === sessionId);
-    if (!sessionToRevoke) throw new Error('Sesión no encontrada');
 
-    const isCurrent = sessionId === currentSession?.id;
-
-    if (isCurrent) {
-      await currentSession?.end(); // O signOut() para logout completo
-      if (onShowSuccessAlert) onShowSuccessAlert('Sesión actual cerrada');
-      window.location.href = '/sign-in'; // Redirigir a login
-    } else {
-      await sessionToRevoke.revoke(); // Revoca sesión remota
-      if (onShowSuccessAlert) onShowSuccessAlert('Sesión cerrada exitosamente');
-    }
-  });
 
   const handleRevokeSession = async (sessionId: string) => {
     const { openSessionRevokePopup } = useTasksPageStore.getState();
     openSessionRevokePopup(sessionId);
+  };
+
+  // Función para calcular fuerza de nueva contraseña (dinámica)
+  const calculatePasswordStrength = (password: string) => {
+    let strength = 0;
+    const errors: string[] = [];
+
+    if (password.length >= 8) strength += 1;
+    else errors.push('Debe tener al menos 8 caracteres');
+
+    if (/[A-Z]/.test(password)) strength += 1;
+    else errors.push('Debe incluir una mayúscula');
+
+    if (/[a-z]/.test(password)) strength += 1;
+    else errors.push('Debe incluir una minúscula');
+
+    if (/[0-9]/.test(password)) strength += 1;
+    else errors.push('Debe incluir un número');
+
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+    else errors.push('Debe incluir un carácter especial');
+
+    setPasswordStrength(Math.min(strength, 4)); // Max 4
+    setPasswordErrors(errors);
+  };
+
+  // Actualiza fuerza onChange de newPassword
+  useEffect(() => {
+    calculatePasswordStrength(newPassword);
+  }, [newPassword]);
+
+  // Submit para cambiar contraseña
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMatchError(true);
+      if (onShowFailAlert) onShowFailAlert('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (passwordStrength < 3) {
+      if (onShowFailAlert) onShowFailAlert('La nueva contraseña es débil. Corrige los errores.');
+      return;
+    }
+
+    try {
+      // Usar el método correcto de Clerk para cambiar contraseña
+      await currentUser?.updatePassword({
+        currentPassword,
+        newPassword,
+      });
+      if (onShowSuccessAlert) onShowSuccessAlert('Contraseña actualizada exitosamente');
+      setShowPasswordForm(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordErrors([]);
+      setPasswordMatchError(false);
+    } catch (error: unknown) {
+      console.error('[ConfigPage] Error updating password:', error);
+      let msg = 'Error al actualizar contraseña';
+      if (error && typeof error === 'object' && 'errors' in error && Array.isArray((error as { errors: unknown[] }).errors)) {
+        const errorCode = (error as { errors: { code: string }[] }).errors[0]?.code;
+        if (errorCode === 'form_password_incorrect') {
+          msg = 'Contraseña actual incorrecta';
+        } else if (errorCode === 'form_password_pwned') {
+          msg = 'Contraseña comprometida; elige una más segura';
+        } else if (errorCode === 'form_password_validation_failed') {
+          msg = 'No cumple requisitos de Clerk';
+        }
+      }
+      if (onShowFailAlert) onShowFailAlert(msg, error instanceof Error ? error.message : 'Error desconocido');
+    }
   };
 
 
@@ -1302,7 +1367,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   </div>
               </div>
               
-              <div className={styles.fieldGroup}>
+              <div className={styles.fieldGroup2}>
                 <div className={styles.fieldGroupHeader}>
                   <h3 className={styles.subsectionTitle}>Ubicación de Casa</h3>
                   <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
@@ -1324,7 +1389,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                 </div>
               </div>
               
-              <div className={styles.fieldGroup}>
+              <div className={styles.fieldGroup2}>
                 <div className={styles.fieldGroupHeader}>
                   <h3 className={styles.subsectionTitle}>Ubicación Alternativa</h3>
                   <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
@@ -1632,21 +1697,135 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                       </div>
                     </div>
                     <div className={styles.clerkSectionContent}>
-                      <div className={styles.clerkSectionItem}>
-                        <p className={styles.clerkPasswordDisplay}>
-                          {currentUser?.passwordEnabled ? '••••••••••' : 'No configurada'}
-                        </p>
-                        <button 
-                          className={styles.clerkButton}
-                          onClick={() => {
-                            if (onShowFailAlert) {
-                              onShowFailAlert('Función no disponible', 'Para cambiar contraseña, usa la página de configuración de Clerk');
-                            }
-                          }}
-                        >
-                          {currentUser?.passwordEnabled ? 'Actualizar contraseña' : 'Configurar contraseña'}
-                        </button>
-                      </div>
+                      {!showPasswordForm && (
+                        <div className={styles.clerkSectionItem}>
+                          <p className={styles.clerkPasswordDisplay}>
+                            {currentUser?.passwordEnabled ? '••••••••••' : 'No configurada'}
+                          </p>
+                          {currentUser?.passwordEnabled ? (
+                            <button 
+                              className={styles.clerkButton}
+                              onClick={() => setShowPasswordForm(!showPasswordForm)}
+                            >
+                              Cambiar contraseña
+                            </button>
+                          ) : (
+                            <button 
+                              className={styles.clerkButton}
+                              onClick={() => {
+                                if (onShowFailAlert) {
+                                  onShowFailAlert('Función no disponible', 'Para configurar contraseña, usa la página de Clerk');
+                                }
+                              }}
+                            >
+                              Configurar contraseña
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Form de cambio de contraseña */}
+                      <AnimatePresence>
+                        {showPasswordForm && currentUser?.passwordEnabled && (
+                          <motion.form 
+                            onSubmit={handleChangePassword} 
+                            className={styles.passwordForm}
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: "auto", scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ 
+                              duration: 0.3, 
+                              ease: "easeInOut",
+                              height: { duration: 0.4, ease: "easeInOut" }
+                            }}
+                          >
+                          {/* Botón cancelar en la parte superior */}
+                          <div className={styles.passwordFormHeader}>
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                setShowPasswordForm(false);
+                                setCurrentPassword('');
+                                setNewPassword('');
+                                setConfirmPassword('');
+                                setPasswordErrors([]);
+                                setPasswordMatchError(false);
+                              }} 
+                              className={styles.cancelButton}
+                            >
+                              ✕ Cancelar
+                            </button>
+                          </div>
+                          
+                          <div className={styles.fieldGroupColumn}>
+                            <label className={styles.label}>Contraseña Actual</label>
+                            <input
+                              type="password"
+                              value={currentPassword}
+                              onChange={(e) => setCurrentPassword(e.target.value)}
+                              className={styles.input}
+                              placeholder="Ingresa tu contraseña actual"
+                              required
+                            />
+                          </div>
+                          
+                          <div className={styles.fieldGroupColumn}>
+                            <label className={styles.label}>Nueva Contraseña</label>
+                            <input
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className={styles.input}
+                              placeholder="Ingresa tu nueva contraseña"
+                              required
+                            />
+                            {/* Indicadores dinámicos de fuerza */}
+                            {newPassword && (
+                              <div className={styles.passwordStrength}>
+                                <div 
+                                  className={styles.strengthBar} 
+                                  style={{ 
+                                    width: `${(passwordStrength / 4) * 100}%`, 
+                                    backgroundColor: passwordStrength < 2 ? '#ef4444' : passwordStrength < 3 ? '#f59e0b' : '#10b981' 
+                                  }} 
+                                />
+                                <ul className={styles.strengthTips}>
+                                  {passwordErrors.map((err, i) => (
+                                    <li key={i} className={styles.strengthTip}>
+                                      {err}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className={styles.fieldGroupColumn}>
+                            <label className={styles.label}>Confirmar Nueva Contraseña</label>
+                            <input
+                              type="password"
+                              value={confirmPassword}
+                              onChange={(e) => {
+                                setConfirmPassword(e.target.value);
+                                setPasswordMatchError(e.target.value !== newPassword && e.target.value !== '');
+                              }}
+                              className={styles.input}
+                              placeholder="Confirma tu nueva contraseña"
+                              required
+                            />
+                            {passwordMatchError && (
+                              <p className={styles.errorText}>Las contraseñas no coinciden</p>
+                            )}
+                          </div>
+                          
+                          <div className={styles.passwordFormActions}>
+                            <button type="submit" className={styles.editButton}>
+                              Guardar Nueva Contraseña
+                            </button>
+                          </div>
+                          </motion.form>
+                        )}
+                      </AnimatePresence>
                       {currentUser?.twoFactorEnabled && (
                         <div className={styles.clerkTwoFactorInfo}>
                           <p>🔐 Autenticación de dos factores habilitada</p>
@@ -1739,9 +1918,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                                   <button
                                     className={styles.clerkRevokeButton}
                                     onClick={() => handleRevokeSession(session.id)}
-                                    disabled={revokingSessionId === session.id}
                                   >
-                                    {revokingSessionId === session.id ? 'Cerrando...' : (isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión')}
+                                    {isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión'}
                                   </button>
                                 </div>
                               </div>

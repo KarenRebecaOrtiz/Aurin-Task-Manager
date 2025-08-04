@@ -26,7 +26,7 @@ type ClientsTableStore = ClientsTableState & ClientsTableActions;
 export const clientsTableStore = createStore<ClientsTableStore>()((set) => ({
   clients: [],
   filteredClients: [],
-  sortKey: 'name',
+  sortKey: '',
   sortDirection: 'asc',
   searchQuery: '',
   actionMenuOpenId: null,

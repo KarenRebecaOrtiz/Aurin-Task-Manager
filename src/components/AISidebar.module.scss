@@ -1,4 +1,5 @@
 @use '@/app/styles/variables' as *;
+@use 'sass:color';
 /* Importación de fuente Inter Tight */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 @import '@/app/styles/utils';
@@ -14,7 +15,7 @@
   border-bottom: 1px solid $border-color;
 
   &.dark {
-    border-bottom-color: darken($border-color, 50%);
+    border-bottom-color: color.adjust($border-color, $lightness: -50%);
   }
 }
 
@@ -68,7 +69,7 @@
   font-family: 'monospace';
 
   &.dark {
-    color: lighten($red-accent, 20%);
+    color: color.adjust($red-accent, $lightness: 20%);
   }
 }
 
@@ -90,7 +91,7 @@
   }
 
   &.dark .wave-bar {
-    background: lighten($red-accent, 20%);
+    background: color.adjust($red-accent, $lightness: 20%);
   }
 }
 

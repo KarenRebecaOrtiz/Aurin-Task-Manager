@@ -41,7 +41,7 @@ export const usePrivateMessageActions = ({
     isAudio = false,
     audioUrl?: string,
   ) => {
-    if (!senderId || isSending) return;
+    if (!senderId || isSending || !conversationId || conversationId === '') return;
     setIsSending(true);
 
     const clientId = messageData.clientId || crypto.randomUUID();
@@ -136,6 +136,10 @@ export const usePrivateMessageActions = ({
     if (!newText.trim()) {
       throw new Error('El mensaje no puede estar vacío.');
     }
+    
+    if (!conversationId || conversationId === '') {
+      throw new Error('Conversación no válida.');
+    }
 
     try {
       const encrypted = await encryptMessage(newText.trim());
@@ -169,8 +173,9 @@ export const usePrivateMessageActions = ({
         }
       }
 
-      // NO actualizar optimistamente aquí - como en ChatSidebar
-      // El listener de tiempo real se encargará de actualizar la UI
+      // OPTIMISTIC UPDATE: Actualizar optimistamente en el store
+      // Esto se maneja en MessageSidebar.tsx para mejor control
+      console.log('[PrivateMessageActions] Message edited successfully in Firestore:', messageId);
     } catch (error) {
       console.error('Error editing message:', error);
       throw new Error('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
@@ -178,6 +183,10 @@ export const usePrivateMessageActions = ({
   }, [conversationId, senderId, encryptMessage]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
+    if (!conversationId || conversationId === '') {
+      throw new Error('Conversación no válida.');
+    }
+    
     try {
       console.log('[PrivateMessageActions] Deleting message', messageId);
       const messageRef = doc(db, `conversations/${conversationId}/messages`, messageId);

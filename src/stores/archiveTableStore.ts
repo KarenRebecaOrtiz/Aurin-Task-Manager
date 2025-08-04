@@ -58,7 +58,7 @@ type ArchiveTableStore = ArchiveTableState & ArchiveTableActions;
 
 export const archiveTableStore = createStore<ArchiveTableStore>()((set) => ({
   filteredTasks: [],
-  sortKey: 'archivedAt',
+  sortKey: '',
   sortDirection: 'desc',
   searchQuery: '',
   priorityFilter: '',

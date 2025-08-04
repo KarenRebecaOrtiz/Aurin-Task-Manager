@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
-import { collection, doc, query, serverTimestamp, setDoc, getDoc, where, getDocs, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, query, serverTimestamp, setDoc, getDoc, where, getDocs, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 import { motion } from 'framer-motion';
@@ -56,7 +56,18 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const { userId: currentUserId } = useClerkAuth();
   
   // Usar el conversationId correcto generado dinámicamente
-  const correctConversationId = generateConversationId(currentUserId || '', receiver.id);
+  const correctConversationId = currentUserId && receiver.id 
+    ? generateConversationId(currentUserId, receiver.id)
+    : '';
+  
+  // Debug log para verificar que correctConversationId se genera correctamente
+  useEffect(() => {
+    if (currentUserId && receiver.id) {
+      console.log('[MessageSidebar] correctConversationId generated:', correctConversationId);
+    } else {
+      console.log('[MessageSidebar] Missing required data for conversationId:', { currentUserId, receiverId: receiver.id });
+    }
+  }, [currentUserId, receiver.id, correctConversationId]);
   
   // NUEVO: Usar el hook de cifrado existente
   const { encryptMessage, decryptMessage } = useEncryption(correctConversationId);
@@ -121,13 +132,22 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     
     const allCombined = [...combinedMessages, ...newOptimisticMessages];
     
-    return allCombined.sort((a, b) => {
+    const sortedMessages = allCombined.sort((a, b) => {
       const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : 
         (a.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
       const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : 
         (b.timestamp as { toDate?: () => Date })?.toDate?.()?.getTime() || 0;
       return bTime - aTime;
     });
+    
+    // Debug log para verificar que los mensajes se están combinando correctamente
+    if (optimisticArray.length > 0) {
+      console.log('[MessageSidebar] Optimistic messages count:', optimisticArray.length);
+      console.log('[MessageSidebar] Paginated messages count:', paginatedMessages.length);
+      console.log('[MessageSidebar] Combined messages count:', sortedMessages.length);
+    }
+    
+    return sortedMessages;
   }, [paginatedMessages, optimisticMessages]);
 
   // Agrupación por fecha con DatePill
@@ -268,33 +288,48 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
   // Marcar mensajes como leídos cuando se abre el sidebar
   useEffect(() => {
-    if (isOpen && currentUserId && receiver.id) {
+    if (isOpen && currentUserId && receiver.id && correctConversationId && correctConversationId !== '') {
       const markMessagesAsRead = async () => {
         try {
-          // Marcar todos los mensajes del otro usuario como leídos
+          // Filtra solo messages con id (de DB) y no pending
           const unreadMessages = allMessages.filter(message => 
-            message.senderId !== currentUserId && !message.read
+            message.id &&  // Asegura id existe
+            !message.isPending &&  // Excluye optimistas
+            message.senderId !== currentUserId && 
+            !message.read
           );
           
+          // Debug: Log mensajes sin id para debugging
+          const messagesWithoutId = allMessages.filter(message => !message.id);
+          if (messagesWithoutId.length > 0) {
+            console.warn('[MessageSidebar] Messages without id found:', messagesWithoutId.length, messagesWithoutId);
+          }
+          
           if (unreadMessages.length > 0) {
-            // Marcar cada mensaje como leído
-            const markPromises = unreadMessages.map(message => 
-              updateDoc(doc(db, `conversations/${correctConversationId}/messages`, message.id), {
-                read: true,
-              })
-            );
+            // Usa batch para efficiency (como ChatSidebar)
+            const batch = writeBatch(db);
+            unreadMessages.forEach(message => {
+              batch.update(
+                doc(db, `conversations/${correctConversationId}/messages`, message.id),
+                { read: true }
+              );
+            });
             
-            await Promise.all(markPromises);
+            await batch.commit();
             console.log('[MessageSidebar] Marked', unreadMessages.length, 'messages as read for conversation:', correctConversationId);
           }
         } catch (error) {
           console.error('[MessageSidebar] Error marking messages as read:', error);
+          // Alert user (parity con Chat)
+          alert('Error al marcar mensajes como leídos');
         }
       };
       
       markMessagesAsRead();
+    } else {
+      console.warn('[MessageSidebar] Skipping mark read: missing data', { currentUserId, receiverId: receiver.id, correctConversationId });
     }
-  }, [isOpen, currentUserId, receiver.id, allMessages, correctConversationId]);
+  }, [isOpen, allMessages, currentUserId, receiver.id, correctConversationId]);
 
   // Scroll detection for down arrow
   useEffect(() => {
@@ -328,7 +363,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
   // Initialize conversation and listen for real-time updates
   useEffect(() => {
-    if (!isOpen || !currentUserId || !receiver.id || !user?.id || !correctConversationId) {
+    if (!isOpen || !currentUserId || !receiver.id || !user?.id || !correctConversationId || correctConversationId === '') {
       return;
     }
 
@@ -447,15 +482,35 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
   const handleEditMessage = async (messageId: string, newText: string) => {
     try {
-      // NO actualizar optimistamente - como en ChatSidebar
-      // El listener de tiempo real se encargará de actualizar la UI
+      console.log('[MessageSidebar] Starting edit for message:', messageId, 'with text:', newText);
+      
+      // OPTIMISTIC UPDATE PRIMERO (como en ChatSidebar)
+      // Encontrar el mensaje en allMessages para obtener el clientId
+      const messageToEdit = allMessages.find(msg => msg.id === messageId);
+      if (messageToEdit) {
+        // Actualizar optimistamente en el store
+        updateOptimisticMessage(messageToEdit.clientId, { text: newText });
+        console.log('[MessageSidebar] Optimistic update applied for message:', messageId, 'clientId:', messageToEdit.clientId);
+      } else {
+        console.warn('[MessageSidebar] Message not found in allMessages for optimistic update:', messageId);
+      }
+      
+      // Luego actualizar en Firestore
       await editMessage(messageId, newText);
+      
       setEditingMessageId(null);
       setEditingText('');
       console.log('[MessageSidebar] Message edited successfully:', messageId);
     } catch (error) {
       console.error('[MessageSidebar] Error editing message:', error);
       alert('Error al editar el mensaje');
+      
+      // Rollback optimistic update si falla
+      const messageToEdit = allMessages.find(msg => msg.id === messageId);
+      if (messageToEdit) {
+        updateOptimisticMessage(messageToEdit.clientId, { text: editingText });
+        console.log('[MessageSidebar] Rollback optimistic update for message:', messageId);
+      }
     }
   };
 

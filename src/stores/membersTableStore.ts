@@ -29,7 +29,7 @@ type MembersTableStore = MembersTableState & MembersTableActions;
 export const membersTableStore = createStore<MembersTableStore>()((set, get) => ({
   // Solo estado de UI - los datos vienen de dataStore
   filteredUsers: [],
-  sortKey: 'fullName',
+  sortKey: '',
   sortDirection: 'asc',
   searchQuery: '',
   isLoadingUsers: true,

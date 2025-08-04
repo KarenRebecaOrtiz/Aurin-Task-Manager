@@ -10,8 +10,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Componente del mapa
 const LocationMap: React.FC<{ location: PersonalLocation }> = ({ location }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-  const markerInstance = useRef<any>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  const markerInstance = useRef<google.maps.Marker | null>(null);
+  const circleInstance = useRef<google.maps.Circle | null>(null);
   const { isLoaded } = useGoogleMaps();
 
   useEffect(() => {
@@ -70,9 +71,14 @@ const LocationMap: React.FC<{ location: PersonalLocation }> = ({ location }) => 
       radius: location.radius // 50 metros
     });
 
+    circleInstance.current = circle;
+
     return () => {
       if (markerInstance.current) {
         markerInstance.current.setMap(null);
+      }
+      if (circleInstance.current) {
+        circleInstance.current.setMap(null);
       }
       if (mapInstance.current) {
         mapInstance.current = null;
@@ -95,6 +101,13 @@ export interface LocationSuggestion {
     secondary_text: string;
   };
 }
+
+// Type guard para convertir QueryAutocompletePrediction a LocationSuggestion
+const convertToLocationSuggestion = (prediction: google.maps.places.QueryAutocompletePrediction): LocationSuggestion => ({
+  place_id: prediction.place_id || '',
+  description: prediction.description,
+  structured_formatting: undefined
+});
 
 interface LocationDropdownProps {
   value?: PersonalLocation;
@@ -164,9 +177,9 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
         componentRestrictions: { country: 'mx' },
       };
 
-      services.autocompleteService.getPlacePredictions(request, (predictions: any, status: any) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          setSuggestions(predictions);
+      services.autocompleteService.getPlacePredictions(request, (predictions: google.maps.places.QueryAutocompletePrediction[] | null, status: google.maps.places.PlacesServiceStatus) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setSuggestions(predictions.map(convertToLocationSuggestion));
         } else {
           setSuggestions([]);
         }
@@ -187,8 +200,8 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
       fields: ['name', 'formatted_address', 'geometry'],
     };
 
-    services.placesService.getDetails(request, (place: any, status: any) => {
-      if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+    services.placesService.getDetails(request, (place: google.maps.places.PlaceResult | null, status: google.maps.places.PlacesServiceStatus) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && place) {
         const location: PersonalLocation = {
           name: label === 'Casa' ? 'Casa' : value?.name || 'Ubicación Secundaria',
           address: place.formatted_address || suggestion.description,

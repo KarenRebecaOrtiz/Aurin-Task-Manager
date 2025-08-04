@@ -39,6 +39,12 @@ export const useEncryption = (uniqueSecret: string) => {
 
   // Encripta texto
   const encryptMessage = useCallback(async (text: string): Promise<{ encryptedData: string; nonce: string; tag: string; salt: string }> => {
+    // Si uniqueSecret está vacío, devolver valores por defecto
+    if (!uniqueSecret || uniqueSecret === '') {
+      console.warn('[useEncryption] Cannot encrypt: uniqueSecret is empty');
+      return { encryptedData: '', nonce: '', tag: '', salt: '' };
+    }
+    
     const salt = generateSalt();
     const key = await deriveKey(uniqueSecret, salt);
     const encoder = new TextEncoder();
@@ -66,6 +72,12 @@ export const useEncryption = (uniqueSecret: string) => {
 
   // Desencripta
   const decryptMessage = useCallback(async (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string }): Promise<string> => {
+    // Si uniqueSecret está vacío, devolver cadena vacía
+    if (!uniqueSecret || uniqueSecret === '') {
+      console.warn('[useEncryption] Cannot decrypt: uniqueSecret is empty');
+      return '';
+    }
+    
     const saltArray = Uint8Array.from(atob(encrypted.salt), (c) => c.charCodeAt(0));
     const key = await deriveKey(uniqueSecret, saltArray);
     const nonceArray = Uint8Array.from(atob(encrypted.nonce), (c) => c.charCodeAt(0));

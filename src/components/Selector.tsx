@@ -36,7 +36,7 @@ export default function Selector({
       indicatorRef.current.style.opacity = '0';
       indicatorRef.current.style.transform = 'scale(0)';
     }
-  }, []);
+  }, [selectedContainer]);
 
   useEffect(() => {
     const computeDark = () =>

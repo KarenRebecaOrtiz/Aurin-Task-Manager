@@ -159,27 +159,31 @@ export function useSharedTasksState(userId: string | undefined) {
     const unsubscribe = onSnapshot(
       tasksQuery,
       (snapshot) => {
-        const tasksData: Task[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          clientId: doc.data().clientId || '',
-          project: doc.data().project || '',
-          name: doc.data().name || '',
-          description: doc.data().description || '',
-          status: doc.data().status || '',
-          priority: doc.data().priority || '',
-          startDate: safeTimestampToISOOrNull(doc.data().startDate),
-          endDate: safeTimestampToISOOrNull(doc.data().endDate),
-          LeadedBy: doc.data().LeadedBy || [],
-          AssignedTo: doc.data().AssignedTo || [],
-          createdAt: safeTimestampToISO(doc.data().createdAt),
-          CreatedBy: doc.data().CreatedBy || '',
-          lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt),
-          hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
-          lastViewedBy: doc.data().lastViewedBy || {},
-          archived: doc.data().archived || false,
-          archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
-          archivedBy: doc.data().archivedBy || '',
-        }));
+        const tasksData: Task[] = snapshot.docs.map((doc) => {
+          const rawStatus = doc.data().status;
+          
+          return {
+            id: doc.id,
+            clientId: doc.data().clientId || '',
+            project: doc.data().project || '',
+            name: doc.data().name || '',
+            description: doc.data().description || '',
+            status: rawStatus || '',
+            priority: doc.data().priority || '',
+            startDate: safeTimestampToISOOrNull(doc.data().startDate),
+            endDate: safeTimestampToISOOrNull(doc.data().endDate),
+            LeadedBy: doc.data().LeadedBy || [],
+            AssignedTo: doc.data().AssignedTo || [],
+            createdAt: safeTimestampToISO(doc.data().createdAt),
+            CreatedBy: doc.data().CreatedBy || '',
+            lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt),
+            hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
+            lastViewedBy: doc.data().lastViewedBy || {},
+            archived: doc.data().archived || false,
+            archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
+            archivedBy: doc.data().archivedBy || '',
+          };
+        });
 
         setTasks(tasksData);
         setIsLoadingTasks(false);

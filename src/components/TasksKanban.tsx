@@ -726,9 +726,16 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     return Array.from(ids);
   }, []);
 
-  // Helper function to normalize status values
+  // Helper function to normalize status values with memoization
   const normalizeStatus = useCallback((status: string): string => {
-    if (!status) return 'Por Iniciar'; // Default for empty/null status
+    // Handle case where status is an Object instead of string
+    if (typeof status === 'object' && status !== null) {
+      status = String(status);
+    }
+    
+    if (!status) {
+      return 'Por Iniciar'; // Default for empty/null status
+    }
     
     const normalized = status.trim();
     
@@ -771,6 +778,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     
     return statusMap[normalized.toLowerCase()] || normalized;
   }, []);
+
+
 
   // Usar el hook de notificaciones simplificado
   const { getUnreadCount, markAsViewed } = useTaskNotifications();
@@ -1109,7 +1118,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     const task = effectiveTasks.find(t => t.id === taskId);
     if (task) {
       setActiveTask(task);
-      console.log('[TasksKanban] Drag started for task:', taskId);
     }
   };
 
@@ -1118,12 +1126,28 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     setActiveTask(null);
     
     if (!over || !isAdmin) {
-      console.log('[TasksKanban] Drag ended without valid drop or insufficient permissions');
       return;
     }
 
     const taskId = String(active.id);
-    const newStatus = over.id;
+    let targetColumnId = over.id as string;
+    
+    // Fix: Si over.id NO es una columna válida, buscar la columna padre
+    if (!statusColumns.some(col => col.id === targetColumnId)) {
+      // Si over es una tarea, usar la columna de esa tarea
+      const overTask = effectiveTasks.find(t => t.id === targetColumnId);
+      if (overTask) {
+        const normalized = normalizeStatus(overTask.status);
+        targetColumnId = normalized.toLowerCase().replace(/\s+/g, '-');
+      } else {
+        return;
+      }
+    }
+
+    // Verificar que tenemos una columna válida
+    if (!statusColumns.some(col => col.id === targetColumnId)) {
+      return;
+    }
     
     // Map column IDs back to proper status names
     const columnToStatusMap: { [key: string]: string } = {
@@ -1135,23 +1159,15 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
       'cancelado': 'Cancelado'
     };
     
-    const newStatusName = columnToStatusMap[newStatus] || newStatus;
+    const newStatusName = columnToStatusMap[targetColumnId];
     
-    console.log('[TasksKanban] Drag ended - attempting to update task status:', {
-      taskId,
-      newStatus: newStatusName,
-      columnId: newStatus
-    });
+    if (!newStatusName) {
+      return;
+    }
 
     try {
       const task = effectiveTasks.find(t => t.id === taskId);
       if (task && task.status !== newStatusName) {
-        console.log('[TasksKanban] Updating task status in Firestore:', {
-          taskId,
-          oldStatus: task.status,
-          newStatus: newStatusName
-        });
-
         // Importar funciones de Firestore
         const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore');
         const { updateTaskActivity } = await import('@/lib/taskUtils');
@@ -1162,13 +1178,15 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           lastActivity: serverTimestamp(),
         });
         
+        // Fix 2: Actualización optimista en dataStore para UI inmediata
+        const { updateTask } = useDataStore.getState();
+        updateTask(taskId, {
+          status: newStatusName,
+          lastActivity: new Date().toISOString(),
+        });
+        
         // Actualizar la actividad de la tarea
         await updateTaskActivity(taskId, 'status_change');
-        
-        console.log('[TasksKanban] Task status updated successfully via drag & drop:', {
-          taskId,
-          newStatus: newStatusName
-        });
       }
     } catch (error) {
       console.error('[TasksKanban] Error updating task status:', error);
@@ -1386,6 +1404,90 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           ) : null}
         </DragOverlay>
       </DndContext>
+      
+      {/* DEBUG: Botón temporal para limpiar status corruptos */}
+      {isAdmin && (
+        <div style={{ 
+          position: 'fixed', 
+          bottom: '20px', 
+          right: '20px', 
+          zIndex: 1000,
+          background: '#f0f0f0',
+          padding: '10px',
+          borderRadius: '8px',
+          border: '1px solid #ccc'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <button
+              onClick={async () => {
+                try {
+                  const { cleanCorruptStatuses, getCorruptStatusStats } = await import('@/lib/taskUtils');
+                  
+                  // Primero obtener estadísticas
+                  console.log('[DEBUG] Getting corrupt status stats...');
+                  const stats = await getCorruptStatusStats();
+                  
+                  if (stats.corruptTasks > 0) {
+                    // Preguntar confirmación
+                    if (confirm(`Encontré ${stats.corruptTasks} tareas con status corruptos. ¿Limpiarlas?`)) {
+                      console.log('[DEBUG] Starting cleanup...');
+                      const result = await cleanCorruptStatuses();
+                      alert(`Limpieza completada: ${result.cleanedCount} tareas corregidas`);
+                    }
+                  } else {
+                    alert('No se encontraron status corruptos');
+                  }
+                } catch (error) {
+                  console.error('[DEBUG] Error in cleanup:', error);
+                  alert('Error durante la limpieza: ' + error);
+                }
+              }}
+              style={{
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              🧹 Clean Corrupt Status
+            </button>
+            
+            <button
+              onClick={async () => {
+                try {
+                  const { cleanObjectStatuses } = await import('@/lib/taskUtils');
+                  
+                  console.log('[DEBUG] Starting Object status cleanup...');
+                  const result = await cleanObjectStatuses();
+                  
+                  if (result.cleanedCount > 0) {
+                    alert(`Object status cleanup: ${result.cleanedCount} tareas corregidas`);
+                  } else {
+                    alert('No se encontraron Object statuses');
+                  }
+                } catch (error) {
+                  console.error('[DEBUG] Error in Object status cleanup:', error);
+                  alert('Error durante la limpieza: ' + error);
+                }
+              }}
+              style={{
+                background: '#dc3545',
+                color: 'white',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              🔧 Clean Object Status
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

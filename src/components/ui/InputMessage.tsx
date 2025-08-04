@@ -136,7 +136,7 @@ export function InputMessage({
         editorElement.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
       }
     }
-  }, []);
+  }, [editorRef]);
 
   // Typewriter effect for reformulation
   const typeWriter = useCallback(

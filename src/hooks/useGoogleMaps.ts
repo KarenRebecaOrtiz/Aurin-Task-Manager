@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface GoogleMapsServices {
-  autocompleteService: any;
-  placesService: any;
+  autocompleteService: google.maps.places.AutocompleteService;
+  placesService: google.maps.places.PlacesService;
 }
 
 export const useGoogleMaps = () => {
@@ -42,11 +42,9 @@ export const useGoogleMaps = () => {
         }
       }
 
-      // Si no está cargado, cargar la API
       if (typeof window !== 'undefined' && !window.google) {
         setIsLoading(true);
         
-        // Verificar si ya hay un script cargándose
         const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
         if (existingScript) {
           // Esperar a que el script existente termine de cargar
