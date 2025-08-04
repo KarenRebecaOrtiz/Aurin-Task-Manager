@@ -15,7 +15,7 @@ import UserAvatar from './ui/UserAvatar';
 import LoadMoreButton from './ui/LoadMoreButton';
 import DatePill from './ui/DatePill';
 import PrivateMessageActionMenu from './ui/PrivateMessageActionMenu';
-import { usePrivateMessagePagination } from '@/hooks/usePrivateMessagePagination';
+import { usePrivateMessagePaginationSingleton } from '@/hooks/usePrivateMessagePaginationSingleton';
 import { useScrollDetection } from '@/hooks/useScrollDetection';
 import { usePrivateMessageActions } from '@/hooks/usePrivateMessageActions';
 import { useEncryption } from '@/hooks/useEncryption';
@@ -55,10 +55,11 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const { user } = useUser();
   const { userId: currentUserId } = useClerkAuth();
   
-  // Usar el conversationId correcto generado dinámicamente
-  const correctConversationId = currentUserId && receiver.id 
-    ? generateConversationId(currentUserId, receiver.id)
-    : '';
+  // Usar el conversationId correcto generado dinámicamente - MEMOIZADO
+  const correctConversationId = React.useMemo(() => {
+    if (!currentUserId || !receiver.id) return '';
+    return generateConversationId(currentUserId, receiver.id);
+  }, [currentUserId, receiver.id]);
   
   // Debug log para verificar que correctConversationId se genera correctamente
   useEffect(() => {
@@ -67,12 +68,12 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     } else {
       console.log('[MessageSidebar] Missing required data for conversationId:', { currentUserId, receiverId: receiver.id });
     }
-  }, [currentUserId, receiver.id, correctConversationId]);
+  }, [correctConversationId]);
   
-  // NUEVO: Usar el hook de cifrado existente
+  // NUEVO: Usar el hook de cifrado existente - MEMOIZADO
   const { encryptMessage, decryptMessage } = useEncryption(correctConversationId);
 
-  // NUEVO: Store para mensajes privados
+  // NUEVO: Store para mensajes privados - OPTIMIZADO
   const {
     optimisticMessages,
     addOptimisticMessage,
@@ -85,18 +86,18 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }))
   );
 
-  // NUEVO: paginación y scroll
+  // NUEVO: paginación y scroll - OPTIMIZADO
   const {
     messages: paginatedMessages,
     isLoadingMore,
     hasMore,
     loadMoreMessages,
-  } = usePrivateMessagePagination({
+  } = usePrivateMessagePaginationSingleton({
     conversationId: correctConversationId,
     decryptMessage,
   });
 
-  // NUEVO: acciones de mensaje unificadas
+  // NUEVO: acciones de mensaje unificadas - OPTIMIZADO
   const {
     sendMessage,
     deleteMessage,
@@ -113,7 +114,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     updateOptimisticMessage,
   });
 
-  // Combinar mensajes paginados con optimistas
+  // Combinar mensajes paginados con optimistas - OPTIMIZADO
   const allMessages = React.useMemo(() => {
     const optimisticArray = Object.values(optimisticMessages);
     
@@ -150,7 +151,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     return sortedMessages;
   }, [paginatedMessages, optimisticMessages]);
 
-  // Agrupación por fecha con DatePill
+  // Agrupación por fecha con DatePill - OPTIMIZADO
   const groupedMessages = React.useMemo(() => {
     const groups: { date: string; messages: Message[]; groupIndex: number }[] = [];
     let lastDate = '';
@@ -173,7 +174,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     return groups;
   }, [allMessages]);
 
-  // Scroll infinito
+  // Scroll infinito - OPTIMIZADO
   const { containerRef } = useScrollDetection({
     onLoadMore: loadMoreMessages,
     hasMore,
@@ -286,50 +287,61 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }
   }, [allMessages, paginatedMessages]);
 
-  // Marcar mensajes como leídos cuando se abre el sidebar
+  // Marcar mensajes como leídos cuando se abre el sidebar - OPTIMIZADO CON DEBOUNCE
+  const markMessagesAsReadRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
-    if (isOpen && currentUserId && receiver.id && correctConversationId && correctConversationId !== '') {
-      const markMessagesAsRead = async () => {
-        try {
-          // Filtra solo messages con id (de DB) y no pending
-          const unreadMessages = allMessages.filter(message => 
-            message.id &&  // Asegura id existe
-            !message.isPending &&  // Excluye optimistas
-            message.senderId !== currentUserId && 
-            !message.read
-          );
-          
-          // Debug: Log mensajes sin id para debugging
-          const messagesWithoutId = allMessages.filter(message => !message.id);
-          if (messagesWithoutId.length > 0) {
-            console.warn('[MessageSidebar] Messages without id found:', messagesWithoutId.length, messagesWithoutId);
-          }
-          
-          if (unreadMessages.length > 0) {
-            // Usa batch para efficiency (como ChatSidebar)
-            const batch = writeBatch(db);
-            unreadMessages.forEach(message => {
-              batch.update(
-                doc(db, `conversations/${correctConversationId}/messages`, message.id),
-                { read: true }
-              );
-            });
-            
-            await batch.commit();
-            console.log('[MessageSidebar] Marked', unreadMessages.length, 'messages as read for conversation:', correctConversationId);
-          }
-        } catch (error) {
-          console.error('[MessageSidebar] Error marking messages as read:', error);
-          // Alert user (parity con Chat)
-          alert('Error al marcar mensajes como leídos');
-        }
-      };
-      
-      markMessagesAsRead();
-    } else {
-      console.warn('[MessageSidebar] Skipping mark read: missing data', { currentUserId, receiverId: receiver.id, correctConversationId });
+    if (!isOpen || !currentUserId || !receiver.id || !correctConversationId || correctConversationId === '') {
+      return;
     }
-  }, [isOpen, allMessages, currentUserId, receiver.id, correctConversationId]);
+
+    // Debounce para evitar múltiples ejecuciones
+    if (markMessagesAsReadRef.current) {
+      clearTimeout(markMessagesAsReadRef.current);
+    }
+
+    markMessagesAsReadRef.current = setTimeout(async () => {
+      try {
+        // Filtra solo messages con id (de DB) y no pending
+        const unreadMessages = allMessages.filter(message => 
+          message.id &&  // Asegura id existe
+          !message.isPending &&  // Excluye optimistas
+          message.senderId !== currentUserId && 
+          !message.read
+        );
+        
+        // Debug: Log mensajes sin id para debugging
+        const messagesWithoutId = allMessages.filter(message => !message.id);
+        if (messagesWithoutId.length > 0) {
+          console.warn('[MessageSidebar] Messages without id found:', messagesWithoutId.length, messagesWithoutId);
+        }
+        
+        if (unreadMessages.length > 0) {
+          // Usa batch para efficiency (como ChatSidebar)
+          const batch = writeBatch(db);
+          unreadMessages.forEach(message => {
+            batch.update(
+              doc(db, `conversations/${correctConversationId}/messages`, message.id),
+              { read: true }
+            );
+          });
+          
+          await batch.commit();
+          console.log('[MessageSidebar] Marked', unreadMessages.length, 'messages as read for conversation:', correctConversationId);
+        }
+      } catch (error) {
+        console.error('[MessageSidebar] Error marking messages as read:', error);
+        // Alert user (parity con Chat)
+        alert('Error al marcar mensajes como leídos');
+      }
+    }, 1000); // 1 segundo debounce
+
+    return () => {
+      if (markMessagesAsReadRef.current) {
+        clearTimeout(markMessagesAsReadRef.current);
+      }
+    };
+  }, [isOpen, currentUserId, receiver.id, correctConversationId]); // Removido allMessages de dependencias
 
   // Scroll detection for down arrow
   useEffect(() => {
@@ -361,7 +373,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     };
   }, [isOpen, handleClose]);
 
-  // Initialize conversation and listen for real-time updates
+  // Initialize conversation and listen for real-time updates - OPTIMIZADO
   useEffect(() => {
     if (!isOpen || !currentUserId || !receiver.id || !user?.id || !correctConversationId || correctConversationId === '') {
       return;
@@ -374,12 +386,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         const conversationDoc = await getDoc(conversationRef);
 
         if (!conversationDoc.exists()) {
-          // Create conversation document
+          // Create conversation document with unreadCountByUser
           await setDoc(conversationRef, {
             participants: [currentUserId, receiver.id],
             createdAt: serverTimestamp(),
             lastMessage: null,
             lastViewedBy: {},
+            unreadCountByUser: { [currentUserId]: 0, [receiver.id]: 0 }, // Initialize unread counts
           });
         } else {
           // Update last viewed timestamp for current user

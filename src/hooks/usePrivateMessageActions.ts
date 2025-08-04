@@ -1,7 +1,8 @@
 // src/hooks/usePrivateMessageActions.ts
 import { useState, useCallback } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, Timestamp, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { notificationService } from '@/services/notificationService';
 import { Message } from '@/types';
 
 interface Conversation {
@@ -13,6 +14,7 @@ interface Conversation {
     senderId: string;
   };
   lastViewedBy?: { [userId: string]: Timestamp };
+  unreadCountByUser?: { [userId: string]: number };
 }
 
 interface UsePrivateMessageActionsProps {
@@ -87,14 +89,25 @@ export const usePrivateMessageActions = ({
         replyTo: messageData.replyTo || null,
       });
 
-      // Update conversation last message
-      await updateDoc(doc(db, 'conversations', conversationId), {
-        lastMessage: {
-          text: messageData.text,
-          timestamp: serverTimestamp(),
-          senderId,
-        },
-        [`lastViewedBy.${senderId}`]: serverTimestamp(),
+      // Update conversation last message and increment unread count transactionally
+      await runTransaction(db, async (transaction) => {
+        const conversationRef = doc(db, 'conversations', conversationId);
+        const convSnap = await transaction.get(conversationRef);
+        
+        if (convSnap.exists()) {
+          const convData = convSnap.data() as Conversation;
+          const currentUnread = convData.unreadCountByUser?.[receiverId] || 0;
+          
+          transaction.update(conversationRef, {
+            lastMessage: {
+              text: messageData.text,
+              timestamp: serverTimestamp(),
+              senderId,
+            },
+            [`lastViewedBy.${senderId}`]: serverTimestamp(),
+            [`unreadCountByUser.${receiverId}`]: currentUnread + 1, // Increment unread count
+          });
+        }
       });
 
       updateOptimisticMessage(clientId, {
@@ -103,21 +116,20 @@ export const usePrivateMessageActions = ({
         timestamp: Timestamp.now(),
       });
 
-      // Create notification
+      // Create notification using centralized service
       try {
         const notificationText = messageData.text 
           ? `${senderName} te escribió: ${messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text}`
           : `${senderName} te ha enviado un mensaje privado`;
           
-        await addDoc(collection(db, 'notifications'), {
+        await notificationService.createNotification({
           userId: senderId,
-          message: notificationText,
-          timestamp: Timestamp.now(),
-          read: false,
           recipientId: receiverId,
-          conversationId,
+          message: notificationText,
           type: 'private_message',
+          conversationId,
         });
+        console.log('[usePrivateMessageActions] Created private message notification');
       } catch (error) {
         console.error('[usePrivateMessageActions] Failed to create notification:', error);
       }

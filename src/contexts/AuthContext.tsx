@@ -3,6 +3,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useUser } from '@clerk/nextjs';
 
+// Importar managers para cleanup
+import { MessageNotificationsManager } from '@/hooks/useMessageNotificationsSingleton';
+import { PrivateMessagePaginationManager } from '@/hooks/usePrivateMessagePaginationSingleton';
+
 // Define the context shape
 interface AuthContextType {
   isAdmin: boolean;
@@ -73,6 +77,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     checkAdminStatus();
   }, [user?.id, user?.publicMetadata?.access, user]);
+
+  // Cleanup listeners cuando el usuario se desloguea
+  useEffect(() => {
+    return () => {
+      if (!user?.id) {
+        console.log('[AuthContext] User logged out, cleaning up listeners');
+        try {
+          // Cleanup de MessageNotificationsManager
+          const messageManager = MessageNotificationsManager.getInstance();
+          messageManager.cleanupAllListeners();
+          
+          // Cleanup de PrivateMessagePaginationManager
+          const paginationManager = PrivateMessagePaginationManager.getInstance();
+          paginationManager.cleanupAllListeners();
+        } catch (error) {
+          console.error('[AuthContext] Error cleaning up listeners:', error);
+        }
+      }
+    };
+  }, [user?.id]);
 
   return (
     <AuthContext.Provider value={{ isAdmin, isLoading, error }}>

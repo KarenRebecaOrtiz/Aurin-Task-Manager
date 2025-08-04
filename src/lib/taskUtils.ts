@@ -1,5 +1,6 @@
 import { db } from './firebase';
 import { collection, getDocs, query, deleteDoc, doc, addDoc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { notificationService } from '@/services/notificationService';
 
 interface Task {
   id: string;
@@ -339,23 +340,24 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
       console.log('[taskUtils] Deleted notification:', notifDoc.id);
     }
 
-    // Enviar notificaciones a los usuarios involucrados
+    // Enviar notificaciones a los usuarios involucrados usando el servicio centralizado
     const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
     if (task.CreatedBy) recipients.add(task.CreatedBy);
     recipients.delete(userId); // Excluir al usuario que realiza la acción
-    const now = Timestamp.now();
-    for (const recipientId of recipients) {
-      await addDoc(collection(db, 'notifications'), {
-        userId, // ID del usuario que realiza la acción
-        taskId,
-        message: `Usuario eliminó la tarea "${task.name}"`,
-        timestamp: now,
-        read: false,
-        recipientId, // ID del usuario que recibe la notificación
-        type: 'task_deleted', // Añadir tipo para mejor manejo
-        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
-      });
-      console.log('[taskUtils] Sent notification to:', recipientId);
+    
+    if (recipients.size > 0) {
+      try {
+        await notificationService.createNotificationsForRecipients({
+          userId,
+          message: `Usuario eliminó la tarea "${task.name}"`,
+          type: 'task_deleted',
+          taskId,
+        }, Array.from(recipients));
+        console.log('[taskUtils] Sent delete notifications to:', recipients.size, 'recipients');
+      } catch (error) {
+        console.error('[taskUtils] Error sending delete notifications:', error);
+        // No fallar la operación principal por errores de notificación
+      }
     }
 
     // Eliminar tarea
@@ -385,22 +387,24 @@ export async function archiveTask(taskId: string, userId: string, isAdmin: boole
       archivedBy: userId,
     });
 
-    // Enviar notificaciones a los usuarios involucrados
+    // Enviar notificaciones a los usuarios involucrados usando el servicio centralizado
     const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
     if (task.CreatedBy) recipients.add(task.CreatedBy);
     recipients.delete(userId); // Excluir al usuario que realiza la acción
-    for (const recipientId of recipients) {
-      await addDoc(collection(db, 'notifications'), {
-        userId, // ID del usuario que realiza la acción
-        taskId,
-        message: `Usuario archivó la tarea "${task.name}"`,
-        timestamp: now,
-        read: false,
-        recipientId, // ID del usuario que recibe la notificación
-        type: 'task_archived', // Añadir tipo para mejor manejo
-        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
-      });
-      console.log('[taskUtils] Sent archive notification to:', recipientId);
+    
+    if (recipients.size > 0) {
+      try {
+        await notificationService.createNotificationsForRecipients({
+          userId,
+          message: `Usuario archivó la tarea "${task.name}"`,
+          type: 'task_archived',
+          taskId,
+        }, Array.from(recipients));
+        console.log('[taskUtils] Sent archive notifications to:', recipients.size, 'recipients');
+      } catch (error) {
+        console.error('[taskUtils] Error sending archive notifications:', error);
+        // No fallar la operación principal por errores de notificación
+      }
     }
 
     console.log('[taskUtils] Task archived successfully:', taskId);
@@ -428,22 +432,24 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
       archivedBy: null,
     });
 
-    // Enviar notificaciones a los usuarios involucrados
+    // Enviar notificaciones a los usuarios involucrados usando el servicio centralizado
     const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
     if (task.CreatedBy) recipients.add(task.CreatedBy);
     recipients.delete(userId); // Excluir al usuario que realiza la acción
-    for (const recipientId of recipients) {
-      await addDoc(collection(db, 'notifications'), {
-        userId, // ID del usuario que realiza la acción
-        taskId,
-        message: `Usuario desarchivó la tarea "${task.name}"`,
-        timestamp: now,
-        read: false,
-        recipientId, // ID del usuario que recibe la notificación
-        type: 'task_unarchived', // Añadir tipo para mejor manejo
-        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
-      });
-      console.log('[taskUtils] Sent unarchive notification to:', recipientId);
+    
+    if (recipients.size > 0) {
+      try {
+        await notificationService.createNotificationsForRecipients({
+          userId,
+          message: `Usuario desarchivó la tarea "${task.name}"`,
+          type: 'task_unarchived',
+          taskId,
+        }, Array.from(recipients));
+        console.log('[taskUtils] Sent unarchive notifications to:', recipients.size, 'recipients');
+      } catch (error) {
+        console.error('[taskUtils] Error sending unarchive notifications:', error);
+        // No fallar la operación principal por errores de notificación
+      }
     }
 
     console.log('[taskUtils] Task unarchived successfully:', taskId);

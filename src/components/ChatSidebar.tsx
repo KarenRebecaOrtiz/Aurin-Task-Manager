@@ -31,6 +31,7 @@ import { useSidebarManager } from '@/hooks/useSidebarManager';
 import LoadMoreButton from './ui/LoadMoreButton';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useShallow } from 'zustand/react/shallow';
+import { notificationService } from '@/services/notificationService';
 
 
 interface Message {
@@ -794,19 +795,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
         if (task.CreatedBy) recipients.add(task.CreatedBy);
         recipients.delete(user.id);
-        for (const recipientId of recipients) {
+        if (recipients.size > 0) {
           try {
-            await addDoc(collection(db, 'notifications'), {
+            await notificationService.createNotificationsForRecipients({
               userId: user.id,
-              recipientId,
               message: `${user.fullName || 'Usuario'} ha cambiado el estado de la tarea "${task.name}" a "${status}"`,
-              timestamp: serverTimestamp(),
-              read: false,
               type: 'task_status_changed',
               taskId: task.id,
-            });
+            }, Array.from(recipients));
+            console.log('[ChatSidebar] Sent status change notifications to:', recipients.size, 'recipients');
           } catch (error) {
-            console.warn('[ChatSidebar] Error sending notification:', error);
+            console.warn('[ChatSidebar] Error sending status change notifications:', error);
           }
         }
         console.log('[ChatSidebar] Task status updated successfully:', {
@@ -863,16 +862,18 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text
           }`
         : `${user.firstName || 'Usuario'} compartió un archivo en "${task.name}"`;
-      for (const recipientId of recipients) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: user.id,
-          taskId: task.id,
-          message: notificationText,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-          type: 'group_message',
-        });
+      if (recipients.size > 0) {
+        try {
+          await notificationService.createNotificationsForRecipients({
+            userId: user.id,
+            message: notificationText,
+            type: 'group_message',
+            taskId: task.id,
+          }, Array.from(recipients));
+          console.log('[ChatSidebar] Sent message notifications to:', recipients.size, 'recipients');
+        } catch (error) {
+          console.warn('[ChatSidebar] Error sending message notifications:', error);
+        }
       }
       await updateTaskActivity(task.id, 'message');
       setReplyingTo(null);

@@ -303,6 +303,12 @@ export const usePrivateMessagePagination = ({
                 }
               } else {
                 console.log('[usePrivateMessagePagination] Adding new message:', newMessage.id);
+                // Verificar que no esté duplicado antes de agregar
+                const isDuplicate = prev.some(m => m.id === newMessage.id);
+                if (isDuplicate) {
+                  console.log('[usePrivateMessagePagination] Duplicate message detected, skipping:', newMessage.id);
+                  return prev;
+                }
                 return [newMessage, ...prev];
               }
             });

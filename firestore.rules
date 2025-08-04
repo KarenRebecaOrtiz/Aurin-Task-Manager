@@ -166,9 +166,11 @@ service cloud.firestore {
         allow create: if request.auth != null && 
                      request.resource.data.senderId == request.auth.uid;
         
-        // ✅ PERMITIR EDICIÓN/ELIMINACIÓN: Admins o el autor del mensaje
+        // ✅ PERMITIR EDICIÓN/ELIMINACIÓN: Admins, autor del mensaje, o participantes para marcar como leído
         allow update, delete: if request.auth != null && 
-                             (isAdmin() || resource.data.senderId == request.auth.uid);
+                             (isAdmin() || 
+                              resource.data.senderId == request.auth.uid ||
+                              request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants);
       }
       
       match /typing/{userId} {

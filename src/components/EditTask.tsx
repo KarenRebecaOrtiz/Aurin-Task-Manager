@@ -22,6 +22,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { z } from "zod";
+import { notificationService } from '@/services/notificationService';
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -531,15 +532,19 @@ const [currentStep, setCurrentStep] = useState(0);
 
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
       recipients.delete(user.id);
-      for (const recipientId of Array.from(recipients)) {
-        await addDoc(collection(db, "notifications"), {
-          userId: user.id,
-          taskId,
-          message: `${user.firstName || "Usuario"} actualizó la tarea ${values.basicInfo.name}`,
-          timestamp: Timestamp.now(),
-          read: false,
-          recipientId,
-        });
+      
+      if (recipients.size > 0) {
+        try {
+          await notificationService.createNotificationsForRecipients({
+            userId: user.id,
+            message: `${user.firstName || "Usuario"} actualizó la tarea ${values.basicInfo.name}`,
+            type: 'task_status_changed',
+            taskId,
+          }, Array.from(recipients));
+          console.log('[EditTask] Sent task update notifications to:', recipients.size, 'recipients');
+        } catch (error) {
+          console.warn('[EditTask] Error sending task update notifications:', error);
+        }
       }
 
       // Use parent alert handlers if available, otherwise use local state

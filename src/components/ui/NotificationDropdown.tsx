@@ -5,10 +5,12 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
 import styles from './NotificationDropdown.module.scss';
 import React from 'react';
-import { useNotifications } from '@/hooks/useNotifications';
+import { usePaginatedNotifications } from '@/hooks/usePaginatedNotifications';
 import { useTaskNotifications } from '@/hooks/useTaskNotifications';
+import { useReadStatus } from '@/hooks/useReadStatus';
 
 interface Notification {
   id: string;
@@ -20,6 +22,7 @@ interface Notification {
   recipientId: string;
   conversationId?: string;
   type?: string;
+  action?: 'open-task-chat' | 'open-private-chat' | 'show-notification';
 }
 
 interface NotificationDropdownProps {
@@ -39,8 +42,31 @@ export default React.memo(function NotificationDropdown({
   onNotificationClick,
   onClose,
 }: NotificationDropdownProps) {
-  const { notifications, markNotificationAsRead, deleteNotification, isLoading, error } = useNotifications();
+  const { 
+    notifications, 
+    markAsRead, 
+    deleteNotification, 
+    isLoading, 
+    error,
+    loadMore,
+    hasMore,
+    isLoadingMore
+  } = usePaginatedNotifications({ pageSize: 20, enableCache: false });
   const { markAsViewed } = useTaskNotifications();
+  const { markTaskAsViewed, markConversationAsViewed } = useReadStatus();
+  
+  // Infinite scroll setup
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0.1,
+    triggerOnce: false,
+  });
+
+  // Load more when intersection observer triggers
+  useEffect(() => {
+    if (inView && hasMore && !isLoadingMore) {
+      loadMore();
+    }
+  }, [inView, hasMore, isLoadingMore, loadMore]);
   
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -57,13 +83,67 @@ export default React.memo(function NotificationDropdown({
   const [isSwiping, setIsSwiping] = useState(false);
 
   const handleNotificationClick = useCallback(async (notification: Notification) => {
-    if (notification.taskId && ['task_deleted', 'task_archived', 'task_unarchived', 'task_status_changed', 'group_message'].includes(notification.type || '')) {
-      await markAsViewed(notification.taskId);
+    try {
+      // Marcar como leído primero
+      await markAsRead(notification.id);
+
+      // Manejar diferentes tipos de notificaciones
+      switch (notification.type) {
+        case 'group_message':
+        case 'task_status_changed':
+        case 'task_created':
+          if (notification.taskId) {
+            await markTaskAsViewed(notification.taskId);
+            // Abrir ChatSidebar para la tarea
+            onNotificationClick({
+              ...notification,
+              action: 'open-task-chat',
+              taskId: notification.taskId,
+            });
+          }
+          break;
+
+        case 'private_message':
+          if (notification.conversationId) {
+            await markConversationAsViewed(notification.conversationId);
+            // Abrir MessageSidebar para la conversación
+            onNotificationClick({
+              ...notification,
+              action: 'open-private-chat',
+              conversationId: notification.conversationId,
+            });
+          }
+          break;
+
+        case 'task_deleted':
+        case 'task_archived':
+        case 'task_unarchived':
+          if (notification.taskId) {
+            await markTaskAsViewed(notification.taskId);
+            // Solo mostrar notificación, no abrir sidebar
+            onNotificationClick({
+              ...notification,
+              action: 'show-notification',
+            });
+          }
+          break;
+
+        default:
+          // Para otros tipos, solo mostrar la notificación
+          onNotificationClick({
+            ...notification,
+            action: 'show-notification',
+          });
+          break;
+      }
+
+      onClose();
+    } catch (error) {
+      console.error('[NotificationDropdown] Error handling notification click:', error);
+      // Aún cerrar el dropdown aunque haya error
+      onClose();
     }
-    await markNotificationAsRead(notification.id);
-    onNotificationClick(notification);
-    onClose();
-  }, [markAsViewed, markNotificationAsRead, onNotificationClick, onClose]);
+  }, [markAsRead, markTaskAsViewed, markConversationAsViewed, onNotificationClick, onClose]);
 
   const handleDeleteNotification = useCallback(async (notificationId: string) => {
     await deleteNotification(notificationId);
@@ -179,12 +259,11 @@ export default React.memo(function NotificationDropdown({
     });
   }, []);
 
-  // Filtrar y ordenar notificaciones
+  // Filtrar notificaciones (ya no necesitamos slice porque usamos pagination)
   const filteredNotifications = useMemo(() => {
     if (!isVisible) return [];
     
     return notifications
-      .slice(0, 50)
       .filter(notification => notification.type !== 'task_archived')
       .sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
   }, [notifications, isVisible]);
@@ -319,6 +398,23 @@ export default React.memo(function NotificationDropdown({
             />
           ))}
         </AnimatePresence>
+        
+        {/* Infinite scroll trigger */}
+        {hasMore && (
+          <div ref={loadMoreRef} className={styles.loadMoreTrigger}>
+            {isLoadingMore && (
+              <motion.div 
+                className={styles.loadingMore}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className={styles.spinner}></div>
+                <span>Cargando más notificaciones...</span>
+              </motion.div>
+            )}
+          </div>
+        )}
       </div>
     );
   }, [filteredNotifications, NotificationItem]);
