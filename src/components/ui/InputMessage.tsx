@@ -351,7 +351,7 @@ export function InputMessage({
       finalMessageData.hasError = true;
       await onSendMessage(finalMessageData);
     }
-  }, [userId, editor, file, isSending, isProcessing, userFirstName, onSendMessage, currentConversationId, previewUrl, effectiveReplyingTo, onCancelReply, clearPersistedData]);
+  }, [userId, editor, file, isSending, isProcessing, userFirstName, onSendMessage, currentConversationId, previewUrl, effectiveReplyingTo, onCancelReply, clearPersistedData, adjustEditorHeight, editingMessageId, onCancelEdit, onEditMessage]);
 
   // Handle keydown for shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

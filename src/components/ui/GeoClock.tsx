@@ -12,10 +12,12 @@ const OFFICE_LOCATION = {
   lng: -99.2468563357126,
 };
 const OFFICE_RADIUS = 500; // Radio en metros
-const OFFICE_HOURS = {
-  start: 9, // 9:00 AM
-  end: 18, // 6:00 PM
-};
+
+
+// const OFFICE_HOURS = {
+//  start: 9, // 9:00 AM
+//  end: 18, // 6:00 PM
+// };
 
 // Fallback location (Cuernavaca as default)
 const FALLBACK_LOCATION = {
