@@ -137,8 +137,21 @@
 
 .title {
   @include typography($text-base, $font-weight-bold, $color-text-primary, left);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
   :global(body.dark) & {
     color: $color-text-dark-primary;
+  }
+}
+
+.titleIcon {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
   }
 }
 

@@ -407,7 +407,10 @@ export default React.memo(function NotificationDropdown({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.3 }}
               >
-                <div className={styles.title}>Notificaciones</div>
+                <div className={styles.title}>
+                  <Image src="/EmptyNotification.svg" alt="Notificaciones" width={20} height={20} className={styles.titleIcon} />
+                  Notificaciones
+                </div>
                 <div className={styles.dragBar} />
                 <motion.button 
                   className={styles.closeButton} 
@@ -485,7 +488,10 @@ export default React.memo(function NotificationDropdown({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.2 }}
           >
-            <div className={styles.title}>Notificaciones</div>
+            <div className={styles.title}>
+              <Image src="/EmptyNotification.svg" alt="Notificaciones" width={20} height={20} className={styles.titleIcon} />
+              Notificaciones
+            </div>
             <motion.button 
               className={styles.closeButton} 
               onClick={onClose} 

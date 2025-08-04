@@ -13,7 +13,7 @@
   margin-bottom: 8px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 
   :global(body.dark) & {
     color: $color-text-dark-primary;
@@ -22,6 +22,15 @@
   .required {
     color: #ef4444;
     font-weight: 600;
+  }
+}
+
+.labelIcon {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
   }
 }
 
@@ -103,14 +112,74 @@
   }
 }
 
+.locationNameContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .locationName {
   font-size: 14px;
   font-weight: 600;
   color: $color-text-primary;
-  margin-bottom: 4px;
+  flex: 1;
 
   :global(body.dark) & {
     color: $color-text-dark-primary;
+  }
+}
+
+.editNameButton {
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  :global(body.dark) & {
+    &:hover {
+      background: rgba(96, 165, 250, 0.1);
+    }
+  }
+}
+
+.nameEditContainer {
+  margin-bottom: 4px;
+}
+
+.nameInput {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  background: white;
+  color: $color-text-primary;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+
+  :global(body.dark) & {
+    background: #374151;
+    border-color: #60a5fa;
+    color: $color-text-dark-primary;
+
+    &:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
+    }
   }
 }
 
@@ -135,33 +204,7 @@
   }
 }
 
-.clearButton {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
 
-  &:hover {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  :global(body.dark) & {
-    color: #9ca3af;
-
-    &:hover {
-      color: #f87171;
-      background: rgba(248, 113, 113, 0.1);
-    }
-  }
-}
 
 .dropdown {
   position: absolute;
@@ -342,5 +385,51 @@
 
   :global(body.dark) & {
     color: #9ca3af;
+  }
+}
+
+.mapContainer {
+  margin-top: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: white;
+  pointer-events: none; // Deshabilita todas las interacciones
+
+  :global(body.dark) & {
+    border-color: #334155;
+    background: #1f2937;
+  }
+}
+
+.map {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  pointer-events: none; // Deshabilita todas las interacciones del mapa
+  
+  // Ocultar controles de Google Maps
+  :global(.gm-control-active) {
+    display: none !important;
+  }
+  
+  :global(.gm-style-moc) {
+    display: none !important;
+  }
+  
+  :global(.gm-style-mtc) {
+    display: none !important;
+  }
+  
+  :global(.gm-style-cc) {
+    display: none !important;
+  }
+  
+  :global(.gm-style-cc) {
+    display: none !important;
+  }
+  
+  :global(.gm-style) {
+    pointer-events: none !important;
   }
 } 

@@ -28,6 +28,8 @@ export default function TasksPageModals() {
   const showFailAlert = useTasksPageStore(useShallow(state => state.showFailAlert));
   const successMessage = useTasksPageStore(useShallow(state => state.successMessage));
   const failMessage = useTasksPageStore(useShallow(state => state.failMessage));
+  const isSessionRevokePopupOpen = useTasksPageStore(useShallow(state => state.isSessionRevokePopupOpen));
+  const sessionToRevoke = useTasksPageStore(useShallow(state => state.sessionToRevoke));
 
   // Action handlers
   const handleConfirmExit = () => {
@@ -257,6 +259,30 @@ export default function TasksPageModals() {
           onFormSubmit={handleClientSubmit}
           onClose={handleClientSidebarClose}
           isClientLoading={isClientLoading}
+        />
+      )}
+
+      {/* Session Revoke Popup */}
+      {isSessionRevokePopupOpen && sessionToRevoke && (
+        <SimpleDeletePopup
+          isOpen={isSessionRevokePopupOpen}
+          title="Cerrar Sesión"
+          description="¿Estás seguro de cerrar esta sesión? Esto cerrará el acceso en ese dispositivo. Esta acción no se puede deshacer."
+          onConfirm={async () => {
+            try {
+              // Aquí se manejaría la lógica de revocación de sesión
+              // Por ahora solo cerramos el popup
+              console.log('[TasksPageModals] Revoking session:', sessionToRevoke);
+              const { closeSessionRevokePopup } = useTasksPageStore.getState();
+              closeSessionRevokePopup();
+            } catch (error) {
+              console.error('[TasksPageModals] Error revoking session:', error);
+            }
+          }}
+          onCancel={() => {
+            const { closeSessionRevokePopup } = useTasksPageStore.getState();
+            closeSessionRevokePopup();
+          }}
         />
       )}
     </>

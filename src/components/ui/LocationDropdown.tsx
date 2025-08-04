@@ -7,6 +7,86 @@ import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import styles from './LocationDropdown.module.scss';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Componente del mapa
+const LocationMap: React.FC<{ location: PersonalLocation }> = ({ location }) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<any>(null);
+  const markerInstance = useRef<any>(null);
+  const { isLoaded } = useGoogleMaps();
+
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !window.google) return;
+
+    // Crear el mapa
+    const map = new window.google.maps.Map(mapRef.current, {
+      center: { lat: location.lat, lng: location.lng },
+      zoom: 15,
+      mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      zoomControl: false,
+      gestureHandling: 'none', // Deshabilita el zoom con gestos
+      draggable: false, // Deshabilita el arrastre del mapa
+      scrollwheel: false, // Deshabilita el zoom con scroll
+      disableDoubleClickZoom: true, // Deshabilita el zoom con doble clic
+      styles: [
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }]
+        }
+      ]
+    });
+
+    mapInstance.current = map;
+
+    // Crear el marcador
+    const marker = new window.google.maps.Marker({
+      position: { lat: location.lat, lng: location.lng },
+      map: map,
+      title: location.name,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: '#3b82f6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2
+      }
+    });
+
+    markerInstance.current = marker;
+
+    // Crear el círculo del radio
+    const circle = new window.google.maps.Circle({
+      strokeColor: '#3b82f6',
+      strokeOpacity: 0.3,
+      strokeWeight: 2,
+      fillColor: '#3b82f6',
+      fillOpacity: 0.1,
+      map: map,
+      center: { lat: location.lat, lng: location.lng },
+      radius: location.radius // 50 metros
+    });
+
+    return () => {
+      if (markerInstance.current) {
+        markerInstance.current.setMap(null);
+      }
+      if (mapInstance.current) {
+        mapInstance.current = null;
+      }
+    };
+  }, [location, isLoaded]);
+
+  return (
+    <div className={styles.mapContainer}>
+      <div ref={mapRef} className={styles.map} />
+    </div>
+  );
+};
+
 export interface LocationSuggestion {
   place_id: string;
   description: string;
@@ -38,8 +118,11 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingName, setEditingName] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const { isLoaded, isLoading: isGoogleLoading, services } = useGoogleMaps();
 
   useEffect(() => {
@@ -120,12 +203,31 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
     });
   }, [label, value, onChange, isLoaded, services]);
 
-  const handleClear = useCallback(() => {
-    setSearchTerm('');
-    onChange(undefined);
-    setSuggestions([]);
-    setIsOpen(false);
-  }, [onChange]);
+
+
+  const handleEditName = useCallback(() => {
+    if (value && label !== 'Casa') {
+      setIsEditingName(true);
+      setEditingName(value.name);
+    }
+  }, [value, label]);
+
+  const handleSaveName = useCallback(() => {
+    if (value && editingName.trim()) {
+      const updatedLocation = {
+        ...value,
+        name: editingName.trim()
+      };
+      onChange(updatedLocation);
+      setIsEditingName(false);
+      setEditingName('');
+    }
+  }, [value, editingName, onChange]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditingName(false);
+    setEditingName('');
+  }, []);
 
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
@@ -147,6 +249,12 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   return (
     <div className={`${styles.locationDropdown} ${className}`} ref={wrapperRef}>
       <div className={styles.label}>
+        {label === 'Casa' && (
+          <Image src="/house.svg" alt="Casa" width={16} height={16} className={styles.labelIcon} />
+        )}
+        {label === 'Ubicación Secundaria' && (
+          <Image src="/map-pin-plus-inside.svg" alt="Ubicación" width={16} height={16} className={styles.labelIcon} />
+        )}
         {label}
         {required && <span className={styles.required}>*</span>}
       </div>
@@ -165,21 +273,46 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
 
       {value && (
         <div className={styles.locationInfo}>
-          <div className={styles.locationName}>{value.name}</div>
+          {isEditingName ? (
+            <div className={styles.nameEditContainer}>
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                className={styles.nameInput}
+                placeholder="Nombre de la ubicación"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveName();
+                  } else if (e.key === 'Escape') {
+                    handleCancelEdit();
+                  }
+                }}
+                onBlur={handleSaveName}
+                autoFocus
+              />
+            </div>
+          ) : (
+            <div className={styles.locationNameContainer}>
+              <div className={styles.locationName}>{value.name}</div>
+              {!disabled && label !== 'Casa' && (
+                <button
+                  type="button"
+                  onClick={handleEditName}
+                  className={styles.editNameButton}
+                  title="Editar nombre"
+                >
+                  <Image src="/pencil.svg" alt="Editar" width={12} height={12} />
+                </button>
+              )}
+            </div>
+          )}
           <div className={styles.locationAddress}>{value.address}</div>
           <div className={styles.locationCoords}>
             {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
           </div>
-          {!disabled && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className={styles.clearButton}
-              title="Limpiar ubicación"
-            >
-              ×
-            </button>
-          )}
+          <LocationMap location={value} />
         </div>
       )}
 

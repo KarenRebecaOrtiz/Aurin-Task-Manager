@@ -300,7 +300,10 @@ export default React.memo(function ToDoDropdown({
                 transition={{ delay: 0.1, duration: 0.3 }}
               >
                 <div className={styles.dragBar} />
-                <div className={styles.title}>Mis To Do</div>
+                <div className={styles.title}>
+                  <Image src="/check-check.svg" alt="To Do" width={20} height={20} className={styles.titleIcon} />
+                  Mis To Do
+                </div>
                 <motion.button 
                   className={styles.closeButton} 
                   onClick={onClose} 
@@ -469,7 +472,10 @@ export default React.memo(function ToDoDropdown({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.2 }}
           >
-            <div className={styles.title}>Mis To Do</div>
+            <div className={styles.title}>
+              <Image src="/check-check.svg" alt="To Do" width={20} height={20} className={styles.titleIcon} />
+              Mis To Do
+            </div>
             <motion.button 
               className={styles.closeButton} 
               onClick={onClose} 

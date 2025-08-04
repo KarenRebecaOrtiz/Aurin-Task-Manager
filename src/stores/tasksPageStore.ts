@@ -34,6 +34,8 @@ interface TasksPageState {
   isConfirmExitOpen: boolean;
   isClientSidebarOpen: boolean;
   isClientLoading: boolean;
+  isSessionRevokePopupOpen: boolean;
+  sessionToRevoke: string | null;
   
   // Data states
   editTaskId: string | null;
@@ -76,6 +78,8 @@ interface TasksPageState {
   setIsConfirmExitOpen: (open: boolean) => void;
   setIsClientSidebarOpen: (open: boolean) => void;
   setIsClientLoading: (loading: boolean) => void;
+  setIsSessionRevokePopupOpen: (open: boolean) => void;
+  setSessionToRevoke: (sessionId: string | null) => void;
   
   // Data actions
   setEditTaskId: (id: string | null) => void;
@@ -116,6 +120,8 @@ interface TasksPageState {
   resetAlerts: () => void;
   openConfirmExitPopup: () => void;
   closeConfirmExitPopup: () => void;
+  openSessionRevokePopup: (sessionId: string) => void;
+  closeSessionRevokePopup: () => void;
 }
 
 export const useTasksPageStore = create<TasksPageState>((set) => ({
@@ -131,6 +137,8 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   isConfirmExitOpen: false,
   isClientSidebarOpen: false,
   isClientLoading: false,
+  isSessionRevokePopupOpen: false,
+  sessionToRevoke: null,
   
   editTaskId: null,
   deleteTarget: null,
@@ -165,6 +173,8 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   setIsConfirmExitOpen: (open) => set({ isConfirmExitOpen: open }),
   setIsClientSidebarOpen: (open) => set({ isClientSidebarOpen: open }),
   setIsClientLoading: (loading) => set({ isClientLoading: loading }),
+  setIsSessionRevokePopupOpen: (open) => set({ isSessionRevokePopupOpen: open }),
+  setSessionToRevoke: (sessionId) => set({ sessionToRevoke: sessionId }),
   
   setEditTaskId: (id) => set({ editTaskId: id }),
   setDeleteTarget: (target) => set({ deleteTarget: target }),
@@ -249,7 +259,17 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   }),
   
   openConfirmExitPopup: () => set({ isConfirmExitOpen: true }),
-  closeConfirmExitPopup: () => set({ isConfirmExitOpen: false })
+  closeConfirmExitPopup: () => set({ isConfirmExitOpen: false }),
+  
+  openSessionRevokePopup: (sessionId) => set({ 
+    sessionToRevoke: sessionId, 
+    isSessionRevokePopupOpen: true 
+  }),
+  
+  closeSessionRevokePopup: () => set({ 
+    sessionToRevoke: null, 
+    isSessionRevokePopupOpen: false 
+  })
 }));
 
 // Selectors for specific state slices

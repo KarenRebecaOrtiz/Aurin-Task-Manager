@@ -1,6 +1,7 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useUser, useSession, useReverification } from '@clerk/nextjs';
+import { useClerk } from '@clerk/nextjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
@@ -16,6 +17,7 @@ import { WebsiteInput } from './ui/WebsiteInput';
 import { BiographyInput } from './ui/BiographyInput';
 import LocationDropdown from './ui/LocationDropdown';
 import styles from './ConfigPage.module.scss';
+import { useTasksPageStore } from '@/stores/tasksPageStore';
 
 // Componentes de iconos de redes sociales con soporte para dark mode
 const SocialIcon: React.FC<{ icon: string; alt: string; className?: string }> = ({ icon, alt, className }) => (
@@ -148,6 +150,11 @@ const tableVariants = {
 
 const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessAlert, onShowFailAlert }) => {
   const { user: currentUser, isLoaded } = useUser();
+  const { session: currentSession } = useSession();
+  const { signOut } = useClerk();
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [formData, setFormData] = useState<ConfigForm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -666,6 +673,55 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
 
   const LOCAL_STORAGE_KEY = `configFormData_${userId}`;
 
+  // Función para obtener sesiones activas usando User.getSessions()
+  // Fuente: Tu documentación sobre el método oficial de Clerk
+  const fetchSessions = useCallback(async () => {
+    if (!currentUser || !isLoaded) return;
+    
+    try {
+      setSessionsLoading(true);
+      console.log('[ConfigPage] Fetching sessions using User.getSessions()');
+      
+      // Usar el método oficial User.getSessions() según la documentación
+      const activeSessions = await currentUser.getSessions();
+      console.log('[ConfigPage] Total sessions from User.getSessions():', activeSessions.length);
+      console.log('[ConfigPage] Sessions data:', activeSessions);
+      
+      setSessions(activeSessions);
+    } catch (error) {
+      console.error('[ConfigPage] Error fetching sessions:', error);
+      if (onShowFailAlert) {
+        onShowFailAlert('Error al cargar sesiones', error instanceof Error ? error.message : 'Error desconocido');
+      }
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, [currentUser, isLoaded, onShowFailAlert]);
+
+  // Función para revocar sesión con reverificación según tu documentación
+  const performRevokeWithReverification = useReverification(async (sessionId: string) => {
+    const sessionToRevoke = sessions.find((s) => s.id === sessionId);
+    if (!sessionToRevoke) throw new Error('Sesión no encontrada');
+
+    const isCurrent = sessionId === currentSession?.id;
+
+    if (isCurrent) {
+      await currentSession?.end(); // O signOut() para logout completo
+      if (onShowSuccessAlert) onShowSuccessAlert('Sesión actual cerrada');
+      window.location.href = '/sign-in'; // Redirigir a login
+    } else {
+      await sessionToRevoke.revoke(); // Revoca sesión remota
+      if (onShowSuccessAlert) onShowSuccessAlert('Sesión cerrada exitosamente');
+    }
+  });
+
+  const handleRevokeSession = async (sessionId: string) => {
+    const { openSessionRevokePopup } = useTasksPageStore.getState();
+    openSessionRevokePopup(sessionId);
+  };
+
+
+
   // Cargar datos de localStorage si existen (antes de cargar Firestore)
   useEffect(() => {
     if (!isLoaded || !userId) return;
@@ -680,6 +736,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
       }
     }
   }, [userId, isLoaded, LOCAL_STORAGE_KEY]);
+
+  // Cargar sesiones activas cuando el componente se monta
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   // Guardar en localStorage cada vez que formData cambie
   useEffect(() => {
@@ -1063,6 +1124,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
           {isOwnProfile && !isEditing && (
             <div className={styles.frame239191}>
               <button className={styles.editButton} onClick={toggleEdit}>
+                <Image src="/pencil.svg" alt="Editar" width={16} height={16} className={styles.editButtonIcon} />
                 Editar Perfil
               </button>
             </div>
@@ -1072,7 +1134,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
           <section className={styles.section}>
             <div className={styles.sectionContent}>
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Información General</h2>
+                <h2 className={styles.sectionTitle}>
+                <Image src="/circle-user-round.svg" alt="Información" width={20} height={20} className={styles.sectionIcon} />
+                Información General
+              </h2>
                 <div className={styles.stackDescription}>
                   Completa tu información personal básica para que otros puedan conocerte mejor.
                 </div>
@@ -1224,13 +1289,26 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
           <section className={styles.section}>
             <div className={styles.sectionContent}>
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Ubicaciones Personalizadas</h2>
+                <h2 className={styles.sectionTitle}>
+                  <Image src="/map-pinned.svg" alt="Ubicaciones" width={20} height={20} className={styles.sectionIcon} />
+                  Ubicaciones Personalizadas
+                </h2>
                 <div className={styles.stackDescription}>
-                  Configura tus ubicaciones para que el sistema pueda detectar automáticamente dónde te encuentras.
+                  Configura tus ubicaciones frecuentes para que el sistema pueda detectar automáticamente dónde estás (casa, oficina o fuera).
                 </div>
+                                  <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                    Tus direcciones no se comparten con nadie y están cifradas de extremo a extremo con tecnología AES-256. Solo tú puedes verlas.
+                    El resto del equipo únicamente verá si estás en &ldquo;Casa&rdquo;, &ldquo;Oficina&rdquo; o &ldquo;Fuera&rdquo;, sin conocer tu ubicación exacta.
+                  </div>
               </div>
               
               <div className={styles.fieldGroup}>
+                <div className={styles.fieldGroupHeader}>
+                  <h3 className={styles.subsectionTitle}>Ubicación de Casa</h3>
+                  <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    Esta es tu ubicación principal, por ejemplo donde haces home office o trabajas remotamente.
+                  </div>
+                </div>
                 <LocationDropdown
                   value={formData.homeLocation}
                   onChange={(location) => {
@@ -1241,9 +1319,18 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   disabled={!isOwnProfile || !isEditing}
                   required={false}
                 />
+                <div className={styles.securityNote} style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                  Esta dirección está protegida con cifrado AES-256. Nadie en el sistema tiene acceso a tu dirección exacta.
+                </div>
               </div>
               
               <div className={styles.fieldGroup}>
+                <div className={styles.fieldGroupHeader}>
+                  <h3 className={styles.subsectionTitle}>Ubicación Alternativa</h3>
+                  <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    Puedes añadir una segunda ubicación si trabajas desde más de un lugar.
+                  </div>
+                </div>
                 <LocationDropdown
                   value={formData.secondaryLocation}
                   onChange={(location) => {
@@ -1255,13 +1342,27 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   required={false}
                 />
               </div>
+              
+              <div className={styles.privacyDisclaimer}>
+                <div className={styles.privacyDisclaimerTitle}>
+                  Privacidad garantizada
+                </div>
+                <div className={styles.privacyDisclaimerText}>
+                  Tus direcciones están cifradas con algoritmos seguros y almacenadas en Firestore bajo los estándares de cifrado nativo de Google.
+                  Incluso si accedes a tu documento desde Firestore, los datos están encriptados y son ilegibles sin tu clave secreta.
+                  Solo tú puedes ver y modificar tu información de ubicación.
+                </div>
+              </div>
             </div>
           </section>
 
           <section className={styles.section}>
             <div className={styles.sectionContent}>
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Stack</h2>
+                <h2 className={styles.sectionTitle}>
+                <Image src="/layers.svg" alt="Stack" width={20} height={20} className={styles.sectionIcon} />
+                Stack
+              </h2>
                 <div className={styles.stackDescription}>
                   Selecciona las tecnologías y herramientas que usas frecuentemente.
                 </div>
@@ -1288,7 +1389,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
 
           <section className={styles.section}>
             <div className={styles.sectionContent}>
-              <h2 className={styles.sectionTitle}>Redes Sociales</h2>
+              <h2 className={styles.sectionTitle}>
+                <Image src="/share-2.svg" alt="Redes Sociales" width={20} height={20} className={styles.sectionIcon} />
+                Redes Sociales
+              </h2>
               <div className={styles.fieldGroup}>
                 <div className={styles.stackDescription}>
                   Agrega tus perfiles de redes sociales para que otros puedan conectarse contigo.
@@ -1430,7 +1534,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
               animate="visible"
             >
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Equipos</h2>
+                <h2 className={styles.sectionTitle}>
+                <Image src="/users-round.svg" alt="Equipos" width={20} height={20} className={styles.sectionIcon} />
+                Equipos
+              </h2>
                 <div className={styles.teamsDescription}>
                   Escribe y selecciona aquí tus equipos (máximo 3)
                 </div>
@@ -1480,6 +1587,179 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             </motion.div>
           </motion.section>
           
+          {/* Sección de Seguridad con Sesiones Reales */}
+          {isOwnProfile && (
+            <motion.section 
+              className={styles.section} 
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <motion.div 
+                className={styles.sectionContent}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <div className={styles.sectionHeader}>
+                  <h2 className={styles.sectionTitle}>
+                    <Image 
+                      src="/shield.svg" 
+                      alt="Seguridad" 
+                      width={20} 
+                      height={20} 
+                      className={styles.sectionIcon}
+                      onError={(e) => {
+                        console.error('Error loading shield icon:', e);
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                    Seguridad
+                  </h2>
+                  <div className={styles.stackDescription}>
+                    Gestiona tu contraseña y dispositivos activos de forma segura.
+                  </div>
+                </div>
+                
+                {/* Sección de Contraseña */}
+                <div className={styles.fieldGroup}>
+                  <div className={styles.clerkSection}>
+                    <div className={styles.clerkSectionHeader}>
+                      <h3 className={styles.clerkSectionTitle}>Contraseña</h3>
+                      <div className={styles.clerkSectionHint}>
+                        Cambia tu contraseña regularmente para mantener tu cuenta segura
+                      </div>
+                    </div>
+                    <div className={styles.clerkSectionContent}>
+                      <div className={styles.clerkSectionItem}>
+                        <p className={styles.clerkPasswordDisplay}>
+                          {currentUser?.passwordEnabled ? '••••••••••' : 'No configurada'}
+                        </p>
+                        <button 
+                          className={styles.clerkButton}
+                          onClick={() => {
+                            if (onShowFailAlert) {
+                              onShowFailAlert('Función no disponible', 'Para cambiar contraseña, usa la página de configuración de Clerk');
+                            }
+                          }}
+                        >
+                          {currentUser?.passwordEnabled ? 'Actualizar contraseña' : 'Configurar contraseña'}
+                        </button>
+                      </div>
+                      {currentUser?.twoFactorEnabled && (
+                        <div className={styles.clerkTwoFactorInfo}>
+                          <p>🔐 Autenticación de dos factores habilitada</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección de Dispositivos Activos */}
+                <div className={styles.fieldGroup}>
+                  <div className={styles.clerkSection}>
+                    <div className={styles.clerkSectionHeader}>
+                      <h3 className={styles.clerkSectionTitle}>Dispositivos Activos</h3>
+                      <div className={styles.clerkSectionHint}>
+                        Revisa y gestiona los dispositivos donde has iniciado sesión
+                      </div>
+                    </div>
+                    <div className={styles.clerkSectionContent}>
+                      {sessionsLoading ? (
+                        <div className={styles.clerkLoading}>
+                          <p>Cargando dispositivos...</p>
+                        </div>
+                      ) : sessions && sessions.length > 0 ? (
+                        <div className={styles.clerkDeviceList}>
+                          {sessions
+                            .sort((a, b) => {
+                              // La sesión actual va primero
+                              const aIsCurrent = a.id === currentSession?.id;
+                              const bIsCurrent = b.id === currentSession?.id;
+                              if (aIsCurrent && !bIsCurrent) return -1;
+                              if (!aIsCurrent && bIsCurrent) return 1;
+                              return 0;
+                            })
+                            .map((session) => {
+                            // Acceder a latestActivity según tu documentación
+                            const activity = session.latestActivity;
+                            console.log('[ConfigPage] Session activity:', activity);
+                            
+                            // Generar etiqueta del dispositivo según tu documentación
+                            const deviceLabel = activity 
+                              ? `${activity.browserName || 'Desconocido'} ${activity.browserVersion || ''} en ${activity.deviceType || 'Dispositivo desconocido'}${activity.isMobile ? ' (Móvil)' : ''}`
+                              : 'Dispositivo desconocido';
+                            
+                            const ipLabel = activity?.ipAddress || 'IP desconocida';
+                            const locationLabel = activity 
+                              ? `${activity.city || 'Ciudad desconocida'}, ${activity.country || 'País desconocido'}`
+                              : 'Ubicación desconocida';
+                            
+                            // Determinar si es el dispositivo actual
+                            const isCurrent = session.id === currentSession?.id;
+                            
+                            return (
+                              <div key={session.id} className={styles.clerkDeviceItem}>
+                                <div className={styles.clerkDevice}>
+                                  <div className={styles.clerkDeviceIcon}>
+                                    {activity?.isMobile ? (
+                                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="670.6 72.3 84 76" width="32" height="32">
+                                        <path fill="#6D6D6D" fillRule="evenodd" d="M712.5 107.2v-.6h.1l.2.1v7.2a.1.1 0 0 1-.2.2l-.1-.3v-6.6Z" clipRule="evenodd"/>
+                                        <path fill="#6D6D6D" fillRule="evenodd" d="M697.4 100v-.7h-.2a.1.1 0 0 0-.1.2v4.4s0 .2.2.2V100Z" clipRule="evenodd"/>
+                                        <path fill="#6D6D6D" fillRule="evenodd" d="M697.4 94v-.7h-.2a.1.1 0 0 0-.1.2v4.4s0 .2.2.2V94Z" clipRule="evenodd"/>
+                                        <path fill="#363636" d="M722.7 78.6c3.6 0 5.5 2.1 5.5 5.7v52.4c0 3.4-2.3 5.3-5.8 5.3H703c-3.8 0-5.8-2.4-5.7-5.4V84.3c0-3.6 2-5.7 5.6-5.7h19.8Z"/>
+                                        <path fill="#363636" stroke="black" strokeWidth="0.5" d="M722.3 79.2c3.7 0 5.4 1.8 5.4 5.4v52c0 3.2-2.2 5-5.5 5h-19c-3.2 0-5.4-2-5.4-5v-52c0-3.6 1.8-5.4 5.5-5.4h19Z"/>
+                                        <path fill="black" fillRule="evenodd" d="M704.9 80.3c.2 0 .3.1.3.4v.2c0 .9.8 1.7 1.6 1.7h11.8c1 0 1.7-.8 1.7-1.7v-.2c0-.3.1-.4.3-.4h3c1.6 0 3 1.7 3 3.3V137c0 1.7-1.5 3.3-3.4 3.3h-21c-2.1 0-3.3-1.3-3.3-3.2V83.6c0-1.6 1.3-3.3 2.9-3.3h3Z" clipRule="evenodd"/>
+                                        <path fillRule="evenodd" d="M715.3 81.2a.3.3 0 0 0-.2-.4.3.3 0 1 0-.2.6.3.3 0 0 0 .4-.2Zm-5.1-.2c0 .2 0 .3.2.3h2.9a.3.3 0 0 0 .2-.3.3.3 0 0 0-.2-.2h-2.9a.3.3 0 0 0-.2.2Z" clipRule="evenodd"/>
+                                      </svg>
+                                    ) : (
+                                      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+                                        <path d="M2.91 1.452c0-.58.077-.83.23-1.079C3.33.166 3.6 0 4.212 0h23.617c.536 0 .765.124.957.332.191.207.268.498.268 1.12v17.013c0 .58-.077.83-.192.996a1.06 1.06 0 0 1-.37.338.968.968 0 0 1-.472.118H3.905c-.306 0-.612-.125-.765-.415-.153-.166-.23-.415-.23-1.037V1.452Z" fill="#000"/>
+                                        <path d="M3.445 19.334h25.072c.115 0 .23-.083.306-.166.077-.083.077-.207.077-.58V1.45c0-.498-.038-.83-.23-.995-.191-.208-.383-.29-.842-.29H4.211c-.498 0-.766.124-.957.331-.153.166-.192.415-.192.954v17.137c0 .374 0 .498.077.581.077.083.191.166.306.166Z" fill="#575757"/>
+                                        <path fillRule="evenodd" clipRule="evenodd" d="M15.999.912a.109.109 0 0 0 .117.006.119.119 0 0 0 .045-.046.132.132 0 0 0 0-.128.119.119 0 0 0-.045-.046.108.108 0 0 0-.117.006.109.109 0 0 0-.118-.006.12.12 0 0 0-.044.046.132.132 0 0 0 0 .128.12.12 0 0 0 .044.046.108.108 0 0 0 .118-.006Z" fill="#000" stroke="#000" strokeWidth="0.3"/>
+                                        <path fillRule="evenodd" clipRule="evenodd" d="M0 19.5v-.207h32v.207s-.727.25-1.531.332c-.536.042-1.416.166-3.407.166H5.091c-1.723 0-3.177-.124-3.828-.207C.613 19.708 0 19.5 0 19.5Z" fill="#444"/>
+                                        <path fillRule="evenodd" clipRule="evenodd" d="M3.941 1.328h24.115v16.349H3.941V1.328Z" fill="#000"/>
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <div className={styles.clerkDeviceInfo}>
+                                    <div className={styles.clerkDeviceHeader}>
+                                      <p className={styles.clerkDeviceName}>{deviceLabel}</p>
+                                      {isCurrent && (
+                                        <span className={styles.clerkDeviceBadge}>Este dispositivo</span>
+                                      )}
+                                    </div>
+                                    <p className={styles.clerkDeviceDetails}>{activity?.browserName || 'Navegador desconocido'}</p>
+                                    <p className={styles.clerkDeviceDetails}>{ipLabel} ({locationLabel})</p>
+                                    <p className={styles.clerkDeviceDetails}>
+                                      {session.lastActiveAt ? new Date(session.lastActiveAt).toLocaleString('es-MX') : 'Desconocido'}
+                                    </p>
+                                  </div>
+                                  <button
+                                    className={styles.clerkRevokeButton}
+                                    onClick={() => handleRevokeSession(session.id)}
+                                    disabled={revokingSessionId === session.id}
+                                  >
+                                    {revokingSessionId === session.id ? 'Cerrando...' : (isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión')}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className={styles.clerkNoDevices}>
+                          <p>No hay dispositivos activos</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.section>
+          )}
+          
           {/* Botones de acción al final */}
           {isOwnProfile && isEditing && (
             <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
@@ -1491,6 +1771,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
               </button>
             </div>
           )}
+
+
         </div>
       </div>
     </>

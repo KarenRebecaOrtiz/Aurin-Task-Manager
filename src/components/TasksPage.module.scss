@@ -40,16 +40,18 @@
   width: 2.75rem;
 }
 
-// Viñetado superior
+// Viñetado superior - MUCHO MÁS PROMINENTE
 .vignetteTop {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100px;
+  height: 100px; // Duplicado de 100px a 200px
   background: linear-gradient(
     to bottom,
-    rgba($white, 0.8) 0%, // Blanco semi-opaco en la parte superior
+    rgba($white, 0.95) 0%, // Blanco más opaco (0.8 a 0.95)
+    rgba($white, 0.7) 30%, // Blanco semi-opaco en el medio
+    rgba($white, 0.3) 70%, // Blanco más transparente
     rgba($white, 0) 100% // Transparente hacia abajo
   );
   pointer-events: none; // Permite clics a través del viñetado
@@ -60,21 +62,27 @@
 :global(.dark) .vignetteTop {
   background: linear-gradient(
     to bottom,
-    rgba($color-bg-dark, 0.087) 0%, // Negro semi-opaco en la parte superior
-    rgba($white, 0) 100% // Transparente hacia abajo
+    rgba($color-bg-dark, 0.95) 0%, // Negro más opaco (0.087 a 0.95)
+    rgba($color-bg-dark, 0.7) 30%, // Negro semi-opaco en el medio
+    rgba($color-bg-dark, 0.3) 70%, // Negro más transparente
+    rgba($color-bg-dark, 0) 100% // Transparente hacia abajo
   );
 }
 
-// Viñetado inferior
+// Viñetado inferior - MUCHO MÁS PROMINENTE Y ALTO
 .vignetteBottom {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 100px; // Ajusta la altura según el efecto deseado
+  height: 300px; // Triplicado de 100px a 300px
   background: linear-gradient(
     to top,
-    rgba($white, 0.8) 0%, // Blanco semi-opaco en la parte inferior
+    rgba($white, 0.95) 0%, // Blanco más opaco (0.8 a 0.95)
+    rgba($white, 0.8) 20%, // Blanco semi-opaco
+    rgba($white, 0.6) 40%, // Blanco más transparente
+    rgba($white, 0.4) 60%, // Blanco aún más transparente
+    rgba($white, 0.2) 80%, // Blanco muy transparente
     rgba($white, 0) 100% // Transparente hacia arriba
   );
   pointer-events: none; // Permite clics a través del viñetado
