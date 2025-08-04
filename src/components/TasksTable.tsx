@@ -116,7 +116,7 @@ interface AvatarGroupProps {
 
 // Eliminar todo el sistema de caché global
 const cleanupTasksTableListeners = () => {
-  console.log('[TasksTable] Cleaning up all table listeners');
+  
 };
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds, users, currentUserId }) => {
@@ -417,11 +417,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   // Función para manejar el clic en una fila de tarea
   const handleTaskRowClick = async (task: Task) => {
-    console.log('🔥 [TasksTable] TASK CLICKED - Before sidebar open:', { 
-      taskId: task.id, 
-      currentFilteredTasksCount: filteredTasks.length,
-      effectiveTasksCount: effectiveTasks.length,
-      timestamp: new Date().toISOString() 
+
+    
+    // OPTIMISTIC UPDATE: Mark task as viewed BEFORE opening sidebar
+    markAsViewed(task.id).catch(error => {
+      console.error('[TasksTable] Error marking task as viewed:', error);
     });
     
     // Usar los action handlers configurados en TasksTableContainer
@@ -430,20 +430,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     // Buscar el nombre del cliente
     const clientName = clients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
     
-    // Abrir el sidebar inmediatamente (sin esperar markAsViewed)
+    // Abrir el sidebar inmediatamente (red dot ya desapareció)
     openChatSidebar(task, clientName);
     
-    console.log('🔥 [TasksTable] TASK CLICKED - After sidebar open:', { 
-      taskId: task.id,
-      currentFilteredTasksCount: filteredTasks.length,
-      effectiveTasksCount: effectiveTasks.length,
-      timestamp: new Date().toISOString() 
-    });
     
-    // Marcar la tarea como vista después de abrir el sidebar (no bloquear)
-    markAsViewed(task.id).catch(error => {
-      console.error('[TasksTable] Error marking task as viewed:', error);
-    });
   };
 
   useEffect(() => {
@@ -1046,7 +1036,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   // Cleanup all table listeners when component unmounts
   useEffect(() => {
     return () => {
-      console.log('[TasksTable] Cleaning up all table listeners on unmount');
+  
       cleanupTasksTableListeners();
       
       // Cleanup undo timeout

@@ -127,6 +127,48 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "AssignedTo",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "lastActivity",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "LeadedBy",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "lastActivity",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "CreatedBy",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastActivity",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -1,7 +1,7 @@
 // src/hooks/useMessageNotificationsSingleton.ts
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, query, where, onSnapshot, doc, getDocs, updateDoc, Timestamp, runTransaction } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, Timestamp, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Debug mode
@@ -135,17 +135,15 @@ export class MessageNotificationsManager {
           const otherParticipant = conversationData.participants.find(p => p !== userId);
           if (!otherParticipant) continue;
 
-          const lastViewed = conversationData.lastViewedBy?.[userId];
+                      // const lastViewed = conversationData.lastViewedBy?.[userId]; // Unused variable
           const lastMessage = conversationData.lastMessage;
           
           if (lastMessage && 
               lastMessage.senderId !== userId && 
               isValidTimestamp(lastMessage.timestamp)) {
             
-            const lastViewedValid = isValidTimestamp(lastViewed);
-            
-                      // Usar denormalized unread count en lugar de recalcular
-          const unreadCount = conversationData.unreadCountByUser?.[userId] || 0;
+            // Usar denormalized unread count en lugar de recalcular
+            const unreadCount = conversationData.unreadCountByUser?.[userId] || 0;
 
           if (unreadCount > 0) {
             notifications.push({
@@ -248,7 +246,7 @@ export class MessageNotificationsManager {
   // Método público para cleanup global (solo en logout/app close)
   cleanupAllListeners(): void {
     if (DEBUG) console.log('[MessageNotificationsManager] Cleaning up all listeners');
-    this.listeners.forEach((unsubscribe, userId) => {
+    this.listeners.forEach((unsubscribe) => {
       unsubscribe();
     });
     this.listeners.clear();

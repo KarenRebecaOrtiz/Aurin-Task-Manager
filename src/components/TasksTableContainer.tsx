@@ -70,7 +70,7 @@ const TasksTableContainer = ({
         // This will be handled by the sidebar store directly
       },
       openChatSidebar: (task: { id: string; clientId: string; project: string; name: string; description: string; status: string; priority: string; startDate: string | null; endDate: string | null; LeadedBy: string[]; AssignedTo: string[]; createdAt: string; CreatedBy?: string; lastActivity?: string; hasUnreadUpdates?: boolean; lastViewedBy?: { [userId: string]: string }; archived?: boolean; archivedAt?: string; archivedBy?: string }, clientName: string) => {
-        console.log('[TasksTableContainer] openChatSidebar called', task.id);
+    
         // Use the sidebar store directly
         const { openChatSidebar } = useSidebarStateStore.getState();
         openChatSidebar(task, clientName);

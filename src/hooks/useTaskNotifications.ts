@@ -1,8 +1,7 @@
-import { useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { markTaskAsViewed } from '@/lib/taskUtils';
-import { db } from '@/lib/firebase';
+import { useTaskNotificationsSingleton } from '@/hooks/useTaskNotificationsSingleton';
+import { useTaskNotificationsStore } from '@/stores/taskNotificationsStore';
 import { Timestamp } from 'firebase/firestore';
 
 interface Task {
@@ -11,58 +10,72 @@ interface Task {
   lastViewedBy?: { [userId: string]: Timestamp | string };
   lastActivity?: Timestamp | string;
   createdAt: Timestamp | string;
+  unreadCountByUser?: { [userId: string]: number };
 }
 
 export const useTaskNotifications = () => {
   const { user } = useUser();
   const userId = user?.id || '';
+  const { taskNotifications, markTaskAsViewed } = useTaskNotificationsSingleton();
+  const { unreadByTask, markTaskAsRead, setNotifications } = useTaskNotificationsStore();
+  const markAsViewedRef = useRef<Set<string>>(new Set());
 
-  const getUnreadCountForTask = useCallback((task: Task): number => {
+  // Subscribe to singleton and update store
+  useEffect(() => {
+    setNotifications(taskNotifications);
+  }, [taskNotifications, setNotifications]);
+
+  const getUnreadCount = useCallback((task: Task): number => {
     if (!userId) return 0;
-    if (!task.hasUnreadUpdates) return 0;
-
-    // Handle cases where lastViewedBy or lastActivity might be missing
-    if (!task.lastActivity || !task.lastViewedBy || !task.lastViewedBy[userId]) {
-      return 1; // Task has updates and user hasn't viewed it
+    
+    // Use denormalized counter if available (O(1) performance)
+    if (task.unreadCountByUser && task.unreadCountByUser[userId] !== undefined) {
+      return task.unreadCountByUser[userId];
     }
+    
+    // Fallback to store-based count
+    return unreadByTask[task.id] || 0;
+  }, [userId, unreadByTask]);
 
-    const lastActivityTime = task.lastActivity instanceof Timestamp
-      ? task.lastActivity.toMillis()
-      : new Date(task.lastActivity).getTime();
-    const lastViewedTime = task.lastViewedBy[userId] instanceof Timestamp
-      ? task.lastViewedBy[userId].toMillis()
-      : new Date(task.lastViewedBy[userId]).getTime();
-
-    return lastActivityTime > lastViewedTime ? 1 : 0;
-  }, [userId]);
-
-  const markTaskAsViewedForUser = useCallback(async (taskId: string) => {
+  const markAsViewed = useCallback(async (taskId: string) => {
     if (!userId) return;
+
+    // Prevent multiple calls for same task
+    const callKey = `${taskId}_${userId}`;
+    if (markAsViewedRef.current.has(callKey)) {
+      return;
+    }
+    
+    markAsViewedRef.current.add(callKey);
+    
     try {
-      await markTaskAsViewed(taskId, userId);
+      // OPTIMISTIC UPDATE: Mark task as read locally first
+      markTaskAsRead(taskId);
       
-      // Opcional: Actualizar notificaciones relacionadas en Firestore
-      const notificationsQuery = query(
-        collection(db, 'notifications'),
-        where('taskId', '==', taskId),
-        where('recipientId', '==', userId),
-        where('read', '==', false),
-        where('type', 'in', ['group_message', 'task_deleted', 'task_archived', 'task_unarchived', 'task_status_changed'])
-      );
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const updatePromises = notificationsSnapshot.docs.map((notifDoc) =>
-        updateDoc(doc(db, 'notifications', notifDoc.id), { read: true })
-      );
-      await Promise.all(updatePromises);
-      // Debug logging disabled to reduce console spam
+      // Then update Firestore with transaction (atomic)
+      await markTaskAsViewed(taskId);
+      
+      // Force store update after singleton update
+      setTimeout(() => {
+        const store = useTaskNotificationsStore.getState();
+        store.markTaskAsRead(taskId);
+      }, 100);
+      
     } catch (error) {
       console.error('[useTaskNotifications] Error marking task as viewed:', error);
+      // Rollback optimistic update on error
+      // The singleton will handle rollback automatically
+    } finally {
+      // Remove from tracking after delay
+      setTimeout(() => {
+        markAsViewedRef.current.delete(callKey);
+      }, 1000);
     }
-  }, [userId]);
+  }, [userId, markTaskAsRead, markTaskAsViewed]);
 
   return {
-    getUnreadCount: getUnreadCountForTask,
-    markAsViewed: markTaskAsViewedForUser,
+    getUnreadCount,
+    markAsViewed,
     userId,
   };
 }; 

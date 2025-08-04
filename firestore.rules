@@ -59,8 +59,14 @@ service cloud.firestore {
       
       // ✅ CORREGIDO: Admins pueden editar/eliminar cualquier tarea, 
       // usuarios pueden editar tareas donde están involucrados
+      // ✅ PERMITIR ACTUALIZACIÓN DE lastViewedBy y unreadCountByUser para usuarios involucrados
       allow update: if isAdmin() || 
-                    (request.auth != null && isInvolvedInTask(taskId));
+                    (request.auth != null && isInvolvedInTask(taskId)) ||
+                    (request.auth != null && 
+                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastViewedBy', 'unreadCountByUser', 'hasUnreadUpdates']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastViewedBy']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadCountByUser']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hasUnreadUpdates'])));
       
       // ✅ CORREGIDO: Solo admins pueden eliminar tareas
       allow delete: if isAdmin();

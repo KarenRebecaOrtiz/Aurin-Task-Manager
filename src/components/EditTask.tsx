@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
-import { doc, collection, setDoc, addDoc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, collection, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";

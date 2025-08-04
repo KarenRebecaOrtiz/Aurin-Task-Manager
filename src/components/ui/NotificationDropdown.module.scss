@@ -199,8 +199,8 @@
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
-  will-change: transform, box-shadow, background, border-color, opacity;
+  transition: none;
+  will-change: auto;
 
   &:last-child {
     margin-bottom: 0;
@@ -211,29 +211,15 @@
   }
 
   &.swiping {
-    transition: transform 0.2s ease;
+    transition: none;
   }
 
   &:hover {
-    transform: translateY(-2px) scale(1.001);
-    background: rgba(241, 245, 249, 0.85);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow:
-      -6px -6px 12px rgba(255, 255, 255, 0.95),
-      6px 6px 12px rgba(0, 0, 0, 0.1),
-      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
-      inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+    background: rgba(241, 245, 249, 0.9);
   }
 
   &:active {
-    transform: scale(0.98);
-    background: rgba(241, 245, 249, 0.6);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow:
-      inset -2px -2px 6px rgba(255, 255, 255, 0.4),
-      inset 2px 2px 6px rgba(209, 217, 230, 0.2),
-      -2px -2px 6px rgba(255, 255, 255, 0.85),
-      2px 2px 6px rgba(0, 0, 0, 0.04);
+    background: rgba(241, 245, 249, 0.7);
   }
 
   &.unread {
@@ -253,23 +239,11 @@
       inset 4px 4px 8px rgba(0, 0, 0, 0.1);
 
     &:hover {
-      transform: translateY(-2px) scale(1.05);
       background: rgba(30, 30, 30, 0.9);
-      border-color: rgba(255, 255, 255, 0.3);
-      box-shadow: 
-        -8px -8px 16px rgba(0, 0, 0, 0.4),
-        8px 8px 16px rgba(0, 0, 0, 0.3),
-        inset -4px -4px 8px rgba(255, 255, 255, 0.08),
-        inset 4px 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     &:active {
-      transform: translateY(0) scale(0.98);
-      background: rgba(30, 30, 30, 0.6);
-      border-color: rgba(255, 255, 255, 0.05);
-      box-shadow: 
-        inset -4px -4px 8px rgba(255, 255, 255, 0.03),
-        inset 4px 4px 8px rgba(0, 0, 0, 0.3);
+      background: rgba(30, 30, 30, 0.7);
     }
 
     svg {

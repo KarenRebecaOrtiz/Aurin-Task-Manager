@@ -6,6 +6,7 @@ import { useUser } from '@clerk/nextjs';
 // Importar managers para cleanup
 import { MessageNotificationsManager } from '@/hooks/useMessageNotificationsSingleton';
 import { PrivateMessagePaginationManager } from '@/hooks/usePrivateMessagePaginationSingleton';
+import { TaskNotificationsManager } from '@/hooks/useTaskNotificationsSingleton';
 
 // Define the context shape
 interface AuthContextType {
@@ -83,17 +84,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       if (!user?.id) {
         console.log('[AuthContext] User logged out, cleaning up listeners');
-        try {
-          // Cleanup de MessageNotificationsManager
-          const messageManager = MessageNotificationsManager.getInstance();
-          messageManager.cleanupAllListeners();
-          
-          // Cleanup de PrivateMessagePaginationManager
-          const paginationManager = PrivateMessagePaginationManager.getInstance();
-          paginationManager.cleanupAllListeners();
-        } catch (error) {
-          console.error('[AuthContext] Error cleaning up listeners:', error);
-        }
+                              try {
+                        // Cleanup de MessageNotificationsManager
+                        const messageManager = MessageNotificationsManager.getInstance();
+                        messageManager.cleanupAllListeners();
+                        
+                        // Cleanup de PrivateMessagePaginationManager
+                        const paginationManager = PrivateMessagePaginationManager.getInstance();
+                        paginationManager.cleanupAllListeners();
+                        
+                        // Cleanup de TaskNotificationsManager
+                        const taskManager = TaskNotificationsManager.getInstance();
+                        taskManager.cleanupAllListeners();
+                      } catch (error) {
+                        console.error('[AuthContext] Error cleaning up listeners:', error);
+                      }
       }
     };
   }, [user?.id]);

@@ -4,7 +4,7 @@ import { collection, addDoc, writeBatch, doc, Timestamp, updateDoc, deleteDoc } 
 interface QueueOperation {
   id: string;
   type: 'create' | 'create-batch' | 'mark-read' | 'delete';
-  data: any;
+  data: unknown;
   timestamp: number;
   attempts: number;
 }
@@ -79,7 +79,7 @@ export class NotificationQueue {
         await this.executeCreate(operation.data);
         break;
       case 'create-batch':
-        await this.executeCreateBatch(operation.data);
+        await this.executeCreateBatch(operation.data as unknown[]);
         break;
       case 'mark-read':
         await this.executeMarkRead(operation.data);
@@ -92,9 +92,9 @@ export class NotificationQueue {
     }
   }
 
-  private async executeCreate(data: any): Promise<void> {
+  private async executeCreate(data: unknown): Promise<void> {
     const docRef = await addDoc(collection(db, 'notifications'), {
-      ...data,
+      ...(data as Record<string, unknown>),
       timestamp: Timestamp.now(),
       read: false,
       expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
@@ -102,13 +102,13 @@ export class NotificationQueue {
     console.log(`[NotificationQueue] Created notification: ${docRef.id}`);
   }
 
-  private async executeCreateBatch(notifications: any[]): Promise<void> {
+  private async executeCreateBatch(notifications: unknown[]): Promise<void> {
     const batch = writeBatch(db);
     
     notifications.forEach(notification => {
       const docRef = doc(collection(db, 'notifications'));
       batch.set(docRef, {
-        ...notification,
+        ...(notification as Record<string, unknown>),
         timestamp: Timestamp.now(),
         read: false,
         expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
@@ -119,25 +119,25 @@ export class NotificationQueue {
     console.log(`[NotificationQueue] Created batch of ${notifications.length} notifications`);
   }
 
-  private async executeMarkRead(notificationId: string): Promise<void> {
-    await updateDoc(doc(db, 'notifications', notificationId), { read: true });
+  private async executeMarkRead(notificationId: unknown): Promise<void> {
+    await updateDoc(doc(db, 'notifications', notificationId as string), { read: true });
     console.log(`[NotificationQueue] Marked notification as read: ${notificationId}`);
   }
 
-  private async executeDelete(notificationId: string): Promise<void> {
-    await deleteDoc(doc(db, 'notifications', notificationId));
+  private async executeDelete(notificationId: unknown): Promise<void> {
+    await deleteDoc(doc(db, 'notifications', notificationId as string));
     console.log(`[NotificationQueue] Deleted notification: ${notificationId}`);
   }
 
   // Métodos públicos para facilitar el uso
-  async addCreateNotification(data: any) {
+  async addCreateNotification(data: unknown) {
     await this.add({
       type: 'create',
       data,
     });
   }
 
-  async addCreateBatchNotifications(notifications: any[]) {
+  async addCreateBatchNotifications(notifications: unknown[]) {
     await this.add({
       type: 'create-batch',
       data: notifications,

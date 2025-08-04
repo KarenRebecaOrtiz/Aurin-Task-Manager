@@ -25,7 +25,7 @@ interface UsePrivateMessagePaginationSingletonProps {
 }
 
 const DEFAULT_PAGE_SIZE = 20;
-const DEFAULT_CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+// const DEFAULT_CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutos - unused
 
 // Singleton para manejar listeners globalmente
 export class PrivateMessagePaginationManager {
@@ -320,7 +320,7 @@ export class PrivateMessagePaginationManager {
   // Método público para cleanup global (solo en logout/app close)
   cleanupAllListeners(): void {
     if (DEBUG) console.log('[PrivateMessagePaginationManager] Cleaning up all listeners');
-    this.listeners.forEach((unsubscribe, conversationId) => {
+    this.listeners.forEach((unsubscribe) => {
       unsubscribe();
     });
     this.listeners.clear();
@@ -334,15 +334,13 @@ export class PrivateMessagePaginationManager {
 // Hook que usa el singleton
 export const usePrivateMessagePaginationSingleton = ({
   conversationId,
-  pageSize = DEFAULT_PAGE_SIZE,
-  cacheTimeout = DEFAULT_CACHE_TIMEOUT,
   decryptMessage,
-}: UsePrivateMessagePaginationSingletonProps) => {
+}: Omit<UsePrivateMessagePaginationSingletonProps, 'pageSize' | 'cacheTimeout'>) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [hasMore] = useState(true);
+  const [error] = useState<string | null>(null);
   const managerRef = useRef<PrivateMessagePaginationManager | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 

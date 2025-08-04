@@ -201,19 +201,19 @@ const SortableItem: React.FC<SortableItemProps> = ({
         console.log('[TasksKanban] Task card clicked, opening chat for task:', task.id);
         
         try {
+          // OPTIMISTIC UPDATE: Mark task as viewed BEFORE opening sidebar
+          markAsViewed(task.id).catch(error => {
+            console.error('[TasksKanban] Error marking task as viewed:', error);
+          });
+          
           // Usar directamente el store en lugar de props para evitar re-renders
           const { openChatSidebar } = useSidebarStateStore.getState();
           
           // Buscar el nombre del cliente
           const clientName = clients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
           
-          // Abrir el sidebar inmediatamente (sin esperar markAsViewed)
+          // Abrir el sidebar inmediatamente (red dot ya desapareció)
           openChatSidebar(task, clientName);
-          
-          // Marcar la tarea como vista después de abrir el sidebar (no bloquear)
-          markAsViewed(task.id).catch(error => {
-            console.error('[TasksKanban] Error marking task as viewed:', error);
-          });
         } catch (error) {
           console.error('[TasksKanban] Error in onClick:', error);
         }
@@ -958,7 +958,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   // Cleanup all table listeners when component unmounts
   useEffect(() => {
     return () => {
-      console.log('[TasksKanban] Cleaning up all table listeners on unmount');
+  
       cleanupTasksKanbanListeners();
     };
   }, []);

@@ -34,6 +34,7 @@ import { usePersonalLocations } from '@/hooks/usePersonalLocations';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
 import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
+import { Notification } from '@/services/notificationService';
 
 // Función para generar conversationId de manera consistente (igual que en MessageSidebar)
 const generateConversationId = (userId1: string, userId2: string): string => {
@@ -174,9 +175,71 @@ function TasksPageContent() {
   }, [isInitialLoadComplete, contentReady]);
 
   // Event handlers - TODOS MEMOIZADOS
-  const handleNotificationClick = useCallback(() => {
-    // Handle notification click
-  }, []);
+  const handleNotificationClick = useCallback((notification: Notification & { action?: string }) => {
+    console.log('🔥 [TasksPage] NOTIFICATION CLICK RECEIVED:', {
+      action: notification.action,
+      taskId: notification.taskId,
+      conversationId: notification.conversationId,
+      type: notification.type
+    });
+    
+    try {
+      switch (notification.action) {
+        case 'open-task-chat':
+          if (notification.taskId) {
+            console.log('🔥 [TasksPage] OPENING TASK CHAT for taskId:', notification.taskId);
+            // Buscar la tarea y abrir el ChatSidebar
+            const task = tasks.find(t => t.id === notification.taskId);
+            console.log('🔥 [TasksPage] Found task:', task ? 'YES' : 'NO', 'taskId:', notification.taskId);
+            if (task) {
+              const { openChatSidebar } = useSidebarStateStore.getState();
+              const clientName = clients.find(c => c.id === task.clientId)?.name || 'Cliente';
+              console.log('🔥 [TasksPage] Opening ChatSidebar with task:', task.name, 'client:', clientName);
+              openChatSidebar(task, clientName);
+            } else {
+              console.error('🔥 [TasksPage] ERROR: Task not found for taskId:', notification.taskId);
+            }
+          }
+          break;
+          
+        case 'open-private-chat':
+          if (notification.conversationId) {
+            console.log('🔥 [TasksPage] OPENING PRIVATE CHAT for conversationId:', notification.conversationId);
+            const { openMessageSidebar } = useSidebarStateStore.getState();
+            
+            // Necesitamos encontrar el usuario que envió la notificación
+            const sender = users.find(u => u.id === notification.userId);
+            if (sender) {
+              console.log('🔥 [TasksPage] Opening MessageSidebar with sender:', sender.fullName);
+              openMessageSidebar(
+                notification.userId, // senderId
+                {
+                  id: sender.id,
+                  imageUrl: sender.imageUrl,
+                  fullName: sender.fullName,
+                  role: sender.role || 'user'
+                }, // receiver
+                notification.conversationId // conversationId
+              );
+            } else {
+              console.error('🔥 [TasksPage] ERROR: Sender not found for userId:', notification.userId);
+            }
+          }
+          break;
+          
+        case 'show-notification':
+          console.log('🔥 [TasksPage] SHOWING NOTIFICATION:', notification.message);
+          // Aquí podrías mostrar un toast o notificación
+          break;
+          
+        default:
+          console.log('🔥 [TasksPage] UNKNOWN ACTION:', notification.action);
+          break;
+      }
+    } catch (error) {
+      console.error('🔥 [TasksPage] ERROR handling notification click:', error);
+    }
+  }, [tasks, clients]);
 
   const handleContainerChange = useCallback((newContainer: Container) => {
     

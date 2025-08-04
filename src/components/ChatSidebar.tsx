@@ -6,7 +6,7 @@ import ReactDOM from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
-import { Timestamp, doc, serverTimestamp, collection, addDoc, updateDoc, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
+import { Timestamp, doc, serverTimestamp, collection, updateDoc, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -141,14 +141,12 @@ const MessageItem = memo(
       }, []);
 
       useLayoutEffect(() => {
-        console.log('[ActionMenu] useLayoutEffect triggered for message:', message.id);
-        console.log('[ActionMenu] actionMenuOpenId:', actionMenuOpenId);
+  
         if (actionMenuOpenId === message.id) {
-          console.log('[ActionMenu] Menu should be positioned for this message');
           updateMenuPosition();
           setIsMenuPositioned(true);
         } else {
-          console.log('[ActionMenu] Menu should NOT be positioned for this message');
+
           setIsMenuPositioned(false);
         }
       }, [actionMenuOpenId, message.id, updateMenuPosition]);
@@ -1194,53 +1192,63 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
       return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
     }, [messages]);
 
-    useEffect(() => {
-      if (isOpen && user?.id) {
-        const batchOperations = async () => {
-          try {
-            const batch = writeBatch(db);
-            let operationsCount = 0;
-            const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
-            unreadMessages.forEach((msg) => {
-              if (operationsCount < 490) {
-                batch.update(doc(db, `tasks/${task.id}/messages`, msg.id), { 
-                  read: true,
-                  lastModified: serverTimestamp()
-                });
-                operationsCount++;
-              }
+                    useEffect(() => {
+        if (isOpen && user?.id) {
+          // Mark as viewed only once when sidebar opens
+          const markAsViewedTimeoutId = setTimeout(() => {
+            markAsViewed(task.id).catch(error => {
+              console.error('[ChatSidebar] Error marking task as viewed:', error);
             });
-            const lastNotificationCheck = localStorage.getItem(`lastNotificationCheck_${task.id}_${user.id}`);
-            const shouldCheckNotifications = !lastNotificationCheck || 
-              (Date.now() - parseInt(lastNotificationCheck)) > 5 * 60 * 1000;
-            if (shouldCheckNotifications) {
-              const notificationsQuery = query(
-                collection(db, 'notifications'),
-                where('taskId', '==', task.id),
-                where('recipientId', '==', user.id),
-                where('read', '==', false)
-              );
-              const snapshot = await getDocs(notificationsQuery);
-              snapshot.docs.forEach((notifDoc) => {
+          }, 100); // Small delay to prevent race conditions
+          
+          const batchOperations = async () => {
+            try {
+              const batch = writeBatch(db);
+              let operationsCount = 0;
+              const unreadMessages = messages.filter((msg) => !msg.read && !msg.isPending);
+              unreadMessages.forEach((msg) => {
                 if (operationsCount < 490) {
-                  batch.update(doc(db, 'notifications', notifDoc.id), { read: true });
+                  batch.update(doc(db, `tasks/${task.id}/messages`, msg.id), { 
+                    read: true,
+                    lastModified: serverTimestamp()
+                  });
                   operationsCount++;
                 }
               });
-              localStorage.setItem(`lastNotificationCheck_${task.id}_${user.id}`, Date.now().toString());
-              console.log('[ChatSidebar] Verificación de notificaciones completada:', snapshot.docs.length);
+              const lastNotificationCheck = localStorage.getItem(`lastNotificationCheck_${task.id}_${user.id}`);
+              const shouldCheckNotifications = !lastNotificationCheck || 
+                (Date.now() - parseInt(lastNotificationCheck)) > 5 * 60 * 1000;
+              if (shouldCheckNotifications) {
+                const notificationsQuery = query(
+                  collection(db, 'notifications'),
+                  where('taskId', '==', task.id),
+                  where('recipientId', '==', user.id),
+                  where('read', '==', false)
+                );
+                const snapshot = await getDocs(notificationsQuery);
+                snapshot.docs.forEach((notifDoc) => {
+                  if (operationsCount < 490) {
+                    batch.update(doc(db, 'notifications', notifDoc.id), { read: true });
+                    operationsCount++;
+                  }
+                });
+                localStorage.setItem(`lastNotificationCheck_${task.id}_${user.id}`, Date.now().toString());
+                console.log('[ChatSidebar] Verificación de notificaciones completada:', snapshot.docs.length);
+              }
+              if (operationsCount > 0) {
+                await batch.commit();
+                console.log('[ChatSidebar] Operaciones batch completadas:', operationsCount);
+              }
+            } catch (error) {
+              console.error('[ChatSidebar] Error en operaciones batch:', error);
             }
-            if (operationsCount > 0) {
-              await batch.commit();
-              console.log('[ChatSidebar] Operaciones batch completadas:', operationsCount);
-            }
-            await markAsViewed(task.id);
-          } catch (error) {
-            console.error('[ChatSidebar] Error en operaciones batch:', error);
-          }
-        };
-        const timeoutId = setTimeout(batchOperations, 1500);
-        return () => clearTimeout(timeoutId);
+          };
+          const batchTimeoutId = setTimeout(batchOperations, 1500);
+          
+          return () => {
+            clearTimeout(markAsViewedTimeoutId);
+            clearTimeout(batchTimeoutId);
+          };
       }
     }, [isOpen, messages, user?.id, task.id, markAsViewed]);
 

@@ -8,9 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import styles from './NotificationDropdown.module.scss';
 import React from 'react';
-import { usePaginatedNotifications } from '@/hooks/usePaginatedNotifications';
-import { useTaskNotifications } from '@/hooks/useTaskNotifications';
-import { useReadStatus } from '@/hooks/useReadStatus';
+import { useTaskNotificationsSingleton } from '@/hooks/useTaskNotificationsSingleton';
+import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
 
 interface Notification {
   id: string;
@@ -43,17 +42,57 @@ export default React.memo(function NotificationDropdown({
   onClose,
 }: NotificationDropdownProps) {
   const { 
-    notifications, 
-    markAsRead, 
-    deleteNotification, 
-    isLoading, 
-    error,
-    loadMore,
-    hasMore,
-    isLoadingMore
-  } = usePaginatedNotifications({ pageSize: 20, enableCache: false });
-  const { markAsViewed } = useTaskNotifications();
-  const { markTaskAsViewed, markConversationAsViewed } = useReadStatus();
+    taskNotifications, 
+    markAsRead: markTaskNotificationAsRead, 
+    markTaskAsViewed 
+  } = useTaskNotificationsSingleton();
+  
+  const { 
+    messageNotifications, 
+    markConversationAsRead 
+  } = useMessageNotificationsSingleton();
+  
+  // Combinar notificaciones de ambos sistemas con tipos compatibles
+  const notifications: Notification[] = useMemo(() => [
+    ...taskNotifications.map(notif => ({
+      ...notif,
+      type: notif.type || 'task_notification',
+      userId: notif.recipientId || '' // Task notifications use recipientId as userId
+    })),
+    ...messageNotifications.map(notif => ({
+      id: notif.conversationId, // Usar conversationId como id
+      type: 'private_message',
+      taskId: undefined,
+      conversationId: notif.conversationId,
+      message: notif.lastMessage || 'Nuevo mensaje privado',
+      userId: notif.senderId || '', // Unify senderId to userId
+      recipientId: '', // Fill with current user if needed
+      read: false,
+      timestamp: notif.lastMessageTime // Map lastMessageTime to timestamp
+    }))
+  ], [taskNotifications, messageNotifications]);
+  const isLoading = false; // Los singletons manejan el loading internamente
+  const error = null;
+  const hasMore = false; // Los singletons cargan todo
+  const isLoadingMore = false;
+  
+  const markAsRead = useCallback(async (notificationId: string) => {
+    // Intentar marcar en ambos sistemas
+    try {
+      await markTaskNotificationAsRead(notificationId);
+    } catch (error) {
+      console.error('[NotificationDropdown] Error marking task notification as read:', error);
+    }
+  }, [markTaskNotificationAsRead]);
+  
+  const deleteNotification = useCallback(async (notificationId: string) => {
+    // Por ahora, solo marcar como leído
+    await markAsRead(notificationId);
+  }, [markAsRead]);
+  
+  const loadMore = useCallback(() => {
+    // Los singletons manejan la carga automáticamente
+  }, []);
   
   // Infinite scroll setup
   const { ref: loadMoreRef, inView } = useInView({
@@ -76,14 +115,18 @@ export default React.memo(function NotificationDropdown({
   const [isMobile, setIsMobile] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   
-  // Estados para swipe
-  const [swipedNotificationId, setSwipedNotificationId] = useState<string | null>(null);
-  const [swipeStartX, setSwipeStartX] = useState<number>(0);
-  const [swipeCurrentX, setSwipeCurrentX] = useState<number>(0);
-  const [isSwiping, setIsSwiping] = useState(false);
+  // REMOVED: Swipe states to prevent conflicts
 
   const handleNotificationClick = useCallback(async (notification: Notification) => {
     try {
+      console.log('🔥 [NotificationDropdown] CLICK DETECTED for notification:', {
+        id: notification.id,
+        type: notification.type,
+        taskId: notification.taskId,
+        conversationId: notification.conversationId,
+        message: notification.message
+      });
+      
       // Marcar como leído primero
       await markAsRead(notification.id);
 
@@ -92,58 +135,58 @@ export default React.memo(function NotificationDropdown({
         case 'group_message':
         case 'task_status_changed':
         case 'task_created':
+        case 'task_deleted':
+        case 'task_archived':
+        case 'task_unarchived':
           if (notification.taskId) {
+            console.log('🔥 [NotificationDropdown] TASK NOTIFICATION - Marking as viewed:', notification.taskId);
             await markTaskAsViewed(notification.taskId);
             // Abrir ChatSidebar para la tarea
-            onNotificationClick({
+            const notificationWithAction = {
               ...notification,
-              action: 'open-task-chat',
+              action: 'open-task-chat' as const,
               taskId: notification.taskId,
-            });
+            };
+            console.log('🔥 [NotificationDropdown] Calling onNotificationClick with:', notificationWithAction);
+            onNotificationClick(notificationWithAction);
           }
           break;
 
         case 'private_message':
           if (notification.conversationId) {
-            await markConversationAsViewed(notification.conversationId);
+            console.log('🔥 [NotificationDropdown] PRIVATE MESSAGE - Marking conversation as viewed:', notification.conversationId);
+            await markConversationAsRead(notification.conversationId);
             // Abrir MessageSidebar para la conversación
-            onNotificationClick({
+            const notificationWithAction = {
               ...notification,
-              action: 'open-private-chat',
+              action: 'open-private-chat' as const,
               conversationId: notification.conversationId,
-            });
-          }
-          break;
-
-        case 'task_deleted':
-        case 'task_archived':
-        case 'task_unarchived':
-          if (notification.taskId) {
-            await markTaskAsViewed(notification.taskId);
-            // Solo mostrar notificación, no abrir sidebar
-            onNotificationClick({
-              ...notification,
-              action: 'show-notification',
-            });
+            };
+            console.log('🔥 [NotificationDropdown] Calling onNotificationClick with:', notificationWithAction);
+            onNotificationClick(notificationWithAction);
           }
           break;
 
         default:
+          console.log('🔥 [NotificationDropdown] UNKNOWN TYPE - notification type:', notification.type);
           // Para otros tipos, solo mostrar la notificación
-          onNotificationClick({
-            ...notification,
-            action: 'show-notification',
-          });
+                      const notificationWithAction = {
+              ...notification,
+              action: 'show-notification' as const,
+            };
+          console.log('🔥 [NotificationDropdown] Calling onNotificationClick with:', notificationWithAction);
+          onNotificationClick(notificationWithAction);
           break;
       }
 
+      console.log('🔥 [NotificationDropdown] SUCCESS - Closing dropdown');
       onClose();
     } catch (error) {
-      console.error('[NotificationDropdown] Error handling notification click:', error);
+      console.error('🔥 [NotificationDropdown] ERROR handling notification click:', error);
       // Aún cerrar el dropdown aunque haya error
       onClose();
     }
-  }, [markAsRead, markTaskAsViewed, markConversationAsViewed, onNotificationClick, onClose]);
+  }, [markAsRead, markTaskAsViewed, markConversationAsRead, onNotificationClick, onClose]);
 
   const handleDeleteNotification = useCallback(async (notificationId: string) => {
     await deleteNotification(notificationId);
@@ -204,39 +247,7 @@ export default React.memo(function NotificationDropdown({
     setDragOffset(0);
   }, [isMobile, dragOffset, onClose]);
 
-  // Funciones para manejar swipe
-  const handleSwipeStart = useCallback((e: React.MouseEvent | React.TouchEvent, notificationId: string) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    setSwipeStartX(clientX);
-    setSwipeCurrentX(clientX);
-    setIsSwiping(true);
-    setSwipedNotificationId(notificationId);
-  }, []);
-
-  const handleSwipeMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!isSwiping) return;
-    
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    setSwipeCurrentX(clientX);
-  }, [isSwiping]);
-
-  const handleSwipeEnd = useCallback(() => {
-    if (!isSwiping || !swipedNotificationId) return;
-    
-    const swipeDistance = swipeStartX - swipeCurrentX;
-    const threshold = 80; // Distancia mínima para activar el swipe
-    
-    if (swipeDistance > threshold) {
-      // Swipe completado - eliminar notificación directamente
-      handleDeleteNotification(swipedNotificationId);
-    }
-    
-    // Resetear estados
-    setIsSwiping(false);
-    setSwipedNotificationId(null);
-    setSwipeStartX(0);
-    setSwipeCurrentX(0);
-  }, [isSwiping, swipedNotificationId, swipeStartX, swipeCurrentX, handleDeleteNotification]);
+  // REMOVED: Swipe handlers to prevent conflicts
 
   // Memoizar el cálculo de tiempo relativo para evitar recálculos innecesarios
   const formatRelativeTime = useCallback((timestamp: Timestamp) => {
@@ -259,13 +270,17 @@ export default React.memo(function NotificationDropdown({
     });
   }, []);
 
-  // Filtrar notificaciones (ya no necesitamos slice porque usamos pagination)
+  // Filtrar notificaciones - OPTIMIZADO
   const filteredNotifications = useMemo(() => {
     if (!isVisible) return [];
     
     return notifications
       .filter(notification => notification.type !== 'task_archived')
-      .sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+      .sort((a, b) => {
+        const aTime = a.timestamp.toMillis();
+        const bTime = b.timestamp.toMillis();
+        return bTime - aTime;
+      });
   }, [notifications, isVisible]);
 
   const truncateText = useCallback((txt: string, max: number) => {
@@ -287,46 +302,20 @@ export default React.memo(function NotificationDropdown({
     return truncated + '...';
   }, []);
 
-  // Componente para renderizar item de notificación
-  const NotificationItem = useCallback(({ notification, index }: { notification: Notification; index: number }) => {
+  // Componente para renderizar item de notificación - SIMPLIFICADO
+  const NotificationItem = useCallback(({ notification }: { notification: Notification; index: number }) => {
     const sender = users.find((u) => u.id === notification.userId);
     const relativeTime = formatRelativeTime(notification.timestamp);
-    const swipeDistance = swipedNotificationId === notification.id ? swipeStartX - swipeCurrentX : 0;
     
     return (
-      <motion.div
-        className={`${styles.notificationItem} ${!notification.read ? styles.unread : ''} ${
-          isSwiping && swipedNotificationId === notification.id ? styles.swiping : ''
-        }`}
-        style={{
-          transform: `translateX(${swipeDistance}px)`,
-          transition: isSwiping && swipedNotificationId === notification.id ? 'none' : 'transform 0.3s ease'
+      <div
+        className={`${styles.notificationItem} ${!notification.read ? styles.unread : ''}`}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🔥 [NotificationDropdown] RAW CLICK DETECTED on notification:', notification.id);
+          handleNotificationClick(notification);
         }}
-        onMouseDown={(e) => handleSwipeStart(e, notification.id)}
-        onMouseMove={handleSwipeMove}
-        onMouseUp={handleSwipeEnd}
-        onMouseLeave={handleSwipeEnd}
-        onTouchStart={(e) => handleSwipeStart(e, notification.id)}
-        onTouchMove={handleSwipeMove}
-        onTouchEnd={handleSwipeEnd}
-        onClick={() => handleNotificationClick(notification)}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ 
-          duration: 0.3, 
-          ease: "easeOut",
-          delay: index * 0.05 // Stagger effect
-        }}
-        whileHover={{ 
-          scale: 1.02,
-          transition: { duration: 0.2 }
-        }}
-        whileTap={{ 
-          scale: 0.98,
-          transition: { duration: 0.1 }
-        }}
-        layout
       >
         <div className={styles.notificationContent}>
           <div className={styles.notificationHeader}>
@@ -349,75 +338,56 @@ export default React.memo(function NotificationDropdown({
             </div>
           </div>
         </div>
-        <motion.div 
-          className={styles.swipeActions}
-          initial={{ opacity: 0 }}
-          whileHover={{ opacity: 1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <motion.button
+        <div className={styles.swipeActions}>
+          <button
             className={styles.deleteButton}
             onClick={(e) => {
               e.stopPropagation();
               handleDeleteNotification(notification.id);
             }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
           >
             <Image src="/trash-2.svg" alt="Eliminar" width={16} height={16} />
-          </motion.button>
-        </motion.div>
-      </motion.div>
+          </button>
+        </div>
+      </div>
     );
-  }, [users, formatRelativeTime, swipedNotificationId, swipeStartX, swipeCurrentX, isSwiping, handleSwipeStart, handleSwipeMove, handleSwipeEnd, handleNotificationClick, handleDeleteNotification, truncateText]);
+      }, [users, formatRelativeTime, handleNotificationClick, handleDeleteNotification, truncateText]);
 
   // Renderizar lista de notificaciones
   const renderNotificationsList = useCallback(() => {
     if (filteredNotifications.length === 0) {
       return (
-        <motion.div 
-          className={styles.emptyState}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
+        <div className={styles.emptyState}>
           <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={64} height={64} />
           <p>No hay notificaciones</p>
-        </motion.div>
+        </div>
       );
     }
 
     return (
       <div className={styles.notificationsList}>
-        <AnimatePresence mode="popLayout">
-          {filteredNotifications.map((notification, index) => (
-            <NotificationItem 
-              key={notification.id} 
-              notification={notification} 
-              index={index} 
-            />
-          ))}
-        </AnimatePresence>
+        {filteredNotifications.map((notification) => (
+          <NotificationItem 
+            key={notification.id} 
+            notification={notification} 
+            index={0} 
+          />
+        ))}
         
         {/* Infinite scroll trigger */}
         {hasMore && (
           <div ref={loadMoreRef} className={styles.loadMoreTrigger}>
             {isLoadingMore && (
-              <motion.div 
-                className={styles.loadingMore}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
+              <div className={styles.loadingMore}>
                 <div className={styles.spinner}></div>
                 <span>Cargando más notificaciones...</span>
-              </motion.div>
+              </div>
             )}
           </div>
         )}
       </div>
     );
-  }, [filteredNotifications, NotificationItem]);
+  }, [filteredNotifications, NotificationItem, hasMore, isLoadingMore, loadMoreRef]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
