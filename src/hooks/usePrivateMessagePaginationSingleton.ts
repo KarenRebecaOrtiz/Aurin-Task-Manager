@@ -317,6 +317,11 @@ export class PrivateMessagePaginationManager {
     return this.listeners.has(conversationId);
   }
 
+  // Método público para obtener mensajes actuales
+  getCurrentMessages(conversationId: string): Message[] {
+    return this.currentMessages.get(conversationId) || [];
+  }
+
   // Método público para cleanup global (solo en logout/app close)
   cleanupAllListeners(): void {
     if (DEBUG) console.log('[PrivateMessagePaginationManager] Cleaning up all listeners');
@@ -343,6 +348,7 @@ export const usePrivateMessagePaginationSingleton = ({
   const [error] = useState<string | null>(null);
   const managerRef = useRef<PrivateMessagePaginationManager | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
     if (!conversationId) {
@@ -364,13 +370,26 @@ export const usePrivateMessagePaginationSingleton = ({
       if (DEBUG) console.log('[usePrivateMessagePaginationSingleton] Received messages update:', conversationId, 'count:', newMessages.length);
       setMessages(newMessages);
       setIsLoading(false);
+      isInitializedRef.current = true;
     });
+
+    // Si ya hay mensajes en el singleton y no hemos inicializado, usarlos inmediatamente
+    if (!isInitializedRef.current) {
+      const currentMessages = managerRef.current.getCurrentMessages(conversationId);
+      if (currentMessages.length > 0) {
+        if (DEBUG) console.log('[usePrivateMessagePaginationSingleton] Using cached messages on mount:', conversationId, 'count:', currentMessages.length);
+        setMessages(currentMessages);
+        setIsLoading(false);
+        isInitializedRef.current = true;
+      }
+    }
 
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
         unsubscribeRef.current = null;
       }
+      // NO resetear isInitializedRef aquí para mantener el estado persistente
     };
   }, [conversationId, decryptMessage]);
 

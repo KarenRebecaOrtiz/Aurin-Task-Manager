@@ -25,7 +25,7 @@ const shortcuts: Shortcut[] = [
 const Dock: React.FC = () => {
   const dockRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
-  const isVisible = useRef(true);
+  const isVisible = useRef(false);
   const isTemporarilyHidden = useRef(false); // Track temporary hide on scroll
 
   // Load visibility from localStorage on mount
@@ -42,15 +42,25 @@ const Dock: React.FC = () => {
           });
         }
       } else {
-        // Initial animation if no saved state
-        gsap.fromTo(
-          dockRef.current,
-          { y: -100, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
-        );
+        // Default to hidden if no saved state
+        isVisible.current = false;
+        if (dockRef.current) {
+          gsap.set(dockRef.current, {
+            y: 100,
+            opacity: 0,
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading visibility from localStorage:', error);
+      // Default to hidden on error
+      isVisible.current = false;
+      if (dockRef.current) {
+        gsap.set(dockRef.current, {
+          y: 100,
+          opacity: 0,
+        });
+      }
     }
   }, []);
 

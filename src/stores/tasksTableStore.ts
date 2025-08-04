@@ -72,7 +72,7 @@ export const tasksTableStore = create<TasksTableStore>()((set) => ({
     priorityFilter: '',
     statusFilter: '',
     clientFilter: '',
-    sortKey: '',
+    sortKey: 'createdAt',
     sortDirection: 'desc',
     isUserDropdownOpen: false,
     isPriorityDropdownOpen: false,

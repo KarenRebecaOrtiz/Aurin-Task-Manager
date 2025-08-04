@@ -41,7 +41,7 @@ interface CursorProviderProps extends React.HTMLAttributes<HTMLDivElement> {
 const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) => {
   const [cursorPos, setCursorPos] = React.useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = React.useState(false);
-  const [isCursorEnabled, setIsCursorEnabled] = React.useState(true);
+  const [isCursorEnabled, setIsCursorEnabled] = React.useState(false);
   const [isTouchDevice, setIsTouchDevice] = React.useState(false);
   const [userFirstName, setUserFirstName] = React.useState('');
   const cursorRef = React.useRef<HTMLDivElement>(null);
@@ -118,9 +118,13 @@ const CursorProvider: React.FC<CursorProviderProps> = ({ children, ...props }) =
       if (savedVisibility !== null) {
         const parsedVisibility = JSON.parse(savedVisibility);
         setIsCursorEnabled(parsedVisibility);
+      } else {
+        // Default to disabled if no saved state
+        setIsCursorEnabled(false);
       }
     } catch {
-      // Silent error handling
+      // Silent error handling - default to disabled
+      setIsCursorEnabled(false);
     }
   }, [isTouchDevice]);
 

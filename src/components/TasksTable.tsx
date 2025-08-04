@@ -549,8 +549,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const sortedTasks = useMemo(() => {
     const sorted = [...filteredTasks];
     
-    // Si no hay sortKey o está vacío, retornar sin ordenar
+    // Si no hay sortKey o está vacío, aplicar ordenamiento por defecto por createdAt
     if (!sortKey || sortKey === '') {
+      sorted.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA; // Orden descendente (más recientes primero)
+      });
       return sorted;
     }
     
