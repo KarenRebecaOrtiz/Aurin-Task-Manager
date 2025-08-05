@@ -262,29 +262,7 @@ export default function TasksPageModals() {
         />
       )}
 
-      {/* Session Revoke Popup */}
-      {isSessionRevokePopupOpen && sessionToRevoke && (
-        <SimpleDeletePopup
-          isOpen={isSessionRevokePopupOpen}
-          title="Cerrar Sesión"
-          description="¿Estás seguro de cerrar esta sesión? Esto cerrará el acceso en ese dispositivo. Esta acción no se puede deshacer."
-          onConfirm={async () => {
-            try {
-              // Aquí se manejaría la lógica de revocación de sesión
-              // Por ahora solo cerramos el popup
-              console.log('[TasksPageModals] Revoking session:', sessionToRevoke);
-              const { closeSessionRevokePopup } = useTasksPageStore.getState();
-              closeSessionRevokePopup();
-            } catch (error) {
-              console.error('[TasksPageModals] Error revoking session:', error);
-            }
-          }}
-          onCancel={() => {
-            const { closeSessionRevokePopup } = useTasksPageStore.getState();
-            closeSessionRevokePopup();
-          }}
-        />
-      )}
+      {/* Session Revoke Popup - ELIMINADO - Ahora va directo al modal de Clerk */}
     </>
   );
 } 

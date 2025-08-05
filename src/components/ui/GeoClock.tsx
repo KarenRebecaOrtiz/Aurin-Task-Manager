@@ -219,20 +219,85 @@ const GeoClock: React.FC<GeoClockProps> = ({ personalLocations }) => {
                 if (weatherData.main && typeof weatherData.main.temp === 'number') {
                   setTemperature(`${Math.round(weatherData.main.temp)}°`);
                   const weatherMain = weatherData.weather[0].main.toLowerCase();
+                  const weatherDescription = weatherData.weather[0].description.toLowerCase();
+                  // Usar la zona horaria de México para determinar si es día o noche
                   const currentTime = new Date();
+                  const mexicoTime = new Date(currentTime.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+                  const currentHour = mexicoTime.getHours();
+                  
                   const icon = (() => {
+                    // Función helper para determinar si es día o noche
+                    const isDaytime = currentHour >= 6 && currentHour < 18;
+                    
+                    // Debug: ver qué icono se está seleccionando
+                    console.log('Weather condition mapping:', {
+                      weatherMain,
+                      weatherDescription,
+                      isDaytime,
+                      currentHour
+                    });
+                    
+                    // Primero intentar con weatherMain
                     switch (weatherMain) {
-                      case 'clouds': return '/weather/Cloudy.svg';
+                      case 'clouds': 
+                      case 'cloudy': 
+                        console.log('Selected icon: Cloudy.svg');
+                        return '/weather/Cloudy.svg';
                       case 'clear':
-                        return currentTime.getHours() >= 6 && currentTime.getHours() < 18
-                          ? '/weather/CoolDay.svg'
-                          : '/weather/CoolNight.svg';
-                      case 'rain': return '/weather/Rainy.svg';
-                      case 'snow': return '/weather/Snowy.svg';
-                      case 'thunderstorm': return '/weather/Storm.svg';
+                      case 'sunny':
+                        const clearIcon = isDaytime ? '/weather/CoolDay.svg' : '/weather/CoolNight.svg';
+                        console.log('Selected icon:', clearIcon);
+                        return clearIcon;
+                      case 'rain': 
+                      case 'drizzle':
+                      case 'shower rain':
+                        console.log('Selected icon: Rainy.svg');
+                        return '/weather/Rainy.svg';
+                      case 'snow': 
+                      case 'sleet':
+                        console.log('Selected icon: Snowy.svg');
+                        return '/weather/Snowy.svg';
+                      case 'thunderstorm': 
+                      case 'storm':
+                        console.log('Selected icon: Storm.svg');
+                        return '/weather/Storm.svg';
                       case 'windy':
-                      case 'gust': return '/weather/Windy.svg';
-                      default: return null;
+                      case 'gust':
+                      case 'wind':
+                        console.log('Selected icon: Windy.svg');
+                        return '/weather/Windy.svg';
+                      default: 
+                        console.log('No match in weatherMain, trying weatherDescription...');
+                        // Si no coincide con weatherMain, intentar con weatherDescription
+                        if (weatherDescription.includes('clear') || weatherDescription.includes('sunny')) {
+                          const clearIcon = isDaytime ? '/weather/CoolDay.svg' : '/weather/CoolNight.svg';
+                          console.log('Selected icon from description:', clearIcon);
+                          return clearIcon;
+                        }
+                        if (weatherDescription.includes('cloud')) {
+                          console.log('Selected icon from description: Cloudy.svg');
+                          return '/weather/Cloudy.svg';
+                        }
+                        if (weatherDescription.includes('rain') || weatherDescription.includes('drizzle')) {
+                          console.log('Selected icon from description: Rainy.svg');
+                          return '/weather/Rainy.svg';
+                        }
+                        if (weatherDescription.includes('snow')) {
+                          console.log('Selected icon from description: Snowy.svg');
+                          return '/weather/Snowy.svg';
+                        }
+                        if (weatherDescription.includes('thunder') || weatherDescription.includes('storm')) {
+                          console.log('Selected icon from description: Storm.svg');
+                          return '/weather/Storm.svg';
+                        }
+                        if (weatherDescription.includes('wind')) {
+                          console.log('Selected icon from description: Windy.svg');
+                          return '/weather/Windy.svg';
+                        }
+                        
+                        // Fallback: si no se encuentra coincidencia, usar nublado como default
+                        console.log('No match found, using fallback: Cloudy.svg');
+                        return '/weather/Cloudy.svg';
                     }
                   })();
                   setWeatherIcon(icon);

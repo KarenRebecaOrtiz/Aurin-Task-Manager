@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser, useSession } from '@clerk/nextjs';
+import { useUser, useSession, useReverification } from '@clerk/nextjs';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
@@ -72,7 +72,8 @@ interface Config {
     linkedin?: string;
     twitter?: string;
     instagram?: string;
-    dribbble?: string;
+    facebook?: string;
+    tiktok?: string;
   };
 }
 
@@ -92,7 +93,8 @@ interface ConfigForm extends Omit<Config, 'id'> {
   linkedin?: string;
   twitter?: string;
   instagram?: string;
-  dribbble?: string;
+  facebook?: string;
+  tiktok?: string;
 }
 
 interface User {
@@ -153,6 +155,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sessions, setSessions] = useState<any[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -281,7 +284,20 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     'Inteligencia Artificial', 'No-Code Builders', 'Project Management', 'UX/UI',
   ].sort();
 
+  // Función para revocar sesión con reverificación
+  const revokeSessionWithReverification = useReverification(async (sessionId: string) => {
+    const sessionToRevoke = sessions.find((s) => s.id === sessionId);
+    if (!sessionToRevoke) throw new Error('Sesión no encontrada');
 
+    const isCurrent = sessionId === currentSession?.id;
+
+    if (isCurrent) {
+      await currentSession?.end();  // O signOut() para logout completo
+      window.location.href = '/sign-in';  // Redirigir a login
+    } else {
+      await sessionToRevoke.revoke();
+    }
+  });
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -330,7 +346,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             linkedin: data.socialLinks?.linkedin || '',
             twitter: data.socialLinks?.twitter || '',
             instagram: data.socialLinks?.instagram || '',
-            dribbble: data.socialLinks?.dribbble || '',
+            facebook: data.socialLinks?.facebook || '',
+            tiktok: data.socialLinks?.tiktok || '',
           });
         } else {
           setFormData({
@@ -369,7 +386,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             linkedin: '',
             twitter: '',
             instagram: '',
-            dribbble: '',
+            facebook: '',
+            tiktok: '',
           });
         }
         setLoading(false);
@@ -707,8 +725,102 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
 
 
   const handleRevokeSession = async (sessionId: string) => {
-    const { openSessionRevokePopup } = useTasksPageStore.getState();
-    openSessionRevokePopup(sessionId);
+    // Validación previa
+    const sessionToRevoke = sessions.find((s) => s.id === sessionId);
+    if (!sessionToRevoke) {
+      if (onShowFailAlert) onShowFailAlert('Sesión no encontrada', 'La sesión ya no existe en la lista actual');
+      return;
+    }
+
+    // Verificar que el usuario actual puede revocar esta sesión
+    if (!currentUser || !currentUser.id) {
+      if (onShowFailAlert) onShowFailAlert('Error de autenticación', 'No se pudo verificar tu identidad');
+      return;
+    }
+
+    setRevokingSessionId(sessionId);
+    try {
+      await revokeSessionWithReverification(sessionId);
+      
+      if (onShowSuccessAlert) onShowSuccessAlert('Sesión cerrada exitosamente');
+
+      // Refrescar lista de sesiones
+      await fetchSessions();
+    } catch (error) {
+      console.error('[ConfigPage] Error revoking session:', error);
+      
+      // Manejar específicamente los errores de Clerk
+      if (error && typeof error === 'object') {
+        // Verificar si es un error de Clerk con código
+        const clerkError = error as { 
+          code?: string; 
+          message?: string; 
+          error?: { 
+            code?: string; 
+            message?: string; 
+          }; 
+        };
+        const errorCode = clerkError.code || clerkError.error?.code;
+        
+        if (errorCode) {
+          switch (errorCode) {
+            case 'reverification_cancelled':
+              // Usuario canceló la reverificación - no mostrar error, solo log
+              console.log('[ConfigPage] User cancelled reverification');
+              return;
+              
+            case 'session_reverification_required':
+              if (onShowFailAlert) onShowFailAlert('Se requiere verificación adicional', 'Por favor, completa la verificación para continuar');
+              return;
+              
+            case 'session_not_found':
+              if (onShowFailAlert) onShowFailAlert('Sesión no encontrada', 'La sesión ya no existe o ha expirado');
+              return;
+              
+            case 'session_already_revoked':
+              if (onShowSuccessAlert) onShowSuccessAlert('Sesión ya estaba cerrada');
+              await fetchSessions(); // Refrescar lista
+              return;
+              
+            case 'insufficient_permissions':
+              if (onShowFailAlert) onShowFailAlert('Permisos insuficientes', 'No tienes permisos para cerrar esta sesión');
+              return;
+              
+            case 'user_not_found':
+              if (onShowFailAlert) onShowFailAlert('Usuario no encontrado', 'Error en la autenticación');
+              return;
+              
+            default:
+              // Para códigos de error desconocidos, mostrar el código específico
+              if (onShowFailAlert) onShowFailAlert(`Error de Clerk: ${errorCode}`, error instanceof Error ? error.message : 'Error desconocido');
+              return;
+          }
+        }
+        
+        // Verificar si el mensaje de error contiene información sobre cancelación
+        const errorMessage = clerkError.message || clerkError.error?.message || '';
+        if (errorMessage.includes('cancelled') || errorMessage.includes('canceled')) {
+          console.log('[ConfigPage] User cancelled operation');
+          return;
+        }
+      }
+      
+      // Para otros errores, mostrar mensaje genérico
+      if (onShowFailAlert) {
+        // Manejar errores de red específicamente
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          onShowFailAlert('Error de conexión', 'No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+        } else if (error instanceof Error) {
+          // Para errores de Error estándar
+          onShowFailAlert('Error al cerrar sesión', error.message);
+        } else {
+          // Para errores desconocidos
+          onShowFailAlert('Error al cerrar sesión', 'Error desconocido');
+        }
+      }
+    } finally {
+      setRevokingSessionId(null);
+    }
   };
 
   // Función para calcular fuerza de nueva contraseña (dinámica)
@@ -888,7 +1000,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
           linkedin: formData.linkedin || '',
           twitter: formData.twitter || '',
           instagram: formData.instagram || '',
-          dribbble: formData.dribbble || '',
+          facebook: formData.facebook || '',
+          tiktok: formData.tiktok || '',
         },
       });
 
@@ -1475,7 +1588,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   name="github"
                   value={formData.github || ''}
                   onChange={handleInputChange}
-                  placeholder="usuario-github"
+                  placeholder="www.example.com/perfil"
                   className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
                   disabled={!isOwnProfile || !isEditing}
                   onKeyDown={(e) => handleFormInputKeyDown(e, { 
@@ -1499,7 +1612,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   name="linkedin"
                   value={formData.linkedin || ''}
                   onChange={handleInputChange}
-                  placeholder="in/usuario-linkedin"
+                  placeholder="www.example.com/perfil"
                   className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
                   disabled={!isOwnProfile || !isEditing}
                   onKeyDown={(e) => handleFormInputKeyDown(e, { 
@@ -1523,7 +1636,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   name="twitter"
                   value={formData.twitter || ''}
                   onChange={handleInputChange}
-                  placeholder="@usuario-twitter"
+                  placeholder="www.example.com/perfil"
                   className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
                   disabled={!isOwnProfile || !isEditing}
                   onKeyDown={(e) => handleFormInputKeyDown(e, { 
@@ -1547,7 +1660,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   name="instagram"
                   value={formData.instagram || ''}
                   onChange={handleInputChange}
-                  placeholder="@usuario-instagram"
+                  placeholder="www.example.com/perfil"
                   className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
                   disabled={!isOwnProfile || !isEditing}
                   onKeyDown={(e) => handleFormInputKeyDown(e, { 
@@ -1560,24 +1673,48 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                 />
               </div>
 
-              {/* Dribbble - Contenedor individual */}
+              {/* Facebook - Contenedor individual */}
               <div className={styles.socialContainer}>
                 <div className={styles.label}>
-                  <SocialIcon icon="/dribble.svg" alt="Dribbble" />
-                  Dribbble
+                  <SocialIcon icon="/facebook.svg" alt="Facebook" />
+                  Facebook
                 </div>
                 <input
                   type="text"
-                  name="dribbble"
-                  value={formData.dribbble || ''}
+                  name="facebook"
+                  value={formData.facebook || ''}
                   onChange={handleInputChange}
-                  placeholder="usuario-dribbble"
+                  placeholder="www.example.com/perfil"
                   className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
                   disabled={!isOwnProfile || !isEditing}
                   onKeyDown={(e) => handleFormInputKeyDown(e, { 
-                    value: formData.dribbble || '', 
+                    value: formData.facebook || '', 
                     onChange: (value) => {
-                      const event = { target: { name: 'dribbble', value } } as React.ChangeEvent<HTMLInputElement>;
+                      const event = { target: { name: 'facebook', value } } as React.ChangeEvent<HTMLInputElement>;
+                      handleInputChange(event);
+                    }
+                  })}
+                />
+              </div>
+
+              {/* TikTok - Contenedor individual */}
+              <div className={styles.socialContainer}>
+                <div className={styles.label}>
+                  <SocialIcon icon="/tiktok.svg" alt="TikTok" />
+                  TikTok
+                </div>
+                <input
+                  type="text"
+                  name="tiktok"
+                  value={formData.tiktok || ''}
+                  onChange={handleInputChange}
+                  placeholder="www.example.com/perfil"
+                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
+                  disabled={!isOwnProfile || !isEditing}
+                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                    value: formData.tiktok || '', 
+                    onChange: (value) => {
+                      const event = { target: { name: 'tiktok', value } } as React.ChangeEvent<HTMLInputElement>;
                       handleInputChange(event);
                     }
                   })}
@@ -1918,8 +2055,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                                   <button
                                     className={styles.clerkRevokeButton}
                                     onClick={() => handleRevokeSession(session.id)}
+                                    disabled={revokingSessionId === session.id}
                                   >
-                                    {isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión'}
+                                    {revokingSessionId === session.id ? 'Cerrando...' : (isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión')}
                                   </button>
                                 </div>
                               </div>

@@ -40,37 +40,16 @@ export default React.memo(function NotificationDropdown({
   dropdownPosition,
   onNotificationClick,
   onClose,
-}: NotificationDropdownProps) {
+  notifications = [], // Agregar prop para notificaciones
+}: NotificationDropdownProps & { notifications?: Notification[] }) {
   const { 
-    taskNotifications, 
     markAsRead: markTaskNotificationAsRead, 
     markTaskAsViewed 
   } = useTaskNotificationsSingleton();
   
   const { 
-    messageNotifications, 
     markConversationAsRead 
   } = useMessageNotificationsSingleton();
-  
-  // Combinar notificaciones de ambos sistemas con tipos compatibles
-  const notifications: Notification[] = useMemo(() => [
-    ...taskNotifications.map(notif => ({
-      ...notif,
-      type: notif.type || 'task_notification',
-      userId: notif.recipientId || '' // Task notifications use recipientId as userId
-    })),
-    ...messageNotifications.map(notif => ({
-      id: notif.conversationId, // Usar conversationId como id
-      type: 'private_message',
-      taskId: undefined,
-      conversationId: notif.conversationId,
-      message: notif.lastMessage || 'Nuevo mensaje privado',
-      userId: notif.senderId || '', // Unify senderId to userId
-      recipientId: '', // Fill with current user if needed
-      read: false,
-      timestamp: notif.lastMessageTime // Map lastMessageTime to timestamp
-    }))
-  ], [taskNotifications, messageNotifications]);
   const isLoading = false; // Los singletons manejan el loading internamente
   const error = null;
   const hasMore = false; // Los singletons cargan todo

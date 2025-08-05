@@ -60,6 +60,7 @@ class TaskNotificationsManager {
   }
 
   private setupListener(userId: string) {
+    console.log('[TaskNotificationsManager] Setting up listener for user:', userId);
 
     const q = query(
       collection(db, 'notifications'),
@@ -69,32 +70,32 @@ class TaskNotificationsManager {
 
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
+        console.log('[TaskNotificationsManager] Snapshot received for user:', userId, 'docs count:', snapshot.docs.length, 'fromCache:', snapshot.metadata.fromCache);
+        
         // Skip if listener is paused
         if (this.pausedListeners.has(userId)) {
+          console.log('[TaskNotificationsManager] Listener paused for user:', userId);
           return;
         }
 
-        // Filter out cache/pending writes
-        const changes = snapshot.docChanges().filter(change => 
-          !change.doc.metadata.hasPendingWrites && !change.doc.metadata.fromCache
-        );
+        // Process all notifications, not just changes
+        const notifications: TaskNotification[] = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data() as Omit<TaskNotification, 'id'>
+        }));
 
-        if (changes.length === 0) return;
+        console.log('[TaskNotificationsManager] Processed notifications for user:', userId, 'count:', notifications.length);
 
         // Debounce
         const timeout = this.debounceTimeouts.get(userId);
         if (timeout) clearTimeout(timeout);
 
         const newTimeout = setTimeout(() => {
-          const notifications: TaskNotification[] = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data() as Omit<TaskNotification, 'id'>
-          }));
-
           this.currentNotifications.set(userId, notifications);
           
           const subscribers = this.subscribers.get(userId);
           if (subscribers) {
+            console.log('[TaskNotificationsManager] Notifying subscribers for user:', userId, 'subscriber count:', subscribers.size);
             subscribers.forEach(cb => {
               try {
                 cb(notifications);
@@ -102,8 +103,9 @@ class TaskNotificationsManager {
                 console.error('[TaskNotificationsManager] Error in subscriber callback:', error);
               }
             });
+          } else {
+            console.log('[TaskNotificationsManager] No subscribers for user:', userId);
           }
-
 
         }, 300); // 300ms debounce from research
 
@@ -245,13 +247,21 @@ export const useTaskNotificationsSingleton = () => {
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('[useTaskNotificationsSingleton] No userId provided');
+      return;
+    }
 
+    console.log('[useTaskNotificationsSingleton] Setting up for user:', userId);
     managerRef.current = TaskNotificationsManager.getInstance();
 
-    unsubscribeRef.current = managerRef.current.subscribe(userId, setTaskNotifications);
+    unsubscribeRef.current = managerRef.current.subscribe(userId, (notifications) => {
+      console.log('[useTaskNotificationsSingleton] Received notifications for user:', userId, 'count:', notifications.length);
+      setTaskNotifications(notifications);
+    });
 
     return () => {
+      console.log('[useTaskNotificationsSingleton] Cleaning up for user:', userId);
       unsubscribeRef.current?.();
     };
   }, [userId]);

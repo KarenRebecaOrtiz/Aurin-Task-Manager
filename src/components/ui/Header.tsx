@@ -16,8 +16,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import SimpleTooltip from './SimpleTooltip';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
-
-
+import { useTaskNotificationsSingleton } from '@/hooks/useTaskNotificationsSingleton';
+import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
 
 interface Notification {
   id: string;
@@ -35,9 +35,9 @@ interface HeaderProps {
   selectedContainer: 'tareas' | 'cuentas' | 'miembros' | 'config';
   isArchiveTableOpen?: boolean;
   users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
-  notifications: Notification[];
-  onNotificationClick: (notification: Notification) => void;
-  onLimitNotifications: (notifications: Notification[]) => void;
+  notifications?: Notification[]; // Hacer opcional
+  onNotificationClick?: (notification: Notification) => void; // Hacer opcional
+  onLimitNotifications?: (notifications: Notification[]) => void; // Hacer opcional
   onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
   isCreateTaskOpen?: boolean;
   isEditTaskOpen?: boolean;
@@ -52,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({
   selectedContainer,
   isArchiveTableOpen,
   users,
-  notifications,
+  notifications = [], // Valor por defecto
   onNotificationClick,
   onLimitNotifications,
   onChangeContainer,
@@ -65,6 +65,10 @@ const Header: React.FC<HeaderProps> = ({
   const { isAdmin } = useAuth();
   const { isDarkMode } = useTheme();
   const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
+
+  // Usar los singletons de notificaciones
+  const { taskNotifications } = useTaskNotificationsSingleton();
+  const { messageNotifications } = useMessageNotificationsSingleton();
 
   /* ────────────────────────────────────────────
      REFS
@@ -84,6 +88,34 @@ const Header: React.FC<HeaderProps> = ({
   const [hasInteracted, setHasInteracted] = useState(false);
   const [hasViewedNotifications, setHasViewedNotifications] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+
+  // Combinar notificaciones de ambos sistemas
+  const allNotifications: Notification[] = [
+    ...taskNotifications.map(notif => ({
+      id: notif.id,
+      userId: notif.recipientId,
+      taskId: notif.taskId,
+      message: notif.message,
+      timestamp: notif.timestamp,
+      read: notif.read,
+      recipientId: notif.recipientId,
+      type: notif.type
+    })),
+    ...messageNotifications.map(notif => ({
+      id: notif.conversationId,
+      userId: notif.senderId,
+      conversationId: notif.conversationId,
+      message: notif.lastMessage || 'Nuevo mensaje privado',
+      timestamp: notif.lastMessageTime,
+      read: false,
+      recipientId: '',
+      type: 'private_message'
+    }))
+  ];
+
+  // Calcular conteos basados en las notificaciones combinadas
+  const hasUnread = allNotifications.some((n) => !n.read);
+  const unreadCount = allNotifications.filter((n) => !n.read).length;
 
   /* ────────────────────────────────────────────
      EFFECTS – AUDIO INIT
@@ -109,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({
      EFFECTS – WATCH FOR NEW NOTIFICATIONS
   ──────────────────────────────────────────── */
   useEffect(() => {
-    const newUnread = notifications.filter(
+    const newUnread = allNotifications.filter(
       (n) => !n.read && !prevNotificationsRef.current.some((p) => p.id === n.id),
     );
 
@@ -120,12 +152,12 @@ const Header: React.FC<HeaderProps> = ({
       }
     }
 
-    if (notifications.length > 20) {
-      onLimitNotifications(notifications);
+    if (allNotifications.length > 20) {
+      onLimitNotifications?.(allNotifications);
     }
 
-    prevNotificationsRef.current = notifications;
-  }, [notifications, hasInteracted, onLimitNotifications]);
+    prevNotificationsRef.current = allNotifications;
+  }, [allNotifications, hasInteracted, onLimitNotifications]);
 
   /* ────────────────────────────────────────────
      EFFECTS – DROPDOWN POSITION
@@ -339,15 +371,55 @@ const Header: React.FC<HeaderProps> = ({
   }, [isNotificationsOpen]);
 
   const handleNotificationClick = useCallback((notification: Notification) => {
-    onNotificationClick(notification);
+    // Si se proporciona un callback externo, usarlo
+    if (onNotificationClick) {
+      onNotificationClick(notification);
+      return;
+    }
+
+    // Manejo interno de notificaciones
+    console.log('🔥 [Header] Handling notification click:', notification);
+    
+    try {
+      switch (notification.type) {
+        case 'task_created':
+        case 'task_status_changed':
+        case 'task_deleted':
+        case 'task_archived':
+        case 'task_unarchived':
+        case 'group_message':
+        case 'time_log':
+          if (notification.taskId) {
+            console.log('🔥 [Header] Opening task chat for taskId:', notification.taskId);
+            // Aquí podrías abrir el chat de la tarea
+            // Por ahora solo cerramos el dropdown
+            setIsNotificationsOpen(false);
+          }
+          break;
+          
+        case 'private_message':
+          if (notification.conversationId) {
+            console.log('🔥 [Header] Opening private chat for conversationId:', notification.conversationId);
+            // Aquí podrías abrir el chat privado
+            // Por ahora solo cerramos el dropdown
+            setIsNotificationsOpen(false);
+          }
+          break;
+          
+        default:
+          console.log('🔥 [Header] Unknown notification type:', notification.type);
+          setIsNotificationsOpen(false);
+          break;
+      }
+    } catch (error) {
+      console.error('🔥 [Header] Error handling notification click:', error);
+      setIsNotificationsOpen(false);
+    }
   }, [onNotificationClick]);
 
   const handleCloseNotifications = useCallback(() => {
     setIsNotificationsOpen(false);
   }, []);
-
-  const hasUnread = notifications.some((n) => !n.read);
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   /* ────────────────────────────────────────────
      RENDER
@@ -446,6 +518,7 @@ const Header: React.FC<HeaderProps> = ({
               dropdownPosition={dropdownPosition}
               onNotificationClick={handleNotificationClick}
               onClose={handleCloseNotifications}
+              notifications={allNotifications}
             />
           </div>
 

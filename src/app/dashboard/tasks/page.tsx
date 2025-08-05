@@ -536,9 +536,6 @@ function TasksPageContent() {
           selectedContainer={selectedContainer}
           isArchiveTableOpen={isArchiveTableOpen}
           users={memoizedUsers}
-          notifications={[]}
-          onNotificationClick={handleNotificationClick}
-          onLimitNotifications={() => {}}
           onChangeContainer={handleContainerChange}
           isCreateTaskOpen={isCreateTaskOpen}
           isEditTaskOpen={isEditTaskOpen}
