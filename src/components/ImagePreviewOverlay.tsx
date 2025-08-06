@@ -73,8 +73,8 @@ const ImagePreviewOverlay: React.FC<ImagePreviewOverlayProps> = ({ src, alt, fil
             <Image 
               src={src} 
               alt={alt} 
-              width={0} 
-              height={0} 
+              width={800} 
+              height={600} 
               sizes="90vw" 
               draggable="false"
               style={{

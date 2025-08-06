@@ -1,271 +1,127 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
-import Image from 'next/image';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import styles from './AvatarDropdown.module.scss';
-import { gsap } from 'gsap';
-import { createPortal } from 'react-dom';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
-import ThemeToggler from '@/components/ui/ThemeToggler';
-import { useTheme } from '@/contexts/ThemeContext';
-import ProfileCard from './ProfileCard';
+import styles from './AvatarDropdown.module.scss';
 
 const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const { user } = useUser();
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  
-  // Usar el hook de estado de disponibilidad
-  const { currentStatus: onlineStatus } = useAvailabilityStatus();
-  const { isDarkMode } = useTheme();
+  const { currentStatus: onlineStatus, isOnline } = useAvailabilityStatus();
 
-  // Create portal container
   useEffect(() => {
-    const container = document.createElement('div');
-    container.id = 'avatar-dropdown-portal';
-    document.body.appendChild(container);
-    setPortalContainer(container);
-    return () => {
-      document.body.removeChild(container);
-    };
+    setMounted(true);
   }, []);
 
-  // Listen to Firestore user document changes with onSnapshot
-  useEffect(() => {
-    if (!user?.id || !isLoaded) return;
-
-    const userDocRef = doc(db, 'users', user.id);
-    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setProfilePhoto(data.profilePhoto || '');
-      } else {
-        setProfilePhoto('');
+  // Computa status color
+  const getStatusColor = useCallback((status: string, isOnline: boolean) => {
+    if (isOnline) {
+      switch (status) {
+        case 'Disponible': return '#178d00';
+        case 'Ocupado': return '#d32f2f';
+        case 'Por terminar': return '#f57c00';
+        default: return '#178d00';
       }
-    }, (error) => {
-      console.error('Error listening to Firestore:', error);
-      setProfilePhoto('');
-    });
-
-    return () => unsubscribe();
-  }, [user?.id, isLoaded]);
-
-  // GSAP animation for dropdown
-  useEffect(() => {
-    if (isDropdownOpen && dropdownRef.current && portalContainer) {
-      dropdownRef.current.style.display = 'block';
-      gsap.fromTo(
-        dropdownRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.3,
-          ease: 'power2.out',
-        },
-      );
-      gsap.fromTo(
-        dropdownRef.current.querySelectorAll(`.${styles.dropdownItem}`),
-        { opacity: 0, y: 10 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.2,
-          stagger: 0.05,
-          ease: 'power2.out',
-          delay: 0.1,
-        },
-      );
-    } else if (!isDropdownOpen && dropdownRef.current) {
-      gsap.to(dropdownRef.current, {
-        opacity: 0,
-        y: -10,
-        scale: 0.95,
-        duration: 0.2,
-        ease: 'power2.in',
-        onComplete: () => {
-          dropdownRef.current!.style.display = 'none';
-        },
-      });
+    } else {
+      return '#616161'; // Offline
     }
-  }, [isDropdownOpen, portalContainer]);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node) &&
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
-        setIsDropdownOpen(false);
+        setIsOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
-  // Menu item handlers
-  const handleConfig = useCallback(() => {
-    onChangeContainer('config');
-    setIsDropdownOpen(false);
+  const handleTareas = useCallback(() => {
+    onChangeContainer('tareas');
+    setIsOpen(false);
   }, [onChangeContainer]);
 
-  const handleLogout = useCallback(() => {
-    signOut();
-    setIsDropdownOpen(false);
-  }, [signOut]);
+  const handleCuentas = useCallback(() => {
+    onChangeContainer('cuentas');
+    setIsOpen(false);
+  }, [onChangeContainer]);
 
-  const handleProfileClick = useCallback(() => {
-    setIsProfileOpen(true);
-    setIsDropdownOpen(false);
-  }, []);
+  const handleMiembros = useCallback(() => {
+    onChangeContainer('miembros');
+    setIsOpen(false);
+  }, [onChangeContainer]);
 
-  const handleCloseProfile = useCallback(() => {
-    setIsProfileOpen(false);
-  }, []);
+  const handleConfig = useCallback(() => {
+    onChangeContainer('config');
+    setIsOpen(false);
+  }, [onChangeContainer]);
 
-  // Get status color based on current status
-  const getStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case 'Disponible':
-        return '#178d00';
-      case 'Ocupado':
-        return '#d32f2f';
-      case 'Por terminar':
-        return '#f57c00';
-      case 'Fuera':
-        return '#616161';
-      default:
-        return '#178d00';
-    }
-  }, []);
-
-  // Calculate dropdown position
-  const getDropdownPosition = useCallback(() => {
-    if (!buttonRef.current) {
-      return { top: 0, right: 0 };
-    }
-    const rect = buttonRef.current.getBoundingClientRect();
-    return {
-      top: rect.bottom + window.scrollY + 8,
-      right: window.innerWidth - rect.right,
-    };
-  }, []);
-
-  const dropdownPosition = getDropdownPosition();
-
-  const dropdownMenuContent = useMemo(() => {
-    return (
-      <div
-        ref={dropdownRef}
-        className={styles.dropdownMenu}
-        style={{
-          top: `${dropdownPosition.top}px`,
-          right: `${dropdownPosition.right}px`,
-          width: '220px',
-        }}
-      >
-        {/* Configuración Section */}
-        <div className={styles.sectionLabel}>Configuración</div>
-        
-        {/* Theme Toggle */}
-        <div className={styles.dropdownItem}>
-          <div className={styles.dropdownItemContent}>
-            <Image
-              src={isDarkMode ? "/sun.svg" : "/moon.svg"}
-              alt="Tema"
-              width={16}
-              height={16}
-              className={styles.dropdownIcon}
-              style={{
-                filter: isDarkMode ? 'brightness(0) invert(1)' : 'none',
-              }}
-            />
-            <span>Tema</span>
-          </div>
-          <div className={styles.themeToggleContainer}>
-            <ThemeToggler />
-          </div>
-        </div>
-        
-        <button onClick={handleConfig} className={styles.dropdownItem}>
-          <Image
-            src="/settings.svg"
-            alt="Perfil"
-            width={16}
-            height={16}
-            className={styles.dropdownIcon}
-          />
-          Perfil
-        </button>
-        <button onClick={handleLogout} className={styles.dropdownItem}>
-          <Image
-            src="/log-out.svg"
-            alt="Cerrar Sesión"
-            width={16}
-            height={16}
-            className={styles.dropdownIcon}
-          />
-          Cerrar Sesión
-        </button>
-      </div>
-    );
-  }, [dropdownPosition, handleConfig, handleLogout, isDarkMode]);
+  if (!mounted) return null;
 
   return (
-    <>
-      <div className={styles.avatarContainer}>
-        <button
-          ref={buttonRef}
-          className={styles.avatarButton}
-          onClick={() => setIsDropdownOpen((prev) => !prev)}
-          onDoubleClick={handleProfileClick}
-          aria-haspopup="true"
-          aria-expanded={isDropdownOpen}
-          aria-label="Abrir menú de usuario"
-          title="Clic para menú, doble clic para ver perfil"
-        >
-          {profilePhoto ? (
-            <Image
-              src={profilePhoto}
-              alt="Profile"
-              width={40}
-              height={40}
+    <div className={styles.avatarContainer}>
+      <button
+        className={styles.avatarButton}
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        aria-label="Abrir menú de usuario"
+        title="Clic para menú"
+      >
+        <div className={styles.avatar}>
+          {user?.imageUrl ? (
+            <img
+              src={user.imageUrl}
+              alt={user.fullName || 'Avatar'}
               className={styles.avatarImage}
             />
           ) : (
-            <div className={styles.avatarPlaceholder}>U</div>
+            <div className={styles.avatarPlaceholder}>
+              {user?.firstName?.charAt(0) || user?.emailAddresses[0]?.emailAddress?.charAt(0) || 'U'}
+            </div>
           )}
           <div
             className={styles.statusDot}
-            style={{ backgroundColor: getStatusColor(onlineStatus) }}
+            style={{ backgroundColor: getStatusColor(onlineStatus, isOnline) }}
           />
-        </button>
-        {isDropdownOpen && portalContainer && createPortal(dropdownMenuContent, portalContainer)}
-      </div>
+        </div>
+      </button>
       
-      {/* ProfileCard Modal */}
-      {isProfileOpen && user && (
-        <ProfileCard
-          userId={user.id}
-          imageUrl={profilePhoto || ''}
-          onClose={handleCloseProfile}
-        />
+      {isOpen && (
+        <div ref={dropdownRef} className={styles.dropdown}>
+          <div className={styles.dropdownHeader}>
+            <span className={styles.userName}>{user?.fullName || 'Usuario'}</span>
+            <span className={styles.userEmail}>{user?.emailAddresses[0]?.emailAddress}</span>
+          </div>
+          
+          <div className={styles.dropdownMenu}>
+            <button onClick={handleTareas} className={styles.menuItem}>
+              Tareas
+            </button>
+            <button onClick={handleCuentas} className={styles.menuItem}>
+              Cuentas
+            </button>
+            <button onClick={handleMiembros} className={styles.menuItem}>
+              Miembros
+            </button>
+            <button onClick={handleConfig} className={styles.menuItem}>
+              Configuración
+            </button>
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 };
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface TimerState {
@@ -10,6 +10,9 @@ interface TimerState {
   isRestoring: boolean;
   taskId: string | null;
   userId: string | null;
+  lastSyncTime: number | null; // High-resolution timestamp for drift tracking
+  syncStatus: 'idle' | 'syncing' | 'error';
+  workerActive: boolean; // Indica si el worker está activo
 }
 
 interface TimerActions {
@@ -20,6 +23,9 @@ interface TimerActions {
   setAccumulatedSeconds: (seconds: number) => void;
   setStartTime: (startTime: Date | null) => void;
   setIsRestoring: (isRestoring: boolean) => void;
+  setLastSyncTime: (time: number | null) => void;
+  setSyncStatus: (status: 'idle' | 'syncing' | 'error') => void;
+  setWorkerActive: (active: boolean) => void;
   
   // Acciones
   startTimer: () => Promise<void>;
@@ -31,6 +37,7 @@ interface TimerActions {
   getTimerSeconds: () => number;
   getIsTimerRunning: () => boolean;
   getIsRestoringTimer: () => boolean;
+  getSyncStatus: () => 'idle' | 'syncing' | 'error';
   
   // Inicialización
   initializeTimer: (taskId: string, userId: string) => Promise<void>;
@@ -40,18 +47,59 @@ interface TimerActions {
 type TimerStore = TimerState & TimerActions;
 
 export const useTimerStore = create<TimerStore>((set, get) => {
-  let intervalRef: NodeJS.Timeout | null = null;
-  let syncIntervalRef: NodeJS.Timeout | null = null;
+  let timeoutRef: NodeJS.Timeout | null = null;
+  let syncTimeoutRef: NodeJS.Timeout | null = null;
   let unsubscribeSnapshot: (() => void) | null = null;
+  let performanceStartTime: number | null = null;
+  let worker: Worker | null = null;
   
   const deviceId = crypto.randomUUID();
 
-  // Función para sincronizar con Firestore
+  // Inicializar Web Worker
+  const initializeWorker = () => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      worker = new Worker('/timerWorker.js');
+      
+      worker.onmessage = (e) => {
+        const { type, timestamp, error } = e.data;
+        
+        switch (type) {
+          case 'tick':
+            set((prev) => ({
+              ...prev,
+              accumulatedSeconds: prev.accumulatedSeconds + 1,
+            }));
+            break;
+            
+          case 'error':
+            console.error('[TimerStore] Worker error:', error);
+            set({ syncStatus: 'error' });
+            break;
+        }
+      };
+      
+      worker.onerror = (error) => {
+        console.error('[TimerStore] Worker error:', error);
+        set({ syncStatus: 'error', workerActive: false });
+      };
+      
+      set({ workerActive: true });
+      console.log('[TimerStore] Web Worker initialized successfully');
+    } catch (error) {
+      console.warn('[TimerStore] Web Worker not supported, falling back to setTimeout');
+      set({ workerActive: false });
+    }
+  };
+
+  // Función para sincronizar con Firestore usando serverTimestamp
   const syncToFirestore = async (state: TimerState) => {
     const { taskId, userId } = state;
     if (!taskId || !userId) return;
     
     try {
+      set({ syncStatus: 'syncing' });
       const timerDocRef = doc(db, `tasks/${taskId}/timers/${userId}`);
       const firestoreData = {
         userId,
@@ -59,22 +107,70 @@ export const useTimerStore = create<TimerStore>((set, get) => {
         startTime: state.startTime ? Timestamp.fromDate(state.startTime) : null,
         accumulatedSeconds: state.accumulatedSeconds,
         deviceId,
-        lastSync: Timestamp.fromDate(new Date()),
+        lastSync: serverTimestamp(), // Use server timestamp for accuracy
+        lastSyncTime: state.lastSyncTime,
       };
 
       await setDoc(timerDocRef, firestoreData, { merge: true });
-      console.log('[TimerStore] ✅ Sincronizado con Firestore:', { isRunning: state.isRunning, seconds: state.accumulatedSeconds });
+      set({ syncStatus: 'idle', lastSyncTime: performance.now() });
+      console.log('[TimerStore] ✅ Sincronizado con Firestore:', { 
+        isRunning: state.isRunning, 
+        seconds: state.accumulatedSeconds,
+        drift: state.lastSyncTime ? performance.now() - state.lastSyncTime : 0
+      });
     } catch (error) {
       console.error('[TimerStore] ❌ Error sincronizando:', error);
+      set({ syncStatus: 'error' });
     }
   };
 
-  // Función para obtener tiempo del servidor
-  const getServerTime = () => new Date();
+  // Función para obtener tiempo del servidor usando performance.now() para precisión
+  const getHighResTime = () => performance.now();
 
-  // Función para calcular tiempo transcurrido
+  // Función para calcular tiempo transcurrido con alta precisión
   const calculateElapsedTime = (startTime: Date, currentTime: Date): number => {
     return Math.max(0, Math.floor((currentTime.getTime() - startTime.getTime()) / 1000));
+  };
+
+  // Función recursiva para timer preciso usando setTimeout (fallback)
+  const startPreciseTimer = () => {
+    const state = get();
+    if (!state.isRunning || state.isRestoring) return;
+
+    const now = getHighResTime();
+    const elapsedSinceStart = performanceStartTime ? (now - performanceStartTime) / 1000 : 0;
+    
+    // Calcular el tiempo transcurrido basado en startTime real
+    let totalElapsed = state.accumulatedSeconds;
+    if (state.startTime) {
+      const realElapsed = calculateElapsedTime(state.startTime, new Date());
+      totalElapsed = realElapsed;
+    }
+
+    set((prev) => ({
+      ...prev,
+      accumulatedSeconds: Math.floor(totalElapsed),
+    }));
+
+    // Programar próximo tick con compensación de deriva
+    const nextTick = 1000 - (elapsedSinceStart % 1000);
+    timeoutRef = setTimeout(() => {
+      startPreciseTimer();
+    }, Math.max(0, nextTick));
+  };
+
+  // Función para sincronización periódica mejorada
+  const startSyncTimer = () => {
+    const state = get();
+    if (!state.isRunning || state.isRestoring) return;
+
+    syncTimeoutRef = setTimeout(async () => {
+      const currentState = get();
+      if (currentState.isRunning) {
+        await syncToFirestore(currentState);
+        startSyncTimer(); // Recursive call for continuous sync
+      }
+    }, 30000); // Sync every 30 seconds instead of 5 minutes
   };
 
   return {
@@ -86,6 +182,9 @@ export const useTimerStore = create<TimerStore>((set, get) => {
     isRestoring: true,
     taskId: null,
     userId: null,
+    lastSyncTime: null,
+    syncStatus: 'idle',
+    workerActive: false,
 
     // Setters
     setTaskId: (taskId) => set({ taskId }),
@@ -94,17 +193,22 @@ export const useTimerStore = create<TimerStore>((set, get) => {
     setAccumulatedSeconds: (accumulatedSeconds) => set({ accumulatedSeconds }),
     setStartTime: (startTime) => set({ startTime }),
     setIsRestoring: (isRestoring) => set({ isRestoring }),
+    setLastSyncTime: (lastSyncTime) => set({ lastSyncTime }),
+    setSyncStatus: (syncStatus) => set({ syncStatus }),
+    setWorkerActive: (workerActive) => set({ workerActive }),
 
     // Getters
     getTimerSeconds: () => get().accumulatedSeconds,
     getIsTimerRunning: () => get().isRunning,
     getIsRestoringTimer: () => get().isRestoring,
+    getSyncStatus: () => get().syncStatus,
 
-    // Inicialización
+    // Inicialización mejorada
     initializeTimer: async (taskId: string, userId: string) => {
-      // Debug logging disabled to reduce console spam
-      
       set({ taskId, userId, isRestoring: true });
+      
+      // Inicializar Web Worker
+      initializeWorker();
       
       try {
         const timerDocRef = doc(db, `tasks/${taskId}/timers/${userId}`);
@@ -112,13 +216,13 @@ export const useTimerStore = create<TimerStore>((set, get) => {
         
         if (timerDoc.exists()) {
           const data = timerDoc.data();
-          const serverTime = getServerTime();
+          const serverTime = new Date();
           
           let accumulatedSeconds = data.accumulatedSeconds || 0;
           
           if (data.isRunning && data.startTime) {
             const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
-            accumulatedSeconds += elapsed;
+            accumulatedSeconds = elapsed;
           }
           
           const newState = {
@@ -126,296 +230,207 @@ export const useTimerStore = create<TimerStore>((set, get) => {
             accumulatedSeconds,
             startTime: data.isRunning && data.startTime ? data.startTime.toDate() : null,
             isRestoring: false,
+            lastSyncTime: data.lastSyncTime || null,
+            syncStatus: 'idle' as const,
           };
           
           set(newState);
-          // Debug logging disabled to reduce console spam
-        } else {
-          set({ isRestoring: false });
-          // Debug logging disabled to reduce console spam
-        }
 
-        // Configurar listener en tiempo real
-        unsubscribeSnapshot = onSnapshot(timerDocRef, (doc) => {
-          if (!doc.exists()) return;
-          
-          const remoteData = doc.data();
-          
-          // Solo sincronizar si es de otro dispositivo
-          if (remoteData.deviceId !== deviceId) {
-            const serverTime = getServerTime();
-            let accumulatedSeconds = remoteData.accumulatedSeconds || 0;
+          // Configurar listener en tiempo real para multi-device sync
+          unsubscribeSnapshot = onSnapshot(timerDocRef, (doc) => {
+            if (!doc.exists()) return;
             
-            if (remoteData.isRunning && remoteData.startTime) {
-              const elapsed = calculateElapsedTime(remoteData.startTime.toDate(), serverTime);
-              accumulatedSeconds += elapsed;
-            }
+            const data = doc.data();
+            const currentState = get();
             
-            const current = get();
-            // Solo actualizar si realmente hay cambios
-            if (current.isRunning === remoteData.isRunning && 
-                Math.abs(current.accumulatedSeconds - accumulatedSeconds) < 2) {
-              return;
-            }
-            
-            set({
-              isRunning: remoteData.isRunning,
-              accumulatedSeconds,
-              startTime: remoteData.isRunning && remoteData.startTime ? remoteData.startTime.toDate() : null,
-            });
-          }
-        });
-
-        // Configurar timer local
-        const startLocalTimer = () => {
-          const state = get();
-          if (state.isRunning && !state.isRestoring) {
-            intervalRef = setInterval(() => {
-              set((prev) => ({
-                ...prev,
-                accumulatedSeconds: prev.accumulatedSeconds + 1,
-              }));
-            }, 1000);
-          }
-        };
-
-        // Configurar sincronización periódica
-        const startSyncTimer = () => {
-          const state = get();
-          if (state.isRunning && !state.isRestoring) {
-            syncIntervalRef = setInterval(() => {
-              const currentState = get();
-              const currentTime = getServerTime();
-              let accumulatedSeconds = currentState.accumulatedSeconds;
+            // Solo actualizar si viene de otro dispositivo
+            if (data.deviceId !== currentState.deviceId) {
+              const serverTime = new Date();
+              let accumulatedSeconds = data.accumulatedSeconds || 0;
               
-              if (currentState.startTime) {
-                const elapsed = calculateElapsedTime(currentState.startTime, currentTime);
+              if (data.isRunning && data.startTime) {
+                const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
                 accumulatedSeconds = elapsed;
               }
               
-              const newState = {
-                ...currentState,
+              set({
+                isRunning: data.isRunning,
                 accumulatedSeconds,
-              };
+                startTime: data.isRunning && data.startTime ? data.startTime.toDate() : null,
+                lastSyncTime: data.lastSyncTime || null,
+              });
               
-              set(newState);
-              syncToFirestore(newState);
-            }, 5 * 60 * 1000); // 5 minutos
+              console.log('[TimerStore] 🔄 Sincronizado desde otro dispositivo:', { 
+                deviceId: data.deviceId, 
+                isRunning: data.isRunning, 
+                seconds: accumulatedSeconds 
+              });
+            }
+          });
+
+          // Iniciar timers si es necesario
+          if (newState.isRunning) {
+            performanceStartTime = getHighResTime();
+            
+            // Usar Web Worker si está disponible, sino fallback a setTimeout
+            if (worker && get().workerActive) {
+              worker.postMessage({ action: 'start' });
+            } else {
+              startPreciseTimer();
+            }
+            
+            startSyncTimer();
           }
-        };
-
-        // Iniciar timers si es necesario
-        const state = get();
-        if (state.isRunning) {
-          startLocalTimer();
-          startSyncTimer();
+        } else {
+          set({ isRestoring: false, syncStatus: 'idle' });
         }
-
       } catch (error) {
         console.error('[TimerStore] ❌ Error inicializando timer:', error);
-        set({ isRestoring: false });
+        set({ isRestoring: false, syncStatus: 'error' });
       }
     },
 
-    // Acciones
+    // Acciones mejoradas
     startTimer: async () => {
-      // Debug logging disabled to reduce console spam
-      
       const state = get();
       
-      // Evitar iniciar si ya está corriendo
       if (state.isRunning) {
         console.log('[TimerStore] ⚠️ Timer ya está corriendo, ignorando startTimer');
         return;
       }
       
-      const serverTime = getServerTime();
+      const serverTime = new Date();
+      performanceStartTime = getHighResTime();
       
       const newState = {
         ...state,
         isRunning: true,
         startTime: serverTime,
+        lastSyncTime: getHighResTime(),
       };
       
       set(newState);
       
-      // Limpiar timers existentes antes de iniciar nuevos
-      if (intervalRef) {
-        clearInterval(intervalRef);
-        intervalRef = null;
+      // Limpiar timers existentes
+      if (timeoutRef) {
+        clearTimeout(timeoutRef);
+        timeoutRef = null;
       }
-      if (syncIntervalRef) {
-        clearInterval(syncIntervalRef);
-        syncIntervalRef = null;
+      if (syncTimeoutRef) {
+        clearTimeout(syncTimeoutRef);
+        syncTimeoutRef = null;
       }
       
-      // Iniciar timer local
-      intervalRef = setInterval(() => {
-        set((prev) => ({
-          ...prev,
-          accumulatedSeconds: prev.accumulatedSeconds + 1,
-        }));
-      }, 1000);
-
+      // Iniciar timer usando Web Worker o fallback
+      if (worker && state.workerActive) {
+        worker.postMessage({ action: 'start' });
+      } else {
+        startPreciseTimer();
+      }
+      
       // Iniciar sincronización periódica
-      syncIntervalRef = setInterval(() => {
-        const currentState = get();
-        const currentTime = getServerTime();
-        let accumulatedSeconds = currentState.accumulatedSeconds;
-        
-        if (currentState.startTime) {
-          const elapsed = calculateElapsedTime(currentState.startTime, currentTime);
-          accumulatedSeconds = elapsed;
-        }
-        
-        const newState = {
-          ...currentState,
-          accumulatedSeconds,
-        };
-        
-        set(newState);
-        syncToFirestore(newState);
-      }, 5 * 60 * 1000);
+      startSyncTimer();
 
       // Sincronización inmediata
       await syncToFirestore(newState);
-      
-      // Debug logging disabled to reduce console spam
     },
 
     pauseTimer: async () => {
-      // Debug logging disabled to reduce console spam
-      
       const state = get();
       
-      // Evitar pausar si ya está pausado
       if (!state.isRunning) {
         console.log('[TimerStore] ⚠️ Timer ya está pausado, ignorando pauseTimer');
         return;
       }
       
+      // Limpiar timers
+      if (timeoutRef) {
+        clearTimeout(timeoutRef);
+        timeoutRef = null;
+      }
+      if (syncTimeoutRef) {
+        clearTimeout(syncTimeoutRef);
+        syncTimeoutRef = null;
+      }
+      
+      // Pausar Web Worker si está activo
+      if (worker && state.workerActive) {
+        worker.postMessage({ action: 'pause' });
+      }
+      
+      performanceStartTime = null;
+      
       const newState = {
         ...state,
         isRunning: false,
         startTime: null,
+        lastSyncTime: getHighResTime(),
       };
       
       set(newState);
-      
-      // Limpiar timers
-      if (intervalRef) {
-        clearInterval(intervalRef);
-        intervalRef = null;
-      }
-      if (syncIntervalRef) {
-        clearInterval(syncIntervalRef);
-        syncIntervalRef = null;
-      }
-
-      // Sincronización inmediata
       await syncToFirestore(newState);
-      
-      // Debug logging disabled to reduce console spam
     },
 
     resetTimer: async () => {
-      // Debug logging disabled to reduce console spam
-      
       const state = get();
+      
+      // Limpiar timers
+      if (timeoutRef) {
+        clearTimeout(timeoutRef);
+        timeoutRef = null;
+      }
+      if (syncTimeoutRef) {
+        clearTimeout(syncTimeoutRef);
+        syncTimeoutRef = null;
+      }
+      
+      // Detener Web Worker si está activo
+      if (worker && state.workerActive) {
+        worker.postMessage({ action: 'stop' });
+      }
+      
+      performanceStartTime = null;
+      
       const newState = {
         ...state,
         isRunning: false,
-        startTime: null,
         accumulatedSeconds: 0,
+        startTime: null,
+        lastSyncTime: getHighResTime(),
       };
       
       set(newState);
-      
-      // Limpiar timers
-      if (intervalRef) {
-        clearInterval(intervalRef);
-        intervalRef = null;
-      }
-      if (syncIntervalRef) {
-        clearInterval(syncIntervalRef);
-        syncIntervalRef = null;
-      }
-
-      // Sincronización inmediata
       await syncToFirestore(newState);
-      
-      console.log('[TimerStore] ✅ Timer reseteado');
     },
 
     finalizeTimer: async () => {
-      console.log('[TimerStore] 🎯 Finalizando timer...');
-      
       const state = get();
       const finalSeconds = state.accumulatedSeconds;
       
-      // Limpiar timer en Firestore
-      if (state.taskId && state.userId) {
-        const timerDocRef = doc(db, `tasks/${state.taskId}/timers/${state.userId}`);
-        await setDoc(timerDocRef, {
-          userId: state.userId,
-          isRunning: false,
-          startTime: null,
-          accumulatedSeconds: 0,
-          lastFinalized: Timestamp.fromDate(new Date()),
-          deviceId,
-        });
-      }
-      
-      // Limpiar timers locales primero
-      if (intervalRef) {
-        clearInterval(intervalRef);
-        intervalRef = null;
-      }
-      if (syncIntervalRef) {
-        clearInterval(syncIntervalRef);
-        syncIntervalRef = null;
-      }
-      
-      // Resetear estado completamente
-      const newState = {
-        ...state,
-        isRunning: false,
-        startTime: null,
-        accumulatedSeconds: 0,
-        isRestoring: false,
-      };
-      
-      set(newState);
-      
-      console.log('[TimerStore] ✅ Timer finalizado y reseteado completamente');
+      await get().pauseTimer();
       return finalSeconds;
     },
 
-    // Limpieza
     cleanupTimer: () => {
-      // Debug logging disabled to reduce console spam
-      
-      if (intervalRef) {
-        clearInterval(intervalRef);
-        intervalRef = null;
+      if (timeoutRef) {
+        clearTimeout(timeoutRef);
+        timeoutRef = null;
       }
-      if (syncIntervalRef) {
-        clearInterval(syncIntervalRef);
-        syncIntervalRef = null;
+      if (syncTimeoutRef) {
+        clearTimeout(syncTimeoutRef);
+        syncTimeoutRef = null;
       }
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
         unsubscribeSnapshot = null;
       }
-      
-      set({
-        isRunning: false,
-        accumulatedSeconds: 0,
-        startTime: null,
-        isRestoring: true,
-        taskId: null,
-        userId: null,
-      });
+      if (worker) {
+        worker.postMessage({ action: 'stop' });
+        worker.terminate();
+        worker = null;
+      }
+      performanceStartTime = null;
+      set({ workerActive: false });
     },
   };
 }); 

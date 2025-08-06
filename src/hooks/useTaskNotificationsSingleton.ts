@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, query, where, onSnapshot, Timestamp, doc, updateDoc, runTransaction, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, doc, updateDoc, runTransaction, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Define types
@@ -107,7 +107,7 @@ class TaskNotificationsManager {
             console.log('[TaskNotificationsManager] No subscribers for user:', userId);
           }
 
-        }, 300); // 300ms debounce from research
+        }, 1000); // ✅ OPTIMIZACIÓN: Aumentar debounce de 300ms a 1000ms para reducir re-renders
 
         this.debounceTimeouts.set(userId, newTimeout);
       },
@@ -178,20 +178,19 @@ class TaskNotificationsManager {
         });
       }
 
-
-
-      // Then update Firestore and DELETE all task notifications
+      // ✅ OPTIMIZACIÓN: Usar batch para updates atómicos y reducir re-renders
+      const batch = writeBatch(db);
       const taskRef = doc(db, 'tasks', taskId);
       
       try {
-        // Update task document
-        await updateDoc(taskRef, {
+        // Batch update task document
+        batch.update(taskRef, {
           [`lastViewedBy.${userId}`]: Timestamp.now(),
           hasUnreadUpdates: false,
           [`unreadCountByUser.${userId}`]: 0, // Reset unread count
         });
         
-        // DELETE all notifications for this task and user
+        // Batch delete all notifications for this task and user
         const notificationsQuery = query(
           collection(db, 'notifications'),
           where('taskId', '==', taskId),
@@ -200,9 +199,13 @@ class TaskNotificationsManager {
         
         const snapshot = await getDocs(notificationsQuery);
         if (snapshot.docs.length > 0) {
-          const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-          await Promise.all(deletePromises);
+          snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+          });
         }
+        
+        // ✅ Commit batch atómico
+        await batch.commit();
         
       } catch (error) {
         console.error('[TaskNotificationsManager] Error updating task in Firestore:', error);

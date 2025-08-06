@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { ref, set } from 'firebase/database';
+import { rtdb } from '@/lib/firebase';
 
 interface TabDetectionConfig {
   checkInterval?: number;
@@ -7,6 +10,7 @@ interface TabDetectionConfig {
 }
 
 export const useTabDetection = (config: TabDetectionConfig = {}) => {
+  const { user } = useUser();
   const {
     checkInterval = 5000, // Menos frecuente
     heartbeatInterval = 6000, // Menos frecuente
@@ -32,7 +36,7 @@ export const useTabDetection = (config: TabDetectionConfig = {}) => {
     return false;
   }, []);
 
-  // Estrategia 1: SessionStorage con heartbeat optimizado
+  // Estrategia 1: SessionStorage con heartbeat optimizado + RTDB sync
   const updateSessionStorage = useCallback(() => {
     if (typeof window === 'undefined') return;
     
@@ -65,6 +69,19 @@ export const useTabDetection = (config: TabDetectionConfig = {}) => {
     setActiveTabCount(Math.max(1, realTabCount));
     setIsOnline(newIsOnline);
     
+    // Sincronizar con RTDB si hay usuario autenticado
+    if (user?.id) {
+      const presenceRef = ref(rtdb, `presence/${user.id}`);
+      set(presenceRef, {
+        online: newIsOnline,
+        tabCount: realTabCount,
+        lastActive: new Date().toISOString(),
+        sessionId: sessionId.current
+      }).catch((error) => {
+        console.error('[TabDetection] Error syncing with RTDB:', error);
+      });
+    }
+    
     if (shouldLog()) {
       // Debug logging disabled to reduce console spam
     }
@@ -77,7 +94,7 @@ export const useTabDetection = (config: TabDetectionConfig = {}) => {
         }
       }, 2000);
     }
-  }, [toleranceMs, shouldLog]);
+  }, [toleranceMs, shouldLog, user?.id]);
 
   // Estrategia 2: BroadcastChannel optimizado
   const setupBroadcastChannel = useCallback(() => {

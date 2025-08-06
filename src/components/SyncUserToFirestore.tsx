@@ -1,15 +1,10 @@
 'use client';
 
 import { useAuth as useClerkAuth, useUser } from '@clerk/nextjs';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import { firebaseConfig } from '@/lib/firebaseConfig';
+import { signInWithCustomToken } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 import { useEffect, useState } from 'react';
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
 
 export default function SyncUserToFirestore() {
   const { getToken, userId } = useClerkAuth();

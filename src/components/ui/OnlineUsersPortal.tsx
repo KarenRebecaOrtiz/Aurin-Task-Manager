@@ -29,12 +29,17 @@ const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({
   const users = useUsers();
   const { user: currentUser } = useUser();
 
-  // Filtrar usuarios online (Disponible, Ocupado, Por terminar)
+  // Filtrar usuarios online usando información de presencia mejorada
   const onlineUsers = useMemo(() => {
-    return users.filter(user => 
-      user.status && 
-      ['Disponible', 'Ocupado', 'Por terminar'].includes(user.status)
-    );
+    return users.filter(user => {
+      // Usar información de presencia de RTDB si está disponible
+      if (user.online !== undefined) {
+        return user.online;
+      }
+      // Fallback a status tradicional
+      return user.status && 
+        ['Disponible', 'Ocupado', 'Por terminar'].includes(user.status);
+    });
   }, [users]);
 
   // Limitar el número de usuarios visibles
@@ -118,6 +123,11 @@ const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({
         <div className={styles.tooltipContent}>
           <div className={styles.tooltipTitle}>
             Usuarios Online ({onlineUsers.length})
+            {onlineUsers.some(user => user.online !== undefined) && (
+              <span style={{ fontSize: '0.8em', color: '#888', marginLeft: '8px' }}>
+                (RTDB)
+              </span>
+            )}
           </div>
           <div className={styles.tooltipUsers}>
             {onlineUsers.map(user => (
@@ -132,6 +142,15 @@ const OnlineUsersPortal: React.FC<OnlineUsersPortalProps> = ({
                 <span className={styles.tooltipUserName}>
                   {user.fullName}
                   {user.id === currentUser?.id && ' (Tú)'}
+                  {user.online !== undefined && (
+                    <span style={{ 
+                      fontSize: '0.7em', 
+                      color: user.online ? '#4caf50' : '#f44336',
+                      marginLeft: '4px'
+                    }}>
+                      {user.online ? '●' : '○'}
+                    </span>
+                  )}
                 </span>
                 <div className={styles.tooltipUserActions}>
                   {user.id !== currentUser?.id && (

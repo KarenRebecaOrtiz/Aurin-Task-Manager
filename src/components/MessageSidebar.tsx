@@ -219,24 +219,41 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   // Body scroll lock effect
   useEffect(() => {
     if (isOpen) {
-      // Save current scroll position
+      // ✅ OPTIMIZACIÓN: Guardar posición de scroll de manera más robusta
       const scrollY = window.scrollY;
-
-      // Lock body scroll
+      console.log('[MessageSidebar] Locking body scroll at position:', scrollY);
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
+      document.body.setAttribute('data-scroll-y', scrollY.toString());
 
       return () => {
-        // Restore body scroll
+        // ✅ OPTIMIZACIÓN: Restaurar scroll de manera más suave
+        const scrollY = document.body.getAttribute('data-scroll-y');
+        console.log('[MessageSidebar] Restoring body scroll to position:', scrollY);
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.overflow = '';
+        document.body.removeAttribute('data-scroll-y');
 
-        // Restore scroll position
-        window.scrollTo(0, scrollY);
+        // ✅ OPTIMIZACIÓN: Usar requestAnimationFrame para scroll más suave
+        if (scrollY) {
+          requestAnimationFrame(() => {
+            // ✅ OPTIMIZACIÓN: Verificar que el valor sea válido antes de hacer scroll
+            const scrollValue = parseInt(scrollY);
+            if (!isNaN(scrollValue) && scrollValue >= 0) {
+              console.log('[MessageSidebar] Executing scrollTo:', scrollValue);
+              window.scrollTo({
+                top: scrollValue,
+                behavior: 'instant' // Usar 'instant' en lugar de 'smooth' para evitar animación
+              });
+            } else {
+              console.warn('[MessageSidebar] Invalid scroll value:', scrollY);
+            }
+          });
+        }
       };
     }
   }, [isOpen]);
@@ -847,8 +864,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                         <Image
                                   src={message.imageUrl}
                                   alt={message.fileName || 'Imagen'}
-                          width={0}
-                          height={0}
+                          width={400}
+                          height={300}
                           sizes="100vw"
                                 className={`${styles.image} ${message.isPending ? styles.pendingImage : ''}`}
                                   onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}

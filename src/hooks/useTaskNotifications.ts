@@ -19,22 +19,45 @@ export const useTaskNotifications = () => {
   const { taskNotifications, markTaskAsViewed } = useTaskNotificationsSingleton();
   const { unreadByTask, markTaskAsRead, setNotifications } = useTaskNotificationsStore();
   const markAsViewedRef = useRef<Set<string>>(new Set());
+  
+  // ✅ OPTIMIZACIÓN: Cache para getUnreadCount para evitar recálculos innecesarios
+  const unreadCountCache = useRef<Map<string, number>>(new Map());
+  const lastNotificationsRef = useRef<string>('');
 
   // Subscribe to singleton and update store
   useEffect(() => {
     setNotifications(taskNotifications);
+    
+    // ✅ OPTIMIZACIÓN: Limpiar cache cuando notificaciones cambian significativamente
+    const notificationsString = JSON.stringify(taskNotifications);
+    if (notificationsString !== lastNotificationsRef.current) {
+      lastNotificationsRef.current = notificationsString;
+      unreadCountCache.current.clear(); // Limpiar cache cuando notificaciones cambian
+    }
   }, [taskNotifications, setNotifications]);
 
   const getUnreadCount = useCallback((task: Task): number => {
     if (!userId) return 0;
     
+    // ✅ OPTIMIZACIÓN: Usar cache para evitar recálculos
+    const cacheKey = `${task.id}_${userId}`;
+    const cachedCount = unreadCountCache.current.get(cacheKey);
+    
+    if (cachedCount !== undefined) {
+      return cachedCount;
+    }
+    
     // Use denormalized counter if available (O(1) performance)
     if (task.unreadCountByUser && task.unreadCountByUser[userId] !== undefined) {
-      return task.unreadCountByUser[userId];
+      const count = task.unreadCountByUser[userId];
+      unreadCountCache.current.set(cacheKey, count);
+      return count;
     }
     
     // Fallback to store-based count
-    return unreadByTask[task.id] || 0;
+    const count = unreadByTask[task.id] || 0;
+    unreadCountCache.current.set(cacheKey, count);
+    return count;
   }, [userId, unreadByTask]);
 
   const markAsViewed = useCallback(async (taskId: string) => {
@@ -51,6 +74,10 @@ export const useTaskNotifications = () => {
     try {
       // OPTIMISTIC UPDATE: Mark task as read locally first
       markTaskAsRead(taskId);
+      
+      // ✅ OPTIMIZACIÓN: Limpiar cache para esta tarea
+      const cacheKey = `${taskId}_${userId}`;
+      unreadCountCache.current.delete(cacheKey);
       
       // Then update Firestore with transaction (atomic)
       await markTaskAsViewed(taskId);

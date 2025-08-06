@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server'; // Cambia currentUser por auth
 import styles from './DashboardLayout.module.scss';
 import { UsersSyncProvider } from '@/components/UsersSyncProvider';
-import StatusDebug from '@/components/ui/StatusDebug';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth(); // Obtiene el ID del usuario
@@ -14,7 +13,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className={styles.container}>
       <UsersSyncProvider>
         <main className={styles.main}>{children}</main>
-        <StatusDebug />
       </UsersSyncProvider>
     </div>
   );

@@ -1,8 +1,8 @@
 @use '@/app/styles/variables' as *;
 @use 'sass:color';
+@use '@/app/styles/utils' as *;
 /* Importación de fuente Inter Tight */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
-@import '@/app/styles/utils';
 
 // -----------------------------------
 // Estilos Generales
@@ -613,7 +613,7 @@
   display: block;
   --height-of-loader: 4px;
   --loader-color: #0071e2;
-  width: 130px;
+  width: 200px;
   height: var(--height-of-loader);
   border-radius: 30px;
   background-color: rgba(0,0,0,0.2);
@@ -1851,123 +1851,6 @@
   justify-content: center;
   font-size: 10px;
   animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { 
-    opacity: 1; 
-    transform: scale(1);
-  }
-  50% { 
-    opacity: 0.8; 
-    transform: scale(1.1);
-  }
-}
-
-:global(body.dark) .timerNumbers {
-  --timer-text-color: white;
-}
-
-:global(body.dark) .timerContainer div span {
-  color: white;
-}
-
-:global(body.dark) .timerContainer div img {
-  filter: invert(100%) brightness(80%) !important;
-}
-
-// -----------------------------------
-// Timer Panel
-// -----------------------------------
-.timerPanel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  z-index: 20;
-  height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: all 0.3s ease-in-out;
-}
-
-.timerPanelContent {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 20px;
-  background: #f5f5f5;
-  border-radius: 16px;
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.004),
-    6px 6px 12px rgba(0, 0, 0, 0.10);
-  transition: all 0.3s ease-in-out;
-}
-
-:global(body.dark) .timerPanelContent {
-  background: #1f1f20;
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.04),
-    6px 6px 12px rgba(0, 0, 0, 0.4);
-}
-
-.timerRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.timerCard {
-  background: #f6f6f6;
-  border-radius: 16px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: all 0.3s ease-in-out;
-}
-
-:global(body.dark) .timerCard {
-  background: #232323;
-}
-
-.timerInput {
-  width: 100%;
-  padding: 8px 12px;
-  background: #f3f3f3;
-  border: none;
-  border-radius: 10px;
-  color: #1b2734d9;
-  font-size: 15px;
-  font-family: $font-family-primary;
-  font-weight: 400;
-  opacity: 0.85;
-  box-shadow:
-    inset -2px -2px 4px rgba(255, 255, 255, 0.03),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease-in-out;
-}
-
-.timerInput:focus {
-  outline: none;
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow:
-    inset -1px -1px 3px rgba(255, 255, 255, 0.1),
-    inset 2px 2px 4px rgba(0, 0, 0, 0.2),
-    0 0 0 1px #e4e4e4;
-}
-
-:global(body.dark) .timerInput {
-  background-color: rgb(36, 36, 36);
-  color: white;
-}
-
-.calendarPopper {
-  z-index: 1000;
 }
 
 .timerCommentInput {

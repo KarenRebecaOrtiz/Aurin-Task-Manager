@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { ref, onValue } from 'firebase/database';
+import { rtdb } from '@/lib/firebase';
 import { useDataStore } from '@/stores/dataStore';
 
 interface FirestoreUser {
@@ -17,11 +19,13 @@ interface FirestoreUser {
 
 export const useUsersSync = () => {
   const setUsers = useDataStore((state) => state.setUsers);
+  const updateUserPresence = useDataStore((state) => state.updateUserPresence);
   
   useEffect(() => {
     console.log('🔄 Iniciando sincronización de usuarios en tiempo real...');
     
-    const unsubscribe = onSnapshot(
+    // Sincronización de datos de usuario desde Firestore
+    const unsubscribeFirestore = onSnapshot(
       collection(db, 'users'), 
       (snapshot) => {
         const firestoreUsers: FirestoreUser[] = snapshot.docs.map(doc => ({ 
@@ -41,16 +45,39 @@ export const useUsersSync = () => {
         }));
         
         setUsers(users);
-        console.log(`✅ ${users.length} usuarios sincronizados`);
+        console.log(`✅ ${users.length} usuarios sincronizados desde Firestore`);
       },
       (error) => {
-        console.error('❌ Error sincronizando usuarios:', error);
+        console.error('❌ Error sincronizando usuarios desde Firestore:', error);
       }
     );
 
+    // Sincronización de presencia desde RTDB
+    const presenceRef = ref(rtdb, 'presence');
+    const unsubscribePresence = onValue(presenceRef, (snap) => {
+      const presenceData = snap.val() || {};
+      
+      Object.entries(presenceData).forEach(([userId, data]: [string, unknown]) => {
+        if (data && typeof data === 'object') {
+          const presenceData = data as Record<string, unknown>;
+          updateUserPresence(
+            userId, 
+            (presenceData.online as boolean) || false, 
+            (presenceData.lastActive as string) || null,
+            (presenceData.tabCount as number) || 0
+          );
+        }
+      });
+      
+      console.log(`✅ Presencia sincronizada para ${Object.keys(presenceData).length} usuarios`);
+    }, (error) => {
+      console.error('❌ Error sincronizando presencia desde RTDB:', error);
+    });
+
     return () => {
       console.log('🔄 Deteniendo sincronización de usuarios...');
-      unsubscribe();
+      unsubscribeFirestore();
+      unsubscribePresence();
     };
-  }, [setUsers]);
+  }, [setUsers, updateUserPresence]);
 }; 

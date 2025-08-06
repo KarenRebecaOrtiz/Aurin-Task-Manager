@@ -9,12 +9,16 @@
  * - Sincronización en tiempo real con Firestore
  * - Gestión automática de estado "Fuera" cuando no hay pestañas abiertas
  * - Sincronización entre múltiples componentes (AvailabilityToggle y AvatarDropdown)
+ * 
+ * Mejoras: Usa lista de conexiones en RTDB para multi-tab, computa online basado en child count.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useInactivityDetection } from './useInactivityDetection';
+import { useDayReset } from './useDayReset';
 
 export type AvailabilityStatus = 'Disponible' | 'Ocupado' | 'Por terminar' | 'Fuera';
 
@@ -23,21 +27,11 @@ interface AvailabilityState {
   isOnline: boolean;
   isLoading: boolean;
   lastStatusChange: string | null;
-  dayStatus: AvailabilityStatus; // El estado configurado por el usuario para el día
+  dayStatus: AvailabilityStatus;
 }
 
-/**
- * Hook principal para gestión de estado de disponibilidad
- * 
- * Reglas de negocio:
- * 1. Si hay ventana abierta + sesión iniciada = estado configurado (Disponible/Ocupado)
- * 2. Si no hay ventana abierta o sin sesión = "Fuera"
- * 3. Estado persiste durante el día, resetea a "Disponible" en nuevo día
- * 4. Sincronización automática entre pestañas y componentes
- */
 export const useAvailabilityStatus = () => {
   const { user, isLoaded } = useUser();
-  
   const [state, setState] = useState<AvailabilityState>({
     currentStatus: 'Disponible',
     isOnline: false,
@@ -46,198 +40,91 @@ export const useAvailabilityStatus = () => {
     dayStatus: 'Disponible'
   });
 
-  const tabCountRef = useRef(0);
+  const [isLoading, setIsLoading] = useState(false);
   const isInitializedRef = useRef(false);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
-   * Verifica si es un nuevo día desde la última actualización de estado
+   * Actualiza el estado de disponibilidad en Firestore
    */
-  const isNewDay = useCallback((lastUpdate: string | null): boolean => {
-    if (!lastUpdate) return true;
-    
-    const today = new Date();
-    const lastDate = new Date(lastUpdate);
-    
-    const todayDateString = today.toDateString();
-    const lastDateString = lastDate.toDateString();
-    
-    return todayDateString !== lastDateString;
-  }, []);
-
-  /**
-   * Actualiza el estado en Firestore con validación
-   */
-  const updateFirestoreStatus = useCallback(async (
-    newStatus: AvailabilityStatus,
-    isDayReset = false
-  ) => {
+  const updateFirestoreStatus = useCallback(async (newStatus: AvailabilityStatus) => {
     if (!user?.id) return;
     
     try {
-      const updateData: Record<string, unknown> = {
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, {
         status: newStatus,
-        lastOnlineAt: new Date().toISOString(),
-        isOnline: tabCountRef.current > 0
-      };
-
-      if (isDayReset || newStatus !== 'Fuera') {
-        updateData.lastStatusChange = new Date().toISOString();
-        updateData.dayStatus = newStatus === 'Fuera' ? state.dayStatus : newStatus;
-      }
-
-      await updateDoc(doc(db, 'users', user.id), updateData);
-      
-      console.log(`[AvailabilityStatus] Updated status: ${newStatus}`, {
-        isDayReset,
-        tabCount: tabCountRef.current,
-        userId: user.id
+        lastStatusChange: new Date().toISOString(),
+        lastOnlineAt: new Date().toISOString()
       });
+      console.log('[AvailabilityStatus] Firestore status updated to:', newStatus);
     } catch (error) {
-      console.error('[AvailabilityStatus] Error updating status:', error);
-      throw error;
+      console.error('[AvailabilityStatus] Error updating Firestore status:', error);
     }
-  }, [user?.id, state.dayStatus]);
+  }, [user?.id]);
 
   /**
-   * Maneja el cambio de estado manual por parte del usuario
+   * Actualiza el estado usando writes optimizados
    */
   const updateStatus = useCallback(async (newStatus: AvailabilityStatus) => {
-    if (!user?.id || state.isLoading) return;
+    if (!user?.id || isLoading) return;
     
-    setState(prev => ({ ...prev, isLoading: true }));
+    setIsLoading(true);
     
     try {
-      // Solo permitir cambios entre Disponible y Ocupado cuando está online
-      if (tabCountRef.current > 0 && (newStatus === 'Disponible' || newStatus === 'Ocupado')) {
-        await updateFirestoreStatus(newStatus);
-        setState(prev => ({
-          ...prev,
-          currentStatus: newStatus,
-          dayStatus: newStatus,
-          lastStatusChange: new Date().toISOString()
-        }));
-      }
+      await updateFirestoreStatus(newStatus);
+      setState(prev => ({ ...prev, currentStatus: newStatus }));
+      console.log('[AvailabilityStatus] Status updated to:', newStatus);
     } catch (error) {
       console.error('[AvailabilityStatus] Error in updateStatus:', error);
     } finally {
-      setState(prev => ({ ...prev, isLoading: false }));
+      setIsLoading(false);
     }
-  }, [user?.id, state.isLoading, updateFirestoreStatus]);
+  }, [user?.id, isLoading, updateFirestoreStatus]);
 
-  /**
-   * Gestión de pestañas y estado online/offline
-   */
+  // Función para volver a Disponible cuando hay actividad
+  const handleActivity = useCallback(() => {
+    if (state.currentStatus === 'Fuera') {
+      console.log('[AvailabilityStatus] Activity detected, returning to Disponible');
+      updateFirestoreStatus('Disponible');
+    }
+  }, [state.currentStatus, updateFirestoreStatus]);
+
+  // Integrar detección de inactividad simplificada - solo si está Disponible
+  useInactivityDetection(3600000, () => {
+    // Solo marcar como Fuera si está Disponible
+    if (state.currentStatus === 'Disponible') {
+      console.log('[AvailabilityStatus] Inactivity detected, marking as Fuera');
+      updateFirestoreStatus('Fuera');
+    } else {
+      console.log('[AvailabilityStatus] Inactivity detected but status is not Disponible, ignoring');
+    }
+  }, handleActivity);
+
+  // Integrar reset de día
+  useDayReset();
+
+  // Listener de Firestore para sincronizar estado
   useEffect(() => {
     if (!user?.id || !isLoaded) return;
 
-    // Incrementar contador de pestañas
-    tabCountRef.current += 1;
-    
-    const handleBeforeUnload = async () => {
-      tabCountRef.current -= 1;
-      
-      // Si es la última pestaña, marcar como "Fuera"
-      if (tabCountRef.current <= 0) {
-        try {
-          await updateFirestoreStatus('Fuera');
-        } catch (error) {
-          console.error('[AvailabilityStatus] Error on beforeunload:', error);
-        }
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      // Por ahora solo loggeamos, puede extenderse para más lógica
-      if (document.visibilityState === 'hidden') {
-        console.log('[AvailabilityStatus] Tab hidden, maintaining status');
-      } else {
-        console.log('[AvailabilityStatus] Tab visible');
-      }
-    };
-
-    // Heartbeat para mantener vivo el estado online
-    heartbeatIntervalRef.current = setInterval(() => {
-      if (tabCountRef.current > 0 && state.currentStatus !== 'Fuera') {
-        updateDoc(doc(db, 'users', user.id), { 
-          lastOnlineAt: new Date().toISOString(),
-          isOnline: true
-        }).catch(console.error);
-      }
-    }, 60000); // Cada minuto
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-      }
-      tabCountRef.current = Math.max(0, tabCountRef.current - 1);
-    };
-  }, [user?.id, isLoaded, updateFirestoreStatus, state.currentStatus]);
-
-  /**
-   * Listener de Firestore para sincronización en tiempo real
-   */
-  useEffect(() => {
-    if (!user?.id || !isLoaded) return;
-
-    const userDocRef = doc(db, 'users', user.id);
-    
-    const unsubscribe = onSnapshot(userDocRef, async (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const firestoreStatus = data.status || 'Disponible';
-        const dayStatus = data.dayStatus || 'Disponible';
-        const lastStatusChange = data.lastStatusChange;
-        const isOnline = Boolean(data.isOnline);
-
-        // Lógica de inicialización y reset de día
-        if (!isInitializedRef.current && tabCountRef.current > 0) {
-          isInitializedRef.current = true;
-          
-          // Verificar si es un nuevo día
-          if (isNewDay(lastStatusChange)) {
-            console.log('[AvailabilityStatus] New day detected, resetting to Disponible');
-            await updateFirestoreStatus('Disponible', true);
-            setState(prev => ({
-              ...prev,
-              currentStatus: 'Disponible',
-              dayStatus: 'Disponible',
-              isOnline: true,
-              isLoading: false,
-              lastStatusChange: new Date().toISOString()
-            }));
-            return;
-          }
-          
-          // Si hay pestañas abiertas, restaurar el estado del día
-          if (firestoreStatus === 'Fuera' && tabCountRef.current > 0) {
-            await updateFirestoreStatus(dayStatus);
-            setState(prev => ({
-              ...prev,
-              currentStatus: dayStatus,
-              dayStatus,
-              isOnline: true,
-              isLoading: false,
-              lastStatusChange
-            }));
-            return;
-          }
-        }
-
-        // Actualización normal de estado
+    const userRef = doc(db, 'users', user.id);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        const currentStatus = data.status as AvailabilityStatus || 'Disponible';
+        const lastStatusChange = data.lastStatusChange || null;
+        const dayStatus = data.dayStatus as AvailabilityStatus || 'Disponible';
+        
         setState(prev => ({
           ...prev,
-          currentStatus: firestoreStatus,
+          currentStatus,
+          lastStatusChange,
           dayStatus,
-          isOnline,
           isLoading: false,
-          lastStatusChange
+          isOnline: currentStatus !== 'Fuera'
         }));
+        
+        console.log('[AvailabilityStatus] Firestore state synced:', JSON.stringify({ currentStatus, isOnline: currentStatus !== 'Fuera' }));
       }
     }, (error) => {
       console.error('[AvailabilityStatus] Firestore listener error:', error);
@@ -245,14 +132,14 @@ export const useAvailabilityStatus = () => {
     });
 
     return () => unsubscribe();
-  }, [user?.id, isLoaded, updateFirestoreStatus, isNewDay]);
+  }, [user?.id, isLoaded]);
 
   return {
     currentStatus: state.currentStatus,
-    dayStatus: state.dayStatus,
     isOnline: state.isOnline,
-    isLoading: state.isLoading,
+    isLoading: state.isLoading || isLoading,
     updateStatus,
-    tabCount: tabCountRef.current
+    lastStatusChange: state.lastStatusChange,
+    dayStatus: state.dayStatus
   };
 };

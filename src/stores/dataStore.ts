@@ -42,6 +42,9 @@ interface User {
   role: string;
   description?: string;
   status?: string;
+  online?: boolean;
+  lastActive?: string;
+  tabCount?: number;
 }
 
 interface Message {
@@ -100,6 +103,7 @@ interface DataStore {
   setUsers: (users: User[]) => void;
   updateUser: (userId: string, updates: Partial<User>) => void;
   updateUserStatus: (userId: string, newStatus: string) => void;
+  updateUserPresence: (userId: string, online: boolean, lastActive: string, tabCount?: number) => void;
   addUser: (user: User) => void;
   deleteUser: (userId: string) => void;
   isLoadingUsers: boolean;
@@ -201,37 +205,49 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   // Tasks
   tasks: [],
   setTasks: (tasks) => set((state) => {
-    // Solo actualizar si realmente cambió
-    if (JSON.stringify(state.tasks) !== JSON.stringify(tasks)) {
-      return { tasks };
+    // ✅ OPTIMIZACIÓN: Evitar re-renders si el contenido no cambió realmente
+    const currentTasksString = JSON.stringify(state.tasks);
+    const newTasksString = JSON.stringify(tasks);
+    
+    if (currentTasksString === newTasksString) {
+      console.log('[dataStore] Tasks unchanged, skipping update');
+      return state; // No actualizar si el contenido es idéntico
     }
-    return state;
+    
+    console.log('[dataStore] Tasks updated, count:', tasks.length);
+    return { tasks };
   }),
-  updateTask: (taskId, updates) =>
-    set((state) => ({
-      tasks: state.tasks.map((task) =>
-        task.id === taskId ? { ...task, ...updates } : task
-      ),
-    })),
-  addTask: (task) =>
-    set((state) => ({
-      tasks: [...state.tasks, task],
-    })),
-  deleteTask: (taskId) =>
-    set((state) => ({
-      tasks: state.tasks.filter((task) => task.id !== taskId),
-    })),
+  updateTask: (taskId, updates) => set((state) => {
+    const taskIndex = state.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return state;
+    
+    const updatedTask = { ...state.tasks[taskIndex], ...updates };
+    const newTasks = [...state.tasks];
+    newTasks[taskIndex] = updatedTask;
+    
+    return { tasks: newTasks };
+  }),
+  addTask: (task) => set((state) => ({ tasks: [...state.tasks, task] })),
+  deleteTask: (taskId) => set((state) => ({ 
+    tasks: state.tasks.filter(t => t.id !== taskId) 
+  })),
   isLoadingTasks: false,
   setIsLoadingTasks: (loading) => set({ isLoadingTasks: loading }),
   
   // Clients
   clients: [],
   setClients: (clients) => set((state) => {
-    // Solo actualizar si realmente cambió
-    if (JSON.stringify(state.clients) !== JSON.stringify(clients)) {
-      return { clients };
+    // ✅ OPTIMIZACIÓN: Evitar re-renders si el contenido no cambió realmente
+    const currentClientsString = JSON.stringify(state.clients);
+    const newClientsString = JSON.stringify(clients);
+    
+    if (currentClientsString === newClientsString) {
+      console.log('[dataStore] Clients unchanged, skipping update');
+      return state; // No actualizar si el contenido es idéntico
     }
-    return state;
+    
+    console.log('[dataStore] Clients updated, count:', clients.length);
+    return { clients };
   }),
   updateClient: (clientId, updates) =>
     set((state) => ({
@@ -269,6 +285,12 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     set((state) => ({
       users: state.users.map((user) =>
         user.id === userId ? { ...user, status: newStatus } : user
+      ),
+    })),
+  updateUserPresence: (userId, online, lastActive, tabCount) =>
+    set((state) => ({
+      users: state.users.map((user) =>
+        user.id === userId ? { ...user, online, lastActive, tabCount } : user
       ),
     })),
   addUser: (user) =>

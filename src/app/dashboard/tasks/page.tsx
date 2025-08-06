@@ -842,6 +842,9 @@ export default function TasksPage() {
       <SafariFirebaseAuthFix />
       {/* ProfileCard Modal - Renderizado a nivel de página */}
       <ProfileCardRenderer />
+      
+      {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
+      <SafariFirebaseAuthFix />
     </AuthProvider>
   );
 }

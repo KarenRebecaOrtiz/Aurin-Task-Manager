@@ -171,6 +171,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   externalClients,
   externalUsers,
 }) => {
+  // ✅ DEBUG: Log re-renders para trackear causas
+  console.log('[TasksTable] Render triggered', {
+    externalTasksCount: externalTasks?.length || 0,
+    externalClientsCount: externalClients?.length || 0,
+    externalUsersCount: externalUsers?.length || 0,
+    timestamp: new Date().toISOString()
+  });
+
   const { user } = useUser();
   const { isAdmin } = useAuth();
   
@@ -192,10 +200,41 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   
   const isLoadingUsers = useDataStore(useShallow(state => state.isLoadingUsers));
 
-  // ✅ Usar datos directamente de dataStore (como MembersTable)
-  const effectiveTasks = externalTasks || tasks;
-  const effectiveClients = externalClients || clients;
-  const effectiveUsers = externalUsers || users;
+  // ✅ OPTIMIZACIÓN: Memoizar effectiveTasks para estabilizar dependencias
+  const effectiveTasks = useMemo(() => {
+    const result = externalTasks || tasks;
+    console.log('[TasksTable] effectiveTasks memo recalculated', {
+      externalTasksCount: externalTasks?.length || 0,
+      tasksCount: tasks.length,
+      resultCount: result.length
+    });
+    return result;
+  }, [externalTasks, tasks]);
+  
+  const effectiveClients = useMemo(() => {
+    const result = externalClients || clients;
+    console.log('[TasksTable] effectiveClients memo recalculated', {
+      externalClientsCount: externalClients?.length || 0,
+      clientsCount: clients.length,
+      resultCount: result.length
+    });
+    return result;
+  }, [externalClients, clients]);
+  
+  const effectiveUsers = useMemo(() => {
+    const result = externalUsers || users;
+    console.log('[TasksTable] effectiveUsers memo recalculated', {
+      externalUsersCount: externalUsers?.length || 0,
+      usersCount: users.length,
+      resultCount: result.length
+    });
+    return result;
+  }, [externalUsers, users]);
+
+  // ✅ OPTIMIZACIÓN: Memoizar IDs para dependencias estables
+  const effectiveTasksIds = useMemo(() => effectiveTasks.map(t => t.id).join(','), [effectiveTasks]);
+  const effectiveClientsIds = useMemo(() => effectiveClients.map(c => c.id).join(','), [effectiveClients]);
+  const effectiveUsersIds = useMemo(() => effectiveUsers.map(u => u.id).join(','), [effectiveUsers]);
 
   // ✅ Optimizar selectores de Zustand para evitar re-renders innecesarios - usar selectores individuales como MembersTable
   const filteredTasks = useStore(tasksTableStore, useShallow(state => state.filteredTasks));
@@ -249,16 +288,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   // Usar datos externos si están disponibles, de lo contrario usar datos del store
   const effectiveTasksRef = useRef(effectiveTasks);
-  const effectiveTasksIdsRef = useRef('');
   
   // Solo recalcular IDs si realmente cambió el array
   useEffect(() => {
     const newIds = effectiveTasks.map(t => t.id).join(',');
-    if (newIds !== effectiveTasksIdsRef.current) {
-      effectiveTasksIdsRef.current = newIds;
+    if (newIds !== effectiveTasksIds) {
       effectiveTasksRef.current = effectiveTasks;
     }
-  }, [effectiveTasks]);
+  }, [effectiveTasks, effectiveTasksIds]);
 
   // ARREGLADO: No sobrescribir filteredTasks con todas las tareas
   // El filtrado se maneja en memoizedFilteredTasks y se aplica en el useEffect de abajo
@@ -279,38 +316,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     }
   }, [user?.id, effectiveTasks, setIsLoadingTasks]);
 
+  // ❌ ELIMINAR: Este listener está duplicado - ya existe en useSharedTasksState
   // Setup de clients con actualizaciones en tiempo real
-  useEffect(() => {
-    if (!user?.id || effectiveClients.length > 0) return;
-
-    // Setting up clients listener
-    setIsLoadingClients(true);
-
-    const clientsQuery = query(collection(db, 'clients'));
-    const unsubscribeClients = onSnapshot(
-      clientsQuery,
-      (snapshot) => {
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '/empty-image.png',
-        }));
-
-        // Clients updated
-        
-        // Actualizar estado directamente sin caché
-        setIsLoadingClients(false);
-      },
-      (error) => {
-        console.error('[TasksTable] Error in clients onSnapshot:', error);
-        setIsLoadingClients(false);
-      }
-    );
-
-    return () => {
-      unsubscribeClients();
-    };
-  }, [user?.id, effectiveClients, setIsLoadingClients]);
+  // useEffect(() => {
+  //   if (!user?.id || effectiveClients.length > 0) return;
+  //   // ... código eliminado
+  // }, [user?.id, effectiveClients, setIsLoadingClients]);
 
   // Users are now managed centrally by useSharedTasksState
   // No independent user fetching needed
@@ -362,7 +373,22 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     console.log(`[TasksTable] Column ${columnKey} visibility changed to: ${visible}`);
   }, []);
 
+  // ✅ OPTIMIZACIÓN: Memoizar getUnreadCount para estabilizar dependencias
+  const memoizedGetUnreadCount = useCallback((task: Task) => {
+    return getUnreadCount(task);
+  }, [getUnreadCount]);
+
   const memoizedFilteredTasks = useMemo(() => {
+    console.log('[TasksTable] memoizedFilteredTasks recalculating', {
+      effectiveTasksCount: effectiveTasks.length,
+      searchQuery,
+      priorityFilter,
+      clientFilter,
+      userFilter,
+      userId,
+      isAdmin
+    });
+    
     // Filtering tasks...
     
     const filtered = effectiveTasks.filter((task) => {
@@ -399,10 +425,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       return matchesSearch && matchesPriority && matchesClient && matchesUser;
     });
     
+    console.log('[TasksTable] memoizedFilteredTasks result', {
+      filteredCount: filtered.length,
+      totalCount: effectiveTasks.length
+    });
+    
     // Filtering complete
     
     return filtered;
-  }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
+  }, [effectiveTasksIds, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
   // Crear un ID estable para las tareas filtradas
   const filteredTasksIds = useMemo(() => memoizedFilteredTasks.map(t => t.id).join(','), [memoizedFilteredTasks]);
@@ -546,7 +577,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     console.log('[TasksTable] Sorting tasks:', { sortKey: key, sortDirection });
   };
 
+  // ✅ OPTIMIZACIÓN: Usar IDs estables y cache para sortedTasks
   const sortedTasks = useMemo(() => {
+    console.log('[TasksTable] sortedTasks recalculating', {
+      filteredTasksCount: filteredTasks.length,
+      sortKey,
+      sortDirection,
+      effectiveClientsCount: effectiveClients.length,
+      effectiveUsersCount: effectiveUsers.length
+    });
+    
     const sorted = [...filteredTasks];
     
     // Si no hay sortKey o está vacío, aplicar ordenamiento por defecto por createdAt
@@ -574,10 +614,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           : clientB.localeCompare(clientA);
       });
     } else if (sortKey === 'notificationDot') {
-      // Ordenamiento por número de notificaciones
+      // ✅ OPTIMIZACIÓN: Usar cache para getUnreadCount en sort
       sorted.sort((a, b) => {
-        const countA = getUnreadCount(a);
-        const countB = getUnreadCount(b);
+        const countA = memoizedGetUnreadCount(a);
+        const countB = memoizedGetUnreadCount(b);
         return sortDirection === 'asc' ? countA - countB : countB - countA;
       });
     } else if (sortKey === 'assignedTo') {
@@ -639,8 +679,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           : String(b[sortKey as keyof Task]).localeCompare(String(a[sortKey as keyof Task])),
       );
     }
+    
+    console.log('[TasksTable] sortedTasks result', {
+      sortedCount: sorted.length,
+      sortKey,
+      sortDirection
+    });
+    
     return sorted;
-  }, [filteredTasks, sortKey, sortDirection, effectiveClients, effectiveUsers, getUnreadCount]);
+  }, [filteredTasks, sortKey, sortDirection, effectiveClientsIds, effectiveUsersIds, memoizedGetUnreadCount]);
 
   const animateClick = (element: HTMLElement) => {
     gsap.to(element, {
@@ -793,7 +840,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       return {
         ...col,
         render: (task: Task) => {
-          const updateCount = getUnreadCount(task);
+          const updateCount = memoizedGetUnreadCount(task);
 
           return (
             <div className={styles.notificationDotWrapper}>
@@ -1485,7 +1532,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       </div>
 
       <Table
-        key={`tasks-table-${effectiveTasksIdsRef.current}`}
+        key={`tasks-table-${effectiveTasksIds}-${filteredTasksIds}`}
         data={sortedTasks}
         columns={columns}
         itemsPerPage={10}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { collection, onSnapshot, query, doc, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, getDoc, Timestamp, limit, orderBy } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useDataStore } from '@/stores/dataStore';
 
@@ -152,10 +152,15 @@ export function useSharedTasksState(userId: string | undefined) {
       tasksListenerRef.current();
     }
 
-
     setIsLoadingTasks(true);
 
-    const tasksQuery = query(collection(db, 'tasks'));
+    // ✅ OPTIMIZACIÓN: Agregar limit y orderBy para reducir re-renders
+    const tasksQuery = query(
+      collection(db, 'tasks'),
+      limit(100), // Limitar a 100 tareas para evitar re-renders masivos
+      orderBy('createdAt', 'desc')
+    );
+    
     const unsubscribe = onSnapshot(
       tasksQuery,
       (snapshot) => {
@@ -185,7 +190,18 @@ export function useSharedTasksState(userId: string | undefined) {
           };
         });
 
-        setTasks(tasksData);
+        // ✅ OPTIMIZACIÓN: Memoizar datos antes de setState para evitar re-renders innecesarios
+        const tasksDataString = JSON.stringify(tasksData);
+        const currentTasksString = JSON.stringify(tasks);
+        
+        // Solo actualizar si realmente cambió
+        if (tasksDataString !== currentTasksString) {
+          console.log('[useSharedTasksState] Tasks updated, count:', tasksData.length);
+          setTasks(tasksData);
+        } else {
+          console.log('[useSharedTasksState] Tasks unchanged, skipping update');
+        }
+        
         setIsLoadingTasks(false);
         setLoadingProgress({ tasks: true });
         
@@ -228,10 +244,14 @@ export function useSharedTasksState(userId: string | undefined) {
       clientsListenerRef.current();
     }
 
-
     setIsLoadingClients(true);
 
-    const clientsQuery = query(collection(db, 'clients'));
+    // ✅ OPTIMIZACIÓN: Agregar limit para clients también
+    const clientsQuery = query(
+      collection(db, 'clients'),
+      limit(50) // Limitar clients también
+    );
+    
     const unsubscribe = onSnapshot(
       clientsQuery,
       (snapshot) => {
@@ -245,7 +265,17 @@ export function useSharedTasksState(userId: string | undefined) {
           createdAt: safeTimestampToISO(doc.data().createdAt),
         }));
 
-        setClients(clientsData);
+        // ✅ OPTIMIZACIÓN: Memoizar clients también
+        const clientsDataString = JSON.stringify(clientsData);
+        const currentClientsString = JSON.stringify(clients);
+        
+        if (clientsDataString !== currentClientsString) {
+          console.log('[useSharedTasksState] Clients updated, count:', clientsData.length);
+          setClients(clientsData);
+        } else {
+          console.log('[useSharedTasksState] Clients unchanged, skipping update');
+        }
+        
         setIsLoadingClients(false);
         setLoadingProgress({ clients: true });
         

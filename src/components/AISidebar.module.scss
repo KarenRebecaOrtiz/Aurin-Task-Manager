@@ -1,8 +1,8 @@
 @use '@/app/styles/variables' as *;
 @use 'sass:color';
+@use '@/app/styles/utils' as *;
 /* Importación de fuente Inter Tight */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
-@import '@/app/styles/utils';
 
 .toolbar {
   @include neomorphic-container;

@@ -19,7 +19,7 @@ const TimerDisplay = memo(({
   onToggleTimer, 
   onFinalizeTimer, 
   onTogglePanel, 
-  isRestoringTimer 
+  isRestoringTimer
 }: TimerDisplayProps) => {
   // Memoizar los cálculos del timer para evitar re-renders innecesarios
   const timerValues = useMemo(() => ({

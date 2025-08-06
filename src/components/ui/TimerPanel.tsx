@@ -33,6 +33,8 @@ interface TimerPanelProps {
   totalHours: string;
   onAddTimeEntry: (time?: string, date?: Date, comment?: string) => Promise<void>;
   onCancel: () => void;
+  isTimerRunning?: boolean;
+  timerSeconds?: number;
 }
 
 const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
@@ -46,6 +48,8 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
   totalHours,
   onAddTimeEntry,
   onCancel,
+  isTimerRunning = false,
+  timerSeconds = 0,
 }, ref) => {
   const timerPanelRef = useRef<HTMLDivElement>(null);
   
@@ -200,7 +204,9 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
       time: values.time,
       date: values.date,
       comment: values.comment?.slice(0, 50) + (values.comment && values.comment.length > 50 ? '...' : ''),
-      totalHours
+      totalHours,
+      isTimerRunning,
+      timerSeconds
     });
 
     try {
@@ -209,6 +215,17 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
       if (!isValid) {
         console.log('[TimerPanel:HandleSubmit] ❌ Form validation failed');
         return;
+      }
+
+      // Si el timer está corriendo, mostrar advertencia
+      if (isTimerRunning && timerSeconds > 0) {
+        const shouldContinue = confirm(
+          `El timer está corriendo con ${Math.floor(timerSeconds / 60)}:${String(timerSeconds % 60).padStart(2, '0')} minutos. ` +
+          '¿Deseas continuar añadiendo tiempo manual? El timer seguirá corriendo.'
+        );
+        if (!shouldContinue) {
+          return;
+        }
       }
 
       // Call onAddTimeEntry with the current form values
@@ -227,7 +244,7 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
       console.error('[TimerPanel:HandleSubmit] ❌ Error adding time entry:', error);
       alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     }
-  }, [form, onAddTimeEntry, totalHours, onCancel]);
+  }, [form, onAddTimeEntry, totalHours, onCancel, isTimerRunning, timerSeconds]);
 
   if (!isMounted) {
     return null;

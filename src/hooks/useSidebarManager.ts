@@ -28,7 +28,7 @@ export const useSidebarManager = ({
         // Debug logging disabled to reduce console spam
         closeSidebar();
         closeStateSidebar();
-        // Pequeño delay para asegurar que el sidebar anterior se cierre
+        // ✅ OPTIMIZACIÓN: Reducir delay para evitar timing issues
         setTimeout(() => {
           if (sidebarType === 'chat') {
             openChatSidebar(sidebarId);
@@ -36,12 +36,13 @@ export const useSidebarManager = ({
             openMessageSidebar(sidebarId);
           }
           openStateSidebar(sidebarType, sidebarId);
-        }, 100);
+        }, 50); // ✅ Reducido de 100ms a 50ms
       } else if (openSidebar.type === sidebarType && openSidebar.id !== sidebarId) {
         // Si es el mismo tipo pero diferente ID, cerrar el anterior y abrir el nuevo
         // Debug logging disabled to reduce console spam
         closeSidebar();
         closeStateSidebar();
+        // ✅ OPTIMIZACIÓN: Reducir delay para evitar timing issues
         setTimeout(() => {
           if (sidebarType === 'chat') {
             openChatSidebar(sidebarId);
@@ -49,7 +50,7 @@ export const useSidebarManager = ({
             openMessageSidebar(sidebarId);
           }
           openStateSidebar(sidebarType, sidebarId);
-        }, 100);
+        }, 50); // ✅ Reducido de 100ms a 50ms
       } else if (!openSidebar.type) {
         // No hay sidebar abierto, abrir este
         // Debug logging disabled to reduce console spam
@@ -69,18 +70,7 @@ export const useSidebarManager = ({
         closeStateSidebar();
       }
     }
-  }, [
-    isOpen,
-    sidebarType,
-    sidebarId,
-    openChatSidebar,
-    openMessageSidebar,
-    closeSidebar,
-    getOpenSidebar,
-    openStateSidebar,
-    closeStateSidebar,
-    getSidebarState,
-  ]);
+  }, [isOpen, sidebarType, sidebarId, getOpenSidebar, closeSidebar, closeStateSidebar, openChatSidebar, openMessageSidebar, openStateSidebar]);
 
   // Función para cerrar el sidebar actual
   const handleClose = () => {

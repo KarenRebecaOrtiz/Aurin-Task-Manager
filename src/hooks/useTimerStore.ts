@@ -8,8 +8,7 @@ export const useTimerStoreHook = (taskId: string, userId: string) => {
     isRunning,
     accumulatedSeconds,
     isRestoring,
-    
-    // Acciones
+    // Eliminadas: syncStatus y workerActive
     initializeTimer,
     startTimer,
     pauseTimer,
@@ -21,6 +20,7 @@ export const useTimerStoreHook = (taskId: string, userId: string) => {
       isRunning: state.isRunning,
       accumulatedSeconds: state.accumulatedSeconds,
       isRestoring: state.isRestoring,
+      // Eliminadas: syncStatus y workerActive
       initializeTimer: state.initializeTimer,
       startTimer: state.startTimer,
       pauseTimer: state.pauseTimer,
@@ -64,8 +64,7 @@ export const useTimerStoreHook = (taskId: string, userId: string) => {
     isTimerRunning: isRunning,
     timerSeconds: accumulatedSeconds,
     isRestoringTimer: isRestoring,
-    
-    // Acciones memoizadas
+    // Eliminadas: syncStatus y workerActive
     startTimer: memoizedStartTimer,
     pauseTimer: memoizedPauseTimer,
     resetTimer: memoizedResetTimer,

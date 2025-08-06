@@ -525,6 +525,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       isTimerRunning,
       timerSeconds,
       isRestoringTimer,
+      // Eliminadas: syncStatus y workerActive
     } = useTimerStoreHook(task?.id || '', user?.id || '');
     
     // Debug logging disabled to reduce console spam
@@ -698,21 +699,39 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const toggleBodyScroll = useCallback((disable: boolean) => {
       if (typeof document !== 'undefined') {
         if (disable) {
+          // ✅ OPTIMIZACIÓN: Guardar posición de scroll de manera más robusta
           const scrollY = window.scrollY;
+          console.log('[ChatSidebar] Locking body scroll at position:', scrollY);
           document.body.style.position = 'fixed';
           document.body.style.top = `-${scrollY}px`;
           document.body.style.width = '100%';
           document.body.style.overflow = 'hidden';
           document.body.setAttribute('data-scroll-y', scrollY.toString());
         } else {
+          // ✅ OPTIMIZACIÓN: Restaurar scroll de manera más suave
           const scrollY = document.body.getAttribute('data-scroll-y');
+          console.log('[ChatSidebar] Restoring body scroll to position:', scrollY);
           document.body.style.position = '';
           document.body.style.top = '';
           document.body.style.width = '';
           document.body.style.overflow = '';
           document.body.removeAttribute('data-scroll-y');
+          
+          // ✅ OPTIMIZACIÓN: Usar requestAnimationFrame para scroll más suave
           if (scrollY) {
-            window.scrollTo(0, parseInt(scrollY));
+            requestAnimationFrame(() => {
+              // ✅ OPTIMIZACIÓN: Verificar que el valor sea válido antes de hacer scroll
+              const scrollValue = parseInt(scrollY);
+              if (!isNaN(scrollValue) && scrollValue >= 0) {
+                console.log('[ChatSidebar] Executing scrollTo:', scrollValue);
+                window.scrollTo({
+                  top: scrollValue,
+                  behavior: 'instant' // Usar 'instant' en lugar de 'smooth' para evitar animación
+                });
+              } else {
+                console.warn('[ChatSidebar] Invalid scroll value:', scrollY);
+              }
+            });
           }
         }
       }
@@ -1635,8 +1654,8 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           setCommentInput={setCommentInput}
           onAddTimeEntry={handleAddTimeEntry}
           totalHours={totalHours}
-          isRestoringTimer={isRestoringTimer}
-          replyingTo={replyingTo}
+                        isRestoringTimer={isRestoringTimer}
+              replyingTo={replyingTo}
           onCancelReply={handleCancelReply}
           editingMessageId={editingMessageId}
           editingText={editingText}

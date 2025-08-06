@@ -27,7 +27,7 @@
   color: white;
   font-size: 0.9em;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   box-shadow: 
     -2px -2px 4px rgba(255, 255, 255, 0.9),
@@ -51,17 +51,49 @@
       inset 2px 2px 4px rgba(209, 217, 230, 0.3);
   }
 
-  .icon {
-    width: 20px;
-    height: 20px;
-    transition: all 0.3s ease;
+  // Animación suave para el SVG
+  svg {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
     
     path {
-      fill: white;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
   }
 
-  // Estado ocupado (rojo)
+  // Contenedor para animaciones de fade
+  .svgContainer {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Animación para SVG disponible
+  .svgAvailable {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover {
+      transform: scale(1.1) rotate(0deg);
+    }
+  }
+
+  // Animación para SVG ocupado
+  .svgOccupied {
+    opacity: 1;
+    transform: scale(0.9) rotate(5deg);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover {
+      transform: scale(1) rotate(0deg);
+    }
+  }
+
+  // Estado ocupado (rojo) con animación suave
   .checkbox:checked + & {
     background-color: #dc3545;
     box-shadow: 
@@ -71,6 +103,10 @@
       inset -1px -1px 2px rgba(255, 255, 255, 0.5),
       inset 1px 1px 2px rgba(209, 217, 230, 0.3);
 
+    svg {
+      transform: scale(0.9) rotate(5deg);
+    }
+
     &:hover {
       box-shadow: 
         0px 0px 30px rgba(220, 53, 69, 0.6),
@@ -78,10 +114,14 @@
         4px 4px 8px rgba(0, 0, 0, 0.08),
         inset -2px -2px 4px rgba(255, 255, 255, 0.5),
         inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+      
+      svg {
+        transform: scale(1) rotate(0deg);
+      }
     }
   }
 
-  // Estado disponible (verde)
+  // Estado disponible (verde) con animación suave
   .checkbox:not(:checked) + & {
     background-color: #28a745;
     box-shadow: 
@@ -91,6 +131,10 @@
       inset -1px -1px 2px rgba(255, 255, 255, 0.5),
       inset 1px 1px 2px rgba(209, 217, 230, 0.3);
 
+    svg {
+      transform: scale(1) rotate(0deg);
+    }
+
     &:hover {
       box-shadow: 
         0px 0px 30px rgba(40, 167, 69, 0.6),
@@ -98,6 +142,10 @@
         4px 4px 8px rgba(0, 0, 0, 0.08),
         inset -2px -2px 4px rgba(255, 255, 255, 0.5),
         inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+      
+      svg {
+        transform: scale(1.1) rotate(0deg);
+      }
     }
   }
 

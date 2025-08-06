@@ -28,8 +28,7 @@ export default function TasksPageModals() {
   const showFailAlert = useTasksPageStore(useShallow(state => state.showFailAlert));
   const successMessage = useTasksPageStore(useShallow(state => state.successMessage));
   const failMessage = useTasksPageStore(useShallow(state => state.failMessage));
-  const isSessionRevokePopupOpen = useTasksPageStore(useShallow(state => state.isSessionRevokePopupOpen));
-  const sessionToRevoke = useTasksPageStore(useShallow(state => state.sessionToRevoke));
+  // Removed session revoke popup - not implemented in store
 
   // Action handlers
   const handleConfirmExit = () => {

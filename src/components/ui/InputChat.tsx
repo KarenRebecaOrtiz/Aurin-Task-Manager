@@ -571,7 +571,21 @@ export default function InputChat({
           </div>
         </div>
       )}
-      <TimerPanel isOpen={isTimerPanelOpen} timerInput={timerInput} setTimerInput={setTimerInput} dateInput={dateInput} setDateInput={setDateInput} commentInput={commentInput} setCommentInput={setCommentInput} totalHours={totalHours} onAddTimeEntry={onAddTimeEntry} onCancel={handleCloseTimerPanel} ref={timerPanelRef} />
+      <TimerPanel 
+        isOpen={isTimerPanelOpen} 
+        timerInput={timerInput} 
+        setTimerInput={setTimerInput} 
+        dateInput={dateInput} 
+        setDateInput={setDateInput} 
+        commentInput={commentInput} 
+        setCommentInput={setCommentInput} 
+        totalHours={totalHours} 
+        onAddTimeEntry={onAddTimeEntry} 
+        onCancel={handleCloseTimerPanel} 
+        isTimerRunning={isTimerRunning}
+        timerSeconds={timerSeconds}
+        ref={timerPanelRef} 
+      />
       {!isTimerPanelOpen && (
         <form className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`} ref={inputWrapperRef} onDragOver={handleDragOver} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} onSubmit={handleSend}>
           <div className={styles.toolbar}>

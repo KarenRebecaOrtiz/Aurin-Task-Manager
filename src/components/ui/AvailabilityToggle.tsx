@@ -18,23 +18,22 @@ import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
 import styles from './AvailabilityToggle.module.scss';
 
 const AvailabilityToggle = () => {
-  const { currentStatus, updateStatus, isLoading: hookLoading } = useAvailabilityStatus();
+  const { currentStatus, updateStatus, isLoading: hookLoading, isOnline } = useAvailabilityStatus(); // Add isOnline
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Evitar errores de hidratación
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const handleToggle = async () => {
-    if (isLoading || hookLoading || !mounted) return;
+    if (isLoading || hookLoading || !mounted || !isOnline) return; // Add !isOnline to prevent offline updates
 
     setIsLoading(true);
     try {
-      // Solo permitir toggle entre Disponible y Ocupado
       const newStatus = currentStatus === 'Disponible' ? 'Ocupado' : 'Disponible';
       await updateStatus(newStatus);
+      console.log('[AvailabilityToggle] Toggle called, newStatus:', newStatus); // Add log to confirm call
     } catch (error) {
       console.error('[AvailabilityToggle] Error updating status:', error);
     } finally {
@@ -42,20 +41,12 @@ const AvailabilityToggle = () => {
     }
   };
 
-  // No renderizar hasta que esté montado en el cliente o esté cargando
   if (!mounted || hookLoading) {
     return (
       <div className={styles.container}>
-        <div className={styles.switch}>
-          <svg
-            className={styles.icon}
-            viewBox="0 0 512 512"
-            height="1em"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V256c0 17.7 14.3 32 32 32s32-14.3 32-32V32zM143.5 120.6c13.6-11.3 15.4-31.5 4.1-45.1s-31.5-15.4-45.1-4.1C49.7 115.4 16 181.8 16 256c0 132.5 107.5 240 240 240s240-107.5 240-240c0-74.2-33.8-140.6-86.6-184.6c-13.6-11.3-33.8-9.4-45.1 4.1s-9.4 33.8 4.1 45.1c38.9 32.3 63.5 81 63.5 135.4c0 97.2-78.8 176-176 176s-176-78.8-176-176c0-54.4 24.7-103.1 63.5-135.4z"
-            />
+        <div className={styles.skeleton}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="24" height="24" rx="12" fill="#E0E0E0"/>
           </svg>
         </div>
       </div>
@@ -63,7 +54,7 @@ const AvailabilityToggle = () => {
   }
 
   const isAvailable = currentStatus === 'Disponible';
-  const isToggleDisabled = isLoading || hookLoading || currentStatus === 'Fuera';
+  const isToggleDisabled = isLoading || hookLoading || !isOnline || currentStatus === 'Fuera';
 
   return (
     <div className={styles.container}>
@@ -74,19 +65,41 @@ const AvailabilityToggle = () => {
         checked={!isAvailable}
         onChange={handleToggle}
         disabled={isToggleDisabled}
-        title={isToggleDisabled ? 'No disponible cuando está fuera de línea' : 'Cambiar entre Disponible y Ocupado'}
+        title={isToggleDisabled ? 'No disponible cuando está fuera de línea o offline' : 'Cambiar entre Disponible y Ocupado'}
       />
       <label htmlFor="availability-toggle" className={styles.switch}>
-        <svg
-          className={styles.icon}
-          viewBox="0 0 512 512"
-          height="1em"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V256c0 17.7 14.3 32 32 32s32-14.3 32-32V32zM143.5 120.6c13.6-11.3 15.4-31.5 4.1-45.1s-31.5-15.4-45.1-4.1C49.7 115.4 16 181.8 16 256c0 132.5 107.5 240 240 240s240-107.5 240-240c0-74.2-33.8-140.6-86.6-184.6c-13.6-11.3-33.8-9.4-45.1 4.1s-9.4 33.8 4.1 45.1c38.9 32.3 63.5 81 63.5 135.4c0 97.2-78.8 176-176 176s-176-78.8-176-176c0-54.4 24.7-103.1 63.5-135.4z"
-          />
-        </svg>
+        <div className={styles.svgContainer}>
+          {isAvailable ? (
+            <svg 
+              width="24" 
+              height="24" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+              className={styles.svgAvailable}
+            >
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <path d="M8 12L11 15L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          ) : (
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="24" 
+              height="24" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className={styles.svgOccupied}
+            >
+              <path d="m2 2 20 20"/>
+              <path d="M8.35 2.69A10 10 0 0 1 21.3 15.65"/>
+              <path d="M19.08 19.08A10 10 0 1 1 4.92 4.92"/>
+            </svg>
+          )}
+        </div>
       </label>
     </div>
   );
