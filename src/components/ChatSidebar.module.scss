@@ -7,6 +7,113 @@
 // -----------------------------------
 // Estilos Generales
 // -----------------------------------
+
+// -----------------------------------
+// Dock Styles para Timer Menu
+// -----------------------------------
+.dockContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dockItem {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+
+.dockIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+  
+  img {
+    transition: transform 0.2s ease;
+  }
+}
+
+.dockLabel {
+  position: absolute;
+  top: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.8);
+  }
+}
+
+:global(body.dark) {
+  .dockContainer {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .dockItem {
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+  
+  .dockLabel {
+    background: rgba(255, 255, 255, 0.9);
+    color: #000;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    
+    &::after {
+      border-top-color: rgba(255, 255, 255, 0.9);
+    }
+  }
+}
 .container {
   position: fixed;
   top: 0;
@@ -46,7 +153,7 @@
 }
 
 :global(body.dark) .container {
-  background: #070707;
+  background: #0d0d0d;
   box-shadow: none;
 
   &::before {
@@ -311,7 +418,7 @@
 
 :global(body.dark) .card,
 :global(body.dark) .cardFullWidth {
-  background: #070707;
+  background: #3d3d3d;
 }
 
 .cardLabel {
@@ -865,6 +972,7 @@
 
 .actions {
   display: flex;
+  justify-content: space-between;
   flex-direction: row;
 }
 
@@ -1569,6 +1677,24 @@
       transform: translateY(-1px) scale(0.98);
     }
   }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f8f9fa;
+    box-shadow: none;
+    transform: none;
+
+    &:hover {
+      background: #f8f9fa;
+      box-shadow: none;
+      transform: none;
+    }
+
+    img {
+      filter: grayscale(100%) opacity(0.6) !important;
+    }
+  }
 }
 
 :global(body.dark) .format-button {
@@ -1598,6 +1724,24 @@
         inset -2px -2px 4px rgba(255, 255, 255, 0.15),
         inset 2px 2px 6px rgba(0, 0, 0, 0.35);
       transform: translateY(-1px) scale(0.98);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #2a2a2d;
+    box-shadow: none;
+    transform: none;
+
+    &:hover {
+      background: #2a2a2d;
+      box-shadow: none;
+      transform: none;
+    }
+
+    img {
+      filter: grayscale(100%) opacity(0.6) invert(100%) !important;
     }
   }
 }
@@ -1684,6 +1828,41 @@
 // -----------------------------------
 // Image Button
 // -----------------------------------
+.playStopButton {
+  background: linear-gradient(135deg, #e6f3ff, #dbeafe) !important;
+  box-shadow:
+    -6px -6px 12px #ffffff,
+    6px 6px 12px rgba(59, 130, 246, 0.2) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 50%;
+  height: 40px;
+  width: 40px;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease-in-out,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+
+  &:hover:not(:disabled) {
+    box-shadow:
+      -8px -8px 16px #ffffff,
+      8px 8px 16px rgba(59, 130, 246, 0.3) !important;
+    transform: translateY(-2px);
+  }
+
+  &:active:not(:disabled) {
+    box-shadow:
+      inset -3px -3px 6px rgba(255, 255, 255, 0.8),
+      inset 3px 3px 6px rgba(59, 130, 246, 0.2) !important;
+    transform: translateY(0);
+  }
+}
+
 .imageButton {
   background: #f1f5f9;
   border: none;
@@ -1709,6 +1888,30 @@
       inset -2px -2px 4px rgba(255, 255, 255, 0.5),
       inset 2px 2px 6px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
+  }
+}
+
+:global(body.dark) .playStopButton {
+  background: linear-gradient(135deg, #1e3a8a, #1d4ed8) !important;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.05),
+    6px 6px 12px rgba(59, 130, 246, 0.3) !important;
+  border-color: rgba(147, 197, 253, 0.3);
+
+  &:hover:not(:disabled) {
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.08),
+      8px 8px 16px rgba(59, 130, 246, 0.4) !important;
+  }
+
+  &:active:not(:disabled) {
+    box-shadow:
+      inset -3px -3px 6px rgba(255, 255, 255, 0.1),
+      inset 3px 3px 6px rgba(59, 130, 246, 0.3) !important;
+  }
+
+  img {
+    filter: invert(100%) brightness(130%);
   }
 }
 
@@ -1816,6 +2019,10 @@
   color: #1b2734d9;
 }
 
+:global(body.dark) .timerContainer div span {
+  color: #ffffff;
+}
+
 .timerNumbers {
   --timer-text-color: #1b2734d9;
   font-variant-numeric: tabular-nums;
@@ -1835,6 +2042,11 @@
   :global(.number-flow-separator) {
     margin: 0 1px;
   }
+}
+
+:global(body.dark) .timerNumbers {
+  --timer-text-color: #ffffff;
+  color: var(--timer-text-color, #ffffff);
 }
 
 .restoreIndicator {
@@ -2455,7 +2667,14 @@
   }
 
   img {
-    filter: invert(100%) brightness(130%);
+    filter: invert(100%) brightness(130%) !important;
+  }
+  
+  // Selectores adicionales dentro del bloque summarizeButton
+  img[src="/Robot.svg"],
+  img[data-nimg="1"][src="/Robot.svg"] {
+    filter: invert(100%) brightness(130%) !important;
+    color: transparent !important;
   }
 }
 
@@ -2966,7 +3185,6 @@
 }
 
 .format-button,
-.playStopButton,
 .sendButton,
 .imageButton,
 .timer,

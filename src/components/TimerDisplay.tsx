@@ -1,8 +1,12 @@
 // src/components/TimerDisplay.tsx
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import NumberFlow, { NumberFlowGroup } from '@number-flow/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import styles from './ChatSidebar.module.scss';
+import { useTimerStoreHook } from '@/hooks/useTimerStore';
+
+
 
 interface TimerDisplayProps {
   timerSeconds: number;
@@ -11,16 +15,23 @@ interface TimerDisplayProps {
   onFinalizeTimer: () => Promise<void>;
   onTogglePanel: (e: React.MouseEvent) => void;
   isRestoringTimer: boolean;
+  isMenuOpen: boolean;
+  setIsMenuOpen: (open: boolean) => void;
 }
 
-const TimerDisplay = memo(({ 
-  timerSeconds, 
-  isTimerRunning, 
-  onToggleTimer, 
-  onFinalizeTimer, 
-  onTogglePanel, 
-  isRestoringTimer
+const TimerDisplay = memo(({
+  timerSeconds,
+  isTimerRunning,
+  onToggleTimer,
+  onFinalizeTimer,
+  onTogglePanel,
+  isRestoringTimer,
+  isMenuOpen,
+  setIsMenuOpen
 }: TimerDisplayProps) => {
+  // Hook del timer store para acceder a resetTimer
+  const { resetTimer } = useTimerStoreHook('temp-task-id', 'temp-user-id');
+
   // Memoizar los cálculos del timer para evitar re-renders innecesarios
   const timerValues = useMemo(() => ({
     hours: Math.floor(timerSeconds / 3600),
@@ -88,23 +99,57 @@ const TimerDisplay = memo(({
     await onFinalizeTimer();
   };
 
+  // Handler para toggle menu en click
+  const handleToggleMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  // Click outside para cerrar menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMenuOpen && !event.target) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+
+
   return (
     <div className={styles.timerContainer}>
-      <button 
-        className={styles.playStopButton} 
-        onClick={handleButtonClick}
-        onDoubleClick={handleDoubleClick}
-        title={timerState.tooltip}
-        disabled={timerState.isDisabled}
+      <div 
+        className={styles.timerButtonContainer}
+        style={{ position: 'relative' }}
       >
-        <Image 
-          src={timerState.icon} 
-          alt={timerState.alt} 
-          width={12} 
-          height={12} 
-        />
-      </button>
-      <div className={styles.timer} onClick={onTogglePanel}>
+        <button 
+          className={styles.playStopButton} 
+          onClick={handleToggleMenu}
+          title="Abrir menu de timer"
+          disabled={isRestoringTimer}
+        >
+          <Image 
+            src="/Clock.svg" 
+            alt="Reloj" 
+            width={12} 
+            height={12} 
+          />
+        </button>
+        
+
+      </div>
+      
+      <div 
+        className={styles.timerDisplay}
+        style={{ cursor: 'default', border: 'none', background: 'transparent' }}
+        title="Contador de tiempo"
+      >
         <NumberFlowGroup>
           <div className={styles.timerNumbers}>
             <NumberFlow 
@@ -124,7 +169,6 @@ const TimerDisplay = memo(({
           </div>
         </NumberFlowGroup>
         {isRestoringTimer && <div className={styles.restoreIndicator}>↻</div>}
-        <Image src="/chevron-down.svg" alt="Abrir panel" width={12} height={12} />
       </div>
     </div>
   );

@@ -1,0 +1,211 @@
+// Estilos para el calendario del TimerPanel
+.calendarContainer {
+  transform: scale(0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  min-height: 300px;
+}
+
+// Dark mode para el contenedor del calendario
+:global(body.dark) .calendarContainer {
+  background: rgba(30, 30, 30, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+// Centrar el contenedor padre del calendario
+.timerCard {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 20px;
+}
+
+// Centrar el contenedor del wizard step
+:global(.wizard_wizardStep__SZ0KF) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+// Estilos para el calendario react-day-picker
+:global(.rdp) {
+  background: transparent;
+  margin: 0;
+  font-size: 14px;
+  font-family: inherit;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+// Fijar el margin-bottom del root del calendario
+:global(.rdp-root) {
+  position: relative;
+  box-sizing: border-box;
+  margin-bottom: 50px;
+}
+
+// Centrar todos los contenedores del calendario
+:global(.rdp-months) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+:global(.rdp-month) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+:global(.rdp-month_grid) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+:global(.rdp-weeks) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+:global(.rdp-week) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+:global(.rdp-month_caption) {
+  text-align: center;
+  width: 100%;
+}
+
+// Título del mes
+:global(.rdp-month_caption) {
+  font-size: 16px;
+  font-weight: 600;
+  color: #182735;
+  margin-bottom: 12px;
+}
+
+:global(body.dark) .rdp-month_caption {
+  color: #ffffff !important;
+}
+
+// Días de la semana
+:global(.rdp-weekdays) {
+  font-size: 12px;
+  font-weight: 500;
+  color: #71717A;
+}
+
+:global(body.dark) .rdp-weekdays {
+  color: #a1a1aa !important;
+}
+
+// Días del calendario
+:global(.rdp-day) {
+  font-size: 14px;
+  font-weight: 500;
+  color: #182735;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+:global(body.dark) .rdp-day {
+  color: #ffffff !important;
+}
+
+// Botones de los días
+:global(.rdp-day_button) {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+// Día seleccionado
+:global(.rdp-day.rdp-selected) {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+}
+
+:global(body.dark) .rdp-day.rdp-selected {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+// Día de hoy
+:global(.rdp-day.rdp-today) {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+:global(body.dark) .rdp-day.rdp-today {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  color: #3b82f6 !important;
+}
+
+// Días fuera del mes (ocultos)
+:global(.rdp-day.rdp-outside) {
+  color: transparent;
+}
+
+:global(body.dark) .rdp-day.rdp-outside {
+  color: transparent !important;
+}
+
+// Hover en días
+:global(.rdp-day:hover:not(.rdp-outside)) {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+:global(body.dark) .rdp-day:hover:not(.rdp-outside) {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  color: #3b82f6 !important;
+}
+
+// Botones de navegación
+:global(.rdp-button_previous),
+:global(.rdp-button_next) {
+  color: #182735;
+}
+
+:global(body.dark) .rdp-button_previous,
+:global(body.dark) .rdp-button_next {
+  color: #ffffff !important;
+}
+
+// Iconos de navegación
+:global(.rdp-chevron) {
+  fill: currentColor;
+}
+
+:global(body.dark) .rdp-chevron {
+  fill: #ffffff !important;
+} 

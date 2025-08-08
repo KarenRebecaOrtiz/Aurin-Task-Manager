@@ -407,7 +407,9 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       const state = get();
       const finalSeconds = state.accumulatedSeconds;
       
-      await get().pauseTimer();
+      // Usar resetTimer en lugar de pauseTimer para limpiar completamente a 0
+      await get().resetTimer();
+      console.log('[TimerStore] ✅ Timer finalizado y reseteado a 0 segundos');
       return finalSeconds;
     },
 

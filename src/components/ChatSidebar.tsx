@@ -404,6 +404,21 @@ const MessageItem = memo(
                         <Image src="/pencil.svg" alt="Editar" width={16} height={16} />
                       </motion.div>
                     )}
+                    {message.hours && (
+                      <motion.div
+                        className={`${styles.actionDropdownItem} ${styles.edit}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Aquí implementaremos la edición de timelogs
+                          console.log('Editar timelog:', message.id, message.hours);
+                          setActionMenuOpenId(null);
+                        }}
+                        whileTap={{ scale: 0.95, opacity: 0.8 }}
+                        title="Editar tiempo"
+                      >
+                        <Image src="/Clock.svg" alt="Editar tiempo" width={16} height={16} />
+                      </motion.div>
+                    )}
                     <motion.div
                       className={`${styles.actionDropdownItem} ${styles.delete}`}
                       onClick={(e) => {
@@ -521,6 +536,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const {
       startTimer,
       pauseTimer,
+      resetTimer,
       finalizeTimer,
       isTimerRunning,
       timerSeconds,
@@ -1641,6 +1657,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           isTimerRunning={isTimerRunning}
           onToggleTimer={toggleTimer}
           onFinalizeTimer={handleFinalizeTimer}
+          onResetTimer={resetTimer}
           onToggleTimerPanel={() => setIsTimerPanelOpen(prev => !prev)}
           isTimerPanelOpen={isTimerPanelOpen}
           setIsTimerPanelOpen={setIsTimerPanelOpen}

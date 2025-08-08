@@ -273,6 +273,13 @@ export const useMessageActions = ({
     }
   }, [task.id]);
 
+  // Helper para crear timestamp al final del día (23:59:59)
+  const getEndOfDayTimestamp = (date: Date): Timestamp => {
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+    return Timestamp.fromDate(endDate);
+  };
+
   const sendTimeMessage = useCallback(async (
     senderId: string,
     senderName: string,
@@ -287,7 +294,10 @@ export const useMessageActions = ({
     const commentTempId = `temp-comment-${commentClientId}`;
     
     try {
-      const timestamp = Timestamp.now();
+      // Usar fecha seleccionada o fallback a now()
+      const timestamp = dateString 
+        ? getEndOfDayTimestamp(new Date(dateString))
+        : Timestamp.now();
       
       const timeMessage = dateString 
         ? `Añadió una entrada de tiempo de ${timeEntry} el ${dateString}`
@@ -307,7 +317,7 @@ export const useMessageActions = ({
         senderId,
         senderName,
         text: timeMessage,
-        timestamp: new Date(),
+        timestamp: timestamp.toDate(),
         read: false,
         hours,
         imageUrl: null,

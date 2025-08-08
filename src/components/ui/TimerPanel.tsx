@@ -3,6 +3,7 @@
 import { useEffect, useRef, forwardRef, useState, useCallback, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { DayPicker } from 'react-day-picker';
+import { es } from 'date-fns/locale';
 import 'react-day-picker/style.css';
 import { z } from 'zod';
 import { useForm, Controller } from 'react-hook-form';
@@ -305,7 +306,7 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
           <WizardStep step={0} validator={validateStep0}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
-                ⏰ Tiempo Invertido
+                Tiempo Invertido
               </h4>
               <p style={{ fontSize: '16px', color: '#71717A', margin: 0 }}>
                 Ingresa el tiempo que dedicaste a esta tarea
@@ -389,82 +390,20 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
           <WizardStep step={1} validator={validateStep1}>
             <div style={{ textAlign: 'center' }}>
               <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#182735', marginBottom: '8px' }}>
-                📅 Fecha de Trabajo
+                Fecha de Trabajo
               </h4>
               <p style={{ fontSize: '12px', color: '#71717A', margin: 0 }}>
                 Selecciona la fecha en la que realizaste el trabajo
               </p>
             </div>
             <div className={styles.timerCard}>
-              <div style={{
-                transform:'scale(0.8)',
-                display: 'flex',
-                justifyContent: 'center',
-                padding: '16px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
-              }}>
+              <div className={styles.calendarContainer}>
                 <DayPicker
                   mode="single"
                   selected={form.watch('date') || undefined}
                   onSelect={handleDateSelect}
-                  style={{ 
-                    background: 'transparent',
-                    margin: 0
-                  }}
-                  styles={{
-                    root: { 
-                      fontSize: '14px',
-                      fontFamily: 'inherit'
-                    },
-                    month_caption: {
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      color: '#182735',
-                      marginBottom: '12px'
-                    },
-                    weekdays: {
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      color: '#71717A'
-                    },
-                    day: {
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#182735',
-                      borderRadius: '8px',
-                      padding: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    },
-                    day_button: {
-                      borderRadius: '8px',
-                      transition: 'all 0.2s ease'
-                    },
-                    selected: {
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      fontWeight: '600'
-                    },
-                    today: {
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      color: '#3b82f6',
-                      fontWeight: '600'
-                    }
-                  }}
-                  modifiersStyles={{
-                    selected: {
-                      backgroundColor: '#3b82f6',
-                      color: 'white'
-                    },
-                    today: {
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                      color: '#3b82f6'
-                    }
-                  }}
+                  locale={es}
+                  weekStartsOn={1}
                 />
               </div>
               {form.formState.errors.date && (

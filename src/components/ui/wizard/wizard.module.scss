@@ -5,6 +5,37 @@
   font-family: 'Urbanist', sans-serif;
 }
 
+// Dark mode para títulos y textos del wizard
+:global(body.dark) .wizardContainer {
+  h3, h4 {
+    color: #ffffff !important;
+  }
+  
+  p {
+    color: #a1a1aa !important;
+  }
+  
+  // Para números del counter
+  .timeInputContainer {
+    span {
+      color: #ffffff !important;
+    }
+    
+    input {
+      color: #ffffff !important;
+    }
+    
+    .numberFlow {
+      color: #ffffff !important;
+    }
+  }
+  
+  // Para el separador ":"
+  div[style*="color: rgb(24, 39, 53)"] {
+    color: #ffffff !important;
+  }
+}
+
 .wizardStep {
   display: flex;
   flex-direction: column;

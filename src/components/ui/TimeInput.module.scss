@@ -16,6 +16,11 @@
     letter-spacing: 0.05em; // tracking-wide
   }
 
+  // Dark mode para labels
+  :global(body.dark) & .label {
+    color: #ffffff !important;
+  }
+
   .inputGroup {
     display: flex;
     align-items: stretch;
@@ -62,6 +67,20 @@
       .icon {
         width: 1rem; // size-4
         height: 1rem; // size-4
+      }
+    }
+
+    // Dark mode para botones
+    :global(body.dark) & .decrementButton,
+    :global(body.dark) & .incrementButton {
+      color: #ffffff !important;
+
+      &:hover:not(:disabled) {
+        color: #d5df63 !important;
+      }
+
+      &:disabled {
+        color: #6b7280 !important;
       }
     }
 
@@ -128,6 +147,11 @@
         @media (prefers-color-scheme: dark) {
           color: #000000; // dark:text-black
         }
+      }
+
+      // Dark mode para números
+      :global(body.dark) & .numberFlow {
+        color: #ffffff !important;
       }
     }
   }

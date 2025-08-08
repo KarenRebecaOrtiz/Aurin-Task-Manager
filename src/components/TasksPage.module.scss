@@ -62,10 +62,10 @@
 :global(.dark) .vignetteTop {
   background: linear-gradient(
     to bottom,
-    rgba($color-bg-dark, 0.95) 0%, // Negro más opaco (0.087 a 0.95)
-    rgba($color-bg-dark, 0.7) 30%, // Negro semi-opaco en el medio
-    rgba($color-bg-dark, 0.3) 70%, // Negro más transparente
-    rgba($color-bg-dark, 0) 100% // Transparente hacia abajo
+    rgba($color-bg-dark, 0) 0%, // Completamente transparente
+    rgba($color-bg-dark, 0) 30%, // Completamente transparente
+    rgba($color-bg-dark, 0) 70%, // Completamente transparente
+    rgba($color-bg-dark, 0) 100% // Completamente transparente
   );
 }
 

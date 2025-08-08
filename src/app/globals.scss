@@ -236,6 +236,16 @@ img[src*="android-chrome"] {
   }
 }
 
+// Hide vignette effects in dark mode
+body.dark,
+html.dark,
+[data-theme="dark"] {
+  .vignetteTop,
+  .vignetteBottom {
+    display: none !important;
+  }
+}
+
 // Global SVG dark mode inversion
 :global(body.dark) {
   img[src*=".svg"] {

@@ -148,8 +148,8 @@
 :global(.dark) .vignetteTop {
   background: linear-gradient(
     to bottom,
-    rgba($color-bg-dark, 0.087) 0%, // Negro semi-opaco en la parte superior
-    rgba($white, 0) 100% // Transparente hacia abajo
+    rgba($color-bg-dark, 0) 0%, // Completamente transparente
+    rgba($white, 0) 100% // Completamente transparente
   );
 }
 

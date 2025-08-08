@@ -65,6 +65,7 @@ interface InputChatProps {
   isTimerRunning: boolean;
   onToggleTimer: (e: React.MouseEvent) => void;
   onFinalizeTimer?: () => Promise<void>;
+  onResetTimer?: () => Promise<void>;
   onToggleTimerPanel: (e: React.MouseEvent) => void;
   isTimerPanelOpen: boolean;
   setIsTimerPanelOpen: (open: boolean) => void;
@@ -78,6 +79,7 @@ interface InputChatProps {
   editingText?: string;
   onEditMessage?: (messageId: string, newText: string) => Promise<void>;
   onCancelEdit?: () => void;
+  isTimerMenuOpen?: boolean;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -93,6 +95,7 @@ export default function InputChat({
   isTimerRunning,
   onToggleTimer,
   onFinalizeTimer,
+  onResetTimer,
   onToggleTimerPanel,
   isTimerPanelOpen,
   setIsTimerPanelOpen,
@@ -115,6 +118,7 @@ export default function InputChat({
   onCancelEdit,
 }: InputChatProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [isTimerMenuOpen, setIsTimerMenuOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isDropupOpen, setIsDropupOpen] = useState(false);
@@ -588,13 +592,244 @@ export default function InputChat({
       />
       {!isTimerPanelOpen && (
         <form className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`} ref={inputWrapperRef} onDragOver={handleDragOver} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} onSubmit={handleSend}>
-          <div className={styles.toolbar}>
-            {formatButtons.map(({ id, icon, label, shortcut }) => (
-              <button key={id} type="button" className={`${styles['format-button']} ${styles.tooltip}`} data-active={editor?.isActive(id) ? 'true' : 'false'} onClick={() => toggleFormat(id)} disabled={isSending || isProcessing} title={`${label} (${shortcut})`} aria-label={label}>
-                <Image src={icon} alt={label} width={16} height={16} className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`} style={{ filter: 'none', fill: '#000000' }} draggable="false" />
-              </button>
-            ))}
-          </div>
+          <AnimatePresence>
+            {editor && !editor.isEmpty && !isTimerMenuOpen && (
+              <motion.div 
+                className={styles.toolbar}
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ 
+                  duration: 0.2, 
+                  ease: 'easeOut',
+                  staggerChildren: 0.05,
+                  delayChildren: 0.1
+                }}
+              >
+                {formatButtons.map(({ id, icon, label, shortcut }, index) => (
+                  <motion.button 
+                    key={id} 
+                    type="button" 
+                    className={`${styles['format-button']} ${styles.tooltip}`} 
+                    data-active={editor?.isActive(id) ? 'true' : 'false'} 
+                    onClick={() => toggleFormat(id)} 
+                    disabled={isSending || isProcessing} 
+                    title={`${label} (${shortcut})`} 
+                    aria-label={label}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ 
+                      duration: 0.15, 
+                      ease: 'easeOut',
+                      delay: index * 0.02
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Image src={icon} alt={label} width={16} height={16} className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`} style={{ filter: 'none', fill: '#000000' }} draggable="false" />
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Menu Timer con estructura de Toolbar */}
+          <AnimatePresence>
+            {isTimerMenuOpen && (
+              <motion.div 
+                className={styles.toolbar}
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ 
+                  duration: 0.2, 
+                  ease: 'easeOut',
+                  staggerChildren: 0.05,
+                  delayChildren: 0.1
+                }}
+              >
+                {/* Botón Play */}
+                <motion.button 
+                  type="button" 
+                  className={`${styles['format-button']} ${styles.tooltip}`} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isTimerRunning) {
+                      onToggleTimer(e);
+                      setIsTimerMenuOpen(false);
+                    }
+                  }}
+                  disabled={isTimerRunning}
+                  title="Iniciar"
+                  aria-label="Iniciar"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    duration: 0.15, 
+                    ease: 'easeOut',
+                    delay: 0 * 0.02
+                  }}
+                  whileHover={!isTimerRunning ? { scale: 1.05 } : {}}
+                  whileTap={!isTimerRunning ? { scale: 0.95 } : {}}
+                >
+                  <Image 
+                    src="/Play.svg" 
+                    alt="Iniciar" 
+                    width={16} 
+                    height={16} 
+                    className={styles.toolbarIcon}
+                    style={{ filter: 'none', fill: '#000000' }} 
+                    draggable="false" 
+                  />
+                </motion.button>
+                
+                {/* Botón Stop */}
+                <motion.button 
+                  type="button" 
+                  className={`${styles['format-button']} ${styles.tooltip}`} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isTimerRunning) {
+                      onToggleTimer(e);
+                      setIsTimerMenuOpen(false);
+                    }
+                  }}
+                  disabled={!isTimerRunning}
+                  title="Pausar"
+                  aria-label="Pausar"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    duration: 0.15, 
+                    ease: 'easeOut',
+                    delay: 1 * 0.02
+                  }}
+                  whileHover={isTimerRunning ? { scale: 1.05 } : {}}
+                  whileTap={isTimerRunning ? { scale: 0.95 } : {}}
+                >
+                  <Image 
+                    src="/pause.svg" 
+                    alt="Pausar" 
+                    width={16} 
+                    height={16} 
+                    className={styles.toolbarIcon}
+                    style={{ filter: 'none', fill: '#000000' }} 
+                    draggable="false" 
+                  />
+                </motion.button>
+                
+                {/* Botón Reiniciar */}
+                <motion.button 
+                  type="button" 
+                  className={`${styles['format-button']} ${styles.tooltip}`} 
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (onResetTimer && timerSeconds > 0) {
+                      console.log('[InputChat] 🔄 Reiniciando timer...');
+                      await onResetTimer();
+                      setIsTimerMenuOpen(false);
+                      console.log('[InputChat] ✅ Timer reiniciado correctamente');
+                    }
+                  }}
+                  disabled={!timerSeconds || timerSeconds === 0}
+                  title="Reiniciar"
+                  aria-label="Reiniciar"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    duration: 0.15, 
+                    ease: 'easeOut',
+                    delay: 2 * 0.02
+                  }}
+                  whileHover={timerSeconds > 0 ? { scale: 1.05 } : {}}
+                  whileTap={timerSeconds > 0 ? { scale: 0.95 } : {}}
+                >
+                  <Image 
+                    src="/rotate-ccw.svg" 
+                    alt="Reiniciar" 
+                    width={16} 
+                    height={16} 
+                    className={styles.toolbarIcon}
+                    style={{ filter: 'none', fill: '#000000' }} 
+                    draggable="false" 
+                  />
+                </motion.button>
+                
+                {/* Botón Enviar */}
+                <motion.button 
+                  type="button" 
+                  className={`${styles['format-button']} ${styles.tooltip}`} 
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (isTimerRunning && onFinalizeTimer) {
+                      await onFinalizeTimer();
+                      setIsTimerMenuOpen(false);
+                    }
+                  }}
+                  disabled={!isTimerRunning}
+                  title="Enviar"
+                  aria-label="Enviar"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    duration: 0.15, 
+                    ease: 'easeOut',
+                    delay: 3 * 0.02
+                  }}
+                  whileHover={isTimerRunning ? { scale: 1.05 } : {}}
+                  whileTap={isTimerRunning ? { scale: 0.95 } : {}}
+                >
+                  <Image 
+                    src="/send.svg" 
+                    alt="Enviar" 
+                    width={16} 
+                    height={16} 
+                    className={styles.toolbarIcon}
+                    style={{ filter: 'none', fill: '#000000' }} 
+                    draggable="false" 
+                  />
+                </motion.button>
+                
+                {/* Botón Tiempo Personalizado */}
+                <motion.button 
+                  type="button" 
+                  className={`${styles['format-button']} ${styles.tooltip}`} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleTimerPanel(e);
+                    setIsTimerMenuOpen(false);
+                  }}
+                  title="Tiempo Personalizado"
+                  aria-label="Tiempo Personalizado"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    duration: 0.15, 
+                    ease: 'easeOut',
+                    delay: 4 * 0.02
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Image 
+                    src="/clock-plus.svg" 
+                    alt="Tiempo Personalizado" 
+                    width={16} 
+                    height={16} 
+                    className={styles.toolbarIcon}
+                    style={{ filter: 'none', fill: '#000000' }} 
+                    draggable="false" 
+                  />
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {isProcessing && (
             <div className={styles.processingSpinner}>
               <svg width="16" height="16" viewBox="0 0 24 24" className="animate-spin">
@@ -657,6 +892,8 @@ export default function InputChat({
               onFinalizeTimer={onFinalizeTimer}
               onTogglePanel={handleToggleTimerPanel}
               isRestoringTimer={!!isRestoringTimer}
+              isMenuOpen={isTimerMenuOpen}
+              setIsMenuOpen={setIsTimerMenuOpen}
             />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <div className={styles.dropupContainer} ref={dropupRef}>
