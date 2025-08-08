@@ -68,7 +68,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     } else {
       console.log('[MessageSidebar] Missing required data for conversationId:', { currentUserId, receiverId: receiver.id });
     }
-  }, [correctConversationId]);
+  }, [correctConversationId, currentUserId, receiver.id]);
   
   // NUEVO: Usar el hook de cifrado existente - MEMOIZADO
   const { encryptMessage, decryptMessage } = useEncryption(correctConversationId);
@@ -358,7 +358,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         clearTimeout(markMessagesAsReadRef.current);
       }
     };
-  }, [isOpen, currentUserId, receiver.id, correctConversationId]); // Removido allMessages de dependencias
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, currentUserId, receiver.id, correctConversationId]); // allMessages intencionalmente omitido para evitar re-ejecuciones excesivas
 
   // Scroll detection for down arrow
   useEffect(() => {

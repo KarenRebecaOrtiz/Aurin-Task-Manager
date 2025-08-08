@@ -5,8 +5,9 @@ import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// Firebase imports removidos - ya no se usan listeners aquí
+// import { collection, onSnapshot, query } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
 import styles from './TasksTable.module.scss';
@@ -233,8 +234,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   // ✅ OPTIMIZACIÓN: Memoizar IDs para dependencias estables
   const effectiveTasksIds = useMemo(() => effectiveTasks.map(t => t.id).join(','), [effectiveTasks]);
-  const effectiveClientsIds = useMemo(() => effectiveClients.map(c => c.id).join(','), [effectiveClients]);
-  const effectiveUsersIds = useMemo(() => effectiveUsers.map(u => u.id).join(','), [effectiveUsers]);
+  // const effectiveClientsIds = useMemo(() => effectiveClients.map(c => c.id).join(','), [effectiveClients]); // No usado
+  // const effectiveUsersIds = useMemo(() => effectiveUsers.map(u => u.id).join(','), [effectiveUsers]); // No usado
 
   // ✅ Optimizar selectores de Zustand para evitar re-renders innecesarios - usar selectores individuales como MembersTable
   const filteredTasks = useStore(tasksTableStore, useShallow(state => state.filteredTasks));
@@ -264,7 +265,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const setIsClientDropdownOpen = useStore(tasksTableStore, useShallow(state => state.setIsClientDropdownOpen));
   const setIsUserDropdownOpen = useStore(tasksTableStore, useShallow(state => state.setIsUserDropdownOpen));
   const setIsLoadingTasks = useStore(tasksTableStore, useShallow(state => state.setIsLoadingTasks));
-  const setIsLoadingClients = useStore(tasksTableStore, useShallow(state => state.setIsLoadingClients));
+  // const setIsLoadingClients = useStore(tasksTableStore, useShallow(state => state.setIsLoadingClients)); // No usado - listeners eliminados
   const setUndoStack = useStore(tasksTableStore, useShallow(state => state.setUndoStack));
   const setShowUndo = useStore(tasksTableStore, useShallow(state => state.setShowUndo));
   
@@ -433,7 +434,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     // Filtering complete
     
     return filtered;
-  }, [effectiveTasksIds, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, [effectiveTasksIds, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]); // effectiveTasks intencionalmente omitido, usamos effectiveTasksIds para optimización
 
   // Crear un ID estable para las tareas filtradas
   const filteredTasksIds = useMemo(() => memoizedFilteredTasks.map(t => t.id).join(','), [memoizedFilteredTasks]);
@@ -687,7 +689,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     });
     
     return sorted;
-  }, [filteredTasks, sortKey, sortDirection, effectiveClientsIds, effectiveUsersIds, memoizedGetUnreadCount]);
+  }, [filteredTasks, sortKey, sortDirection, effectiveClients, effectiveUsers, memoizedGetUnreadCount]);
 
   const animateClick = (element: HTMLElement) => {
     gsap.to(element, {

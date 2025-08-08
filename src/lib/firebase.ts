@@ -19,7 +19,7 @@ if (typeof window !== "undefined") {
   const initializeAppCheckSafely = () => {
     try {
       // Verificar si reCAPTCHA está disponible de forma segura
-      const grecaptcha = (window as any).grecaptcha;
+      const grecaptcha = (window as Window & { grecaptcha?: unknown }).grecaptcha;
       if (!grecaptcha) {
         console.log("[Firebase] reCAPTCHA not ready yet, retrying in 500ms...");
         setTimeout(initializeAppCheckSafely, 500);
