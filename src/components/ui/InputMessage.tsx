@@ -898,7 +898,7 @@ export function InputMessage({
         </div>
         {isProcessing && (
           <div className={styles.processingSpinner}>
-            <svg width="16" height="16" viewBox="0 0 24 24" className="animate-spin">
+                            <svg width="16" height="16" viewBox="0 0 24 24" className={styles.spinAnimation}>
               <circle
                 cx="12"
                 cy="12"

@@ -1,0 +1,98 @@
+@import '../../styles/variables';
+
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: $z-dialog;
+  background-color: rgba(0, 0, 0, 0.5);
+  animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialogContent {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: $z-dialog;
+  width: 90vw;
+  max-width: 450px;
+  max-height: 85vh;
+  background: $popover;
+  color: $popover-foreground;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-lg;
+  animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+  padding: $spacing-6;
+  
+  &:focus {
+    outline: none;
+  }
+}
+
+.dialogClose {
+  position: absolute;
+  top: $spacing-4;
+  right: $spacing-4;
+  border-radius: $radius-sm;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  cursor: pointer;
+  padding: $spacing-1;
+  
+  &:hover {
+    opacity: 1;
+  }
+  
+  &:focus {
+    outline: 2px solid $ring;
+    outline-offset: 2px;
+  }
+}
+
+.dialogHeader {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+  margin-bottom: $spacing-4;
+}
+
+.dialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-2;
+  margin-top: $spacing-4;
+}
+
+.dialogTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  line-height: 1.4;
+  color: $foreground;
+}
+
+.dialogDescription {
+  font-size: $font-size-sm;
+  color: $muted-foreground;
+  line-height: 1.4;
+}
+
+@keyframes overlayShow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes contentShow {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+} 

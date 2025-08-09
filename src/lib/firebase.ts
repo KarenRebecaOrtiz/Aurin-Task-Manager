@@ -86,7 +86,7 @@ if (typeof window !== "undefined") {
 export const storage = getStorage(app);
 export const auth = getAuth(app);
 export const ai = getAI(app, { backend: new GoogleAIBackend() });
-export { appCheck, messaging };
+export { appCheck, messaging, app };
 
 // Inicialización de Firebase Realtime Database (RTDB)
 export const rtdb = getDatabase(app);

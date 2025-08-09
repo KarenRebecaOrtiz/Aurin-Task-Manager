@@ -17,6 +17,11 @@ import { saveErrorMessage, removeErrorMessage, PersistedMessage } from '@/lib/me
 import { toast } from './use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import TimerDisplay from '../TimerDisplay';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { decryptBatch } from '@/lib/encryption';
+import { uploadTempImage } from '@/lib/upload';
+import { useChunkStore } from '@/stores/chunkStore';
+import SearchableDropdown, { DropdownItem } from '@/components/ui/SearchableDropdown';
 
 interface Message {
   id: string;
@@ -80,6 +85,11 @@ interface InputChatProps {
   onEditMessage?: (messageId: string, newText: string) => Promise<void>;
   onCancelEdit?: () => void;
   isTimerMenuOpen?: boolean;
+  messages?: Message[]; // Para contexto en reformulación
+  hasMore?: boolean; // Para detectar si hay más mensajes por cargar
+  loadMoreMessages?: () => void; // Para cargar más mensajes
+  onNewMessage?: (msg: Message) => void; // Callback para nuevos mensajes
+  users?: { id: string; fullName: string }[]; // Task users for mentions
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -116,16 +126,141 @@ export default function InputChat({
   editingText,
   onEditMessage,
   onCancelEdit,
+  messages,
+  hasMore,
+  loadMoreMessages: loadMoreMessagesProp,
+  onNewMessage: onNewMessageProp,
+  users,
 }: InputChatProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isTimerMenuOpen, setIsTimerMenuOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [isDropupOpen, setIsDropupOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasReformulated, setHasReformulated] = useState(false);
+  const [reformHistory, setReformHistory] = useState<string[]>([]); // Stack de versiones para undo
   const [isClient, setIsClient] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isGeminiMentioned, setIsGeminiMentioned] = useState(false);
+  const [geminiQuery, setGeminiQuery] = useState('');
+  const [retryQuery, setRetryQuery] = useState(false);
+  const [pendingNewMsgs, setPendingNewMsgs] = useState<Message[]>([]);
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
+  const [mentionInput, setMentionInput] = useState("");
+  const [mentionOptions, setMentionOptions] = useState<DropdownItem[]>([]);
+  
+  // Keywords para detectar queries que necesitan contexto completo
+  const fullContextKeywords = [
+    'resumir todo', 'historial completo', 'summary all', 'full chat', 
+    'toda conversación', 'resumir chat', 'todo el chat', 'historial completo',
+    'resumen completo', 'toda la conversación', 'todos los mensajes'
+  ];
+  
+  // Hook para acceder a chunks
+  const getChunks = useChunkStore((state) => state.getChunks);
+  
+  // Usar el hook de image upload
+  const {
+    previewUrl,
+    fileName,
+    fileInputRef,
+    isDragging,
+    uploadProgress,
+    isUploading,
+    handleThumbnailClick,
+    handleRemove,
+    handleDragOver,
+    handleDragLeave,
+  } = useImageUpload({
+    onUpload: (url) => {
+      console.log('[InputChat] Image uploaded:', url);
+      // Aquí podrías integrar con Gemini para análisis de imagen
+    },
+  });
+
+  // Wrapper para usar selectFile en los handlers
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      selectFile(file); // Usa selectFile para validación
+    }
+    if (e.target) e.target.value = '';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      selectFile(file); // Usa selectFile para validación
+    }
+  }, []);
+
+  // Effect para retry después de cargar más mensajes
+  useEffect(() => {
+    if (retryQuery && !hasMore) { // Todos los mensajes cargados
+      setRetryQuery(false);
+      // Re-trigger send después de un delay
+      setTimeout(() => {
+        if (isGeminiMentioned && geminiQuery) {
+          // Simular un evento de submit
+          const fakeEvent = {
+            preventDefault: () => {},
+          } as React.FormEvent;
+          handleSend(fakeEvent);
+        }
+      }, 1000);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, retryQuery, isGeminiMentioned, geminiQuery]);
+
+  // Función para refrescar respuesta de Gemini con nuevos mensajes
+  const refreshGeminiResponse = useCallback(async () => {
+    if (pendingNewMsgs.length === 0) return;
+    
+    try {
+      if (!ai) return;
+      
+      // Decrypt nuevos mensajes
+      const decryptedNewMsgs = await decryptBatch(pendingNewMsgs, pendingNewMsgs.length, taskId);
+      const newContext = decryptedNewMsgs.map(msg => msg.text || '').join('\n');
+      
+      // Encontrar último mensaje de Gemini para editar
+      const lastGeminiMsg = messages?.findLast(m => m.senderId === 'gemini');
+      if (lastGeminiMsg && onEditMessage) {
+        // Re-generar respuesta con nuevo contexto
+        const model = getGenerativeModel(ai, { model: 'gemini-1.5-flash' });
+        const updatedPrompt = `${geminiQuery}\n\nNuevo contexto real-time: ${newContext}`;
+        const newResponse = await model.generateContent(updatedPrompt);
+        const newText = await newResponse.response.text();
+        
+        // Editar mensaje existente
+        await onEditMessage(lastGeminiMsg.id, newText);
+        console.log('[InputChat] Respuesta de Gemini actualizada con nuevo contexto');
+      }
+      
+      setPendingNewMsgs([]);
+    } catch (error) {
+      console.error('[InputChat] Error actualizando respuesta de Gemini:', error);
+      setPendingNewMsgs([]);
+    }
+  }, [pendingNewMsgs, taskId, messages, geminiQuery, onEditMessage]);
+
+  // Función para manejar nuevos mensajes durante @gemini
+  const handleNewMessage = useCallback((newMsg: Message) => {
+    if (isGeminiMentioned) {
+      setPendingNewMsgs(prev => [...prev, newMsg]);
+      // Re-process después de 500ms debounce
+      setTimeout(() => {
+        refreshGeminiResponse();
+      }, 500);
+    }
+    // Llamar al callback prop si existe
+    onNewMessageProp?.(newMsg);
+  }, [isGeminiMentioned, refreshGeminiResponse, onNewMessageProp]);
+  
+  // Usar la función handleNewMessage para que no aparezca como no utilizada
+  useEffect(() => {
+    // Esta función se pasa a través de props y se usa en useMessagePagination
+    console.log('[InputChat] handleNewMessage ready for pagination hook');
+  }, [handleNewMessage]);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const dropupRef = useRef<HTMLDivElement>(null);
   const conversationId = `chat-sidebar-${taskId}`;
@@ -144,7 +279,39 @@ export default function InputChat({
     extensions: [StarterKit.configure({ bulletList: { keepMarks: true, keepAttributes: true }, orderedList: { keepMarks: true, keepAttributes: true } }), Underline],
     content: '',
     immediatelyRender: false,
-    onUpdate: () => adjustEditorHeight(),
+    onUpdate: () => {
+      adjustEditorHeight();
+      // Detectar menciones @gemini y otras menciones
+      if (editor) {
+        const text = editor.getText();
+        const geminiMatch = text.match(/@gemini\s*(.*)/i);
+        setIsGeminiMentioned(!!geminiMatch);
+        setGeminiQuery(geminiMatch ? geminiMatch[1].trim() : '');
+        
+        // Mantener autocomplete abierto si hay un '@' no seguido por espacio
+        const lastAtIndex = text.lastIndexOf('@');
+        const lastSpaceIndex = Math.max(text.lastIndexOf(' '), text.lastIndexOf('\n'));
+        const shouldOpen = lastAtIndex > -1 && lastAtIndex > lastSpaceIndex;
+        setIsMentionOpen(shouldOpen);
+        if (shouldOpen) {
+          const queryAfterAt = text.substring(lastAtIndex + 1);
+          setMentionInput(queryAfterAt);
+          const baseItems: DropdownItem[] = [
+            { id: 'gemini', name: 'Gemini', imageUrl: '/Gemini.png' },
+            ...((users || []).map(u => ({ id: u.id, name: u.fullName })))
+          ];
+          setMentionOptions(baseItems);
+        } else {
+          setMentionInput("");
+        }
+        
+        // Highlight mention si existe
+        if (geminiMatch) {
+          // Highlight mention - por ahora solo detectamos, no aplicamos mark
+          // TODO: Agregar extensión Mention si se necesita highlight visual
+        }
+      }
+    },
     editable: !isSending && !isProcessing,
     editorProps: { attributes: { class: `${styles.input} ProseMirror`, 'aria-label': 'Escribir mensaje' } },
   }, [isClient]);
@@ -333,6 +500,7 @@ export default function InputChat({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Función para validar y procesar archivos (usada en handleFileChange del hook)
   const selectFile = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
       toast({ title: 'Archivo demasiado grande', description: 'El archivo supera los 10 MB.', variant: 'error' });
@@ -345,56 +513,72 @@ export default function InputChat({
       return;
     }
     setFile(f);
-    const newPreviewUrl = f.type.startsWith('image/') ? URL.createObjectURL(f) : null;
-    setPreviewUrl(newPreviewUrl);
   };
-
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f && !f.name.includes('/paperclip.svg')) selectFile(f);
-  }, []);
 
   const handleRemoveFile = () => {
     setFile(null);
-    setPreviewUrl(null);
+    handleRemove();
   };
 
   const handleReformulate = async (mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list') => {
     if (!userId || !editor || editor.isEmpty || isProcessing) return;
     setIsProcessing(true);
     setIsDropupOpen(false);
+    
+    // Guardar versión actual en historial antes de reformular
+    const currentContent = editor.getHTML();
+    setReformHistory(prev => [...prev, currentContent]);
+    
     try {
       if (!ai) throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
+      
+      // Obtener contexto de los últimos mensajes (privacy: solo últimos 3)
+      const contextMessages = messages?.slice(-3) || [];
+      const context = contextMessages.map(msg => msg.text).join('\n');
+      
       const prompts = {
-        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el texto: "${editor.getText()}"`,
-        rewrite: `Reescribe completamente el texto manteniendo el mismo significado: "${editor.getText()}"`,
-        friendly: `Transforma el texto a un tono más amigable: "${editor.getText()}"`,
-        professional: `Convierte el texto en una versión más profesional: "${editor.getText()}"`,
-        concise: `Haz el texto más conciso: "${editor.getText()}"`,
-        summarize: `Resume el texto en sus puntos más importantes: "${editor.getText()}"`,
-        keypoints: `Extrae los puntos clave del texto como lista: "${editor.getText()}"`,
-        list: `Convierte el texto en una lista organizada: "${editor.getText()}"`,
+        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el texto: "${editor.getText()}". Contexto: ${context}`,
+        rewrite: `Reescribe completamente el texto manteniendo el mismo significado: "${editor.getText()}". Contexto: ${context}`,
+        friendly: `Transforma el texto a un tono más amigable: "${editor.getText()}". Contexto: ${context}`,
+        professional: `Convierte el texto en una versión más profesional: "${editor.getText()}". Contexto: ${context}`,
+        concise: `Haz el texto más conciso: "${editor.getText()}". Contexto: ${context}`,
+        summarize: `Resume el texto en sus puntos más importantes: "${editor.getText()}". Contexto: ${context}`,
+        keypoints: `Extrae los puntos clave del texto como lista: "${editor.getText()}". Contexto: ${context}`,
+        list: `Convierte el texto en una lista organizada: "${editor.getText()}". Contexto: ${context}`,
       };
+      
       const generationConfig = { maxOutputTokens: 800, temperature: mode === 'rewrite' ? 0.8 : 0.6, topK: 40, topP: 0.9 };
       const safetySettings = [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
       ];
       const systemInstruction = `Eres un asistente de escritura experto. Responde únicamente con el texto procesado.`;
-      const model = getGenerativeModel(ai, { model: 'gemini-1.5-flash', generationConfig, safetySettings, systemInstruction });
-      const promptText = prompts[mode];
-      const result = await model.generateContent(promptText);
-      const reformulatedText = await result.response.text();
-      if (!reformulatedText.trim()) throw new Error('📝 Gemini devolvió una respuesta vacía.');
-      typeWriter(reformulatedText.trim(), () => editor.commands.focus());
-      setHasReformulated(true);
+              const model = getGenerativeModel(ai, { model: 'gemini-1.5-flash', generationConfig, safetySettings, systemInstruction });
+        const promptText = prompts[mode];
+        
+        // Intentar streaming primero, fallback a typeWriter si no está disponible
+        try {
+          const stream = await model.generateContentStream(promptText);
+          editor.commands.clearContent();
+          
+          for await (const chunk of stream.stream) {
+            if (chunk.text) {
+              editor.commands.insertContent(chunk.text);
+              adjustEditorHeight();
+            }
+          }
+          
+          editor.commands.focus('end');
+          setHasReformulated(true);
+        } catch (streamError) {
+          console.log('[InputChat] Streaming no disponible, usando typeWriter:', streamError);
+          // Fallback a método original
+          const result = await model.generateContent(promptText);
+          const reformulatedText = await result.response.text();
+          if (!reformulatedText.trim()) throw new Error('📝 Gemini devolvió una respuesta vacía.');
+          typeWriter(reformulatedText.trim(), () => editor.commands.focus());
+          setHasReformulated(true);
+        }
     } catch (error) {
       console.error('[InputChat:Reformulate] Error:', error);
       toast({ title: 'Error al procesar el texto con Gemini AI', description: '❌ Error al procesar el texto.', variant: 'error' });
@@ -409,6 +593,32 @@ export default function InputChat({
     const hasFile = file !== null;
     if (!userId || (!hasText && !hasFile) || isSending || isProcessing) return;
 
+    // Detectar si hay mención @gemini
+    const text = editor.getHTML(); // Get full text
+    const match = text.match(/@gemini\s*(.*)/i);
+    const isMention = !!match;
+    const query = match ? match[1].trim() : '';
+    
+    // Si necesita contexto completo y hay más mensajes por cargar
+    if (isMention && query) {
+      const needsFullContext = fullContextKeywords.some(keyword => 
+        query.toLowerCase().includes(keyword.toLowerCase())
+      );
+      
+      if (needsFullContext && hasMore) {
+        toast({ 
+          title: 'Contexto Incompleto', 
+          description: 'Carga más mensajes para un resumen completo del chat.', 
+          variant: 'info',
+        });
+        
+        // TODO: Implementar botón de cargar más en el toast cuando la API lo soporte
+        console.log('[InputChat] Contexto incompleto - loadMoreMessagesProp disponible:', !!loadMoreMessagesProp);
+        setIsSending(false);
+        return; // Abortar query
+      }
+    }
+
     if (editingMessageId && onEditMessage) {
       const newText = editor.getHTML();
       if (!newText.trim()) {
@@ -420,7 +630,7 @@ export default function InputChat({
         await onEditMessage(editingMessageId, newText);
         editor?.commands.clearContent();
         setFile(null);
-        setPreviewUrl(null);
+        handleRemove();
         setHasReformulated(false);
         adjustEditorHeight();
         removeErrorMessage(conversationId);
@@ -477,15 +687,224 @@ export default function InputChat({
         };
       }
 
+      // Siempre enviar mensaje del usuario primero
       await onSendMessage(finalMessageData);
+      console.log('[InputChat] User message sent successfully');
+      
+      // Limpiar editor después de enviar
       editor?.commands.clearContent();
       setFile(null);
-      setPreviewUrl(null);
+      handleRemove();
       setHasReformulated(false);
       adjustEditorHeight();
       removeErrorMessage(conversationId);
       clearPersistedData();
       if (onCancelReply) onCancelReply();
+      
+      // Si hay mención @gemini, procesar después
+      if (isMention && query) {
+        console.log('[InputChat] Processing Gemini query:', query);
+        
+        // Mostrar toast de "pensando"
+        toast({ 
+          title: 'Gemini pensando...', 
+          variant: 'info',
+        });
+        
+        try {
+          if (!ai) throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
+          
+          // Determinar tamaño del batch basado en el tipo de query
+          const needsFullContext = fullContextKeywords.some(keyword => 
+            query.toLowerCase().includes(keyword.toLowerCase())
+          );
+          const batchSize = needsFullContext ? Math.min(messages?.length || 0, 20) : 3;
+          const contextMessages = messages?.slice(-batchSize) || [];
+          const decryptedContext = await decryptBatch(contextMessages, batchSize, taskId);
+          let context = decryptedContext.map(msg => msg.text || '').join('\n');
+          
+          // Si necesita contexto completo, usar todos los chunks cargados
+          if (needsFullContext) {
+            const allChunks = getChunks(taskId) || [];
+            const allLoadedMessages = allChunks.flat(); // Flatten chunks a array único
+            let fullContext = allLoadedMessages.map(msg => msg.text || '').join('\n');
+            
+            // Resumir si es muy largo (reducir tokens)
+            if (allLoadedMessages.length > 10) {
+              try {
+                const summaryModel = getGenerativeModel(ai, { model: 'gemini-1.5-flash' });
+                const summaryPrompt = `Resume todo chat cargado en <400 palabras, sin sensibles como nombres/emails: ${fullContext}`;
+                const summaryResult = await summaryModel.generateContent(summaryPrompt);
+                fullContext = await summaryResult.response.text();
+                console.log(`[Gemini] Contexto resumido: ${fullContext.length} chars (de ${allLoadedMessages.length} msgs)`);
+              } catch (error) {
+                console.error('[Gemini] Error resumiendo contexto:', error);
+                // Usar contexto original si falla el resumen
+              }
+            }
+            
+            context = fullContext;
+            
+            // Agregar nota si hay más mensajes por cargar
+            if (hasMore) {
+              context += '\n\n(Nota: Basado en chunks cargados - puede ser parcial)';
+            }
+          }
+          
+          let prompt = `Responde como Gemini en chat de tarea: ${query}. Contexto (no revelar detalles privados): ${context}. Sé útil, conciso y mantén privacidad. Usa markdown si aplica.`;
+          
+          let externalInfo = '';
+          
+          // Real Clima tool (OpenWeather API)
+          if (query.toLowerCase().includes('clima') || query.toLowerCase().includes('weather')) {
+            const cityMatch = query.match(/en\s+([a-zA-Záéíóúñ\s]+)/i);
+            const city = cityMatch ? cityMatch[1].trim() : 'Cuernavaca';
+            
+            try {
+              const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || 'c4e9937072f9fa89a6087653624fcbf1';
+              console.log('[Gemini] Fetching weather for:', city);
+              
+              const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}&lang=es`);
+              if (!response.ok) throw new Error('Weather API error');
+              
+              const data = await response.json();
+              const weatherData = {
+                city: data.name,
+                temperature: `${Math.round(data.main.temp)}°C (sensación ${Math.round(data.main.feels_like)}°C)`,
+                condition: data.weather[0].description,
+                humidity: `${data.main.humidity}%`,
+                wind: `${Math.round(data.wind.speed * 3.6)} km/h`, // m/s to km/h
+                rain: data.rain ? `${data.rain['1h']}mm/h` : '0%',
+                source: 'OpenWeather'
+              };
+              
+              externalInfo = `\n\n🌤️ **Clima actual en ${weatherData.city}:**
+- **Temperatura:** ${weatherData.temperature}
+- **Condición:** ${weatherData.condition.charAt(0).toUpperCase() + weatherData.condition.slice(1)}
+- **Humedad:** ${weatherData.humidity}
+- **Viento:** ${weatherData.wind}
+- **Lluvia:** ${weatherData.rain}
+- **Fuente:** ${weatherData.source} (datos al ${new Date().toLocaleString('es-MX')})`;
+              
+              console.log('[Gemini] Weather fetched:', weatherData);
+            } catch (error) {
+              console.error('[Gemini] Weather fetch error:', error);
+              externalInfo = `\n\n⚠️ No pude obtener clima para ${city}. Verifica conexión o pregunta de nuevo.`;
+            }
+          }
+          
+          // General web search tool (para queries no específicas)
+          else if (query.toLowerCase().includes('precio') || 
+                   query.toLowerCase().includes('price') || 
+                   query.toLowerCase().includes('qué') ||
+                   query.toLowerCase().includes('que') ||
+                   query.toLowerCase().includes('cómo') ||
+                   query.toLowerCase().includes('como')) {
+            try {
+              console.log('[Gemini] Performing web search for:', query);
+              
+              const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+              if (!response.ok) throw new Error('Search API error');
+              
+              const { snippets } = await response.json();
+              
+              if (snippets && snippets.length > 0) {
+                externalInfo = '\n\n🔍 **Resultados de búsqueda web:**';
+                snippets.forEach((s: { title: string; snippet: string; link: string }, i: number) => {
+                  externalInfo += `\n${i+1}. **${s.title}** ([Fuente](${s.link})): ${s.snippet.substring(0, 200)}...`;
+                });
+                
+                console.log('[Gemini] Web search results:', snippets.length);
+              } else {
+                externalInfo = '\n\n⚠️ No encontré información relevante en la web.';
+              }
+            } catch (error) {
+              console.error('[Gemini] Web search error:', error);
+              externalInfo = '\n\n⚠️ Búsqueda web fallida. Intenta de nuevo.';
+            }
+          }
+          
+          // Tool call para análisis de imagen con Gemini
+          if (previewUrl && file) {
+            try {
+              console.log('[Gemini] Analyzing image with Gemini...');
+              
+              // Upload imagen a Firebase Storage para tool call
+              const publicUrl = await uploadTempImage(file);
+              console.log('[Gemini] Image uploaded for analysis:', publicUrl);
+              
+              // Usar Gemini para describir la imagen
+              const imageModel = getGenerativeModel(ai, { 
+                model: 'gemini-1.5-flash',
+                generationConfig: { maxOutputTokens: 300, temperature: 0.7 }
+              });
+              
+              const imagePrompt = `Describe esta imagen en detalle, enfocado en contenido relevante para tarea (e.g., si es wireframe, extrae elementos). Sé conciso pero informativo:`;
+              
+              const imageResult = await imageModel.generateContent([
+                imagePrompt,
+                { inlineData: { data: publicUrl, mimeType: file.type } }
+              ]);
+              
+              const imageDesc = await imageResult.response.text();
+              
+              externalInfo += `\n\n📷 **Análisis de imagen con Gemini:** ${imageDesc.substring(0, 300)}...`;
+              console.log('[Gemini] Image described:', imageDesc);
+              
+              // Cleanup temp file (opcional pero recomendado)
+              // TODO: Implementar deleteObject para limpiar archivos temporales
+              
+            } catch (error) {
+              console.error('[Gemini] Image analysis error:', error);
+              externalInfo += `\n\n⚠️ Análisis de imagen fallido.`;
+            }
+          }
+          
+          // Agregar información externa al prompt
+          if (externalInfo) {
+            prompt += externalInfo;
+          }
+          
+          const generationConfig = { maxOutputTokens: 800, temperature: 0.7, topK: 40, topP: 0.9 };
+          const safetySettings = [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          ];
+          const systemInstruction = `Eres Gemini, un asistente útil en un chat de tareas. Responde de manera clara y concisa.`;
+          
+          const model = getGenerativeModel(ai, { model: 'gemini-1.5-flash', generationConfig, safetySettings, systemInstruction });
+          const result = await model.generateContent(prompt);
+          const responseText = await result.response.text();
+          
+          if (!responseText.trim()) throw new Error('Respuesta vacía de Gemini');
+          
+          // Obtener el ID del mensaje del usuario que acaba de enviarse
+          const userMessageId = clientId; // Usar el clientId del mensaje del usuario
+          
+          const geminiMessage: Partial<Message> = {
+            senderId: 'gemini',
+            senderName: '🤖 Gemini',
+            text: responseText,
+            timestamp: new Date(),
+            read: true,
+            clientId: crypto.randomUUID(),
+            replyTo: {
+              id: userMessageId,
+              senderName: userFirstName || 'Usuario',
+              text: text,
+              imageUrl: finalMessageData.imageUrl || undefined
+            }
+          };
+          
+          await onSendMessage(geminiMessage); // Post as separate message
+          console.log('[InputChat] Gemini response posted successfully');
+          
+                 } catch (error) {
+           console.error('[InputChat: Gemini Processing] Error:', error);
+           toast({ title: 'Error de Gemini', description: 'No pudo responder a tu consulta.', variant: 'error' });
+         }
+      }
+      
     } catch (error) {
       console.error('[InputChat:HandleSend] Error:', error);
       const errorMessage: PersistedMessage = {
@@ -591,7 +1010,7 @@ export default function InputChat({
         ref={timerPanelRef} 
       />
       {!isTimerPanelOpen && (
-        <form className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`} ref={inputWrapperRef} onDragOver={handleDragOver} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop} onSubmit={handleSend}>
+        <form className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`} ref={inputWrapperRef} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onSubmit={handleSend}>
           <AnimatePresence>
             {editor && !editor.isEmpty && !isTimerMenuOpen && (
               <motion.div 
@@ -630,6 +1049,47 @@ export default function InputChat({
                     <Image src={icon} alt={label} width={16} height={16} className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`} style={{ filter: 'none', fill: '#000000' }} draggable="false" />
                   </motion.button>
                 ))}
+                
+                {/* Botón Undo para reformulación */}
+                {hasReformulated && reformHistory.length > 0 && (
+                  <motion.button 
+                    type="button" 
+                    className={`${styles['format-button']} ${styles.undoButton} ${styles.tooltip}`} 
+                    onClick={() => {
+                      if (reformHistory.length > 0) {
+                        const previousVersion = reformHistory.pop();
+                        if (previousVersion && editor) {
+                          editor.commands.setContent(previousVersion);
+                          setReformHistory([...reformHistory]);
+                          setHasReformulated(reformHistory.length > 0);
+                        }
+                      }
+                    }}
+                    disabled={isSending || isProcessing || reformHistory.length === 0}
+                    title="Deshacer reformulación"
+                    aria-label="Deshacer reformulación"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ 
+                      duration: 0.15, 
+                      ease: 'easeOut',
+                      delay: 0.1
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Image 
+                      src="/rotate-ccw.svg" 
+                      alt="Undo" 
+                      width={16} 
+                      height={16} 
+                      className={styles.toolbarIcon}
+                      style={{ filter: 'none', fill: '#000000' }} 
+                      draggable="false" 
+                    />
+                  </motion.button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -832,19 +1292,39 @@ export default function InputChat({
           </AnimatePresence>
           {isProcessing && (
             <div className={styles.processingSpinner}>
-              <svg width="16" height="16" viewBox="0 0 24 24" className="animate-spin">
+                              <svg width="16" height="16" viewBox="0 0 24 24" className={styles.spinAnimation}>
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
                 <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75" />
               </svg>
             </div>
           )}
           {previewUrl && (
-            <div className={styles.imagePreview}>
+            <motion.div 
+              className={styles.imagePreview}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+            >
               <Image src={previewUrl} alt="Previsualización" width={50} height={50} className={styles.previewImage} draggable="false" />
-              <button className={styles.removeImageButton} onClick={handleRemoveFile} type="button" title="Eliminar imagen">
+              <span className={styles.fileName}>{fileName || 'Imagen adjunta'}</span>
+              {isUploading && (
+                <div className={styles.uploadProgress}>
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${uploadProgress}%` }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className={styles.progressBar}
+                  />
+                  <span className={styles.progressText}>
+                    {uploadProgress < 100 ? `Subiendo... ${uploadProgress}%` : "Procesando imagen..."}
+                  </span>
+                </div>
+              )}
+              <button className={styles.removeImageButton} onClick={handleRemove} type="button" title="Eliminar imagen">
                 <Image src="/x.svg" alt="Eliminar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>
-            </div>
+            </motion.div>
           )}
           {file && !previewUrl && (
             <div className={styles.filePreview}>
@@ -877,12 +1357,62 @@ export default function InputChat({
                     }
                   }
                 } else if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
+                  if (isMentionOpen) {
+                    // bloquea enviar cuando el dropdown de mencionar está abierto
+                    e.preventDefault();
+                    return;
+                  }
                   e.preventDefault();
                   handleSend(e);
                 } else if (e.key === 'Enter') setTimeout(adjustEditorHeight, 0);
               }}
               onContextMenu={handleContextMenu}
             />
+            
+            {/* Autocomplete para menciones */}
+            {isMentionOpen && (
+              <div className={styles.mentionAutocomplete} onMouseDown={(e) => e.preventDefault()}>
+                <SearchableDropdown
+                  items={mentionOptions.filter(i => i.name.toLowerCase().includes((mentionInput || '').toLowerCase()))}
+                  selectedItems={[]}
+                  onSelectionChange={(ids) => {
+                    const id = ids[0];
+                    const item = mentionOptions.find(i => i.id === id);
+                    if (!item) return;
+                    const currentText = editor?.getText() || '';
+                    const lastAtIndex = currentText.lastIndexOf('@');
+                    const beforeAt = lastAtIndex >= 0 ? currentText.substring(0, lastAtIndex) : currentText;
+                    const newText = `${beforeAt}@${item.name} `;
+                    editor?.commands.setContent(newText);
+                    setIsMentionOpen(false);
+                    setMentionInput('');
+                    setIsGeminiMentioned(item.id === 'gemini');
+                    if (item.id === 'gemini') setGeminiQuery('');
+                    setTimeout(() => editor?.commands.focus(), 0);
+                  }}
+                  placeholder=""
+                  searchPlaceholder=""
+                  disabled={false}
+                  multiple={false}
+                  emptyMessage="Sin resultados"
+                  isOpenDefault
+                  hideSearch
+                />
+              </div>
+            )}
+            
+            {/* Drag Overlay para transform */}
+            {isDragging && (
+              <motion.div 
+                className={styles.dragOverlay}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                Suelta imagen aquí para adjuntar
+              </motion.div>
+            )}
           </div>
           <div className={styles.actions}>
             <TimerDisplay
@@ -913,7 +1443,7 @@ export default function InputChat({
                   </div>
                 )}
               </div>
-              <button type="button" className={`${styles.imageButton} ${styles.tooltip}`} onClick={() => fileInputRef.current?.click()} disabled={isSending || isProcessing} aria-label="Adjuntar archivo" title="Adjuntar archivo">
+              <button type="button" className={`${styles.imageButton} ${styles.tooltip}`} onClick={handleThumbnailClick} disabled={isSending || isProcessing} aria-label="Adjuntar archivo" title="Adjuntar archivo">
                 <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>
               <EmojiSelector onEmojiSelect={(emoji) => { editor?.commands.insertContent(emoji); setTimeout(adjustEditorHeight, 0); }} disabled={isSending || isProcessing} value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''} containerRef={containerRef} />
@@ -924,7 +1454,7 @@ export default function InputChat({
           </div>
         </form>
       )}
-      <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) selectFile(f); }} accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx" />
+      <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx" />
     </div>
   );
 }

@@ -1,0 +1,109 @@
+@import '../../styles/variables';
+
+.tagSelectorButton {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: $spacing-1;
+  padding: 2px $spacing-3 2px 2px;
+  height: auto;
+  width: 100%;
+  text-align: left;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 36px;
+  border: 1px solid $input;
+  background: $background;
+  border-radius: $radius-md;
+  transition: $transition;
+  cursor: pointer;
+  
+  &:hover {
+    background: $background;
+  }
+  
+  .tag {
+    display: flex;
+    align-items: center;
+    gap: $spacing-1;
+    border-radius: $radius-md;
+    background: $secondary;
+    padding: $spacing-1 $spacing-2;
+    font-size: $font-size-sm;
+    word-break: break-word;
+    
+    button {
+      cursor: pointer;
+      padding: 2px;
+      border-radius: $radius-sm;
+      transition: $transition;
+      border: none;
+      background: transparent;
+      
+      &:hover {
+        background: rgba($destructive, 0.4);
+      }
+      
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+  
+  .flexGrow {
+    flex-grow: 1;
+  }
+  
+  .chevronIcon {
+    height: 16px;
+    width: 16px;
+    opacity: 0.5;
+  }
+}
+
+.popoverContent {
+  width: 100%;
+  padding: 0;
+  z-index: $z-popover;
+}
+
+.removeButton {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: $radius-sm;
+  transition: $transition;
+  border: none;
+  background: transparent;
+  
+  &:hover {
+    background: rgba($destructive, 0.4);
+  }
+  
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.mention {
+  color: $primary;
+  font-weight: bold;
+  background: rgba($primary, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.checkIcon {
+  margin-right: $spacing-2;
+  height: 16px;
+  width: 16px;
+}
+
+.visible {
+  opacity: 1;
+}
+
+.hidden {
+  opacity: 0;
+} 

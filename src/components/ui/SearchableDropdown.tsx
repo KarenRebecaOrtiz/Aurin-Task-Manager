@@ -25,6 +25,9 @@ interface SearchableDropdownProps {
   maxItems?: number;
   emptyMessage?: string;
   className?: string;
+  isOpenDefault?: boolean;
+  hideSearch?: boolean;
+  containerClassName?: string;
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
@@ -38,8 +41,11 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   maxItems,
   emptyMessage = "No hay elementos disponibles",
   className = "",
+  isOpenDefault = false,
+  hideSearch = false,
+  containerClassName = "",
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(isOpenDefault);
   const [searchTerm, setSearchTerm] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -128,36 +134,38 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   };
 
   return (
-    <div className={`${styles.searchableDropdown} ${className}`} ref={wrapperRef}>
-      <button
-        type="button"
-        className={`${styles.selectButton} ${disabled ? styles.disabled : ''}`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-      >
-        <div className={styles.buttonContent}>
-                                {hasSelection && !multiple && selectedItemsData[0]?.imageUrl && (
-                        <Image
-                          src={selectedItemsData[0].imageUrl}
-                          alt={selectedItemsData[0].name}
-                          width={24}
-                          height={24}
-                          className={styles.selectedImage}
-                          onError={(e) => {
-                            e.currentTarget.src = '/empty-image.png';
-                          }}
-                        />
-                      )}
-                      {hasSelection && !multiple && selectedItemsData[0]?.svgIcon && (
-                        <div 
-                          className={styles.selectedSvg}
-                          dangerouslySetInnerHTML={{ __html: selectedItemsData[0].svgIcon }}
-                        />
-                      )}
-          <span className={styles.selectedText}>{getDisplayText()}</span>
-        </div>
-        <Image src="/chevron-down.svg" alt="arrow" width={16} height={16} />
-      </button>
+    <div className={`${styles.searchableDropdown} ${className} ${containerClassName}`} ref={wrapperRef}>
+      {!isOpenDefault && (
+        <button
+          type="button"
+          className={`${styles.selectButton} ${disabled ? styles.disabled : ''}`}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+        >
+          <div className={styles.buttonContent}>
+            {hasSelection && !multiple && selectedItemsData[0]?.imageUrl && (
+              <Image
+                src={selectedItemsData[0].imageUrl}
+                alt={selectedItemsData[0].name}
+                width={24}
+                height={24}
+                className={styles.selectedImage}
+                onError={(e) => {
+                  e.currentTarget.src = '/empty-image.png';
+                }}
+              />
+            )}
+            {hasSelection && !multiple && selectedItemsData[0]?.svgIcon && (
+              <div 
+                className={styles.selectedSvg}
+                dangerouslySetInnerHTML={{ __html: selectedItemsData[0].svgIcon }}
+              />
+            )}
+            <span className={styles.selectedText}>{getDisplayText()}</span>
+          </div>
+          <Image src="/chevron-down.svg" alt="arrow" width={16} height={16} />
+        </button>
+      )}
       
       {hasSelection && multiple && (
         <div className={styles.selectedTags}>
@@ -203,27 +211,29 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={styles.dropdown}
           >
-            <div className={styles.searchContainer}>
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder={searchPlaceholder}
-                className={styles.searchInput}
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-            </div>
+            {!hideSearch && (
+              <div className={styles.searchContainer}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  className={styles.searchInput}
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                />
+              </div>
+            )}
             
             <div className={styles.itemsContainer}>
               {filteredItems.length > 0 ? (
-                filteredItems.map(item => {
+                filteredItems.map((item, idx) => {
                   const isSelected = selectedItems.includes(item.id);
                   return (
                     <div
                       key={item.id}
                       onClick={() => handleItemClick(item.id)}
-                      className={`${styles.item} ${isSelected ? styles.selected : ''} ${item.disabled ? styles.disabled : ''}`}
+                      className={`${styles.item} ${isSelected || (!hasSelection && idx === 0) ? styles.selected : ''} ${item.disabled ? styles.disabled : ''}`}
                     >
                                                         <div className={styles.itemContent}>
                                     {item.imageUrl && (

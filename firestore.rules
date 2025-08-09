@@ -76,9 +76,13 @@ service cloud.firestore {
         // ✅ PERMITIR LECTURA: Todos los usuarios autenticados pueden leer mensajes
         allow read, list: if request.auth != null;
         
-        // ✅ PERMITIR CREACIÓN: Todos los usuarios autenticados pueden crear mensajes
-        allow create: if request.auth != null && 
-                     request.resource.data.senderId == request.auth.uid;
+        // ✅ PERMITIR CREACIÓN: Usuarios autenticados
+        //    - Mensajes normales: senderId debe ser el del usuario
+        //    - Mensajes de agente (Gemini): permitir si el usuario está involucrado en la tarea
+        allow create: if request.auth != null && (
+                       request.resource.data.senderId == request.auth.uid ||
+                       (request.resource.data.senderId == 'gemini' && isInvolvedInTask(taskId))
+                     );
         
         // ✅ PERMITIR EDICIÓN/ELIMINACIÓN: Admins o el autor del mensaje
         allow update, delete: if request.auth != null && 

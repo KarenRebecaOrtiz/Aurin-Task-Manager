@@ -6,7 +6,7 @@ import ReactDOM from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { useUser } from '@clerk/nextjs';
-import { Timestamp, doc, serverTimestamp, collection, updateDoc, query, where, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
+import { Timestamp, doc, serverTimestamp, collection, updateDoc, query, where, getDocs, getDoc, setDoc, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,6 +32,8 @@ import LoadMoreButton from './ui/LoadMoreButton';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useShallow } from 'zustand/react/shallow';
 import { notificationService } from '@/services/notificationService';
+import { useSummaryStore } from '@/stores/summaryStore';
+import { decryptBatch } from '@/lib/encryption';
 
 
 interface Message {
@@ -215,7 +217,12 @@ const MessageItem = memo(
                     />
                   )}
                   {message.replyTo.text && (
-                    <span className={styles.replyText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.replyTo.text.length > 50 ? `${message.replyTo.text.substring(0, 50)}...` : message.replyTo.text) }} />
+                    <span className={styles.replyText} dangerouslySetInnerHTML={{ 
+                      __html: sanitizeHtml(
+                        (message.replyTo.text.length > 50 ? `${message.replyTo.text.substring(0, 50)}...` : message.replyTo.text).replace(/@(\w+)/g, '<span class="mention">@$1</span>'), 
+                        { allowedTags: [...sanitizeHtml.defaults.allowedTags, 'span'], allowedAttributes: { span: ['class'] } }
+                      ) 
+                    }} />
                   )}
                   {!message.replyTo.text && !message.replyTo.imageUrl && (
                     <span className={styles.replyText}>Mensaje</span>
@@ -227,8 +234,15 @@ const MessageItem = memo(
         }
 
         if (message.text) {
+          // Reemplazar menciones @ con estilos azules
+          const mentionedText = message.text.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
           contentElements.push(
-            <div key="text" className={styles.messageText} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.text) }} />
+            <div key="text" className={styles.messageText} dangerouslySetInnerHTML={{ 
+              __html: sanitizeHtml(mentionedText, { 
+                allowedTags: [...sanitizeHtml.defaults.allowedTags, 'span'], 
+                allowedAttributes: { span: ['class'] } 
+              }) 
+            }} />
           );
         }
 
@@ -300,7 +314,7 @@ const MessageItem = memo(
         >
           <UserAvatar
             userId={message.senderId}
-            imageUrl={users.find((u) => u.id === message.senderId)?.imageUrl}
+            imageUrl={message.senderId === 'gemini' ? '/Gemini.png' : users.find((u) => u.id === message.senderId)?.imageUrl}
             userName={message.senderName}
             size="medium"
             showStatus={true}
@@ -555,6 +569,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const summarizeDropdownRef = useRef<HTMLDivElement>(null);
     const chatRef = useRef<HTMLDivElement>(null);
 
+    // Función para manejar nuevos mensajes (real-time context refresh)
+    const handleNewMessage = useCallback((newMsg: Message) => {
+      // Esta función se pasa a InputChat para manejar nuevos mensajes durante @gemini
+      console.log('[ChatSidebar] Nuevo mensaje recibido durante @gemini:', newMsg.id);
+    }, []);
+
     const {
       messages,
       groupedMessages,
@@ -566,6 +586,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       taskId: task?.id || '',
       pageSize: 10,
       decryptMessage,
+      onNewMessage: handleNewMessage,
     });
     
     // Debug logging disabled to reduce console spam
@@ -614,8 +635,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         }
       );
 
+      // onSnapshot para mensajes de Gemini (real-time updates)
+      const messagesRef = collection(db, 'tasks', task.id, 'messages');
+      const messagesQuery = query(messagesRef, where('senderId', '==', 'gemini'));
+      
+      const unsubscribeGemini = onSnapshot(
+        messagesQuery,
+        (snapshot) => {
+          const newGeminiMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+          if (newGeminiMessages.length > 0) {
+            console.log('[ChatSidebar] New Gemini message detected:', newGeminiMessages[newGeminiMessages.length-1]);
+            // Trigger UI refresh for Gemini messages
+            // El sistema de pagination ya maneja esto automáticamente
+          }
+        },
+        (error) => {
+          console.error('[ChatSidebar] Error in Gemini messages onSnapshot:', error);
+        }
+      );
+
       return () => {
         unsubscribe();
+        unsubscribeGemini();
       };
     }, [isOpen, task.id, task.status, task.priority]);
 
@@ -877,8 +918,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       if (!user?.id) return;
       const messageWithReply = {
         ...messageData,
-        senderId: user.id,
-        senderName: user.firstName || 'Usuario',
+        senderId: messageData.senderId ?? user.id,
+        senderName: messageData.senderName ?? (user.firstName || 'Usuario'),
         replyTo: replyingTo ? {
           id: replyingTo.id,
           senderName: replyingTo.senderName,
@@ -922,14 +963,57 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       }
     }, [deleteMessage, task.id]);
 
-    const handleGenerateSummary = useCallback(async (interval: string) => {
+    // Usar el store de resúmenes con shallow comparison para optimizar performance
+    const summaries = useSummaryStore(useShallow((state) => state.summaries));
+    const setSummary = useSummaryStore((state) => state.setSummary);
+
+    const handleGenerateSummary = useCallback(async (interval: string, forceRefresh = false) => {
       if (!user?.id || !messages.length || isGeneratingSummary) return;
       setIsGeneratingSummary(true);
       setIsSummarizeDropdownOpen(false);
+      
+      const cacheKey = `${task.id}_${interval}`;
+      
       try {
+        // Verificar caché local primero (shallow comparison)
+        if (!forceRefresh) {
+          const localCached = summaries[cacheKey];
+          if (localCached && Date.now() - localCached.timestamp < 3600000) { // 1 hora
+            console.log('[ChatSidebar] Using cached summary from local store');
+            await handleSendMessage({ 
+              text: localCached.text, 
+              senderId: 'ai-summary', 
+              senderName: '🤖 Resumen IA',
+              read: true,
+              clientId: task.clientId,
+            });
+            return;
+          }
+          
+          // Verificar caché en Firestore
+          const summaryRef = doc(db, 'summaries', cacheKey);
+          const docSnap = await getDoc(summaryRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data() as { text: string; timestamp: number };
+            if (Date.now() - data.timestamp < 3600000) {
+              console.log('[ChatSidebar] Using cached summary from Firestore');
+              setSummary(cacheKey, data);
+              await handleSendMessage({ 
+                text: data.text, 
+                senderId: 'ai-summary', 
+                senderName: '🤖 Resumen IA',
+                read: true,
+                clientId: task.clientId,
+              });
+              return;
+            }
+          }
+        }
+
         if (!ai) {
           throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
         }
+
         const now = new Date();
         let startDate: Date;
         switch (interval) {
@@ -954,17 +1038,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           default:
             startDate = new Date(0);
         }
+
         const filteredMessages = messages.filter(msg => {
           if (!msg.timestamp) return false;
           const msgDate = msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp);
           return msgDate >= startDate;
         });
+
         if (filteredMessages.length === 0) {
-          // Mostrar mensaje más elegante usando el sistema de notificaciones existente
           const intervalLabel = intervalLabels[interval as keyof typeof intervalLabels] || interval;
           const message = `📊 No hay actividad registrada en los últimos ${intervalLabel.toLowerCase()}. El resumen estaría vacío.`;
           
-          // Enviar el mensaje como una notificación en el chat
           await handleSendMessage({
             text: message,
             senderId: 'system',
@@ -975,7 +1059,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           });
           return;
         }
-        const chatContext = filteredMessages
+
+        // Decrypt batch de mensajes para privacidad
+        const decryptedMessages = await decryptBatch(filteredMessages, 10, task.id);
+        
+        const chatContext = decryptedMessages
           .map(msg => {
             const date = msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp);
             const timeStr = date.toLocaleDateString('es-MX') + ' ' + date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
@@ -992,6 +1080,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           })
           .filter(Boolean)
           .join('\n');
+
         const prompt = `Como experto analista de proyectos, genera un resumen ejecutivo y detallado de la actividad en esta tarea durante ${intervalLabels[interval as keyof typeof intervalLabels]}. 
 Analiza el siguiente historial de conversación y actividades:
 ${chatContext}
@@ -1003,12 +1092,14 @@ Proporciona un resumen que incluya:
 5. **🎯 Puntos Clave**: Decisiones importantes, problemas identificados, próximos pasos
 6. **📈 Estado del Proyecto**: Evaluación del progreso y momentum
 Usa markdown para el formato y sé conciso pero informativo. Si hay poca actividad, menciona esto de manera constructiva.`;
+
         const generationConfig = {
           maxOutputTokens: 1000,
           temperature: 0.3,
           topK: 20,
           topP: 0.8,
         };
+
         const safetySettings = [
           {
             category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -1019,17 +1110,21 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
           },
         ];
+
         const systemInstruction = `Eres un analista experto en gestión de proyectos. Creas resúmenes claros, estructurados y actionables de la actividad en tareas. Usa markdown para formatear tu respuesta y proporciona insights valiosos sobre el progreso y la colaboración del equipo.`;
+
         const model = getGenerativeModel(ai, {
           model: 'gemini-1.5-flash',
           generationConfig,
           safetySettings,
           systemInstruction,
         });
+
         const result = await model.generateContent(prompt);
         if (!result || !result.response) {
           throw new Error('🚫 No se recibió respuesta del servidor de Gemini.');
         }
+
         let summaryText: string;
         try {
           summaryText = await result.response.text();
@@ -1037,16 +1132,29 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           console.error('[ChatSidebar:GenerateSummary] Error al extraer texto:', textError);
           throw new Error('⚠️ Error al procesar la respuesta de Gemini.');
         }
+
         if (!summaryText || summaryText.trim().length === 0) {
           throw new Error('📝 Gemini devolvió un resumen vacío.');
         }
+
+        const fullSummaryText = `📊 Resumen de actividad - ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`;
+        
+        // Guardar en caché (local y Firestore)
+        const cacheData = { text: fullSummaryText, timestamp: Date.now() };
+        await setDoc(doc(db, 'summaries', cacheKey), cacheData);
+        setSummary(cacheKey, cacheData);
+
         const summaryMessage: Partial<Message> = {
           senderId: 'ai-summary',
           senderName: '🤖 Resumen IA',
-          text: `📊 Resumen de actividad - ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`,
+          text: fullSummaryText,
           read: true,
+          clientId: task.clientId,
         };
+
         await handleSendMessage(summaryMessage);
+        console.log('[ChatSidebar] Summary generated and cached successfully');
+
       } catch (error) {
         console.error('[ChatSidebar:GenerateSummary] Error:', error);
         let errorMessage = '❌ Error al generar el resumen.';
@@ -1063,7 +1171,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
       } finally {
         setIsGeneratingSummary(false);
       }
-    }, [user?.id, messages, isGeneratingSummary, handleSendMessage, task.clientId]);
+    }, [user?.id, messages, isGeneratingSummary, handleSendMessage, task.clientId, task.id, summaries, setSummary]);
 
     const hasDataForInterval = useCallback((interval: string) => {
       if (!messages.length) return false;
@@ -1413,6 +1521,17 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
                   >
                     📅 1 año
                   </motion.button>
+                  <motion.button
+                    type="button"
+                    className={`${styles.dropdownItem} ${styles.refreshButton}`}
+                    onClick={() => handleGenerateSummary('1day', true)}
+                    disabled={isGeneratingSummary}
+                    role="menuitem"
+                    whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    title="Actualizar resumen (ignorar caché)"
+                  >
+                    🔄 Actualizar Resumen
+                  </motion.button>
                 </motion.div>
               )}
             </div>
@@ -1609,10 +1728,10 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
               : `invalid-date-${groupIndex}`; // Usar índice como fallback para fechas inválidas
 
             return (
-              <React.Fragment key={dateKey}>
+              <React.Fragment key={`${dateKey}-${groupIndex}`}>
                 {group.messages.map((message, messageIndex) => (
                 <MessageItem
-                    key={`${message.id}-${message.clientId}-${messageIndex}`}
+                    key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}-${messageIndex}`}
                   message={message}
                   users={users}
                   userId={user?.id}
@@ -1671,8 +1790,8 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
           setCommentInput={setCommentInput}
           onAddTimeEntry={handleAddTimeEntry}
           totalHours={totalHours}
-                        isRestoringTimer={isRestoringTimer}
-              replyingTo={replyingTo}
+          isRestoringTimer={isRestoringTimer}
+          replyingTo={replyingTo}
           onCancelReply={handleCancelReply}
           editingMessageId={editingMessageId}
           editingText={editingText}
@@ -1681,6 +1800,11 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
             setEditingMessageId(null);
             setEditingText('');
           }}
+          messages={messages}
+          hasMore={hasMore}
+          loadMoreMessages={handleLoadMoreMessages}
+          onNewMessage={handleNewMessage}
+          users={(teamUsers || []).map(u => ({ id: u.id, fullName: u.firstName }))}
         />
         {isDeletePopupOpen && (
           <motion.div

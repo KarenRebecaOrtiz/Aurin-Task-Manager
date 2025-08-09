@@ -56,6 +56,7 @@ interface UseMessagePaginationProps {
   taskId: string;
   pageSize?: number;
   decryptMessage: (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string }) => Promise<string>;
+  onNewMessage?: (msg: Message) => void; // Callback para nuevos mensajes
 }
 
 const DEFAULT_PAGE_SIZE = 10;  // Cambiado de 20 a 10
@@ -124,6 +125,7 @@ export const useMessagePagination = ({
   taskId,
   pageSize = DEFAULT_PAGE_SIZE,
   decryptMessage,
+  onNewMessage,
 }: UseMessagePaginationProps) => {
   const selectMessages = useMemo(() => (state: { messages: Record<string, Message[]> }) => state.messages[taskId] || EMPTY_MESSAGES, [taskId]);
   const messages = useDataStore(selectMessages);
@@ -381,6 +383,9 @@ export const useMessagePagination = ({
               // Debug logging disabled to reduce console spam
               store.addMessage(taskId, newMessage);
             }
+            
+            // Callback para nuevos mensajes (real-time context refresh)
+            onNewMessage?.(newMessage);
           } else if (change.type === 'modified') {
             const updatedMessage = await processMessage(change.doc.data(), change.doc.id);
             const existing = currentMessages.find(m => m.id === updatedMessage.id);
@@ -424,7 +429,7 @@ export const useMessagePagination = ({
       unsubscribe();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [taskId, loadInitialMessages, processMessage, messages.length]);
+  }, [taskId, loadInitialMessages, processMessage, messages.length, onNewMessage]);
 
   return {
     messages,
