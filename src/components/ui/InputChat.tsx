@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { Timestamp } from 'firebase/firestore';
-import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
+import { getGenerativeModel } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
 import styles from '../ChatSidebar.module.scss';
 import { EmojiSelector } from './EmojiSelector';
@@ -19,9 +19,15 @@ import { AnimatePresence, motion } from 'framer-motion';
 import TimerDisplay from '../TimerDisplay';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { decryptBatch } from '@/lib/encryption';
-import { uploadTempImage } from '@/lib/upload';
-import { useChunkStore } from '@/stores/chunkStore';
+// Removido: uploadTempImage y useChunkStore ya no se usan después de la refactorización
 import SearchableDropdown, { DropdownItem } from '@/components/ui/SearchableDropdown';
+import TagDropdown, { TagItem } from '@/components/ui/TagDropdown';
+// import { GeminiModesDropdown } from '@/components/ui/GeminiModesDropdown';
+import { GeminiImageAnalyzer } from '@/components/ui/GeminiImageAnalyzer';
+import { useGeminiIntegration } from '@/hooks/useGeminiIntegration';
+import { useMentionHandler } from '@/hooks/useMentionHandler';
+// Removido: useGeminiModes ya no se usa después de la refactorización
+// Removido: useGeminiStore ya no se usa directamente después de la refactorización
 
 interface Message {
   id: string;
@@ -141,6 +147,7 @@ export default function InputChat({
   const [isClient, setIsClient] = useState(false);
   const [isGeminiMentioned, setIsGeminiMentioned] = useState(false);
   const [geminiQuery, setGeminiQuery] = useState('');
+  // const [geminiMode, setGeminiMode] = useState<'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list'>('rewrite');
   const [retryQuery, setRetryQuery] = useState(false);
   const [pendingNewMsgs, setPendingNewMsgs] = useState<Message[]>([]);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -154,8 +161,7 @@ export default function InputChat({
     'resumen completo', 'toda la conversación', 'todos los mensajes'
   ];
   
-  // Hook para acceder a chunks
-  const getChunks = useChunkStore((state) => state.getChunks);
+  // Removido: getChunks ya no se usa después de la refactorización
   
   // Usar el hook de image upload
   const {
@@ -184,6 +190,8 @@ export default function InputChat({
     }
     if (e.target) e.target.value = '';
   }, []);
+
+
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -316,6 +324,21 @@ export default function InputChat({
     editorProps: { attributes: { class: `${styles.input} ProseMirror`, 'aria-label': 'Escribir mensaje' } },
   }, [isClient]);
 
+  // Hooks para Gemini y menciones
+  const { generateReformulation, generateQueryResponse } = useGeminiIntegration(taskId);
+  const { showDropdown, handleSelection } = useMentionHandler(editor);
+  
+  // Estado para menciones
+  const [mentionItems] = useState<TagItem[]>([
+    {
+      id: 'gemini',
+      name: '🤖 Gemini',
+      type: 'ai',
+      subtitle: 'Asistente de IA para consultas y reformulación'
+    }
+  ]);
+
+
   const editorRef = useRef<HTMLDivElement>(null);
   const adjustEditorHeight = useCallback(() => {
     if (editorRef.current) {
@@ -331,26 +354,26 @@ export default function InputChat({
     }
   }, []);
 
-  const typeWriter = useCallback((text: string, callback: () => void) => {
-    if (!editor) return;
-    editor.commands.clearContent();
-    let index = 0;
-    const speed = 15;
-    const type = () => {
-      if (index < text.length) {
-        editor.commands.insertContent(text.charAt(index));
-        index++;
-        setTimeout(type, speed);
-      } else {
-        setTimeout(() => {
-          adjustEditorHeight();
-          editor.commands.focus('end');
-          callback();
-        }, 100);
-      }
-    };
-    setTimeout(type, 300);
-  }, [editor, adjustEditorHeight]);
+  // const typeWriter = useCallback((text: string, callback: () => void) => {
+  //   if (!editor) return;
+  //   editor.commands.clearContent();
+  //   let index = 0;
+  //   const speed = 15;
+  //   const type = () => {
+  //     if (index < text.length) {
+  //       editor.commands.insertContent(text.charAt(index));
+  //       index++;
+  //       setTimeout(type, speed);
+  //     } else {
+  //       setTimeout(() => {
+  //         adjustEditorHeight();
+  //         editor.commands.focus('end');
+  //         callback();
+  //       }, 100);
+  //     }
+  //   };
+  //   setTimeout(type, 300);
+  // }, [editor, adjustEditorHeight]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -530,55 +553,21 @@ export default function InputChat({
     setReformHistory(prev => [...prev, currentContent]);
     
     try {
-      if (!ai) throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
+      // Refactorizado según tesis: usar hook de Gemini para reformulación
+      // Los prompts ahora se manejan en el hook useGeminiIntegration
       
-      // Obtener contexto de los últimos mensajes (privacy: solo últimos 3)
-      const contextMessages = messages?.slice(-3) || [];
-      const context = contextMessages.map(msg => msg.text).join('\n');
+      // Usar hook de Gemini para reformulación
+      const reformulatedText = await generateReformulation(mode, editor.getText());
       
-      const prompts = {
-        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el texto: "${editor.getText()}". Contexto: ${context}`,
-        rewrite: `Reescribe completamente el texto manteniendo el mismo significado: "${editor.getText()}". Contexto: ${context}`,
-        friendly: `Transforma el texto a un tono más amigable: "${editor.getText()}". Contexto: ${context}`,
-        professional: `Convierte el texto en una versión más profesional: "${editor.getText()}". Contexto: ${context}`,
-        concise: `Haz el texto más conciso: "${editor.getText()}". Contexto: ${context}`,
-        summarize: `Resume el texto en sus puntos más importantes: "${editor.getText()}". Contexto: ${context}`,
-        keypoints: `Extrae los puntos clave del texto como lista: "${editor.getText()}". Contexto: ${context}`,
-        list: `Convierte el texto en una lista organizada: "${editor.getText()}". Contexto: ${context}`,
-      };
+      if (!reformulatedText.trim()) throw new Error('📝 Gemini devolvió una respuesta vacía.');
       
-      const generationConfig = { maxOutputTokens: 800, temperature: mode === 'rewrite' ? 0.8 : 0.6, topK: 40, topP: 0.9 };
-      const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      ];
-      const systemInstruction = `Eres un asistente de escritura experto. Responde únicamente con el texto procesado.`;
-              const model = getGenerativeModel(ai, { model: 'gemini-1.5-flash', generationConfig, safetySettings, systemInstruction });
-        const promptText = prompts[mode];
-        
-        // Intentar streaming primero, fallback a typeWriter si no está disponible
-        try {
-          const stream = await model.generateContentStream(promptText);
-          editor.commands.clearContent();
-          
-          for await (const chunk of stream.stream) {
-            if (chunk.text) {
-              editor.commands.insertContent(chunk.text);
-              adjustEditorHeight();
-            }
-          }
-          
-          editor.commands.focus('end');
-          setHasReformulated(true);
-        } catch (streamError) {
-          console.log('[InputChat] Streaming no disponible, usando typeWriter:', streamError);
-          // Fallback a método original
-          const result = await model.generateContent(promptText);
-          const reformulatedText = await result.response.text();
-          if (!reformulatedText.trim()) throw new Error('📝 Gemini devolvió una respuesta vacía.');
-          typeWriter(reformulatedText.trim(), () => editor.commands.focus());
-          setHasReformulated(true);
-        }
+      // Limpiar editor y insertar texto reformulado
+      editor.commands.clearContent();
+      editor.commands.insertContent(reformulatedText.trim());
+      editor.commands.focus('end');
+      adjustEditorHeight();
+      setHasReformulated(true);
+      
     } catch (error) {
       console.error('[InputChat:Reformulate] Error:', error);
       toast({ title: 'Error al procesar el texto con Gemini AI', description: '❌ Error al procesar el texto.', variant: 'error' });
@@ -712,169 +701,13 @@ export default function InputChat({
         });
         
         try {
-          if (!ai) throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
-          
-          // Determinar tamaño del batch basado en el tipo de query
+          // Refactorizado según tesis: usar hook useGeminiIntegration en lugar de lógica hardcodeada
           const needsFullContext = fullContextKeywords.some(keyword => 
             query.toLowerCase().includes(keyword.toLowerCase())
           );
-          const batchSize = needsFullContext ? Math.min(messages?.length || 0, 20) : 3;
-          const contextMessages = messages?.slice(-batchSize) || [];
-          const decryptedContext = await decryptBatch(contextMessages, batchSize, taskId);
-          let context = decryptedContext.map(msg => msg.text || '').join('\n');
           
-          // Si necesita contexto completo, usar todos los chunks cargados
-          if (needsFullContext) {
-            const allChunks = getChunks(taskId) || [];
-            const allLoadedMessages = allChunks.flat(); // Flatten chunks a array único
-            let fullContext = allLoadedMessages.map(msg => msg.text || '').join('\n');
-            
-            // Resumir si es muy largo (reducir tokens)
-            if (allLoadedMessages.length > 10) {
-              try {
-                const summaryModel = getGenerativeModel(ai, { model: 'gemini-1.5-flash' });
-                const summaryPrompt = `Resume todo chat cargado en <400 palabras, sin sensibles como nombres/emails: ${fullContext}`;
-                const summaryResult = await summaryModel.generateContent(summaryPrompt);
-                fullContext = await summaryResult.response.text();
-                console.log(`[Gemini] Contexto resumido: ${fullContext.length} chars (de ${allLoadedMessages.length} msgs)`);
-              } catch (error) {
-                console.error('[Gemini] Error resumiendo contexto:', error);
-                // Usar contexto original si falla el resumen
-              }
-            }
-            
-            context = fullContext;
-            
-            // Agregar nota si hay más mensajes por cargar
-            if (hasMore) {
-              context += '\n\n(Nota: Basado en chunks cargados - puede ser parcial)';
-            }
-          }
-          
-          let prompt = `Responde como Gemini en chat de tarea: ${query}. Contexto (no revelar detalles privados): ${context}. Sé útil, conciso y mantén privacidad. Usa markdown si aplica.`;
-          
-          let externalInfo = '';
-          
-          // Real Clima tool (OpenWeather API)
-          if (query.toLowerCase().includes('clima') || query.toLowerCase().includes('weather')) {
-            const cityMatch = query.match(/en\s+([a-zA-Záéíóúñ\s]+)/i);
-            const city = cityMatch ? cityMatch[1].trim() : 'Cuernavaca';
-            
-            try {
-              const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || 'c4e9937072f9fa89a6087653624fcbf1';
-              console.log('[Gemini] Fetching weather for:', city);
-              
-              const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}&lang=es`);
-              if (!response.ok) throw new Error('Weather API error');
-              
-              const data = await response.json();
-              const weatherData = {
-                city: data.name,
-                temperature: `${Math.round(data.main.temp)}°C (sensación ${Math.round(data.main.feels_like)}°C)`,
-                condition: data.weather[0].description,
-                humidity: `${data.main.humidity}%`,
-                wind: `${Math.round(data.wind.speed * 3.6)} km/h`, // m/s to km/h
-                rain: data.rain ? `${data.rain['1h']}mm/h` : '0%',
-                source: 'OpenWeather'
-              };
-              
-              externalInfo = `\n\n🌤️ **Clima actual en ${weatherData.city}:**
-- **Temperatura:** ${weatherData.temperature}
-- **Condición:** ${weatherData.condition.charAt(0).toUpperCase() + weatherData.condition.slice(1)}
-- **Humedad:** ${weatherData.humidity}
-- **Viento:** ${weatherData.wind}
-- **Lluvia:** ${weatherData.rain}
-- **Fuente:** ${weatherData.source} (datos al ${new Date().toLocaleString('es-MX')})`;
-              
-              console.log('[Gemini] Weather fetched:', weatherData);
-            } catch (error) {
-              console.error('[Gemini] Weather fetch error:', error);
-              externalInfo = `\n\n⚠️ No pude obtener clima para ${city}. Verifica conexión o pregunta de nuevo.`;
-            }
-          }
-          
-          // General web search tool (para queries no específicas)
-          else if (query.toLowerCase().includes('precio') || 
-                   query.toLowerCase().includes('price') || 
-                   query.toLowerCase().includes('qué') ||
-                   query.toLowerCase().includes('que') ||
-                   query.toLowerCase().includes('cómo') ||
-                   query.toLowerCase().includes('como')) {
-            try {
-              console.log('[Gemini] Performing web search for:', query);
-              
-              const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
-              if (!response.ok) throw new Error('Search API error');
-              
-              const { snippets } = await response.json();
-              
-              if (snippets && snippets.length > 0) {
-                externalInfo = '\n\n🔍 **Resultados de búsqueda web:**';
-                snippets.forEach((s: { title: string; snippet: string; link: string }, i: number) => {
-                  externalInfo += `\n${i+1}. **${s.title}** ([Fuente](${s.link})): ${s.snippet.substring(0, 200)}...`;
-                });
-                
-                console.log('[Gemini] Web search results:', snippets.length);
-              } else {
-                externalInfo = '\n\n⚠️ No encontré información relevante en la web.';
-              }
-            } catch (error) {
-              console.error('[Gemini] Web search error:', error);
-              externalInfo = '\n\n⚠️ Búsqueda web fallida. Intenta de nuevo.';
-            }
-          }
-          
-          // Tool call para análisis de imagen con Gemini
-          if (previewUrl && file) {
-            try {
-              console.log('[Gemini] Analyzing image with Gemini...');
-              
-              // Upload imagen a Firebase Storage para tool call
-              const publicUrl = await uploadTempImage(file);
-              console.log('[Gemini] Image uploaded for analysis:', publicUrl);
-              
-              // Usar Gemini para describir la imagen
-              const imageModel = getGenerativeModel(ai, { 
-                model: 'gemini-1.5-flash',
-                generationConfig: { maxOutputTokens: 300, temperature: 0.7 }
-              });
-              
-              const imagePrompt = `Describe esta imagen en detalle, enfocado en contenido relevante para tarea (e.g., si es wireframe, extrae elementos). Sé conciso pero informativo:`;
-              
-              const imageResult = await imageModel.generateContent([
-                imagePrompt,
-                { inlineData: { data: publicUrl, mimeType: file.type } }
-              ]);
-              
-              const imageDesc = await imageResult.response.text();
-              
-              externalInfo += `\n\n📷 **Análisis de imagen con Gemini:** ${imageDesc.substring(0, 300)}...`;
-              console.log('[Gemini] Image described:', imageDesc);
-              
-              // Cleanup temp file (opcional pero recomendado)
-              // TODO: Implementar deleteObject para limpiar archivos temporales
-              
-            } catch (error) {
-              console.error('[Gemini] Image analysis error:', error);
-              externalInfo += `\n\n⚠️ Análisis de imagen fallido.`;
-            }
-          }
-          
-          // Agregar información externa al prompt
-          if (externalInfo) {
-            prompt += externalInfo;
-          }
-          
-          const generationConfig = { maxOutputTokens: 800, temperature: 0.7, topK: 40, topP: 0.9 };
-          const safetySettings = [
-            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-          ];
-          const systemInstruction = `Eres Gemini, un asistente útil en un chat de tareas. Responde de manera clara y concisa.`;
-          
-          const model = getGenerativeModel(ai, { model: 'gemini-1.5-flash', generationConfig, safetySettings, systemInstruction });
-          const result = await model.generateContent(prompt);
-          const responseText = await result.response.text();
+          // Usar el hook para generar respuesta
+          const responseText = await generateQueryResponse(query, needsFullContext);
           
           if (!responseText.trim()) throw new Error('Respuesta vacía de Gemini');
           
@@ -1400,6 +1233,45 @@ export default function InputChat({
                 />
               </div>
             )}
+
+            {/* TagDropdown para menciones @gemini */}
+            {showDropdown && (
+              <TagDropdown
+                items={mentionItems}
+                onSelectionChange={([selectedItem]) => {
+                  const fullItem = mentionItems.find(item => item.id === selectedItem.id);
+                  if (fullItem) {
+                    const mentionItem = {
+                      id: fullItem.id,
+                      name: fullItem.name,
+                      type: fullItem.type as 'user' | 'ai'
+                    };
+                    handleSelection(mentionItem);
+                    if (fullItem.type === 'ai') {
+                      setIsGeminiMentioned(true);
+                      setGeminiQuery('');
+                    }
+                  }
+                }}
+                placeholder="Seleccionar..."
+                disabled={false}
+                multiple={false}
+                isOpenDefault={true}
+                hideSearch={true}
+              />
+            )}
+
+            {/* GeminiImageAnalyzer para análisis de imágenes */}
+            {file && previewUrl && (
+              <GeminiImageAnalyzer
+                taskId={taskId}
+                onAnalysisComplete={(analysis) => {
+                  console.log('[InputChat] Image analysis completed:', analysis);
+                  // Integrar análisis en el contexto de Gemini
+                }}
+                disabled={isSending || isProcessing}
+              />
+            )}
             
             {/* Drag Overlay para transform */}
             {isDragging && (
@@ -1443,6 +1315,11 @@ export default function InputChat({
                   </div>
                 )}
               </div>
+              {/* <GeminiModesDropdown
+                onModeSelect={(mode) => setGeminiMode(mode)}
+                disabled={isSending || isProcessing}
+                className={styles.geminiModeDropdown}
+              /> */}
               <button type="button" className={`${styles.imageButton} ${styles.tooltip}`} onClick={handleThumbnailClick} disabled={isSending || isProcessing} aria-label="Adjuntar archivo" title="Adjuntar archivo">
                 <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>

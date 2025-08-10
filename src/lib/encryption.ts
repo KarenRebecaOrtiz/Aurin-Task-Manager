@@ -56,29 +56,37 @@ export const decryptMessage = async (encryptedText: string, key: string): Promis
   }
 };
 
-// Función para decrypt un batch de mensajes (limitado para performance)
+// Función para decrypt un batch de mensajes (optimizada para performance)
 export const decryptBatch = async (
   messages: Message[], 
-  batchSize: number = 5,
+  batchSize: number = 20, // Aumentado de 5 a 20 para mejor performance
   taskId: string
 ): Promise<Message[]> => {
   try {
     // Limitar el batch para evitar problemas de performance
     const limitedMessages = messages.slice(0, batchSize);
     
-    const decryptedMessages = await Promise.all(
-      limitedMessages.map(async (msg) => {
-        if (!msg.text) return msg;
-        
-        const decryptedText = await decryptMessage(msg.text, taskId);
-        return {
-          ...msg,
-          text: decryptedText,
-        };
-      })
-    );
+    // Procesar en batches paralelos para mejor performance
+    const batchSizeParallel = 5; // Procesar 5 mensajes en paralelo
+    const decryptedMessages: Message[] = [];
     
-    console.log(`[Encryption] Decrypted ${decryptedMessages.length} messages for task ${taskId}`);
+    for (let i = 0; i < limitedMessages.length; i += batchSizeParallel) {
+      const batch = limitedMessages.slice(i, i + batchSizeParallel);
+      const batchResults = await Promise.all(
+        batch.map(async (msg) => {
+          if (!msg.text) return msg;
+          
+          const decryptedText = await decryptMessage(msg.text, taskId);
+          return {
+            ...msg,
+            text: decryptedText,
+          };
+        })
+      );
+      decryptedMessages.push(...batchResults);
+    }
+    
+    console.log(`[Encryption] Decrypted ${decryptedMessages.length} messages for task ${taskId} in parallel batches`);
     return decryptedMessages;
   } catch (error) {
     console.error('[Encryption] Error in decryptBatch:', error);
