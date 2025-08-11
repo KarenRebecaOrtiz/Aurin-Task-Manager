@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "lint:detailed": "eslint src --ext .ts,.tsx,.js,.jsx --format=compact",
+    "lint:check": "eslint src --ext .ts,.tsx,.js,.jsx --max-warnings 0"
   },
   "dependencies": {
     "@clerk/backend": "^2.1.0",
