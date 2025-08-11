@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
 import { PersonalLocation } from '../ConfigPage';
@@ -229,74 +229,52 @@ const GeoClock: React.FC<GeoClockProps> = ({ personalLocations }) => {
                     // Función helper para determinar si es día o noche
                     const isDaytime = currentHour >= 6 && currentHour < 18;
                     
-                    // Debug: ver qué icono se está seleccionando
-                    console.log('Weather condition mapping:', {
-                      weatherMain,
-                      weatherDescription,
-                      isDaytime,
-                      currentHour
-                    });
-                    
                     // Primero intentar con weatherMain
                     switch (weatherMain) {
                       case 'clouds': 
                       case 'cloudy': 
-                        console.log('Selected icon: Cloudy.svg');
                         return '/weather/Cloudy.svg';
                       case 'clear':
                       case 'sunny':
                         const clearIcon = isDaytime ? '/weather/CoolDay.svg' : '/weather/CoolNight.svg';
-                        console.log('Selected icon:', clearIcon);
                         return clearIcon;
                       case 'rain': 
                       case 'drizzle':
                       case 'shower rain':
-                        console.log('Selected icon: Rainy.svg');
                         return '/weather/Rainy.svg';
                       case 'snow': 
                       case 'sleet':
-                        console.log('Selected icon: Snowy.svg');
                         return '/weather/Snowy.svg';
                       case 'thunderstorm': 
                       case 'storm':
-                        console.log('Selected icon: Storm.svg');
                         return '/weather/Storm.svg';
                       case 'windy':
                       case 'gust':
                       case 'wind':
-                        console.log('Selected icon: Windy.svg');
                         return '/weather/Windy.svg';
                       default: 
-                        console.log('No match in weatherMain, trying weatherDescription...');
                         // Si no coincide con weatherMain, intentar con weatherDescription
                         if (weatherDescription.includes('clear') || weatherDescription.includes('sunny')) {
                           const clearIcon = isDaytime ? '/weather/CoolDay.svg' : '/weather/CoolNight.svg';
-                          console.log('Selected icon from description:', clearIcon);
                           return clearIcon;
                         }
                         if (weatherDescription.includes('cloud')) {
-                          console.log('Selected icon from description: Cloudy.svg');
                           return '/weather/Cloudy.svg';
                         }
                         if (weatherDescription.includes('rain') || weatherDescription.includes('drizzle')) {
-                          console.log('Selected icon from description: Rainy.svg');
                           return '/weather/Rainy.svg';
                         }
                         if (weatherDescription.includes('snow')) {
-                          console.log('Selected icon from description: Snowy.svg');
                           return '/weather/Snowy.svg';
                         }
                         if (weatherDescription.includes('thunder') || weatherDescription.includes('storm')) {
-                          console.log('Selected icon from description: Storm.svg');
                           return '/weather/Storm.svg';
                         }
                         if (weatherDescription.includes('wind')) {
-                          console.log('Selected icon from description: Windy.svg');
                           return '/weather/Windy.svg';
                         }
                         
                         // Fallback: si no se encuentra coincidencia, usar nublado como default
-                        console.log('No match found, using fallback: Cloudy.svg');
                         return '/weather/Cloudy.svg';
                     }
                   })();
@@ -374,6 +352,18 @@ const GeoClock: React.FC<GeoClockProps> = ({ personalLocations }) => {
     ? time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
     : '';
 
+  const handleWeatherIconMouseEnter = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1.2)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+  }, []);
+
+  const handleWeatherIconMouseLeave = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+  }, []);
+
   return (
     <div className={styles.Clock}>
       <div
@@ -409,22 +399,15 @@ const GeoClock: React.FC<GeoClockProps> = ({ personalLocations }) => {
             alt="Ícono del clima"
             width={15}
             height={15}
+            priority
             style={{
               marginLeft: '5px',
               transition: 'transform 0.3s ease, filter 0.3s ease',
               filter:
                 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.2)';
-              e.currentTarget.style.filter =
-                'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.88)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.filter =
-                'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-            }}
+            onMouseEnter={handleWeatherIconMouseEnter}
+            onMouseLeave={handleWeatherIconMouseLeave}
           />
         )}
       </div>

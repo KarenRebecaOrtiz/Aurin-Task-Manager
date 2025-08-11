@@ -37,13 +37,7 @@ export const useOnboardingStatus = () => {
       const clerkOnboardingCompleted = user.publicMetadata?.onboardingCompleted as boolean;
       const clerkCurrentStep = user.publicMetadata?.currentStep as number;
       
-      console.log('[useOnboardingStatus] Clerk metadata check:', {
-        onboardingCompleted: clerkOnboardingCompleted,
-        currentStep: clerkCurrentStep,
-      });
-      
       if (clerkOnboardingCompleted) {
-        console.log('[useOnboardingStatus] Onboarding completed (Clerk metadata)');
         setStatus({
           isCompleted: true,
           currentStep: clerkCurrentStep || 5,
@@ -64,14 +58,8 @@ export const useOnboardingStatus = () => {
             const firestoreOnboardingCompleted = data.onboardingCompleted ?? false;
             const firestoreCurrentStep = data.currentStep || 1;
             
-            console.log('[useOnboardingStatus] Firestore onboarding status:', {
-              isCompleted: firestoreOnboardingCompleted,
-              currentStep: firestoreCurrentStep,
-            });
-            
             // If Firestore shows completed but Clerk doesn't, sync to Clerk
             if (firestoreOnboardingCompleted && !clerkOnboardingCompleted) {
-              console.log('[useOnboardingStatus] Syncing completion status to Clerk');
               // This would trigger a sync to Clerk (handled by SyncUserToFirestore)
             }
             
@@ -82,7 +70,7 @@ export const useOnboardingStatus = () => {
               error: null,
             });
           } else {
-            console.log('[useOnboardingStatus] No user document, onboarding not started');
+            // No user document, onboarding not started
             setStatus({
               isCompleted: false,
               currentStep: 1,
@@ -91,8 +79,8 @@ export const useOnboardingStatus = () => {
             });
           }
         },
-        (error) => {
-          console.error('[useOnboardingStatus] Error fetching onboarding status:', error);
+        () => {
+          // Silently handle error
           setStatus(prev => ({
             ...prev,
             isLoading: false,
@@ -102,8 +90,8 @@ export const useOnboardingStatus = () => {
       );
 
       return unsubscribe;
-    } catch (error) {
-      console.error('[useOnboardingStatus] Error in onboarding check:', error);
+    } catch {
+      // Silently handle error
       setStatus({
         isCompleted: false,
         currentStep: 1,
@@ -111,7 +99,7 @@ export const useOnboardingStatus = () => {
         error: 'Error al verificar estado de onboarding',
       });
     }
-  }, [user?.id, user?.publicMetadata?.onboardingCompleted, user?.publicMetadata?.currentStep]);
+  }, [user?.id, user?.publicMetadata?.currentStep, user?.publicMetadata?.onboardingCompleted]);
 
   useEffect(() => {
     const unsubscribe = checkOnboardingStatus();

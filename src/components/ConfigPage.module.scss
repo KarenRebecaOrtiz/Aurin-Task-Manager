@@ -1548,6 +1548,22 @@
   &:hover {
     opacity: 1;
   }
+
+  :global(body.dark) & {
+    filter: invert(1) brightness(100%);
+  }
+}
+
+.subsectionTitle {
+  font-size: 16px;
+  font-family: 'Urbanist', sans-serif;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px 0;
+
+  :global(body.dark) & {
+    filter: invert(1) brightness(100%);
+  }
 }
 
 .sectionHeader {
@@ -2539,11 +2555,13 @@
     @include crystal-dark(rgba(220, 38, 38, 0.15));
     border-color: rgba(220, 38, 38, 0.3);
     color: #f87171;
+    
 
     &:hover:not(:disabled) {
       background: rgba(220, 38, 38, 0.25);
       border-color: rgba(220, 38, 38, 0.4);
       color: #ef4444;
+      box-shadow: none!important;
     }
 
     &:disabled {

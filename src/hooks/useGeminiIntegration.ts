@@ -1,20 +1,36 @@
 // src/hooks/useGeminiIntegration.ts
 import { useCallback } from 'react';
-import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
+import { getGenerativeModel, HarmCategory, HarmBlockThreshold, GenerateContentResult } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
 import useGeminiStore from '@/stores/geminiStore';
 import { useGeminiContext } from './useGeminiContext';
 import { decryptBatch } from '@/lib/encryption';
 import { useSummaryStore } from '@/stores/summaryStore';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+
+// Helper function for conditional logging (only in development)
+const debugLog = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+// Helper function for conditional error logging (only in development)
+const debugError = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  }
+};
 
 interface Message {
   id: string;
   senderId: string;
   senderName: string;
   text: string | null;
-  timestamp: number | Date;
+  timestamp: Date | Timestamp;
   read: boolean;
   hours?: number;
   imageUrl?: string | null;
@@ -23,12 +39,23 @@ interface Message {
   clientId: string;
 }
 
+// Labels para intervalos de tiempo
+const intervalLabels = {
+  '1day': 'último día',
+  '3days': 'últimos 3 días',
+  '1week': 'última semana',
+  '1month': 'último mes',
+  '6months': 'últimos 6 meses',
+  '1year': 'último año'
+} as const;
+
 export const useGeminiIntegration = (taskId: string) => {
   const { addQuery, setProcessing, setLastQuery, setLastResponse } = useGeminiStore();
   const { getContextText, getContextMessages } = useGeminiContext(taskId);
+  const { setSummary } = useSummaryStore();
 
   // Función de retry con backoff exponencial
-  const retry = useCallback(async (fn: () => Promise<unknown>, retries = 3, delay = 1000) => {
+  const retry = useCallback(async (fn: () => Promise<GenerateContentResult>, retries = 3, delay = 1000): Promise<GenerateContentResult> => {
     for (let i = 0; i < retries; i++) {
       try {
         return await fn();
@@ -37,6 +64,19 @@ export const useGeminiIntegration = (taskId: string) => {
         await new Promise(res => setTimeout(res, delay * (2 ** i)));
       }
     }
+    throw new Error('Retry failed after all attempts');
+  }, []);
+
+  // Función helper para convertir timestamp a Date
+  const timestampToDate = useCallback((timestamp: Date | Timestamp): Date => {
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+    if (timestamp instanceof Timestamp) {
+      return timestamp.toDate();
+    }
+    // Si es number, asumir que es timestamp en milisegundos
+    return new Date(timestamp);
   }, []);
 
   // Generar respuesta para reformulación
@@ -99,7 +139,7 @@ export const useGeminiIntegration = (taskId: string) => {
       
       return response;
     } catch (error) {
-      console.error('[useGeminiIntegration] Error en reformulación:', error);
+      debugError('[useGeminiIntegration] Error en reformulación:', error);
       throw error;
     } finally {
       setProcessing(false);
@@ -153,7 +193,7 @@ export const useGeminiIntegration = (taskId: string) => {
 - **Fuente:** ${weatherData.source} (datos al ${new Date().toLocaleString('es-MX')})`;
           }
         } catch (error) {
-          console.error('[useGeminiIntegration] Weather fetch error:', error);
+          debugError('[useGeminiIntegration] Weather fetch error:', error);
           externalInfo = `\n\n⚠️ No pude obtener clima para ${city}. Verifica conexión o pregunta de nuevo.`;
         }
       }
@@ -192,7 +232,7 @@ export const useGeminiIntegration = (taskId: string) => {
       
       return response;
     } catch (error) {
-      console.error('[useGeminiIntegration] Error en consulta:', error);
+      debugError('[useGeminiIntegration] Error en consulta:', error);
       throw error;
     } finally {
       setProcessing(false);
@@ -219,7 +259,7 @@ export const useGeminiIntegration = (taskId: string) => {
         const summaries = useSummaryStore.getState().summaries;
         const localCached = summaries[cacheKey];
         if (localCached && Date.now() - localCached.timestamp < 3600000) { // 1 hora
-          console.log('[useGeminiIntegration] Using cached summary from local store');
+          debugLog('[useGeminiIntegration] Using cached summary from local store');
           return localCached.text;
         }
       }
@@ -241,10 +281,10 @@ export const useGeminiIntegration = (taskId: string) => {
           startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
         case '6months':
-          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
           break;
         case '1year':
-          startDate = new Date(now.getTime() - 365 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
           break;
         default:
           startDate = new Date(0);
@@ -252,19 +292,11 @@ export const useGeminiIntegration = (taskId: string) => {
 
       const filteredMessages = messages.filter(msg => {
         if (!msg.timestamp) return false;
-        const msgDate = msg.timestamp instanceof Date ? msg.timestamp : msg.timestamp.toDate();
+        const msgDate = timestampToDate(msg.timestamp);
         return msgDate >= startDate;
       });
 
       if (filteredMessages.length === 0) {
-        const intervalLabels = {
-          '1day': 'último día',
-          '3days': 'últimos 3 días',
-          '1week': 'última semana',
-          '1month': 'último mes',
-          '6months': 'últimos 6 meses',
-          '1year': 'último año'
-        };
         const intervalLabel = intervalLabels[interval as keyof typeof intervalLabels] || interval;
         return `📊 No hay actividad registrada en los últimos ${intervalLabel.toLowerCase()}. El resumen estaría vacío.`;
       }
@@ -274,7 +306,7 @@ export const useGeminiIntegration = (taskId: string) => {
       
       const chatContext = decryptedMessages
         .map(msg => {
-          const date = msg.timestamp instanceof Date ? msg.timestamp : msg.timestamp.toDate();
+          const date = timestampToDate(msg.timestamp);
           const timeStr = date.toLocaleDateString('es-MX') + ' ' + date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
           if (msg.hours) {
             return `[${timeStr}] ${msg.senderName}: Registró ${Math.floor(msg.hours)}h ${Math.round((msg.hours % 1) * 60)}m de tiempo en la tarea`;
@@ -338,7 +370,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
       try {
         summaryText = await result.response.text();
       } catch (textError) {
-        console.error('[useGeminiIntegration] Error al extraer texto:', textError);
+        debugError('[useGeminiIntegration] Error al extraer texto:', textError);
         throw new Error('⚠️ Error al procesar la respuesta de Gemini.');
       }
 
@@ -353,16 +385,16 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
       await setDoc(doc(db, 'summaries', cacheKey), cacheData);
       setSummary(cacheKey, cacheData);
 
-      console.log('[useGeminiIntegration] Summary generated and cached successfully');
+      debugLog('[useGeminiIntegration] Summary generated and cached successfully');
       
       return fullSummaryText;
     } catch (error) {
-      console.error('[useGeminiIntegration] Error en generación de resumen:', error);
+      debugError('[useGeminiIntegration] Error en generación de resumen:', error);
       throw error;
     } finally {
       setProcessing(false);
     }
-  }, [taskId, setProcessing, retry]);
+  }, [taskId, setProcessing, retry, setSummary, timestampToDate]);
 
   return {
     generateReformulation,

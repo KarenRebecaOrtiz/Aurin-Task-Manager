@@ -50,8 +50,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
       } else {
         setProfilePhoto('');
       }
-    }, (error) => {
-      console.error('Error listening to Firestore:', error);
+    }, () => {
       setProfilePhoto('');
     });
 
@@ -135,6 +134,10 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
 
   const handleCloseProfile = useCallback(() => {
     setIsProfileOpen(false);
+  }, []);
+
+  const handleToggleDropdown = useCallback(() => {
+    setIsDropdownOpen((prev) => !prev);
   }, []);
 
   // Get status color based on current status
@@ -238,7 +241,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         <button
           ref={buttonRef}
           className={styles.avatarButton}
-          onClick={() => setIsDropdownOpen((prev) => !prev)}
+          onClick={handleToggleDropdown}
           onDoubleClick={handleProfileClick}
           aria-haspopup="true"
           aria-expanded={isDropdownOpen}

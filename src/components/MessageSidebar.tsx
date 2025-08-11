@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { collection, doc, query, serverTimestamp, setDoc, getDoc, where, getDocs, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
@@ -63,11 +63,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   
   // Debug log para verificar que correctConversationId se genera correctamente
   useEffect(() => {
-    if (currentUserId && receiver.id) {
-      console.log('[MessageSidebar] correctConversationId generated:', correctConversationId);
-    } else {
-      console.log('[MessageSidebar] Missing required data for conversationId:', { currentUserId, receiverId: receiver.id });
-    }
+    // Debug logging removed for production
   }, [correctConversationId, currentUserId, receiver.id]);
   
   // NUEVO: Usar el hook de cifrado existente - MEMOIZADO
@@ -122,13 +118,28 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     const optimisticMap = new Map(optimisticArray.map(msg => [msg.clientId, msg]));
     
     // Combinar mensajes paginados con optimistas, priorizando optimistas
-    const combinedMessages = paginatedMessages.map(msg => 
-      optimisticMap.has(msg.clientId) ? optimisticMap.get(msg.clientId)! : msg
-    );
+    const combinedMessages = paginatedMessages.map(msg => {
+      // Buscar si hay un mensaje optimista con el mismo clientId
+      const optimisticMsg = optimisticMap.get(msg.clientId);
+      if (optimisticMsg) {
+        // Si el optimista tiene el mismo id de Firestore, usar el optimista
+        if (optimisticMsg.id === msg.id) {
+          return optimisticMsg;
+        }
+        // Si el optimista aún no tiene id de Firestore, usar el paginado
+        if (optimisticMsg.id.startsWith('temp-')) {
+          return msg;
+        }
+      }
+      return msg;
+    });
     
     // Agregar mensajes optimistas que no están en paginados (nuevos mensajes)
     const newOptimisticMessages = optimisticArray.filter(msg => 
-      !paginatedMessages.some(paginatedMsg => paginatedMsg.clientId === msg.clientId)
+      !paginatedMessages.some(paginatedMsg => 
+        paginatedMsg.clientId === msg.clientId || 
+        (msg.id && paginatedMsg.id === msg.id)
+      )
     );
     
     const allCombined = [...combinedMessages, ...newOptimisticMessages];
@@ -141,12 +152,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       return bTime - aTime;
     });
     
-    // Debug log para verificar que los mensajes se están combinando correctamente
-    if (optimisticArray.length > 0) {
-      console.log('[MessageSidebar] Optimistic messages count:', optimisticArray.length);
-      console.log('[MessageSidebar] Paginated messages count:', paginatedMessages.length);
-      console.log('[MessageSidebar] Combined messages count:', sortedMessages.length);
-    }
+    // Debug logging removed for production
     
     return sortedMessages;
   }, [paginatedMessages, optimisticMessages]);
@@ -189,8 +195,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }
   }, [containerRef]);
 
-
-
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -216,12 +220,27 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   // Función para detectar si es móvil
   const isMobile = () => window.innerWidth < 768;
 
+  // NUEVO: Debug log para diagnosticar problemas de carga
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[MessageSidebar] Debug info:', {
+        conversationId,
+        correctConversationId,
+        currentUserId,
+        receiverId: receiver.id,
+        paginatedMessagesCount: paginatedMessages.length,
+        optimisticMessagesCount: Object.keys(optimisticMessages).length,
+        allMessagesCount: allMessages.length,
+        isLoadingMessages
+      });
+    }
+  }, [conversationId, correctConversationId, currentUserId, receiver.id, paginatedMessages.length, optimisticMessages, allMessages.length, isLoadingMessages]);
+
   // Body scroll lock effect
   useEffect(() => {
     if (isOpen) {
       // ✅ OPTIMIZACIÓN: Guardar posición de scroll de manera más robusta
       const scrollY = window.scrollY;
-      console.log('[MessageSidebar] Locking body scroll at position:', scrollY);
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
@@ -231,7 +250,6 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       return () => {
         // ✅ OPTIMIZACIÓN: Restaurar scroll de manera más suave
         const scrollY = document.body.getAttribute('data-scroll-y');
-        console.log('[MessageSidebar] Restoring body scroll to position:', scrollY);
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
@@ -244,13 +262,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             // ✅ OPTIMIZACIÓN: Verificar que el valor sea válido antes de hacer scroll
             const scrollValue = parseInt(scrollY);
             if (!isNaN(scrollValue) && scrollValue >= 0) {
-              console.log('[MessageSidebar] Executing scrollTo:', scrollValue);
               window.scrollTo({
                 top: scrollValue,
                 behavior: 'instant' // Usar 'instant' en lugar de 'smooth' para evitar animación
               });
-            } else {
-              console.warn('[MessageSidebar] Invalid scroll value:', scrollY);
             }
           });
         }
@@ -304,6 +319,37 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     }
   }, [allMessages, paginatedMessages]);
 
+  // NUEVO: Limpiar mensajes optimistas obsoletos cuando se reciben mensajes reales
+  useEffect(() => {
+    if (paginatedMessages.length > 0 && Object.keys(optimisticMessages).length > 0) {
+      const optimisticArray = Object.values(optimisticMessages);
+      const paginatedIds = new Set(paginatedMessages.map(msg => msg.id));
+      const paginatedClientIds = new Set(paginatedMessages.map(msg => msg.clientId));
+      
+      // Encontrar mensajes optimistas que ya tienen su contraparte real
+      const obsoleteOptimisticIds = optimisticArray
+        .filter(msg => {
+          // Si el mensaje optimista ya tiene un id real y está en paginados, es obsoleto
+          if (msg.id && !msg.id.startsWith('temp-') && paginatedIds.has(msg.id)) {
+            return true;
+          }
+          // Si el mensaje optimista tiene un clientId que ya está en paginados, es obsoleto
+          if (paginatedClientIds.has(msg.clientId)) {
+            return true;
+          }
+          return false;
+        })
+        .map(msg => msg.clientId);
+      
+      // Limpiar mensajes optimistas obsoletos
+      if (obsoleteOptimisticIds.length > 0) {
+        obsoleteOptimisticIds.forEach(clientId => {
+          usePrivateMessageStore.getState().removeOptimisticMessage(clientId);
+        });
+      }
+    }
+  }, [paginatedMessages, optimisticMessages]);
+
   // Marcar mensajes como leídos cuando se abre el sidebar - OPTIMIZADO CON DEBOUNCE
   const markMessagesAsReadRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -327,11 +373,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           !message.read
         );
         
-        // Debug: Log mensajes sin id para debugging
-        const messagesWithoutId = allMessages.filter(message => !message.id);
-        if (messagesWithoutId.length > 0) {
-          console.warn('[MessageSidebar] Messages without id found:', messagesWithoutId.length, messagesWithoutId);
-        }
+        // Debug logging removed for production
         
         if (unreadMessages.length > 0) {
           // Usa batch para efficiency (como ChatSidebar)
@@ -344,11 +386,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           });
           
           await batch.commit();
-          console.log('[MessageSidebar] Marked', unreadMessages.length, 'messages as read for conversation:', correctConversationId);
         }
-      } catch (error) {
-        console.error('[MessageSidebar] Error marking messages as read:', error);
-        // Alert user (parity con Chat)
+      } catch {
         alert('Error al marcar mensajes como leídos');
       }
     }, 1000); // 1 segundo debounce
@@ -359,7 +398,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, currentUserId, receiver.id, correctConversationId]); // allMessages intencionalmente omitido para evitar re-ejecuciones excesivas
+  }, [isOpen, currentUserId, receiver.id, correctConversationId]); 
 
   // Scroll detection for down arrow
   useEffect(() => {
@@ -418,8 +457,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             [`lastViewedBy.${currentUserId}`]: serverTimestamp(),
           });
         }
-      } catch (error) {
-        console.error('[MessageSidebar] Error initializing conversation:', error);
+      } catch {
+        // Error handling removed for production
       }
     };
 
@@ -445,30 +484,27 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     };
   }, []);
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
     try {
       await deleteMessage(messageId);
       // Actualizar optimistamente en el store - como en ChatSidebar
       usePrivateMessageStore.getState().removeMessage(messageId);
-      console.log('[MessageSidebar] Message deleted successfully:', messageId);
-    } catch (error) {
-      console.error('[MessageSidebar] Error deleting message:', error);
+    } catch {
       alert('Error al eliminar el mensaje');
     }
-  };
+  }, [deleteMessage]);
 
 
 
-  const handleResendMessage = async (message: Message) => {
+  const handleResendMessage = useCallback(async (message: Message) => {
     try {
       await resendMessage(message);
-      } catch (error) {
-      console.error('[MessageSidebar] Error resending message:', error);
+      } catch {
       alert('Error al reintentar el envío');
     }
-  };
+  }, [resendMessage]);
 
-  const handleCopyMessage = (message: Message) => {
+  const handleCopyMessage = useCallback((message: Message) => {
     const textToCopy = message.text || '';
     navigator.clipboard.writeText(textToCopy).catch(() => {
       // Fallback for older browsers
@@ -479,9 +515,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       document.execCommand('copy');
       document.body.removeChild(textArea);
     });
-  };
+  }, []);
 
-  const handleDownloadFile = (message: Message) => {
+  const handleDownloadFile = useCallback((message: Message) => {
     if (message.imageUrl || message.fileUrl) {
       const link = document.createElement('a');
       link.href = message.imageUrl || message.fileUrl || '';
@@ -491,7 +527,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       link.click();
       document.body.removeChild(link);
     }
-  };
+  }, []);
 
   const handleQuoteMessage = (message: Message) => {
     // Crear un objeto replyTo limpio sin campos undefined
@@ -508,22 +544,16 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     };
     
     setReplyingTo(messageWithCleanReply);
-    console.log('[MessageSidebar] Quoting message:', messageWithCleanReply);
   };
 
   const handleEditMessage = async (messageId: string, newText: string) => {
     try {
-      console.log('[MessageSidebar] Starting edit for message:', messageId, 'with text:', newText);
-      
       // OPTIMISTIC UPDATE PRIMERO (como en ChatSidebar)
       // Encontrar el mensaje en allMessages para obtener el clientId
       const messageToEdit = allMessages.find(msg => msg.id === messageId);
       if (messageToEdit) {
         // Actualizar optimistamente en el store
         updateOptimisticMessage(messageToEdit.clientId, { text: newText });
-        console.log('[MessageSidebar] Optimistic update applied for message:', messageId, 'clientId:', messageToEdit.clientId);
-      } else {
-        console.warn('[MessageSidebar] Message not found in allMessages for optimistic update:', messageId);
       }
       
       // Luego actualizar en Firestore
@@ -531,24 +561,18 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       
       setEditingMessageId(null);
       setEditingText('');
-      console.log('[MessageSidebar] Message edited successfully:', messageId);
-    } catch (error) {
-      console.error('[MessageSidebar] Error editing message:', error);
+    } catch {
       alert('Error al editar el mensaje');
       
       // Rollback optimistic update si falla
       const messageToEdit = allMessages.find(msg => msg.id === messageId);
       if (messageToEdit) {
         updateOptimisticMessage(messageToEdit.clientId, { text: editingText });
-        console.log('[MessageSidebar] Rollback optimistic update for message:', messageId);
       }
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingMessageId(null);
-    setEditingText('');
-  };
+
 
   const animateClick = (element: HTMLElement) => {
     element.style.transform = 'scale(0.95)';
@@ -592,9 +616,66 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
     const messageToReply = allMessages.find(msg => msg.id === messageId);
     if (messageToReply) {
       handleQuoteMessage(messageToReply);
-      console.log('[MessageSidebar] Reply activated for message:', messageToReply.id);
     }
   }, [allMessages]);
+
+  // Memoizar callbacks para evitar re-renders
+  const handleCloseClick = useCallback(() => {
+    handleClose();
+  }, [handleClose]);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageId(null);
+    setEditingText('');
+  }, []);
+
+  // Handlers memoizados para InputMessage
+  const handleCancelReplyMemo = useCallback(() => {
+    handleCancelReply();
+  }, [handleCancelReply]);
+
+  const handleCancelEditMemo = useCallback(() => {
+    handleCancelEdit();
+  }, [handleCancelEdit]);
+
+  const handleImagePreview = useCallback((imageUrl: string) => {
+    setImagePreviewSrc(imageUrl);
+  }, []);
+
+
+
+  const handleEditClick = useCallback((messageId: string, text: string) => {
+    setEditingMessageId(messageId);
+    setEditingText(text);
+  }, []);
+
+  const handleDeleteClick = useCallback((messageId: string) => {
+    handleDeleteMessage(messageId);
+  }, [handleDeleteMessage]);
+
+  const handleResendClick = useCallback((message: Message) => {
+    handleResendMessage(message);
+  }, [handleResendMessage]);
+
+  const handleCopyClick = useCallback((message: Message) => {
+    handleCopyMessage(message);
+  }, [handleCopyMessage]);
+
+  const handleDownloadClick = useCallback((message: Message) => {
+    handleDownloadFile(message);
+  }, [handleDownloadFile]);
+
+
+
+  const handleCloseImagePreview = useCallback(() => {
+    setImagePreviewSrc(null);
+  }, []);
+
+
 
   const {
     isDraggingMessage,
@@ -604,6 +685,200 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   } = useMessageDrag({
     onReplyActivated: handleReplyActivated,
   });
+
+  // Callbacks para eventos de drag
+  const handleMouseDown = useCallback((messageId: string, e: React.MouseEvent) => {
+    handleMessageDragStart(messageId, e);
+  }, [handleMessageDragStart]);
+
+  const handleTouchStart = useCallback((messageId: string, e: React.TouchEvent) => {
+    handleMessageDragStart(messageId, e);
+  }, [handleMessageDragStart]);
+
+  // Handlers memoizados para drag events
+  const handleMouseDownMemo = useCallback((messageId: string) => (e: React.MouseEvent) => {
+    handleMouseDown(messageId, e);
+  }, [handleMouseDown]);
+
+  const handleTouchStartMemo = useCallback((messageId: string) => (e: React.TouchEvent) => {
+    handleTouchStart(messageId, e);
+  }, [handleTouchStart]);
+
+  // Callback para preview de imagen
+  const handleImageClick = useCallback((message: Message) => {
+    if (!message.isPending && message.imageUrl) {
+      handleImagePreview(message.imageUrl);
+    }
+  }, [handleImagePreview]);
+
+
+
+
+
+
+
+
+
+  // Handler específico para click de imagen - versión completamente sin arrow functions
+  const createImageClickHandlerFinal = useCallback((message: Message) => {
+    const clickHandler = function() { handleImageClick(message); };
+    return clickHandler;
+  }, [handleImageClick]);
+
+
+
+
+
+  // Handlers específicos para PrivateMessageActionMenu
+  const handleEditAction = useCallback((message: Message) => {
+    handleEditClick(message.id, message.text || '');
+  }, [handleEditClick]);
+
+  const handleDeleteAction = useCallback((message: Message) => {
+    handleDeleteClick(message.id);
+  }, [handleDeleteClick]);
+
+  const handleResendAction = useCallback((message: Message) => {
+    handleResendClick(message);
+  }, [handleResendClick]);
+
+  const handleCopyAction = useCallback((message: Message) => {
+    handleCopyClick(message);
+  }, [handleCopyClick]);
+
+  const handleDownloadAction = useCallback((message: Message) => {
+    handleDownloadClick(message);
+  }, [handleDownloadClick]);
+
+  // Handler memoizado para actionButtonRef
+  const handleActionButtonRef = useCallback(() => {}, []);
+
+  // Handler memoizado para onError de imagen
+  const handleImageError = useCallback(() => {
+    // Image load error handling removed
+  }, []);
+
+  // Handler memoizado para LoadMoreButton
+  const handleLoadMore = useCallback(() => {
+    loadMoreMessages();
+  }, [loadMoreMessages]);
+
+  // Handler memoizado para replyingTo
+  const replyingToMemo = useMemo(() => {
+    if (!replyingTo) return null;
+    return {
+      ...replyingTo, 
+      text: replyingTo.text || '',
+      timestamp: replyingTo.timestamp instanceof Date 
+        ? Timestamp.fromDate(replyingTo.timestamp)
+        : replyingTo.timestamp
+    };
+  }, [replyingTo]);
+
+  // Handler memoizado para DatePill
+  const getDatePillDate = useCallback((dateStr: string) => {
+    return new Date(dateStr);
+  }, []);
+
+
+
+
+
+
+
+  // Handlers específicos para cada mensaje - versión completamente sin arrow functions
+  const createMessageHandlersFinal = useCallback((message: Message) => {
+    const editHandler = function() { handleEditAction(message); };
+    const deleteHandler = function() { handleDeleteAction(message); };
+    const resendHandler = function() { handleResendAction(message); };
+    const copyHandler = function() { handleCopyAction(message); };
+    const downloadHandler = function() { handleDownloadAction(message); };
+    
+    return {
+      onEdit: editHandler,
+      onDelete: deleteHandler,
+      onResend: resendHandler,
+      onCopy: copyHandler,
+      onDownload: downloadHandler,
+    };
+  }, [handleEditAction, handleDeleteAction, handleResendAction, handleCopyAction, handleDownloadAction]);
+
+  // Transform tags memoizados para sanitizeHtml
+  const transformTags = useMemo(() => ({
+    'strong': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `font-weight: bold; ${attribs.style || ''}`
+      }
+    }),
+    'em': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `font-style: italic; ${attribs.style || ''}`
+      }
+    }),
+    'u': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `text-decoration: underline; ${attribs.style || ''}`
+      }
+    }),
+    'code': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}`
+      }
+    })
+  }), []);
+
+  const transformTagsExtended = useMemo(() => ({
+    'strong': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `font-weight: bold; ${attribs.style || ''}`
+      }
+    }),
+    'em': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `font-style: italic; ${attribs.style || ''}`
+      }
+    }),
+    'u': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `text-decoration: underline; ${attribs.style || ''}`
+      }
+    }),
+    'code': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        style: `font-family: monospace; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; ${attribs.style || ''}`
+      }
+    }),
+    'ul': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        class: `list-disc pl-5 ${attribs.class || ''}`
+      }
+    }),
+    'ol': (tagName: string, attribs: Record<string, string>) => ({
+      tagName,
+      attribs: {
+        ...attribs,
+        class: `list-decimal pl-5 ${attribs.class || ''}`
+      }
+    })
+  }), []);
 
 
 
@@ -619,7 +894,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         <div className={styles.controls}>
           <motion.div
             className={styles.arrowLeft}
-                          onClick={handleClose}
+            onClick={handleCloseClick}
             whileTap={{ scale: 0.95, opacity: 0.8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
           >
@@ -688,7 +963,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           </div>
         )}
         {allMessages.length === 0 && !isLoadingMessages && (
-          <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
+          <div className={styles.noMessages}>
+            {correctConversationId ? 'No hay mensajes en esta conversación.' : 'Cargando conversación...'}
+          </div>
         )}
         {/* {isTyping && ( // Eliminado
           <div className={styles.typingIndicator}> // Eliminado
@@ -708,7 +985,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
 
           return (
             <React.Fragment key={dateKey}>
-              {group.messages.map((message, messageIndex) => {
+              {group.messages.map((message) => {
                 let msgDate: Date;
                 if (message.timestamp instanceof Date) {
                   msgDate = message.timestamp;
@@ -719,7 +996,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                 }
                 
                 return (
-                  <div key={`${message.id}-${message.clientId}-${messageIndex}`}>
+                  <div key={`${message.id}-${message.clientId}`}>
                     <div
                       data-message-id={message.id}
                       className={`${styles.message} ${message.isPending ? styles.pending : ''} ${
@@ -734,8 +1011,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                   : 'transform 0.3s ease-out'
               }}
                       data-drag-threshold={isDraggingMessage && draggedMessageId === message.id && dragOffset >= 40 ? 'true' : 'false'}
-                      onMouseDown={(e) => handleMessageDragStart(message.id, e)}
-                      onTouchStart={(e) => handleMessageDragStart(message.id, e)}
+                      onMouseDown={handleMouseDownMemo(message.id)}
+                      onTouchStart={handleTouchStartMemo(message.id)}
             >
               <UserAvatar
                         userId={message.senderId}
@@ -771,18 +1048,14 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                               <PrivateMessageActionMenu
                                 message={message}
                                 userId={currentUserId}
-
-                                onEdit={() => {
-                                  setEditingMessageId(message.id);
-                                  setEditingText(message.text || '');
-                                }}
-                                onDelete={() => handleDeleteMessage(message.id)}
-                                onResend={() => handleResendMessage(message)}
-                                onCopy={() => handleCopyMessage(message)}
-                                onDownload={() => handleDownloadFile(message)}
+                                onEdit={createMessageHandlersFinal(message).onEdit}
+                                onDelete={createMessageHandlersFinal(message).onDelete}
+                                onResend={createMessageHandlersFinal(message).onResend}
+                                onCopy={createMessageHandlersFinal(message).onCopy}
+                                onDownload={createMessageHandlersFinal(message).onDownload}
                                 animateClick={animateClick}
                                 actionMenuRef={actionMenuRef}
-                                actionButtonRef={() => {}}
+                                actionButtonRef={handleActionButtonRef}
                               />
                             )}
                   </div>
@@ -817,36 +1090,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                                   allowedAttributes: {
                                     '*': ['style', 'class']
                                   },
-                                  transformTags: {
-                                    'strong': (tagName: string, attribs: Record<string, string>) => ({
-                                      tagName,
-                                      attribs: {
-                                        ...attribs,
-                                        style: `font-weight: bold; ${attribs.style || ''}`
-                                      }
-                                    }),
-                                    'em': (tagName: string, attribs: Record<string, string>) => ({
-                                      tagName,
-                                      attribs: {
-                                        ...attribs,
-                                        style: `font-style: italic; ${attribs.style || ''}`
-                                      }
-                                    }),
-                                    'u': (tagName: string, attribs: Record<string, string>) => ({
-                                      tagName,
-                                      attribs: {
-                                        ...attribs,
-                                        style: `text-decoration: underline; ${attribs.style || ''}`
-                                      }
-                                    }),
-                                    'code': (tagName: string, attribs: Record<string, string>) => ({
-                                      tagName,
-                                      attribs: {
-                                        ...attribs,
-                                        style: `font-family: monospace; background-color: #f3f4f6; padding: 1px 3px; border-radius: 2px; ${attribs.style || ''}`
-                                      }
-                                    })
-                                  }
+                                  transformTags: transformTags
                                 })
                               }}
                             />
@@ -869,8 +1113,8 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                           height={300}
                           sizes="100vw"
                                 className={`${styles.image} ${message.isPending ? styles.pendingImage : ''}`}
-                                  onClick={() => !message.isPending && setImagePreviewSrc(message.imageUrl!)}
-                                onError={() => console.warn('Image load failed', message.imageUrl)}
+                                  onClick={createImageClickHandlerFinal(message)}
+                                onError={handleImageError}
                           draggable="false"
                           style={{
                             width: 'auto',
@@ -913,50 +1157,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
                           allowedAttributes: {
                             '*': ['style', 'class']
                           },
-                          transformTags: {
-                            'strong': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `font-weight: bold; ${attribs.style || ''}`
-                              }
-                            }),
-                            'em': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `font-style: italic; ${attribs.style || ''}`
-                              }
-                            }),
-                            'u': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `text-decoration: underline; ${attribs.style || ''}`
-                              }
-                            }),
-                            'code': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                style: `font-family: monospace; background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; ${attribs.style || ''}`
-                              }
-                            }),
-                            'ul': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                class: `list-disc pl-5 ${attribs.class || ''}`
-                              }
-                            }),
-                            'ol': (tagName: string, attribs: Record<string, string>) => ({
-                              tagName,
-                              attribs: {
-                                ...attribs,
-                                class: `list-decimal pl-5 ${attribs.class || ''}`
-                              }
-                            })
-                          }
+                          transformTags: transformTagsExtended
                         })
                       }}
                     />
@@ -967,13 +1168,13 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
             </div>
           );
         })}
-              <DatePill date={new Date(group.date)} />
+              <DatePill date={getDatePillDate(group.date)} />
             </React.Fragment>
           );
         })}
 
         <LoadMoreButton
-          onClick={loadMoreMessages}
+          onClick={handleLoadMore}
           isLoading={isLoadingMore}
           hasMoreMessages={hasMore}
           className={styles.loadMoreButtonContainer}
@@ -986,18 +1187,12 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         onSendMessage={handleSendMessage}
         isSending={isSending}
         containerRef={sidebarRef}
-        replyingTo={replyingTo ? { 
-          ...replyingTo, 
-          text: replyingTo.text || '',
-          timestamp: replyingTo.timestamp instanceof Date 
-            ? Timestamp.fromDate(replyingTo.timestamp)
-            : replyingTo.timestamp
-        } : null}
-        onCancelReply={() => setReplyingTo(null)}
+        replyingTo={replyingToMemo}
+        onCancelReply={handleCancelReplyMemo}
         editingMessageId={editingMessageId}
         editingText={editingText}
         onEditMessage={handleEditMessage}
-        onCancelEdit={handleCancelEdit}
+        onCancelEdit={handleCancelEditMemo}
         conversationId={correctConversationId}
       />
       
@@ -1017,7 +1212,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
         <ImagePreviewOverlay
           src={imagePreviewSrc}
           alt="Vista previa de imagen"
-          onClose={() => setImagePreviewSrc(null)}
+          onClose={handleCloseImagePreview}
         />
       )}
     </motion.div>

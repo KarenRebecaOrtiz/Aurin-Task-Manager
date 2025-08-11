@@ -3,7 +3,6 @@ import { gsap } from 'gsap';
 import styles from './Dock.module.scss';
 import Image from 'next/image';
 
-
 interface Shortcut {
   name: string;
   icon: string;
@@ -18,8 +17,16 @@ const shortcuts: Shortcut[] = [
   { name: 'Vercel', icon: '/Dock/Vercel.png', link: 'https://vercel.com' },
   { name: 'Wordpress', icon: '/Dock/Wordpress.jpg', link: 'https://wordpress.com' },
   { name: 'Zoho', icon: '/Dock/Zoho.png', link: 'https://www.zoho.com' },
-  { name: 'Notion', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6be92ee5ddf0080fb90_notion.png', link: 'https://www.notion.so' },
-  { name: 'Webflow', icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6bea73fcc6ee568f6f0_webflow.png', link: 'https://www.webflow.com' },
+  { 
+    name: 'Notion', 
+    icon: 'https://cdn.prod.website-files.com/6728a3e6f4f4161c235bc519/6728a6be92ee5ddf0080fb90_notion.png', 
+    link: 'https://www.notion.so'
+  },
+  { 
+    name: 'Webflow', 
+    icon: 'https://cdn.prod.website-files.com/6728a6bea73fcc6ee568f6f0_webflow.png', 
+    link: 'https://www.webflow.com'
+  },
 ];
 
 const Dock: React.FC = () => {
@@ -51,9 +58,8 @@ const Dock: React.FC = () => {
           });
         }
       }
-    } catch (error) {
-      console.error('Error loading visibility from localStorage:', error);
-      // Default to hidden on error
+    } catch {
+      // Silently handle error and default to hidden
       isVisible.current = false;
       if (dockRef.current) {
         gsap.set(dockRef.current, {
@@ -79,8 +85,8 @@ const Dock: React.FC = () => {
         });
         try {
           localStorage.setItem('dockIsVisible', JSON.stringify(isVisible.current));
-        } catch (error) {
-          console.error('Error saving visibility to localStorage:', error);
+        } catch {
+          // Silently handle error
         }
       }
     };
@@ -178,21 +184,18 @@ const Dock: React.FC = () => {
                   width={38}
                   height={38}
                   className={styles.dockItemImage}
-                  unoptimized
                   style={{
                     borderRadius: '5px',
                     objectFit: 'contain',
-                    aspectRatio: '1 / 1',
+                    width: '38px',
+                    height: '38px',
                   }}
                 />
               </a>
               <div className={styles.dockItemTooltip}>{shortcut.name}</div>
             </li>
-
           ))}
         </ul>
-
-
       </nav>
     </section>
   );

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useCallback } from "react"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 
 import styles from "./tag-selector.module.scss"
@@ -60,23 +60,40 @@ export function TagSelector<T>({
       !selectedTags.some((selected) => getValue(selected) === getValue(tag))
   )
 
-  const handleSelect = (value: string) => {
+  const handleSelect = useCallback((value: string) => {
     const existingTag = availableTags.find((tag) => getValue(tag) === value)
     if (existingTag) {
       onChange([...selectedTags, existingTag])
     }
     setInputValue("")
-  }
+  }, [availableTags, selectedTags, onChange, getValue, setInputValue])
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     const newTag = createTag(currentInputValue)
     onChange([...selectedTags, newTag])
     setInputValue("")
-  }
+  }, [currentInputValue, selectedTags, onChange, createTag, setInputValue])
 
-  const handleRemove = (value: string) => {
+  const handleRemove = useCallback((value: string) => {
     onChange(selectedTags.filter((tag) => getValue(tag) !== value))
-  }
+  }, [selectedTags, onChange, getValue])
+
+  const createRemoveHandler = useCallback((tagValue: string) => {
+    return (e: React.MouseEvent) => {
+      e.stopPropagation()
+      handleRemove(tagValue)
+    }
+  }, [handleRemove])
+
+  const handleInputValueChange = useCallback((value: string) => {
+    setInputValue(value)
+  }, [setInputValue])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && currentInputValue.trim() !== "") {
+      handleCreate()
+    }
+  }, [currentInputValue, handleCreate])
 
   return (
     <Popover open={isOpen} onOpenChange={setOpen}>
@@ -91,10 +108,7 @@ export function TagSelector<T>({
               <button
                 type="button"
                 className={styles.removeButton}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleRemove(getValue(tag))
-                }}
+                onClick={createRemoveHandler(getValue(tag))}
               >
                 <X size={12} />
               </button>
@@ -109,13 +123,9 @@ export function TagSelector<T>({
           <CommandInput
             placeholder="Enter tag..."
             value={currentInputValue}
-            onValueChange={(value) => setInputValue(value)}
+            onValueChange={handleInputValueChange}
             autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && currentInputValue.trim() !== "") {
-                handleCreate()
-              }
-            }}
+            onKeyDown={handleKeyDown}
           />
           <CommandList>
             <CommandEmpty>No tags found.</CommandEmpty>

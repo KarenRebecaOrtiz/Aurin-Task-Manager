@@ -6,7 +6,7 @@ import ToDoDynamic from '@/components/ToDoDynamic';
 import AvailabilityToggle from '@/components/ui/AvailabilityToggle';
 import GeoClock from '@/components/ui/GeoClock';
 import styles from './Header.module.scss';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
@@ -52,7 +52,6 @@ const Header: React.FC<HeaderProps> = ({
   selectedContainer,
   isArchiveTableOpen,
   users,
-  notifications = [], // Valor por defecto
   onNotificationClick,
   onLimitNotifications,
   onChangeContainer,
@@ -90,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   // Combinar notificaciones de ambos sistemas
-  const allNotifications: Notification[] = [
+  const allNotifications: Notification[] = useMemo(() => [
     ...taskNotifications.map(notif => ({
       id: notif.id,
       userId: notif.recipientId,
@@ -111,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({
       recipientId: '',
       type: 'private_message'
     }))
-  ];
+  ], [taskNotifications, messageNotifications]);
 
   // Calcular conteos basados en las notificaciones combinadas
   const hasUnread = allNotifications.some((n) => !n.read);
@@ -378,8 +377,6 @@ const Header: React.FC<HeaderProps> = ({
     }
 
     // Manejo interno de notificaciones
-    console.log('🔥 [Header] Handling notification click:', notification);
-    
     try {
       switch (notification.type) {
         case 'task_created':
@@ -390,7 +387,6 @@ const Header: React.FC<HeaderProps> = ({
         case 'group_message':
         case 'time_log':
           if (notification.taskId) {
-            console.log('🔥 [Header] Opening task chat for taskId:', notification.taskId);
             // Aquí podrías abrir el chat de la tarea
             // Por ahora solo cerramos el dropdown
             setIsNotificationsOpen(false);
@@ -399,7 +395,6 @@ const Header: React.FC<HeaderProps> = ({
           
         case 'private_message':
           if (notification.conversationId) {
-            console.log('🔥 [Header] Opening private chat for conversationId:', notification.conversationId);
             // Aquí podrías abrir el chat privado
             // Por ahora solo cerramos el dropdown
             setIsNotificationsOpen(false);
@@ -407,12 +402,11 @@ const Header: React.FC<HeaderProps> = ({
           break;
           
         default:
-          console.log('🔥 [Header] Unknown notification type:', notification.type);
           setIsNotificationsOpen(false);
           break;
       }
-    } catch (error) {
-      console.error('🔥 [Header] Error handling notification click:', error);
+    } catch {
+      // Silently handle error
       setIsNotificationsOpen(false);
     }
   }, [onNotificationClick]);
@@ -420,6 +414,23 @@ const Header: React.FC<HeaderProps> = ({
   const handleCloseNotifications = useCallback(() => {
     setIsNotificationsOpen(false);
   }, []);
+
+  // Handlers para eventos del logo
+  const handleLogoClick = useCallback(() => {
+    handleContainerChange('tareas');
+  }, [handleContainerChange]);
+
+  const handleLogoMouseEnter = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.filter = isDarkMode 
+      ? 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) brightness(1.1)' 
+      : 'drop-shadow(0 6px 12px rgba(255, 255, 255, 0.5)) brightness(1.1)';
+  }, [isDarkMode]);
+
+  const handleLogoMouseLeave = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.filter = isDarkMode 
+      ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))' 
+      : 'drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3))';
+  }, [isDarkMode]);
 
   /* ────────────────────────────────────────────
      RENDER
@@ -429,28 +440,21 @@ const Header: React.FC<HeaderProps> = ({
       <div className={styles.logoAndWelcomeContainer}>
         <div 
           className={styles.logoContainer}
-          onClick={() => handleContainerChange('tareas')}
+          onClick={handleLogoClick}
+          onMouseEnter={handleLogoMouseEnter}
+          onMouseLeave={handleLogoMouseLeave}
         >
           <Image
             src={isDarkMode ? '/logoDark.svg' : '/logoLight.svg'}
             alt="Logo"
             width={180}
             height={68}
+            priority
             style={{
               transition: 'all 0.3s ease',
               filter: isDarkMode 
                 ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))' 
                 : 'drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3))'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.filter = isDarkMode 
-                ? 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) brightness(1.1)' 
-                : 'drop-shadow(0 6px 12px rgba(255, 255, 255, 0.5)) brightness(1.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.filter = isDarkMode 
-                ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))' 
-                : 'drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3))';
             }}
           />
         </div>
@@ -506,6 +510,7 @@ const Header: React.FC<HeaderProps> = ({
                     alt="Notificaciones"
                     width={24}
                     height={24}
+                    priority
                     style={{ width: 'auto', height: 'auto' }}
                   />
                 )}

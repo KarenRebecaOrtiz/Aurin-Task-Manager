@@ -34,7 +34,6 @@ import { usePersonalLocations } from '@/hooks/usePersonalLocations';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
 import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
-import { Notification } from '@/services/notificationService';
 
 // Función para generar conversationId de manera consistente (igual que en MessageSidebar)
 const generateConversationId = (userId1: string, userId2: string): string => {
@@ -52,6 +51,20 @@ import CreateTask from '@/components/CreateTask';
 import TasksPageModals from '@/components/TasksPageModals';
 import OnlineUsersPortal from '@/components/ui/OnlineUsersPortal';
 
+// Helper functions for conditional logging (only in development)
+const debugLog = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+const debugError = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  }
+};
 
 // Componente completamente aislado para TasksTable - similar a MembersTable
 const TasksTableRenderer = memo(() => {
@@ -175,71 +188,10 @@ function TasksPageContent() {
   }, [isInitialLoadComplete, contentReady]);
 
   // Event handlers - TODOS MEMOIZADOS
-  const handleNotificationClick = useCallback((notification: Notification & { action?: string }) => {
-    console.log('🔥 [TasksPage] NOTIFICATION CLICK RECEIVED:', {
-      action: notification.action,
-      taskId: notification.taskId,
-      conversationId: notification.conversationId,
-      type: notification.type
-    });
-    
-    try {
-      switch (notification.action) {
-        case 'open-task-chat':
-          if (notification.taskId) {
-            console.log('🔥 [TasksPage] OPENING TASK CHAT for taskId:', notification.taskId);
-            // Buscar la tarea y abrir el ChatSidebar
-            const task = tasks.find(t => t.id === notification.taskId);
-            console.log('🔥 [TasksPage] Found task:', task ? 'YES' : 'NO', 'taskId:', notification.taskId);
-            if (task) {
-              const { openChatSidebar } = useSidebarStateStore.getState();
-              const clientName = clients.find(c => c.id === task.clientId)?.name || 'Cliente';
-              console.log('🔥 [TasksPage] Opening ChatSidebar with task:', task.name, 'client:', clientName);
-              openChatSidebar(task, clientName);
-            } else {
-              console.error('🔥 [TasksPage] ERROR: Task not found for taskId:', notification.taskId);
-            }
-          }
-          break;
-          
-        case 'open-private-chat':
-          if (notification.conversationId) {
-            console.log('🔥 [TasksPage] OPENING PRIVATE CHAT for conversationId:', notification.conversationId);
-            const { openMessageSidebar } = useSidebarStateStore.getState();
-            
-            // Necesitamos encontrar el usuario que envió la notificación
-            const sender = users.find(u => u.id === notification.userId);
-            if (sender) {
-              console.log('🔥 [TasksPage] Opening MessageSidebar with sender:', sender.fullName);
-              openMessageSidebar(
-                notification.userId, // senderId
-                {
-                  id: sender.id,
-                  imageUrl: sender.imageUrl,
-                  fullName: sender.fullName,
-                  role: sender.role || 'user'
-                }, // receiver
-                notification.conversationId // conversationId
-              );
-            } else {
-              console.error('🔥 [TasksPage] ERROR: Sender not found for userId:', notification.userId);
-            }
-          }
-          break;
-          
-        case 'show-notification':
-          console.log('🔥 [TasksPage] SHOWING NOTIFICATION:', notification.message);
-          // Aquí podrías mostrar un toast o notificación
-          break;
-          
-        default:
-          console.log('🔥 [TasksPage] UNKNOWN ACTION:', notification.action);
-          break;
-      }
-    } catch (error) {
-      console.error('🔥 [TasksPage] ERROR handling notification click:', error);
-    }
-  }, [tasks, clients]);
+  // Nota: handleNotificationClick está comentado ya que no se usa actualmente
+  // const handleNotificationClick = useCallback((notification: Notification & { action?: string }) => {
+  //   // ... implementación comentada
+  // }, [tasks, clients, users]);
 
   const handleContainerChange = useCallback((newContainer: Container) => {
     
@@ -270,6 +222,89 @@ function TasksPageContent() {
       setContainer(newContainer);
     }
   }, [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges]);
+
+  const handleSelectorContainerChange = useCallback((c: SelectorContainer) => {
+    handleContainerChange(c);
+  }, [handleContainerChange]);
+
+  const handleCreateTaskToggle = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const { openConfirmExitPopup } = useTasksPageStore.getState();
+      openConfirmExitPopup();
+    } else {
+      const { closeCreateTask } = useTasksPageStore.getState();
+      closeCreateTask();
+    }
+  }, [hasUnsavedChanges]);
+
+  const handleCreateTaskHasUnsavedChanges = useCallback((hasChanges: boolean) => {
+    const { setHasUnsavedChanges } = useTasksPageStore.getState();
+    setHasUnsavedChanges(hasChanges);
+  }, []);
+
+  const handleCreateTaskCreateClientOpen = useCallback(() => {
+    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+    setClientSidebarData({ isEdit: false });
+    setIsClientSidebarOpen(true);
+  }, []);
+
+  const handleCreateTaskEditClientOpen = useCallback((client: Client) => {
+    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+    setClientSidebarData({
+      client: {
+        ...client,
+        projectCount: client.projects?.length || 0,
+        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
+      },
+      isEdit: true,
+    });
+    setIsClientSidebarOpen(true);
+  }, []);
+
+  const handleCreateTaskCreated = useCallback(() => {
+    const { closeCreateTask } = useTasksPageStore.getState();
+    closeCreateTask();
+  }, []);
+
+  const handleCreateClientOpen = useCallback(() => {
+    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+    setClientSidebarData({ isEdit: false });
+    setIsClientSidebarOpen(true);
+  }, []);
+
+  const handleEditTaskToggle = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const { openConfirmExitPopup } = useTasksPageStore.getState();
+      openConfirmExitPopup();
+    } else {
+      const { closeEditTask } = useTasksPageStore.getState();
+      closeEditTask();
+    }
+  }, [hasUnsavedChanges]);
+
+  const handleEditTaskHasUnsavedChanges = useCallback((hasChanges: boolean) => {
+    const { setHasUnsavedChanges } = useTasksPageStore.getState();
+    setHasUnsavedChanges(hasChanges);
+  }, []);
+
+  const handleEditTaskCreateClientOpen = useCallback(() => {
+    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+    setClientSidebarData({ isEdit: false });
+    setIsClientSidebarOpen(true);
+  }, []);
+
+  const handleEditTaskEditClientOpen = useCallback((client: Client) => {
+    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+    setClientSidebarData({
+      client: {
+        ...client,
+        projectCount: client.projects?.length || 0,
+        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
+      },
+      isEdit: true,
+    });
+    setIsClientSidebarOpen(true);
+  }, []);
 
   const handleOnboardingComplete = useCallback(() => {
     // Handle onboarding complete
@@ -303,79 +338,81 @@ function TasksPageContent() {
   }, []);
 
   // Callbacks para ArchiveTable - MEMOIZADOS SIN DEPENDENCIAS
-  // const handleArchiveTableEditTask = useCallback((taskId: string) => {
-  //   const { openEditTask } = useTasksPageStore.getState();
-  //   openEditTask(taskId);
-  // }, []);
+  const handleArchiveTableEditTaskOpen = useCallback((taskId: string) => {
+    const { openEditTask } = useTasksPageStore.getState();
+    openEditTask(taskId);
+  }, []);
 
-  // const handleArchiveTableViewChange = useCallback((view: TaskView) => {
-  //   const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
-  //   setTaskView(view);
-  //   closeArchiveTable();
-  // }, []);
+  const handleArchiveTableViewChange = useCallback((view: TaskView) => {
+    const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
+    setTaskView(view);
+    closeArchiveTable();
+  }, []);
 
-  // const handleArchiveTableDeleteTask = useCallback((taskId: string) => {
-  //   const { openDeletePopup } = useTasksPageStore.getState();
-  //   openDeletePopup('task', taskId);
-  // }, []);
+  const handleArchiveTableDeleteTaskOpen = useCallback((taskId: string) => {
+    const { openDeletePopup } = useTasksPageStore.getState();
+    openDeletePopup('task', taskId);
+  }, []);
 
-  // const handleArchiveTableClose = useCallback(() => {
-  //   const { closeArchiveTable } = useTasksPageStore.getState();
-  //   closeArchiveTable();
-  // }, []);
+  const handleArchiveTableClose = useCallback(() => {
+    const { closeArchiveTable } = useTasksPageStore.getState();
+    closeArchiveTable();
+  }, []);
 
-  // const handleTaskArchive = useCallback(async (task: Task, action: 'archive' | 'unarchive'): Promise<boolean> => {
-  //   if (!user?.id || !isAdmin) return false;
+  const handleArchiveTableTaskArchive = useCallback(async (task: unknown, action: 'archive' | 'unarchive') => {
+    if (!user?.id) {
+      debugError('[TasksPage] User not authenticated');
+      return false;
+    }
+    
+    // ✅ CORREGIDO: Permitir archivar/desarchivar a admins Y creadores de la tarea
+    const taskData = task as Task;
+    const isTaskCreator = taskData.CreatedBy === user.id;
+    if (!isAdmin && !isTaskCreator) {
+      debugError('[TasksPage] User not authorized to archive/unarchive this task:', {
+        isAdmin,
+        taskCreatedBy: taskData.CreatedBy,
+        currentUserId: user.id
+      });
+      return false;
+    }
 
-  //   try {
-  //     if (action === 'unarchive') {
-  //       await unarchiveTask(task.id, user.id, isAdmin, task);
-  //     } else {
-  //       await archiveTask(task.id, user.id, isAdmin, task);
-  //     }
-  //     return true;
-  //     } catch (error) {
-  //   console.error('[TasksPage] Error archiving/unarchiving task:', error);
-  //   return false;
-  // }
-  // }, [user?.id, isAdmin]);
+    try {
+      const taskData = task as Task;
+      if (action === 'unarchive') {
+        await unarchiveTask(taskData.id, user.id, isAdmin, taskData);
+        debugLog('[TasksPage] Task unarchived successfully:', taskData.id);
+      } else {
+        await archiveTask(taskData.id, user.id, isAdmin, taskData);
+        debugLog('[TasksPage] Task archived successfully:', taskData.id);
+      }
+      return true;
+    } catch (error) {
+      debugError('[TasksPage] Error archiving/unarchiving task:', error);
+      return false;
+    }
+  }, [user?.id, isAdmin]);
 
-  // const handleArchiveTableTaskUpdate = useCallback((task: Task) => {
-  //   if (!user?.id) return;
+  const handleArchiveTableDataRefresh = useCallback(() => {
+    // TODO: Implement data refresh functionality
+  }, []);
 
-  //   try {
-  //     const taskRef = doc(db, 'tasks', task.id);
-  //     updateDoc(taskRef, {
-  //       ...task,
-  //       lastActivity: new Date().toISOString(),
-  //     });
-  //   } catch (error) {
-  //     console.error('[TasksPage] Error updating task:', error);
-  //   }
-  // }, [user?.id]);
+  const handleConfigPageClose = useCallback(() => {
+    handleContainerChange('tareas');
+  }, [handleContainerChange]);
 
-  // const handleDataRefresh = useCallback(async () => {
-  //   if (!user?.id) return;
+  const handleLoaderAnimationComplete = useCallback(() => {
+    // Loader animation completed
+  }, []);
 
-  //   try {
-  //     const tasksQuery = query(collection(db, 'tasks'));
-  //     const snapshot = await getDocs(tasksQuery);
-  //     const tasksData = snapshot.docs.map(doc => ({
-  //       id: doc.id,
-  //       ...doc.data()
-  //     })) as Task[];
-
-  //     // No need to update tasks state directly as it will be handled by onSnapshot
-  //     console.log('[TasksPage] Data refreshed:', tasksData.length);
-  //   } catch (error) {
-  //     console.error('[TasksPage] Error refreshing data:', error);
-  //   }
-  // }, [user?.id]);
+  const handleAISidebarClose = useCallback(() => {
+    // AI Sidebar is always closed in this context
+  }, []);
 
   const handleClientsTableCacheUpdate = useCallback((_updatedClients: Client[]) => {
     // Actualizar el cache global si es necesario
     // TODO: Implementar actualización del cache cuando sea necesario
-    console.log('Cache update requested for clients:', _updatedClients.length);
+    debugLog('Cache update requested for clients:', _updatedClients.length);
   }, []);
 
   const handleShowSuccessAlert = useCallback((message: string) => {
@@ -387,6 +424,14 @@ function TasksPageContent() {
     const { showFail } = useTasksPageStore.getState();
     showFail(message);
   }, []);
+
+  const handleEditTaskClientAlertChange = useCallback((alert: { type: 'success' | 'fail'; message?: string; error?: string }) => {
+    if (alert && alert.type === 'success') {
+      handleShowSuccessAlert(alert.message || '');
+    } else if (alert && alert.type === 'fail') {
+      handleShowFailAlert(alert.error || alert.message || '');
+    }
+  }, [handleShowSuccessAlert, handleShowFailAlert]);
 
   // Get hasUnsavedChanges from store to use in useCallback
   // const hasUnsavedChanges = useTasksPageStore(state => state.hasUnsavedChanges);
@@ -426,12 +471,6 @@ function TasksPageContent() {
       role: receiverUser.role,
     }, conversationId);
   }, [user?.id]);
-
-  const handleCreateClientOpen = useCallback(() => {
-    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-    setClientSidebarData({ isEdit: false });
-    setIsClientSidebarOpen(true);
-  }, []);
 
   const handleEditClientOpen = useCallback((client: Client) => {
     const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
@@ -547,7 +586,7 @@ function TasksPageContent() {
       <div ref={selectorRef} className={styles.selector}>
         <Selector
           selectedContainer={selectedContainer as SelectorContainer}
-          setSelectedContainer={(c: SelectorContainer) => handleContainerChange(c)}
+          setSelectedContainer={handleSelectorContainerChange}
           options={[
             { value: 'tareas', label: 'Inicio' },
             { value: 'cuentas', label: 'Cuentas' },
@@ -561,143 +600,35 @@ function TasksPageContent() {
           {isCreateTaskOpen ? (
             <CreateTask
               isOpen={isCreateTaskOpen}
-              onToggle={() => {
-                if (hasUnsavedChanges) {
-                  const { openConfirmExitPopup } = useTasksPageStore.getState();
-                  openConfirmExitPopup();
-                } else {
-                  const { closeCreateTask } = useTasksPageStore.getState();
-                  closeCreateTask();
-                }
-              }}
-              onHasUnsavedChanges={(hasChanges) => {
-                const { setHasUnsavedChanges } = useTasksPageStore.getState();
-                setHasUnsavedChanges(hasChanges);
-              }}
-              onCreateClientOpen={() => {
-                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                setClientSidebarData({ isEdit: false });
-                setIsClientSidebarOpen(true);
-              }}
-              onEditClientOpen={(client) => {
-                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                setClientSidebarData({
-                  client: {
-                    ...client,
-                    projectCount: client.projects?.length || 0,
-                    createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
-                  },
-                  isEdit: true,
-                });
-                setIsClientSidebarOpen(true);
-              }}
-              onTaskCreated={() => {
-                const { closeCreateTask } = useTasksPageStore.getState();
-                closeCreateTask();
-              }}
+              onToggle={handleCreateTaskToggle}
+              onHasUnsavedChanges={handleCreateTaskHasUnsavedChanges}
+              onCreateClientOpen={handleCreateTaskCreateClientOpen}
+              onEditClientOpen={handleCreateTaskEditClientOpen}
+              onTaskCreated={handleCreateTaskCreated}
               onShowSuccessAlert={handleShowSuccessAlert}
               onShowFailAlert={handleShowFailAlert}
             />
           ) : isEditTaskOpen && editTaskId ? (
             <EditTask
               isOpen={isEditTaskOpen}
-              onToggle={() => {
-                if (hasUnsavedChanges) {
-                  const { openConfirmExitPopup } = useTasksPageStore.getState();
-                  openConfirmExitPopup();
-                } else {
-                  const { closeEditTask } = useTasksPageStore.getState();
-                  closeEditTask();
-                }
-              }}
+              onToggle={handleEditTaskToggle}
               taskId={editTaskId}
-              onHasUnsavedChanges={(hasChanges) => {
-                const { setHasUnsavedChanges } = useTasksPageStore.getState();
-                setHasUnsavedChanges(hasChanges);
-              }}
-              onCreateClientOpen={() => {
-                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                setClientSidebarData({ isEdit: false });
-                setIsClientSidebarOpen(true);
-              }}
-              onEditClientOpen={(client) => {
-                const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-                setClientSidebarData({
-                  client: {
-                    ...client,
-                    projectCount: client.projects?.length || 0,
-                    createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
-                  },
-                  isEdit: true,
-                });
-                setIsClientSidebarOpen(true);
-              }}
-              onClientAlertChange={(alert) => {
-                if (alert && alert.type === 'success') {
-                  handleShowSuccessAlert(alert.message || '');
-                } else if (alert && alert.type === 'fail') {
-                  handleShowFailAlert(alert.error || alert.message || '');
-                }
-              }}
+              onHasUnsavedChanges={handleEditTaskHasUnsavedChanges}
+              onCreateClientOpen={handleEditTaskCreateClientOpen}
+              onEditClientOpen={handleEditTaskEditClientOpen}
+              onClientAlertChange={handleEditTaskClientAlertChange}
               onShowSuccessAlert={handleShowSuccessAlert}
               onShowFailAlert={handleShowFailAlert}
             />
           ) : isArchiveTableOpen ? (
             <ArchiveTable
               // Pasa los handlers necesarios conectados al store
-              onEditTaskOpen={(taskId: string) => {
-                const { openEditTask } = useTasksPageStore.getState();
-                openEditTask(taskId);
-              }}
-              onViewChange={(view: TaskView) => {
-                const { setTaskView, closeArchiveTable } = useTasksPageStore.getState();
-                setTaskView(view);
-                closeArchiveTable();
-              }}
-              onDeleteTaskOpen={(taskId: string) => {
-                const { openDeletePopup } = useTasksPageStore.getState();
-                openDeletePopup('task', taskId);
-              }}
-              onClose={() => {
-                const { closeArchiveTable } = useTasksPageStore.getState();
-                closeArchiveTable();
-              }}
-              onTaskArchive={async (task: unknown, action: 'archive' | 'unarchive') => {
-                if (!user?.id) {
-                  console.error('[TasksPage] User not authenticated');
-                  return false;
-                }
-                
-                // ✅ CORREGIDO: Permitir archivar/desarchivar a admins Y creadores de la tarea
-                const taskData = task as Task;
-                const isTaskCreator = taskData.CreatedBy === user.id;
-                if (!isAdmin && !isTaskCreator) {
-                  console.error('[TasksPage] User not authorized to archive/unarchive this task:', {
-                    isAdmin,
-                    taskCreatedBy: taskData.CreatedBy,
-                    currentUserId: user.id
-                  });
-                  return false;
-                }
-
-                try {
-                  const taskData = task as Task;
-                  if (action === 'unarchive') {
-                    await unarchiveTask(taskData.id, user.id, isAdmin, taskData);
-                    console.log('[TasksPage] Task unarchived successfully:', taskData.id);
-                  } else {
-                    await archiveTask(taskData.id, user.id, isAdmin, taskData);
-                    console.log('[TasksPage] Task archived successfully:', taskData.id);
-                  }
-                  return true;
-                } catch (error) {
-                  console.error('[TasksPage] Error archiving/unarchiving task:', error);
-                  return false;
-                }
-              }}
-              onDataRefresh={() => {
-                // TODO: Implement data refresh functionality
-              }}
+              onEditTaskOpen={handleArchiveTableEditTaskOpen}
+              onViewChange={handleArchiveTableViewChange}
+              onDeleteTaskOpen={handleArchiveTableDeleteTaskOpen}
+              onClose={handleArchiveTableClose}
+              onTaskArchive={handleArchiveTableTaskArchive}
+              onDataRefresh={handleArchiveTableDataRefresh}
             />
           ) : selectedContainer === 'tareas' ? (
             <>
@@ -736,7 +667,7 @@ function TasksPageContent() {
           )}
 
           {selectedContainer === 'config' && (
-            <ConfigPage userId={user?.id || ''} onClose={() => handleContainerChange('tareas')}
+            <ConfigPage userId={user?.id || ''} onClose={handleConfigPageClose}
               onShowSuccessAlert={handleShowSuccessAlert}
               onShowFailAlert={handleShowFailAlert}
             />
@@ -758,7 +689,7 @@ function TasksPageContent() {
           <div className={styles.cursorFollowContent}>{user?.fullName || 'Usuario'}</div>
         </CursorFollow>
       </CursorProvider>
-      <AISidebar isOpen={false} onClose={() => {}} />
+      <AISidebar isOpen={false} onClose={handleAISidebarClose} />
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
       <Dock />
@@ -777,11 +708,9 @@ function TasksPageContent() {
         message="Cargando datos de la aplicación..." 
         loadingProgress={loadingProgress}
         isVisible={showLoader}
-        onAnimationComplete={() => {
-          // Loader animation completed
-        }}
+        onAnimationComplete={handleLoaderAnimationComplete}
       />
-      
+
       {/* Contenido principal que se renderiza antes de que el loader se oculte */}
       {contentReady && mainContent}
       
@@ -861,6 +790,10 @@ const ProfileCardRenderer = () => {
     setContainer(newContainer);
   }, []);
 
+  const handleProfileCardContainerChange = useCallback((newContainer: Container) => {
+    handleContainerChange(newContainer);
+  }, [handleContainerChange]);
+
   if (!isProfileCardOpen || !profileCardData) {
     return null;
   }
@@ -870,7 +803,7 @@ const ProfileCardRenderer = () => {
       userId={profileCardData.userId}
       imageUrl={profileCardData.imageUrl}
       onClose={closeProfileCard}
-      onChangeContainer={handleContainerChange}
+      onChangeContainer={handleProfileCardContainerChange}
     />
   );
 };

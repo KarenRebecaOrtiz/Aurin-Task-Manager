@@ -254,7 +254,9 @@
 
 .viewButton {
   // Subtle blue tint for view change button while maintaining glassmorphism
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(42, 42, 42, 0.08);
+  margin-right: 10px;
+
   border: 1px solid rgba(59, 130, 246, 0.15);
   
   &:hover {

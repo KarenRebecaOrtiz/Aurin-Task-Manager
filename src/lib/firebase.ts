@@ -8,6 +8,14 @@ import { getMessaging, isSupported } from "firebase/messaging";
 import { getDatabase } from "firebase/database";
 import { firebaseConfig } from "./firebaseConfig";
 
+// Helper function for conditional logging (only in development)
+const debugLog = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
 const app = initializeApp(firebaseConfig);
 
 // Inicialización de App Check solo en el cliente con depuración
@@ -21,18 +29,19 @@ if (typeof window !== "undefined") {
       // Verificar si reCAPTCHA está disponible de forma segura
       const grecaptcha = (window as Window & { grecaptcha?: unknown }).grecaptcha;
       if (!grecaptcha) {
-        console.log("[Firebase] reCAPTCHA not ready yet, retrying in 500ms...");
+        debugLog("[Firebase] reCAPTCHA not ready yet, retrying in 500ms...");
         setTimeout(initializeAppCheckSafely, 500);
         return;
       }
 
-      console.log("[Firebase] Initializing App Check in client...");
+      debugLog("[Firebase] Initializing App Check in client...");
       appCheck = initializeAppCheck(app, {
         provider: new ReCaptchaV3Provider("6Lcxe2UrAAAAAANiSWaLO_46zSm09wRhuYOEHfeb"), // Tu site key
         isTokenAutoRefreshEnabled: true,
       });
-      console.log("[Firebase] App Check initialized successfully.");
+      debugLog("[Firebase] App Check initialized successfully.");
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn("[Firebase] App Check initialization failed, continuing without it:", error);
       appCheck = null;
     }
@@ -45,15 +54,16 @@ if (typeof window !== "undefined") {
   isSupported().then((supported) => {
     if (supported) {
       messaging = getMessaging(app);
-      console.log("[Firebase] Messaging initialized successfully.");
+      debugLog("[Firebase] Messaging initialized successfully.");
     } else {
-      console.log("[Firebase] Messaging not supported in this browser.");
+      debugLog("[Firebase] Messaging not supported in this browser.");
     }
   }).catch((error) => {
+    // eslint-disable-next-line no-console
     console.error("[Firebase] Error initializing messaging:", error);
   });
 } else {
-  console.log("[Firebase] Running on server, skipping App Check and Messaging initialization.");
+  debugLog("[Firebase] Running on server, skipping App Check and Messaging initialization.");
 }
 
 // Detectar Safari para aplicar configuración específica
@@ -71,15 +81,15 @@ export const db = initializeFirestore(app, {
 
 // Log para debugging
 if (typeof window !== "undefined") {
-  console.log("[Firebase] Browser detected:", isSafari ? "Safari" : "Other");
-  console.log("[Firebase] Using Long Polling for Firestore:", true);
-  console.log("[Firebase] Offline persistence enabled via persistentLocalCache");
+  debugLog("[Firebase] Browser detected:", isSafari ? "Safari" : "Other");
+  debugLog("[Firebase] Using Long Polling for Firestore:", true);
+  debugLog("[Firebase] Offline persistence enabled via persistentLocalCache");
   
   // Debugging adicional para Safari
   if (isSafari) {
-    console.log("[Firebase][Safari] User Agent:", navigator.userAgent);
-    console.log("[Firebase][Safari] Window location:", window.location.href);
-    console.log("[Firebase][Safari] Protocol:", window.location.protocol);
+    debugLog("[Firebase][Safari] User Agent:", navigator.userAgent);
+    debugLog("[Firebase][Safari] Window location:", window.location.href);
+    debugLog("[Firebase][Safari] Protocol:", window.location.protocol);
   }
 }
 
@@ -93,5 +103,5 @@ export const rtdb = getDatabase(app);
 
 // Log para debugging RTDB
 if (typeof window !== "undefined") {
-  console.log("[Firebase] RTDB initialized successfully");
+  debugLog("[Firebase] RTDB initialized successfully");
 }

@@ -1,8 +1,10 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useTimerStore } from '@/stores/timerStore';
 import { useShallow } from 'zustand/react/shallow';
 
 export const useTimerStoreHook = (taskId: string, userId: string) => {
+  const [isInitializing, setIsInitializing] = useState(true);
+  
   const {
     // Estado
     isRunning,
@@ -33,7 +35,11 @@ export const useTimerStoreHook = (taskId: string, userId: string) => {
   // Inicializar timer cuando cambian taskId o userId
   useEffect(() => {
     if (taskId && userId) {
-      initializeTimer(taskId, userId);
+      setIsInitializing(true);
+      initializeTimer(taskId, userId).finally(() => {
+        // Dar un pequeño delay para asegurar que el estado se haya propagado
+        setTimeout(() => setIsInitializing(false), 100);
+      });
     }
 
     // Cleanup cuando el componente se desmonta
@@ -64,6 +70,7 @@ export const useTimerStoreHook = (taskId: string, userId: string) => {
     isTimerRunning: isRunning,
     timerSeconds: accumulatedSeconds,
     isRestoringTimer: isRestoring,
+    isInitializing,
     // Eliminadas: syncStatus y workerActive
     startTimer: memoizedStartTimer,
     pauseTimer: memoizedPauseTimer,

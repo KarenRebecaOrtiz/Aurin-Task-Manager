@@ -14,7 +14,7 @@
  */
 
 import { useUser } from '@clerk/nextjs';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useInactivityDetection } from './useInactivityDetection';
@@ -41,7 +41,6 @@ export const useAvailabilityStatus = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const isInitializedRef = useRef(false);
 
   /**
    * Actualiza el estado de disponibilidad en Firestore
@@ -56,9 +55,8 @@ export const useAvailabilityStatus = () => {
         lastStatusChange: new Date().toISOString(),
         lastOnlineAt: new Date().toISOString()
       });
-      console.log('[AvailabilityStatus] Firestore status updated to:', newStatus);
-    } catch (error) {
-      console.error('[AvailabilityStatus] Error updating Firestore status:', error);
+    } catch {
+      // Silently handle error
     }
   }, [user?.id]);
 
@@ -73,9 +71,8 @@ export const useAvailabilityStatus = () => {
     try {
       await updateFirestoreStatus(newStatus);
       setState(prev => ({ ...prev, currentStatus: newStatus }));
-      console.log('[AvailabilityStatus] Status updated to:', newStatus);
-    } catch (error) {
-      console.error('[AvailabilityStatus] Error in updateStatus:', error);
+    } catch {
+      // Silently handle error
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +81,6 @@ export const useAvailabilityStatus = () => {
   // Función para volver a Disponible cuando hay actividad
   const handleActivity = useCallback(() => {
     if (state.currentStatus === 'Fuera') {
-      console.log('[AvailabilityStatus] Activity detected, returning to Disponible');
       updateFirestoreStatus('Disponible');
     }
   }, [state.currentStatus, updateFirestoreStatus]);
@@ -93,10 +89,7 @@ export const useAvailabilityStatus = () => {
   useInactivityDetection(3600000, () => {
     // Solo marcar como Fuera si está Disponible
     if (state.currentStatus === 'Disponible') {
-      console.log('[AvailabilityStatus] Inactivity detected, marking as Fuera');
       updateFirestoreStatus('Fuera');
-    } else {
-      console.log('[AvailabilityStatus] Inactivity detected but status is not Disponible, ignoring');
     }
   }, handleActivity);
 
@@ -123,11 +116,9 @@ export const useAvailabilityStatus = () => {
           isLoading: false,
           isOnline: currentStatus !== 'Fuera'
         }));
-        
-        console.log('[AvailabilityStatus] Firestore state synced:', JSON.stringify({ currentStatus, isOnline: currentStatus !== 'Fuera' }));
       }
-    }, (error) => {
-      console.error('[AvailabilityStatus] Firestore listener error:', error);
+    }, () => {
+      // Silently handle error
       setState(prev => ({ ...prev, isLoading: false }));
     });
 

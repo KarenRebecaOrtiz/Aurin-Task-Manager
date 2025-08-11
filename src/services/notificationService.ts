@@ -60,18 +60,14 @@ export class NotificationService {
 
     try {
       const docRef = await addDoc(collection(db, 'notifications'), notification);
-      console.log(`[NotificationService] Created ${params.type} notification: ${docRef.id}`);
       return docRef.id;
     } catch (error) {
-      console.error('[NotificationService] Error creating notification:', error);
       
       // Si falla, intentar con la cola
       try {
         await notificationQueue.addCreateNotification(notification);
-        console.log('[NotificationService] Added to queue for retry');
         return 'queued'; // ID temporal para operaciones en cola
-      } catch (queueError) {
-        console.error('[NotificationService] Error adding to queue:', queueError);
+      } catch {
         throw new Error(`Failed to create notification: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
@@ -97,10 +93,8 @@ export class NotificationService {
 
     try {
       await batch.commit();
-      console.log(`[NotificationService] Created batch of ${notifications.length} notifications`);
       return ids;
     } catch (error) {
-      console.error('[NotificationService] Error creating batch notifications:', error);
       
       // Si falla, intentar con la cola
       try {
@@ -115,10 +109,8 @@ export class NotificationService {
         });
         
         await notificationQueue.addCreateBatchNotifications(notificationData);
-        console.log('[NotificationService] Added batch to queue for retry');
         return notifications.map(() => 'queued'); // IDs temporales para operaciones en cola
-      } catch (queueError) {
-        console.error('[NotificationService] Error adding batch to queue:', queueError);
+      } catch {
         throw new Error(`Failed to create batch notifications: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
@@ -141,16 +133,12 @@ export class NotificationService {
   async markAsRead(notificationId: string): Promise<void> {
     try {
       await updateDoc(doc(db, 'notifications', notificationId), { read: true });
-      console.log(`[NotificationService] Marked notification as read: ${notificationId}`);
     } catch (error) {
-      console.error('[NotificationService] Error marking notification as read:', error);
       
       // Si falla, intentar con la cola
       try {
         await notificationQueue.addMarkAsRead(notificationId);
-        console.log('[NotificationService] Added mark-as-read to queue for retry');
-      } catch (queueError) {
-        console.error('[NotificationService] Error adding to queue:', queueError);
+      } catch {
         throw new Error(`Failed to mark notification as read: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
@@ -159,16 +147,12 @@ export class NotificationService {
   async deleteNotification(notificationId: string): Promise<void> {
     try {
       await deleteDoc(doc(db, 'notifications', notificationId));
-      console.log(`[NotificationService] Deleted notification: ${notificationId}`);
     } catch (error) {
-      console.error('[NotificationService] Error deleting notification:', error);
       
       // Si falla, intentar con la cola
       try {
         await notificationQueue.addDelete(notificationId);
-        console.log('[NotificationService] Added delete to queue for retry');
-      } catch (queueError) {
-        console.error('[NotificationService] Error adding to queue:', queueError);
+      } catch {
         throw new Error(`Failed to delete notification: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }

@@ -153,6 +153,11 @@
   &:hover {
     opacity: 1;
   }
+
+  // NUEVO: Invertir SVG en dark mode
+  :global(body.dark) & {
+    filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+  }
 }
 
 .closeButton {
@@ -336,6 +341,15 @@
     background: $color-error;
     color: $white;
   }
+
+  // NUEVO: Invertir SVG en dark mode
+  :global(body.dark) & {
+    filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+    
+    &:hover {
+      filter: invert(100%) brightness(150%) drop-shadow(0 0 6px rgba(255, 255, 255, 0.3));
+    }
+  }
 }
 
 .emptyState {
@@ -346,6 +360,11 @@
   @include typography($text-base, $font-weight-normal, $color-text-muted, center);
   :global(body.dark) & {
     color: $color-text-dark-muted;
+    
+    // NUEVO: Invertir SVG del estado vacío en dark mode
+    img {
+      filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+    }
   }
 }
 
@@ -415,9 +434,15 @@
     max-width: 200px;
   }
   
-  @include dark-mode {
+  // CORREGIDO: Usar :global(body.dark) en lugar de @include dark-mode
+  :global(body.dark) & {
     span {
       color: $color-error;
+    }
+    
+    // NUEVO: Invertir SVG de error en dark mode
+    img {
+      filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
     }
   }
 }

@@ -63,7 +63,7 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       worker = new Worker('/timerWorker.js');
       
       worker.onmessage = (e) => {
-        const { type, timestamp, error } = e.data;
+        const { type } = e.data;
         
         switch (type) {
           case 'tick':
@@ -74,21 +74,17 @@ export const useTimerStore = create<TimerStore>((set, get) => {
             break;
             
           case 'error':
-            console.error('[TimerStore] Worker error:', error);
             set({ syncStatus: 'error' });
             break;
         }
       };
       
-      worker.onerror = (error) => {
-        console.error('[TimerStore] Worker error:', error);
+      worker.onerror = () => {
         set({ syncStatus: 'error', workerActive: false });
       };
       
       set({ workerActive: true });
-      console.log('[TimerStore] Web Worker initialized successfully');
-    } catch (error) {
-      console.warn('[TimerStore] Web Worker not supported, falling back to setTimeout');
+    } catch {
       set({ workerActive: false });
     }
   };
@@ -113,13 +109,9 @@ export const useTimerStore = create<TimerStore>((set, get) => {
 
       await setDoc(timerDocRef, firestoreData, { merge: true });
       set({ syncStatus: 'idle', lastSyncTime: performance.now() });
-      console.log('[TimerStore] ✅ Sincronizado con Firestore:', { 
-        isRunning: state.isRunning, 
-        seconds: state.accumulatedSeconds,
-        drift: state.lastSyncTime ? performance.now() - state.lastSyncTime : 0
-      });
-    } catch (error) {
-      console.error('[TimerStore] ❌ Error sincronizando:', error);
+      // Debug logging removed for production
+    } catch {
+      // Error logging removed for production
       set({ syncStatus: 'error' });
     }
   };
@@ -210,84 +202,94 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       // Inicializar Web Worker
       initializeWorker();
       
-      try {
-        const timerDocRef = doc(db, `tasks/${taskId}/timers/${userId}`);
-        const timerDoc = await getDoc(timerDocRef);
-        
-        if (timerDoc.exists()) {
-          const data = timerDoc.data();
-          const serverTime = new Date();
+      // Función de retry para la inicialización
+      const attemptInitialization = async (retryCount = 0): Promise<void> => {
+        try {
+          const timerDocRef = doc(db, `tasks/${taskId}/timers/${userId}`);
+          const timerDoc = await getDoc(timerDocRef);
           
-          let accumulatedSeconds = data.accumulatedSeconds || 0;
-          
-          if (data.isRunning && data.startTime) {
-            const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
-            accumulatedSeconds = elapsed;
-          }
-          
-          const newState = {
-            isRunning: data.isRunning,
-            accumulatedSeconds,
-            startTime: data.isRunning && data.startTime ? data.startTime.toDate() : null,
-            isRestoring: false,
-            lastSyncTime: data.lastSyncTime || null,
-            syncStatus: 'idle' as const,
-          };
-          
-          set(newState);
+          if (timerDoc.exists()) {
+            const data = timerDoc.data();
+            const serverTime = new Date();
+            
+            let accumulatedSeconds = data.accumulatedSeconds || 0;
+            
+            if (data.isRunning && data.startTime) {
+              const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
+              accumulatedSeconds = elapsed;
+            }
+            
+            const newState = {
+              isRunning: data.isRunning,
+              accumulatedSeconds,
+              startTime: data.isRunning && data.startTime ? data.startTime.toDate() : null,
+              isRestoring: false,
+              lastSyncTime: data.lastSyncTime || null,
+              syncStatus: 'idle' as const,
+            };
+            
+            set(newState);
 
-          // Configurar listener en tiempo real para multi-device sync
-          unsubscribeSnapshot = onSnapshot(timerDocRef, (doc) => {
-            if (!doc.exists()) return;
-            
-            const data = doc.data();
-            const currentState = get();
-            
-            // Solo actualizar si viene de otro dispositivo
-            if (data.deviceId !== currentState.deviceId) {
-              const serverTime = new Date();
-              let accumulatedSeconds = data.accumulatedSeconds || 0;
+            // Configurar listener en tiempo real para multi-device sync
+            unsubscribeSnapshot = onSnapshot(timerDocRef, (doc) => {
+              if (!doc.exists()) return;
               
-              if (data.isRunning && data.startTime) {
-                const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
-                accumulatedSeconds = elapsed;
+              const data = doc.data();
+              const currentState = get();
+              
+              // Solo actualizar si viene de otro dispositivo
+              if (data.deviceId !== currentState.deviceId) {
+                const serverTime = new Date();
+                let accumulatedSeconds = data.accumulatedSeconds || 0;
+                
+                if (data.isRunning && data.startTime) {
+                  const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
+                  accumulatedSeconds = elapsed;
+                }
+                
+                set({
+                  isRunning: data.isRunning,
+                  accumulatedSeconds,
+                  startTime: data.isRunning && data.startTime ? data.startTime.toDate() : null,
+                  lastSyncTime: data.lastSyncTime || null,
+                });
+                
+                // Debug logging removed for production
+              }
+            });
+
+            // Iniciar timers si es necesario
+            if (newState.isRunning) {
+              performanceStartTime = getHighResTime();
+              
+              // Usar Web Worker si está disponible, sino fallback a setTimeout
+              if (worker && get().workerActive) {
+                worker.postMessage({ action: 'start' });
+              } else {
+                startPreciseTimer();
               }
               
-              set({
-                isRunning: data.isRunning,
-                accumulatedSeconds,
-                startTime: data.isRunning && data.startTime ? data.startTime.toDate() : null,
-                lastSyncTime: data.lastSyncTime || null,
-              });
-              
-              console.log('[TimerStore] 🔄 Sincronizado desde otro dispositivo:', { 
-                deviceId: data.deviceId, 
-                isRunning: data.isRunning, 
-                seconds: accumulatedSeconds 
-              });
+              startSyncTimer();
             }
-          });
-
-          // Iniciar timers si es necesario
-          if (newState.isRunning) {
-            performanceStartTime = getHighResTime();
-            
-            // Usar Web Worker si está disponible, sino fallback a setTimeout
-            if (worker && get().workerActive) {
-              worker.postMessage({ action: 'start' });
-            } else {
-              startPreciseTimer();
-            }
-            
-            startSyncTimer();
+          } else {
+            set({ isRestoring: false, syncStatus: 'idle' });
           }
-        } else {
-          set({ isRestoring: false, syncStatus: 'idle' });
+        } catch (error) {
+          // Si falla y no hemos agotado los reintentos, reintentar
+          if (retryCount < 2) {
+            // console.log(`[TimerStore] Initialization attempt ${retryCount + 1} failed, retrying...`);
+            setTimeout(() => attemptInitialization(retryCount + 1), 500 * (retryCount + 1));
+            return;
+          }
+          
+          // Si agotamos los reintentos, establecer estado de error
+          set({ isRestoring: false, syncStatus: 'error' });
+          // console.error('[TimerStore] Failed to initialize timer after retries:', error);
         }
-      } catch (error) {
-        console.error('[TimerStore] ❌ Error inicializando timer:', error);
-        set({ isRestoring: false, syncStatus: 'error' });
-      }
+      };
+      
+      // Iniciar el proceso de inicialización
+      await attemptInitialization();
     },
 
     // Acciones mejoradas
@@ -295,7 +297,6 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       const state = get();
       
       if (state.isRunning) {
-        console.log('[TimerStore] ⚠️ Timer ya está corriendo, ignorando startTimer');
         return;
       }
       
@@ -339,7 +340,7 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       const state = get();
       
       if (!state.isRunning) {
-        console.log('[TimerStore] ⚠️ Timer ya está pausado, ignorando pauseTimer');
+        // Debug logging removed for production
         return;
       }
       
@@ -409,7 +410,7 @@ export const useTimerStore = create<TimerStore>((set, get) => {
       
       // Usar resetTimer en lugar de pauseTimer para limpiar completamente a 0
       await get().resetTimer();
-      console.log('[TimerStore] ✅ Timer finalizado y reseteado a 0 segundos');
+      // Debug logging removed for production
       return finalSeconds;
     },
 

@@ -256,6 +256,38 @@ export const useTodos = () => {
     return completedTodos.filter(todo => todo.completedDate === today).length;
   }, [completedTodos]);
 
+  // Undo last completed todo
+  const undoLastCompleted = useCallback(async () => {
+    if (!user?.id) {
+      setError('Usuario no autenticado');
+      return;
+    }
+
+    try {
+      // Find the most recently completed todo
+      const lastCompletedTodo = completedTodos[0]; // Already ordered by completedDate desc
+      
+      if (!lastCompletedTodo) {
+        setError('No hay tareas completadas para deshacer');
+        return;
+      }
+
+      const todoRef = doc(db, 'todos', lastCompletedTodo.id);
+      const updateData = {
+        completed: false,
+        completedDate: null,
+        updatedAt: serverTimestamp(),
+      };
+
+      console.log('[useTodos] Undoing last completed todo:', lastCompletedTodo.id);
+      await updateDoc(todoRef, updateData);
+      setError(null);
+    } catch (error) {
+      console.error('[useTodos] Error undoing last completed todo:', error);
+      setError('Error al deshacer la tarea completada');
+    }
+  }, [user?.id, completedTodos]);
+
   return {
     todos,
     completedTodos,
@@ -265,5 +297,6 @@ export const useTodos = () => {
     toggleTodo,
     deleteTodo,
     getCompletedToday,
+    undoLastCompleted,
   };
 }; 

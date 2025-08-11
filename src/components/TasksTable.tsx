@@ -121,9 +121,14 @@ const cleanupTasksTableListeners = () => {
 };
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds, users, currentUserId }) => {
+  // ✅ CORREGIDO: Función local para manejar errores de imagen
+  const handleAvatarImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = '/empty-image.png';
+  }, []);
+
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
-      console.warn('[AvatarGroup] Users prop is not an array:', users);
+      // console.warn('[AvatarGroup] Users prop is not an array:', users);
       return [];
     }
     const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id)).slice(0, 5);
@@ -146,9 +151,7 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUser
               width={40}
               height={40}
               className={avatarStyles.avatarImage}
-              onError={(e) => {
-                e.currentTarget.src = '/empty-image.png';
-              }}
+              onError={handleAvatarImageError}
             />
           </div>
         ))
@@ -173,12 +176,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   externalUsers,
 }) => {
   // ✅ DEBUG: Log re-renders para trackear causas
-  console.log('[TasksTable] Render triggered', {
-    externalTasksCount: externalTasks?.length || 0,
-    externalClientsCount: externalClients?.length || 0,
-    externalUsersCount: externalUsers?.length || 0,
-    timestamp: new Date().toISOString()
-  });
+  // console.log('[TasksTable] Render triggered', {
+  //   externalTasksCount: externalTasks?.length || 0,
+  //   externalClientsCount: externalClients?.length || 0,
+  //   externalUsersCount: externalUsers?.length || 0,
+  //   timestamp: new Date().toISOString()
+  // });
 
   const { user } = useUser();
   const { isAdmin } = useAuth();
@@ -197,38 +200,36 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const clients = useDataStore(useShallow(state => state.clients));
   const users = useDataStore(useShallow(state => state.users));
   const isLoadingTasks = useDataStore(useShallow(state => state.isLoadingTasks));
-  const isLoadingClients = useDataStore(useShallow(state => state.isLoadingClients));
-  
-  const isLoadingUsers = useDataStore(useShallow(state => state.isLoadingUsers));
+
 
   // ✅ OPTIMIZACIÓN: Memoizar effectiveTasks para estabilizar dependencias
   const effectiveTasks = useMemo(() => {
     const result = externalTasks || tasks;
-    console.log('[TasksTable] effectiveTasks memo recalculated', {
-      externalTasksCount: externalTasks?.length || 0,
-      tasksCount: tasks.length,
-      resultCount: result.length
-    });
+    // console.log('[TasksTable] effectiveTasks memo recalculated', {
+    //   externalTasksCount: externalTasks?.length || 0,
+    //   tasksCount: tasks.length,
+    //   resultCount: result.length
+    // });
     return result;
   }, [externalTasks, tasks]);
   
   const effectiveClients = useMemo(() => {
     const result = externalClients || clients;
-    console.log('[TasksTable] effectiveClients memo recalculated', {
-      externalClientsCount: externalClients?.length || 0,
-      clientsCount: clients.length,
-      resultCount: result.length
-    });
+    // console.log('[TasksTable] effectiveClients memo recalculated', {
+    //   externalClientsCount: externalClients?.length || 0,
+    //   clientsCount: clients.length,
+    //   resultCount: result.length
+    // });
     return result;
   }, [externalClients, clients]);
   
   const effectiveUsers = useMemo(() => {
     const result = externalUsers || users;
-    console.log('[TasksTable] effectiveUsers memo recalculated', {
-      externalUsersCount: externalUsers?.length || 0,
-      usersCount: users.length,
-      resultCount: result.length
-    });
+    // console.log('[TasksTable] effectiveUsers memo recalculated', {
+    //   externalUsersCount: externalUsers?.length || 0,
+    //   usersCount: users.length,
+    //   resultCount: result.length
+    // });
     return result;
   }, [externalUsers, users]);
 
@@ -359,6 +360,129 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     setIsUserDropdownOpen(false);
   }, [setUserFilter, setIsUserDropdownOpen]);
 
+  // ✅ CORREGIDO: Memoizar handlers específicos para evitar arrow functions inline
+  const handleUserFilterEmpty = useCallback(() => {
+    handleUserFilter('');
+  }, [handleUserFilter]);
+
+  const handleUserFilterMe = useCallback(() => {
+    handleUserFilter('me');
+  }, [handleUserFilter]);
+
+  const handleUserFilterById = useCallback((userId: string) => {
+    handleUserFilter(userId);
+  }, [handleUserFilter]);
+
+  // ✅ CORREGIDO: Memoizar handlers para imágenes
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = '/empty-image.png';
+  }, []);
+
+  // ✅ CORREGIDO: Memoizar handlers para eventos del mouse
+  const handleKanbanImageMouseEnter = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1.05)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+  }, []);
+
+  const handleKanbanImageMouseLeave = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+  }, []);
+
+  const handleArchiveImageMouseEnter = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1.05)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+  }, []);
+
+  const handleArchiveImageMouseLeave = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+  }, []);
+
+  // ✅ CORREGIDO: Memoizar handlers para eventos del teclado
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          e.preventDefault();
+          e.currentTarget.select();
+          break;
+        case 'c':
+          e.preventDefault();
+          const targetC = e.currentTarget as HTMLInputElement;
+          if (targetC.selectionStart !== targetC.selectionEnd) {
+            const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+            });
+          }
+          break;
+        case 'v':
+          e.preventDefault();
+          const targetV = e.currentTarget as HTMLInputElement;
+          navigator.clipboard.readText().then(text => {
+            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+              const start = targetV.selectionStart;
+              const end = targetV.selectionEnd;
+              const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
+              setSearchQuery(newValue);
+              setTimeout(() => {
+                targetV.setSelectionRange(start + text.length, start + text.length);
+              }, 0);
+            } else {
+              setSearchQuery(searchQuery + text);
+            }
+          }).catch(() => {
+            document.execCommand('paste');
+          });
+          break;
+        case 'x':
+          e.preventDefault();
+          const targetX = e.currentTarget as HTMLInputElement;
+          if (targetX.selectionStart !== targetX.selectionEnd) {
+            const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+            navigator.clipboard.writeText(selectedText).then(() => {
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                setSearchQuery(newValue);
+              } else {
+                setSearchQuery('');
+              }
+            }).catch(() => {
+              const textArea = document.createElement('textarea');
+              textArea.value = selectedText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                const start = targetX.selectionStart;
+                const end = targetX.selectionEnd;
+                const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                setSearchQuery(newValue);
+              } else {
+                setSearchQuery('');
+              }
+            });
+          }
+          break;
+      }
+    }
+  }, [searchQuery, setSearchQuery]);
+
+  // ✅ CORREGIDO: Memoizar handlers para dropdowns - se moverán después de handlePrioritySelect y handleClientSelect
+
   // Función para manejar cambios de visibilidad de columnas
   const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
     setVisibleColumns(prev => {
@@ -371,7 +495,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       }
     });
     
-    console.log(`[TasksTable] Column ${columnKey} visibility changed to: ${visible}`);
+    // console.log(`[TasksTable] Column ${columnKey} visibility changed to: ${visible}`);
   }, []);
 
   // ✅ OPTIMIZACIÓN: Memoizar getUnreadCount para estabilizar dependencias
@@ -379,19 +503,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     return getUnreadCount(task);
   }, [getUnreadCount]);
 
-  const memoizedFilteredTasks = useMemo(() => {
-    console.log('[TasksTable] memoizedFilteredTasks recalculating', {
-      effectiveTasksCount: effectiveTasks.length,
-      searchQuery,
-      priorityFilter,
-      clientFilter,
-      userFilter,
-      userId,
-      isAdmin
-    });
-    
-    // Filtering tasks...
-    
+  // ✅ FILTRADO DIRECTO: Actualizar filteredTasks cuando cambien los filtros
+  useEffect(() => {
     const filtered = effectiveTasks.filter((task) => {
       // Excluir tareas archivadas
       if (task.archived) {
@@ -426,35 +539,28 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       return matchesSearch && matchesPriority && matchesClient && matchesUser;
     });
     
-    console.log('[TasksTable] memoizedFilteredTasks result', {
-      filteredCount: filtered.length,
-      totalCount: effectiveTasks.length
-    });
-    
-    // Filtering complete
-    
-    return filtered;
-  // eslint-disable-next-line react-hooks/exhaustive-deps  
-  }, [effectiveTasksIds, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]); // effectiveTasks intencionalmente omitido, usamos effectiveTasksIds para optimización
+    setFilteredTasks(filtered);
+  }, [effectiveTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin, setFilteredTasks]);
 
-  // Crear un ID estable para las tareas filtradas
-  const filteredTasksIds = useMemo(() => memoizedFilteredTasks.map(t => t.id).join(','), [memoizedFilteredTasks]);
-  
-  // Usar ref para evitar problemas de dependencias
-  const memoizedFilteredTasksRef = useRef(memoizedFilteredTasks);
-  memoizedFilteredTasksRef.current = memoizedFilteredTasks;
-
+  // ✅ CORREGIDO: Reset de paginación cuando cambian los filtros
+  // Esto asegura que las tareas filtradas sean visibles
   useEffect(() => {
-    setFilteredTasks(memoizedFilteredTasksRef.current);
-  }, [filteredTasksIds, setFilteredTasks]); // Solo usar el ID estable como dependencia
+    // Reset paginación cuando cambian los filtros
+    const tableElement = document.querySelector('[data-table="tasks"]');
+    if (tableElement) {
+      // Disparar evento personalizado para resetear paginación
+      const resetEvent = new CustomEvent('resetPagination', { detail: { reason: 'filterChanged' } });
+      tableElement.dispatchEvent(resetEvent);
+    }
+  }, [filteredTasks.length]); // Reset cuando cambian las tareas filtradas
 
   // Función para manejar el clic en una fila de tarea
-  const handleTaskRowClick = async (task: Task) => {
+  const handleTaskRowClick = useCallback(async (task: Task) => {
 
     
     // OPTIMISTIC UPDATE: Mark task as viewed BEFORE opening sidebar
-    markAsViewed(task.id).catch(error => {
-      console.error('[TasksTable] Error marking task as viewed:', error);
+    markAsViewed(task.id).catch(() => {
+      // console.error('[TasksTable] Error marking task as viewed');
     });
     
     // Usar los action handlers configurados en TasksTableContainer
@@ -467,7 +573,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     openChatSidebar(task, clientName);
     
     
-  };
+  }, [clients, markAsViewed]);
 
   useEffect(() => {
     const currentActionMenuRef = actionMenuRef.current;
@@ -477,7 +583,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[TasksTable] Action menu animated for task:', actionMenuOpenId);
+      // console.log('[TasksTable] Action menu animated for task:', actionMenuOpenId);
     }
     return () => {
       if (currentActionMenuRef) {
@@ -494,7 +600,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[TasksTable] Priority dropdown animated');
+      // console.log('[TasksTable] Priority dropdown animated');
     }
   }, [isPriorityDropdownOpen]);
 
@@ -506,7 +612,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[TasksTable] Client dropdown animated');
+      // console.log('[TasksTable] Client dropdown animated');
     }
   }, [isClientDropdownOpen]);
 
@@ -518,7 +624,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         { opacity: 0, y: -10, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out' },
       );
-      console.log('[TasksTable] User dropdown animated');
+      // console.log('[TasksTable] User dropdown animated');
     }
   }, [isUserDropdownOpen]);
 
@@ -530,7 +636,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         !actionButtonRefs.current.get(actionMenuOpenId || '')?.contains(event.target as Node)
       ) {
         setActionMenuOpenId(null);
-        console.log('[TasksTable] Action menu closed via outside click');
+        // console.log('[TasksTable] Action menu closed via outside click');
       }
       if (
         priorityDropdownRef.current &&
@@ -538,7 +644,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         isPriorityDropdownOpen
       ) {
         setIsPriorityDropdownOpen(false);
-        console.log('[TasksTable] Priority dropdown closed via outside click');
+        // console.log('[TasksTable] Priority dropdown closed via outside click');
       }
       if (
         clientDropdownRef.current &&
@@ -546,7 +652,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         isClientDropdownOpen
       ) {
         setIsClientDropdownOpen(false);
-        console.log('[TasksTable] Client dropdown closed via outside click');
+        // console.log('[TasksTable] Client dropdown closed via outside click');
       }
       if (
         userDropdownRef.current &&
@@ -554,19 +660,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         isUserDropdownOpen
       ) {
         setIsUserDropdownOpen(false);
-        console.log('[TasksTable] User dropdown closed via outside click');
+        // console.log('[TasksTable] User dropdown closed via outside click');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [actionMenuOpenId, isPriorityDropdownOpen, isClientDropdownOpen, isUserDropdownOpen, setActionMenuOpenId, setIsPriorityDropdownOpen, setIsClientDropdownOpen, setIsUserDropdownOpen]);
 
-  const handleSort = (key: string) => {
+  const handleSort = useCallback((key: string) => {
     if (!key || key === '') {
       // Remover ordenamiento
       setSortKey('');
       setSortDirection('asc');
-      console.log('[TasksTable] Removed sorting');
+      // console.log('[TasksTable] Removed sorting');
       return;
     }
     
@@ -576,18 +682,18 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       setSortKey(key);
       setSortDirection(key === 'createdAt' ? 'desc' : 'asc');
     }
-    console.log('[TasksTable] Sorting tasks:', { sortKey: key, sortDirection });
-  };
+    // console.log('[TasksTable] Sorting tasks:', { sortKey: key, sortDirection });
+  }, [sortKey, sortDirection, setSortKey, setSortDirection]);
 
-  // ✅ OPTIMIZACIÓN: Usar IDs estables y cache para sortedTasks
+  // ✅ OPTIMIZACIÓN: Usar directamente el estado local del store
   const sortedTasks = useMemo(() => {
-    console.log('[TasksTable] sortedTasks recalculating', {
-      filteredTasksCount: filteredTasks.length,
-      sortKey,
-      sortDirection,
-      effectiveClientsCount: effectiveClients.length,
-      effectiveUsersCount: effectiveUsers.length
-    });
+    // console.log('[TasksTable] sortedTasks recalculating', {
+    //   filteredTasksCount: filteredTasks.length,
+    //   sortKey,
+    //   sortDirection,
+    //   effectiveClientsCount: effectiveClients.length,
+    //   effectiveUsersCount: effectiveUsers.length
+    // });
     
     const sorted = [...filteredTasks];
     
@@ -682,16 +788,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       );
     }
     
-    console.log('[TasksTable] sortedTasks result', {
-      sortedCount: sorted.length,
-      sortKey,
-      sortDirection
-    });
+    // console.log('[TasksTable] sortedTasks result', {
+    //   sortedCount: sorted.length,
+    //   sortKey,
+    //   sortDirection
+    // });
     
     return sorted;
   }, [filteredTasks, sortKey, sortDirection, effectiveClients, effectiveUsers, memoizedGetUnreadCount]);
 
-  const animateClick = (element: HTMLElement) => {
+  const animateClick = useCallback((element: HTMLElement) => {
     gsap.to(element, {
       scale: 0.95,
       opacity: 0.8,
@@ -700,10 +806,67 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       yoyo: true,
       repeat: 1,
     });
+  }, []);
 
-  };
+  // ✅ OPTIMIZACIÓN: Memoizar handlers para evitar re-renders
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setSearchQuery(newValue);
+    
+    // Animate search input when typing
+    const searchInput = e.currentTarget;
+    gsap.to(searchInput, {
+      scale: 1.02,
+      duration: 0.2,
+      ease: 'power2.out',
+      yoyo: true,
+      repeat: 1
+    });
+  }, [setSearchQuery]);
 
-  const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
+  const handleViewButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    animateClick(e.currentTarget);
+    changeView('kanban');
+  }, [animateClick, changeView]);
+
+  const handleArchiveButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    animateClick(e.currentTarget);
+    openArchiveTable();
+  }, [animateClick, openArchiveTable]);
+
+  const handleNewTaskButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    animateClick(e.currentTarget);
+    openNewTask();
+  }, [animateClick, openNewTask]);
+
+  const handlePriorityDropdownToggle = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    animateClick(e.currentTarget);
+    setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+    if (!isPriorityDropdownOpen) {
+      setIsClientDropdownOpen(false);
+      setIsUserDropdownOpen(false);
+    }
+  }, [animateClick, isPriorityDropdownOpen, setIsPriorityDropdownOpen, setIsClientDropdownOpen, setIsUserDropdownOpen]);
+
+  const handleClientDropdownToggle = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    animateClick(e.currentTarget);
+    setIsClientDropdownOpen(!isClientDropdownOpen);
+    if (!isClientDropdownOpen) {
+      setIsPriorityDropdownOpen(false);
+      setIsUserDropdownOpen(false);
+    }
+  }, [animateClick, isClientDropdownOpen, setIsClientDropdownOpen, setIsPriorityDropdownOpen, setIsUserDropdownOpen]);
+
+  const handleUserDropdownToggle = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    animateClick(e.currentTarget);
+    setIsUserDropdownOpen(!isUserDropdownOpen);
+    if (!isUserDropdownOpen) {
+      setIsPriorityDropdownOpen(false);
+      setIsClientDropdownOpen(false);
+    }
+  }, [animateClick, isUserDropdownOpen, setIsUserDropdownOpen, setIsPriorityDropdownOpen, setIsClientDropdownOpen]);
+
+  const handlePrioritySelect = useCallback((priority: string, e: React.MouseEvent<HTMLDivElement>) => {
     animateClick(e.currentTarget);
     
     // Animate filter change
@@ -721,9 +884,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     
     setPriorityFilter(priority);
     setIsPriorityDropdownOpen(false);
-  };
+  }, [animateClick, setPriorityFilter, setIsPriorityDropdownOpen]);
 
-  const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
+  const handleClientSelect = useCallback((clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
     animateClick(e.currentTarget);
     
     // Animate filter change
@@ -741,12 +904,234 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     
     setClientFilter(clientId);
     setIsClientDropdownOpen(false);
-  };
+  }, [animateClick, setClientFilter, setIsClientDropdownOpen]);
+
+  // ✅ CORREGIDO: Memoizar handlers para dropdowns
+  const handlePriorityItemClick = useCallback((priority: string) => (e: React.MouseEvent<HTMLDivElement>) => {
+    handlePrioritySelect(priority, e);
+  }, [handlePrioritySelect]);
+
+  const handleClientItemClick = useCallback((clientId: string) => (e: React.MouseEvent<HTMLDivElement>) => {
+    handleClientSelect(clientId, e);
+  }, [handleClientSelect]);
+
+  const handleUserItemClick = useCallback((userId: string) => () => {
+    handleUserFilterById(userId);
+  }, [handleUserFilterById]);
+
+
 
   // Función para obtener las clases CSS de una fila de tarea
   const getRowClassName = useCallback(() => {
     return ''; // Removido el indicador de actualización de la fila completa
   }, []);
+
+  // ✅ FUNCIONES MEMOIZADAS PARA RENDERS DE COLUMNAS
+  const renderClientColumn = useCallback((client: Client) => {
+    return client ? (
+      <div className={styles.clientWrapper}>
+        <Image
+          style={{ borderRadius: '999px' }}
+          src={client.imageUrl || '/empty-image.png'}
+          alt={client.name || 'Client Image'}
+          width={40}
+          height={40}
+          className={styles.clientImage}
+          onError={handleImageError}
+        />
+      </div>
+    ) : 'Sin cuenta';
+  }, [handleImageError]);
+
+  const renderTaskNameColumn = useCallback((task: Task) => {
+    return (
+      <div className={styles.taskNameWrapper}>
+        <span className={styles.taskName}>{task.name}</span>
+      </div>
+    );
+  }, []);
+
+  const renderNotificationDotColumn = useCallback((task: Task) => {
+    const updateCount = memoizedGetUnreadCount(task);
+    return (
+      <div className={styles.notificationDotWrapper}>
+        <NotificationDot count={updateCount} />
+      </div>
+    );
+  }, [memoizedGetUnreadCount]);
+
+  const renderAssignedToColumn = useCallback((task: Task) => {
+    return <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={effectiveUsers} currentUserId={userId} />;
+  }, [effectiveUsers, userId]);
+
+  const renderStatusColumn = useCallback((task: Task) => {
+    const normalizedStatus = normalizeStatus(task.status);
+    let icon = '/timer.svg';
+    if (normalizedStatus === 'En Proceso') icon = '/timer.svg';
+    else if (normalizedStatus === 'Backlog') icon = '/circle-help.svg';
+    else if (normalizedStatus === 'Por Iniciar') icon = '/circle.svg';
+    else if (normalizedStatus === 'Cancelado') icon = '/circle-x.svg';
+    else if (normalizedStatus === 'Por Finalizar') icon = '/circle-check.svg';
+    else if (normalizedStatus === 'Finalizado') icon = '/check-check.svg';
+    
+    return (
+      <div className={styles.statusWrapper}>
+        <Image
+          src={icon}
+          alt={normalizedStatus}
+          width={16}
+          height={16}
+          style={{ opacity: 0.7 }}
+        />
+        <span className={styles[`status-${normalizedStatus.replace(/\s/g, '-')}`]}>{normalizedStatus}</span>
+      </div>
+    );
+  }, []);
+
+  const renderPriorityColumn = useCallback((task: Task) => {
+    return (
+      <div className={styles.priorityWrapper}>
+        <Image
+          src={
+            task.priority === 'Alta'
+              ? '/arrow-up.svg'
+              : task.priority === 'Media'
+              ? '/arrow-right.svg'
+              : '/arrow-down.svg'
+          }
+          alt={task.priority}
+          width={16}
+          height={16}
+        />
+        <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
+      </div>
+    );
+  }, []);
+
+  // ✅ CORREGIDO: Memoizar handlers para ActionMenu
+  const handleEditTask = useCallback((taskId: string) => {
+    openEditTask(taskId);
+    setActionMenuOpenId(null);
+  }, [openEditTask, setActionMenuOpenId]);
+
+  const handleDeleteTask = useCallback((taskId: string) => {
+    openDeleteTask(taskId);
+    setActionMenuOpenId(null);
+  }, [openDeleteTask, setActionMenuOpenId]);
+
+  const handleArchiveTask = useCallback(async (task: Task) => {
+    try {
+      // ✅ OPTIMISTIC UPDATE: Marcar tarea como archivada inmediatamente en el estado local
+      const updatedTask = { 
+        ...task, 
+        archived: true, 
+        archivedAt: new Date().toISOString(), 
+        archivedBy: userId 
+      };
+      
+      // ✅ ACTUALIZACIÓN OPTIMISTA: Sin interferencias del useEffect
+      
+      // ✅ CLAVE: Actualizar INMEDIATAMENTE el estado local del filtrado para que la tarea desaparezca instantáneamente
+      // Esto es lo que hace que funcione en ArchiveTable - DEBE SER LO PRIMERO
+      setFilteredTasks(filteredTasks.filter(t => t.id !== task.id));
+      
+      // ✅ ACTUALIZACIÓN INMEDIATA: Remover la tarea del filtrado local para que desaparezca instantáneamente
+      if (!externalTasks) {
+        // Actualizar el store de datos para que se refleje en el filtrado
+        const currentTasks = useDataStore.getState().tasks;
+        const updatedTasks = currentTasks.map(t => 
+          t.id === task.id ? updatedTask : t
+        );
+        useDataStore.getState().setTasks(updatedTasks);
+      }
+      
+      // Guardar en undo stack
+      const undoItem = {
+        task: { ...task },
+        action: 'archive' as const,
+        timestamp: Date.now()
+      };
+      setUndoStack([...undoStack, undoItem]);
+      setShowUndo(true);
+
+      // Limpiar timeout anterior
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+
+      // Configurar timeout para limpiar undo
+      undoTimeoutRef.current = setTimeout(() => {
+        setShowUndo(false);
+        setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
+      }, 3000);
+      
+      // Ejecutar la función de archivo
+      await archiveTask(task.id, userId, isAdmin, task);
+      
+      // ✅ OPERACIÓN COMPLETADA: Tarea archivada exitosamente
+      
+      setActionMenuOpenId(null);
+    } catch (error) {
+      // ✅ ROLLBACK: Si falla el archivo, revertir el estado optimista
+      console.error('Error archiving task:', error);
+      
+      if (!externalTasks) {
+        // Revertir el estado local
+        const currentTasks = useDataStore.getState().tasks;
+        const revertedTasks = currentTasks.map(t => 
+          t.id === task.id ? task : t
+        );
+        useDataStore.getState().setTasks(revertedTasks);
+      }
+      
+      // ✅ CLAVE: Revertir también el estado local del filtrado
+      setFilteredTasks([...filteredTasks, task]);
+      
+      // Mostrar error al usuario (opcional)
+      // Puedes implementar un toast o notificación aquí
+    }
+  }, [userId, isAdmin, setUndoStack, undoStack, setShowUndo, setActionMenuOpenId, externalTasks, setFilteredTasks, filteredTasks]);
+
+  // ✅ CORREGIDO: Memoizar handlers para ActionMenu específicos
+  const handleEditTaskForActionMenu = useCallback((taskId: string) => () => {
+    handleEditTask(taskId);
+  }, [handleEditTask]);
+
+  const handleDeleteTaskForActionMenu = useCallback((taskId: string) => () => {
+    handleDeleteTask(taskId);
+  }, [handleDeleteTask]);
+
+  const handleArchiveTaskForActionMenu = useCallback((task: Task) => () => {
+    handleArchiveTask(task);
+  }, [handleArchiveTask]);
+
+  const handleActionButtonRef = useCallback((taskId: string) => (el: HTMLButtonElement | null) => {
+    if (el) {
+      actionButtonRefs.current.set(taskId, el);
+    } else {
+      actionButtonRefs.current.delete(taskId);
+    }
+  }, []);
+
+  const renderActionColumn = useCallback((task: Task) => {
+    const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
+    if (!shouldShowActionMenu) {
+      return null;
+    }
+    
+    return (
+      <ActionMenu
+        task={task}
+        userId={userId}
+        onEdit={handleEditTaskForActionMenu(task.id)}
+        onDelete={handleDeleteTaskForActionMenu(task.id)}
+        onArchive={handleArchiveTaskForActionMenu(task)}
+        animateClick={animateClick}
+        actionMenuRef={actionMenuRef}
+        actionButtonRef={handleActionButtonRef(task.id)}
+      />
+    );
+  }, [isAdmin, userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
   const baseColumns = [
     {
@@ -807,186 +1192,44 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         ...col,
         render: (task: Task) => {
           const client = effectiveClients.find((c) => c.id === task.clientId);
-
-          return client ? (
-            <div className={styles.clientWrapper}>
-              <Image
-                style={{ borderRadius: '999px' }}
-                src={client.imageUrl || '/empty-image.png'}
-                alt={client.name || 'Client Image'}
-                width={40}
-                height={40}
-                className={styles.clientImage}
-                onError={(e) => {
-                  e.currentTarget.src = '/empty-image.png';
-                }}
-              />
-            </div>
-          ) : 'Sin cuenta';
+          return renderClientColumn(client);
         },
       };
     }
     if (col.key === 'name') {
       return {
         ...col,
-        render: (task: Task) => {
-          return (
-            <div className={styles.taskNameWrapper}>
-              <span className={styles.taskName}>{task.name}</span>
-            </div>
-          );
-        },
+        render: renderTaskNameColumn,
       };
     }
     if (col.key === 'notificationDot') {
       return {
         ...col,
-        render: (task: Task) => {
-          const updateCount = memoizedGetUnreadCount(task);
-
-          return (
-            <div className={styles.notificationDotWrapper}>
-              <NotificationDot count={updateCount} />
-            </div>
-          );
-        },
+        render: renderNotificationDotColumn,
       };
     }
     if (col.key === 'assignedTo') {
       return {
         ...col,
-        render: (task: Task) => {
-
-          return <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={effectiveUsers} currentUserId={userId} />;
-        },
+        render: renderAssignedToColumn,
       };
     }
     if (col.key === 'status') {
       return {
         ...col,
-        render: (task: Task) => {
-          const normalizedStatus = normalizeStatus(task.status);
-          let icon = '/timer.svg';
-          if (normalizedStatus === 'En Proceso') icon = '/timer.svg';
-          else if (normalizedStatus === 'Backlog') icon = '/circle-help.svg';
-          else if (normalizedStatus === 'Por Iniciar') icon = '/circle.svg';
-          else if (normalizedStatus === 'Cancelado') icon = '/circle-x.svg';
-          else if (normalizedStatus === 'Por Finalizar') icon = '/circle-check.svg';
-          else if (normalizedStatus === 'Finalizado') icon = '/check-check.svg';
-          
-
-          
-          return (
-            <div className={styles.statusWrapper}>
-              <Image
-                src={icon}
-                alt={normalizedStatus}
-                width={16}
-                height={16}
-                style={{ opacity: 0.7 }}
-              />
-              <span className={styles[`status-${normalizedStatus.replace(/\s/g, '-')}`]}>{normalizedStatus}</span>
-            </div>
-          );
-        },
+        render: renderStatusColumn,
       };
     }
     if (col.key === 'priority') {
       return {
         ...col,
-        render: (task: Task) => {
-
-          return (
-            <div className={styles.priorityWrapper}>
-              <Image
-                src={
-                  task.priority === 'Alta'
-                    ? '/arrow-up.svg'
-                    : task.priority === 'Media'
-                    ? '/arrow-right.svg'
-                    : '/arrow-down.svg'
-                }
-                alt={task.priority}
-                width={16}
-                height={16}
-              />
-              <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
-            </div>
-          );
-        },
+        render: renderPriorityColumn,
       };
     }
     if (col.key === 'action') {
       return {
         ...col,
-        render: (task: Task) => {
-          const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
-          if (!shouldShowActionMenu) {
-            console.log('[TasksTable] ActionMenu hidden for task:', {
-              taskId: task.id,
-              taskCreatedBy: task.CreatedBy,
-              currentUserId: userId,
-              isAdmin,
-              isCreator: task.CreatedBy === userId,
-              reason: `User is neither admin (${isAdmin}) nor creator (${task.CreatedBy === userId})`
-            });
-          }
-          if (shouldShowActionMenu) {
-            return (
-              <ActionMenu
-                task={task}
-                userId={userId}
-                onEdit={() => {
-                  openEditTask(task.id);
-                  setActionMenuOpenId(null);
-                }}
-                                  onDelete={() => {
-                    openDeleteTask(task.id);
-                    setActionMenuOpenId(null);
-                  }}
-                onArchive={async () => {
-                  try {
-                    // Guardar en undo stack
-                    const undoItem = {
-                      task: { ...task },
-                      action: 'archive' as const,
-                      timestamp: Date.now()
-                    };
-                    setUndoStack([...undoStack, undoItem]);
-                    setShowUndo(true);
-
-                    // Limpiar timeout anterior
-                    if (undoTimeoutRef.current) {
-                      clearTimeout(undoTimeoutRef.current);
-                    }
-
-                    // Configurar timeout para limpiar undo
-                    undoTimeoutRef.current = setTimeout(() => {
-                      setShowUndo(false);
-                      setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-                    }, 3000);
-                    
-                    // Ejecutar la función de archivo
-                    await archiveTask(task.id, userId, isAdmin, task);
-                    setActionMenuOpenId(null);
-                  } catch (error) {
-                    console.error('Error archiving task:', error);
-                  }
-                }}
-                animateClick={animateClick}
-                actionMenuRef={actionMenuRef}
-                actionButtonRef={(el) => {
-                  if (el) {
-                    actionButtonRefs.current.set(task.id, el);
-                  } else {
-                    actionButtonRefs.current.delete(task.id);
-                  }
-                }}
-              />
-            );
-          }
-          return null;
-        },
+                render: renderActionColumn,
       };
     }
     return col;
@@ -1010,10 +1253,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       const deltaX = currentX - startX;
       if (Math.abs(deltaX) > 50) {
         if (deltaX > 0) {
-          console.log('Swipe right detected');
+          // console.log('Swipe right detected');
           // Logic to switch to the previous container
         } else {
-          console.log('Swipe left detected');
+          // console.log('Swipe left detected');
           // Logic to switch to the next container
         }
       }
@@ -1037,43 +1280,74 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   // Función para deshacer
   const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
     if (!undoItem || !userId) {
-      console.error('Cannot undo: missing required data');
+      // console.error('Cannot undo: missing required data');
       return;
     }
     
     // ✅ CORREGIDO: Permitir deshacer a admins Y creadores de la tarea
     const isTaskCreator = undoItem.task.CreatedBy === userId;
     if (!isAdmin && !isTaskCreator) {
-      console.error('Cannot undo: user not authorized', {
-        isAdmin,
-        taskCreatedBy: undoItem.task.CreatedBy,
-        currentUserId: userId
-      });
+      // console.error('Cannot undo: user not authorized', {
+      //   isAdmin,
+      //   taskCreatedBy: undoItem.task.CreatedBy,
+      //   currentUserId: userId
+      // });
       return;
     }
 
     try {
+      // ✅ ACTUALIZACIÓN OPTIMISTA: Sin interferencias del useEffect
+      
       if (undoItem.action === 'archive') {
-        // Desarchivar la tarea (deshacer un archivado)
+        // ✅ OPTIMISTIC UPDATE: Desarchivar la tarea inmediatamente en el estado local
+        const updatedTask = { 
+          ...undoItem.task, 
+          archived: false, 
+          archivedAt: undefined, 
+          archivedBy: undefined 
+        };
+        
+        // Actualizar el store de datos para que se refleje en el filtrado
+        if (!externalTasks) {
+          const currentTasks = useDataStore.getState().tasks;
+          const updatedTasks = currentTasks.map(t => 
+            t.id === undoItem.task.id ? updatedTask : t
+          );
+          useDataStore.getState().setTasks(updatedTasks);
+          
+          // ✅ CLAVE: Actualizar también el estado local del filtrado para que la tarea aparezca inmediatamente
+          setFilteredTasks([...filteredTasks, updatedTask]);
+        }
+        
+        // Ejecutar la función de desarchivo
         await unarchiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
         
-        // Actualizar estado local
-        setFilteredTasks(filteredTasks.map((t) => 
-          t.id === undoItem.task.id 
-            ? { ...t, archived: false, archivedAt: undefined, archivedBy: undefined }
-            : t
-        ));
       } else if (undoItem.action === 'unarchive') {
-        // Archivar la tarea (deshacer un desarchivado)
-        await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
+        // ✅ OPTIMISTIC UPDATE: Archivar la tarea inmediatamente en el estado local
+        const updatedTask = { 
+          ...undoItem.task, 
+          archived: true, 
+          archivedAt: new Date().toISOString(), 
+          archivedBy: userId 
+        };
         
-        // Actualizar estado local
-        setFilteredTasks(filteredTasks.map((t) => 
-          t.id === undoItem.task.id 
-            ? { ...t, archived: true, archivedAt: new Date().toISOString(), archivedBy: userId }
-            : t
-        ));
+        // Actualizar el store de datos para que se refleje en el filtrado
+        if (!externalTasks) {
+          const currentTasks = useDataStore.getState().tasks;
+          const updatedTasks = currentTasks.map(t => 
+            t.id === undoItem.task.id ? updatedTask : t
+          );
+          useDataStore.getState().setTasks(updatedTasks);
+          
+          // ✅ CLAVE: Actualizar también el estado local del filtrado para que la tarea desaparezca inmediatamente
+          setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
+        }
+        
+        // Ejecutar la función de archivo
+        await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
       }
+      
+      // ✅ OPERACIÓN COMPLETADA: Undo ejecutado exitosamente
       
       // Remover del undo stack
       setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
@@ -1083,9 +1357,47 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         clearTimeout(undoTimeoutRef.current);
       }
     } catch (error) {
+      // ✅ ROLLBACK: Si falla la operación, revertir el estado optimista
       console.error('Error in undo process:', error);
+      
+      if (!externalTasks) {
+        // Revertir el estado local
+        const currentTasks = useDataStore.getState().tasks;
+        const revertedTasks = currentTasks.map(t => 
+          t.id === undoItem.task.id ? undoItem.task : t
+        );
+        useDataStore.getState().setTasks(revertedTasks);
+        
+        // ✅ CLAVE: Revertir también el estado local del filtrado
+        if (undoItem.action === 'archive') {
+          // Si falló el desarchivo, quitar la tarea del filtrado
+          setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
+        } else {
+          // Si falló el archivado, agregar la tarea al filtrado
+          setFilteredTasks([...filteredTasks, undoItem.task]);
+        }
+      }
+      
+              // Mostrar error al usuario (opcional)
+        // Puedes implementar un toast o notificación aquí
     }
-  }, [userId, isAdmin, setFilteredTasks, setUndoStack, setShowUndo, filteredTasks, undoStack]);
+  }, [userId, isAdmin, setUndoStack, setShowUndo, undoStack, externalTasks, setFilteredTasks, filteredTasks]);
+
+  const handleUndoClick = useCallback(() => {
+    handleUndo(undoStack[undoStack.length - 1]);
+  }, [handleUndo, undoStack]);
+
+  const handleUndoMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+    e.currentTarget.style.transform = 'scale(1.05)';
+  }, []);
+
+  const handleUndoMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    e.currentTarget.style.transform = 'scale(1)';
+  }, []);
+
+
 
   // Cleanup all table listeners when component unmounts
   useEffect(() => {
@@ -1113,20 +1425,20 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     // Solo mostrar loader si NO hay ningún dato Y está cargando tareas (lo más importante)
     const isReallyLoading = !hasAnyData && isLoadingTasks;
     
-    console.log('[TasksTable] Loading state decision:', {
-      hasExternalData: !!(externalTasks && externalClients && externalUsers),
-      hasAnyData,
-      isLoadingTasks,
-      isLoadingClients,
-      isLoadingUsers,
-      shouldShow: isReallyLoading,
-      tasksCount: effectiveTasks.length,
-      clientsCount: effectiveClients.length,
-      usersCount: effectiveUsers.length
-    });
+    // console.log('[TasksTable] Loading state decision:', {
+    //   hasExternalData: !!(externalTasks && externalClients && externalUsers),
+    //   hasAnyData,
+    //   isLoadingTasks,
+    //   isLoadingClients,
+    //   isLoadingUsers,
+    //   shouldShow: isReallyLoading,
+    //   tasksCount: effectiveTasks.length,
+    //   clientsCount: effectiveClients.length,
+    //   usersCount: effectiveUsers.length
+    // });
     
     return isReallyLoading;
-  }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoadingTasks, isLoadingClients, isLoadingUsers]);
+  }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoadingTasks]);
 
   if (shouldShowLoader) {
     return (
@@ -1175,101 +1487,11 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
             type="text"
             placeholder="Buscar Tareas"
             value={searchQuery}
-            onChange={(e) => {
-              const newValue = e.target.value;
-              setSearchQuery(newValue);
-              
-              // Animate search input when typing
-              const searchInput = e.currentTarget;
-              gsap.to(searchInput, {
-                scale: 1.02,
-                duration: 0.2,
-                ease: 'power2.out',
-                yoyo: true,
-                repeat: 1
-              });
-              
-              console.log('[TasksTable] Search query updated:', newValue);
-            }}
+            onChange={handleSearchChange}
             className={styles.searchInput}
             aria-label="Buscar tareas"
             disabled={shouldShowLoader}
-            onKeyDown={(e) => {
-              if (e.ctrlKey || e.metaKey) {
-                switch (e.key.toLowerCase()) {
-                  case 'a':
-                    e.preventDefault();
-                    e.currentTarget.select();
-                    break;
-                  case 'c':
-                    e.preventDefault();
-                    const targetC = e.currentTarget as HTMLInputElement;
-                    if (targetC.selectionStart !== targetC.selectionEnd) {
-                      const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-                      navigator.clipboard.writeText(selectedText).catch(() => {
-                        const textArea = document.createElement('textarea');
-                        textArea.value = selectedText;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                      });
-                    }
-                    break;
-                  case 'v':
-                    e.preventDefault();
-                    const targetV = e.currentTarget as HTMLInputElement;
-                    navigator.clipboard.readText().then(text => {
-                      if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                        const start = targetV.selectionStart;
-                        const end = targetV.selectionEnd;
-                        const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
-                        setSearchQuery(newValue);
-                        setTimeout(() => {
-                          targetV.setSelectionRange(start + text.length, start + text.length);
-                        }, 0);
-                      } else {
-                        setSearchQuery(searchQuery + text);
-                      }
-                    }).catch(() => {
-                      document.execCommand('paste');
-                    });
-                    break;
-                  case 'x':
-                    e.preventDefault();
-                    const targetX = e.currentTarget as HTMLInputElement;
-                    if (targetX.selectionStart !== targetX.selectionEnd) {
-                      const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-                      navigator.clipboard.writeText(selectedText).then(() => {
-                        if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                          const start = targetX.selectionStart;
-                          const end = targetX.selectionEnd;
-                          const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                          setSearchQuery(newValue);
-                        } else {
-                          setSearchQuery('');
-                        }
-                      }).catch(() => {
-                        const textArea = document.createElement('textarea');
-                        textArea.value = selectedText;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                          const start = targetX.selectionStart;
-                          const end = targetX.selectionEnd;
-                          const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                          setSearchQuery(newValue);
-                        } else {
-                          setSearchQuery('');
-                        }
-                      });
-                    }
-                    break;
-                }
-              }
-            }}
+            onKeyDown={handleSearchKeyDown}
           />
         </div>
 
@@ -1277,11 +1499,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           <div className={styles.buttonWithTooltip}>
             <button
               className={`${styles.viewButton} ${styles.hideOnMobile}`}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                changeView('kanban');
-                console.log('[TasksTable] Switching to Kanban view');
-              }}
+              onClick={handleViewButtonClick}
             >
               <Image
                 src="/kanban.svg"
@@ -1295,16 +1513,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                   filter:
                     'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                }}
+                onMouseEnter={handleKanbanImageMouseEnter}
+                onMouseLeave={handleKanbanImageMouseLeave}
               />
             </button>
             <span className={styles.tooltip}>Vista Kanban</span>
@@ -1312,11 +1522,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           <div className={styles.buttonWithTooltip}>
             <button
               className={styles.viewButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                openArchiveTable();
-                console.log('[TasksTable] Opening Archive Table');
-              }}
+              onClick={handleArchiveButtonClick}
             >
               <Image
                 src="/archive.svg"
@@ -1330,16 +1536,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                   filter:
                     'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.filter =
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                }}
+                onMouseEnter={handleArchiveImageMouseEnter}
+                onMouseLeave={handleArchiveImageMouseLeave}
               />
             </button>
             <span className={styles.tooltip}>Archivo</span>
@@ -1349,15 +1547,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
               <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
                 <div
                   className={styles.dropdownTrigger}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
-                    if (!isPriorityDropdownOpen) {
-                      setIsClientDropdownOpen(false);
-                      setIsUserDropdownOpen(false);
-                    }
-                    console.log('[TasksTable] Priority dropdown toggled');
-                  }}
+                  onClick={handlePriorityDropdownToggle}
                 >
                   <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
                   <span>{priorityFilter || 'Prioridad'}</span>
@@ -1375,7 +1565,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                         <motion.div
                           key={priority || 'all'}
                           className={styles.dropdownItem}
-                          onClick={(e) => handlePrioritySelect(priority, e)}
+                          onClick={handlePriorityItemClick(priority)}
                           initial={{ opacity: 0, y: -16 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: index * 0.05 }}
@@ -1395,15 +1585,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
               <div className={styles.dropdownContainer} ref={clientDropdownRef}>
                 <div
                   className={styles.dropdownTrigger}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
-                    setIsClientDropdownOpen(!isClientDropdownOpen);
-                    if (!isClientDropdownOpen) {
-                      setIsPriorityDropdownOpen(false);
-                      setIsUserDropdownOpen(false);
-                    }
-                    console.log('[TasksTable] Client dropdown toggled');
-                  }}
+                  onClick={handleClientDropdownToggle}
                 >
                   <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
                   <span>{effectiveClients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
@@ -1421,7 +1603,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                         <motion.div
                           key={client.id || 'all'}
                           className={styles.dropdownItem}
-                          onClick={(e) => handleClientSelect(client.id, e)}
+                          onClick={handleClientItemClick(client.id)}
                           initial={{ opacity: 0, y: -16 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: index * 0.05 }}
@@ -1443,15 +1625,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                 <div className={styles.dropdownContainer} ref={userDropdownRef}>
                   <div
                     className={styles.dropdownTrigger}
-                    onClick={(e) => {
-                      animateClick(e.currentTarget);
-                      setIsUserDropdownOpen(!isUserDropdownOpen);
-                      if (!isUserDropdownOpen) {
-                        setIsPriorityDropdownOpen(false);
-                        setIsClientDropdownOpen(false);
-                      }
-                      console.log('[TasksTable] User dropdown toggled');
-                    }}
+                    onClick={handleUserDropdownToggle}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
                     <span>
@@ -1474,7 +1648,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                         <motion.div
                           className={styles.dropdownItem}
                           style={{fontWeight: userFilter === '' ? 700 : 400}}
-                          onClick={() => handleUserFilter('')}
+                          onClick={handleUserFilterEmpty}
                           initial={{ opacity: 0, y: -16 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: 0 * 0.05 }}
@@ -1484,7 +1658,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                         <motion.div
                           className={styles.dropdownItem}
                           style={{fontWeight: userFilter === 'me' ? 700 : 400}}
-                          onClick={() => handleUserFilter('me')}
+                          onClick={handleUserFilterMe}
                           initial={{ opacity: 0, y: -16 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: 1 * 0.05 }}
@@ -1498,7 +1672,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                               key={u.id}
                               className={styles.dropdownItem}
                               style={{fontWeight: userFilter === u.id ? 700 : 400}}
-                              onClick={() => handleUserFilter(u.id)}
+                              onClick={handleUserItemClick(u.id)}
                               initial={{ opacity: 0, y: -16 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
@@ -1519,11 +1693,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           <div className={styles.buttonWithTooltip}>
             <button
               className={styles.createButton}
-              onClick={(e) => {
-                animateClick(e.currentTarget);
-                openNewTask();
-                console.log('[TasksTable] New task creation triggered');
-              }}
+              onClick={handleNewTaskButtonClick}
             >
               <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
               <span className={styles.createButtonText}>Crear Tarea</span>
@@ -1534,22 +1704,22 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       </div>
 
       <Table
-        key={`tasks-table-${effectiveTasksIds}-${filteredTasksIds}`}
+        key={`tasks-table-${effectiveTasksIds}-${filteredTasks.length}`}
         data={sortedTasks}
         columns={columns}
         itemsPerPage={10}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onSort={handleSort}
-        onRowClick={(task: Task) => {
-          handleTaskRowClick(task);
-        }}
+        onRowClick={handleTaskRowClick}
         getRowClassName={getRowClassName}
         emptyStateType="tasks"
         enableColumnVisibility={true}
         visibleColumns={visibleColumns}
         onColumnVisibilityChange={handleColumnVisibilityChange}
       />
+      
+
       
       {/* Undo Notification */}
       <AnimatePresence>
@@ -1595,9 +1765,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
               </span>
             </div>
             <button
-              onClick={() => {
-                handleUndo(undoStack[undoStack.length - 1]);
-              }}
+              onClick={handleUndoClick}
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 border: 'none',
@@ -1610,14 +1778,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
+              onMouseEnter={handleUndoMouseEnter}
+              onMouseLeave={handleUndoMouseLeave}
             >
               Deshacer
             </button>

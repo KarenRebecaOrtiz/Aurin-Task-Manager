@@ -210,11 +210,9 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     const newTasksString = JSON.stringify(tasks);
     
     if (currentTasksString === newTasksString) {
-      console.log('[dataStore] Tasks unchanged, skipping update');
       return state; // No actualizar si el contenido es idéntico
     }
     
-    console.log('[dataStore] Tasks updated, count:', tasks.length);
     return { tasks };
   }),
   updateTask: (taskId, updates) => set((state) => {
@@ -242,11 +240,9 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     const newClientsString = JSON.stringify(clients);
     
     if (currentClientsString === newClientsString) {
-      console.log('[dataStore] Clients unchanged, skipping update');
       return state; // No actualizar si el contenido es idéntico
     }
     
-    console.log('[dataStore] Clients updated, count:', clients.length);
     return { clients };
   }),
   updateClient: (clientId, updates) =>

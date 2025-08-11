@@ -22,7 +22,7 @@ export default React.memo(function ToDoDropdown({
   dropdownPosition,
   onClose,
 }: ToDoDropdownProps) {
-  const { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, getCompletedToday } = useTodos();
+  const { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, getCompletedToday, undoLastCompleted } = useTodos();
 
   
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -232,6 +232,7 @@ export default React.memo(function ToDoDropdown({
 
   const remainingTodos = todos.filter(todo => !todo.completed).length;
   const completedToday = getCompletedToday();
+  const hasCompletedTodos = completedToday > 0;
 
   // Solo renderizar cuando es realmente visible
   if (!isVisible) return null;
@@ -304,15 +305,29 @@ export default React.memo(function ToDoDropdown({
                   <Image src="/check-check.svg" alt="To Do" width={20} height={20} className={styles.titleIcon} />
                   Mis To Do
                 </div>
-                <motion.button 
-                  className={styles.closeButton} 
-                  onClick={onClose} 
-                  aria-label="Cerrar todos"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
-                </motion.button>
+                <div className={styles.headerActions}>
+                  {hasCompletedTodos && (
+                    <motion.button 
+                      className={styles.undoButton} 
+                      onClick={undoLastCompleted} 
+                      aria-label="Deshacer última tarea completada"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      title="Deshacer última tarea completada"
+                    >
+                      <Image src="/undo.svg" alt="Deshacer" width={20} height={20} />
+                    </motion.button>
+                  )}
+                  <motion.button 
+                    className={styles.closeButton} 
+                    onClick={onClose} 
+                    aria-label="Cerrar todos"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
+                  </motion.button>
+                </div>
               </motion.div>
               <motion.div 
                 className={styles.scrollContainer}
@@ -476,15 +491,29 @@ export default React.memo(function ToDoDropdown({
               <Image src="/check-check.svg" alt="To Do" width={20} height={20} className={styles.titleIcon} />
               Mis To Do
             </div>
-            <motion.button 
-              className={styles.closeButton} 
-              onClick={onClose} 
-              aria-label="Cerrar todos"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
-            </motion.button>
+            <div className={styles.headerActions}>
+              {hasCompletedTodos && (
+                <motion.button 
+                  className={styles.undoButton} 
+                  onClick={undoLastCompleted} 
+                  aria-label="Deshacer última tarea completada"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  title="Deshacer última tarea completada"
+                >
+                  <Image src="/undo.svg" alt="Deshacer" width={20} height={20} />
+                </motion.button>
+              )}
+              <motion.button 
+                className={styles.closeButton} 
+                onClick={onClose} 
+                aria-label="Cerrar todos"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Image src="/x.svg" alt="Cerrar" width={20} height={20} />
+              </motion.button>
+            </div>
           </motion.div>
           <motion.div 
             className={styles.scrollContainer}

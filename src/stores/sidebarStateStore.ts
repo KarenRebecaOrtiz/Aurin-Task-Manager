@@ -114,7 +114,6 @@ export const useSidebarStateStore = create<SidebarStateStore>()((set, get) => ({
       JSON.stringify(current.messageSidebar.receiver) !== JSON.stringify(receiver);
 
     if (current.sidebarType !== 'message' || current.sidebarId !== conversationId || !current.isOpen || messageStateChanged) {
-      console.log('[SidebarStore] Updating MessageSidebar state', { senderId, conversationId, messageStateChanged });
       set({
         isOpen: true,
         sidebarType: 'message',
@@ -122,7 +121,7 @@ export const useSidebarStateStore = create<SidebarStateStore>()((set, get) => ({
         messageSidebar: newMessageState,
       });
     } else {
-      console.log('[SidebarStore] MessageSidebar state unchanged, skipping update');
+      
     }
   },
 

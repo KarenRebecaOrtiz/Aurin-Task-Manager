@@ -33,11 +33,6 @@ export default function SyncUserToFirestore() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         const userCredentials = await signInWithCustomToken(auth, token);
-        console.log('[SyncUserToFirestore] User authenticated with Firebase:', {
-          userId: userCredentials.user.uid,
-          email: userCredentials.user.email,
-          displayName: userCredentials.user.displayName,
-        });
 
         const email = user.emailAddresses[0]?.emailAddress || 'no-email';
         const displayName = user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Usuario';
@@ -61,22 +56,10 @@ export default function SyncUserToFirestore() {
         };
 
         await setDoc(docRef, userData, { merge: true });
-        console.log('[SyncUserToFirestore] User data stored in Firestore:', {
-          userId,
-          email,
-          displayName,
-          profilePhoto,
-          preservedFields: Object.keys(existingData).length,
-        });
 
         const updatedUserDoc = await getDoc(docRef);
-        if (updatedUserDoc.exists()) {
-          console.log('[SyncUserToFirestore] Verified user document:', {
-            userId,
-            docData: updatedUserDoc.data(),
-          });
-        } else {
-          console.error('[SyncUserToFirestore] User document not found after sync:', userId);
+        if (!updatedUserDoc.exists()) {
+          // User document not found after sync
         }
 
         await userCredentials.user.getIdToken();
@@ -84,17 +67,9 @@ export default function SyncUserToFirestore() {
 
         setSynced(true);
         setRetryCount(0);
-      } catch (error) {
-        console.error('[SyncUserToFirestore] Firebase sync error:', {
-          error: error instanceof Error ? error.message : JSON.stringify(error),
-          userId,
-          retryCount,
-        });
+      } catch {
         if (retryCount < maxRetries) {
-          console.log('[SyncUserToFirestore] Retrying sync attempt:', retryCount + 1);
           setRetryCount((prev) => prev + 1);
-        } else {
-          console.error('[SyncUserToFirestore] Max retries reached, sync failed:', userId);
         }
       }
     };

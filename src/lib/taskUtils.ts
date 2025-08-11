@@ -1,6 +1,22 @@
 import { db } from './firebase';
-import { collection, getDocs, query, deleteDoc, doc, addDoc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, query, deleteDoc, doc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { notificationService } from '@/services/notificationService';
+
+// Helper function for conditional logging (only in development)
+const debugLog = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+// Helper function for conditional error logging (only in development)
+const debugError = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  }
+};
 
 interface Task {
   id: string;
@@ -40,12 +56,12 @@ export async function updateTaskActivity(taskId: string, activityType: 'message'
           lastActivity: now,
           hasUnreadUpdates: true,
         });
-        console.log('[taskUtils] Task activity updated:', { taskId, activityType, timestamp: now });
+        debugLog('[taskUtils] Task activity updated:', { taskId, activityType, timestamp: now });
         
         // Limpiar del cache después de la actualización
         activityUpdateCache.delete(taskId);
       } catch (error) {
-        console.error('[taskUtils] Error updating task activity:', error);
+        debugError('[taskUtils] Error updating task activity:', error);
         activityUpdateCache.delete(taskId);
       }
     }, ACTIVITY_DEBOUNCE_DELAY);
@@ -53,7 +69,7 @@ export async function updateTaskActivity(taskId: string, activityType: 'message'
     // Guardar en cache
     activityUpdateCache.set(taskId, { timeout, lastUpdate: Date.now() });
   } catch (error) {
-    console.error('[taskUtils] Error setting up activity update:', error);
+    debugError('[taskUtils] Error setting up activity update:', error);
   }
 }
 
@@ -71,9 +87,9 @@ export async function forceUpdateTaskActivity(taskId: string, activityType: 'mes
       lastActivity: now,
       hasUnreadUpdates: true,
     });
-    console.log('[taskUtils] Task activity force updated:', { taskId, activityType, timestamp: now });
+    debugLog('[taskUtils] Task activity force updated:', { taskId, activityType, timestamp: now });
   } catch (error) {
-    console.error('[taskUtils] Error force updating task activity:', error);
+    debugError('[taskUtils] Error force updating task activity:', error);
   }
 }
 
@@ -113,9 +129,9 @@ export async function archiveTasks(tasks: Task[], userId: string, isAdmin: boole
     });
     
     await batch.commit();
-    console.log(`[taskUtils] Archived ${tasks.length} tasks successfully`);
+    debugLog(`[taskUtils] Archived ${tasks.length} tasks successfully`);
   } catch (error) {
-    console.error('[taskUtils] Error archiving tasks:', error);
+    debugError('[taskUtils] Error archiving tasks:', error);
     throw error;
   }
 }
@@ -137,9 +153,9 @@ export async function unarchiveTasks(tasks: Task[], userId: string, isAdmin: boo
     });
     
     await batch.commit();
-    console.log(`[taskUtils] Unarchived ${tasks.length} tasks successfully`);
+    debugLog(`[taskUtils] Unarchived ${tasks.length} tasks successfully`);
   } catch (error) {
-    console.error('[taskUtils] Error unarchiving tasks:', error);
+    debugError('[taskUtils] Error unarchiving tasks:', error);
     throw error;
   }
 }
@@ -157,9 +173,9 @@ export async function deleteTasks(tasks: Task[], userId: string, isAdmin: boolea
     });
     
     await batch.commit();
-    console.log(`[taskUtils] Deleted ${tasks.length} tasks successfully`);
+    debugLog(`[taskUtils] Deleted ${tasks.length} tasks successfully`);
   } catch (error) {
-    console.error('[taskUtils] Error deleting tasks:', error);
+    debugError('[taskUtils] Error deleting tasks:', error);
     throw error;
   }
 }
@@ -186,9 +202,9 @@ export async function createBatchNotifications(notifications: Array<{
     });
     
     await batch.commit();
-    console.log(`[taskUtils] Created ${notifications.length} notifications in batch`);
+    debugLog(`[taskUtils] Created ${notifications.length} notifications in batch`);
   } catch (error) {
-    console.error('[taskUtils] Error creating batch notifications:', error);
+    debugError('[taskUtils] Error creating batch notifications:', error);
     throw error;
   }
 }
@@ -204,9 +220,9 @@ export async function markNotificationsAsRead(notificationIds: string[]) {
     });
     
     await batch.commit();
-    console.log(`[taskUtils] Marked ${notificationIds.length} notifications as read`);
+    debugLog(`[taskUtils] Marked ${notificationIds.length} notifications as read`);
   } catch (error) {
-    console.error('[taskUtils] Error marking notifications as read:', error);
+    debugError('[taskUtils] Error marking notifications as read:', error);
     throw error;
   }
 }
@@ -228,7 +244,7 @@ export async function markTaskAsViewed(taskId: string, userId: string) {
     // await checkAndUpdateGlobalUnreadStatus(taskId);
     
   } catch (error) {
-    console.error('[taskUtils] Error marking task as viewed:', error);
+    debugError('[taskUtils] Error marking task as viewed:', error);
     throw new Error(`Failed to mark task as viewed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -248,7 +264,7 @@ export function getLastActivityTimestamp(task: TaskWithActivity): number {
 
 // Función simple para calcular notificaciones no leídas
 export function getUnreadCount(task: TaskWithActivity, userId: string): number {
-  console.log('[getUnreadCount] Called with:', {
+  debugLog('[getUnreadCount] Called with:', {
     taskId: (task as TaskWithActivity & { id: string }).id,
     userId,
     hasUnreadUpdates: task.hasUnreadUpdates,
@@ -258,19 +274,19 @@ export function getUnreadCount(task: TaskWithActivity, userId: string): number {
 
   // Si no hay userId, no hay notificaciones
   if (!userId) {
-    console.log('[getUnreadCount] No userId, returning 0');
+    debugLog('[getUnreadCount] No userId, returning 0');
     return 0;
   }
   
   // Si la tarea no tiene actualizaciones, no hay notificaciones
   if (!task.hasUnreadUpdates) {
-    console.log('[getUnreadCount] No unread updates, returning 0');
+    debugLog('[getUnreadCount] No unread updates, returning 0');
     return 0;
   }
   
   // Si el usuario nunca ha visto la tarea, tiene 1 notificación
   if (!task.lastViewedBy || !task.lastViewedBy[userId]) {
-    console.log('[getUnreadCount] User never viewed, returning 1');
+    debugLog('[getUnreadCount] User never viewed, returning 1');
     return 1;
   }
   
@@ -284,7 +300,7 @@ export function getUnreadCount(task: TaskWithActivity, userId: string): number {
       ? task.lastViewedBy[userId].toMillis() 
       : new Date(task.lastViewedBy[userId]).getTime();
     
-    console.log('[getUnreadCount] Comparing timestamps:', {
+    debugLog('[getUnreadCount] Comparing timestamps:', {
       lastActivity,
       lastViewed,
       lastActivityDate: new Date(lastActivity),
@@ -293,12 +309,12 @@ export function getUnreadCount(task: TaskWithActivity, userId: string): number {
     });
     
     if (lastActivity > lastViewed) {
-      console.log('[getUnreadCount] Activity is newer, returning 1');
+      debugLog('[getUnreadCount] Activity is newer, returning 1');
       return 1; // Una notificación por tarea no vista
     }
   }
   
-  console.log('[getUnreadCount] No conditions met, returning 0');
+  debugLog('[getUnreadCount] No conditions met, returning 0');
   return 0;
 }
 
@@ -323,21 +339,21 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
     const messagesSnapshot = await getDocs(messagesQuery);
     const deleteMessagesPromises = messagesSnapshot.docs.map((doc) => deleteDoc(doc.ref));
     await Promise.all(deleteMessagesPromises);
-    console.log('[taskUtils] Deleted messages for task:', taskId);
+    debugLog('[taskUtils] Deleted messages for task:', taskId);
 
     // Eliminar timers de la tarea
     const timersQuery = query(collection(db, `tasks/${taskId}/timers`));
     const timersSnapshot = await getDocs(timersQuery);
     const deleteTimersPromises = timersSnapshot.docs.map((doc) => deleteDoc(doc.ref));
     await Promise.all(deleteTimersPromises);
-    console.log('[taskUtils] Deleted timers for task:', taskId);
+    debugLog('[taskUtils] Deleted timers for task:', taskId);
 
     // Eliminar notificaciones existentes para esta tarea
     const notificationsQuery = query(collection(db, 'notifications'), where('taskId', '==', taskId));
     const notificationsSnapshot = await getDocs(notificationsQuery);
     for (const notifDoc of notificationsSnapshot.docs) {
       await deleteDoc(doc(db, 'notifications', notifDoc.id));
-      console.log('[taskUtils] Deleted notification:', notifDoc.id);
+      debugLog('[taskUtils] Deleted notification:', notifDoc.id);
     }
 
     // Enviar notificaciones a los usuarios involucrados usando el servicio centralizado
@@ -353,16 +369,16 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
           type: 'task_deleted',
           taskId,
         }, Array.from(recipients));
-        console.log('[taskUtils] Sent delete notifications to:', recipients.size, 'recipients');
+        debugLog('[taskUtils] Sent delete notifications to:', recipients.size, 'recipients');
       } catch (error) {
-        console.error('[taskUtils] Error sending delete notifications:', error);
+        debugError('[taskUtils] Error sending delete notifications:', error);
         // No fallar la operación principal por errores de notificación
       }
     }
 
     // Eliminar tarea
     await deleteDoc(doc(db, 'tasks', taskId));
-    console.log('[taskUtils] Task deleted successfully:', taskId);
+    debugLog('[taskUtils] Task deleted successfully:', taskId);
   } catch (error) {
     throw new Error(`Failed to delete task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
   }
@@ -400,14 +416,14 @@ export async function archiveTask(taskId: string, userId: string, isAdmin: boole
           type: 'task_archived',
           taskId,
         }, Array.from(recipients));
-        console.log('[taskUtils] Sent archive notifications to:', recipients.size, 'recipients');
+        debugLog('[taskUtils] Sent archive notifications to:', recipients.size, 'recipients');
       } catch (error) {
-        console.error('[taskUtils] Error sending archive notifications:', error);
+        debugError('[taskUtils] Error sending archive notifications:', error);
         // No fallar la operación principal por errores de notificación
       }
     }
 
-    console.log('[taskUtils] Task archived successfully:', taskId);
+    debugLog('[taskUtils] Task archived successfully:', taskId);
   } catch (error) {
     throw new Error(`Failed to archive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
   }
@@ -425,7 +441,6 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
       throw new Error('No tienes permisos para desarchivar esta tarea');
     }
 
-    const now = Timestamp.now();
     await updateDoc(doc(db, 'tasks', taskId), {
       archived: false,
       archivedAt: null,
@@ -445,14 +460,14 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
           type: 'task_unarchived',
           taskId,
         }, Array.from(recipients));
-        console.log('[taskUtils] Sent unarchive notifications to:', recipients.size, 'recipients');
+        debugLog('[taskUtils] Sent unarchive notifications to:', recipients.size, 'recipients');
       } catch (error) {
-        console.error('[taskUtils] Error sending unarchive notifications:', error);
+        debugError('[taskUtils] Error sending unarchive notifications:', error);
         // No fallar la operación principal por errores de notificación
       }
     }
 
-    console.log('[taskUtils] Task unarchived successfully:', taskId);
+    debugLog('[taskUtils] Task unarchived successfully:', taskId);
   } catch (error) {
     throw new Error(`Failed to unarchive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
   }
@@ -467,7 +482,7 @@ export async function initializeUnreadUpdates() {
     const updatePromises = tasksSnapshot.docs.map(async (doc) => {
       const taskData = doc.data();
       if (taskData.hasUnreadUpdates === undefined) {
-        console.log('[taskUtils] Initializing hasUnreadUpdates for task:', doc.id);
+        debugLog('[taskUtils] Initializing hasUnreadUpdates for task:', doc.id);
         await updateDoc(doc.ref, {
           hasUnreadUpdates: false,
         });
@@ -475,16 +490,16 @@ export async function initializeUnreadUpdates() {
     });
     
     await Promise.all(updatePromises);
-    console.log('[taskUtils] Initialized hasUnreadUpdates for all tasks');
+    debugLog('[taskUtils] Initialized hasUnreadUpdates for all tasks');
   } catch (error) {
-    console.error('[taskUtils] Error initializing unread updates:', error);
+    debugError('[taskUtils] Error initializing unread updates:', error);
   }
 }
 
 // Función para limpiar status corruptos (IDs random) en la base de datos
 export async function cleanCorruptStatuses() {
   try {
-    console.log('[taskUtils] Starting cleanup of corrupt statuses...');
+    debugLog('[taskUtils] Starting cleanup of corrupt statuses...');
     
     const tasksQuery = query(collection(db, 'tasks'));
     const snapshot = await getDocs(tasksQuery);
@@ -502,7 +517,7 @@ export async function cleanCorruptStatuses() {
       if (status && /^[A-Za-z0-9+/=]{20,}$/.test(status)) {
         batch.update(docSnap.ref, { status: 'Por Iniciar' });
         cleanedCount++;
-        console.log('[taskUtils] Cleaning status for task:', {
+        debugLog('[taskUtils] Cleaning status for task:', {
           taskId: docSnap.id,
           taskName: data.name || 'Unknown',
           oldStatus: status,
@@ -513,14 +528,14 @@ export async function cleanCorruptStatuses() {
     
     if (cleanedCount > 0) {
       await batch.commit();
-      console.log(`[taskUtils] Cleanup complete: ${cleanedCount} corrupt statuses fixed out of ${totalTasks} total tasks`);
+      debugLog(`[taskUtils] Cleanup complete: ${cleanedCount} corrupt statuses fixed out of ${totalTasks} total tasks`);
     } else {
-      console.log(`[taskUtils] No corrupt statuses found in ${totalTasks} tasks`);
+      debugLog(`[taskUtils] No corrupt statuses found in ${totalTasks} tasks`);
     }
     
     return { cleanedCount, totalTasks };
   } catch (error) {
-    console.error('[taskUtils] Error cleaning corrupt statuses:', error);
+    debugError('[taskUtils] Error cleaning corrupt statuses:', error);
     throw new Error(`Failed to clean corrupt statuses: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -552,7 +567,7 @@ export async function getCorruptStatusStats() {
       }
     });
     
-    console.log('[taskUtils] Corrupt status statistics:', {
+    debugLog('[taskUtils] Corrupt status statistics:', {
       totalTasks,
       corruptTasks,
       percentage: totalTasks > 0 ? ((corruptTasks / totalTasks) * 100).toFixed(2) + '%' : '0%',
@@ -561,7 +576,7 @@ export async function getCorruptStatusStats() {
     
     return { totalTasks, corruptTasks, corruptExamples };
   } catch (error) {
-    console.error('[taskUtils] Error getting corrupt status stats:', error);
+    debugError('[taskUtils] Error getting corrupt status stats:', error);
     throw new Error(`Failed to get corrupt status stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -569,7 +584,7 @@ export async function getCorruptStatusStats() {
 // Función para limpiar status que son Objects en lugar de strings
 export async function cleanObjectStatuses() {
   try {
-    console.log('[taskUtils] Starting cleanup of Object statuses...');
+    debugLog('[taskUtils] Starting cleanup of Object statuses...');
     
     const tasksQuery = query(collection(db, 'tasks'));
     const snapshot = await getDocs(tasksQuery);
@@ -587,7 +602,7 @@ export async function cleanObjectStatuses() {
       if (status && typeof status === 'object' && status !== null) {
         batch.update(docSnap.ref, { status: 'Por Iniciar' });
         cleanedCount++;
-        console.log('[taskUtils] Cleaning Object status for task:', {
+        debugLog('[taskUtils] Cleaning Object status for task:', {
           taskId: docSnap.id,
           taskName: data.name || 'Unknown',
           oldStatus: status,
@@ -599,14 +614,14 @@ export async function cleanObjectStatuses() {
     
     if (cleanedCount > 0) {
       await batch.commit();
-      console.log(`[taskUtils] Object status cleanup complete: ${cleanedCount} Object statuses fixed out of ${totalTasks} total tasks`);
+      debugLog(`[taskUtils] Object status cleanup complete: ${cleanedCount} Object statuses fixed out of ${totalTasks} total tasks`);
     } else {
-      console.log(`[taskUtils] No Object statuses found in ${totalTasks} tasks`);
+      debugLog(`[taskUtils] No Object statuses found in ${totalTasks} tasks`);
     }
     
     return { cleanedCount, totalTasks };
   } catch (error) {
-    console.error('[taskUtils] Error cleaning Object statuses:', error);
+    debugError('[taskUtils] Error cleaning Object statuses:', error);
     throw new Error(`Failed to clean Object statuses: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

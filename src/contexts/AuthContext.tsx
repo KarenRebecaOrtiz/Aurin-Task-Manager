@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 
 // Importar managers para cleanup
@@ -12,7 +12,6 @@ import { TaskNotificationsManager } from '@/hooks/useTaskNotificationsSingleton'
 interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
-  error: string | null;
 }
 
 // Create the context
@@ -28,7 +27,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { user } = useUser();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAdminStatus = () => {
@@ -40,26 +38,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         setIsLoading(true);
-        setError(null);
         
         // Verificar admin status desde Clerk metadata (más rápido que Firestore)
         const access = user.publicMetadata?.access as string;
         const isAdminValue = access === 'admin';
-        
-        console.log('[AuthContext] Admin status from Clerk metadata:', {
-          userId: user.id,
-          access,
-          isAdmin: isAdminValue
-        });
-        
-        // 🔍 Debugging específico para Safari
-        if (typeof window !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
-          console.log('[AuthContext][Safari] 🔍 User object:', user);
-          console.log('[AuthContext][Safari] 🔍 Session exists:', !!user);
-          console.log('[AuthContext][Safari] 🔍 User ID:', user.id);
-          console.log('[AuthContext][Safari] 🔍 Browser:', navigator.userAgent);
-          console.log('[AuthContext][Safari] 🔍 Public metadata:', user.publicMetadata);
-        }
         
         setIsAdmin(isAdminValue);
         
@@ -67,9 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const cacheKey = `isAdmin-${user.id}`;
         sessionStorage.setItem(cacheKey, isAdminValue ? 'true' : 'false');
         
-      } catch (error) {
-        console.error('[AuthContext] Error checking admin status:', error);
-        setError('Failed to fetch admin status');
+      } catch {
         setIsAdmin(false);
       } finally {
         setIsLoading(false);
@@ -83,28 +63,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     return () => {
       if (!user?.id) {
-        console.log('[AuthContext] User logged out, cleaning up listeners');
-                              try {
-                        // Cleanup de MessageNotificationsManager
-                        const messageManager = MessageNotificationsManager.getInstance();
-                        messageManager.cleanupAllListeners();
-                        
-                        // Cleanup de PrivateMessagePaginationManager
-                        const paginationManager = PrivateMessagePaginationManager.getInstance();
-                        paginationManager.cleanupAllListeners();
-                        
-                        // Cleanup de TaskNotificationsManager
-                        const taskManager = TaskNotificationsManager.getInstance();
-                        taskManager.cleanupAllListeners();
-                      } catch (error) {
-                        console.error('[AuthContext] Error cleaning up listeners:', error);
-                      }
+        try {
+          // Cleanup de MessageNotificationsManager
+          const messageManager = MessageNotificationsManager.getInstance();
+          messageManager.cleanupAllListeners();
+          
+          // Cleanup de PrivateMessagePaginationManager
+          const paginationManager = PrivateMessagePaginationManager.getInstance();
+          paginationManager.cleanupAllListeners();
+          
+          // Cleanup de TaskNotificationsManager
+          const taskManager = TaskNotificationsManager.getInstance();
+          taskManager.cleanupAllListeners();
+        } catch {
+          // Silent error handling for cleanup
+        }
       }
     };
   }, [user?.id]);
 
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    isAdmin,
+    isLoading
+  }), [isAdmin, isLoading]);
+
   return (
-    <AuthContext.Provider value={{ isAdmin, isLoading, error }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

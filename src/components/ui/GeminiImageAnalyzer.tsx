@@ -1,10 +1,18 @@
 // src/components/ui/GeminiImageAnalyzer.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Image as ImageIcon, Loader2, Tag, BarChart3 } from 'lucide-react';
 import { useGeminiImageAnalysis } from '@/hooks/useGeminiImageAnalysis';
 import styles from './GeminiImageAnalyzer.module.scss';
+
+// Helper function for conditional error logging (only in development)
+const debugError = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  }
+};
 
 interface GeminiImageAnalyzerProps {
   taskId?: string;
@@ -33,7 +41,7 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
 
   const { analyzeImage, isAnalyzing, lastResult, clearResult } = useGeminiImageAnalysis();
 
-  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setSelectedImage(file);
@@ -48,9 +56,9 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
       // Limpiar resultado anterior
       clearResult();
     }
-  };
+  }, [clearResult]);
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = useCallback(async () => {
     if (!selectedImage || !imagePreview) return;
 
     try {
@@ -59,11 +67,11 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
         onAnalysisComplete(result);
       }
     } catch (error) {
-      console.error('[GeminiImageAnalyzer] Error analyzing image:', error);
+      debugError('[GeminiImageAnalyzer] Error analyzing image:', error);
     }
-  };
+  }, [selectedImage, imagePreview, customPrompt, taskId, analyzeImage, onAnalysisComplete]);
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = useCallback(() => {
     setSelectedImage(null);
     setImagePreview(null);
     setCustomPrompt('');
@@ -73,9 +81,9 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  }, [clearResult]);
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     
     const files = event.dataTransfer.files;
@@ -93,15 +101,27 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
         clearResult();
       }
     }
-  };
+  }, [clearResult]);
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-  };
+  }, []);
 
-  const openFileDialog = () => {
+  const openFileDialog = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
+
+  const handlePromptToggle = useCallback(() => {
+    setShowPromptInput(!showPromptInput);
+  }, [showPromptInput]);
+
+  const handleCustomPromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCustomPrompt(e.target.value);
+  }, []);
+
+  const handleClearResult = useCallback(() => {
+    clearResult();
+  }, [clearResult]);
 
   return (
     <div className={`${styles.container} ${className}`}>
@@ -161,7 +181,7 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
               <button
                 type="button"
                 className={styles.promptToggle}
-                onClick={() => setShowPromptInput(!showPromptInput)}
+                onClick={handlePromptToggle}
                 disabled={isAnalyzing}
               >
                 <ImageIcon size={16} />
@@ -180,7 +200,7 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
                     <textarea
                       placeholder="Describe qué quieres que analice en la imagen..."
                       value={customPrompt}
-                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      onChange={handleCustomPromptChange}
                       className={styles.promptTextarea}
                       rows={3}
                       disabled={isAnalyzing}
@@ -228,7 +248,7 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
               <button
                 type="button"
                 className={styles.clearButton}
-                onClick={clearResult}
+                onClick={handleClearResult}
               >
                 <X size={16} />
               </button>
@@ -254,8 +274,8 @@ export const GeminiImageAnalyzer: React.FC<GeminiImageAnalyzerProps> = ({
                     Etiquetas
                   </h5>
                   <div className={styles.tagsContainer}>
-                    {lastResult.tags.map((tag, index) => (
-                      <span key={index} className={styles.tag}>
+                    {lastResult.tags.map((tag) => (
+                      <span key={tag} className={styles.tag}>
                         {tag}
                       </span>
                     ))}

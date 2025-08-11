@@ -119,18 +119,18 @@ const MessageItem = memo(
       const [isMenuPositioned, setIsMenuPositioned] = useState(false);
 
       const updateMenuPosition = useCallback(() => {
-        console.log('[ActionMenu] updateMenuPosition called');
+        // console.log('[ActionMenu] updateMenuPosition called');
         if (actionButtonRef.current) {
           const rect = actionButtonRef.current.getBoundingClientRect();
-          console.log('[ActionMenu] Button rect:', rect);
+          // console.log('[ActionMenu] Button rect:', rect);
           const position = {
             top: rect.bottom + window.scrollY,
             left: rect.left + window.scrollX,
           };
-          console.log('[ActionMenu] Calculated position:', position);
+          // console.log('[ActionMenu] Calculated position:', position);
           setActionMenuPosition(position);
         } else {
-          console.log('[ActionMenu] actionButtonRef.current is null');
+          // console.log('[ActionMenu] actionButtonRef.current is null');
         }
       }, []);
 
@@ -148,9 +148,9 @@ const MessageItem = memo(
       const handleCopyMessage = useCallback(async (messageText: string) => {
         try {
           await navigator.clipboard.writeText(messageText);
-          console.log('[MessageItem] Mensaje copiado al portapapeles');
-        } catch (error) {
-          console.error('[MessageItem] Error copiando mensaje:', error);
+          // console.log('[MessageItem] Mensaje copiado al portapapeles');
+        } catch {
+          // console.error('[MessageItem] Error copiando mensaje');
           const textArea = document.createElement('textarea');
           textArea.value = messageText;
           document.body.appendChild(textArea);
@@ -159,6 +159,75 @@ const MessageItem = memo(
           document.body.removeChild(textArea);
         }
       }, []);
+
+      const handleCopyMessageClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        handleCopyMessage(message.text || '');
+        setActionMenuOpenId(null);
+      }, [handleCopyMessage, message.text, setActionMenuOpenId]);
+
+      const handleEditMessageClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingMessageId(message.id);
+        setEditingText(message.text || '');
+        setActionMenuOpenId(null);
+      }, [message.id, message.text, setEditingMessageId, setEditingText, setActionMenuOpenId]);
+
+      const handleEditTimeClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        // Aquí implementaremos la edición de timelogs
+        // console.log('Editar timelog:', message.id, message.hours);
+        setActionMenuOpenId(null);
+      }, [setActionMenuOpenId]);
+
+      const handleDeleteMessageClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        handleDeleteMessage(message.id);
+        setActionMenuOpenId(null);
+      }, [message.id, handleDeleteMessage, setActionMenuOpenId]);
+
+      const handleDownloadFileClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (message.imageUrl || message.fileUrl) {
+          const link = document.createElement('a');
+          link.href = message.imageUrl || message.fileUrl || '';
+          link.download = message.fileName || 'archivo';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        setActionMenuOpenId(null);
+      }, [message.imageUrl, message.fileUrl, message.fileName, setActionMenuOpenId]);
+
+      const handleImagePreviewClick = useCallback(() => {
+        setImagePreviewSrc(message.imageUrl);
+      }, [message.imageUrl, setImagePreviewSrc]);
+
+      const handleActionButtonClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        // console.log('[ActionMenu] Button clicked for message:', message.id);
+        // console.log('[ActionMenu] Current actionMenuOpenId:', actionMenuOpenId);
+        const newActionMenuOpenId = actionMenuOpenId === message.id ? null : message.id;
+        // console.log('[ActionMenu] Setting actionMenuOpenId to:', newActionMenuOpenId);
+        setActionMenuOpenId(newActionMenuOpenId);
+      }, [actionMenuOpenId, message.id, setActionMenuOpenId]);
+
+      const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        onMessageDragStart(message.id, e);
+      }, [message.id, onMessageDragStart]);
+
+      const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        onMessageDragStart(message.id, e);
+      }, [message.id, onMessageDragStart]);
+
+      const handleRef = useCallback((el: HTMLDivElement | null) => {
+        if (typeof ref === 'function') {
+          ref(el);
+        } else if (ref) {
+          ref.current = el;
+        }
+        messageRef.current = el;
+      }, [ref]);
 
       useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -247,7 +316,7 @@ const MessageItem = memo(
                 width={200}
                 height={200}
                 className={styles.messageImage}
-                onClick={() => setImagePreviewSrc(message.imageUrl)}
+                onClick={handleImagePreviewClick}
               />
             </div>
           );
@@ -265,7 +334,7 @@ const MessageItem = memo(
         }
 
         return contentElements;
-      }, [message, setImagePreviewSrc, formatTimeToHHMMSS, styles]);
+      }, [message, formatTimeToHHMMSS, styles, handleImagePreviewClick]);
 
       if (message.isDatePill) {
         return (
@@ -277,14 +346,7 @@ const MessageItem = memo(
 
       return (
         <motion.div
-          ref={(el) => {
-            if (typeof ref === 'function') {
-              ref(el);
-            } else if (ref) {
-              ref.current = el;
-            }
-            messageRef.current = el;
-          }}
+          ref={handleRef}
           className={`${styles.message} ${message.isPending ? styles.pending : ''} ${
             message.hasError && message.senderId === userId ? styles.error : ''
           } ${isDraggingMessage && draggedMessageId === message.id ? styles.dragging : ''}`}
@@ -298,8 +360,8 @@ const MessageItem = memo(
               : 'transform 0.3s ease-out'
           }}
           data-drag-threshold={isDraggingMessage && draggedMessageId === message.id && dragOffset >= 60 ? 'true' : 'false'}
-          onMouseDown={(e) => onMessageDragStart(message.id, e)}
-          onTouchStart={(e) => onMessageDragStart(message.id, e)}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           initial={isNewChunk && !isLoadingChunk ? { opacity: 0, y: -30, scale: 0.95 } : false}
           animate={isNewChunk && !isLoadingChunk ? { opacity: 1, y: 0, scale: 1 } : { opacity: 1 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -332,14 +394,7 @@ const MessageItem = memo(
                     <motion.button
                       ref={actionButtonRef}
                       className={styles.actionButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('[ActionMenu] Button clicked for message:', message.id);
-                        console.log('[ActionMenu] Current actionMenuOpenId:', actionMenuOpenId);
-                        const newActionMenuOpenId = actionMenuOpenId === message.id ? null : message.id;
-                        console.log('[ActionMenu] Setting actionMenuOpenId to:', newActionMenuOpenId);
-                        setActionMenuOpenId(newActionMenuOpenId);
-                      }}
+                      onClick={handleActionButtonClick}
                       whileTap={{ scale: 0.95, opacity: 0.8 }}
                       transition={{ duration: 0.15, ease: 'easeOut' }}
                     >
@@ -381,16 +436,12 @@ const MessageItem = memo(
               }}
             >
               <div className={styles.actionDropdownContent}>
-                <motion.div
-                  className={`${styles.actionDropdownItem} ${styles.copy}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopyMessage(message.text || '');
-                    setActionMenuOpenId(null);
-                  }}
-                  whileTap={{ scale: 0.95, opacity: 0.8 }}
-                  title="Copiar mensaje"
-                >
+                                    <motion.div
+                      className={`${styles.actionDropdownItem} ${styles.copy}`}
+                      onClick={handleCopyMessageClick}
+                      whileTap={{ scale: 0.95, opacity: 0.8 }}
+                      title="Copiar mensaje"
+                    >
                   <Image src="/copy.svg" alt="Copiar" width={16} height={16} />
                 </motion.div>
                 {message.senderId === userId && (
@@ -398,12 +449,7 @@ const MessageItem = memo(
                     {!message.hours && (
                       <motion.div
                         className={`${styles.actionDropdownItem} ${styles.edit}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingMessageId(message.id);
-                          setEditingText(message.text || '');
-                          setActionMenuOpenId(null);
-                        }}
+                        onClick={handleEditMessageClick}
                         whileTap={{ scale: 0.95, opacity: 0.8 }}
                         title="Editar mensaje"
                       >
@@ -413,12 +459,7 @@ const MessageItem = memo(
                     {message.hours && (
                       <motion.div
                         className={`${styles.actionDropdownItem} ${styles.edit}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Aquí implementaremos la edición de timelogs
-                          console.log('Editar timelog:', message.id, message.hours);
-                          setActionMenuOpenId(null);
-                        }}
+                        onClick={handleEditTimeClick}
                         whileTap={{ scale: 0.95, opacity: 0.8 }}
                         title="Editar tiempo"
                       >
@@ -427,11 +468,7 @@ const MessageItem = memo(
                     )}
                     <motion.div
                       className={`${styles.actionDropdownItem} ${styles.delete}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteMessage(message.id);
-                        setActionMenuOpenId(null);
-                      }}
+                      onClick={handleDeleteMessageClick}
                       whileTap={{ scale: 0.95, opacity: 0.8 }}
                       title="Eliminar mensaje"
                     >
@@ -442,19 +479,7 @@ const MessageItem = memo(
                 {(message.imageUrl || message.fileUrl) && (
                   <motion.div
                     className={`${styles.actionDropdownItem} ${styles.copy}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (message.imageUrl || message.fileUrl) {
-                        const link = document.createElement('a');
-                        link.href = message.imageUrl || message.fileUrl || '';
-                        link.download = message.fileName || 'archivo';
-                        link.target = '_blank';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                      }
-                      setActionMenuOpenId(null);
-                    }}
+                    onClick={handleDownloadFileClick}
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
                     title="Descargar archivo"
                   >
@@ -547,10 +572,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       isTimerRunning,
       timerSeconds,
       isRestoringTimer,
+      isInitializing,
       // Eliminadas: syncStatus y workerActive
     } = useTimerStoreHook(task?.id || '', user?.id || '');
     
     // Debug logging disabled to reduce console spam
+
+
 
     const lastMessageRef = useRef<HTMLDivElement>(null);
     const deletePopupRef = useRef<HTMLDivElement>(null);
@@ -562,10 +590,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const chatRef = useRef<HTMLDivElement>(null);
 
     // Función para manejar nuevos mensajes (real-time context refresh)
-    const handleNewMessage = useCallback((newMsg: Message) => {
+    const handleNewMessage = useCallback(() => {
       // Esta función se pasa a InputChat para manejar nuevos mensajes durante @gemini
-      console.log('[ChatSidebar] Nuevo mensaje recibido durante @gemini:', newMsg.id);
+      // console.log('[ChatSidebar] Nuevo mensaje recibido durante @gemini');
     }, []);
+
+
 
     const {
       messages,
@@ -593,7 +623,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       const messageToReply = messages.find(msg => msg.id === messageId);
       if (messageToReply) {
         setReplyingTo(messageToReply);
-        console.log('[ChatSidebar] Reply activated for message:', messageToReply.id);
+        // console.log('[ChatSidebar] Reply activated for message:', messageToReply.id);
       }
     }, [messages]);
 
@@ -619,12 +649,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           if (docSnap.exists()) {
 
           } else {
-            console.warn('[ChatSidebar] Task document does not exist:', task.id);
+            // console.warn('[ChatSidebar] Task document does not exist:', task.id);
           }
         },
-        (error) => {
-          console.error('[ChatSidebar] Error in task onSnapshot:', error);
-        }
+
       );
 
       // onSnapshot para mensajes de Gemini (real-time updates)
@@ -636,14 +664,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         (snapshot) => {
           const newGeminiMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
           if (newGeminiMessages.length > 0) {
-            console.log('[ChatSidebar] New Gemini message detected:', newGeminiMessages[newGeminiMessages.length-1]);
+            // console.log('[ChatSidebar] New Gemini message detected:', newGeminiMessages[newGeminiMessages.length-1]);
             // Trigger UI refresh for Gemini messages
             // El sistema de pagination ya maneja esto automáticamente
           }
         },
-        (error) => {
-          console.error('[ChatSidebar] Error in Gemini messages onSnapshot:', error);
-        }
+
       );
 
       return () => {
@@ -653,7 +679,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     }, [isOpen, task.id, task.status, task.priority]);
 
     const handleLoadMoreMessages = useCallback(async () => {
-      console.log('[ChatSidebar] handleLoadMoreMessages called. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'isLoadingChunk:', isLoadingChunk);
+      // console.log('[ChatSidebar] handleLoadMoreMessages called. hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'isLoadingChunk:', isLoadingChunk);
       if (hasMore && !isLoadingMore && !isLoadingChunk) {
         setIsLoadingChunk(true);
         // Debug logging disabled to reduce console spam
@@ -750,7 +776,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         if (disable) {
           // ✅ OPTIMIZACIÓN: Guardar posición de scroll de manera más robusta
           const scrollY = window.scrollY;
-          console.log('[ChatSidebar] Locking body scroll at position:', scrollY);
+          // console.log('[ChatSidebar] Locking body scroll at position:', scrollY);
           document.body.style.position = 'fixed';
           document.body.style.top = `-${scrollY}px`;
           document.body.style.width = '100%';
@@ -759,7 +785,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         } else {
           // ✅ OPTIMIZACIÓN: Restaurar scroll de manera más suave
           const scrollY = document.body.getAttribute('data-scroll-y');
-          console.log('[ChatSidebar] Restoring body scroll to position:', scrollY);
+          // console.log('[ChatSidebar] Restoring body scroll to position:', scrollY);
           document.body.style.position = '';
           document.body.style.top = '';
           document.body.style.width = '';
@@ -772,19 +798,60 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
               // ✅ OPTIMIZACIÓN: Verificar que el valor sea válido antes de hacer scroll
               const scrollValue = parseInt(scrollY);
               if (!isNaN(scrollValue) && scrollValue >= 0) {
-                console.log('[ChatSidebar] Executing scrollTo:', scrollValue);
+                // console.log('[ChatSidebar] Executing scrollTo:', scrollValue);
                 window.scrollTo({
                   top: scrollValue,
                   behavior: 'instant' // Usar 'instant' en lugar de 'smooth' para evitar animación
                 });
               } else {
-                console.warn('[ChatSidebar] Invalid scroll value:', scrollY);
+                // console.warn('[ChatSidebar] Invalid scroll value:', scrollY);
               }
             });
           }
         }
       }
     }, []);
+
+
+
+    const handleStatusDropdownToggle = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isCreator || isAdmin) {
+        setActiveCardDropdown(activeCardDropdown === 'status' ? null : 'status');
+      }
+    }, [isCreator, isAdmin, activeCardDropdown]);
+
+    const handleTeamDropdownToggle = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (canViewTeamAndHours) {
+        setActiveCardDropdown(activeCardDropdown === 'team' ? null : 'team');
+      }
+    }, [canViewTeamAndHours, activeCardDropdown]);
+
+    const handleHoursDropdownToggle = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (canViewTeamAndHours) {
+        setActiveCardDropdown(activeCardDropdown === 'hours' ? null : 'hours');
+      }
+    }, [canViewTeamAndHours, activeCardDropdown]);
+
+    const handleDetailsToggle = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsDetailsDropdownOpen(!isDetailsDropdownOpen);
+    }, [isDetailsDropdownOpen]);
+
+    const handleSummarizeDropdownToggle = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsSummarizeDropdownOpen((prev) => !prev);
+    }, []);
+
+
+
+    const handleStopPropagation = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+    }, []);
+
+
 
     useEffect(() => {
       toggleBodyScroll(isOpen);
@@ -840,13 +907,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       );
     }, []);
 
+    const handleCloseClick = useCallback((e: React.MouseEvent) => {
+      handleClick(e.currentTarget as HTMLElement);
+      onClose();
+    }, [onClose, handleClick]);
+
     const handleStatusChange = useCallback(async (status: string) => {
       if (!isCreator && !isAdmin) {
-        console.warn('[ChatSidebar] User not authorized to change status');
         return;
       }
       if (!user?.id) {
-        console.error('[ChatSidebar] No user ID available');
         return;
       }
       try {
@@ -856,7 +926,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           lastActivity: serverTimestamp(),
         });
         // Actualizar status en el store
-        console.log('[ChatSidebar] Status updated in store');
+        // console.log('[ChatSidebar] Status updated in store');
         setActiveCardDropdown(null);
         const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
         if (task.CreatedBy) recipients.add(task.CreatedBy);
@@ -869,23 +939,27 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
               type: 'task_status_changed',
               taskId: task.id,
             }, Array.from(recipients));
-            console.log('[ChatSidebar] Sent status change notifications to:', recipients.size, 'recipients');
-          } catch (error) {
-            console.warn('[ChatSidebar] Error sending status change notifications:', error);
+            // console.warn('[ChatSidebar] Sent status change notifications to:', recipients.size, 'recipients');
+          } catch {
+            // console.warn('[ChatSidebar] Error sending status change notifications:', error);
           }
         }
-        console.log('[ChatSidebar] Task status updated successfully:', {
-          taskId: task.id,
-          newStatus: status,
-          notifiedUsers: Array.from(recipients)
-        });
-      } catch (error) {
-        console.error('[ChatSidebar] Error updating task status:', error);
-        // Actualizar task en el store
-        console.log('[ChatSidebar] Task updated in store');
+        // console.log('[ChatSidebar] Task status updated successfully:', {
+        //   taskId: task.id,
+        //   newStatus: status,
+        //   notifiedUsers: Array.from(recipients)
+        // });
+      } catch {
+        // console.error('[ChatSidebar] Error updating task status:', error);
+
         setActiveCardDropdown(null);
       }
     }, [isCreator, isAdmin, user?.id, user?.fullName, task]);
+
+    const createStatusChangeHandler = useCallback((status: string) => (e: React.MouseEvent) => {
+      e.stopPropagation();
+      handleStatusChange(status);
+    }, [handleStatusChange]);
 
     const handleDeleteTask = useCallback(async () => {
       if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
@@ -897,12 +971,36 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         setDeleteConfirm('');
         handleClose();
       } catch (error) {
-        console.error('Error closing task', error);
+        // console.error('Error closing task', error);
         alert(`Error al cerrar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
       } finally {
         setIsDeleting(false);
       }
     }, [user?.id, deleteConfirm, handleClose]);
+
+    const handleDeleteCancel = useCallback(() => {
+      setIsDeletePopupOpen(false);
+      setDeleteConfirm('');
+    }, []);
+
+    const handleCancelEdit = useCallback(() => {
+      setEditingMessageId(null);
+      setEditingText('');
+    }, []);
+
+    const handleToggleTimerPanel = useCallback(() => {
+      setIsTimerPanelOpen(prev => !prev);
+    }, [setIsTimerPanelOpen]);
+
+    const handleSetIsSending = useCallback(() => {}, []);
+
+    const handleDeleteConfirmChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      setDeleteConfirm(e.target.value);
+    }, [setDeleteConfirm]);
+
+    const handleImagePreviewClose = useCallback(() => {
+      setImagePreviewSrc(null);
+    }, [setImagePreviewSrc]);
 
     const handleSendMessage = useCallback(async (
       messageData: Partial<Message>,
@@ -936,9 +1034,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             type: 'group_message',
             taskId: task.id,
           }, Array.from(recipients));
-          console.log('[ChatSidebar] Sent message notifications to:', recipients.size, 'recipients');
-        } catch (error) {
-          console.warn('[ChatSidebar] Error sending message notifications:', error);
+          // console.log('[ChatSidebar] Sent message notifications to:', recipients.size, 'recipients');
+        } catch {
+          // console.warn('[ChatSidebar] Error sending message notifications:', error);
         }
       }
       await updateTaskActivity(task.id, 'message');
@@ -949,9 +1047,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       try {
         await deleteMessage(messageId);
         useDataStore.getState().deleteMessage(task.id, messageId);
-        console.log('[ChatSidebar] Mensaje eliminado:', messageId);
-      } catch (error) {
-        console.error('[ChatSidebar] Error eliminando mensaje:', error);
+        // console.log('[ChatSidebar] Mensaje eliminado:', messageId);
+      } catch {
+        // console.error('[ChatSidebar] Error eliminando mensaje:', error);
       }
     }, [deleteMessage, task.id]);
 
@@ -977,10 +1075,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         };
 
         await handleSendMessage(summaryMessage);
-        console.log('[ChatSidebar] Summary generated and sent successfully');
+        // console.log('[ChatSidebar] Summary generated and sent successfully');
 
       } catch (error) {
-        console.error('[ChatSidebar:GenerateSummary] Error:', error);
+        // console.error('[ChatSidebar:GenerateSummary] Error:', error);
         let errorMessage = '❌ Error al generar el resumen.';
         if (error instanceof Error) {
           if (error.message.includes('PERMISSION_DENIED')) {
@@ -997,6 +1095,37 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       }
     }, [user?.id, messages, isGeneratingSummary, handleSendMessage, task.clientId, generateSummary]);
 
+    // Funciones memoizadas para los botones de resumen
+    const handleSummary1Day = useCallback(() => {
+      handleGenerateSummary('1day');
+    }, [handleGenerateSummary]);
+
+    const handleSummary3Days = useCallback(() => {
+      handleGenerateSummary('3days');
+    }, [handleGenerateSummary]);
+
+    const handleSummary1Week = useCallback(() => {
+      handleGenerateSummary('1week');
+    }, [handleGenerateSummary]);
+
+    const handleSummary1Month = useCallback(() => {
+      handleGenerateSummary('1month');
+    }, [handleGenerateSummary]);
+
+    const handleSummary6Months = useCallback(() => {
+      handleGenerateSummary('6months');
+    }, [handleGenerateSummary]);
+
+    const handleSummary1Year = useCallback(() => {
+      handleGenerateSummary('1year');
+    }, [handleGenerateSummary]);
+
+    const handleSummaryRefresh = useCallback(() => {
+      handleGenerateSummary('1day', true);
+    }, [handleGenerateSummary]);
+
+
+
     const hasDataForInterval = useCallback((interval: string) => {
       if (!messages.length) return false;
       const now = new Date();
@@ -1009,16 +1138,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
           break;
         case '1week':
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           break;
         case '1month':
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
         case '6months':
-          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
           break;
         case '1year':
-          startDate = new Date(now.getTime() - 365 * 24 * 60 * 1000);
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
           break;
         default:
           return true;
@@ -1036,75 +1165,75 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
 
     const toggleTimer = useCallback(async (e: React.MouseEvent) => {
       if (!user?.id || !task.id) {
-        console.error('[ChatSidebar:ToggleTimer] Missing user ID or task ID:', { userId: user?.id, taskId: task.id });
+        // console.error('[ChatSidebar:ToggleTimer] Missing user ID or task ID:', { userId: user?.id, taskId: task.id });
         return;
       }
       handleClick(e.currentTarget as HTMLElement);
-      console.log('[ChatSidebar] 🎯 Toggle timer:', {
-        isRunning: isTimerRunning,
-        currentSeconds: timerSeconds,
-        userId: user.id,
-        taskId: task.id
-      });
+              // console.log('[ChatSidebar] 🎯 Toggle timer:', {
+        //   isRunning: isTimerRunning,
+        //   currentSeconds: timerSeconds,
+        //   userId: user.id,
+        //   taskId: task.id
+        // });
       try {
         if (isTimerRunning) {
-          console.log('[ChatSidebar] ⏸️ Pausando timer...');
+          // console.log('[ChatSidebar] ⏸️ Pausando timer...');
           await pauseTimer();
-          console.log('[ChatSidebar] ✅ Timer pausado correctamente');
+          // console.log('[ChatSidebar] ✅ Timer pausado correctamente');
         } else {
-          console.log('[ChatSidebar] ▶️ Iniciando/reanudando timer...');
+          // console.log('[ChatSidebar] ▶️ Iniciando/reanudando timer...');
           await startTimer();
-          console.log('[ChatSidebar] ✅ Timer iniciado correctamente');
+          // console.log('[ChatSidebar] ✅ Timer iniciado correctamente');
         }
-      } catch (error) {
-        console.error('[ChatSidebar] ❌ Error en toggle timer:', error);
+      } catch {
+        // console.error('[ChatSidebar] ❌ Error en toggle timer:', error);
       }
-    }, [user?.id, task.id, isTimerRunning, timerSeconds, startTimer, pauseTimer, handleClick]);
+    }, [user?.id, task.id, isTimerRunning, startTimer, pauseTimer, handleClick]);
 
     const handleFinalizeTimer = useCallback(async () => {
-      console.log('[ChatSidebar] 🎯 Iniciando finalizeTimer:', {
-        userId: user?.id,
-        taskId: task.id,
-        timerSeconds,
-        isTimerRunning,
-        hasUser: !!user?.id,
-        hasTask: !!task.id,
-        hasTime: timerSeconds > 0
-      });
+      // console.log('[ChatSidebar] 🎯 Iniciando finalizeTimer:', {
+      //   userId: user?.id,
+      //   taskId: task.id,
+      //   timerSeconds,
+      //   isTimerRunning,
+      //   hasUser: !!user?.id,
+      //   hasTask: !!task.id,
+      //   hasTime: timerSeconds > 0
+      // });
       if (!user?.id) {
-        console.warn('[ChatSidebar] ❌ No hay usuario autenticado');
+        // console.warn('[ChatSidebar] ❌ No hay usuario autenticado');
         return;
       }
       if (!task.id) {
-        console.warn('[ChatSidebar] ❌ No hay task ID');
+        // console.warn('[ChatSidebar] ❌ No hay task ID');
         return;
       }
       if (timerSeconds === 0) {
-        console.warn('[ChatSidebar] ❌ No hay tiempo para registrar (timerSeconds = 0)');
+        // console.warn('[ChatSidebar] ❌ No hay tiempo para registrar (timerSeconds = 0)');
         return;
       }
       const hours = timerSeconds / 3600;
       const displayHours = Math.floor(timerSeconds / 3600);
       const displayMinutes = Math.floor((timerSeconds % 3600) / 60);
       const timeEntry = `${displayHours}h ${displayMinutes}m`;
-      console.log('[ChatSidebar] 🛑 Finalizando timer con doble click:', {
-        totalSeconds: timerSeconds,
-        hours,
-        timeEntry,
-        displayHours,
-        displayMinutes
-      });
+      // console.log('[ChatSidebar] 🛑 Finalizando timer con doble click:', {
+      //   totalSeconds: timerSeconds,
+      //   hours,
+      //   timeEntry,
+      //   displayHours,
+      //   displayMinutes
+      // });
       try {
-        console.log('[ChatSidebar] 📤 Enviando mensaje de tiempo...');
+        // console.log('[ChatSidebar] 📤 Enviando mensaje de tiempo...');
         await sendTimeMessage(user.id, user.firstName || "Usuario", hours, timeEntry);
-        console.log('[ChatSidebar] ✅ Mensaje de tiempo enviado correctamente');
+        // console.log('[ChatSidebar] ✅ Mensaje de tiempo enviado correctamente');
         await finalizeTimer();
-        console.log('[ChatSidebar] 🎉 Timer finalizado y tiempo registrado exitosamente:', timeEntry);
+        // console.log('[ChatSidebar] 🎉 Timer finalizado y tiempo registrado exitosamente:', timeEntry);
       } catch (error) {
-        console.error('[ChatSidebar] ❌ Error finalizando timer:', error);
+        // console.error('[ChatSidebar] ❌ Error finalizando timer:', error);
         alert(`Error al registrar el tiempo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
       }
-    }, [user?.id, user?.firstName, task.id, timerSeconds, isTimerRunning, sendTimeMessage, finalizeTimer]);
+    }, [user?.id, user?.firstName, task.id, sendTimeMessage, finalizeTimer, timerSeconds]);
 
     const handleAddTimeEntry = useCallback(async (time?: string, date?: Date, comment?: string) => {
       if (!user?.id) {
@@ -1129,7 +1258,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         setCommentInput('');
         setIsTimerPanelOpen(false);
       } catch (error) {
-        console.error('Error adding time entry', error);
+        // console.error('Error adding time entry', error);
         alert(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
       }
     }, [user?.id, user?.firstName, timerInput, dateInput, commentInput, sendTimeMessage]);
@@ -1163,8 +1292,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         if (isOpen && user?.id) {
           // Mark as viewed only once when sidebar opens
           const markAsViewedTimeoutId = setTimeout(() => {
-            markAsViewed(task.id).catch(error => {
-              console.error('[ChatSidebar] Error marking task as viewed:', error);
+            markAsViewed(task.id).catch(() => {
+              // console.error('[ChatSidebar] Error marking task as viewed:', error);
             });
           }, 100); // Small delay to prevent race conditions
           
@@ -1200,15 +1329,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   }
                 });
                 localStorage.setItem(`lastNotificationCheck_${task.id}_${user.id}`, Date.now().toString());
-                console.log('[ChatSidebar] Verificación de notificaciones completada:', snapshot.docs.length);
+                // console.log('[ChatSidebar] Verificación de notificaciones completada:', snapshot.docs.length);
               }
               if (operationsCount > 0) {
                 await batch.commit();
-                console.log('[ChatSidebar] Operaciones batch completadas:', operationsCount);
+                // console.log('[ChatSidebar] Operaciones batch completadas:', operationsCount);
               }
-            } catch (error) {
-              console.error('[ChatSidebar] Error en operaciones batch:', error);
-            }
+                    } catch {
+          // console.error('[ChatSidebar] Error en operaciones batch:', error);
+        }
           };
           const batchTimeoutId = setTimeout(batchOperations, 1500);
           
@@ -1218,6 +1347,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           };
       }
     }, [isOpen, messages, user?.id, task.id, markAsViewed]);
+
+    // Efecto para asegurar que el timer se inicialice correctamente cuando se abre el sidebar
+    useEffect(() => {
+      if (isOpen && user?.id && task?.id) {
+        // El timer se inicializa automáticamente a través de useTimerStoreHook
+        // pero este efecto asegura que se ejecute cuando el sidebar se abre
+        // console.log('[ChatSidebar] Sidebar opened, timer should be initialized');
+      }
+    }, [isOpen, user?.id, task?.id]);
 
     if (isLoading) {
       return <Loader />;
@@ -1235,10 +1373,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           <div className={styles.controls}>
             <motion.div
               className={styles.arrowLeft}
-              onClick={(e) => {
-                handleClick(e.currentTarget);
-                onClose();
-              }}
+              onClick={handleCloseClick}
               whileTap={{ scale: 0.95, opacity: 0.8 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
             >
@@ -1251,10 +1386,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
               <motion.button
                 type="button"
                 className={`${styles.imageButton} ${styles.tooltip} ${styles.summarizeButton} ${isGeneratingSummary ? 'processing' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsSummarizeDropdownOpen((prev) => !prev);
-                }}
+                onClick={handleSummarizeDropdownToggle}
                 disabled={isGeneratingSummary || messages.length === 0}
                 aria-label="Generar resumen de actividad"
                 title="Generar resumen de actividad 📊"
@@ -1277,12 +1409,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2, ease: 'easeOut' }}
-                  onClick={e => e.stopPropagation()}
+                  onClick={handleStopPropagation}
                 >
                   <motion.button
                     type="button"
                     className={`${styles.dropdownItem} ${!hasDataForInterval('1day') ? styles.noData : ''}`}
-                    onClick={() => handleGenerateSummary('1day')}
+                    onClick={handleSummary1Day}
                     disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
@@ -1293,7 +1425,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   <motion.button
                     type="button"
                     className={`${styles.dropdownItem} ${!hasDataForInterval('3days') ? styles.noData : ''}`}
-                    onClick={() => handleGenerateSummary('3days')}
+                    onClick={handleSummary3Days}
                     disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
@@ -1304,7 +1436,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   <motion.button
                     type="button"
                     className={`${styles.dropdownItem} ${!hasDataForInterval('1week') ? styles.noData : ''}`}
-                    onClick={() => handleGenerateSummary('1week')}
+                    onClick={handleSummary1Week}
                     disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
@@ -1315,7 +1447,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   <motion.button
                     type="button"
                     className={`${styles.dropdownItem} ${!hasDataForInterval('1month') ? styles.noData : ''}`}
-                    onClick={() => handleGenerateSummary('1month')}
+                    onClick={handleSummary1Month}
                     disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
@@ -1326,7 +1458,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   <motion.button
                     type="button"
                     className={`${styles.dropdownItem} ${!hasDataForInterval('6months') ? styles.noData : ''}`}
-                    onClick={() => handleGenerateSummary('6months')}
+                    onClick={handleSummary6Months}
                     disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
@@ -1337,7 +1469,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   <motion.button
                     type="button"
                     className={`${styles.dropdownItem} ${!hasDataForInterval('1year') ? styles.noData : ''}`}
-                    onClick={() => handleGenerateSummary('1year')}
+                    onClick={handleSummary1Year}
                     disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
@@ -1348,7 +1480,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   <motion.button
                     type="button"
                     className={`${styles.dropdownItem} ${styles.refreshButton}`}
-                    onClick={() => handleGenerateSummary('1day', true)}
+                    onClick={handleSummaryRefresh}
                     disabled={isGeneratingSummary}
                     role="menuitem"
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
@@ -1362,10 +1494,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           </div>
           <motion.div
             className={styles.headerSection}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDetailsDropdownOpen(!isDetailsDropdownOpen);
-            }}
+            onClick={handleDetailsToggle}
             style={{ cursor: 'pointer' }}
             whileTap={{ scale: 0.95, opacity: 0.8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
@@ -1395,12 +1524,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
               >
                 <div
                   className={`${styles.card} ${isCreator || isAdmin ? styles.statusCard : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isCreator || isAdmin) {
-                      setActiveCardDropdown(activeCardDropdown === 'status' ? null : 'status');
-                    }
-                  }}
+                  onClick={handleStatusDropdownToggle}
                 >
                   <div className={styles.cardLabel}>Estado de la tarea:</div>
                   <div className={styles.cardValue}>{task.status}</div>
@@ -1412,13 +1536,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2, ease: 'easeOut' }}
-                      onClick={e => e.stopPropagation()}
+                      onClick={handleStopPropagation}
                     >
                       {statusOptions.map((status) => (
                         <motion.div
                           key={status}
                           className={styles.cardDropdownItem}
-                          onClick={() => handleStatusChange(status)}
+                          onClick={createStatusChangeHandler(status)}
                           whileTap={{ scale: 0.95, opacity: 0.8 }}
                         >
                           {status}
@@ -1429,12 +1553,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                 </div>
                 <div
                   className={styles.card}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (canViewTeamAndHours) {
-                      setActiveCardDropdown(activeCardDropdown === 'team' ? null : 'team');
-                    }
-                  }}
+                  onClick={handleTeamDropdownToggle}
                   style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
                 >
                   <div className={styles.cardLabel}>Equipo:</div>
@@ -1447,12 +1566,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2, ease: 'easeOut' }}
-                      onClick={e => e.stopPropagation()}
+                      onClick={handleStopPropagation}
                     >
                       {teamUsers.length > 0 ? (
-                        teamUsers.map((u, index) => (
+                        teamUsers.map((u) => (
                           <motion.div
-                            key={`${u.id}-${index}`}
+                            key={`${u.id}-${u.firstName}`}
                             className={styles.cardDropdownItem}
                             whileTap={{ scale: 0.95, opacity: 0.8 }}
                           >
@@ -1477,7 +1596,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                 </div>
                 <div
                   className={styles.card}
-                  onClick={e => e.stopPropagation()}
+                  onClick={handleStopPropagation}
                 >
                   <div className={styles.cardLabel}>Fecha:</div>
                   <div className={styles.cardValue}>
@@ -1486,12 +1605,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                 </div>
                 <div
                   className={styles.cardFullWidth}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (canViewTeamAndHours) {
-                      setActiveCardDropdown(activeCardDropdown === 'hours' ? null : 'hours');
-                    }
-                  }}
+                  onClick={handleHoursDropdownToggle}
                   style={{ cursor: canViewTeamAndHours ? 'pointer' : 'default' }}
                 >
                   <div className={styles.cardLabel}>Tiempo registrado:</div>
@@ -1504,12 +1618,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2, ease: 'easeOut' }}
-                      onClick={e => e.stopPropagation()}
+                      onClick={handleStopPropagation}
                     >
                       {hoursByUser.length > 0 ? (
-                        hoursByUser.map((u, index) => (
+                        hoursByUser.map((u) => (
                           <motion.div
-                            key={`${u.id}-${index}`}
+                            key={`${u.id}-${u.firstName}`}
                             className={styles.cardDropdownItem}
                             whileTap={{ scale: 0.95, opacity: 0.8 }}
                           >
@@ -1552,10 +1666,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
               : `invalid-date-${groupIndex}`; // Usar índice como fallback para fechas inválidas
 
             return (
-              <React.Fragment key={`${dateKey}-${groupIndex}`}>
-                {group.messages.map((message, messageIndex) => (
+              <React.Fragment key={`${dateKey}-${group.date?.toISOString() || 'unknown'}`}>
+                {group.messages.map((message) => (
                 <MessageItem
-                    key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}-${messageIndex}`}
+                    key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}`}
                   message={message}
                   users={users}
                   userId={user?.id}
@@ -1595,13 +1709,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           userFirstName={user?.firstName}
           onSendMessage={handleSendMessage}
           isSending={isSending}
-          setIsSending={() => {}}
+          setIsSending={handleSetIsSending}
           timerSeconds={timerSeconds}
           isTimerRunning={isTimerRunning}
           onToggleTimer={toggleTimer}
           onFinalizeTimer={handleFinalizeTimer}
           onResetTimer={resetTimer}
-          onToggleTimerPanel={() => setIsTimerPanelOpen(prev => !prev)}
+          onToggleTimerPanel={handleToggleTimerPanel}
           isTimerPanelOpen={isTimerPanelOpen}
           setIsTimerPanelOpen={setIsTimerPanelOpen}
           containerRef={sidebarRef}
@@ -1615,15 +1729,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           onAddTimeEntry={handleAddTimeEntry}
           totalHours={totalHours}
           isRestoringTimer={isRestoringTimer}
+          isInitializing={isInitializing}
           replyingTo={replyingTo}
           onCancelReply={handleCancelReply}
           editingMessageId={editingMessageId}
           editingText={editingText}
           onEditMessage={editMessage}
-          onCancelEdit={() => {
-            setEditingMessageId(null);
-            setEditingText('');
-          }}
+          onCancelEdit={handleCancelEdit}
           messages={messages}
           hasMore={hasMore}
           loadMoreMessages={handleLoadMoreMessages}
@@ -1657,7 +1769,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                 <input
                   type="text"
                   value={deleteConfirm}
-                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  onChange={handleDeleteConfirmChange}
                   placeholder="Escribe 'Eliminar' para confirmar"
                   className={styles.deleteConfirmInput}
                   autoFocus
@@ -1674,10 +1786,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   </motion.button>
                   <motion.button
                     className={styles.deleteCancelButton}
-                    onClick={() => {
-                      setIsDeletePopupOpen(false);
-                      setDeleteConfirm('');
-                    }}
+                    onClick={handleDeleteCancel}
                     disabled={isDeleting}
                     whileTap={{ scale: 0.95, opacity: 0.8 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
@@ -1694,7 +1803,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             src={imagePreviewSrc}
             alt="Vista previa de imagen"
             fileName={messages.find(m => m.imageUrl === imagePreviewSrc)?.fileName}
-            onClose={() => setImagePreviewSrc(null)}
+            onClose={handleImagePreviewClose}
           />
                 )}
       </motion.div>

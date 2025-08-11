@@ -15,6 +15,7 @@ interface TimerDisplayProps {
   onFinalizeTimer: () => Promise<void>;
   onTogglePanel: (e: React.MouseEvent) => void;
   isRestoringTimer: boolean;
+  isInitializing?: boolean;
   isMenuOpen: boolean;
   setIsMenuOpen: (open: boolean) => void;
 }
@@ -26,6 +27,7 @@ const TimerDisplay = memo(({
   onFinalizeTimer,
   onTogglePanel,
   isRestoringTimer,
+  isInitializing,
   isMenuOpen,
   setIsMenuOpen
 }: TimerDisplayProps) => {
@@ -41,6 +43,15 @@ const TimerDisplay = memo(({
 
   // Determinar el estado del timer y el tooltip correspondiente
   const timerState = useMemo(() => {
+    if (isInitializing) {
+      return {
+        icon: '/Play.svg',
+        alt: 'Inicializando...',
+        tooltip: 'Inicializando timer...',
+        isDisabled: true
+      };
+    }
+    
     if (isRestoringTimer) {
       return {
         icon: '/Play.svg',
@@ -71,18 +82,18 @@ const TimerDisplay = memo(({
     // Timer pausado con tiempo acumulado
     return {
       icon: '/Play.svg',
-      alt: 'Reanudar',
-      tooltip: 'Reanudar timer',
-      isDisabled: false
+        alt: 'Reanudar',
+        tooltip: 'Reanudar timer',
+        isDisabled: false
     };
-  }, [timerSeconds, isTimerRunning, isRestoringTimer]);
+  }, [timerSeconds, isTimerRunning, isRestoringTimer, isInitializing]);
 
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (isRestoringTimer) {
-      return; // No hacer nada si está restaurando
+    if (isInitializing || isRestoringTimer) {
+      return; // No hacer nada si está inicializando o restaurando
     }
     
     await onToggleTimer(e);
@@ -92,8 +103,8 @@ const TimerDisplay = memo(({
     e.preventDefault();
     e.stopPropagation();
     
-    if (isRestoringTimer || timerSeconds === 0) {
-      return; // No hacer nada si está restaurando o no hay tiempo
+    if (isInitializing || isRestoringTimer || timerSeconds === 0) {
+      return; // No hacer nada si está inicializando, restaurando o no hay tiempo
     }
     
     await onFinalizeTimer();
@@ -150,25 +161,32 @@ const TimerDisplay = memo(({
         style={{ cursor: 'default', border: 'none', background: 'transparent' }}
         title="Contador de tiempo"
       >
-        <NumberFlowGroup>
+        {isInitializing ? (
           <div className={styles.timerNumbers}>
-            <NumberFlow 
-              value={timerValues.hours} 
-              format={{ minimumIntegerDigits: 2 }} 
-            />
-            <NumberFlow 
-              prefix=":" 
-              value={timerValues.minutes} 
-              format={{ minimumIntegerDigits: 2 }} 
-            />
-            <NumberFlow 
-              prefix=":" 
-              value={timerValues.seconds} 
-              format={{ minimumIntegerDigits: 2 }} 
-            />
+            <span className={styles.loadingIndicator}>...</span>
           </div>
-        </NumberFlowGroup>
+        ) : (
+          <NumberFlowGroup>
+            <div className={styles.timerNumbers}>
+              <NumberFlow 
+                value={timerValues.hours} 
+                format={{ minimumIntegerDigits: 2 }} 
+              />
+              <NumberFlow 
+                prefix=":" 
+                value={timerValues.minutes} 
+                format={{ minimumIntegerDigits: 2 }} 
+              />
+              <NumberFlow 
+                prefix=":" 
+                value={timerValues.seconds} 
+                format={{ minimumIntegerDigits: 2 }} 
+              />
+            </div>
+          </NumberFlowGroup>
+        )}
         {isRestoringTimer && <div className={styles.restoreIndicator}>↻</div>}
+        {isInitializing && <div className={styles.restoreIndicator}>⏳</div>}
       </div>
     </div>
   );

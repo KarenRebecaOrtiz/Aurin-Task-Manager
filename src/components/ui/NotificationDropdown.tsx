@@ -337,7 +337,7 @@ export default React.memo(function NotificationDropdown({
     if (filteredNotifications.length === 0) {
       return (
         <div className={styles.emptyState}>
-          <Image src="/EmptyNotification.svg" alt="Sin notificaciones" width={64} height={64} />
+          <Image src="/bubbles.svg" alt="Sin notificaciones" width={64} height={64} />
           <p>No hay notificaciones</p>
         </div>
       );
@@ -453,7 +453,7 @@ export default React.memo(function NotificationDropdown({
                 transition={{ delay: 0.1, duration: 0.3 }}
               >
                 <div className={styles.title}>
-                  <Image src="/EmptyNotification.svg" alt="Notificaciones" width={20} height={20} className={styles.titleIcon} />
+                  <Image src="/bubbles.svg" alt="Notificaciones" width={20} height={20} className={styles.titleIcon} />
                   Notificaciones
                 </div>
                 <div className={styles.dragBar} />
@@ -534,7 +534,7 @@ export default React.memo(function NotificationDropdown({
             transition={{ delay: 0.05, duration: 0.2 }}
           >
             <div className={styles.title}>
-              <Image src="/EmptyNotification.svg" alt="Notificaciones" width={20} height={20} className={styles.titleIcon} />
+              <Image src="/bubbles.svg" alt="Notificaciones" width={20} height={20} className={styles.titleIcon} />
               Notificaciones
             </div>
             <motion.button 

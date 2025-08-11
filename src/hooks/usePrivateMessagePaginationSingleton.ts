@@ -25,7 +25,7 @@ interface UsePrivateMessagePaginationSingletonProps {
 }
 
 const DEFAULT_PAGE_SIZE = 20;
-// const DEFAULT_CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutos - unused
+const DEFAULT_CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutos
 
 // Singleton para manejar listeners globalmente
 export class PrivateMessagePaginationManager {
@@ -35,6 +35,7 @@ export class PrivateMessagePaginationManager {
   private currentMessages: Map<string, Message[]> = new Map();
   private cache: MessageCache = {};
   private debounceTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private initialLoadPromises: Map<string, Promise<void>> = new Map();
 
   static getInstance(): PrivateMessagePaginationManager {
     if (!PrivateMessagePaginationManager.instance) {
@@ -88,6 +89,112 @@ export class PrivateMessagePaginationManager {
     }
   }
 
+  // NUEVO: Cargar mensajes iniciales si no existen
+  private async loadInitialMessages(conversationId: string, decryptMessage: (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string } | string) => Promise<string>): Promise<void> {
+    // Verificar si ya hay mensajes en cache
+    const currentMessages = this.currentMessages.get(conversationId);
+    if (currentMessages && currentMessages.length > 0) {
+      if (DEBUG) console.log('[PrivateMessagePaginationManager] Using existing cached messages for conversation:', conversationId, 'count:', currentMessages.length);
+      return;
+    }
+
+    // Verificar si ya hay una carga en progreso
+    if (this.initialLoadPromises.has(conversationId)) {
+      if (DEBUG) console.log('[PrivateMessagePaginationManager] Initial load already in progress for conversation:', conversationId);
+      return this.initialLoadPromises.get(conversationId);
+    }
+
+    if (DEBUG) console.log('[PrivateMessagePaginationManager] Loading initial messages for conversation:', conversationId);
+
+    const loadPromise = this.performInitialLoad(conversationId, decryptMessage);
+    this.initialLoadPromises.set(conversationId, loadPromise);
+
+    try {
+      await loadPromise;
+    } finally {
+      this.initialLoadPromises.delete(conversationId);
+    }
+  }
+
+  private async performInitialLoad(conversationId: string, decryptMessage: (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string } | string) => Promise<string>): Promise<void> {
+    try {
+      const q = query(
+        collection(db, `conversations/${conversationId}/messages`),
+        orderBy('timestamp', 'desc'),
+        limit(DEFAULT_PAGE_SIZE)
+      );
+
+      const snapshot = await getDocs(q);
+      const messages: Message[] = [];
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        if (!data.timestamp) continue;
+
+        let decryptedText = '';
+        if (data.encrypted) {
+          decryptedText = await this.decryptMessageSafely(data.encrypted, decryptMessage);
+        } else if (data.text) {
+          decryptedText = await this.decryptMessageSafely(data.text, decryptMessage);
+        }
+
+        const message: Message = {
+          id: doc.id,
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          senderName: data.senderName,
+          text: decryptedText,
+          timestamp: data.timestamp,
+          read: data.read || false,
+          imageUrl: data.imageUrl || null,
+          fileUrl: data.fileUrl || null,
+          fileName: data.fileName || null,
+          fileType: data.fileType || null,
+          filePath: data.filePath || null,
+          isPending: false,
+          hasError: false,
+          clientId: doc.id,
+          replyTo: data.replyTo || null,
+        };
+
+        messages.push(message);
+      }
+
+      if (DEBUG) console.log('[PrivateMessagePaginationManager] Loaded initial messages:', conversationId, 'count:', messages.length);
+      
+      this.currentMessages.set(conversationId, messages);
+      this.notifySubscribers(conversationId, messages);
+
+      // Actualizar cache
+      this.cache[conversationId] = {
+        messages,
+        lastDoc: snapshot.docs[snapshot.docs.length - 1] || null,
+        hasMore: snapshot.docs.length === DEFAULT_PAGE_SIZE,
+        isLoading: false,
+        lastFetch: Date.now(),
+      };
+    } catch (error) {
+      console.error('[PrivateMessagePaginationManager] Error loading initial messages:', error);
+      this.currentMessages.set(conversationId, []);
+      this.notifySubscribers(conversationId, []);
+    }
+  }
+
+  // NUEVO: Función helper para decrypt seguro
+  private async decryptMessageSafely(encrypted: { encryptedData: string; nonce: string; tag: string; salt: string } | string | null, decryptMessage: (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string } | string) => Promise<string>): Promise<string> {
+    try {
+      if (!encrypted) return '';
+      if (typeof encrypted === 'string') return encrypted;
+      if (encrypted && typeof encrypted === 'object' && 'encryptedData' in encrypted) {
+        return await decryptMessage(encrypted as { encryptedData: string; nonce: string; tag: string; salt: string });
+      }
+      return '';
+    } catch (error) {
+      console.error('[PrivateMessagePaginationManager] Error decrypting message:', error);
+      return '';
+    }
+  }
+
   setupListener(conversationId: string, decryptMessage: (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string } | string) => Promise<string>) {
     if (this.listeners.has(conversationId)) {
       if (DEBUG) console.log('[PrivateMessagePaginationManager] Listener already exists for conversation:', conversationId);
@@ -95,6 +202,9 @@ export class PrivateMessagePaginationManager {
     }
 
     if (DEBUG) console.log('[PrivateMessagePaginationManager] Setting up listener for conversation:', conversationId);
+
+    // NUEVO: Cargar mensajes iniciales antes de configurar el listener
+    this.loadInitialMessages(conversationId, decryptMessage);
 
     const q = query(
       collection(db, `conversations/${conversationId}/messages`),
@@ -105,19 +215,6 @@ export class PrivateMessagePaginationManager {
     let pendingChanges: Array<{ type: 'added' | 'modified' | 'removed'; doc: DocumentSnapshot }> = [];
     let isProcessing = false;
     const processedIds = new Set<string>();
-
-    const decryptMessageSafely = async (encrypted: { encryptedData: string; nonce: string; tag: string; salt: string } | string): Promise<string> => {
-      try {
-        if (typeof encrypted === 'string') return encrypted;
-        if (encrypted && typeof encrypted === 'object') {
-          return await decryptMessage(encrypted);
-        }
-        return '';
-      } catch (error) {
-        console.error('[PrivateMessagePaginationManager] Error decrypting message:', error);
-        return '';
-      }
-    };
 
     const processBatchChanges = async () => {
       if (isProcessing || pendingChanges.length === 0) return;
@@ -135,9 +232,9 @@ export class PrivateMessagePaginationManager {
 
             let decryptedText = '';
             if (data.encrypted) {
-              decryptedText = await decryptMessageSafely(data.encrypted);
+              decryptedText = await this.decryptMessageSafely(data.encrypted, decryptMessage);
             } else if (data.text) {
-              decryptedText = await decryptMessageSafely(data.text);
+              decryptedText = await this.decryptMessageSafely(data.text, decryptMessage);
             }
 
             const newMessage: Message = {
@@ -203,31 +300,27 @@ export class PrivateMessagePaginationManager {
     };
 
     const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot: QuerySnapshot) => {
-      // IGNORAR CACHE SNAPSHOTS - solo procesar cambios reales
-      if (snapshot.metadata.fromCache) {
-        if (DEBUG) console.log('[PrivateMessagePaginationManager] Ignoring cache snapshot for conversation:', conversationId);
-        return;
-      }
+      // NUEVO: Procesar cambios del cache también, pero con prioridad más baja
+      const changes = snapshot.docChanges();
+      
+      if (DEBUG) console.log('[PrivateMessagePaginationManager] Received snapshot changes:', conversationId, 'count:', changes.length, 'fromCache:', snapshot.metadata.fromCache);
 
+      changes.forEach((change) => {
+        // NUEVO: Solo ignorar cambios duplicados, no todo el cache
+        const isDuplicate = pendingChanges.some(pending => pending.doc.id === change.doc.id && pending.type === change.type);
+        if (!isDuplicate) {
+          pendingChanges.push({ type: change.type, doc: change.doc });
+        }
+      });
+      
       // Limpiar timeout anterior
       const existingTimeout = this.debounceTimeouts.get(conversationId);
       if (existingTimeout) {
         clearTimeout(existingTimeout);
       }
 
-      // Solo procesar cambios reales, no cache
-      const changes = snapshot.docChanges();
-      changes.forEach((change) => {
-        // Ignorar 'added' si viene de cache o pending writes
-        if (change.type === 'added' && (snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache)) {
-          console.log('[PrivateMessagePaginationManager] Ignoring cached/pending add for:', change.doc.id);
-          return;
-        }
-        pendingChanges.push({ type: change.type, doc: change.doc });
-      });
-      
       // Debounce el procesamiento
-      const timeoutId = setTimeout(processBatchChanges, 500); // 500ms debounce
+      const timeoutId = setTimeout(processBatchChanges, 100); // Reducido de 500ms a 100ms
       this.debounceTimeouts.set(conversationId, timeoutId);
     }, (error) => {
       console.error('[PrivateMessagePaginationManager] Error fetching messages:', error);
@@ -273,9 +366,9 @@ export class PrivateMessagePaginationManager {
 
         let decryptedText = '';
         if (data.encrypted) {
-          decryptedText = await decryptMessage(data.encrypted);
+          decryptedText = await this.decryptMessageSafely(data.encrypted, decryptMessage);
         } else if (data.text) {
-          decryptedText = await decryptMessage(data.text);
+          decryptedText = await this.decryptMessageSafely(data.text, decryptMessage);
         }
 
         newMessages.push({
@@ -333,6 +426,7 @@ export class PrivateMessagePaginationManager {
     this.currentMessages.clear();
     this.debounceTimeouts.forEach(timeout => clearTimeout(timeout));
     this.debounceTimeouts.clear();
+    this.initialLoadPromises.clear();
   }
 }
 
@@ -344,7 +438,7 @@ export const usePrivateMessagePaginationSingleton = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
   const [error] = useState<string | null>(null);
   const managerRef = useRef<PrivateMessagePaginationManager | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -371,6 +465,12 @@ export const usePrivateMessagePaginationSingleton = ({
       setMessages(newMessages);
       setIsLoading(false);
       isInitializedRef.current = true;
+      
+      // NUEVO: Actualizar hasMore basado en el cache
+      const cache = managerRef.current?.cache[conversationId];
+      if (cache) {
+        setHasMore(cache.hasMore);
+      }
     });
 
     // Si ya hay mensajes en el singleton y no hemos inicializado, usarlos inmediatamente
@@ -381,6 +481,12 @@ export const usePrivateMessagePaginationSingleton = ({
         setMessages(currentMessages);
         setIsLoading(false);
         isInitializedRef.current = true;
+        
+        // NUEVO: Actualizar hasMore
+        const cache = managerRef.current.cache[conversationId];
+        if (cache) {
+          setHasMore(cache.hasMore);
+        }
       }
     }
 

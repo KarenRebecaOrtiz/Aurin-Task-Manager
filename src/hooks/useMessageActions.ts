@@ -115,8 +115,8 @@ export const useMessageActions = ({
       });
 
       await updateTaskActivity(task.id, 'message');
-    } catch (error) {
-      console.error('Send message error:', error);
+    } catch {
+      // Error logging removed for production
       updateOptimisticMessage(clientId, {
         isPending: false,
         hasError: true,
@@ -148,15 +148,15 @@ export const useMessageActions = ({
       });
 
       await updateTaskActivity(task.id, 'message');
-    } catch (error) {
-      console.error('Error editing message:', error);
+    } catch {
+      // Error logging removed for production
       throw new Error('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
     }
   }, [task.id, encryptMessage]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
     try {
-      console.log('[MessageActions] Deleting message', messageId);
+      // Debug logging removed for production
       const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
       const messageDoc = await getDoc(messageRef);
       
@@ -164,14 +164,14 @@ export const useMessageActions = ({
         const messageData = messageDoc.data();
         
         if (messageData.hours && typeof messageData.hours === 'number' && messageData.hours > 0) {
-          console.log('[MessageActions] Mensaje con tiempo detectado:', { hours: messageData.hours });
+          // Debug logging removed for production
           const timerRef = doc(db, `tasks/${task.id}/timers/global`);
           const timerDoc = await getDoc(timerRef);
           
           if (timerDoc.exists()) {
             const currentTotal = timerDoc.data().totalHours || 0;
             const newTotal = Math.max(0, currentTotal - messageData.hours);
-            console.log('[MessageActions] Actualizando timer global:', { currentTotal, newTotal });
+            // Debug logging removed for production
             await updateDoc(timerRef, { totalHours: newTotal });
           }
         }
@@ -184,21 +184,21 @@ export const useMessageActions = ({
               body: JSON.stringify({ filePath: messageData.filePath }),
             });
             if (!response.ok) {
-              console.error('[MessageActions] Failed to delete GCS file', await response.json());
+              // Error logging removed for production
             } else {
-              console.log('[MessageActions] GCS file deleted successfully');
+              // Debug logging removed for production
             }
-          } catch (error) {
-            console.error('[MessageActions] Error deleting GCS file', error);
-          }
+                } catch {
+        // Error logging removed for production
+      }
         }
       }
       
       await deleteDoc(messageRef);
-      console.log('[MessageActions] Message deleted successfully');
-    } catch (error) {
-      console.error('[MessageActions] Error deleting message', error);
-      throw error;
+      // Debug logging removed for production
+    } catch {
+      // Error logging removed for production
+      throw new Error('Error al eliminar el mensaje');
     }
   }, [task.id]);
 
@@ -245,12 +245,12 @@ export const useMessageActions = ({
         isPending: false,
         timestamp: Timestamp.now(),
       });
-    } catch (error) {
-      console.error('Resend message error', error);
-      updateOptimisticMessage(newClientId, {
-        isPending: false,
-        hasError: true,
-      });
+          } catch {
+        // Error logging removed for production
+        updateOptimisticMessage(newClientId, {
+          isPending: false,
+          hasError: true,
+        });
       throw new Error('Error al reenviar el mensaje');
     } finally {
       setIsSending(false);
@@ -268,8 +268,8 @@ export const useMessageActions = ({
       );
 
       await Promise.all(updatePromises);
-    } catch (error) {
-      console.error('Error marking messages as read', error);
+    } catch {
+      // Error logging removed for production
     }
   }, [task.id]);
 
@@ -304,13 +304,7 @@ export const useMessageActions = ({
         : `Añadió una entrada de tiempo de ${timeEntry}`;
       const encryptedTime = await encryptMessage(timeMessage);
       
-      console.log('[useMessageActions] 📝 Creando documento de tiempo:', {
-        originalMessage: timeMessage,
-        hours,
-        timestamp: timestamp.toDate(),
-        senderId,
-        senderName
-      });
+      // Debug logging removed for production
 
       const optimisticTimeMessage = {
         id: timeMessageTempId,
@@ -331,7 +325,7 @@ export const useMessageActions = ({
         replyTo: null,
       };
       
-      console.log('[useMessageActions] 🚀 Añadiendo mensaje optimista de tiempo:', optimisticTimeMessage);
+      // Debug logging removed for production
       addOptimisticMessage(optimisticTimeMessage);
 
       const timeDocRef = await addDoc(collection(db, `tasks/${task.id}/messages`), {
@@ -344,7 +338,7 @@ export const useMessageActions = ({
         hours,
       });
       
-      console.log('[useMessageActions] ✅ Documento de tiempo creado con ID:', timeDocRef.id);
+      // Debug logging removed for production
       
       updateOptimisticMessage(timeMessageClientId, {
         id: timeDocRef.id,
@@ -353,7 +347,7 @@ export const useMessageActions = ({
       });
       
       if (comment && comment.trim()) {
-        console.log('[useMessageActions] 💬 Añadiendo comentario:', comment);
+        // Debug logging removed for production
         
         const optimisticCommentMessage = {
           id: commentTempId,
@@ -392,15 +386,15 @@ export const useMessageActions = ({
           isPending: false,
         });
         
-        console.log('[useMessageActions] ✅ Comentario creado con ID:', commentDocRef.id);
+        // Debug logging removed for production
       }
       
       await updateTaskActivity(task.id, 'time_entry');
       
-      console.log('[useMessageActions] 🎉 sendTimeMessage completado exitosamente');
+      // Debug logging removed for production
       
     } catch (error) {
-      console.error('[useMessageActions] ❌ Error en sendTimeMessage:', error);
+      // Error logging removed for production
       
       updateOptimisticMessage(timeMessageClientId, {
         hasError: true,

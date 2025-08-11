@@ -3012,6 +3012,18 @@
   animation: pulse 1s infinite;
 }
 
+.loadingIndicator {
+  color: #6b7280;
+  font-size: 18px;
+  font-weight: 600;
+  animation: pulse 1.5s infinite;
+  opacity: 0.7;
+}
+
+:global(body.dark) .loadingIndicator {
+  color: #9ca3af;
+}
+
 .timerCommentInput {
   width: 100%;
   padding: 8px 12px;

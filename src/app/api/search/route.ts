@@ -1,5 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Helper function for conditional logging (only in development)
+const debugLog = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+// Helper function for conditional error logging (only in development)
+const debugError = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  }
+};
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('query');
@@ -33,11 +49,11 @@ export async function GET(request: NextRequest) {
       link: result.link,
     })) || [];
     
-    console.log('[Search API] Results for:', query, snippets.length);
+    debugLog('[Search API] Results for:', query, snippets.length);
     
     return NextResponse.json({ snippets });
   } catch (error) {
-    console.error('[Search API] Error:', error);
+    debugError('[Search API] Error:', error);
     
     // Fallback a resultados simulados si la API falla
     const fallbackSnippets = [

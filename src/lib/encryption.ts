@@ -1,5 +1,29 @@
 import { Message } from '@/types';
 
+// Helper function for conditional logging (only in development)
+const debugLog = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+// Helper function for conditional warning logging (only in development)
+const debugWarn = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.warn(message, ...args);
+  }
+};
+
+// Helper function for conditional error logging (only in development)
+const debugError = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  }
+};
+
 // Función para decrypt un mensaje individual usando Web Crypto API
 export const decryptMessage = async (encryptedText: string, key: string): Promise<string> => {
   try {
@@ -10,7 +34,7 @@ export const decryptMessage = async (encryptedText: string, key: string): Promis
     // Check if base64 valid before atob
     const isBase64 = /^[A-Za-z0-9+/=]+$/.test(encryptedText) && encryptedText.length % 4 === 0;
     if (!isBase64) {
-      console.warn('[Encryption] Invalid base64, fallback to plain text');
+      debugWarn('[Encryption] Invalid base64, fallback to plain text');
       return encryptedText;
     }
 
@@ -51,7 +75,7 @@ export const decryptMessage = async (encryptedText: string, key: string): Promis
 
     return new TextDecoder().decode(decrypted);
   } catch (error) {
-    console.error('[Encryption] Error decrypting message:', error);
+    debugError('[Encryption] Error decrypting message:', error);
     return encryptedText; // Fallback al texto original
   }
 };
@@ -86,10 +110,10 @@ export const decryptBatch = async (
       decryptedMessages.push(...batchResults);
     }
     
-    console.log(`[Encryption] Decrypted ${decryptedMessages.length} messages for task ${taskId} in parallel batches`);
+    debugLog(`[Encryption] Decrypted ${decryptedMessages.length} messages for task ${taskId} in parallel batches`);
     return decryptedMessages;
   } catch (error) {
-    console.error('[Encryption] Error in decryptBatch:', error);
+    debugError('[Encryption] Error in decryptBatch:', error);
     // Fallback: retornar mensajes originales
     return messages.slice(0, batchSize);
   }

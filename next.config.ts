@@ -2,7 +2,7 @@ import {withSentryConfig} from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['img.clerk.com', 'randomuser.me'], // opcional, útil para compatibilidad con versiones anteriores
+    domains: ['img.clerk.com', 'randomuser.me', 'cdn.prod.website-files.com'], // opcional, útil para compatibilidad con versiones anteriores
     remotePatterns: [
       {
         protocol: 'https',
@@ -17,6 +17,11 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'randomuser.me',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.prod.website-files.com',
         pathname: '**',
       },
     ],

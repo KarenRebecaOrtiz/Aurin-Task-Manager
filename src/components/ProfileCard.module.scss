@@ -87,8 +87,8 @@
   overflow: hidden;
 
   :global(body.dark) & {
-    background: rgb(17 17 17);
-    border-color: #5555553d;
+    background: rgb(26 26 26);
+    border-color:rgb(26 26 26);
     box-shadow: none!important;
   }
 }
@@ -368,8 +368,8 @@
   border: 1px solid $color-border-subtle;
 
   :global(body.dark) & {
-    background: rgb(17 17 17);
-    border-color: rgb(17 17 17);
+    background: rgb(26 26 26);
+    border-color: rgb(26 26 26);
   }
 }
 

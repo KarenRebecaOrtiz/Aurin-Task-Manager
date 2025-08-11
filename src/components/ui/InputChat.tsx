@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { Timestamp } from 'firebase/firestore';
@@ -84,6 +84,7 @@ interface InputChatProps {
   timerPanelRef?: React.RefObject<HTMLDivElement>;
   totalHours: string;
   isRestoringTimer?: boolean;
+  isInitializing?: boolean;
   replyingTo?: Message | null;
   onCancelReply?: () => void;
   editingMessageId?: string | null;
@@ -126,6 +127,7 @@ export default function InputChat({
   onAddTimeEntry,
   totalHours,
   isRestoringTimer,
+  isInitializing,
   replyingTo,
   onCancelReply,
   editingMessageId,
@@ -134,7 +136,7 @@ export default function InputChat({
   onCancelEdit,
   messages,
   hasMore,
-  loadMoreMessages: loadMoreMessagesProp,
+
   onNewMessage: onNewMessageProp,
   users,
 }: InputChatProps) {
@@ -176,8 +178,8 @@ export default function InputChat({
     handleDragOver,
     handleDragLeave,
   } = useImageUpload({
-    onUpload: (url) => {
-      console.log('[InputChat] Image uploaded:', url);
+    onUpload: () => {
+      // console.log('[InputChat] Image uploaded:', url);
       // Aquí podrías integrar con Gemini para análisis de imagen
     },
   });
@@ -241,12 +243,12 @@ export default function InputChat({
         
         // Editar mensaje existente
         await onEditMessage(lastGeminiMsg.id, newText);
-        console.log('[InputChat] Respuesta de Gemini actualizada con nuevo contexto');
+        // console.log('[InputChat] Respuesta de Gemini actualizada con nuevo contexto');
       }
       
       setPendingNewMsgs([]);
-    } catch (error) {
-      console.error('[InputChat] Error actualizando respuesta de Gemini:', error);
+    } catch {
+      // console.error('[InputChat] Error actualizando respuesta de Gemini:', error);
       setPendingNewMsgs([]);
     }
   }, [pendingNewMsgs, taskId, messages, geminiQuery, onEditMessage]);
@@ -267,7 +269,7 @@ export default function InputChat({
   // Usar la función handleNewMessage para que no aparezca como no utilizada
   useEffect(() => {
     // Esta función se pasa a través de props y se usa en useMessagePagination
-    console.log('[InputChat] handleNewMessage ready for pagination hook');
+    // console.log('[InputChat] handleNewMessage ready for pagination hook');
   }, [handleNewMessage]);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const dropupRef = useRef<HTMLDivElement>(null);
@@ -275,9 +277,11 @@ export default function InputChat({
 
   const [internalReplyingTo, setInternalReplyingTo] = useState<Message | null>(null);
   const effectiveReplyingTo = typeof replyingTo !== 'undefined' ? replyingTo : internalReplyingTo;
-  const setReplyingTo = typeof replyingTo !== 'undefined' && onCancelReply ? (msg: Message | null) => {
-    if (!msg) onCancelReply();
-  } : setInternalReplyingTo;
+  const setReplyingTo = useMemo(() => 
+    typeof replyingTo !== 'undefined' && onCancelReply ? (msg: Message | null) => {
+      if (!msg) onCancelReply();
+    } : setInternalReplyingTo
+  , [replyingTo, onCancelReply, setInternalReplyingTo]);
 
   useEffect(() => {
     setIsClient(true);
@@ -391,11 +395,7 @@ export default function InputChat({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isTimerPanelOpen, setIsTimerPanelOpen, timerPanelRef, isDropupOpen]);
 
-  const handleToggleTimerPanel = useCallback((e: React.MouseEvent) => {
-    if (isSending) return;
-    e.stopPropagation();
-    onToggleTimerPanel(e);
-  }, [isSending, onToggleTimerPanel]);
+
 
   const handleCloseTimerPanel = useCallback(() => setIsTimerPanelOpen(false), [setIsTimerPanelOpen]);
 
@@ -419,17 +419,7 @@ export default function InputChat({
     }
   }, [editingMessageId, editingText, editor, adjustEditorHeight]);
 
-  const toggleFormat = useCallback((format: string) => {
-    if (!editor) return;
-    switch (format) {
-      case 'bold': editor.chain().focus().toggleBold().run(); break;
-      case 'italic': editor.chain().focus().toggleItalic().run(); break;
-      case 'underline': editor.chain().focus().toggleUnderline().run(); break;
-      case 'code': editor.chain().focus().toggleCode().run(); break;
-      case 'bullet': editor.chain().focus().toggleBulletList().run(); break;
-      case 'numbered': editor.chain().focus().toggleOrderedList().run(); break;
-    }
-  }, [editor]);
+  const { watchAndSave, clearPersistedData, restoredData } = useEditorPersistence(editor, `draft_${conversationId}`, true);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!editor) return;
@@ -538,12 +528,16 @@ export default function InputChat({
     setFile(f);
   };
 
-  const handleRemoveFile = () => {
+  const handleRemoveFile = useCallback(() => {
     setFile(null);
     handleRemove();
-  };
+  }, [setFile, handleRemove]);
 
-  const handleReformulate = async (mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list') => {
+
+
+
+
+  const handleReformulate = useCallback(async (mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list') => {
     if (!userId || !editor || editor.isEmpty || isProcessing) return;
     setIsProcessing(true);
     setIsDropupOpen(false);
@@ -568,15 +562,15 @@ export default function InputChat({
       adjustEditorHeight();
       setHasReformulated(true);
       
-    } catch (error) {
-      console.error('[InputChat:Reformulate] Error:', error);
+    } catch {
+      // console.error('[InputChat:Reformulate] Error:', error);
       toast({ title: 'Error al procesar el texto con Gemini AI', description: '❌ Error al procesar el texto.', variant: 'error' });
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [userId, editor, isProcessing, setReformHistory, generateReformulation, adjustEditorHeight, setHasReformulated]);
 
-  const handleSend = async (e: React.FormEvent | React.KeyboardEvent) => {
+  const handleSend = useCallback(async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     const hasText = editor && !editor.isEmpty;
     const hasFile = file !== null;
@@ -602,7 +596,7 @@ export default function InputChat({
         });
         
         // TODO: Implementar botón de cargar más en el toast cuando la API lo soporte
-        console.log('[InputChat] Contexto incompleto - loadMoreMessagesProp disponible:', !!loadMoreMessagesProp);
+        // console.log('[InputChat] Contexto incompleto - loadMoreMessagesProp disponible:', !!loadMoreMessagesProp);
         setIsSending(false);
         return; // Abortar query
       }
@@ -626,8 +620,8 @@ export default function InputChat({
         clearPersistedData();
         if (onCancelReply) onCancelReply();
         if (onCancelEdit) onCancelEdit();
-      } catch (error) {
-        console.error('[InputChat:HandleEdit] Error:', error);
+      } catch {
+        // console.error('[InputChat:HandleEdit] Error:', error);
         toast({ title: 'Error al editar', description: 'Error al editar el mensaje.', variant: 'error' });
       } finally {
         setIsSending(false);
@@ -678,7 +672,7 @@ export default function InputChat({
 
       // Siempre enviar mensaje del usuario primero
       await onSendMessage(finalMessageData);
-      console.log('[InputChat] User message sent successfully');
+      // console.log('[InputChat] User message sent successfully');
       
       // Limpiar editor después de enviar
       editor?.commands.clearContent();
@@ -692,7 +686,7 @@ export default function InputChat({
       
       // Si hay mención @gemini, procesar después
       if (isMention && query) {
-        console.log('[InputChat] Processing Gemini query:', query);
+        // console.log('[InputChat] Processing Gemini query:', query);
         
         // Mostrar toast de "pensando"
         toast({ 
@@ -730,16 +724,16 @@ export default function InputChat({
           };
           
           await onSendMessage(geminiMessage); // Post as separate message
-          console.log('[InputChat] Gemini response posted successfully');
+          // console.log('[InputChat] Gemini response posted successfully');
           
-                 } catch (error) {
-           console.error('[InputChat: Gemini Processing] Error:', error);
+                 } catch {
+           // console.error('[InputChat: Gemini Processing] Error:', error);
            toast({ title: 'Error de Gemini', description: 'No pudo responder a tu consulta.', variant: 'error' });
          }
       }
       
-    } catch (error) {
-      console.error('[InputChat:HandleSend] Error:', error);
+    } catch {
+      // console.error('[InputChat:HandleSend] Error:', error);
       const errorMessage: PersistedMessage = {
         id: `temp-${clientId}`,
         text: hasText ? editor.getHTML() : '',
@@ -753,7 +747,7 @@ export default function InputChat({
     } finally {
       setIsSending(false);
     }
-  };
+  }, [userId, editor, file, isSending, isProcessing, editingMessageId, onEditMessage, effectiveReplyingTo, onCancelReply, onCancelEdit, onNewMessageProp, userFirstName, taskId, hasMore, fullContextKeywords, toast, saveErrorMessage, conversationId, removeErrorMessage, handleRemove, setFile, setHasReformulated, setIsDropupOpen, adjustEditorHeight, generateQueryResponse, onSendMessage, previewUrl, setIsSending, clearPersistedData]);
 
   const formatButtons = [
     { id: 'bold', icon: '/input/bold.svg', label: 'Negrita', shortcut: 'Ctrl+B' },
@@ -764,12 +758,214 @@ export default function InputChat({
     { id: 'numbered', icon: '/list-ordered.svg', label: 'Lista numerada', shortcut: 'Ctrl+Shift+7' },
   ];
 
-  const { watchAndSave, clearPersistedData, restoredData } = useEditorPersistence(editor, `draft_${conversationId}`, true);
+  const handleClearPersistedData = useCallback(() => {
+    clearPersistedData();
+    editor?.commands.clearContent();
+  }, [clearPersistedData, editor]);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, [setReplyingTo]);
+
+  const handleToggleFormat = useCallback((id: string) => {
+    if (editor) {
+      switch (id) {
+        case 'bold':
+          editor.chain().focus().toggleBold().run();
+          break;
+        case 'italic':
+          editor.chain().focus().toggleItalic().run();
+          break;
+        case 'underline':
+          editor.chain().focus().toggleUnderline().run();
+          break;
+        case 'code':
+          editor.chain().focus().toggleCode().run();
+          break;
+        case 'bullet':
+          editor.chain().focus().toggleBulletList().run();
+          break;
+        case 'numbered':
+          editor.chain().focus().toggleOrderedList().run();
+          break;
+      }
+      setTimeout(adjustEditorHeight, 0);
+    }
+  }, [editor, adjustEditorHeight]);
+
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    editor?.commands.insertContent(emoji);
+    setTimeout(adjustEditorHeight, 0);
+  }, [editor, adjustEditorHeight]);
+
+  const handleToggleDropup = useCallback(() => {
+    setIsDropupOpen(prev => !prev);
+  }, []);
+
+  const handleReformulateCorrect = useCallback(() => {
+    handleReformulate('correct');
+  }, [handleReformulate]);
+
+  const handleReformulateRewrite = useCallback(() => {
+    handleReformulate('rewrite');
+  }, [handleReformulate]);
+
+  const handleReformulateFriendly = useCallback(() => {
+    handleReformulate('friendly');
+  }, [handleReformulate]);
+
+  const handleReformulateProfessional = useCallback(() => {
+    handleReformulate('professional');
+  }, [handleReformulate]);
+
+  const handleReformulateConcise = useCallback(() => {
+    handleReformulate('concise');
+  }, [handleReformulate]);
+
+  const handleReformulateSummarize = useCallback(() => {
+    handleReformulate('summarize');
+  }, [handleReformulate]);
+
+  const handleReformulateKeypoints = useCallback(() => {
+    handleReformulate('keypoints');
+  }, [handleReformulate]);
+
+  const handleReformulateList = useCallback(() => {
+    handleReformulate('list');
+  }, [handleReformulate]);
+
+  const handleMentionSelection = useCallback((selected: { id: string; type: "ai" | "user"; }[]) => {
+    const [selectedItem] = selected;
+    const fullItem = mentionItems.find(item => item.id === selectedItem.id);
+    if (fullItem) {
+      const mentionItem = {
+        id: fullItem.id,
+        name: fullItem.name,
+        type: fullItem.type as 'user' | 'ai'
+      };
+      handleSelection(mentionItem);
+      if (fullItem.type === 'ai') {
+        setIsGeminiMentioned(true);
+        setGeminiQuery('');
+      }
+    }
+  }, [mentionItems, handleSelection]);
+
+  const handleToggleTimerPanel = useCallback(() => {
+    onToggleTimerPanel({} as React.MouseEvent);
+  }, [onToggleTimerPanel]);
+
+  const createFormatButtonHandler = useCallback((id: string) => () => {
+    handleToggleFormat(id);
+  }, [handleToggleFormat]);
+
+  const handlePauseTimer = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isTimerRunning) {
+      onToggleTimer(e);
+      setIsTimerMenuOpen(false);
+    }
+  }, [isTimerRunning, onToggleTimer]);
+
+  const handleResetTimer = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onResetTimer && timerSeconds > 0) {
+      // console.log('[InputChat] 🔄 Reiniciando timer...');
+      await onResetTimer();
+      setIsTimerMenuOpen(false);
+      // console.log('[InputChat] ✅ Timer reiniciado correctamente');
+    }
+  }, [onResetTimer, timerSeconds]);
+
+  const handleFinalizeTimer = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isTimerRunning && onFinalizeTimer) {
+      await onFinalizeTimer();
+      setIsTimerMenuOpen(false);
+    }
+  }, [isTimerRunning, onFinalizeTimer]);
+
+  const handleEditorKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a': e.preventDefault(); editor?.commands.selectAll(); break;
+        case 'c': e.preventDefault(); {
+          const selection = window.getSelection();
+          if (selection && selection.toString().length > 0) navigator.clipboard.writeText(selection.toString());
+          break;
+        }
+        case 'v': e.preventDefault(); navigator.clipboard.readText().then(text => editor?.commands.insertContent(text)); break;
+        case 'x': e.preventDefault(); {
+          const cutSelection = window.getSelection();
+          if (cutSelection && cutSelection.toString().length > 0) navigator.clipboard.writeText(cutSelection.toString()).then(() => editor?.commands.deleteSelection());
+          break;
+        }
+      }
+    } else if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
+      if (isMentionOpen) {
+        // bloquea enviar cuando el dropdown de mencionar está abierto
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      handleSend(e);
+    } else if (e.key === 'Enter') setTimeout(adjustEditorHeight, 0);
+  }, [editor, isSending, isProcessing, isMentionOpen, handleSend, adjustEditorHeight]);
+
+  const handleMentionSelectionChange = useCallback((ids: string[]) => {
+    const id = ids[0];
+    const item = mentionOptions.find(i => i.id === id);
+    if (!item) return;
+    const currentText = editor?.getText() || '';
+    const lastAtIndex = currentText.lastIndexOf('@');
+    const beforeAt = lastAtIndex >= 0 ? currentText.substring(0, lastAtIndex) : currentText;
+    const newText = `${beforeAt}@${item.name} `;
+    editor?.commands.setContent(newText);
+    setIsMentionOpen(false);
+    setMentionInput('');
+    setIsGeminiMentioned(item.id === 'gemini');
+    if (item.id === 'gemini') setGeminiQuery('');
+    setTimeout(() => editor?.commands.focus(), 0);
+  }, [mentionOptions, editor, setIsMentionOpen, setMentionInput, setIsGeminiMentioned, setGeminiQuery]);
+
+  const handleCustomTimeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleTimerPanel(e);
+    setIsTimerMenuOpen(false);
+  }, [onToggleTimerPanel]);
+
+  const handleMouseDownPreventDefault = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleAnalysisComplete = useCallback(() => {
+    // console.log('[InputChat] Image analysis completed:', analysis);
+    // Integrar análisis en el contexto de Gemini
+  }, []);
+
+  const handleUndoReformulation = useCallback(() => {
+    if (reformHistory.length > 0) {
+      const previousVersion = reformHistory.pop();
+      if (previousVersion && editor) {
+        editor.commands.setContent(previousVersion);
+        setReformHistory([...reformHistory]);
+        setHasReformulated(reformHistory.length > 0);
+      }
+    }
+  }, [reformHistory, editor]);
+
+  const handleTimerToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isTimerRunning) {
+      onToggleTimer(e);
+      setIsTimerMenuOpen(false);
+    }
+  }, [isTimerRunning, onToggleTimer]);
 
   useEffect(() => {
     if (restoredData && restoredData.content && restoredData.content.trim() && restoredData.content !== '<p></p>' && restoredData.content !== '<p><br></p>' && editor && editor.isEmpty) {
       editor.commands.setContent(restoredData.content);
-      console.log('[InputChat] Contenido restaurado desde cache');
+      // console.log('[InputChat] Contenido restaurado desde cache');
     }
   }, [restoredData, editor]);
 
@@ -789,7 +985,7 @@ export default function InputChat({
         {restoredData && restoredData.content && restoredData.content.trim() && (
           <motion.div className={styles.persistedData} key="persisted-msg" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
             <span>Mensaje guardado restaurado</span>
-            <button type="button" onClick={() => { clearPersistedData(); editor?.commands.clearContent(); }}>Borrar</button>
+            <button type="button" onClick={handleClearPersistedData}>Borrar</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -798,7 +994,7 @@ export default function InputChat({
           <div className={styles.replyContent}>
             <div className={styles.replyHeader}>
               <span className={styles.replyLabel}>Respondiendo a {effectiveReplyingTo.senderName}</span>
-              <button type="button" className={styles.replyCancelButton} onClick={() => setReplyingTo(null)} aria-label="Cancelar respuesta">
+              <button type="button" className={styles.replyCancelButton} onClick={handleCancelReply} aria-label="Cancelar respuesta">
                 <Image src="/x.svg" alt="Cancelar" width={16} height={16} />
               </button>
             </div>
@@ -864,7 +1060,7 @@ export default function InputChat({
                     type="button" 
                     className={`${styles['format-button']} ${styles.tooltip}`} 
                     data-active={editor?.isActive(id) ? 'true' : 'false'} 
-                    onClick={() => toggleFormat(id)} 
+                    onClick={createFormatButtonHandler(id)} 
                     disabled={isSending || isProcessing} 
                     title={`${label} (${shortcut})`} 
                     aria-label={label}
@@ -888,16 +1084,7 @@ export default function InputChat({
                   <motion.button 
                     type="button" 
                     className={`${styles['format-button']} ${styles.undoButton} ${styles.tooltip}`} 
-                    onClick={() => {
-                      if (reformHistory.length > 0) {
-                        const previousVersion = reformHistory.pop();
-                        if (previousVersion && editor) {
-                          editor.commands.setContent(previousVersion);
-                          setReformHistory([...reformHistory]);
-                          setHasReformulated(reformHistory.length > 0);
-                        }
-                      }
-                    }}
+                    onClick={handleUndoReformulation}
                     disabled={isSending || isProcessing || reformHistory.length === 0}
                     title="Deshacer reformulación"
                     aria-label="Deshacer reformulación"
@@ -946,13 +1133,7 @@ export default function InputChat({
                 <motion.button 
                   type="button" 
                   className={`${styles['format-button']} ${styles.tooltip}`} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!isTimerRunning) {
-                      onToggleTimer(e);
-                      setIsTimerMenuOpen(false);
-                    }
-                  }}
+                  onClick={handleTimerToggle}
                   disabled={isTimerRunning}
                   title="Iniciar"
                   aria-label="Iniciar"
@@ -982,13 +1163,7 @@ export default function InputChat({
                 <motion.button 
                   type="button" 
                   className={`${styles['format-button']} ${styles.tooltip}`} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isTimerRunning) {
-                      onToggleTimer(e);
-                      setIsTimerMenuOpen(false);
-                    }
-                  }}
+                  onClick={handlePauseTimer}
                   disabled={!isTimerRunning}
                   title="Pausar"
                   aria-label="Pausar"
@@ -1018,15 +1193,7 @@ export default function InputChat({
                 <motion.button 
                   type="button" 
                   className={`${styles['format-button']} ${styles.tooltip}`} 
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (onResetTimer && timerSeconds > 0) {
-                      console.log('[InputChat] 🔄 Reiniciando timer...');
-                      await onResetTimer();
-                      setIsTimerMenuOpen(false);
-                      console.log('[InputChat] ✅ Timer reiniciado correctamente');
-                    }
-                  }}
+                  onClick={handleResetTimer}
                   disabled={!timerSeconds || timerSeconds === 0}
                   title="Reiniciar"
                   aria-label="Reiniciar"
@@ -1056,13 +1223,7 @@ export default function InputChat({
                 <motion.button 
                   type="button" 
                   className={`${styles['format-button']} ${styles.tooltip}`} 
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (isTimerRunning && onFinalizeTimer) {
-                      await onFinalizeTimer();
-                      setIsTimerMenuOpen(false);
-                    }
-                  }}
+                  onClick={handleFinalizeTimer}
                   disabled={!isTimerRunning}
                   title="Enviar"
                   aria-label="Enviar"
@@ -1092,11 +1253,7 @@ export default function InputChat({
                 <motion.button 
                   type="button" 
                   className={`${styles['format-button']} ${styles.tooltip}`} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleTimerPanel(e);
-                    setIsTimerMenuOpen(false);
-                  }}
+                  onClick={handleCustomTimeClick}
                   title="Tiempo Personalizado"
                   aria-label="Tiempo Personalizado"
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -1173,56 +1330,17 @@ export default function InputChat({
               ref={editorRef}
               editor={editor}
               style={{ fontFamily: '"Inter Tight", sans-serif', minHeight: '36px', maxHeight: '200px', resize: 'none', overflow: 'hidden' }}
-              onKeyDown={(e) => {
-                if (e.ctrlKey || e.metaKey) {
-                  switch (e.key.toLowerCase()) {
-                    case 'a': e.preventDefault(); editor?.commands.selectAll(); break;
-                    case 'c': e.preventDefault(); {
-                      const selection = window.getSelection();
-                      if (selection && selection.toString().length > 0) navigator.clipboard.writeText(selection.toString());
-                      break;
-                    }
-                    case 'v': e.preventDefault(); navigator.clipboard.readText().then(text => editor?.commands.insertContent(text)); break;
-                    case 'x': e.preventDefault(); {
-                      const cutSelection = window.getSelection();
-                      if (cutSelection && cutSelection.toString().length > 0) navigator.clipboard.writeText(cutSelection.toString()).then(() => editor?.commands.deleteSelection());
-                      break;
-                    }
-                  }
-                } else if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
-                  if (isMentionOpen) {
-                    // bloquea enviar cuando el dropdown de mencionar está abierto
-                    e.preventDefault();
-                    return;
-                  }
-                  e.preventDefault();
-                  handleSend(e);
-                } else if (e.key === 'Enter') setTimeout(adjustEditorHeight, 0);
-              }}
+              onKeyDown={handleEditorKeyDown}
               onContextMenu={handleContextMenu}
             />
             
             {/* Autocomplete para menciones */}
             {isMentionOpen && (
-              <div className={styles.mentionAutocomplete} onMouseDown={(e) => e.preventDefault()}>
+              <div className={styles.mentionAutocomplete} onMouseDown={handleMouseDownPreventDefault}>
                 <SearchableDropdown
                   items={mentionOptions.filter(i => i.name.toLowerCase().includes((mentionInput || '').toLowerCase()))}
                   selectedItems={[]}
-                  onSelectionChange={(ids) => {
-                    const id = ids[0];
-                    const item = mentionOptions.find(i => i.id === id);
-                    if (!item) return;
-                    const currentText = editor?.getText() || '';
-                    const lastAtIndex = currentText.lastIndexOf('@');
-                    const beforeAt = lastAtIndex >= 0 ? currentText.substring(0, lastAtIndex) : currentText;
-                    const newText = `${beforeAt}@${item.name} `;
-                    editor?.commands.setContent(newText);
-                    setIsMentionOpen(false);
-                    setMentionInput('');
-                    setIsGeminiMentioned(item.id === 'gemini');
-                    if (item.id === 'gemini') setGeminiQuery('');
-                    setTimeout(() => editor?.commands.focus(), 0);
-                  }}
+                  onSelectionChange={handleMentionSelectionChange}
                   placeholder=""
                   searchPlaceholder=""
                   disabled={false}
@@ -1238,21 +1356,7 @@ export default function InputChat({
             {showDropdown && (
               <TagDropdown
                 items={mentionItems}
-                onSelectionChange={([selectedItem]) => {
-                  const fullItem = mentionItems.find(item => item.id === selectedItem.id);
-                  if (fullItem) {
-                    const mentionItem = {
-                      id: fullItem.id,
-                      name: fullItem.name,
-                      type: fullItem.type as 'user' | 'ai'
-                    };
-                    handleSelection(mentionItem);
-                    if (fullItem.type === 'ai') {
-                      setIsGeminiMentioned(true);
-                      setGeminiQuery('');
-                    }
-                  }
-                }}
+                onSelectionChange={handleMentionSelection}
                 placeholder="Seleccionar..."
                 disabled={false}
                 multiple={false}
@@ -1265,10 +1369,7 @@ export default function InputChat({
             {file && previewUrl && (
               <GeminiImageAnalyzer
                 taskId={taskId}
-                onAnalysisComplete={(analysis) => {
-                  console.log('[InputChat] Image analysis completed:', analysis);
-                  // Integrar análisis en el contexto de Gemini
-                }}
+                onAnalysisComplete={handleAnalysisComplete}
                 disabled={isSending || isProcessing}
               />
             )}
@@ -1294,24 +1395,25 @@ export default function InputChat({
               onFinalizeTimer={onFinalizeTimer}
               onTogglePanel={handleToggleTimerPanel}
               isRestoringTimer={!!isRestoringTimer}
+              isInitializing={!!isInitializing}
               isMenuOpen={isTimerMenuOpen}
               setIsMenuOpen={setIsTimerMenuOpen}
             />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <div className={styles.dropupContainer} ref={dropupRef}>
-                <button type="button" className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={() => setIsDropupOpen(prev => !prev)} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con Gemini AI" title="Reformular texto con Gemini AI ✨" aria-expanded={isDropupOpen}>
+                <button type="button" className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={handleToggleDropup} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con Gemini AI" title="Reformular texto con Gemini AI ✨" aria-expanded={isDropupOpen}>
                   <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} draggable="false" />
                 </button>
                 {isDropupOpen && (
                   <div className={styles.dropupMenu} role="menu">
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('correct')} disabled={isProcessing} role="menuitem" title="Corregir ortografía y gramática">✏️ Corregir</button>
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('rewrite')} disabled={isProcessing} role="menuitem" title="Reescribir">🔄 Re-escribir</button>
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('friendly')} disabled={isProcessing} role="menuitem" title="Hacer amigable">😊 Hacer amigable</button>
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('professional')} disabled={isProcessing} role="menuitem" title="Hacer profesional">💼 Hacer profesional</button>
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('concise')} disabled={isProcessing} role="menuitem" title="Hacer conciso">⚡ Hacer conciso</button>
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('summarize')} disabled={isProcessing} role="menuitem" title="Resumir">📝 Resumir</button>
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('keypoints')} disabled={isProcessing} role="menuitem" title="Puntos clave">🎯 Puntos clave</button>
-                    <button type="button" className={styles.dropupItem} onClick={() => handleReformulate('list')} disabled={isProcessing} role="menuitem" title="Convertir en lista">📋 Convertir en lista</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateCorrect} disabled={isProcessing} role="menuitem" title="Corregir ortografía y gramática">✏️ Corregir</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateRewrite} disabled={isProcessing} role="menuitem" title="Reescribir">🔄 Re-escribir</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateFriendly} disabled={isProcessing} role="menuitem" title="Hacer amigable">😊 Hacer amigable</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateProfessional} disabled={isProcessing} role="menuitem" title="Hacer profesional">💼 Hacer profesional</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateConcise} disabled={isProcessing} role="menuitem" title="Hacer conciso">⚡ Hacer conciso</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateSummarize} disabled={isProcessing} role="menuitem" title="Resumir">📝 Resumir</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateKeypoints} disabled={isProcessing} role="menuitem" title="Puntos clave">🎯 Puntos clave</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateList} disabled={isProcessing} role="menuitem" title="Convertir en lista">📋 Convertir en lista</button>
                   </div>
                 )}
               </div>
@@ -1323,7 +1425,7 @@ export default function InputChat({
               <button type="button" className={`${styles.imageButton} ${styles.tooltip}`} onClick={handleThumbnailClick} disabled={isSending || isProcessing} aria-label="Adjuntar archivo" title="Adjuntar archivo">
                 <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>
-              <EmojiSelector onEmojiSelect={(emoji) => { editor?.commands.insertContent(emoji); setTimeout(adjustEditorHeight, 0); }} disabled={isSending || isProcessing} value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''} containerRef={containerRef} />
+              <EmojiSelector onEmojiSelect={handleEmojiSelect} disabled={isSending || isProcessing} value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''} containerRef={containerRef} />
               <button type="submit" className={styles.sendButton} disabled={isSending || isProcessing || ((!editor || editor.isEmpty) && !file)} aria-label="Enviar mensaje">
                 <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
               </button>

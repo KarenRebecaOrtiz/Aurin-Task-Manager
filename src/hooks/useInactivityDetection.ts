@@ -16,20 +16,19 @@
  * Param: connectionId para remover específica.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 export const useInactivityDetection = (timeout = 900000, onInactive: () => void, onActive?: () => void) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef(Date.now());
   const isPausedRef = useRef(false);
 
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      console.log('[InactivityDetection] Timeout reached, calling onInactive callback');
       onInactive();
     }, timeout);
-  };
+  }, [timeout, onInactive]);
 
   useEffect(() => {
     const events = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
@@ -48,24 +47,18 @@ export const useInactivityDetection = (timeout = 900000, onInactive: () => void,
         if (onActive) {
           onActive();
         }
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[InactivityDetection] Activity detected, timer reset (throttled 10s)');
-        }
       }
     };
 
     // Manejar cambios de visibilidad de la pestaña
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        console.log('[InactivityDetection] Tab hidden, pausing activity detection');
         isPausedRef.current = true;
         if (timerRef.current) {
           clearTimeout(timerRef.current);
           timerRef.current = null;
         }
       } else {
-        console.log('[InactivityDetection] Tab visible, resuming activity detection');
         isPausedRef.current = false;
         lastActivityRef.current = Date.now();
         resetTimer();
@@ -81,7 +74,6 @@ export const useInactivityDetection = (timeout = 900000, onInactive: () => void,
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     resetTimer(); // Start timer
-    console.log('[InactivityDetection] Initialized with timeout', timeout / 1000, 'seconds');
 
     return () => {
       events.forEach(event => {
@@ -90,9 +82,8 @@ export const useInactivityDetection = (timeout = 900000, onInactive: () => void,
       });
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (timerRef.current) clearTimeout(timerRef.current);
-      console.log('[InactivityDetection] Cleanup completed');
     };
-  }, [timeout, onInactive, onActive]);
+  }, [timeout, onInactive, onActive, resetTimer]);
 
   return { resetTimer };
 }; 

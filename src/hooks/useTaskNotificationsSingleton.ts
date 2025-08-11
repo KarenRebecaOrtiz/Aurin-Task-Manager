@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, query, where, onSnapshot, Timestamp, doc, updateDoc, runTransaction, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, doc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Define types
@@ -60,8 +60,6 @@ class TaskNotificationsManager {
   }
 
   private setupListener(userId: string) {
-    console.log('[TaskNotificationsManager] Setting up listener for user:', userId);
-
     const q = query(
       collection(db, 'notifications'),
       where('recipientId', '==', userId),
@@ -70,11 +68,9 @@ class TaskNotificationsManager {
 
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
-        console.log('[TaskNotificationsManager] Snapshot received for user:', userId, 'docs count:', snapshot.docs.length, 'fromCache:', snapshot.metadata.fromCache);
         
         // Skip if listener is paused
         if (this.pausedListeners.has(userId)) {
-          console.log('[TaskNotificationsManager] Listener paused for user:', userId);
           return;
         }
 
@@ -83,8 +79,6 @@ class TaskNotificationsManager {
           id: doc.id,
           ...doc.data() as Omit<TaskNotification, 'id'>
         }));
-
-        console.log('[TaskNotificationsManager] Processed notifications for user:', userId, 'count:', notifications.length);
 
         // Debounce
         const timeout = this.debounceTimeouts.get(userId);
@@ -95,24 +89,17 @@ class TaskNotificationsManager {
           
           const subscribers = this.subscribers.get(userId);
           if (subscribers) {
-            console.log('[TaskNotificationsManager] Notifying subscribers for user:', userId, 'subscriber count:', subscribers.size);
             subscribers.forEach(cb => {
               try {
                 cb(notifications);
-              } catch (error) {
-                console.error('[TaskNotificationsManager] Error in subscriber callback:', error);
+              } catch {
+                // Silently handle error
               }
             });
-          } else {
-            console.log('[TaskNotificationsManager] No subscribers for user:', userId);
           }
-
-        }, 1000); // ✅ OPTIMIZACIÓN: Aumentar debounce de 300ms a 1000ms para reducir re-renders
+        }, 100);
 
         this.debounceTimeouts.set(userId, newTimeout);
-      },
-      (error) => {
-        console.error('[TaskNotificationsManager] Error in task notifications listener:', error);
       }
     );
 
@@ -135,8 +122,8 @@ class TaskNotificationsManager {
         userSubscribers.forEach(callback => {
           try {
             callback(updatedNotifications);
-          } catch (error) {
-            console.error('[TaskNotificationsManager] Error in subscriber callback after optimistic update:', error);
+          } catch {
+            // Silently handle error
           }
         });
       }
@@ -147,10 +134,12 @@ class TaskNotificationsManager {
       await updateDoc(doc(db, 'notifications', notificationId), { read: true });
       
 
-    } catch (error) {
-      console.error('[TaskNotificationsManager] Error marking notification as read:', error);
-      // Rollback optimistic if fails
-      if (DEBUG) console.log('[TaskNotificationsManager] Rolling back optimistic update due to error');
+    } catch {
+      // Silently handle error
+      if (DEBUG) {
+        // Debug logging disabled
+      }
+      // Re-fetch notifications to restore correct state
       this.setupListener(userId);
     }
   }
@@ -172,8 +161,8 @@ class TaskNotificationsManager {
         userSubscribers.forEach(callback => {
           try {
             callback(updatedNotifications);
-          } catch (error) {
-            console.error('[TaskNotificationsManager] Error in subscriber callback after optimistic update:', error);
+          } catch {
+            // Silently handle error
           }
         });
       }
@@ -207,9 +196,8 @@ class TaskNotificationsManager {
         // ✅ Commit batch atómico
         await batch.commit();
         
-      } catch (error) {
-        console.error('[TaskNotificationsManager] Error updating task in Firestore:', error);
-        // Don't throw, just log - optimistic update already applied
+      } catch {
+        // Silently handle error
       }
       
       // RESUME LISTENER after a longer delay to allow Firestore to settle
@@ -217,9 +205,8 @@ class TaskNotificationsManager {
         this.pausedListeners.delete(userId);
       }, 3000); // Increased from 1000ms to 3000ms
       
-    } catch (error) {
-      console.error('[TaskNotificationsManager] Error marking task as viewed:', error);
-      // Rollback optimistic if fails
+    } catch {
+      // Silently handle error
       this.setupListener(userId);
       // Resume listener on error too
       this.pausedListeners.delete(userId);
@@ -251,20 +238,16 @@ export const useTaskNotificationsSingleton = () => {
 
   useEffect(() => {
     if (!userId) {
-      console.log('[useTaskNotificationsSingleton] No userId provided');
       return;
     }
 
-    console.log('[useTaskNotificationsSingleton] Setting up for user:', userId);
     managerRef.current = TaskNotificationsManager.getInstance();
 
     unsubscribeRef.current = managerRef.current.subscribe(userId, (notifications) => {
-      console.log('[useTaskNotificationsSingleton] Received notifications for user:', userId, 'count:', notifications.length);
       setTaskNotifications(notifications);
     });
 
     return () => {
-      console.log('[useTaskNotificationsSingleton] Cleaning up for user:', userId);
       unsubscribeRef.current?.();
     };
   }, [userId]);

@@ -32,6 +32,10 @@
   &:hover {
     opacity: 1;
   }
+
+  :global(body.dark) & {
+    filter: invert(1) brightness(100%);
+  }
 }
 
 .selectButton {

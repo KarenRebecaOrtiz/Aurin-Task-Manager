@@ -129,7 +129,6 @@ export function useSharedTasksState(userId: string | undefined) {
     // Timeout de seguridad - si después de 10 segundos no hay autenticación, forzar el inicio
     const timeout = setTimeout(() => {
       if (!auth.currentUser) {
-        console.warn('[useSharedTasksState] ⚠️ Firebase Auth timeout - proceeding anyway');
         setIsFirebaseAuthReady(true);
       }
     }, 10000);
@@ -196,10 +195,7 @@ export function useSharedTasksState(userId: string | undefined) {
         
         // Solo actualizar si realmente cambió
         if (tasksDataString !== currentTasksString) {
-          console.log('[useSharedTasksState] Tasks updated, count:', tasksData.length);
           setTasks(tasksData);
-        } else {
-          console.log('[useSharedTasksState] Tasks unchanged, skipping update');
         }
         
         setIsLoadingTasks(false);
@@ -211,16 +207,8 @@ export function useSharedTasksState(userId: string | undefined) {
           checkInitialLoadComplete();
         }
       },
-      (error) => {
-        console.error('[useSharedTasksState] Error in tasks onSnapshot:', error);
-        setTasks([]);
+      () => {
         setIsLoadingTasks(false);
-        
-        // Marcar como inicializado incluso con error para que el loader no se quede colgado
-        if (!hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-          checkInitialLoadComplete();
-        }
       }
     );
 
@@ -270,10 +258,7 @@ export function useSharedTasksState(userId: string | undefined) {
         const currentClientsString = JSON.stringify(clients);
         
         if (clientsDataString !== currentClientsString) {
-          console.log('[useSharedTasksState] Clients updated, count:', clientsData.length);
           setClients(clientsData);
-        } else {
-          console.log('[useSharedTasksState] Clients unchanged, skipping update');
         }
         
         setIsLoadingClients(false);
@@ -285,16 +270,8 @@ export function useSharedTasksState(userId: string | undefined) {
           checkInitialLoadComplete();
         }
       },
-      (error) => {
-        console.error('[useSharedTasksState] Error in clients onSnapshot:', error);
-        setClients([]);
+      () => {
         setIsLoadingClients(false);
-        
-        // Marcar como inicializado incluso con error para que el loader no se quede colgado
-        if (!hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-          checkInitialLoadComplete();
-        }
       }
     );
 
@@ -362,16 +339,8 @@ export function useSharedTasksState(userId: string | undefined) {
           hasInitializedRef.current = true;
           checkInitialLoadComplete();
         }
-      } catch (error) {
-        console.error('[useSharedTasksState] Error fetching users:', error);
-        setUsers([]);
+      } catch {
         setIsLoadingUsers(false);
-        
-        // Marcar como inicializado incluso con error para que el loader no se quede colgado
-        if (!hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-          checkInitialLoadComplete();
-        }
       }
     };
 

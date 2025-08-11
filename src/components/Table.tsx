@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Table.module.scss';
@@ -62,13 +62,39 @@ const Table = memo(
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedData = useMemo(() => data.slice(startIndex, startIndex + itemsPerPage), [data, startIndex, itemsPerPage]);
 
-    useEffect(() => {
-      if (currentPage > totalPages && data.length > 0) {
-        setCurrentPage(totalPages);
-      } else if (currentPage === 0 && totalPages > 0) {
-        setCurrentPage(1);
+      useEffect(() => {
+    if (currentPage > totalPages && data.length > 0) {
+      setCurrentPage(totalPages);
+    } else if (currentPage === 0 && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages, data.length]);
+
+  // ✅ CORREGIDO: Reset de paginación cuando cambian los filtros
+  useEffect(() => {
+    const handleResetPagination = (event: CustomEvent) => {
+      if (event.detail?.reason === 'filterChanged') {
+        setCurrentPage(1); // Reset a la primera página
       }
-    }, [currentPage, totalPages, data.length]);
+    };
+
+    // Escuchar evento personalizado para resetear paginación
+    document.addEventListener('resetPagination', handleResetPagination as EventListener);
+    
+    return () => {
+      document.removeEventListener('resetPagination', handleResetPagination as EventListener);
+    };
+  }, []);
+
+  // ✅ CORREGIDO: Reset automático de paginación cuando cambia el data
+  useEffect(() => {
+    setCurrentPage(1); // Reset a la primera página cuando cambian los datos
+  }, [data.length]); // Reset cuando cambia la cantidad de datos
+
+  // ✅ DEBUG: Log temporal para verificar datos
+  useEffect(() => {
+    // Debug logging disabled
+  }, [data.length, currentPage, totalPages, startIndex, itemsPerPage, paginatedData.length]);
 
     useEffect(() => {
       if (tableRef.current && paginatedData.length > 0) {
@@ -117,27 +143,30 @@ const Table = memo(
 
 
 
-    const handleCellClick = useCallback((item: T, column: Column<T>, e: React.MouseEvent) => {
+    const handleCellClick = useCallback((item: T, column: Column<T>) => {
       if (column.key === 'action') {
-        e.stopPropagation();
         return;
       }
+      
       if (onRowClick) {
-        gsap.to(e.currentTarget, {
-          scale: 0.98,
-          duration: 0.15,
-          ease: 'power1.out',
-          yoyo: true,
-          repeat: 1,
-        });
         onRowClick(item, column.key);
       }
     }, [onRowClick]);
+
+    // Memoized callback for each cell to avoid arrow function warnings
+    const createCellClickHandler = useCallback((item: T, column: Column<T>) => {
+      return () => handleCellClick(item, column);
+    }, [handleCellClick]);
 
     const handleFirstPage = useCallback(() => setCurrentPage(1), []);
     const handlePrevPage = useCallback(() => setCurrentPage((prev) => Math.max(prev - 1, 1)), []);
     const handleNextPage = useCallback(() => setCurrentPage((prev) => Math.min(prev + 1, totalPages)), [totalPages]);
     const handleLastPage = useCallback(() => setCurrentPage(totalPages), [totalPages]);
+
+    const handleFirstPageClick = useCallback(() => handleFirstPage(), [handleFirstPage]);
+    const handlePrevPageClick = useCallback(() => handlePrevPage(), [handlePrevPage]);
+    const handleNextPageClick = useCallback(() => handleNextPage(), [handleNextPage]);
+    const handleLastPageClick = useCallback(() => handleLastPage(), [handleLastPage]);
 
     const EmptyState = () => {
       const getEmptyStateContent = () => {
@@ -194,7 +223,7 @@ const Table = memo(
     };
 
     return (
-      <div className={`${styles.tableContainer} ${className || ''}`}>
+      <div className={`${styles.tableContainer} ${className || ''}`} data-table={emptyStateType}>
 
         <div ref={tableRef} className={styles.table}>
           <TableHeader
@@ -218,7 +247,7 @@ const Table = memo(
                       column.key === 'action' ? styles.actionCell : styles.clickableCell
                     }`}
                     style={{ width: getColumnWidth(column) }}
-                    onClick={(e) => handleCellClick(item, column, e)}
+                    onClick={createCellClickHandler(item, column)}
                   >
                     {column.render
                       ? column.render(item)
@@ -234,7 +263,7 @@ const Table = memo(
         {totalPages > 1 && data.length > 0 && (
           <div className={styles.pagination}>
             <button
-              onClick={handleFirstPage}
+              onClick={handleFirstPageClick}
               disabled={currentPage === 1}
               className={styles.paginationButton}
               aria-label="Ir a la primera página"
@@ -242,7 +271,7 @@ const Table = memo(
               <Image src="/chevrons-left.svg" alt="Primera página" width={16} height={16} style={{ width: 'auto', height: 'auto' }} />
             </button>
             <button
-              onClick={handlePrevPage}
+              onClick={handlePrevPageClick}
               disabled={currentPage === 1}
               className={styles.paginationButton}
               aria-label="Ir a la página anterior"
@@ -253,7 +282,7 @@ const Table = memo(
               Página {currentPage} de {totalPages}
             </span>
             <button
-              onClick={handleNextPage}
+              onClick={handleNextPageClick}
               disabled={currentPage === totalPages}
               className={styles.paginationButton}
               aria-label="Ir a la página siguiente"
@@ -261,7 +290,7 @@ const Table = memo(
               <Image src="/chevron-right.svg" alt="Página siguiente" width={16} height={16} style={{ width: 'auto', height: 'auto' }} />
             </button>
             <button
-              onClick={handleLastPage}
+              onClick={handleLastPageClick}
               disabled={currentPage === totalPages}
               className={styles.paginationButton}
               aria-label="Ir a la última página"

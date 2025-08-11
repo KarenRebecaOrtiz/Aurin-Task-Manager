@@ -17,6 +17,8 @@ interface Conversation {
   };
   lastViewedBy?: { [userId: string]: Timestamp };
   unreadCountByUser?: { [userId: string]: number };
+  lastMessageTime?: Timestamp; // Added for sorting
+  unreadCount?: number; // Added for denormalized count
 }
 
 interface MessageNotification {
@@ -40,7 +42,7 @@ export class MessageNotificationsManager {
   private static instance: MessageNotificationsManager | null = null;
   private listeners: Map<string, () => void> = new Map();
   private subscribers: Map<string, Set<(notifications: MessageNotification[]) => void>> = new Map();
-  private currentNotifications: Map<string, MessageNotification[]> = new Map();
+  private notifications: Map<string, MessageNotification[]> = new Map(); // Changed from currentNotifications
   private debounceTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   static getInstance(): MessageNotificationsManager {
@@ -62,12 +64,14 @@ export class MessageNotificationsManager {
 
     // Setup listener on first subscribe (PERSISTENTE)
     if (!this.listeners.has(userId)) {
-      if (DEBUG) console.log('[MessageNotificationsManager] Setting up persistent listener for user:', userId);
+      if (DEBUG) {
+        // Debug logging disabled
+      }
       this.setupListener(userId);
     }
 
     // Enviar estado actual inmediatamente
-    const currentNotifications = this.currentNotifications.get(userId) || [];
+    const currentNotifications = this.notifications.get(userId) || []; // Changed from currentNotifications
     callback(currentNotifications);
 
     // Retornar función de unsubscribe (NO CLEANUP LISTENER)
@@ -76,7 +80,9 @@ export class MessageNotificationsManager {
       if (userSubscribers.size === 0) {
         this.subscribers.delete(userId);
         // NO cleanupListener aquí - mantener listener vivo
-        if (DEBUG) console.log('[MessageNotificationsManager] Unsubscribed from user:', userId, 'but keeping listener alive');
+        if (DEBUG) {
+          // Debug logging disabled
+        }
       }
     };
   }
@@ -86,7 +92,7 @@ export class MessageNotificationsManager {
     if (unsubscribe) {
       unsubscribe();
       this.listeners.delete(userId);
-      this.currentNotifications.delete(userId);
+      this.notifications.delete(userId); // Changed from currentNotifications
       
       // Limpiar debounce timeout
       const timeout = this.debounceTimeouts.get(userId);
@@ -95,17 +101,23 @@ export class MessageNotificationsManager {
         this.debounceTimeouts.delete(userId);
       }
       
-      if (DEBUG) console.log('[MessageNotificationsManager] Cleaned up listener for user:', userId);
+      if (DEBUG) {
+        // Debug logging disabled
+      }
     }
   }
 
   setupListener(userId: string) {
     if (this.listeners.has(userId)) {
-      if (DEBUG) console.log('[MessageNotificationsManager] Listener already exists for user:', userId);
+      if (DEBUG) {
+        // Debug logging disabled
+      }
       return;
     }
 
-    if (DEBUG) console.log('[MessageNotificationsManager] Setting up listener for user:', userId);
+    if (DEBUG) {
+      // Debug logging disabled
+    }
 
     const conversationsQuery = query(
       collection(db, 'conversations'),
@@ -115,7 +127,9 @@ export class MessageNotificationsManager {
     const unsubscribe = onSnapshot(conversationsQuery, { includeMetadataChanges: true }, async (snapshot) => {
       // IGNORAR CACHE SNAPSHOTS - solo procesar cambios reales
       if (snapshot.metadata.fromCache) {
-        if (DEBUG) console.log('[MessageNotificationsManager] Ignoring cache snapshot for user:', userId);
+        if (DEBUG) {
+          // Debug logging disabled
+        }
         return;
       }
 
@@ -135,7 +149,6 @@ export class MessageNotificationsManager {
           const otherParticipant = conversationData.participants.find(p => p !== userId);
           if (!otherParticipant) continue;
 
-                      // const lastViewed = conversationData.lastViewedBy?.[userId]; // Unused variable
           const lastMessage = conversationData.lastMessage;
           
           if (lastMessage && 
@@ -165,7 +178,7 @@ export class MessageNotificationsManager {
         });
 
         // Actualizar estado global
-        this.currentNotifications.set(userId, sortedNotifications);
+        this.notifications.set(userId, sortedNotifications); // Changed from currentNotifications
 
         // Notificar a todos los subscribers
         const userSubscribers = this.subscribers.get(userId);
@@ -173,19 +186,21 @@ export class MessageNotificationsManager {
           userSubscribers.forEach(callback => {
             try {
               callback(sortedNotifications);
-            } catch (error) {
-              console.error('[MessageNotificationsManager] Error in subscriber callback:', error);
+            } catch {
+              // Silently handle error
             }
           });
         }
 
-        if (DEBUG) console.log('[MessageNotificationsManager] Updated notifications for user:', userId, 'count:', sortedNotifications.length);
+        if (DEBUG) {
+          // Debug logging disabled
+        }
       }, 500); // 500ms debounce
 
       this.debounceTimeouts.set(userId, timeoutId);
-    }, (error) => {
-      console.error('[MessageNotificationsManager] Error fetching conversations:', error);
-      this.currentNotifications.set(userId, []);
+    }, () => {
+      // Silently handle error
+      this.notifications.set(userId, []);
     });
 
     this.listeners.set(userId, unsubscribe);
@@ -194,10 +209,10 @@ export class MessageNotificationsManager {
   async markConversationAsRead(userId: string, conversationId: string): Promise<void> {
     try {
       // OPTIMISTIC UPDATE PRIMERO: Remover localmente antes de Firestore
-      const currentNotifications = this.currentNotifications.get(userId) || [];
+      const currentNotifications = this.notifications.get(userId) || []; // Changed from currentNotifications
       const updatedNotifications = currentNotifications.filter(n => n.conversationId !== conversationId);
       
-      this.currentNotifications.set(userId, updatedNotifications);
+      this.notifications.set(userId, updatedNotifications); // Changed from currentNotifications
       
       // Notificar subscribers inmediatamente
       const userSubscribers = this.subscribers.get(userId);
@@ -205,12 +220,14 @@ export class MessageNotificationsManager {
         userSubscribers.forEach(callback => {
           try {
             callback(updatedNotifications);
-          } catch (error) {
-            console.error('[MessageNotificationsManager] Error in subscriber callback after optimistic update:', error);
+          } catch {
+            // Silently handle error
           }
         });
       }
-      if (DEBUG) console.log('[MessageNotificationsManager] Optimistic update: Removed notification locally, count:', updatedNotifications.length);
+      if (DEBUG) {
+        // Debug logging disabled
+      }
 
       // Luego update Firestore con transaction (atomic)
       const conversationRef = doc(db, 'conversations', conversationId);
@@ -223,12 +240,11 @@ export class MessageNotificationsManager {
           });
         }
       });
-      if (DEBUG) console.log('[MessageNotificationsManager] Conversation marked as read in Firestore (transactional):', conversationId);
-    } catch (error) {
-      console.error('[MessageNotificationsManager] Error marking conversation as read:', error);
-      // Rollback optimistic si falla (raramente)
-      if (DEBUG) console.log('[MessageNotificationsManager] Rolling back optimistic update due to error');
-      // Re-trigger fetch para sync
+      if (DEBUG) {
+        // Debug logging disabled
+      }
+    } catch {
+      // Silently handle error
       this.setupListener(userId);
     }
   }
@@ -245,13 +261,15 @@ export class MessageNotificationsManager {
 
   // Método público para cleanup global (solo en logout/app close)
   cleanupAllListeners(): void {
-    if (DEBUG) console.log('[MessageNotificationsManager] Cleaning up all listeners');
+    if (DEBUG) {
+      // Debug logging disabled
+    }
     this.listeners.forEach((unsubscribe) => {
       unsubscribe();
     });
     this.listeners.clear();
     this.subscribers.clear();
-    this.currentNotifications.clear();
+    this.notifications.clear(); // Changed from currentNotifications
     this.debounceTimeouts.forEach(timeout => clearTimeout(timeout));
     this.debounceTimeouts.clear();
   }

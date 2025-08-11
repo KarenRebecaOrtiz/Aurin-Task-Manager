@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import SimpleTooltip from './SimpleTooltip';
 import styles from './TableHeader.module.scss';
 
 interface Column<T> {
@@ -38,9 +37,6 @@ const TableHeader = <T,>({
   onColumnVisibilityChange,
   isMobile = false,
 }: TableHeaderProps<T>) => {
-  // Tooltip state and ref removed as we now use the Tooltip component
-  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Función para obtener el estado de ordenamiento de una columna
   const getSortState = useCallback((columnKey: string): SortState => {
     if (sortKey !== columnKey) return 'none';
@@ -56,36 +52,6 @@ const TableHeader = <T,>({
       default: return 'none';
     }
   };
-
-  // Función para obtener el texto del tooltip de ordenamiento
-  const getSortTooltip = (columnKey: string, label: string): string => {
-    const currentState = getSortState(columnKey);
-    const nextState = getNextSortState(currentState);
-    
-    switch (nextState) {
-      case 'asc':
-        if (columnKey === 'clientId') return `Ordenar alfabéticamente A→Z`;
-        if (columnKey === 'name') return `Ordenar alfabéticamente A→Z`;
-        if (columnKey === 'notificationDot') return `Ordenar por cantidad (menor a mayor)`;
-        if (columnKey === 'assignedTo') return `Ordenar por asignados (menos primero)`;
-        if (columnKey === 'status') return `Ordenar por estado (Pendiente → Finalizado)`;
-        if (columnKey === 'priority') return `Ordenar por prioridad (Alta → Baja)`;
-        return `Ordenar ${label} A→Z`;
-      case 'desc':
-        if (columnKey === 'clientId') return `Ordenar alfabéticamente Z→A`;
-        if (columnKey === 'name') return `Ordenar alfabéticamente Z→A`;
-        if (columnKey === 'notificationDot') return `Ordenar por cantidad (mayor a menor)`;
-        if (columnKey === 'assignedTo') return `Ordenar por asignados (más primero)`;
-        if (columnKey === 'status') return `Ordenar por estado (Finalizado → Pendiente)`;
-        if (columnKey === 'priority') return `Ordenar por prioridad (Baja → Alta)`;
-        return `Ordenar ${label} Z→A`;
-      case 'none':
-      default:
-        return `Quitar ordenamiento`;
-    }
-  };
-
-  // Tooltip functions removed as we now use the Tooltip component
 
   // Función para manejar el clic en ordenamiento
   const handleSort = useCallback((columnKey: string) => {
@@ -139,15 +105,6 @@ const TableHeader = <T,>({
     return true;
   };
 
-  useEffect(() => {
-    const timeoutRef = tooltipTimeoutRef;
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
   return (
     <div className={styles.header}>
       {columns.map((column) => {
@@ -155,7 +112,6 @@ const TableHeader = <T,>({
         const visible = isColumnVisible(column.key);
         const sortState = getSortState(column.key);
         const hasLabel = column.label && column.label.trim() !== '';
-        const hasTooltip = sortable && getSortTooltip(column.key, column.label).trim() !== '';
 
         // Si no hay label y no es ordenable, no mostrar la celda
         if (!hasLabel && !sortable) {
@@ -185,103 +141,93 @@ const TableHeader = <T,>({
         }
 
         return (
-          <SimpleTooltip
+          <div
             key={column.key}
-            text={hasTooltip ? getSortTooltip(column.key, column.label) : ''}
-            position="top"
-            delay={300}
-            disabled={!hasTooltip}
+            className={`
+              ${styles.headerCell} 
+              ${sortable ? styles.sortable : ''} 
+              ${!column.mobileVisible ? styles.hideOnMobile : ''}
+              ${sortState !== 'none' ? styles.sorted : ''}
+              ${!visible ? styles.hidden : ''}
+            `}
+            style={{
+              width: getColumnWidth(column),
+              opacity: visible ? 1 : 0.3,
+            }}
+            onClick={sortable ? () => handleSort(column.key) : undefined}
+            role={sortable ? 'button' : undefined}
+            tabIndex={sortable ? 0 : undefined}
+            aria-sort={
+              sortable && sortState !== 'none'
+                ? sortState === 'asc'
+                  ? 'ascending'
+                  : 'descending'
+                : 'none'
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && sortable) {
+                handleSort(column.key);
+              }
+            }}
           >
-            <div
-              className={`
-                ${styles.headerCell} 
-                ${sortable ? styles.sortable : ''} 
-                ${!column.mobileVisible ? styles.hideOnMobile : ''}
-                ${sortState !== 'none' ? styles.sorted : ''}
-                ${!visible ? styles.hidden : ''}
-              `}
-              style={{
-                width: getColumnWidth(column),
-                opacity: visible ? 1 : 0.3,
-              }}
-              onClick={sortable ? () => handleSort(column.key) : undefined}
-              role={sortable ? 'button' : undefined}
-              tabIndex={sortable ? 0 : undefined}
-              aria-sort={
-                sortable && sortState !== 'none'
-                  ? sortState === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              }
-              aria-label={
-                hasTooltip ? getSortTooltip(column.key, column.label) : undefined
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && sortable) {
-                  handleSort(column.key);
-                }
-              }}
-            >
-              <div className={styles.sortContainer}>
-                <span className={styles.columnLabel}>{column.label}</span>
-              </div>
-
-              {onColumnVisibilityChange &&
-                column.key !== 'action' &&
-                column.key !== 'notificationDot' && (
-                  <div className={styles.visibilityContainer}>
-                    <button
-                      className={styles.visibilityButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleColumnVisibilityToggle(column.key);
-                      }}
-                      aria-label={
-                        visible
-                          ? `Ocultar columna ${column.label}`
-                          : `Mostrar columna ${column.label}`
-                      }
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'absolute',
-                        top: '50%',
-                        right: '2px',
-                        transform: 'translateY(-50%)',
-                        zIndex: 10
-                      }}
-                    >
-                      <motion.div
-                        animate={{
-                          scale: visible ? 1 : 0.8,
-                          opacity: visible ? 1 : 0.5,
-                        }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        <Image
-                          src={visible ? '/eye.svg' : '/eye-closed.svg'}
-                          alt={
-                            visible ? 'Ocultar columna' : 'Mostrar columna'
-                          }
-                          width={7}
-                          height={7}
-                          className={styles.eyeIcon}
-                          style={{ 
-                            width: '15px', 
-                            height: '15px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        />
-                      </motion.div>
-                    </button>
-                  </div>
-                )}
+            <div className={styles.sortContainer}>
+              <span className={styles.columnLabel}>{column.label}</span>
             </div>
-          </SimpleTooltip>
+
+            {onColumnVisibilityChange &&
+              column.key !== 'action' &&
+              column.key !== 'notificationDot' && (
+                <div className={styles.visibilityContainer}>
+                  <button
+                    className={styles.visibilityButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleColumnVisibilityToggle(column.key);
+                    }}
+                    aria-label={
+                      visible
+                        ? `Ocultar columna ${column.label}`
+                        : `Mostrar columna ${column.label}`
+                    }
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'absolute',
+                      top: '50%',
+                      right: '2px',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10
+                    }}
+                  >
+                    <motion.div
+                      animate={{
+                        scale: visible ? 1 : 0.8,
+                        opacity: visible ? 1 : 0.5,
+                      }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <Image
+                        src={visible ? '/eye.svg' : '/eye-closed.svg'}
+                        alt={
+                          visible ? 'Ocultar columna' : 'Mostrar columna'
+                        }
+                        width={7}
+                        height={7}
+                        className={styles.eyeIcon}
+                        style={{ 
+                          width: '15px', 
+                          height: '15px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      />
+                    </motion.div>
+                  </button>
+                </div>
+              )}
+          </div>
         );
       })}
     </div>
