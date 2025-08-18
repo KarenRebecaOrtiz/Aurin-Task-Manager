@@ -27,6 +27,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchableDropdown from "@/components/ui/SearchableDropdown";
 import { useShallow } from "zustand/react/shallow";
+import PopupLoader from "@/components/ui/PopupLoader";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -170,6 +171,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const [failErrorMessage, setFailErrorMessage] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [includeMembers, setIncludeMembers] = useState(false);
+  const [showPopupLoader, setShowPopupLoader] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -520,6 +522,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       return;
     }
 
+    // Mostrar PopupLoader
+    setShowPopupLoader(true);
     setIsSaving(true);
     try {
       const taskDocRef = doc(collection(db, "tasks"));
@@ -564,6 +568,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       clearPersistedData();
       setIsSaving(false);
       
+      // El PopupLoader se cerrará automáticamente y llamará a onComplete
       if (onTaskCreated) {
         setTimeout(() => {
           onTaskCreated();
@@ -609,6 +614,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       }
       
       setIsSaving(false);
+      setShowPopupLoader(false);
     }
   };
 
@@ -1219,6 +1225,22 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           </div>
         )}
       </div>
+      
+      {/* PopupLoader para mostrar progreso de creación */}
+      <PopupLoader
+        isOpen={showPopupLoader}
+        title="Creando Tarea"
+        description="Estamos procesando tu tarea y enviando notificaciones a los colaboradores..."
+        onComplete={() => {
+          setShowPopupLoader(false);
+          // Redirigir al TasksTable
+          if (onTaskCreated) {
+            onTaskCreated();
+          }
+        }}
+        autoClose={true}
+        autoCloseDelay={3000}
+      />
     </>
   );
 };

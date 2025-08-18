@@ -9,7 +9,9 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "lint:detailed": "eslint src --ext .ts,.tsx,.js,.jsx --format=compact",
-    "lint:check": "eslint src --ext .ts,.tsx,.js,.jsx --max-warnings 0"
+    "lint:check": "eslint src --ext .ts,.tsx,.js,.jsx --max-warnings 0",
+    "test:notifications": "ts-node src/scripts/test-notification-system.ts",
+    "test:email-templates": "ts-node src/scripts/test-email-templates.ts"
   },
   "dependencies": {
     "@clerk/backend": "^2.1.0",

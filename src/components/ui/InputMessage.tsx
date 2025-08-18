@@ -1,5 +1,25 @@
 'use client';
 
+/**
+ * 🎯 FASE 5: LIMPIEZA DEL INPUT AL ENVIAR MENSAJE CON ENTER
+ * 🚀 FASE 6: CORRECCIÓN DE LIMPIEZA DEL INPUT AL ENVIAR CON ENTER
+ * 
+ * Implementación de limpieza optimista del input y caché para mejorar UX:
+ * - Clear inmediato del editor Tiptap tras envío optimista
+ * - Limpieza de archivos adjuntos y estado de respuesta
+ * - Eliminación de mensajes persistidos en caché (drafts y errores)
+ * - Integración con sistema existente de persistencia
+ * - Corrección de limpieza al presionar Enter (Fase 6)
+ * 
+ * Basado en:
+ * - https://tiptap.dev/api/commands#clearcontent para resetear editor
+ * - https://javascript.plainenglish.io/implementing-optimistic-ui-updates-in-react-a-deep-dive-2f4d91e2b1a4
+ * - https://stackoverflow.com/questions/28889826/react-preventdefault-not-working para event handling
+ * 
+ * @author Optimistic UI Implementation Team
+ * @version 6.0
+ */
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
@@ -288,7 +308,8 @@ export function InputMessage({
           return;
         }
         await onEditMessage(editingMessageId, newText);
-        editor?.commands.clearContent();
+        // ✅ FASE 6: Limpiar input y caché tras edición con reset completo
+        editor?.commands.clearContent(true); // Forzar reset completo
         setFile(null);
         setPreviewUrl(null);
         setHasReformulated(false);
@@ -314,19 +335,24 @@ export function InputMessage({
         finalMessageData.imageUrl = data.imageUrl;
       }
 
+      // ✅ OPTIMIZACIÓN: Clear input inmediatamente post-optimistic para UX rápida
       await onSendMessage(finalMessageData);
-      editor?.commands.clearContent();
+      // console.log('[InputMessage] User message sent successfully');
+      
+      // 🚀 OPTIMISTIC UI: Clear input y caché inmediatamente después del envío optimista
+      // Basado en https://tiptap.dev/api/commands#clearcontent para resetear editor
+      // Esto mejora la percepción de velocidad según https://javascript.plainenglish.io/implementing-optimistic-ui-updates-in-react-a-deep-dive-2f4d91e2b1a4
+      // ✅ LIMPIEZA INMEDIATA: Editor, archivo, caché y estado se resetean instantáneamente
+      // 🎯 FASE 5: Limpieza completa del input y caché para UX tipo WhatsApp
+      // 🚀 FASE 6: Forzar reset completo del editor para garantizar limpieza con Enter
+      editor?.commands.clearContent(true); // Forzar reset completo
       setFile(null);
       setPreviewUrl(null);
-      
-      // Limpiar mensaje guardado al enviar exitosamente
-      removeErrorMessage(currentConversationId);
-      clearPersistedData(); // Clear draft after successful send
-      
-      // Limpiar reply después de enviar
-      if (onCancelReply) {
-        onCancelReply();
-      }
+      setHasReformulated(false);
+      adjustEditorHeight();
+      removeErrorMessage(currentConversationId); // Limpiar mensajes de error en caché
+      clearPersistedData(); // Limpiar draft en caché
+      if (onCancelReply) onCancelReply();
       
       console.log('[InputMessage] Message sent successfully');
     } catch (error) {
@@ -420,10 +446,15 @@ export function InputMessage({
       }
     }
     
-    // Handle Enter to send
+    // ✅ FASE 6: Asegurar que Enter dispare handleSend sin bloqueos
+    // Basado en https://stackoverflow.com/questions/28889826/react-preventdefault-not-working
     if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
       e.preventDefault();
       handleSend(e);
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      // ✅ Permitir salto de línea con Shift+Enter
+      // Comportamiento estándar de Tiptap para salto de línea
+      setTimeout(adjustEditorHeight, 0);
     }
   }, [isSending, isProcessing, handleSend, editor, editingMessageId, onCancelEdit]);
 
@@ -731,16 +762,18 @@ export function InputMessage({
     return () => clearInterval(interval);
   }, [editor, watchAndSave]);
 
-  // 4. Clear draft when reply is cancelled
+  // ✅ FASE 5: Limpiar caché al cancelar respuesta para mantener consistencia
   const handleCancelReply = useCallback(() => {
     if (typeof replyingTo !== 'undefined' && onCancelReply) {
       onCancelReply();
     } else {
       setInternalReplyingTo(null);
     }
-    // Don't clear the draft here, let the user keep their text
+    // ✅ Limpiar caché al cancelar respuesta para mantener consistencia
+    clearPersistedData();
+    removeErrorMessage(currentConversationId);
     console.log('[InputMessage] Reply cancelled, keeping draft text');
-  }, [replyingTo, onCancelReply]);
+  }, [replyingTo, onCancelReply, clearPersistedData, removeErrorMessage, currentConversationId]);
 
   return (
     <div className={styles.inputWrapper}>

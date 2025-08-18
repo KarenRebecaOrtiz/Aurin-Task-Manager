@@ -113,6 +113,9 @@ export default React.memo(function NotificationDropdown({
       switch (notification.type) {
         case 'group_message':
         case 'task_status_changed':
+        case 'task_priority_changed':
+        case 'task_dates_changed':
+        case 'task_assignment_changed':
         case 'task_created':
         case 'task_deleted':
         case 'task_archived':

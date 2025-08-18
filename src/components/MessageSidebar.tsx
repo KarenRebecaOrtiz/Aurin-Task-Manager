@@ -1,6 +1,30 @@
 'use client';
 
+/**
+ * 🎯 FASE 5: LIMPIEZA DEL INPUT AL ENVIAR MENSAJE CON ENTER
+ * 🚀 FASE 6: CORRECCIÓN DE LIMPIEZA DEL INPUT AL ENVIAR CON ENTER
+ * 🎯 FASE 3: MANEJO DE ERRORES CON MODAL DE RETRY
+ * 🚀 FASE 4: OPTIMIZACIONES Y VERIFICACIÓN DEL RENDERING DEL MODAL
+ * 
+ * Implementación completa de mensajes optimistas para conversaciones privadas:
+ * - Clear inmediato del editor Tiptap tras envío optimista
+ * - Limpieza de archivos adjuntos y estado de respuesta
+ * - Eliminación de mensajes persistidos en caché (drafts y errores)
+ * - Modal de retry para mensajes fallidos
+ * - Portal para modal sin clipping del sidebar
+ * - Integración con sistema existente de persistencia
+ * 
+ * Basado en:
+ * - https://tiptap.dev/api/commands#clearcontent para resetear editor
+ * - https://javascript.plainenglish.io/implementing-optimistic-ui-updates-in-react-a-deep-dive-2f4d91e2b1a4
+ * - https://react.dev/reference/react-dom/createPortal para portals
+ * 
+ * @author Optimistic UI Implementation Team
+ * @version 6.0
+ */
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { collection, doc, query, serverTimestamp, setDoc, getDoc, where, getDocs, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
@@ -204,6 +228,10 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   const [messageDelivered, setMessageDelivered] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const lastScrollTop = useRef(0);
+  
+  // ✅ OPTIMISTIC UI: Modal de retry para mensajes fallidos
+  const [retryModalOpen, setRetryModalOpen] = useState(false);
+  const [retryMessage, setRetryMessage] = useState<Message | null>(null);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -503,6 +531,49 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       alert('Error al reintentar el envío');
     }
   }, [resendMessage]);
+
+  // ✅ OPTIMISTIC UI: Funciones para manejar modal de retry
+  const handleOpenRetryModal = useCallback((message: Message) => {
+    setRetryMessage(message);
+    setRetryModalOpen(true);
+  }, []);
+
+  const handleCloseRetryModal = useCallback(() => {
+    setRetryModalOpen(false);
+    setRetryMessage(null);
+  }, []);
+
+  const handleRetrySend = useCallback(async () => {
+    if (retryMessage) {
+      try {
+        await handleResendMessage(retryMessage);
+        handleCloseRetryModal();
+      } catch (error) {
+        // El error ya se maneja en handleResendMessage
+      }
+    }
+  }, [retryMessage, handleResendMessage, handleCloseRetryModal]);
+
+  // ✅ OPTIMIZACIÓN: Hook para manejar escape key en modal
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && retryModalOpen) {
+        handleCloseRetryModal();
+      }
+    };
+
+    if (retryModalOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+      // ✅ Prevenir scroll del body cuando modal está abierto
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+      // ✅ Restaurar scroll del body cuando modal se cierra
+      document.body.style.overflow = 'unset';
+    };
+  }, [retryModalOpen, handleCloseRetryModal]);
 
   const handleCopyMessage = useCallback((message: Message) => {
     const textToCopy = message.text || '';
@@ -1214,6 +1285,66 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
           alt="Vista previa de imagen"
           onClose={handleCloseImagePreview}
         />
+      )}
+      
+      {/* ✅ OPTIMISTIC UI: Modal de retry para mensajes fallidos */}
+      {/* 🚀 PORTAL IMPLEMENTATION: Render en DOM root para evitar clipping del sidebar */}
+      {retryModalOpen && ReactDOM.createPortal(
+        <motion.div
+          className={styles.retryModalOverlay}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          onClick={handleCloseRetryModal}
+        >
+          <motion.div
+            className={styles.retryModal}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.retryModalContent}>
+              <div className={styles.retryModalHeader}>
+                <Image src="/circle-x.svg" alt="Error" width={24} height={24} />
+                <h3 className={styles.retryModalTitle}>Error al enviar mensaje</h3>
+              </div>
+              <div className={styles.retryModalBody}>
+                <p className={styles.retryModalText}>
+                  ¿Reintentar envío del mensaje?
+                </p>
+                {retryMessage?.text && (
+                  <div className={styles.retryMessagePreview}>
+                    <span className={styles.retryMessageText}>
+                      "{retryMessage.text.length > 100 ? `${retryMessage.text.substring(0, 100)}...` : retryMessage.text}"
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className={styles.retryModalActions}>
+                <motion.button
+                  className={styles.retryModalCancelButton}
+                  onClick={handleCloseRetryModal}
+                  whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                >
+                  Cancelar
+                </motion.button>
+                <motion.button
+                  className={styles.retryModalRetryButton}
+                  onClick={handleRetrySend}
+                  whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                >
+                  Reintentar
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>,
+        document.body  // ✅ Render en root para sobre sidebar
       )}
     </motion.div>
   );

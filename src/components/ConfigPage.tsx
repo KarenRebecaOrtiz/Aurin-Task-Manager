@@ -61,6 +61,13 @@ interface Config {
   profilePhoto?: string;
   coverPhoto?: string;
   status?: string;
+  // Preferencias de email para notificaciones
+  emailPreferences?: {
+    messages: boolean;
+    creation: boolean;
+    edition: boolean;
+    timers: boolean;
+  };
   // Ubicaciones personalizadas
   personalLocations?: {
     home?: PersonalLocation;
@@ -85,6 +92,13 @@ interface ConfigForm extends Omit<Config, 'id'> {
   currentPassword?: string;
   newPassword?: string;
   confirmPassword?: string;
+  // Preferencias de email para el formulario
+  emailPreferences?: {
+    messages: boolean;
+    creation: boolean;
+    edition: boolean;
+    timers: boolean;
+  };
   // Ubicaciones personalizadas para el formulario
   homeLocation?: PersonalLocation;
   secondaryLocation?: PersonalLocation;
@@ -338,6 +352,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             newPassword: '',
             confirmPassword: '',
             status: data.status || 'Disponible',
+            // Preferencias de email (por defecto activadas)
+            emailPreferences: data.emailPreferences || { messages: true, creation: true, edition: true, timers: true },
             // Ubicaciones personalizadas
             homeLocation: data.personalLocations?.home,
             secondaryLocation: data.personalLocations?.secondary,
@@ -378,6 +394,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
             newPassword: '',
             confirmPassword: '',
             status: 'Disponible',
+            // Preferencias de email (por defecto activadas)
+            emailPreferences: { messages: true, creation: true, edition: true, timers: true },
             // Ubicaciones personalizadas
             homeLocation: undefined,
             secondaryLocation: undefined,
@@ -989,6 +1007,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         profilePhoto: profilePhotoUrl,
         coverPhoto: coverPhotoUrl,
         status: formData.status || 'Disponible',
+        // Preferencias de email
+        emailPreferences: formData.emailPreferences,
         // Ubicaciones personalizadas
         personalLocations: {
           home: formData.homeLocation || null,
@@ -2071,6 +2091,74 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                       )}
                     </div>
                   </div>
+                </div>
+              </motion.div>
+            </motion.section>
+          )}
+          
+          {/* Sección de Preferencias de Email */}
+          {isOwnProfile && (
+            <motion.section 
+              className={styles.section} 
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <motion.div 
+                className={styles.sectionContent}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <div className={styles.sectionHeader}>
+                  <h2 className={styles.sectionTitle}>
+                    <Image 
+                      src="/mail.svg" 
+                      alt="Notificaciones Email" 
+                      width={20} 
+                      height={20} 
+                      className={styles.sectionIcon}
+                      onError={(e) => {
+                        console.error('Error loading mail icon:', e);
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                    Notificaciones por Email
+                  </h2>
+                  <div className={styles.stackDescription}>
+                    Personaliza qué notificaciones quieres recibir por email. Las notificaciones in-app siempre están activas.
+                  </div>
+                </div>
+                
+                <div className={styles.fieldGroup}>
+                  {[
+                    { key: 'messages', label: 'Mensajes (group_message, private_message)' },
+                    { key: 'creation', label: 'Creación de tareas (task_created)' },
+                    { key: 'edition', label: 'Edición de tareas (status, priority, dates, assignment changes)' },
+                    { key: 'timers', label: 'Registros de tiempo (time_log)' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className={styles.toggleRow}>
+                      <label className={styles.toggleLabel}>{label}</label>
+                      <label className={styles.switch}>
+                        <input
+                          type="checkbox"
+                          checked={formData.emailPreferences?.[key as keyof typeof formData.emailPreferences] ?? true}
+                          onChange={(e) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              emailPreferences: {
+                                ...prev.emailPreferences,
+                                [key]: e.target.checked,
+                              },
+                            }));
+                          }}
+                          disabled={!isOwnProfile || !isEditing}
+                        />
+                        <span className={styles.slider}></span>
+                      </label>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             </motion.section>

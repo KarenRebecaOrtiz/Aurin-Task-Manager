@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchableDropdown from "@/components/ui/SearchableDropdown";
 import { useShallow } from "zustand/react/shallow";
+import PopupLoader from "@/components/ui/PopupLoader";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -176,6 +177,7 @@ const [currentStep, setCurrentStep] = useState(0);
   const [failErrorMessage, setFailErrorMessage] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [includeMembers, setIncludeMembers] = useState(false);
+  const [showPopupLoader, setShowPopupLoader] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -515,6 +517,8 @@ const [currentStep, setCurrentStep] = useState(0);
       return;
     }
 
+    // Mostrar PopupLoader
+    setShowPopupLoader(true);
     setIsSaving(true);
     try {
       const taskData = {
@@ -531,21 +535,55 @@ const [currentStep, setCurrentStep] = useState(0);
       // Actualizar la actividad de la tarea
       await updateTaskActivity(taskId, 'edit');
 
+      // Determinar destinatarios (excluyendo al editor)
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
       recipients.delete(user.id);
       
       if (recipients.size > 0) {
         try {
+          // Determinar el tipo de cambio para notificación más específica
+          let notificationType: string = 'task_status_changed';
+          let notificationMessage = `${user.firstName || "Usuario"} actualizó la tarea ${values.basicInfo.name}`;
+          
+          // Detectar cambios específicos
+          const hasPriorityChanged = values.basicInfo.priority !== defaultValues.basicInfo.priority;
+          const hasDatesChanged = values.basicInfo.startDate !== defaultValues.basicInfo.startDate || 
+                                 values.basicInfo.endDate !== defaultValues.basicInfo.endDate;
+          const hasAssignmentChanged = JSON.stringify(values.teamInfo.AssignedTo) !== JSON.stringify(defaultValues.teamInfo.AssignedTo);
+          
+          if (hasPriorityChanged) {
+            notificationType = 'task_priority_changed';
+            notificationMessage = `${user.firstName || "Usuario"} cambió la prioridad de "${values.basicInfo.name}" a ${values.basicInfo.priority}`;
+          } else if (hasDatesChanged) {
+            notificationType = 'task_dates_changed';
+            notificationMessage = `${user.firstName || "Usuario"} actualizó las fechas de "${values.basicInfo.name}"`;
+          } else if (hasAssignmentChanged) {
+            notificationType = 'task_assignment_changed';
+            notificationMessage = `${user.firstName || "Usuario"} modificó la asignación de "${values.basicInfo.name}"`;
+          }
+
+          // Log para depuración
+          console.log('[EditTask] Detected changes:', {
+            priorityChanged: hasPriorityChanged,
+            datesChanged: hasDatesChanged,
+            assignmentChanged: hasAssignmentChanged,
+            notificationType,
+            recipients: Array.from(recipients),
+          });
+
           await notificationService.createNotificationsForRecipients({
             userId: user.id,
-            message: `${user.firstName || "Usuario"} actualizó la tarea ${values.basicInfo.name}`,
-            type: 'task_status_changed',
+            message: notificationMessage,
+            type: notificationType as any, // Type assertion para compatibilidad
             taskId,
           }, Array.from(recipients));
-          console.log('[EditTask] Sent task update notifications to:', recipients.size, 'recipients');
+          
+          console.log(`[EditTask] Sent ${notificationType} notifications to:`, recipients.size, 'recipients');
         } catch (error) {
           console.warn('[EditTask] Error sending task update notifications:', error);
         }
+      } else {
+        console.log('[EditTask] No recipients for notifications (solo editor)');
       }
 
       // Use parent alert handlers if available, otherwise use local state
@@ -560,6 +598,7 @@ const [currentStep, setCurrentStep] = useState(0);
       setIsSaving(false);
       onHasUnsavedChanges(false);
       
+      // El PopupLoader se cerrará automáticamente y llamará a onComplete
       // Cerrar el modal de edición
       onToggle();
       
@@ -595,15 +634,7 @@ const [currentStep, setCurrentStep] = useState(0);
         userFriendlyDescription = "La tarea que intentas editar ya no existe o fue eliminada por otro usuario.";
       } else if (errorMessage.includes("validation") || errorMessage.includes("required")) {
         userFriendlyTitle = "📝 Datos Incompletos";
-        userFriendlyDescription = "Algunos campos obligatorios están incompletos o contienen errores. Revisa el formulario y completa toda la información requerida.";
-      } else if (errorMessage.includes("timeout")) {
-        userFriendlyTitle = "⏱️ Tiempo de Espera Agotado";
-        userFriendlyDescription = "La operación tardó demasiado en completarse. Tu conexión puede ser lenta, intenta nuevamente.";
-      } else if (errorMessage.includes("conflict") || errorMessage.includes("version")) {
-        userFriendlyTitle = "⚡ Conflicto de Versión";
-        userFriendlyDescription = "Otro usuario modificó esta tarea mientras la editabas. Recarga la página para ver los cambios más recientes.";
-      } else {
-        userFriendlyDescription += "Por favor, verifica todos los campos y intenta nuevamente. Si el problema persiste, contacta al soporte técnico.";
+        userFriendlyDescription = "Algunos campos requeridos están incompletos. Verifica que todos los campos obligatorios estén llenos.";
       }
 
       toast({
@@ -621,6 +652,7 @@ const [currentStep, setCurrentStep] = useState(0);
       }
       
       setIsSaving(false);
+      setShowPopupLoader(false);
     }
   };
 
@@ -1309,6 +1341,19 @@ const [currentStep, setCurrentStep] = useState(0);
           </div>
         )}
       </div>
+      
+      {/* PopupLoader para mostrar progreso de edición */}
+      <PopupLoader
+        isOpen={showPopupLoader}
+        title="Actualizando Tarea"
+        description="Estamos guardando los cambios y enviando notificaciones a los colaboradores..."
+        onComplete={() => {
+          setShowPopupLoader(false);
+          // El modal ya se cierra y redirige automáticamente
+        }}
+        autoClose={true}
+        autoCloseDelay={2500}
+      />
     </>
   );
 };

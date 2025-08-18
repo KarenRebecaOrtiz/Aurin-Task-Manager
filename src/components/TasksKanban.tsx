@@ -479,17 +479,17 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
                 marginLeft: '5px',
                 transition: 'transform 0.3s ease, filter 0.3s ease',
                 filter:
-                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0))',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
                 e.currentTarget.style.filter =
-                  'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                  'drop-shadow(0 6px 12px rgba(0, 0, 0, 0)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0))';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
                 e.currentTarget.style.filter =
-                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
               }}
             />
           </button>

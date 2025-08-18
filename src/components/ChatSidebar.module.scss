@@ -4085,6 +4085,535 @@
 // -----------------------------------
 .message.pending {
   opacity: 0.8;
+  
+  .pendingIndicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .pendingSpinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .pendingText {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Modo oscuro para pending indicator
+:global(body.dark) {
+  .message.pending {
+    .pendingIndicator {
+      color: #9ca3af;
+    }
+    
+    .pendingSpinner {
+      border-color: #374151;
+      border-top-color: #60a5fa;
+    }
+    
+    .pendingText {
+      color: #9ca3af;
+    }
+  }
+}
+
+// ✅ OPTIMISTIC UI: Indicadores de estado de mensajes
+.messageStatus {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
+  gap: 4px;
+  
+  .statusIcon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+  }
+  
+  &.errorStatus {
+    .statusIcon {
+      opacity: 1;
+      filter: brightness(0.8);
+    }
+  }
+}
+
+// Modo oscuro para indicadores de estado
+:global(body.dark) {
+  .messageStatus {
+    .statusIcon {
+      opacity: 0.8;
+    }
+    
+    &.errorStatus {
+      .statusIcon {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// ✅ OPTIMISTIC UI: Modal de retry para mensajes fallidos
+// 🚀 PORTAL OPTIMIZATION: Modal renderizado en DOM root para evitar clipping del sidebar
+// 📱 RESPONSIVE: Adaptado para móvil y desktop con breakpoints
+.retryModalOverlay {
+  position: fixed;  // ✅ Asegura sobre todo el contenido
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;  // ✅ Alto z-index, > chat z-index (asumir chat ~1000)
+  backdrop-filter: blur(4px);
+  
+  // ✅ OPTIMIZACIÓN: Asegurar que esté por encima de todo
+  isolation: isolate;
+  
+  // ✅ RESPONSIVE: Ajustes para móvil
+  @media (max-width: 768px) {
+    padding: 16px;
+    align-items: flex-end;  // Modal en la parte inferior en móvil
+  }
+}
+
+.retryModal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
+  z-index: 1002;  // ✅ Mayor que overlay para layering correcto
+  
+  // ✅ RESPONSIVE: Ajustes para móvil
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 12px 12px 0 0;  // Bordes redondeados solo arriba en móvil
+    width: 100%;
+    max-width: none;
+    margin-bottom: 0;
+  }
+}
+
+.retryModalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.retryModalHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  .retryModalTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+  }
+}
+
+.retryModalBody {
+  .retryModalText {
+    margin: 0 0 12px 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .retryMessagePreview {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    
+    .retryMessageText {
+      color: #374151;
+      font-size: 13px;
+      line-height: 1.4;
+      font-style: italic;
+    }
+  }
+}
+
+.retryModalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  
+  .retryModalCancelButton {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: #e5e7eb;
+      border-color: #9ca3af;
+    }
+  }
+  
+  .retryModalRetryButton {
+    background: #3b82f6;
+    border: 1px solid #2563eb;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: #2563eb;
+      border-color: #1d4ed8;
+    }
+  }
+  
+  // ✅ RESPONSIVE: Botones en móvil
+  @media (max-width: 768px) {
+    flex-direction: column;  // Botones apilados verticalmente en móvil
+    gap: 8px;
+    
+    .retryModalCancelButton,
+    .retryModalRetryButton {
+      width: 100%;  // Botones de ancho completo en móvil
+      padding: 12px 16px;  // Padding más grande para touch
+      font-size: 16px;  // Texto más grande para móvil
+    }
+  }
+}
+
+// Modo oscuro para modal de retry
+:global(body.dark) {
+  .retryModal {
+    background: #1f2937;
+    border-color: #374151;
+    
+    .retryModalHeader {
+      .retryModalTitle {
+        color: #f9fafb;
+      }
+    }
+    
+    .retryModalBody {
+      .retryModalText {
+        color: #d1d5db;
+      }
+      
+      .retryMessagePreview {
+        background: #374151;
+        border-color: #4b5563;
+        
+        .retryMessageText {
+          color: #e5e7eb;
+        }
+      }
+    }
+    
+    .retryModalActions {
+      .retryModalCancelButton {
+        background: #374151;
+        border-color: #4b5563;
+        color: #d1d5db;
+        
+        &:hover {
+          background: #4b5563;
+          border-color: #6b7280;
+        }
+      }
+      
+      .retryModalRetryButton {
+        background: #3b82f6;
+        border-color: #2563eb;
+        
+        &:hover {
+          background: #2563eb;
+          border-color: #1d4ed8;
+        }
+      }
+    }
+  }
+}
+
+// ✅ OPTIMISTIC UI: Modal de retry para mensajes fallidos
+// 🚀 PORTAL OPTIMIZATION: Modal renderizado en DOM root para evitar clipping del sidebar
+// 📱 RESPONSIVE: Adaptado para móvil y desktop con breakpoints
+.retryModalOverlay {
+  position: fixed;  // ✅ Asegura sobre todo el contenido
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;  // ✅ Alto z-index, > chat z-index (asumir chat ~1000)
+  backdrop-filter: blur(4px);
+  
+  // ✅ OPTIMIZACIÓN: Asegurar que esté por encima de todo
+  isolation: isolate;
+  
+  // ✅ RESPONSIVE: Ajustes para móvil
+  @media (max-width: 768px) {
+    padding: 16px;
+    align-items: flex-end;  // Modal en la parte inferior en móvil
+  }
+}
+
+.retryModal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
+  z-index: 1002;  // ✅ Mayor que overlay para layering correcto
+  
+  // ✅ RESPONSIVE: Ajustes para móvil
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 12px 12px 0 0;  // Bordes redondeados solo arriba en móvil
+    width: 100%;
+    max-width: none;
+    margin-bottom: 0;
+  }
+}
+
+.retryModalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.retryModalHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  .retryModalTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+  }
+}
+
+.retryModalBody {
+  .retryModalText {
+    margin: 0 0 12px 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .retryMessagePreview {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    
+    .retryMessageText {
+      color: #374151;
+      font-size: 13px;
+      line-height: 1.4;
+      font-style: italic;
+    }
+  }
+}
+
+.retryModalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  
+  .retryModalCancelButton {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: #e5e7eb;
+      border-color: #9ca3af;
+    }
+  }
+  
+  .retryModalRetryButton {
+    background: #3b82f6;
+    border: 1px solid #2563eb;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: #2563eb;
+      border-color: #1d4ed8;
+    }
+  }
+  
+  // ✅ RESPONSIVE: Botones en móvil
+  @media (max-width: 768px) {
+    flex-direction: column;  // Botones apilados verticalmente en móvil
+    gap: 8px;
+    
+    .retryModalCancelButton,
+    .retryModalRetryButton {
+      width: 100%;  // Botones de ancho completo en móvil
+      padding: 12px 16px;  // Padding más grande para touch
+      font-size: 16px;  // Texto más grande para móvil
+    }
+  }
+}
+
+// Modo oscuro para modal de retry
+:global(body.dark) {
+  .retryModal {
+    background: #1f2937;
+    border-color: #374151;
+    
+    .retryModalHeader {
+      .retryModalTitle {
+        color: #f9fafb;
+      }
+    }
+    
+    .retryModalBody {
+      .retryModalText {
+        color: #d1d5db;
+      }
+      
+      .retryMessagePreview {
+        background: #374151;
+        border-color: #4b5563;
+        
+        .retryMessageText {
+          color: #e5e7eb;
+        }
+      }
+    }
+    
+    .retryModalActions {
+      .retryModalCancelButton {
+        background: #374151;
+        border-color: #4b5563;
+        color: #d1d5db;
+        
+        &:hover {
+          background: #4b5563;
+          border-color: #6b7280;
+        }
+      }
+      
+      .retryModalRetryButton {
+        background: #3b82f6;
+        border-color: #2563eb;
+        
+        &:hover {
+          background: #2563eb;
+          border-color: #1d4ed8;
+        }
+      }
+    }
+  }
+}
+
+// Indicador de error para mensajes fallidos
+.errorIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  color: #dc2626;
+  
+  .errorText {
+    font-size: 12px;
+    font-weight: 500;
+    color: #dc2626;
+  }
+  
+  .retryButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+}
+
+// Modo oscuro para error indicator
+:global(body.dark) {
+  .errorIndicator {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    
+    .errorText {
+      color: #fca5a5;
+    }
+    
+    .retryButton {
+      &:hover {
+        background: rgba(239, 68, 68, 0.2);
+      }
+    }
+  }
 }
 
 .message.error {
@@ -4107,6 +4636,28 @@
     border: none;
     cursor: pointer;
     font-size: 12px;
+  }
+}
+
+// ✅ OPTIMISTIC UI: Tinte rojo para mensajes con error (estado visual)
+.message.error {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  
+  &:hover {
+    background-color: rgba(239, 68, 68, 0.08) !important;
+  }
+}
+
+// Modo oscuro para mensajes con error
+:global(body.dark) {
+  .message.error {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    border-color: rgba(239, 68, 68, 0.25) !important;
+    
+    &:hover {
+      background-color: rgba(239, 68, 68, 0.15) !important;
+    }
   }
 }
 

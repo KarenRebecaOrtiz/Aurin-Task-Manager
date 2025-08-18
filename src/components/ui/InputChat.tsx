@@ -29,6 +29,26 @@ import { useMentionHandler } from '@/hooks/useMentionHandler';
 // Removido: useGeminiModes ya no se usa después de la refactorización
 // Removido: useGeminiStore ya no se usa directamente después de la refactorización
 
+/**
+ * 🎯 FASE 5: LIMPIEZA DEL INPUT AL ENVIAR MENSAJE CON ENTER
+ * 🚀 FASE 6: CORRECCIÓN DE LIMPIEZA DEL INPUT AL ENVIAR CON ENTER
+ * 
+ * Implementación de limpieza optimista del input y caché para mejorar UX:
+ * - Clear inmediato del editor Tiptap tras envío optimista
+ * - Limpieza de archivos adjuntos y estado de respuesta
+ * - Eliminación de mensajes persistidos en caché (drafts y errores)
+ * - Integración con sistema existente de persistencia
+ * - Corrección de limpieza al presionar Enter (Fase 6)
+ * 
+ * Basado en:
+ * - https://tiptap.dev/api/commands#clearcontent para resetear editor
+ * - https://javascript.plainenglish.io/implementing-optimistic-ui-updates-in-react-a-deep-dive-2f4d91e2b1a4
+ * - https://stackoverflow.com/questions/28889826/react-preventdefault-not-working para event handling
+ * 
+ * @author Optimistic UI Implementation Team
+ * @version 6.0
+ */
+
 interface Message {
   id: string;
   senderId: string;
@@ -611,7 +631,8 @@ export default function InputChat({
       try {
         setIsSending(true);
         await onEditMessage(editingMessageId, newText);
-        editor?.commands.clearContent();
+        // ✅ FASE 6: Limpiar input y caché tras edición con reset completo
+        editor?.commands.clearContent(true); // Forzar reset completo
         setFile(null);
         handleRemove();
         setHasReformulated(false);
@@ -670,18 +691,24 @@ export default function InputChat({
         };
       }
 
+      // ✅ OPTIMIZACIÓN: Clear input inmediatamente post-optimistic para UX rápida
       // Siempre enviar mensaje del usuario primero
       await onSendMessage(finalMessageData);
       // console.log('[InputChat] User message sent successfully');
       
-      // Limpiar editor después de enviar
-      editor?.commands.clearContent();
+      // 🚀 OPTIMISTIC UI: Clear input y caché inmediatamente después del envío optimista
+      // Basado en https://tiptap.dev/api/commands#clearcontent para resetear editor
+      // Esto mejora la percepción de velocidad según https://javascript.plainenglish.io/implementing-optimistic-ui-updates-in-react-a-deep-dive-2f4d91e2b1a4
+      // ✅ LIMPIEZA INMEDIATA: Editor, archivo, caché y estado se resetean instantáneamente
+      // 🎯 FASE 5: Limpieza completa del input y caché para UX tipo WhatsApp
+      // 🚀 FASE 6: Forzar reset completo del editor para garantizar limpieza con Enter
+      editor?.commands.clearContent(true); // Forzar reset completo
       setFile(null);
       handleRemove();
       setHasReformulated(false);
       adjustEditorHeight();
-      removeErrorMessage(conversationId);
-      clearPersistedData();
+      removeErrorMessage(conversationId); // Limpiar mensajes de error en caché
+      clearPersistedData(); // Limpiar draft en caché
       if (onCancelReply) onCancelReply();
       
       // Si hay mención @gemini, procesar después
@@ -765,7 +792,10 @@ export default function InputChat({
 
   const handleCancelReply = useCallback(() => {
     setReplyingTo(null);
-  }, [setReplyingTo]);
+    // ✅ FASE 5: Limpiar caché al cancelar respuesta para mantener consistencia
+    clearPersistedData();
+    removeErrorMessage(conversationId);
+  }, [setReplyingTo, clearPersistedData, removeErrorMessage, conversationId]);
 
   const handleToggleFormat = useCallback((id: string) => {
     if (editor) {
@@ -901,15 +931,16 @@ export default function InputChat({
           break;
         }
       }
-    } else if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing) {
-      if (isMentionOpen) {
-        // bloquea enviar cuando el dropdown de mencionar está abierto
-        e.preventDefault();
-        return;
-      }
+    } else if (e.key === 'Enter' && !e.shiftKey && !isSending && !isProcessing && !isMentionOpen) {
+      // ✅ FASE 6: Asegurar que Enter dispare handleSend sin bloqueos
+      // Basado en https://stackoverflow.com/questions/28889826/react-preventdefault-not-working
       e.preventDefault();
       handleSend(e);
-    } else if (e.key === 'Enter') setTimeout(adjustEditorHeight, 0);
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      // ✅ Permitir salto de línea con Shift+Enter
+      // Comportamiento estándar de Tiptap para salto de línea
+      setTimeout(adjustEditorHeight, 0);
+    }
   }, [editor, isSending, isProcessing, isMentionOpen, handleSend, adjustEditorHeight]);
 
   const handleMentionSelectionChange = useCallback((ids: string[]) => {

@@ -78,6 +78,8 @@ interface MessageItemProps {
   setEditingMessageId: Dispatch<React.SetStateAction<string | null>>;
   setEditingText: Dispatch<React.SetStateAction<string>>;
   handleDeleteMessage: (messageId: string) => Promise<void>;
+  handleRetryMessage: (message: Message) => Promise<void>;
+  onOpenRetryModal: (message: Message) => void;
   setImagePreviewSrc: Dispatch<React.SetStateAction<string | null>>;
   editingMessageId: string | null;
   isDraggingMessage: boolean;
@@ -103,6 +105,8 @@ const MessageItem = memo(
         setEditingMessageId,
         setEditingText,
         handleDeleteMessage,
+        handleRetryMessage,
+        onOpenRetryModal,
         setImagePreviewSrc,
         editingMessageId,
         isDraggingMessage,
@@ -334,6 +338,38 @@ const MessageItem = memo(
           );
         }
 
+        // ✅ Indicador de error para mensajes fallidos
+        if (message.hasError && message.senderId === userId) {
+          contentElements.push(
+            <div key="error" className={styles.errorIndicator}>
+              <Image src="/circle-x.svg" alt="Error" width={16} height={16} />
+              <span className={styles.errorText}>Error al enviar</span>
+              <button 
+                className={styles.retryButton}
+                onClick={() => onOpenRetryModal(message)}
+                title="Reintentar envío"
+              >
+                <Image src="/rotate-ccw.svg" alt="Reintentar" width={14} height={14} />
+              </button>
+            </div>
+          );
+        }
+
+        // ✅ OPTIMISTIC UI: Indicadores de estado para mensajes propios
+        if (message.senderId === userId && !message.hours) {  // Solo para mensajes propios no-time
+          contentElements.push(
+            <div key="status" className={`${styles.messageStatus} ${message.hasError ? styles.errorStatus : ''}`}>
+              {message.hasError ? (
+                <Image src="/circle-x.svg" alt="Error" width={16} height={16} className={styles.statusIcon} />
+              ) : message.isPending ? (
+                <Image src="/circle.svg" alt="Pendiente" width={16} height={16} className={styles.statusIcon} />
+              ) : (
+                <Image src="/check-check.svg" alt="Enviado" width={16} height={16} className={styles.statusIcon} />
+              )}
+            </div>
+          );
+        }
+
         return contentElements;
       }, [message, formatTimeToHHMMSS, styles, handleImagePreviewClick]);
 
@@ -351,6 +387,7 @@ const MessageItem = memo(
           className={`${styles.message} ${message.isPending ? styles.pending : ''} ${
             message.hasError && message.senderId === userId ? styles.error : ''
           } ${isDraggingMessage && draggedMessageId === message.id ? styles.dragging : ''}`}
+          data-message-status={message.isPending ? 'pending' : message.hasError ? 'error' : 'sent'}
           data-message-id={message.id}
           style={{
             transform: isDraggingMessage && draggedMessageId === message.id 
@@ -390,7 +427,12 @@ const MessageItem = memo(
                     timeZone: 'America/Mexico_City',
                   })}
                 </span>
-                {!message.isPending && (
+                {message.isPending ? (
+                  <div className={styles.pendingIndicator}>
+                    <div className={styles.pendingSpinner}></div>
+                    <span className={styles.pendingText}>Enviando...</span>
+                  </div>
+                ) : (
                   <div className={styles.actionContainer}>
                     <motion.button
                       ref={actionButtonRef}
@@ -552,8 +594,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
-          const [isLoadingChunk, setIsLoadingChunk] = useState(false);
-    const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
+            const [isLoadingChunk, setIsLoadingChunk] = useState(false);
+  const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
+  
+  // ✅ OPTIMISTIC UI: Modal de retry para mensajes fallidos
+  const [retryModalOpen, setRetryModalOpen] = useState(false);
+  const [retryMessage, setRetryMessage] = useState<Message | null>(null);
 
     // ✅ OPTIMIZACIÓN: Usar getState() para evitar suscripciones reactivas innecesarias
     const dataStore = useDataStore.getState();
@@ -1011,6 +1057,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       messageData: Partial<Message>,
     ) => {
       if (!user?.id) return;
+
       const messageWithReply = {
         ...messageData,
         senderId: messageData.senderId ?? user.id,
@@ -1022,30 +1069,69 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           imageUrl: replyingTo.imageUrl,
         } : null,
       };
-      await sendMessage(messageWithReply);
-      const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
-      if (task.CreatedBy) recipients.add(task.CreatedBy);
-      recipients.delete(user.id);
-      const notificationText = messageData.text
-        ? `${user.firstName || 'Usuario'} escribió en "${task.name}": ${
-            messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text
-          }`
-        : `${user.firstName || 'Usuario'} compartió un archivo en "${task.name}"`;
-      if (recipients.size > 0) {
-        try {
-          await notificationService.createNotificationsForRecipients({
-            userId: user.id,
-            message: notificationText,
-            type: 'group_message',
-            taskId: task.id,
-          }, Array.from(recipients));
-          // console.log('[ChatSidebar] Sent message notifications to:', recipients.size, 'recipients');
-        } catch {
-          // console.warn('[ChatSidebar] Error sending message notifications:', error);
+
+      try {
+        // Enviar mensaje optimista
+        await sendMessage(messageWithReply);
+
+        // Determinar los destinatarios (excluyendo al creador del mensaje)
+        const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
+        if (task.CreatedBy) recipients.add(task.CreatedBy);
+        recipients.delete(user.id); // Excluir al creador del trigger
+
+        // Log para depuración
+        console.log('[ChatSidebar] Preparing notifications for recipients:', {
+          recipients: Array.from(recipients),
+          taskId: task.id,
+          messageType: messageData.hours ? 'time_log' : 'group_message',
+          excludedCreator: user.id,
+          totalRecipients: recipients.size,
+        });
+
+        // Crear notificación solo si hay destinatarios
+        if (recipients.size > 0) {
+          // Determinar el tipo de notificación basado en el contenido
+          const notificationType = messageData.hours ? 'time_log' : 'group_message';
+          
+          const notificationText = messageData.hours
+            ? `${user.firstName || 'Usuario'} registró ${messageData.hours} horas en "${task.name}"`
+            : messageData.text
+              ? `${user.firstName || 'Usuario'} escribió en "${task.name}": ${
+                  messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text
+                }`
+              : `${user.firstName || 'Usuario'} compartió un archivo en "${task.name}"`;
+
+          try {
+            await notificationService.createNotificationsForRecipients({
+              userId: user.id,
+              message: notificationText,
+              type: notificationType,
+              taskId: task.id,
+            }, Array.from(recipients));
+            console.log(`[ChatSidebar] Sent ${notificationType} notifications to:`, recipients.size, 'recipients');
+          } catch (error) {
+            console.error('[ChatSidebar] Error sending notifications:', {
+              error: error instanceof Error ? error.message : JSON.stringify(error),
+              recipients: Array.from(recipients),
+              taskId: task.id,
+              userId: user.id,
+            });
+          }
+        } else {
+          console.log('[ChatSidebar] No recipients for notifications (solo creator)');
         }
+
+        await updateTaskActivity(task.id, 'message');
+        setReplyingTo(null);
+      } catch (error) {
+        console.error('[ChatSidebar] Error sending message:', {
+          error: error instanceof Error ? error.message : JSON.stringify(error),
+          messageData,
+          userId: user.id,
+          taskId: task.id,
+        });
+        throw error; // Propagar error para manejo en InputChat
       }
-      await updateTaskActivity(task.id, 'message');
-      setReplyingTo(null);
     }, [user?.id, user?.firstName, task, replyingTo, sendMessage]);
 
     const handleDeleteMessage = useCallback(async (messageId: string) => {
@@ -1057,6 +1143,80 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         // console.error('[ChatSidebar] Error eliminando mensaje:', error);
       }
     }, [deleteMessage, task.id]);
+
+    // ✅ Función para reintentar envío de mensajes fallidos
+    const handleRetryMessage = useCallback(async (message: Message) => {
+      if (!user?.id) return;
+      
+      try {
+        // Crear nuevo mensaje con el mismo contenido
+        const retryMessage: Partial<Message> = {
+          senderId: message.senderId,
+          senderName: message.senderName,
+          text: message.text,
+          imageUrl: message.imageUrl,
+          fileUrl: message.fileUrl,
+          fileName: message.fileName,
+          fileType: message.fileType,
+          filePath: message.filePath,
+          replyTo: message.replyTo,
+        };
+        
+        // Enviar el mensaje nuevamente
+        await sendMessage(retryMessage);
+        
+        // Eliminar el mensaje con error del store
+        useDataStore.getState().deleteMessage(task.id, message.id);
+        
+        // console.log('[ChatSidebar] Mensaje reintentado exitosamente:', message.id);
+      } catch (error) {
+        // console.error('[ChatSidebar] Error reintentando mensaje:', error);
+        alert('Error al reintentar: No se pudo enviar el mensaje. Inténtalo de nuevo.');
+      }
+    }, [user?.id, sendMessage, task.id]);
+
+    // ✅ OPTIMISTIC UI: Funciones para manejar modal de retry
+    const handleOpenRetryModal = useCallback((message: Message) => {
+      setRetryMessage(message);
+      setRetryModalOpen(true);
+    }, []);
+
+    const handleCloseRetryModal = useCallback(() => {
+      setRetryModalOpen(false);
+      setRetryMessage(null);
+    }, []);
+
+    const handleRetrySend = useCallback(async () => {
+      if (retryMessage) {
+        try {
+          await handleRetryMessage(retryMessage);
+          handleCloseRetryModal();
+        } catch (error) {
+          // El error ya se maneja en handleRetryMessage
+        }
+      }
+    }, [retryMessage, handleRetryMessage, handleCloseRetryModal]);
+
+    // ✅ OPTIMIZACIÓN: Hook para manejar escape key en modal
+    useEffect(() => {
+      const handleEscapeKey = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && retryModalOpen) {
+          handleCloseRetryModal();
+        }
+      };
+
+      if (retryModalOpen) {
+        document.addEventListener('keydown', handleEscapeKey);
+        // ✅ Prevenir scroll del body cuando modal está abierto
+        document.body.style.overflow = 'hidden';
+      }
+
+      return () => {
+        document.removeEventListener('keydown', handleEscapeKey);
+        // ✅ Restaurar scroll del body cuando modal se cierra
+        document.body.style.overflow = 'unset';
+      };
+    }, [retryModalOpen, handleCloseRetryModal]);
 
     // Usar el hook modular de Gemini para resúmenes
     const { generateSummary } = useGeminiIntegration(task.id);
@@ -1684,6 +1844,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   setEditingMessageId={setEditingMessageId}
                   setEditingText={setEditingText}
                   handleDeleteMessage={handleDeleteMessage}
+                  handleRetryMessage={handleRetryMessage}
+                  onOpenRetryModal={handleOpenRetryModal}
                   setImagePreviewSrc={setImagePreviewSrc}
                   editingMessageId={editingMessageId}
                   isDraggingMessage={isDraggingMessage}
@@ -1803,14 +1965,74 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             </motion.div>
           </motion.div>
         )}
-        {imagePreviewSrc && (
+                {imagePreviewSrc && (
           <ImagePreviewOverlay
             src={imagePreviewSrc}
             alt="Vista previa de imagen"
             fileName={messages.find(m => m.imageUrl === imagePreviewSrc)?.fileName}
             onClose={handleImagePreviewClose}
           />
-                )}
+        )}
+        
+        {/* ✅ OPTIMISTIC UI: Modal de retry para mensajes fallidos */}
+        {/* 🚀 PORTAL IMPLEMENTATION: Render en DOM root para evitar clipping del sidebar */}
+        {retryModalOpen && ReactDOM.createPortal(
+          <motion.div
+            className={styles.retryModalOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onClick={handleCloseRetryModal}
+          >
+            <motion.div
+              className={styles.retryModal}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.retryModalContent}>
+                <div className={styles.retryModalHeader}>
+                  <Image src="/circle-x.svg" alt="Error" width={24} height={24} />
+                  <h3 className={styles.retryModalTitle}>Error al enviar mensaje</h3>
+                </div>
+                <div className={styles.retryModalBody}>
+                  <p className={styles.retryModalText}>
+                    ¿Reintentar envío del mensaje?
+                  </p>
+                  {retryMessage?.text && (
+                    <div className={styles.retryMessagePreview}>
+                      <span className={styles.retryMessageText}>
+                        "{retryMessage.text.length > 100 ? `${retryMessage.text.substring(0, 100)}...` : retryMessage.text}"
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className={styles.retryModalActions}>
+                  <motion.button
+                    className={styles.retryModalCancelButton}
+                    onClick={handleCloseRetryModal}
+                    whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    Cancelar
+                  </motion.button>
+                  <motion.button
+                    className={styles.retryModalRetryButton}
+                    onClick={handleRetrySend}
+                    whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  >
+                    Reintentar
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>,
+          document.body  // ✅ Render en root para sobre sidebar
+        )}
       </motion.div>
     );
   }

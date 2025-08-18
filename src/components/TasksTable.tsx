@@ -1533,7 +1533,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                   marginLeft: '5px',
                   transition: 'transform 0.3s ease, filter 0.3s ease',
                   filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0))',
                 }}
                 onMouseEnter={handleKanbanImageMouseEnter}
                 onMouseLeave={handleKanbanImageMouseLeave}
@@ -1556,7 +1556,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                   marginLeft: '5px',
                   transition: 'transform 0.3s ease, filter 0.3s ease',
                   filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0))',
                 }}
                 onMouseEnter={handleArchiveImageMouseEnter}
                 onMouseLeave={handleArchiveImageMouseLeave}

@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot, Timestamp, doc, updateDoc, getDoc
 import { db } from '@/lib/firebase';
 
 // Define types
-export type TaskNotificationType = 'group_message' | 'time_log' | 'task_created' | 'task_status_changed' | 'task_deleted' | 'task_archived' | 'task_unarchived';
+export type TaskNotificationType = 'group_message' | 'time_log' | 'task_created' | 'task_status_changed' | 'task_priority_changed' | 'task_dates_changed' | 'task_assignment_changed' | 'task_deleted' | 'task_archived' | 'task_unarchived';
 
 export interface TaskNotification {
   id: string;
@@ -63,7 +63,7 @@ class TaskNotificationsManager {
     const q = query(
       collection(db, 'notifications'),
       where('recipientId', '==', userId),
-      where('type', 'in', ['group_message', 'time_log', 'task_created', 'task_status_changed', 'task_deleted', 'task_archived', 'task_unarchived'])
+      where('type', 'in', ['group_message', 'time_log', 'task_created', 'task_status_changed', 'task_priority_changed', 'task_dates_changed', 'task_assignment_changed', 'task_deleted', 'task_archived', 'task_unarchived'])
     );
 
     const unsubscribe = onSnapshot(q, 
