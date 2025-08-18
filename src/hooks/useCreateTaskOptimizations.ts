@@ -1,15 +1,16 @@
 // src/hooks/useCreateTaskOptimizations.ts
-import { useMemo, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { gsap } from 'gsap';
 import { useDataStore } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
 
 // Hook para filtros optimizados de colaboradores
 export const useFilteredCollaborators = (
   searchQuery: string,
   excludedUserIds: string[] = []
 ) => {
-  const { users } = useDataStore();
+  const { users } = useDataStore(useShallow(state => ({ users: state.users })));
   
   return useMemo(() => {
     if (!Array.isArray(users)) return [];
@@ -29,7 +30,7 @@ export const useFilteredCollaborators = (
 
 // Hook para filtros optimizados de líderes
 export const useFilteredLeaders = (searchQuery: string) => {
-  const { users } = useDataStore();
+  const { users } = useDataStore(useShallow(state => ({ users: state.users })));
   
   return useMemo(() => {
     if (!Array.isArray(users)) return [];
@@ -45,7 +46,7 @@ export const useFilteredLeaders = (searchQuery: string) => {
 
 // Hook para filtros optimizados de clientes
 export const useFilteredClients = (searchQuery: string) => {
-  const { clients } = useDataStore();
+  const { clients } = useDataStore(useShallow(state => ({ clients: state.clients })));
   
   return useMemo(() => {
     if (!Array.isArray(clients)) return [];

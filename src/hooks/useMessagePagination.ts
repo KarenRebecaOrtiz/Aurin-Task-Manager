@@ -127,11 +127,21 @@ export const useMessagePagination = ({
   decryptMessage,
   onNewMessage,
 }: UseMessagePaginationProps) => {
+  // ✅ OPTIMIZACIÓN: Usar selectores optimizados para evitar re-renders
   const selectMessages = useMemo(() => (state: { messages: Record<string, Message[]> }) => state.messages[taskId] || EMPTY_MESSAGES, [taskId]);
   const messages = useDataStore(selectMessages);
-  const { addMessage, updateMessage, setMessages: setTaskMessages } = useDataStore();
+  
+  // ✅ OPTIMIZACIÓN: Usar getState() para funciones que no necesitan ser reactivas
+  const dataStore = useDataStore.getState();
+  const { addMessage, updateMessage, setMessages: setTaskMessages } = dataStore;
   const { addChunk, getChunks } = useChunkStore();
-  const groupedMessages = useMemo(() => groupMessagesByDate(messages), [messages]);
+  
+  // ✅ OPTIMIZACIÓN: Memoizar groupedMessages solo cuando messages cambie realmente
+  const groupedMessages = useMemo(() => {
+    if (!messages || messages.length === 0) return [];
+    return groupMessagesByDate(messages);
+  }, [messages]);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);

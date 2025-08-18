@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, memo, forwardRef, Dispatch, useMemo } from 'react';
+// import { useWhatChanged } from '@simbathesailor/use-what-changed';
 import ReactDOM from 'react-dom';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
@@ -554,7 +555,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           const [isLoadingChunk, setIsLoadingChunk] = useState(false);
     const [newChunkMessageIds, setNewChunkMessageIds] = useState<Set<string>>(new Set());
 
-    const { addMessage, updateMessage } = useDataStore();
+    // ✅ OPTIMIZACIÓN: Usar getState() para evitar suscripciones reactivas innecesarias
+    const dataStore = useDataStore.getState();
+    const { addMessage, updateMessage } = dataStore;
     
     // Usar el hook para manejar un solo sidebar abierto
     const { handleClose } = useSidebarManager({
@@ -588,6 +591,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const timerPanelRef = useRef<HTMLDivElement>(null);
     const summarizeDropdownRef = useRef<HTMLDivElement>(null);
     const chatRef = useRef<HTMLDivElement>(null);
+
+    // Debug hooks: identify which deps cause message pagination to refetch
 
     // Función para manejar nuevos mensajes (real-time context refresh)
     const handleNewMessage = useCallback(() => {

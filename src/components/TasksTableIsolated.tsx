@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
@@ -12,7 +12,7 @@ export default function TasksTableIsolated() {
   
   const { user } = useUser();
   
-  // Get data from shared state
+  // ✅ SOLUCIÓN INTELIGENTE: Usar el hook de manera normal pero con optimizaciones
   const {
     tasks,
     clients,
@@ -20,7 +20,7 @@ export default function TasksTableIsolated() {
     isInitialLoadComplete
   } = useSharedTasksState(user?.id);
 
-  // Memoized data
+  // ✅ SOLUCIÓN INTELIGENTE: Memoizar datos para evitar re-renders innecesarios
   const memoizedTasks = useMemo(() => tasks, [tasks]);
   const memoizedClients = useMemo(() => clients, [clients]);
   const memoizedUsers = useMemo(() => users, [users]);

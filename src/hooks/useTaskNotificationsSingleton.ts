@@ -226,6 +226,10 @@ class TaskNotificationsManager {
   hasListener(userId: string): boolean {
     return this.listeners.has(userId);
   }
+
+  getNotifications(userId: string): TaskNotification[] {
+    return this.currentNotifications.get(userId) || [];
+  }
 }
 
 // Hook
@@ -235,6 +239,7 @@ export const useTaskNotificationsSingleton = () => {
   const [taskNotifications, setTaskNotifications] = useState<TaskNotification[]>([]);
   const managerRef = useRef<TaskNotificationsManager | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const lastNotificationsRef = useRef<string>('');
 
   useEffect(() => {
     if (!userId) {
@@ -243,12 +248,22 @@ export const useTaskNotificationsSingleton = () => {
 
     managerRef.current = TaskNotificationsManager.getInstance();
 
-    unsubscribeRef.current = managerRef.current.subscribe(userId, (notifications) => {
-      setTaskNotifications(notifications);
+    // ✅ SOLUCIÓN INTELIGENTE: Volver a onSnapshot pero con optimizaciones
+    const unsubscribe = managerRef.current.subscribe(userId, (notifications) => {
+      // ✅ SOLUCIÓN INTELIGENTE: Solo actualizar si realmente cambió
+      const newNotificationsString = JSON.stringify(notifications);
+      if (newNotificationsString !== lastNotificationsRef.current) {
+        lastNotificationsRef.current = newNotificationsString;
+        setTaskNotifications(notifications);
+      }
     });
 
+    unsubscribeRef.current = unsubscribe;
+
     return () => {
-      unsubscribeRef.current?.();
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
     };
   }, [userId]);
 

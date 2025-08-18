@@ -26,6 +26,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchableDropdown from "@/components/ui/SearchableDropdown";
+import { useShallow } from "zustand/react/shallow";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -147,7 +148,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const { user } = useUser();
   const { isAdmin, isLoading } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
-  const users = useDataStore(state => state.users);
+  const users = useDataStore(useShallow(state => state.users));
   const [isSaving, setIsSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 

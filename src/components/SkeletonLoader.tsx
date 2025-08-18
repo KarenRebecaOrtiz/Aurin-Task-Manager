@@ -6,11 +6,18 @@ import styles from './SkeletonLoader.module.scss';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface SkeletonLoaderProps {
-  type: 'tasks' | 'clients' | 'members' | 'kanban' | 'config';
+  type: 'tasks' | 'clients' | 'members' | 'kanban' | 'config' | 'archive';
   rows?: number;
+  isEmpty?: boolean; // Nuevo prop para indicar si la tabla está vacía
+  emptyMessage?: string; // Mensaje personalizado para tablas vacías
 }
 
-const SkeletonLoader: React.FC<SkeletonLoaderProps> = memo(({ type, rows = 5 }) => {
+const SkeletonLoader: React.FC<SkeletonLoaderProps> = memo(({ 
+  type, 
+  rows = 5, 
+  isEmpty = false, 
+  emptyMessage 
+}) => {
   const { isDarkMode } = useTheme();
 
   // Animation variants
@@ -144,6 +151,15 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = memo(({ type, rows = 5 }) 
           { key: 'teams', label: 'Equipos', width: '25%' },
           { key: 'action', label: 'Acciones', width: '15%' },
         ];
+      case 'archive':
+        return [
+          { key: 'name', label: 'Tarea', width: '30%' },
+          { key: 'client', label: 'Cuenta', width: '15%' },
+          { key: 'priority', label: 'Prioridad', width: '10%' },
+          { key: 'status', label: 'Estado', width: '10%' },
+          { key: 'assigned', label: 'Asignados', width: '20%' },
+          { key: 'action', label: 'Acciones', width: '15%' },
+        ];
       default:
         return [];
     }
@@ -253,6 +269,108 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = memo(({ type, rows = 5 }) 
         );
     }
   };
+
+  // Si está vacío, mostrar estado vacío elegante
+  if (isEmpty) {
+    const getEmptyMessage = () => {
+      if (emptyMessage) return emptyMessage;
+      
+      switch (type) {
+        case 'tasks':
+          return 'No hay tareas disponibles';
+        case 'clients':
+          return 'No hay clientes registrados';
+        case 'members':
+          return 'No hay miembros en el equipo';
+        case 'kanban':
+          return 'No hay tareas para mostrar';
+        case 'config':
+          return 'No hay configuraciones disponibles';
+        case 'archive':
+          return 'No hay tareas archivadas';
+        default:
+          return 'No hay datos disponibles';
+      }
+    };
+
+    return (
+      <motion.div
+        className={styles.skeletonContainer}
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div 
+          className={styles.emptyState}
+          variants={sectionVariants}
+          style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: isDarkMode ? '#e5e7eb' : '#6b7280'
+          }}
+        >
+          <motion.div
+            style={{
+              width: '120px',
+              height: '120px',
+              margin: '0 auto 24px',
+              borderRadius: '50%',
+              background: isDarkMode 
+                ? 'linear-gradient(135deg, rgba(60, 60, 60, 0.8), rgba(80, 80, 80, 0.6))'
+                : 'linear-gradient(135deg, rgba(240, 240, 240, 0.8), rgba(220, 220, 220, 0.6))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+            variants={cellVariants}
+          >
+            {shimmerOverlay}
+            <motion.div
+              style={{
+                fontSize: '48px',
+                opacity: 0.3
+              }}
+            >
+              📭
+            </motion.div>
+          </motion.div>
+          
+          <motion.h3
+            style={{
+              fontSize: '24px',
+              fontWeight: '600',
+              margin: '0 0 12px',
+              color: isDarkMode ? '#f3f4f6' : '#374151'
+            }}
+            variants={cellVariants}
+          >
+            {getEmptyMessage()}
+          </motion.h3>
+          
+          <motion.p
+            style={{
+              fontSize: '16px',
+              margin: '0',
+              opacity: 0.7,
+              maxWidth: '400px',
+              marginLeft: 'auto',
+              marginRight: 'auto'
+            }}
+            variants={cellVariants}
+          >
+            {type === 'tasks' && 'Crea tu primera tarea para comenzar a organizar tu trabajo'}
+            {type === 'clients' && 'Agrega clientes para gestionar tus proyectos'}
+            {type === 'members' && 'Invita miembros a tu equipo para colaborar'}
+            {type === 'kanban' && 'Las tareas aparecerán aquí cuando las crees'}
+            {type === 'config' && 'Configura tu perfil y preferencias'}
+            {type === 'archive' && 'Las tareas archivadas aparecerán aquí'}
+          </motion.p>
+        </motion.div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

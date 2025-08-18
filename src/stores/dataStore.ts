@@ -1,6 +1,7 @@
 // src/stores/dataStore.ts
 import { create } from 'zustand';
 import { Timestamp } from 'firebase/firestore';
+import { useShallow } from 'zustand/react/shallow';
 
 // Interfaces
 interface Task {
@@ -145,6 +146,12 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       const existingMessage = currentMessages.find(msg => msg.id === message.id);
       
       if (existingMessage) {
+        // ✅ OPTIMIZACIÓN: Solo actualizar si hay cambios reales
+        const hasChanges = JSON.stringify(existingMessage) !== JSON.stringify(message);
+        if (!hasChanges) {
+          return state; // No actualizar si no hay cambios
+        }
+        
         // Si el mensaje ya existe, actualizarlo en lugar de duplicarlo
         return {
           messages: {
@@ -165,23 +172,59 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       };
     }),
   updateMessage: (key, messageId, updates) =>
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [key]: state.messages[key]?.map((msg) =>
-          msg.id === messageId ? { ...msg, ...updates } : msg
-        ) || [],
-      },
-    })),
+    set((state) => {
+      const currentMessages = state.messages[key] || [];
+      const messageIndex = currentMessages.findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex === -1) return state;
+      
+      const currentMessage = currentMessages[messageIndex];
+      const updatedMessage = { ...currentMessage, ...updates };
+      
+      // ✅ OPTIMIZACIÓN: Solo actualizar si hay cambios reales
+      const hasChanges = JSON.stringify(currentMessage) !== JSON.stringify(updatedMessage);
+      if (!hasChanges) {
+        return state; // No actualizar si no hay cambios
+      }
+      
+      return {
+        messages: {
+          ...state.messages,
+          [key]: currentMessages.map((msg) =>
+            msg.id === messageId ? updatedMessage : msg
+          ),
+        },
+      };
+    }),
   deleteMessage: (key, messageId) =>
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [key]: state.messages[key]?.filter((msg) => msg.id !== messageId) || [],
-      },
-    })),
+    set((state) => {
+      const currentMessages = state.messages[key] || [];
+      const messageExists = currentMessages.some(msg => msg.id === messageId);
+      
+      // ✅ OPTIMIZACIÓN: Solo actualizar si el mensaje existe
+      if (!messageExists) {
+        return state; // No actualizar si no hay cambios
+      }
+      
+      return {
+        messages: {
+          ...state.messages,
+          [key]: currentMessages.filter((msg) => msg.id !== messageId),
+        },
+      };
+    }),
   setMessages: (key, messages) =>
     set((state) => {
+      const currentMessages = state.messages[key] || [];
+      
+      // ✅ OPTIMIZACIÓN: Solo actualizar si hay cambios reales
+      const currentMessagesString = JSON.stringify(currentMessages);
+      const newMessagesString = JSON.stringify(messages);
+      
+      if (currentMessagesString === newMessagesString) {
+        return state; // No actualizar si no hay cambios
+      }
+      
       // Eliminar duplicados basándose en el ID del mensaje
       const uniqueMessages = messages.filter((message, index, self) => 
         index === self.findIndex(m => m.id === message.id)
@@ -360,35 +403,39 @@ export const useDataStore = create<DataStore>()((set, get) => ({
 // Helper to get sorted messages
 export const useSortedMessages = (taskId: string) =>
   useDataStore(
-    (state) => {
+    useShallow((state) => {
       const msgs = state.messages[taskId] || [];
+      if (msgs.length === 0) return [];
       return [...msgs].sort(
         (a, b) =>
           (b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp || 0).getTime()) -
           (a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp || 0).getTime())
       );
-    }
+    })
   );
 
-// Helper hooks for specific data
-export const useTasks = () => useDataStore((state) => state.tasks);
-export const useClients = () => useDataStore((state) => state.clients);
-export const useUsers = () => useDataStore((state) => state.users);
+// Helper hooks for specific data - OPTIMIZADOS con useShallow
+export const useTasks = () => useDataStore(useShallow((state) => state.tasks));
+export const useClients = () => useDataStore(useShallow((state) => state.clients));
+export const useUsers = () => useDataStore(useShallow((state) => state.users));
 
-export const useTasksLoading = () => useDataStore((state) => state.isLoadingTasks);
-export const useClientsLoading = () => useDataStore((state) => state.isLoadingClients);
-export const useUsersLoading = () => useDataStore((state) => state.isLoadingUsers);
-export const useInitialLoadComplete = () => useDataStore((state) => state.isInitialLoadComplete);
+export const useTasksLoading = () => useDataStore(useShallow((state) => state.isLoadingTasks));
+export const useClientsLoading = () => useDataStore(useShallow((state) => state.isLoadingClients));
+export const useUsersLoading = () => useDataStore(useShallow((state) => state.isLoadingUsers));
+export const useInitialLoadComplete = () => useDataStore(useShallow((state) => state.isInitialLoadComplete));
 
-// Helper to get filtered tasks
+// Helper to get filtered tasks - OPTIMIZADO
 export const useFilteredTasks = (filterFn?: (task: Task) => boolean) =>
   useDataStore(
-    (state) => filterFn ? state.tasks.filter(filterFn) : state.tasks
+    useShallow((state) => {
+      if (!filterFn) return state.tasks;
+      return state.tasks.filter(filterFn);
+    })
   );
 
-// ActionMenu hooks
-export const useActionMenuState = () => useDataStore((state) => state.actionMenuState);
-export const useActionMenuActions = () => useDataStore((state) => ({
+// ActionMenu hooks - OPTIMIZADOS
+export const useActionMenuState = () => useDataStore(useShallow((state) => state.actionMenuState));
+export const useActionMenuActions = () => useDataStore(useShallow((state) => ({
   setActionMenuOpen: state.setActionMenuOpen,
   setDropdownPosition: state.setDropdownPosition,
-}));
+})));

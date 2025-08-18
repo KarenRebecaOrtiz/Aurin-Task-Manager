@@ -36,7 +36,6 @@ function saveClientsCache(userId: string, data: Client[]) {
     const cacheKey = getCacheKey('clients', userId);
     const cacheData = { data, timestamp: Date.now() };
     localStorage.setItem(cacheKey, JSON.stringify(cacheData, null, 2));
-    console.log('[ClientsTable] Clients cache saved:', data.length);
   } catch (error) {
     console.error('[ClientsTable] Error saving clients cache:', error);
   }
@@ -54,7 +53,6 @@ function loadClientsCache(userId: string): Client[] | null {
       return null;
     }
     
-    console.log('[ClientsTable] Clients cache loaded:', parsed.data.length);
     return parsed.data;
   } catch (error) {
     console.error('[ClientsTable] Error loading clients cache:', error);
@@ -64,7 +62,6 @@ function loadClientsCache(userId: string): Client[] | null {
 
 // Función para limpiar listeners de ClientsTable
 export const cleanupClientsTableListeners = () => {
-  console.log('[ClientsTable] Cleaning up all listeners');
   clientsTableCache.listeners.forEach((listener) => {
     if (listener.clients) listener.clients();
   });
@@ -82,9 +79,8 @@ interface ClientsTableProps {
 
 const ClientsTable: React.FC<ClientsTableProps> = memo(
   ({ onCreateOpen, onEditOpen, onDeleteOpen, externalClients, onCacheUpdate }) => {
-    console.log('ClientsTable rendered');
     const { user } = useUser();
-    const { isAdmin, isLoading } = useAuth(); // Use useAuth to get isAdmin and isLoading
+    const { isAdmin, isLoading } = useAuth();
     
     // Estados optimizados con refs para evitar re-renders
     const clientsRef = useRef<Client[]>([]);
@@ -152,7 +148,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         clientsRef.current = cached;
         setClients(cached);
         setIsDataLoading(false);
-        console.log('[ClientsTable] Using cached clients:', cached.length);
         
         // Pasar datos al cache global
         if (onCacheUpdate) {
@@ -165,7 +160,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       const existingListener = clientsTableCache.listeners.get(cacheKey);
       
       if (existingListener?.clients) {
-        console.log('[ClientsTable] Reusing existing clients listener');
         if (clientsTableCache.clients.has(cacheKey)) {
           const cachedData = clientsTableCache.clients.get(cacheKey)!.data;
           clientsRef.current = cachedData;
@@ -180,7 +174,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
         return;
       }
 
-      console.log('[ClientsTable] Setting up new clients onSnapshot listener');
       setIsDataLoading(true);
 
       const clientsQuery = query(collection(db, 'clients'));
@@ -196,8 +189,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
               createdBy: doc.data().createdBy || '',
             createdAt: doc.data().createdAt || '',
           }));
-          
-          console.log('[ClientsTable] Clients onSnapshot update:', clientsData.length);
           
           clientsRef.current = clientsData;
           setClients(clientsData);
@@ -219,7 +210,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           setIsDataLoading(false);
         },
         (error) => {
-          console.error('[ClientsTable] Error in clients onSnapshot:', error);
           setClients([]);
           setIsDataLoading(false);
         }
@@ -388,11 +378,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
               ...col,
               render: (client: Client) => {
                 if (!isAdmin || isLoading) return null; // Use isAdmin and isLoading from useAuth
-                console.log('Rendering ActionMenu for client:', {
-                  clientId: client.id,
-                  name: client.name,
-                  isAdmin,
-                });
                 return (
                   <ActionMenu
                     task={{
@@ -446,8 +431,6 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
           return prev.filter(key => key !== columnKey);
         }
       });
-      
-      console.log(`[ClientsTable] Column ${columnKey} visibility changed to: ${visible}`);
     }, []);
 
     // Handle loading state - mostrar loader mientras cargan los datos
@@ -564,237 +547,239 @@ const ClientsTable: React.FC<ClientsTableProps> = memo(
       );
     }
 
+    // ✅ NUEVO: Mostrar estado vacío elegante cuando no hay clientes
+    if (effectiveClients.length === 0 && !searchQuery) {
+      return (
+        <div className={`${styles.container} ${styles.mobileContainer}`}>
+          <div className={`${styles.header} ${styles.mobileHeader}`}>
+            <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>
+              <input
+                type="text"
+                placeholder="Buscar Cuentas"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={styles.searchInput}
+                aria-label="Buscar cuentas"
+                onKeyDown={(e) => {
+                  if (e.ctrlKey || e.metaKey) {
+                    switch (e.key.toLowerCase()) {
+                      case 'a':
+                        e.preventDefault();
+                        e.currentTarget.select();
+                        break;
+                      case 'c':
+                        e.preventDefault();
+                        const targetC = e.currentTarget as HTMLInputElement;
+                        if (targetC.selectionStart !== targetC.selectionEnd) {
+                          const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                          navigator.clipboard.writeText(selectedText).catch(() => {
+                            const textArea = document.createElement('textarea');
+                            textArea.value = selectedText;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                          });
+                        }
+                        break;
+                      case 'v':
+                        e.preventDefault();
+                        const targetV = e.currentTarget as HTMLInputElement;
+                        navigator.clipboard.readText().then(text => {
+                          if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                            const start = targetV.selectionStart;
+                            const end = targetV.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                            setTimeout(() => {
+                              targetV.setSelectionRange(start + text.length, start + text.length);
+                            }, 0);
+                          } else {
+                            setSearchQuery(searchQuery + text);
+                          }
+                        }).catch(() => {
+                          document.execCommand('paste');
+                        });
+                        break;
+                      case 'x':
+                        e.preventDefault();
+                        const targetX = e.currentTarget as HTMLInputElement;
+                        if (targetX.selectionStart !== targetX.selectionEnd) {
+                          const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                          navigator.clipboard.writeText(selectedText).then(() => {
+                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                              const start = targetX.selectionStart;
+                              const end = targetX.selectionEnd;
+                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                              setSearchQuery(newValue);
+                            } else {
+                              setSearchQuery('');
+                            }
+                          }).catch(() => {
+                            const textArea = document.createElement('textarea');
+                            textArea.value = selectedText;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                              const start = targetX.selectionStart;
+                              const end = targetX.selectionEnd;
+                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                              setSearchQuery(newValue);
+                            } else {
+                              setSearchQuery('');
+                            }
+                          });
+                        }
+                        break;
+                    }
+                  }
+                }}
+              />
+            </div>
+            {isAdmin && !isLoading && (
+              <div className={`${styles.createButtonWrapper} ${styles.hideOnMobile}`}>
+                <button
+                  onClick={onCreateOpen}
+                  className={styles.createButton}
+                  aria-label="Crear nueva cuenta"
+                  data-testid="create-client-button"
+                >
+                  <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
+                  Nueva Cuenta
+                </button>
+              </div>
+            )}
+          </div>
+          
+          <SkeletonLoader 
+            type="clients" 
+            isEmpty={true}
+            emptyMessage="¡Comienza agregando tu primer cliente!"
+          />
+        </div>
+      );
+    }
+
     return (
       <div className={`${styles.container} ${styles.mobileContainer}`}>
-        {effectiveClients.length === 0 && !searchQuery ? (
-          <div className={styles.emptyState}>
-            <div className={`${styles.header} ${styles.mobileHeader}`}>
-              <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>
-                <input
-                  type="text"
-                  placeholder="Buscar Cuentas"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={styles.searchInput}
-                  aria-label="Buscar cuentas"
-                  onKeyDown={(e) => {
-                    if (e.ctrlKey || e.metaKey) {
-                      switch (e.key.toLowerCase()) {
-                        case 'a':
-                          e.preventDefault();
-                          e.currentTarget.select();
-                          break;
-                        case 'c':
-                          e.preventDefault();
-                          const targetC = e.currentTarget as HTMLInputElement;
-                          if (targetC.selectionStart !== targetC.selectionEnd) {
-                            const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-                            navigator.clipboard.writeText(selectedText).catch(() => {
-                              const textArea = document.createElement('textarea');
-                              textArea.value = selectedText;
-                              document.body.appendChild(textArea);
-                              textArea.select();
-                              document.execCommand('copy');
-                              document.body.removeChild(textArea);
-                            });
-                          }
-                          break;
-                        case 'v':
-                          e.preventDefault();
-                          const targetV = e.currentTarget as HTMLInputElement;
-                          navigator.clipboard.readText().then(text => {
-                            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                              const start = targetV.selectionStart;
-                              const end = targetV.selectionEnd;
-                              const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
-                              setSearchQuery(newValue);
-                              setTimeout(() => {
-                                targetV.setSelectionRange(start + text.length, start + text.length);
-                              }, 0);
-                            } else {
-                              setSearchQuery(searchQuery + text);
-                            }
-                          }).catch(() => {
-                            document.execCommand('paste');
-                          });
-                          break;
-                        case 'x':
-                          e.preventDefault();
-                          const targetX = e.currentTarget as HTMLInputElement;
-                          if (targetX.selectionStart !== targetX.selectionEnd) {
-                            const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-                            navigator.clipboard.writeText(selectedText).then(() => {
-                              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                const start = targetX.selectionStart;
-                                const end = targetX.selectionEnd;
-                                const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                                setSearchQuery(newValue);
-                              } else {
-                                setSearchQuery('');
-                              }
-                            }).catch(() => {
-                              const textArea = document.createElement('textarea');
-                              textArea.value = selectedText;
-                              document.body.appendChild(textArea);
-                              textArea.select();
-                              document.execCommand('copy');
-                              document.body.removeChild(textArea);
-                              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                const start = targetX.selectionStart;
-                                const end = targetX.selectionEnd;
-                                const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                                setSearchQuery(newValue);
-                              } else {
-                                setSearchQuery('');
-                              }
-                            });
-                          }
-                          break;
+        <div className={`${styles.header} ${styles.mobileHeader}`}>
+          <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>
+            <input
+              type="text"
+              placeholder="Buscar Cuentas"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={styles.searchInput}
+              aria-label="Buscar cuentas"
+              onKeyDown={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  switch (e.key.toLowerCase()) {
+                    case 'a':
+                      e.preventDefault();
+                      e.currentTarget.select();
+                      break;
+                    case 'c':
+                      e.preventDefault();
+                      const targetC = e.currentTarget as HTMLInputElement;
+                      if (targetC.selectionStart !== targetC.selectionEnd) {
+                        const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                        navigator.clipboard.writeText(selectedText).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = selectedText;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        });
                       }
-                    }
-                  }}
-                />
-              </div>
-              {isAdmin && !isLoading && (
-                <div className={`${styles.createButtonWrapper} ${styles.hideOnMobile}`}>
-                  <button
-                    onClick={onCreateOpen}
-                    className={styles.createButton}
-                    aria-label="Crear nueva cuenta"
-                    data-testid="create-client-button"
-                  >
-                    <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
-                    Nueva Cuenta
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className={styles.emptyContent}>
-              <Image src="/emptyStateImage.png" alt="No hay clientes" width={289} height={289} />
-              <div className={styles.emptyText}>
-                <h2>¡Todo en orden por ahora!</h2>
-                <p>No tienes clientes activos. {isAdmin ? '¿Por qué no comienzas creando uno nuevo?' : ''}</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className={`${styles.header} ${styles.mobileHeader}`}>
-              <div className={`${styles.searchWrapper} ${styles.mobileSearchWrapper}`}>
-                <input
-                  type="text"
-                  placeholder="Buscar Cuentas"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={styles.searchInput}
-                  aria-label="Buscar cuentas"
-                  onKeyDown={(e) => {
-                    if (e.ctrlKey || e.metaKey) {
-                      switch (e.key.toLowerCase()) {
-                        case 'a':
-                          e.preventDefault();
-                          e.currentTarget.select();
-                          break;
-                        case 'c':
-                          e.preventDefault();
-                          const targetC = e.currentTarget as HTMLInputElement;
-                          if (targetC.selectionStart !== targetC.selectionEnd) {
-                            const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-                            navigator.clipboard.writeText(selectedText).catch(() => {
-                              const textArea = document.createElement('textarea');
-                              textArea.value = selectedText;
-                              document.body.appendChild(textArea);
-                              textArea.select();
-                              document.execCommand('copy');
-                              document.body.removeChild(textArea);
-                            });
+                      break;
+                    case 'v':
+                      e.preventDefault();
+                      const targetV = e.currentTarget as HTMLInputElement;
+                      navigator.clipboard.readText().then(text => {
+                        if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                          const start = targetV.selectionStart;
+                          const end = targetV.selectionEnd;
+                          const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
+                          setSearchQuery(newValue);
+                          setTimeout(() => {
+                            targetV.setSelectionRange(start + text.length, start + text.length);
+                          }, 0);
+                        } else {
+                          setSearchQuery(searchQuery + text);
+                        }
+                      }).catch(() => {
+                        document.execCommand('paste');
+                      });
+                      break;
+                    case 'x':
+                      e.preventDefault();
+                      const targetX = e.currentTarget as HTMLInputElement;
+                      if (targetX.selectionStart !== targetX.selectionEnd) {
+                        const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                        navigator.clipboard.writeText(selectedText).then(() => {
+                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                            const start = targetX.selectionStart;
+                            const end = targetX.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                          } else {
+                            setSearchQuery('');
                           }
-                          break;
-                        case 'v':
-                          e.preventDefault();
-                          const targetV = e.currentTarget as HTMLInputElement;
-                          navigator.clipboard.readText().then(text => {
-                            if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                              const start = targetV.selectionStart;
-                              const end = targetV.selectionEnd;
-                              const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
-                              setSearchQuery(newValue);
-                              setTimeout(() => {
-                                targetV.setSelectionRange(start + text.length, start + text.length);
-                              }, 0);
-                            } else {
-                              setSearchQuery(searchQuery + text);
-                            }
-                          }).catch(() => {
-                            document.execCommand('paste');
-                          });
-                          break;
-                        case 'x':
-                          e.preventDefault();
-                          const targetX = e.currentTarget as HTMLInputElement;
-                          if (targetX.selectionStart !== targetX.selectionEnd) {
-                            const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-                            navigator.clipboard.writeText(selectedText).then(() => {
-                              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                const start = targetX.selectionStart;
-                                const end = targetX.selectionEnd;
-                                const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                                setSearchQuery(newValue);
-                              } else {
-                                setSearchQuery('');
-                              }
-                            }).catch(() => {
-                              const textArea = document.createElement('textarea');
-                              textArea.value = selectedText;
-                              document.body.appendChild(textArea);
-                              textArea.select();
-                              document.execCommand('copy');
-                              document.body.removeChild(textArea);
-                              if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                                const start = targetX.selectionStart;
-                                const end = targetX.selectionEnd;
-                                const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                                setSearchQuery(newValue);
-                              } else {
-                                setSearchQuery('');
-                              }
-                            });
+                        }).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = selectedText;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                            const start = targetX.selectionStart;
+                            const end = targetX.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                          } else {
+                            setSearchQuery('');
                           }
-                          break;
+                        });
                       }
-                    }
-                  }}
-                />
-              </div>
-              {isAdmin && !isLoading && (
-                <div className={`${styles.createButtonWrapper} ${styles.hideOnMobile}`}>
-                  <button
-                    onClick={onCreateOpen}
-                    className={styles.createButton}
-                    aria-label="Crear nueva cuenta"
-                    data-testid="create-client-button"
-                  >
-                    <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
-                    Nueva Cuenta
-                  </button>
-                </div>
-              )}
-            </div>
-            <Table
-              data={sortedClients}
-              columns={columns}
-              itemsPerPage={10}
-              sortKey={sortKey}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-              emptyStateType="clients"
-              className="clients-table"
-              enableColumnVisibility={true}
-              visibleColumns={visibleColumns}
-              onColumnVisibilityChange={handleColumnVisibilityChange}
+                      break;
+                  }
+                }
+              }}
             />
-          </>
-        )}
+          </div>
+          {isAdmin && (
+            <div className={`${styles.createButtonWrapper} ${styles.hideOnMobile}`}>
+              <button
+                onClick={onCreateOpen}
+                className={styles.createButton}
+                aria-label="Crear nueva cuenta"
+                data-testid="create-client-button"
+                disabled={isLoading || isDataLoading}
+                style={{ opacity: isLoading || isDataLoading ? 0.6 : 1 }}
+              >
+                <Image src="/wallet-cards.svg" alt="Crear" width={17} height={17} />
+                Nueva Cuenta
+              </button>
+            </div>
+          )}
+        </div>
+        <Table
+          data={sortedClients}
+          columns={columns}
+          itemsPerPage={10}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          emptyStateType="clients"
+          className="clients-table"
+          enableColumnVisibility={true}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={handleColumnVisibilityChange}
+        />
       </div>
     );
   },

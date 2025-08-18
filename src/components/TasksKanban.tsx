@@ -73,7 +73,7 @@ interface Task {
 type TaskView = 'table' | 'kanban';
 
 export const cleanupTasksKanbanListeners = () => {
-  console.log('[TasksKanban] Cleaning up all kanban listeners');
+  // Cleanup function - no logging needed
 };
 
 interface AvatarGroupProps {
@@ -198,7 +198,6 @@ const SortableItem: React.FC<SortableItemProps> = ({
       {...listeners}
       className={`${styles.taskCard} ${isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
       onClick={async () => {
-        console.log('[TasksKanban] Task card clicked, opening chat for task:', task.id);
         
         try {
           // OPTIMISTIC UPDATE: Mark task as viewed BEFORE opening sidebar
@@ -421,8 +420,6 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
               yoyo: true,
               repeat: 1,
             });
-
-            console.log('[TasksKanban] Search query updated:', newValue);
           }}
           className={styles.searchInput}
           aria-label="Buscar tareas"
@@ -470,7 +467,6 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
             onClick={(e) => {
               animateClick(e.currentTarget);
               onArchiveTableOpen();
-              console.log('[TasksKanban] Opening Archive Table');
             }}
           >
             <Image
@@ -609,7 +605,6 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
                         }
                         return !prev;
                       });
-                      console.log('[TasksKanban] User dropdown toggled');
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
@@ -676,10 +671,8 @@ const TasksKanbanHeader: React.FC<TasksKanbanHeaderProps> = ({
               <button
                 className={styles.createButton}
                 onClick={(e) => {
-                  console.log('[TasksKanban] Create task button clicked');
                   animateClick(e.currentTarget);
                   onNewTaskOpen();
-                  console.log('[TasksKanban] onNewTaskOpen called');
                 }}
               >
                 <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
@@ -863,22 +856,13 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
 
   // Only log significant changes to reduce console noise
   useEffect(() => {
-    if (effectiveTasks.length > 0) {
-      const hasStatusChanges = effectiveTasks.some(task => 
-        task.status && task.status !== 'Por Iniciar'
-      );
-      
-      if (hasStatusChanges) {
-        console.log('[TasksKanban] Tasks updated with status changes:', effectiveTasks.length);
-      }
-    }
+    // Silent monitoring - no logging needed
   }, [effectiveTasks]);
 
   useEffect(() => {
     const checkTouchDevice = () => {
       const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       setIsTouchDevice(isTouch);
-      console.log('[TasksKanban] Touch device detected:', isTouch);
     };
 
     checkTouchDevice();
@@ -924,9 +908,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   useEffect(() => {
     if (!user?.id || effectiveClients.length > 0) return;
 
-    console.log('[TasksKanban] Setting up clients listener');
-    // No necesitamos setIsLoadingClients ya que dataStore maneja esto
-
     const clientsQuery = query(collection(db, 'clients'));
     const unsubscribeClients = onSnapshot(
       clientsQuery,
@@ -936,8 +917,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           name: doc.data().name || '',
           imageUrl: doc.data().imageUrl || '/empty-image.png',
         }));
-
-        console.log('[TasksKanban] Clients onSnapshot update:', clientsData.length);
         
         // dataStore maneja el estado de loading
       },
@@ -972,7 +951,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
       yoyo: true,
       repeat: 1,
     });
-    console.log('[TasksKanban] Click animation triggered');
   };
 
   const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
@@ -991,7 +969,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
       });
     }
     
-    console.log('[TasksKanban] Priority filter selected:', priority);
     setPriorityFilter(priority);
     setIsPriorityDropdownOpen(false);
   };
@@ -1012,18 +989,12 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
       });
     }
     
-    console.log('[TasksKanban] Client filter selected:', clientId);
     setClientFilter(clientId);
     setIsClientDropdownOpen(false);
   };
 
   // Group tasks by status - essential for Kanban functionality
   const groupedTasks = useMemo(() => {
-    console.log('[TasksKanban] Grouping tasks:', {
-      total: effectiveTasks.length,
-      filtered: effectiveTasks.filter(t => !t.archived).length
-    });
-
     const groups: { [key: string]: Task[] } = {};
     
     // Initialize empty arrays for all columns
@@ -1039,13 +1010,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
         
         if (!canViewTask) {
-          console.log('[TasksKanban] Task excluded by permissions:', {
-            taskId: task.id,
-            taskName: task.name,
-            isAdmin,
-            userId,
-            involvedUserIds: getInvolvedUserIds(task)
-          });
+          // Silent permission filtering - no logging needed
         }
         
         return canViewTask;
@@ -1201,20 +1166,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     }
     
     try {
-      console.log('[TasksKanban] Archiving task locally:', {
-        table: 'TasksKanban',
-        taskId: task.id,
-        taskName: task.name,
-        taskStatus: task.status,
-        currentState: {
-          archived: task.archived,
-          archivedAt: task.archivedAt,
-          archivedBy: task.archivedBy
-        },
-        action: 'Archive task from Kanban view',
-        userId,
-        isAdmin
-      });
       
       // Importar las funciones de archivado
       const { archiveTask } = await import('@/lib/taskUtils');
@@ -1222,14 +1173,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
       // Archivar en Firestore
       await archiveTask(task.id, userId, isAdmin, task);
       
-      console.log('[TasksKanban] Task archived successfully:', {
-        table: 'TasksKanban',
-        taskId: task.id,
-        taskName: task.name,
-        taskStatus: task.status,
-        finalState: 'archived',
-        source: 'Kanban view'
-      });
     } catch (error) {
       console.error('[TasksKanban] Error archiving task:', error);
     }
@@ -1263,6 +1206,48 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           </div>
         </div>
         <SkeletonLoader type="kanban" rows={6} />
+      </div>
+    );
+  }
+
+  // ✅ NUEVO: Mostrar estado vacío elegante cuando no hay tareas
+  const hasAnyTasks = Object.values(groupedTasks).some(tasks => tasks.length > 0);
+  if (!hasAnyTasks && !searchQuery && !priorityFilter && !clientFilter && !userFilter) {
+    return (
+      <div className={styles.container}>
+        <TasksKanbanHeader
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onViewChange={onViewChange}
+          onArchiveTableOpen={onArchiveTableOpen}
+          onNewTaskOpen={onNewTaskOpen}
+          priorityFilter={priorityFilter}
+          clientFilter={clientFilter}
+          userFilter={userFilter}
+          clients={effectiveClients}
+          users={effectiveUsers}
+          userId={userId}
+          isAdmin={isAdmin}
+          isPriorityDropdownOpen={isPriorityDropdownOpen}
+          isClientDropdownOpen={isClientDropdownOpen}
+          isUserDropdownOpen={isUserDropdownOpen}
+          setIsPriorityDropdownOpen={setIsPriorityDropdownOpen}
+          setIsClientDropdownOpen={setIsClientDropdownOpen}
+          setIsUserDropdownOpen={setIsUserDropdownOpen}
+          priorityDropdownRef={priorityDropdownRef}
+          clientDropdownRef={clientDropdownRef}
+          userDropdownRef={userDropdownRef}
+          handlePrioritySelect={handlePrioritySelect}
+          handleClientSelect={handleClientSelect}
+          handleUserFilter={handleUserFilter}
+          animateClick={animateClick}
+        />
+        
+        <SkeletonLoader 
+          type="kanban" 
+          isEmpty={true}
+          emptyMessage="¡Comienza creando tu primera tarea!"
+        />
       </div>
     );
   }
@@ -1405,89 +1390,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         </DragOverlay>
       </DndContext>
       
-      {/* DEBUG: Botón temporal para limpiar status corruptos */}
-      {isAdmin && (
-        <div style={{ 
-          position: 'fixed', 
-          bottom: '20px', 
-          right: '20px', 
-          zIndex: 1000,
-          background: '#f0f0f0',
-          padding: '10px',
-          borderRadius: '8px',
-          border: '1px solid #ccc'
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button
-              onClick={async () => {
-                try {
-                  const { cleanCorruptStatuses, getCorruptStatusStats } = await import('@/lib/taskUtils');
-                  
-                  // Primero obtener estadísticas
-                  console.log('[DEBUG] Getting corrupt status stats...');
-                  const stats = await getCorruptStatusStats();
-                  
-                  if (stats.corruptTasks > 0) {
-                    // Preguntar confirmación
-                    if (confirm(`Encontré ${stats.corruptTasks} tareas con status corruptos. ¿Limpiarlas?`)) {
-                      console.log('[DEBUG] Starting cleanup...');
-                      const result = await cleanCorruptStatuses();
-                      alert(`Limpieza completada: ${result.cleanedCount} tareas corregidas`);
-                    }
-                  } else {
-                    alert('No se encontraron status corruptos');
-                  }
-                } catch (error) {
-                  console.error('[DEBUG] Error in cleanup:', error);
-                  alert('Error durante la limpieza: ' + error);
-                }
-              }}
-              style={{
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '8px 12px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
-            >
-              🧹 Clean Corrupt Status
-            </button>
-            
-            <button
-              onClick={async () => {
-                try {
-                  const { cleanObjectStatuses } = await import('@/lib/taskUtils');
-                  
-                  console.log('[DEBUG] Starting Object status cleanup...');
-                  const result = await cleanObjectStatuses();
-                  
-                  if (result.cleanedCount > 0) {
-                    alert(`Object status cleanup: ${result.cleanedCount} tareas corregidas`);
-                  } else {
-                    alert('No se encontraron Object statuses');
-                  }
-                } catch (error) {
-                  console.error('[DEBUG] Error in Object status cleanup:', error);
-                  alert('Error durante la limpieza: ' + error);
-                }
-              }}
-              style={{
-                background: '#dc3545',
-                color: 'white',
-                border: 'none',
-                padding: '8px 12px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
-            >
-              🔧 Clean Object Status
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

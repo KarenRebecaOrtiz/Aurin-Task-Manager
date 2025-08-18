@@ -742,7 +742,7 @@ const IndependentMessageSidebarRenderer = () => {
 
 const IndependentChatSidebarRenderer = () => {
   const { isOpen, sidebarType, chatSidebar, closeChatSidebar } = useSidebarStateStore();
-  const users = useDataStore(useShallow(state => state.users));
+  const users = useDataStore.getState().users;
   
   if (!isOpen || sidebarType !== 'chat' || !chatSidebar.task) {
     return null;

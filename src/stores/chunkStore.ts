@@ -51,6 +51,15 @@ export const useChunkStore = create<ChunkStore>()(
         // Debug logging disabled to reduce console spam
         set((state) => {
           const existing = state.chunksByTask[taskId] || { chunks: [], lastFetched: Date.now() };
+          
+          // ✅ OPTIMIZACIÓN: Solo actualizar si hay cambios reales
+          const newChunkString = JSON.stringify(newChunk);
+          const lastChunkString = existing.chunks.length > 0 ? JSON.stringify(existing.chunks[existing.chunks.length - 1]) : '';
+          
+          if (newChunkString === lastChunkString) {
+            return state; // No actualizar si el chunk es idéntico al último
+          }
+          
           return {
             chunksByTask: {
               ...state.chunksByTask,
@@ -63,12 +72,21 @@ export const useChunkStore = create<ChunkStore>()(
         });
       },
       getChunks: (taskId) => get().chunksByTask[taskId]?.chunks,
-      clearChunks: (taskId) => set((state) => ({
-        chunksByTask: {
-          ...state.chunksByTask,
-          [taskId]: { chunks: [], lastFetched: 0 },
-        },
-      })),
+      clearChunks: (taskId) => set((state) => {
+        const existing = state.chunksByTask[taskId];
+        
+        // ✅ OPTIMIZACIÓN: Solo actualizar si hay chunks para limpiar
+        if (!existing || existing.chunks.length === 0) {
+          return state; // No actualizar si no hay chunks
+        }
+        
+        return {
+          chunksByTask: {
+            ...state.chunksByTask,
+            [taskId]: { chunks: [], lastFetched: 0 },
+          },
+        };
+      }),
     }),
     {
       name: 'chunk-storage',  // Clave única en sessionStorage

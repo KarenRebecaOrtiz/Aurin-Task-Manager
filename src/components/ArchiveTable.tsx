@@ -57,36 +57,13 @@ interface AvatarGroupProps {
 }
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds = [], users, currentUserId }) => {
-  console.log('[ArchiveTable AvatarGroup] Received data:', {
-    assignedUserIds,
-    leadedByUserIds,
-    usersCount: users.length,
-    currentUserId,
-    usersData: users.map(u => ({
-      id: u.id,
-      fullName: u.fullName,
-      imageUrl: u.imageUrl,
-      hasImageUrl: !!u.imageUrl
-    }))
-  });
+  // ✅ ELIMINADO: Logs innecesarios que saturaban la consola
 
   const avatars = useMemo(() => {
     if (!Array.isArray(users)) {
-      console.warn('[AvatarGroup] Users prop is not an array:', users);
       return [];
     }
     const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id)).slice(0, 5);
-    console.log('[ArchiveTable AvatarGroup] Matched users:', {
-      assignedUserIds,
-      leadedByUserIds,
-      matchedUsersCount: matchedUsers.length,
-      matchedUsers: matchedUsers.map(u => ({
-        id: u.id,
-        fullName: u.fullName,
-        imageUrl: u.imageUrl,
-        clerkImageUrl: `https://img.clerk.com/${u.id}`
-      }))
-    });
     return matchedUsers.sort((a, b) => {
       if (a.id === currentUserId) return -1;
       if (b.id === currentUserId) return 1;
@@ -247,33 +224,20 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     const effectiveClients = clients;
     const effectiveUsers = users;
 
-    console.log('[ArchiveTable] Data usage check:', {
-      hasExternalTasks: false, // No external tasks passed as props
-      hasExternalClients: false, // No external clients passed as props
-      hasExternalUsers: false, // No external users passed as props
-      effectiveTasksCount: effectiveTasks.length,
-      archivedTasksCount: effectiveTasks.filter(t => t.archived === true).length,
-      externalUsersCount: users?.length || 0,
-      });
-
     // CRÍTICO: Actualizar inmediatamente cuando cambien los datos externos
     useEffect(() => {
       if (tasks && tasks.length > 0) {
-        console.log('[ArchiveTable] External tasks updated, count:', tasks.length);
         const archivedCount = tasks.filter(t => t.archived === true).length;
-        console.log('[ArchiveTable] Archived tasks in external data:', archivedCount);
       }
     }, [tasks]);
 
     useEffect(() => {
       if (clients && clients.length > 0) {
-        console.log('[ArchiveTable] External clients updated, count:', clients.length);
         }
     }, [clients]);
 
     useEffect(() => {
       if (users && users.length > 0) {
-        console.log('[ArchiveTable] External users updated, count:', users.length);
       }
     }, [users]);
 
@@ -281,23 +245,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     const archivedTasks = useMemo(() => {
       const archived = effectiveTasks.filter(task => {
         const isArchived = Boolean(task.archived);
-        if (!isArchived) {
-          console.log('[ArchiveTable] EXCLUDING non-archived task:', {
-            taskId: task.id,
-            taskName: task.name,
-            archived: task.archived
-          });
-        }
         return isArchived; // Solo mostrar tareas ARCHIVADAS
       });
       
-      console.log('[ArchiveTable] Archive filtering results (ARCHIVED only):', {
-        totalTasks: effectiveTasks.length,
-        archivedTasksCount: archived.length,
-        nonArchivedTasksCount: effectiveTasks.filter(t => !Boolean(t.archived)).length,
-        archivedTaskIds: archived.map(t => t.id),
-        nonArchivedTaskIds: effectiveTasks.filter(t => !Boolean(t.archived)).map(t => t.id)
-      });
       return archived;
     }, [effectiveTasks]);
 
@@ -334,10 +284,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
-      console.log('[ArchiveTable] Updated filteredTasks:', {
-        filteredCount: memoizedFilteredTasks.length,
-        filteredTaskIds: memoizedFilteredTasks.map((t) => t.id),
-      });
     }, [memoizedFilteredTasks, setFilteredTasks]);
 
     const handleUserFilter = (id: string) => {
@@ -574,7 +520,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         }
       });
       
-      console.log(`[ArchiveTable] Column ${columnKey} visibility changed to: ${visible}`);
     }, []);
 
     // Configurar columnas de la tabla - ESPECÍFICO PARA ARCHIVETABLE
@@ -617,11 +562,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           ...col,
           render: (task: Task) => {
             const client = effectiveClients.find((c) => c.id === task.clientId);
-            console.log('[ArchiveTable] Rendering client column:', {
-              taskId: task.id,
-              clientId: task.clientId,
-              clientName: client?.name,
-            });
             return client ? (
               <div className={styles.clientWrapper}>
                 <Image
@@ -646,12 +586,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           render: (task: Task) => {
             const hasUpdates = hasUnreadUpdates(task, userId);
             const updateCount = getUnreadCount(task, userId);
-            console.log('[ArchiveTable] Rendering name column:', {
-              taskId: task.id,
-              taskName: task.name,
-              hasUpdates,
-              updateCount,
-            });
             return (
               <div className={styles.taskNameWrapper}>
                 <span className={styles.taskName}>{task.name}</span>
@@ -699,32 +633,19 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             // Admins y creadores pueden ver el ActionMenu en ArchiveTable
             const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
             if (!shouldShowActionMenu) {
-              console.log('[ArchiveTable] ActionMenu hidden for task:', {
-                taskId: task.id,
-                taskCreatedBy: task.CreatedBy,
-                currentUserId: userId,
-                isAdmin
-              });
+              return null;
             }
-            if (shouldShowActionMenu) {
-              console.log('[ArchiveTable] Rendering action column:', {
-                taskId: task.id,
-                taskName: task.name,
-                isAdmin,
-              });
-              return (
+            return (
                 <ActionMenu
                   task={task}
                   userId={userId}
                   onEdit={() => {
                     onEditTaskOpen(task.id);
                     // setActionMenuOpenId(null); // Remover variable no usada
-                    console.log('[ArchiveTable] Edit action triggered for task:', task.id);
                   }}
                   onDelete={() => {
                     onDeleteTaskOpen(task.id);
                     // setActionMenuOpenId(null); // Remover variable no usada
-                    console.log('[ArchiveTable] Delete action triggered for task:', task.id);
                   }}
                   onArchive={async () => {
                     try {
@@ -751,7 +672,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                       // Ejecutar la función de desarchivo
                       await handleUnarchiveTask(task);
                       // setActionMenuOpenId(null); // Remover variable no usada
-                      console.log('[ArchiveTable] Task unarchived successfully:', task.id);
                     } catch (error) {
                       console.error('[ArchiveTable] Error unarchiving task:', error);
                     }
@@ -761,16 +681,12 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   actionButtonRef={(el) => {
                     if (el) {
                       actionButtonRefs.current.set(task.id, el);
-                      console.log('[ArchiveTable] Action button ref set for task:', task.id);
                     } else {
                       actionButtonRefs.current.delete(task.id);
-                      console.log('[ArchiveTable] Action button ref removed for task:', task.id);
                     }
                   }}
                 />
               );
-            }
-            return null;
           },
         };
       }
@@ -789,7 +705,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     // Loading state - show table immediately if external data is available
     if (!tasks || !clients || !users) {
-      console.log('[ArchiveTable] Showing skeleton loader - waiting for external data');
       return (
         <div className={styles.container}>
           <SkeletonLoader type="tasks" />
@@ -797,7 +712,146 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       );
     }
 
-    console.log('[ArchiveTable] Showing table with', sortedTasks.length, 'archived tasks');
+    // ✅ NUEVO: Mostrar estado vacío elegante cuando no hay tareas archivadas
+    const hasArchivedTasks = tasks.some(task => task.archived);
+    if (!hasArchivedTasks && !searchQuery) {
+      return (
+        <div className={styles.container}>
+          <div className={styles.header} style={{margin:'30px 0px'}}>
+            <div className={styles.searchWrapper}>
+              <div className={styles.buttonWithTooltip}>
+                <button
+                  className={`${styles.viewButton} ${styles.hideOnMobile}`}
+                  onClick={(e) => {
+                    animateClick(e.currentTarget);
+                    onViewChange('table');
+                    onClose();
+                  }}
+                >
+                  <Image
+                    src="/arrow-left.svg"
+                    draggable="false"
+                    alt="Volver a tareas"
+                    width={20}
+                    height={20}
+                    style={{
+                      marginLeft: '5px',
+                      transition: 'transform 0.3s ease, filter 0.3s ease',
+                      filter:
+                        'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.filter =
+                        'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.filter =
+                        'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+                    }}
+                  />
+                </button>
+                <span className={styles.tooltip}>Volver a Tareas</span>
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar tareas archivadas..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={styles.searchInput}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setSearchQuery('');
+                  }
+                  if (e.ctrlKey || e.metaKey) {
+                    switch (e.key.toLowerCase()) {
+                      case 'a':
+                        e.preventDefault();
+                        e.currentTarget.select();
+                        break;
+                      case 'c':
+                        e.preventDefault();
+                        const targetC = e.currentTarget as HTMLInputElement;
+                        if (targetC.selectionStart !== targetC.selectionEnd) {
+                          const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
+                          navigator.clipboard.writeText(selectedText).catch(() => {
+                            const textArea = document.createElement('textarea');
+                            textArea.value = selectedText;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                          });
+                        }
+                        break;
+                      case 'v':
+                        e.preventDefault();
+                        const targetV = e.currentTarget as HTMLInputElement;
+                        navigator.clipboard.readText().then(text => {
+                          if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
+                            const start = targetV.selectionStart;
+                            const end = targetV.selectionEnd;
+                            const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
+                            setSearchQuery(newValue);
+                            setTimeout(() => {
+                              targetV.setSelectionRange(start + text.length, start + text.length);
+                            }, 0);
+                          } else {
+                            setSearchQuery(searchQuery + text);
+                          }
+                        }).catch(() => {
+                          document.execCommand('paste');
+                        });
+                        break;
+                      case 'x':
+                        e.preventDefault();
+                        const targetX = e.currentTarget as HTMLInputElement;
+                        if (targetX.selectionStart !== targetX.selectionEnd) {
+                          const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
+                          navigator.clipboard.writeText(selectedText).then(() => {
+                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                              const start = targetX.selectionStart;
+                              const end = targetX.selectionEnd;
+                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                              setSearchQuery(newValue);
+                            } else {
+                              setSearchQuery('');
+                            }
+                          }).catch(() => {
+                            const textArea = document.createElement('textarea');
+                            textArea.value = selectedText;
+                            document.body.appendChild(textArea);
+                            textArea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
+                              const start = targetX.selectionStart;
+                              const end = targetX.selectionEnd;
+                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
+                              setSearchQuery(newValue);
+                            } else {
+                              setSearchQuery('');
+                            }
+                          });
+                        }
+                        break;
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          <SkeletonLoader 
+            type="archive" 
+            isEmpty={true}
+            emptyMessage="No hay tareas archivadas"
+          />
+        </div>
+      );
+    }
+
     return (
       <motion.div 
         className={styles.container}
@@ -825,7 +879,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   animateClick(e.currentTarget);
                   onViewChange('table');
                   onClose();
-                  console.log('[ArchiveTable] Returning to Tasks Table');
                 }}
               >
                 <Image
@@ -954,7 +1007,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                         setIsClientDropdownOpen(false);
                         setIsUserDropdownOpen(false);
                       }
-                      console.log('[ArchiveTable] Priority dropdown toggled');
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
@@ -1000,7 +1052,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                         setIsPriorityDropdownOpen(false);
                         setIsUserDropdownOpen(false);
                       }
-                      console.log('[ArchiveTable] Client dropdown toggled');
                     }}
                   >
                     <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
@@ -1048,7 +1099,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                           setIsPriorityDropdownOpen(false);
                           setIsClientDropdownOpen(false);
                         }
-                        console.log('[ArchiveTable] User dropdown toggled');
                       }}
                     >
                       <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { collection, onSnapshot, query, doc, getDoc, Timestamp, limit, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, getDoc, Timestamp, limit, orderBy, getDocs, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useDataStore } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
 
 // Type definitions
 interface Task {
@@ -63,331 +64,258 @@ const safeTimestampToISOOrNull = (timestamp: Timestamp | Date | string | null | 
 };
 
 export function useSharedTasksState(userId: string | undefined) {
-  // Usar el store de Zustand directamente
-  const setTasks = useDataStore((state) => state.setTasks);
-  const setClients = useDataStore((state) => state.setClients);
-  const setUsers = useDataStore((state) => state.setUsers);
-  const setIsLoadingTasks = useDataStore((state) => state.setIsLoadingTasks);
-  const setIsLoadingClients = useDataStore((state) => state.setIsLoadingClients);
-  const setIsLoadingUsers = useDataStore((state) => state.setIsLoadingUsers);
-  const setIsInitialLoadComplete = useDataStore((state) => state.setIsInitialLoadComplete);
-  const setLoadingProgress = useDataStore((state) => state.setLoadingProgress);
+  // ✅ SOLUCIÓN DRÁSTICA: Usar getState() para evitar suscripciones reactivas
+  const dataStore = useDataStore.getState();
+  const {
+    setTasks,
+    setClients,
+    setUsers,
+    setIsLoadingTasks,
+    setIsLoadingClients,
+    setIsLoadingUsers,
+    setIsInitialLoadComplete,
+    setLoadingProgress,
+  } = dataStore;
 
-  const tasks = useDataStore((state) => state.tasks);
-  const clients = useDataStore((state) => state.clients);
-  const users = useDataStore((state) => state.users);
-  const isLoadingTasks = useDataStore((state) => state.isLoadingTasks);
-  const isLoadingClients = useDataStore((state) => state.isLoadingClients);
-  const isLoadingUsers = useDataStore((state) => state.isLoadingUsers);
-  const isInitialLoadComplete = useDataStore((state) => state.isInitialLoadComplete);
-  const loadingProgress = useDataStore((state) => state.loadingProgress);
+  // ✅ SOLUCIÓN DRÁSTICA: Estado local para evitar re-renders del store
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  const [localClients, setLocalClients] = useState<Client[]>([]);
+  const [localUsers, setLocalUsers] = useState<User[]>([]);
+  const [localIsLoadingTasks, setLocalIsLoadingTasks] = useState(false);
+  const [localIsLoadingClients, setLocalIsLoadingClients] = useState(false);
+  const [localIsLoadingUsers, setLocalIsLoadingUsers] = useState(false);
+  const [localIsInitialLoadComplete, setLocalIsInitialLoadComplete] = useState(false);
+  const [localLoadingProgress, setLocalLoadingProgress] = useState({
+    tasks: false,
+    clients: false,
+    users: false,
+  });
 
   // Estado para rastrear si Firebase Auth está listo
   const [isFirebaseAuthReady, setIsFirebaseAuthReady] = useState(false);
 
-  // Refs para evitar re-renders innecesarios
+  // ✅ SOLUCIÓN DRÁSTICA: Refs para evitar re-renders innecesarios
   const tasksListenerRef = useRef<(() => void) | null>(null);
   const clientsListenerRef = useRef<(() => void) | null>(null);
   const hasInitializedRef = useRef(false);
+  const lastTasksHashRef = useRef<string>('');
+  const lastClientsHashRef = useRef<string>('');
+  const lastUsersHashRef = useRef<string>('');
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Monitorear Firebase Auth readiness
+  // ✅ SOLUCIÓN DRÁSTICA: Función para verificar si la carga inicial está completa
+  const checkInitialLoadComplete = useCallback(() => {
+    if (hasInitializedRef.current && !localIsLoadingTasks && !localIsLoadingClients && !localIsLoadingUsers) {
+      setLocalIsInitialLoadComplete(true);
+      setIsInitialLoadComplete(true);
+    }
+  }, [localIsLoadingTasks, localIsLoadingClients, localIsLoadingUsers, setIsInitialLoadComplete]);
+
+  // ✅ SOLUCIÓN DRÁSTICA: Cargar datos solo una vez al montar
   useEffect(() => {
     if (!userId) return;
 
-    // Check Firebase Auth readiness
-    
-    // Verificar si Firebase Auth ya está listo
-    if (auth.currentUser && auth.currentUser.uid === userId) {
+    // ✅ SOLUCIÓN DRÁSTICA: Verificar Firebase Auth de forma síncrona
+    const checkAuth = () => {
+      if (auth.currentUser && auth.currentUser.uid === userId) {
+        setIsFirebaseAuthReady(true);
+        return true;
+      }
+      return false;
+    };
 
-      setIsFirebaseAuthReady(true);
+    // Si ya está autenticado, cargar datos inmediatamente
+    if (checkAuth()) {
+      loadAllData();
       return;
     }
 
-    // Listener para cambios en el estado de autenticación
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user && user.uid === userId) {
-
-        setIsFirebaseAuthReady(true);
-      } else if (!user) {
-
-        setIsFirebaseAuthReady(false);
-      }
-    });
-
-    // Listener para el evento de Safari fix
-    const handleSafariAuthFixed = (event: CustomEvent) => {
-
-      if (event.detail?.userId === userId) {
-        setIsFirebaseAuthReady(true);
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('safariFirebaseAuthFixed', handleSafariAuthFixed as EventListener);
-    }
-
-    // Timeout de seguridad - si después de 10 segundos no hay autenticación, forzar el inicio
+    // Si no está autenticado, esperar un poco y forzar la carga
     const timeout = setTimeout(() => {
-      if (!auth.currentUser) {
-        setIsFirebaseAuthReady(true);
-      }
-    }, 10000);
+      setIsFirebaseAuthReady(true);
+      loadAllData();
+    }, 2000);
 
-    return () => {
-      unsubscribe();
-      clearTimeout(timeout);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('safariFirebaseAuthFixed', handleSafariAuthFixed as EventListener);
-      }
-    };
+    return () => clearTimeout(timeout);
   }, [userId]);
 
-  // Setup tasks listener
-  useEffect(() => {
-    if (!userId || !isFirebaseAuthReady) return;
+  // ✅ SOLUCIÓN DRÁSTICA: Función para cargar todos los datos
+  const loadAllData = useCallback(async () => {
+    if (!userId) return;
 
-    // Cleanup previous listener
-    if (tasksListenerRef.current) {
-      tasksListenerRef.current();
-    }
-
-    setIsLoadingTasks(true);
-
-    // ✅ OPTIMIZACIÓN: Agregar limit y orderBy para reducir re-renders
-    const tasksQuery = query(
-      collection(db, 'tasks'),
-      limit(100), // Limitar a 100 tareas para evitar re-renders masivos
-      orderBy('createdAt', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(
-      tasksQuery,
-      (snapshot) => {
-        const tasksData: Task[] = snapshot.docs.map((doc) => {
-          const rawStatus = doc.data().status;
-          
-          return {
-            id: doc.id,
-            clientId: doc.data().clientId || '',
-            project: doc.data().project || '',
-            name: doc.data().name || '',
-            description: doc.data().description || '',
-            status: rawStatus || '',
-            priority: doc.data().priority || '',
-            startDate: safeTimestampToISOOrNull(doc.data().startDate),
-            endDate: safeTimestampToISOOrNull(doc.data().endDate),
-            LeadedBy: doc.data().LeadedBy || [],
-            AssignedTo: doc.data().AssignedTo || [],
-            createdAt: safeTimestampToISO(doc.data().createdAt),
-            CreatedBy: doc.data().CreatedBy || '',
-            lastActivity: safeTimestampToISO(doc.data().lastActivity) || safeTimestampToISO(doc.data().createdAt),
-            hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
-            lastViewedBy: doc.data().lastViewedBy || {},
-            archived: doc.data().archived || false,
-            archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
-            archivedBy: doc.data().archivedBy || '',
-          };
-        });
-
-        // ✅ OPTIMIZACIÓN: Memoizar datos antes de setState para evitar re-renders innecesarios
-        const tasksDataString = JSON.stringify(tasksData);
-        const currentTasksString = JSON.stringify(tasks);
+    // Cargar tasks
+    try {
+      setLocalIsLoadingTasks(true);
+      setIsLoadingTasks(true);
+      
+      // ✅ SOLUCIÓN DRÁSTICA: Restaurar query original pero optimizada
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        limit(100), // Limitar a 100 tareas para evitar re-renders masivos
+        orderBy('createdAt', 'desc')
+      );
+      
+      const tasksSnapshot = await getDocs(tasksQuery);
+      const tasksData: Task[] = tasksSnapshot.docs.map((doc) => {
+        const rawStatus = doc.data().status;
         
-        // Solo actualizar si realmente cambió
-        if (tasksDataString !== currentTasksString) {
-          setTasks(tasksData);
-        }
-        
-        setIsLoadingTasks(false);
-        setLoadingProgress({ tasks: true });
-        
-        // Marcar como inicializado si es la primera carga
-        if (!hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-          checkInitialLoadComplete();
-        }
-      },
-      () => {
-        setIsLoadingTasks(false);
-      }
-    );
-
-    tasksListenerRef.current = unsubscribe;
-
-    return () => {
-      if (tasksListenerRef.current) {
-        tasksListenerRef.current();
-        tasksListenerRef.current = null;
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, isFirebaseAuthReady, setTasks, setIsLoadingTasks]); // setLoadingProgress and checkInitialLoadComplete stable
-
-  // Setup clients listener
-  useEffect(() => {
-    if (!userId || !isFirebaseAuthReady) return;
-
-    // Cleanup previous listener
-    if (clientsListenerRef.current) {
-      clientsListenerRef.current();
-    }
-
-    setIsLoadingClients(true);
-
-    // ✅ OPTIMIZACIÓN: Agregar limit para clients también
-    const clientsQuery = query(
-      collection(db, 'clients'),
-      limit(50) // Limitar clients también
-    );
-    
-    const unsubscribe = onSnapshot(
-      clientsQuery,
-      (snapshot) => {
-        const clientsData: Client[] = snapshot.docs.map((doc) => ({
+        return {
           id: doc.id,
+          clientId: doc.data().clientId || '',
+          project: doc.data().project || '',
           name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '/empty-image.png',
-          projectCount: doc.data().projectCount || 0,
-          projects: doc.data().projects || [],
-          createdBy: doc.data().createdBy || '',
+          description: doc.data().description || '',
+          status: rawStatus || '',
+          priority: doc.data().priority || '',
+          startDate: safeTimestampToISOOrNull(doc.data().startDate),
+          endDate: safeTimestampToISOOrNull(doc.data().endDate),
+          LeadedBy: doc.data().LeadedBy || [],
+          AssignedTo: doc.data().AssignedTo || [],
           createdAt: safeTimestampToISO(doc.data().createdAt),
-        }));
+          CreatedBy: doc.data().CreatedBy || '',
+          lastActivity: safeTimestampToISO(doc.data().lastActivity),
+          hasUnreadUpdates: doc.data().hasUnreadUpdates || false,
+          lastViewedBy: doc.data().lastViewedBy || {},
+          archived: doc.data().archived || false,
+          archivedAt: safeTimestampToISOOrNull(doc.data().archivedAt),
+          archivedBy: doc.data().archivedBy || '',
+        };
+      });
 
-        // ✅ OPTIMIZACIÓN: Memoizar clients también
-        const clientsDataString = JSON.stringify(clientsData);
-        const currentClientsString = JSON.stringify(clients);
-        
-        if (clientsDataString !== currentClientsString) {
-          setClients(clientsData);
-        }
-        
-        setIsLoadingClients(false);
-        setLoadingProgress({ clients: true });
-        
-        // Marcar como inicializado si es la primera carga
-        if (!hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-          checkInitialLoadComplete();
-        }
-      },
-      () => {
-        setIsLoadingClients(false);
+      // ✅ SOLUCIÓN DRÁSTICA: Solo actualizar si realmente cambió
+      const tasksDataString = JSON.stringify(tasksData);
+      if (tasksDataString !== lastTasksHashRef.current) {
+        lastTasksHashRef.current = tasksDataString;
+        setLocalTasks(tasksData);
+        setTasks(tasksData);
       }
-    );
+      
+      setLocalIsLoadingTasks(false);
+      setIsLoadingTasks(false);
+      setLocalLoadingProgress(prev => ({ ...prev, tasks: true }));
+      setLoadingProgress({ tasks: true });
+    } catch (error) {
+      setLocalIsLoadingTasks(false);
+      setIsLoadingTasks(false);
+    }
 
-    clientsListenerRef.current = unsubscribe;
+    // Cargar clients
+    try {
+      setLocalIsLoadingClients(true);
+      setIsLoadingClients(true);
+      
+      // ✅ SOLUCIÓN DRÁSTICA: Restaurar query original pero optimizada
+      const clientsQuery = query(
+        collection(db, 'clients'),
+        limit(50) // Limitar clients también
+      );
+      
+      const clientsSnapshot = await getDocs(clientsQuery);
+      const clientsData: Client[] = clientsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        name: doc.data().name || '',
+        imageUrl: doc.data().imageUrl || '/empty-image.png',
+        projectCount: doc.data().projectCount || 0,
+        projects: doc.data().projects || [],
+        createdBy: doc.data().createdBy || '',
+        createdAt: safeTimestampToISO(doc.data().createdAt),
+      }));
 
-    return () => {
-      if (clientsListenerRef.current) {
-        clientsListenerRef.current();
-        clientsListenerRef.current = null;
+      // ✅ SOLUCIÓN DRÁSTICA: Solo actualizar si realmente cambió
+      const clientsDataString = JSON.stringify(clientsData);
+      if (clientsDataString !== lastClientsHashRef.current) {
+        lastClientsHashRef.current = clientsDataString;
+        setLocalClients(clientsData);
+        setClients(clientsData);
       }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps  
-  }, [userId, isFirebaseAuthReady, setClients, setIsLoadingClients]); // setLoadingProgress and checkInitialLoadComplete stable
+      
+      setLocalIsLoadingClients(false);
+      setIsLoadingClients(false);
+      setLocalLoadingProgress(prev => ({ ...prev, clients: true }));
+      setLoadingProgress({ clients: true });
+    } catch (error) {
+      setLocalIsLoadingClients(false);
+      setIsLoadingClients(false);
+    }
 
-  // Setup users fetch - OPTIMIZADO
-  useEffect(() => {
-    if (!userId || !isFirebaseAuthReady) return;
+    // Cargar users
+    try {
+      setLocalIsLoadingUsers(true);
+      setIsLoadingUsers(true);
+      
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status}`);
+      }
+      
+      const clerkUsers: {
+        id: string;
+        imageUrl?: string;
+        firstName?: string;
+        lastName?: string;
+        publicMetadata: { role?: string; description?: string };
+      }[] = await response.json();
 
+      // OPTIMIZACIÓN: Usar batch getDocs en lugar de Promise.all
+      const userIds = clerkUsers.map(user => user.id);
+      const userDocs = await Promise.all(
+        userIds.map(id => getDoc(doc(db, 'users', id)))
+      );
 
-    setIsLoadingUsers(true);
-
-    const fetchUsers = async () => {
-      try {
-    
-        const response = await fetch('/api/users');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch users: ${response.status}`);
-        }
+      const usersData: User[] = clerkUsers.map((clerkUser, index) => {
+        const userDoc = userDocs[index];
+        const userData = userDoc.exists() ? userDoc.data() : {};
         
-        const clerkUsers: {
-          id: string;
-          imageUrl?: string;
-          firstName?: string;
-          lastName?: string;
-          publicMetadata: { role?: string; description?: string };
-        }[] = await response.json();
+        return {
+          id: clerkUser.id,
+          imageUrl: clerkUser.imageUrl || '',
+          fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
+          role: userData.role || clerkUser.publicMetadata.role || 'Sin rol',
+          description: userData.description || clerkUser.publicMetadata.description || '',
+          status: userData.status || undefined,
+        };
+      });
 
-        // OPTIMIZACIÓN: Usar batch getDocs en lugar de Promise.all
-        const userIds = clerkUsers.map(user => user.id);
-        const userDocs = await Promise.all(
-          userIds.map(id => getDoc(doc(db, 'users', id)))
-        );
-
-        const usersData: User[] = clerkUsers.map((clerkUser, index) => {
-          const userDoc = userDocs[index];
-          const userData = userDoc.exists() ? userDoc.data() : {};
-          
-          return {
-            id: clerkUser.id,
-            imageUrl: clerkUser.imageUrl || '',
-            fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
-            role: userData.role || clerkUser.publicMetadata.role || 'Sin rol',
-            description: userData.description || clerkUser.publicMetadata.description || '',
-            status: userData.status || undefined,
-          };
-        });
-
-  
+      // ✅ SOLUCIÓN DRÁSTICA: Solo actualizar si realmente cambió
+      const usersDataString = JSON.stringify(usersData);
+      if (usersDataString !== lastUsersHashRef.current) {
+        lastUsersHashRef.current = usersDataString;
+        setLocalUsers(usersData);
         setUsers(usersData);
-        setIsLoadingUsers(false);
-        setLoadingProgress({ users: true });
-        
-        // Marcar como inicializado si es la primera carga
-        if (!hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-          checkInitialLoadComplete();
-        }
-      } catch {
-        setIsLoadingUsers(false);
       }
-    };
-
-    fetchUsers();
-
-    return () => {
-      // Cleanup no necesario ya que no hay listener
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, isFirebaseAuthReady, setUsers, setIsLoadingUsers]); // setLoadingProgress and checkInitialLoadComplete stable
-
-  // Función para verificar si la carga inicial está completa
-  const checkInitialLoadComplete = useCallback(() => {
-    // Solo verificar si Firebase Auth está listo
-    if (!isFirebaseAuthReady) {
-
-      return;
+      
+      setLocalIsLoadingUsers(false);
+      setIsLoadingUsers(false);
+      setLocalLoadingProgress(prev => ({ ...prev, users: true }));
+      setLoadingProgress({ users: true });
+    } catch (error) {
+      setLocalIsLoadingUsers(false);
+      setIsLoadingUsers(false);
     }
 
-    // Verificar que no esté cargando
-    const isNotLoading = !isLoadingTasks && !isLoadingClients && !isLoadingUsers;
-    
-    // Si ya no está cargando, marcar como completo independientemente de si hay datos
-    // Esto maneja el caso donde un usuario no tiene datos pero la carga está completa
-    if (isNotLoading) {
-      // Initial load complete
-      setIsInitialLoadComplete(true);
-    } else {
-      // Still loading data...
+    // Marcar como inicializado
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      
+      // ✅ SOLUCIÓN DRÁSTICA: Verificar si la carga inicial está completa inmediatamente
+      const isNotLoading = !localIsLoadingTasks && !localIsLoadingClients && !localIsLoadingUsers;
+      if (isNotLoading) {
+        setLocalIsInitialLoadComplete(true);
+        setIsInitialLoadComplete(true);
+      }
     }
-  }, [isLoadingTasks, isLoadingClients, isLoadingUsers, isFirebaseAuthReady, setIsInitialLoadComplete]);
+  }, [userId, setTasks, setClients, setUsers, setIsLoadingTasks, setIsLoadingClients, setIsLoadingUsers, setLoadingProgress]);
 
-  // Verificar cuando cambian los estados de carga
-  useEffect(() => {
-    if (hasInitializedRef.current) {
-      checkInitialLoadComplete();
-    }
-  }, [isLoadingTasks, isLoadingClients, isLoadingUsers, checkInitialLoadComplete]);
+  // ✅ SOLUCIÓN DRÁSTICA: Eliminado useEffect problemático que causaba re-renders
 
   return {
-    tasks,
-    clients,
-    users,
-    isLoadingTasks,
-    isLoadingClients,
-    isLoadingUsers,
-    isInitialLoadComplete,
-    loadingProgress,
+    tasks: localTasks,
+    clients: localClients,
+    users: localUsers,
+    isLoadingTasks: localIsLoadingTasks,
+    isLoadingClients: localIsLoadingClients,
+    isLoadingUsers: localIsLoadingUsers,
+    isInitialLoadComplete: localIsInitialLoadComplete,
+    loadingProgress: localLoadingProgress,
   };
 } 

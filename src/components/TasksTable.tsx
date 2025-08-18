@@ -1412,32 +1412,20 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     };
   }, []);
 
-  // Handle loading state - PRIORIZADO para mostrar TasksTable inmediatamente
+  // Handle loading state - PRIORIZADO para mostrar SkeletonLoader inmediatamente
   const shouldShowLoader = useMemo(() => {
     // Si hay datos externos, nunca mostrar loader
     if (externalTasks && externalClients && externalUsers) {
       return false;
     }
     
-    // Si hay CUALQUIER dato en caché (tareas, clientes o usuarios), mostrar tabla
-    const hasAnyData = effectiveTasks.length > 0 || effectiveClients.length > 0 || effectiveUsers.length > 0;
+    // ✅ PRIORIDAD: Mostrar loader SIEMPRE que no haya datos completos
+    const hasCompleteData = effectiveTasks.length > 0 && effectiveClients.length > 0 && effectiveUsers.length > 0;
     
-    // Solo mostrar loader si NO hay ningún dato Y está cargando tareas (lo más importante)
-    const isReallyLoading = !hasAnyData && isLoadingTasks;
+    // Mostrar loader si NO hay datos completos O está cargando
+    const shouldShow = !hasCompleteData || isLoadingTasks;
     
-    // console.log('[TasksTable] Loading state decision:', {
-    //   hasExternalData: !!(externalTasks && externalClients && externalUsers),
-    //   hasAnyData,
-    //   isLoadingTasks,
-    //   isLoadingClients,
-    //   isLoadingUsers,
-    //   shouldShow: isReallyLoading,
-    //   tasksCount: effectiveTasks.length,
-    //   clientsCount: effectiveClients.length,
-    //   usersCount: effectiveUsers.length
-    // });
-    
-    return isReallyLoading;
+    return shouldShow;
   }, [externalTasks, externalClients, externalUsers, effectiveTasks.length, effectiveClients.length, effectiveUsers.length, isLoadingTasks]);
 
   if (shouldShowLoader) {
@@ -1467,7 +1455,41 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
             </div>
           </div>
         </div>
-        <SkeletonLoader type="tasks" rows={8} />
+        
+        {/* ✅ MEJORADO: Mensaje de carga más prominente */}
+        <div style={{
+          textAlign: 'center',
+          padding: '20px',
+          marginBottom: '20px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '12px',
+          color: 'white',
+          boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{
+            fontSize: '24px',
+            marginBottom: '8px',
+            animation: 'pulse 2s infinite'
+          }}>
+            ⚡
+          </div>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            margin: '0 0 4px'
+          }}>
+            Cargando tareas...
+          </h3>
+          <p style={{
+            fontSize: '14px',
+            margin: '0',
+            opacity: 0.9
+          }}>
+            Preparando tu espacio de trabajo
+          </p>
+        </div>
+        
+        <SkeletonLoader type="tasks" rows={12} />
       </div>
     );
   }
@@ -1718,6 +1740,42 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         visibleColumns={visibleColumns}
         onColumnVisibilityChange={handleColumnVisibilityChange}
       />
+
+      {/* ✅ NUEVO: Estado vacío cuando no hay tareas filtradas */}
+      {filteredTasks.length === 0 && (searchQuery || priorityFilter || clientFilter || userFilter) && (
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 20px',
+          color: 'var(--text-secondary)',
+          background: 'var(--bg-secondary)',
+          borderRadius: '12px',
+          margin: '20px 0',
+          border: '1px solid var(--border-color)'
+        }}>
+          <div style={{
+            fontSize: '48px',
+            marginBottom: '16px',
+            opacity: 0.6
+          }}>
+            🔍
+          </div>
+          <h3 style={{
+            fontSize: '20px',
+            fontWeight: '600',
+            margin: '0 0 8px',
+            color: 'var(--text-primary)'
+          }}>
+            No se encontraron tareas
+          </h3>
+          <p style={{
+            fontSize: '16px',
+            margin: '0',
+            opacity: 0.7
+          }}>
+            Intenta ajustar los filtros de búsqueda
+          </p>
+        </div>
+      )}
       
 
       

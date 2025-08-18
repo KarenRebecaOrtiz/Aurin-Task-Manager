@@ -264,29 +264,20 @@ export function getLastActivityTimestamp(task: TaskWithActivity): number {
 
 // Función simple para calcular notificaciones no leídas
 export function getUnreadCount(task: TaskWithActivity, userId: string): number {
-  debugLog('[getUnreadCount] Called with:', {
-    taskId: (task as TaskWithActivity & { id: string }).id,
-    userId,
-    hasUnreadUpdates: task.hasUnreadUpdates,
-    lastViewedBy: task.lastViewedBy,
-    lastActivity: task.lastActivity,
-  });
+  // ✅ ELIMINADO: Logs innecesarios que saturaban la consola
 
   // Si no hay userId, no hay notificaciones
   if (!userId) {
-    debugLog('[getUnreadCount] No userId, returning 0');
     return 0;
   }
   
   // Si la tarea no tiene actualizaciones, no hay notificaciones
   if (!task.hasUnreadUpdates) {
-    debugLog('[getUnreadCount] No unread updates, returning 0');
     return 0;
   }
   
   // Si el usuario nunca ha visto la tarea, tiene 1 notificación
   if (!task.lastViewedBy || !task.lastViewedBy[userId]) {
-    debugLog('[getUnreadCount] User never viewed, returning 1');
     return 1;
   }
   
@@ -300,21 +291,11 @@ export function getUnreadCount(task: TaskWithActivity, userId: string): number {
       ? task.lastViewedBy[userId].toMillis() 
       : new Date(task.lastViewedBy[userId]).getTime();
     
-    debugLog('[getUnreadCount] Comparing timestamps:', {
-      lastActivity,
-      lastViewed,
-      lastActivityDate: new Date(lastActivity),
-      lastViewedDate: new Date(lastViewed),
-      isNewer: lastActivity > lastViewed,
-    });
-    
     if (lastActivity > lastViewed) {
-      debugLog('[getUnreadCount] Activity is newer, returning 1');
       return 1; // Una notificación por tarea no vista
     }
   }
   
-  debugLog('[getUnreadCount] No conditions met, returning 0');
   return 0;
 }
 
