@@ -45,9 +45,15 @@ export async function getUserEmail(userId: string): Promise<string | null> {
 /**
  * Obtiene emails de múltiples usuarios desde la API
  * @param userIds - Array de IDs de usuarios
- * @returns Array de objetos con userId y email
+ * @returns Array de objetos con userId, email y nombres
  */
-export async function getUserEmails(userIds: string[]): Promise<Array<{ userId: string; email: string | null }>> {
+export async function getUserEmails(userIds: string[]): Promise<Array<{ 
+  userId: string; 
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  fullName: string | null;
+}>> {
   try {
     if (userIds.length === 0) {
       return [];
@@ -69,14 +75,27 @@ export async function getUserEmails(userIds: string[]): Promise<Array<{ userId: 
     
     if (result.success) {
       console.log(`[userUtils] Retrieved emails for ${result.validCount}/${result.totalCount} users`);
-      return result.data;
+      // Asegurar que todos los campos estén presentes
+      return result.data.map(user => ({
+        userId: user.userId,
+        email: user.email || null,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        fullName: user.fullName || null,
+      }));
     } else {
       throw new Error(result.error || 'Unknown error');
     }
   } catch (error) {
     console.error('[userUtils] Error retrieving user emails:', error);
-    // Retornar array con emails null en caso de error
-    return userIds.map(userId => ({ userId, email: null }));
+    // Retornar array con campos null en caso de error
+    return userIds.map(userId => ({ 
+      userId, 
+      email: null,
+      firstName: null,
+      lastName: null,
+      fullName: null
+    }));
   }
 }
 
@@ -92,15 +111,16 @@ export async function getUserBasicInfo(userId: string): Promise<{
   fullName: string | null; 
 } | null> {
   try {
-    // Por ahora solo obtenemos email, pero podríamos extender la API
-    const email = await getUserEmail(userId);
+    // Usar la nueva API que incluye nombres
+    const userInfo = await getUserEmails([userId]);
     
-    if (email) {
+    if (userInfo.length > 0) {
+      const user = userInfo[0];
       return {
-        email,
-        firstName: null, // TODO: Extender API para incluir más información
-        lastName: null,
-        fullName: null,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.fullName,
       };
     }
     
@@ -117,7 +137,13 @@ export async function getUserBasicInfo(userId: string): Promise<{
  * @returns Array de objetos con userId y email
  */
 export function useUserEmails(userIds: string[]) {
-  const [emails, setEmails] = useState<Array<{ userId: string; email: string | null }>>([]);
+  const [emails, setEmails] = useState<Array<{ 
+    userId: string; 
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    fullName: string | null;
+  }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

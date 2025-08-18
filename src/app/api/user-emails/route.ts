@@ -39,17 +39,33 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Obteniendo emails para ${userIds.length} usuarios`);
 
-    // Obtener emails de los usuarios desde Clerk
+    // Obtener emails y nombres de los usuarios desde Clerk
     const client = await clerkClient();
     const userEmails = await Promise.all(
       userIds.map(async (userId) => {
         try {
           const user = await client.users.getUser(userId);
           const email = user.emailAddresses?.[0]?.emailAddress || null;
-          return { userId, email };
+          const firstName = user.firstName || null;
+          const lastName = user.lastName || null;
+          const fullName = user.fullName || null;
+          
+          return { 
+            userId, 
+            email,
+            firstName,
+            lastName,
+            fullName
+          };
         } catch (error) {
           console.error(`[API] Error obteniendo usuario ${userId}:`, error);
-          return { userId, email: null };
+          return { 
+            userId, 
+            email: null,
+            firstName: null,
+            lastName: null,
+            fullName: null
+          };
         }
       })
     );

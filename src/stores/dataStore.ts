@@ -87,6 +87,7 @@ interface DataStore {
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   addTask: (task: Task) => void;
   deleteTask: (taskId: string) => void;
+  deleteTaskOptimistic: (taskId: string) => Task | null;
   isLoadingTasks: boolean;
   setIsLoadingTasks: (loading: boolean) => void;
   
@@ -272,6 +273,15 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   deleteTask: (taskId) => set((state) => ({ 
     tasks: state.tasks.filter(t => t.id !== taskId) 
   })),
+  deleteTaskOptimistic: (taskId) => {
+    const state = get();
+    const taskToDelete = state.tasks.find(t => t.id === taskId);
+    if (taskToDelete) {
+      set({ tasks: state.tasks.filter(t => t.id !== taskId) });
+      return taskToDelete;
+    }
+    return null;
+  },
   isLoadingTasks: false,
   setIsLoadingTasks: (loading) => set({ isLoadingTasks: loading }),
   

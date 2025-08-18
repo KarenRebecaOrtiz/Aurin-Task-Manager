@@ -438,6 +438,11 @@ export class NotificationService {
           templateData.taskStatus = taskData.status || '';
           templateData.taskPriority = taskData.priority || '';
           
+          // Agregar información adicional para ediciones
+          if (params.type !== 'task_created') {
+            templateData.taskDescription = taskData.description || 'Sin descripción disponible';
+          }
+          
           // Preparar listas de equipo
           if (taskData.LeadedBy && Array.isArray(taskData.LeadedBy)) {
             try {
@@ -484,6 +489,11 @@ export class NotificationService {
           templateData.hoursLogged = taskData.hours || 0;
           templateData.logDate = new Date().toLocaleDateString('es-ES');
           templateData.comment = taskData.comment || '';
+          
+          // Obtener información adicional de la tarea si está disponible
+          if (taskData.description) {
+            templateData.taskDescription = taskData.description;
+          }
           break;
       }
 

@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { doc, deleteDoc, addDoc, updateDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useUser } from '@clerk/nextjs';
+import { useDataStore } from '@/stores/dataStore';
 
 import SimpleDeletePopup from './SimpleDeletePopup';
 import ConfirmExitPopup from './ConfirmExitPopup';
@@ -146,15 +147,33 @@ export default function TasksPageModals() {
           onConfirm={async () => {
             console.log('[TasksPageModals] Delete popup confirmed for:', deleteTarget);
             if (deleteTarget.type === 'task') {
+              // ✅ OPTIMISTIC UPDATE: Eliminar inmediatamente del estado local
+              const { deleteTaskOptimistic, addTask } = useDataStore.getState();
+              const deletedTask = deleteTaskOptimistic(deleteTarget.id);
+              
+              if (!deletedTask) {
+                handleShowFailAlert('Tarea no encontrada');
+                return;
+              }
+              
               try {
+                console.log('[TasksPageModals] Task removed from local state:', deleteTarget.id);
+                
+                // Ahora eliminar de Firestore
                 console.log('[TasksPageModals] Deleting task from Firestore:', deleteTarget.id);
                 await deleteDoc(doc(db, 'tasks', deleteTarget.id));
                 console.log('[TasksPageModals] Task deleted successfully from Firestore');
+                
                 const { closeDeletePopup } = useTasksPageStore.getState();
                 closeDeletePopup();
                 handleShowSuccessAlert('Tarea eliminada exitosamente');
               } catch (error) {
                 console.error('[TasksPageModals] Error deleting task:', error);
+                
+                // ✅ ROLLBACK: Si falla, restaurar la tarea en el estado local
+                addTask(deletedTask);
+                console.log('[TasksPageModals] Task restored to local state after error');
+                
                 handleShowFailAlert('Error al eliminar la tarea');
               }
             }
