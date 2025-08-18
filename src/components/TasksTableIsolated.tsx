@@ -1,29 +1,27 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { useSharedTasksState } from '@/hooks/useSharedTasksState';
+import { useDataStore } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import TasksTable from './TasksTable';
 
 export default function TasksTableIsolated() {
-  // Solo log cuando realmente cambia algo importante
-  // Debug logging disabled to reduce console spam
-  
   const { user } = useUser();
   
-  // ✅ SOLUCIÓN INTELIGENTE: Usar el hook de manera normal pero con optimizaciones
+  // ✅ SOLUCIÓN: Usar directamente useDataStore para actualización inmediata
   const {
     tasks,
     clients,
     users,
     isInitialLoadComplete
-  } = useSharedTasksState(user?.id);
-
-  // ✅ SOLUCIÓN INTELIGENTE: Memoizar datos para evitar re-renders innecesarios
-  const memoizedTasks = useMemo(() => tasks, [tasks]);
-  const memoizedClients = useMemo(() => clients, [clients]);
-  const memoizedUsers = useMemo(() => users, [users]);
+  } = useDataStore(useShallow(state => ({
+    tasks: state.tasks,
+    clients: state.clients,
+    users: state.users,
+    isInitialLoadComplete: state.isInitialLoadComplete
+  })));
 
   // Configure action handlers for TasksTable
   useEffect(() => {
@@ -73,23 +71,33 @@ export default function TasksTableIsolated() {
         }, conversationId);
       },
       openChatSidebar: (task: { id: string; clientId: string; project: string; name: string; description: string; status: string; priority: string; startDate: string | null; endDate: string | null; LeadedBy: string[]; AssignedTo: string[]; createdAt: string; CreatedBy?: string; lastActivity?: string; hasUnreadUpdates?: boolean; lastViewedBy?: { [userId: string]: string }; archived?: boolean; archivedAt?: string; archivedBy?: string }, clientName: string) => {
-    
         const { openChatSidebar } = useSidebarStateStore.getState();
         openChatSidebar(task, clientName);
       },
     });
   }, []);
 
-  // Only render if data is ready
-  if (!isInitialLoadComplete) {
+  // ✅ SOLUCIÓN: Mostrar TasksTable solo si hay datos disponibles
+  // No depender de isInitialLoadComplete del store ya que puede no estar sincronizado
+  const hasData = tasks.length > 0 || clients.length > 0 || users.length > 0;
+  
+  // Debug: Log para verificar que los datos se estén recibiendo
+  console.log('[TasksTableIsolated] Data from store:', {
+    tasksCount: tasks.length,
+    clientsCount: clients.length,
+    usersCount: users.length,
+    hasData
+  });
+  
+  if (!hasData) {
     return null;
   }
 
   return (
     <TasksTable
-      externalTasks={memoizedTasks}
-      externalClients={memoizedClients}
-      externalUsers={memoizedUsers}
+      externalTasks={tasks}
+      externalClients={clients}
+      externalUsers={users}
     />
   );
 } 

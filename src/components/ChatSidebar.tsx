@@ -34,6 +34,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { notificationService } from '@/services/notificationService';
 
 import { useGeminiIntegration } from '@/hooks/useGeminiIntegration';
+import { deleteTask as deleteTaskFromFirestore } from '@/lib/taskUtils';
 
 
 interface Message {
@@ -1016,18 +1017,45 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       if (!user?.id || deleteConfirm.toLowerCase() !== 'eliminar') {
         return;
       }
+      
       setIsDeleting(true);
       try {
+        // ✅ OPTIMISTIC UPDATE: Eliminar inmediatamente del estado local
+        const { deleteTaskOptimistic, addTask } = useDataStore.getState();
+        const deletedTask = deleteTaskOptimistic(task.id);
+        
+        if (!deletedTask) {
+          throw new Error('Task not found in local state');
+        }
+        
+        console.log('[ChatSidebar] Task removed from local state:', task.id);
+        
+        // Cerrar el popup y sidebar inmediatamente
         setIsDeletePopupOpen(false);
         setDeleteConfirm('');
         handleClose();
+        
+        // Ahora eliminar de Firestore en background
+        try {
+          await deleteTaskFromFirestore(task.id, user.id, isAdmin, task);
+          console.log('[ChatSidebar] Task deleted successfully from Firestore');
+        } catch (firestoreError) {
+          console.error('[ChatSidebar] Error deleting task from Firestore:', firestoreError);
+          
+          // ✅ ROLLBACK: Si falla, restaurar la tarea en el estado local
+          addTask(deletedTask);
+          console.log('[ChatSidebar] Task restored to local state after error');
+          
+          // Mostrar error al usuario
+          alert(`Error al eliminar la tarea: ${firestoreError instanceof Error ? firestoreError.message : 'Inténtalo de nuevo.'}`);
+        }
       } catch (error) {
-        // console.error('Error closing task', error);
-        alert(`Error al cerrar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
+        console.error('[ChatSidebar] Error in delete process:', error);
+        alert(`Error al eliminar la tarea: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
       } finally {
         setIsDeleting(false);
       }
-    }, [user?.id, deleteConfirm, handleClose]);
+    }, [user?.id, deleteConfirm, task, isAdmin, handleClose]);
 
     const handleDeleteCancel = useCallback(() => {
       setIsDeletePopupOpen(false);

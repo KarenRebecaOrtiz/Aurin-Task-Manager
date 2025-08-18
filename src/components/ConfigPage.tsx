@@ -2131,15 +2131,18 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   </div>
                 </div>
                 
-                <div className={styles.fieldGroup}>
+                <div className={styles.fieldGroupToggler}>
                   {[
-                    { key: 'messages', label: 'Mensajes (group_message, private_message)' },
-                    { key: 'creation', label: 'Creación de tareas (task_created)' },
-                    { key: 'edition', label: 'Edición de tareas (status, priority, dates, assignment changes)' },
-                    { key: 'timers', label: 'Registros de tiempo (time_log)' },
-                  ].map(({ key, label }) => (
+                    { key: 'messages', label: 'Mensajes del equipo', description: 'Recibe notificaciones cuando alguien te envía mensajes grupales o privados' },
+                    { key: 'creation', label: 'Nuevas tareas', description: 'Te avisamos cuando se crean tareas que te afectan o en tus proyectos' },
+                    { key: 'edition', label: 'Cambios en tareas', description: 'Notificaciones sobre cambios de estado, prioridad, fechas o asignaciones' },
+                    { key: 'timers', label: 'Registros de tiempo', description: 'Avisos sobre registros de tiempo en tareas y proyectos' },
+                  ].map(({ key, label, description }) => (
                     <div key={key} className={styles.toggleRow}>
-                      <label className={styles.toggleLabel}>{label}</label>
+                      <div className={styles.toggleContent}>
+                        <label className={styles.toggleLabel}>{label}</label>
+                        <p className={styles.toggleDescription}>{description}</p>
+                      </div>
                       <label className={styles.switch}>
                         <input
                           type="checkbox"

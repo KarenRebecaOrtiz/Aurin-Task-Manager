@@ -257,6 +257,11 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       return state; // No actualizar si el contenido es idéntico
     }
     
+    console.log('[useDataStore] setTasks called:', { 
+      currentCount: state.tasks.length, 
+      newCount: tasks.length 
+    });
+    
     return { tasks };
   }),
   updateTask: (taskId, updates) => set((state) => {
@@ -295,6 +300,11 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     if (currentClientsString === newClientsString) {
       return state; // No actualizar si el contenido es idéntico
     }
+    
+    console.log('[useDataStore] setClients called:', { 
+      currentCount: state.clients.length, 
+      newCount: clients.length 
+    });
     
     return { clients };
   }),

@@ -187,6 +187,31 @@ function TasksPageContent() {
     }
   }, [isInitialLoadComplete, contentReady]);
 
+  // ✅ SOLUCIÓN: Sincronizar datos de useSharedTasksState con useDataStore
+  useEffect(() => {
+    // Sincronizar datos cuando estén disponibles, incluso si isInitialLoadComplete es false
+    if (tasks.length > 0 || clients.length > 0 || users.length > 0) {
+      const { setTasks, setClients, setUsers, setIsInitialLoadComplete } = useDataStore.getState();
+      
+      // Sincronizar datos con el store
+      if (tasks.length > 0) setTasks(tasks);
+      if (clients.length > 0) setClients(clients);
+      if (users.length > 0) setUsers(users);
+      
+      // Solo marcar como inicializado si realmente tenemos datos
+      if (tasks.length > 0 && clients.length > 0 && users.length > 0) {
+        setIsInitialLoadComplete(true);
+      }
+      
+      console.log('[TasksPage] Data synchronized with useDataStore:', {
+        tasksCount: tasks.length,
+        clientsCount: clients.length,
+        usersCount: users.length,
+        isInitialLoadComplete
+      });
+    }
+  }, [tasks, clients, users, isInitialLoadComplete]);
+
   // Event handlers - TODOS MEMOIZADOS
   // Nota: handleNotificationClick está comentado ya que no se usa actualmente
   // const handleNotificationClick = useCallback((notification: Notification & { action?: string }) => {

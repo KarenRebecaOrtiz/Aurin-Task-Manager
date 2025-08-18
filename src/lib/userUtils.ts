@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-
 /**
  * Utilidades para obtener datos de usuarios desde el cliente
  * Usa la API route /api/user-emails para obtener emails
@@ -132,44 +130,31 @@ export async function getUserBasicInfo(userId: string): Promise<{
 }
 
 /**
- * Hook para obtener emails de usuarios con cache
+ * Función utilitaria para obtener emails de usuarios (versión sin hooks)
  * @param userIds - Array de IDs de usuarios
- * @returns Array de objetos con userId y email
+ * @returns Promise con array de objetos con userId y email
  */
-export function useUserEmails(userIds: string[]) {
-  const [emails, setEmails] = useState<Array<{ 
+export async function getUserEmailsAsync(userIds: string[]): Promise<{ 
+  emails: Array<{ 
     userId: string; 
     email: string | null;
     firstName: string | null;
     lastName: string | null;
     fullName: string | null;
-  }>>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  }>;
+  loading: boolean;
+  error: string | null;
+}> {
+  if (userIds.length === 0) {
+    return { emails: [], loading: false, error: null };
+  }
 
-  useEffect(() => {
-    if (userIds.length === 0) {
-      setEmails([]);
-      return;
-    }
-
-    const fetchEmails = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const result = await getUserEmails(userIds);
-        setEmails(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido');
-        console.error('[useUserEmails] Error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEmails();
-  }, [userIds.join(',')]); // Dependencia basada en userIds
-
-  return { emails, loading, error };
+  try {
+    const result = await getUserEmails(userIds);
+    return { emails: result, loading: false, error: null };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+    console.error('[getUserEmailsAsync] Error:', err);
+    return { emails: [], loading: false, error: errorMessage };
+  }
 }
