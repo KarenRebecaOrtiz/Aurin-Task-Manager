@@ -18,6 +18,7 @@ import SimpleTooltip from './SimpleTooltip';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useTaskNotificationsSingleton } from '@/hooks/useTaskNotificationsSingleton';
 import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
+import { TextShimmer } from '@/components/TextShimmer';
 
 interface Notification {
   id: string;
@@ -181,65 +182,50 @@ const Header: React.FC<HeaderProps> = ({
   }, [isNotificationsOpen]);
 
   /* ────────────────────────────────────────────
-     EFFECTS – TYPEWRITER WELCOME
-  ──────────────────────────────────────────── */
+     EFFECTS – ADMIN BUTTON INITIALIZATION
+   ──────────────────────────────────────────── */
   useEffect(() => {
     const el = welcomeRef.current;
-    if (!el || !isLoaded) return;
-    const text = `Te damos la bienvenida de nuevo, ${userName}`;
-    el.innerHTML = '';
-    const textWrapper = document.createElement('span');
-    textWrapper.className = styles.typewriterWrapper;
-    el.appendChild(textWrapper);
-    text.split(' ').forEach((word, idx, arr) => {
-      const span = document.createElement('span');
-      span.className = styles.typewriterChar;
-      span.style.opacity = '0';
-      span.textContent = word;
-      textWrapper.appendChild(span);
-      if (idx < arr.length - 1) textWrapper.appendChild(document.createTextNode(' '));
-      gsap.to(span, {
-        opacity: 1,
-        duration: 0.2,
-        delay: idx * 0.1,
-        ease: 'power1.in',
-      });
-    });
+    if (!el || !isLoaded || !isAdmin) return;
 
-    if (isAdmin) {
-      const buttonWrapper = document.createElement('span');
-      buttonWrapper.className = styles.adminButtonWrapper;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = styles.adminButton;
-      button.innerHTML = `
-        <span class="${styles.fold}"></span>
-        <div class="${styles.pointsWrapper}">
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-        </div>
-        <span class="${styles.inner}">
-          <img
-            src="/verified.svg"
-            alt="Verified Icon"
-            class="${styles.icon}"
-          />
-        </span>
-      `;
-      buttonWrapper.appendChild(button);
-      el.appendChild(buttonWrapper);
-    }
+    // Crear el botón de admin
+    const buttonWrapper = document.createElement('span');
+    buttonWrapper.className = styles.adminButtonWrapper;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = styles.adminButton;
+    button.innerHTML = `
+      <span class="${styles.fold}"></span>
+      <div class="${styles.pointsWrapper}">
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+        <i class="${styles.point}"></i>
+      </div>
+      <span class="${styles.inner}">
+        <img
+          src="/verified.svg"
+          alt="Verified Icon"
+          class="${styles.icon}"
+        />
+      </span>
+    `;
+    buttonWrapper.appendChild(button);
+    el.appendChild(buttonWrapper);
 
-    return () => gsap.killTweensOf(el.querySelectorAll(`.${styles.typewriterChar}`));
-  }, [userName, isLoaded, isAdmin]);
+    return () => {
+      // Cleanup si es necesario
+      if (el.contains(buttonWrapper)) {
+        el.removeChild(buttonWrapper);
+      }
+    };
+  }, [isLoaded, isAdmin]);
 
   /* ────────────────────────────────────────────
      EFFECTS – SUN/MOON ICON ENTRANCE
@@ -464,7 +450,13 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <div className={styles.frame14}>
             <div className={styles.title}>
-              <div ref={welcomeRef} className={styles.welcome} />
+              <div className={styles.welcome}>
+                <span className={styles.welcomeText}>Te damos la bienvenida de nuevo, </span>
+                <span className={styles.nameContainer}>
+                  <TextShimmer duration={3} spread={1.5}>{userName}</TextShimmer>
+                </span>
+                <div ref={welcomeRef} className={styles.adminButtonContainer}></div>
+              </div>
             </div>
             <div className={styles.text}>
               <div className={styles.subtitle}>{getSubtitle()}</div>
