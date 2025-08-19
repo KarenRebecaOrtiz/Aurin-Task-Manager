@@ -1,10 +1,10 @@
 // src/hooks/useGeminiSummary.ts
-import { useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
 import { decryptBatch } from '@/lib/encryption';
 import { useSummaryStore } from '@/stores/summaryStore';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Message {
@@ -12,7 +12,7 @@ interface Message {
   senderId: string;
   senderName: string;
   text: string | null;
-  timestamp: number | Date;
+  timestamp: Date | Timestamp;
   read: boolean;
   hours?: number;
   imageUrl?: string | null;
@@ -32,6 +32,13 @@ const intervalLabels = {
 
 export const useGeminiSummary = (taskId: string) => {
   const { setSummary } = useSummaryStore();
+
+  // Helper function to convert timestamp to Date
+  const timestampToDate = useCallback((timestamp: Date | Timestamp): Date => {
+    if (timestamp instanceof Date) return timestamp;
+    if (timestamp instanceof Timestamp) return timestamp.toDate();
+    return new Date(timestamp);
+  }, []);
 
   const generateSummary = useCallback(async (
     interval: string, 
@@ -71,7 +78,7 @@ export const useGeminiSummary = (taskId: string) => {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       case '6months':
-        startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 1000);
+        startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
         break;
       case '1year':
         startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
@@ -82,7 +89,7 @@ export const useGeminiSummary = (taskId: string) => {
 
     const filteredMessages = messages.filter(msg => {
       if (!msg.timestamp) return false;
-      const msgDate = msg.timestamp instanceof Date ? msg.timestamp : msg.timestamp.toDate();
+      const msgDate = timestampToDate(msg.timestamp);
       return msgDate >= startDate;
     });
 
@@ -96,7 +103,7 @@ export const useGeminiSummary = (taskId: string) => {
     
     const chatContext = decryptedMessages
       .map(msg => {
-        const date = msg.timestamp instanceof Date ? msg.timestamp : msg.timestamp.toDate();
+        const date = timestampToDate(msg.timestamp);
         const timeStr = date.toLocaleDateString('es-MX') + ' ' + date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
         if (msg.hours) {
           return `[${timeStr}] ${msg.senderName}: Registró ${Math.floor(msg.hours)}h ${Math.round((msg.hours % 1) * 60)}m de tiempo en la tarea`;

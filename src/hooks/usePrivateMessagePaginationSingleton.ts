@@ -415,6 +415,13 @@ export class PrivateMessagePaginationManager {
     return this.currentMessages.get(conversationId) || [];
   }
 
+  // Método público para obtener si hay más mensajes
+  hasMoreMessages(conversationId: string): boolean | undefined {
+    const cache = this.cache[conversationId];
+    if (!cache) return undefined;
+    return cache.hasMore;
+  }
+
   // Método público para cleanup global (solo en logout/app close)
   cleanupAllListeners(): void {
     if (DEBUG) console.log('[PrivateMessagePaginationManager] Cleaning up all listeners');
@@ -466,10 +473,10 @@ export const usePrivateMessagePaginationSingleton = ({
       setIsLoading(false);
       isInitializedRef.current = true;
       
-      // NUEVO: Actualizar hasMore basado en el cache
-      const cache = managerRef.current?.cache[conversationId];
-      if (cache) {
-        setHasMore(cache.hasMore);
+      // NUEVO: Actualizar hasMore basado en el estado del manager
+      const hasMoreMessages = managerRef.current?.hasMoreMessages(conversationId);
+      if (hasMoreMessages !== undefined) {
+        setHasMore(hasMoreMessages);
       }
     });
 
@@ -482,10 +489,10 @@ export const usePrivateMessagePaginationSingleton = ({
         setIsLoading(false);
         isInitializedRef.current = true;
         
-        // NUEVO: Actualizar hasMore
-        const cache = managerRef.current.cache[conversationId];
-        if (cache) {
-          setHasMore(cache.hasMore);
+        // NUEVO: Actualizar hasMore usando método público
+        const hasMoreMessages = managerRef.current.hasMoreMessages(conversationId);
+        if (hasMoreMessages !== undefined) {
+          setHasMore(hasMoreMessages);
         }
       }
     }
