@@ -1280,8 +1280,8 @@ export default function InputChat({
                   />
                 </motion.button>
                 
-                {/* Botón Tiempo Personalizado */}
-                <motion.button 
+                {/* Botón Tiempo Personalizado - TEMPORALMENTE DESHABILITADO */}
+                {/* <motion.button 
                   type="button" 
                   className={`${styles['format-button']} ${styles.tooltip}`} 
                   onClick={handleCustomTimeClick}
@@ -1307,7 +1307,7 @@ export default function InputChat({
                     style={{ filter: 'none', fill: '#000000' }} 
                     draggable="false" 
                   />
-                </motion.button>
+                </motion.button> */}
               </motion.div>
             )}
           </AnimatePresence>
