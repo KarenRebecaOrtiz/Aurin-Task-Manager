@@ -4,6 +4,28 @@
 .locationDropdown {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    margin-bottom: 8px; // Reducido porque no hay mapas
+    
+    // Agregar indicador visual de que es clickeable
+    .selectButton {
+      border-style: dashed;
+      border-width: 2px;
+      
+      &:hover {
+        border-style: solid;
+        background: rgba(59, 130, 246, 0.05);
+      }
+    }
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 6px;
+  }
 }
 
 .label {
@@ -52,6 +74,9 @@
   justify-content: space-between;
   transition: all 0.3s ease;
   color: $color-text-primary;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 
   &:hover:not(.disabled) {
     border-color: #3b82f6;
@@ -84,6 +109,17 @@
       box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
     }
   }
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    padding: 10px 12px;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 8px 10px;
+    border-radius: 4px;
+  }
 }
 
 .buttonContent {
@@ -91,6 +127,8 @@
   align-items: center;
   gap: 8px;
   flex: 1;
+  min-width: 0; // Permite que el contenido se encoja
+  overflow: hidden;
 }
 
 .selectedText {
@@ -100,58 +138,163 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0; // Permite que el texto se encoja
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    font-size: 13px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 12px;
+  }
 }
 
 .locationInfo {
-  margin-top: 12px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 8px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
   border: 1px solid #e2e8f0;
-  position: relative;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 1000;
+  margin-top: 4px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 
   :global(body.dark) & {
-    background: #1e293b;
+    background: #1f2937;
     border-color: #334155;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  }
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    border-radius: 6px;
+    margin-top: 2px;
+    padding: 12px;
+    
+    // Agregar mensaje informativo para mobile
+    &::after {
+      content: "📍 Mapa oculto en mobile para mejor experiencia";
+      display: block;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 8px;
+      padding: 6px;
+      background: rgba(107, 114, 128, 0.1);
+      border-radius: 4px;
+      font-style: italic;
+    }
+    
+    :global(body.dark) &::after {
+      color: #9ca3af;
+      background: rgba(156, 163, 175, 0.1);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    padding: 10px;
+    margin-top: 1px;
+    
+    &::after {
+      font-size: 11px;
+      margin-top: 6px;
+      padding: 4px;
+    }
   }
 }
 
 .locationNameContainer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
   gap: 8px;
-  margin-bottom: 4px;
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    margin-bottom: 6px;
+    gap: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 4px;
+    gap: 4px;
+  }
 }
 
 .locationName {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  color: $color-text-primary;
+  color: #374151;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   :global(body.dark) & {
-    color: $color-text-dark-primary;
+    color: #d1d5db;
+  }
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    font-size: 15px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 14px;
   }
 }
 
 .editNameButton {
   background: none;
   border: none;
+  cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
   &:hover {
-    opacity: 1;
     background: rgba(59, 130, 246, 0.1);
   }
-
+  
+  &:focus {
+    outline: none;
+    background: rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
+  
   :global(body.dark) & {
     &:hover {
       background: rgba(96, 165, 250, 0.1);
     }
+    
+    &:focus {
+      background: rgba(96, 165, 250, 0.15);
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+    }
+  }
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    padding: 3px;
+    border-radius: 3px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 2px;
+    border-radius: 2px;
   }
 }
 
@@ -188,23 +331,45 @@
 }
 
 .locationAddress {
-  font-size: 13px;
+  font-size: 14px;
   color: #6b7280;
-  margin-bottom: 4px;
-  line-height: 1.3;
+  margin-bottom: 6px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 
   :global(body.dark) & {
     color: #9ca3af;
   }
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 12px;
+    margin-bottom: 3px;
+  }
 }
 
 .locationCoords {
-  font-size: 11px;
+  font-size: 12px;
   color: #9ca3af;
-  font-family: 'Inconsolata', monospace;
-
-  :global(body.dark) & {
-    color: #6b7280;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 8px;
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 10px;
+    margin-bottom: 4px;
   }
 }
 
@@ -399,10 +564,18 @@
   border: 1px solid #e2e8f0;
   background: white;
   pointer-events: none; // Deshabilita todas las interacciones
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 
   :global(body.dark) & {
     border-color: #334155;
     background: #1f2937;
+  }
+  
+  // Ocultar mapas en mobile para evitar problemas de overflow
+  @media (max-width: 768px) {
+    display: none;
   }
 }
 
@@ -411,6 +584,8 @@
   height: 200px;
   border-radius: 8px;
   pointer-events: none; // Deshabilita todas las interacciones del mapa
+  max-width: 100%;
+  box-sizing: border-box;
   
   // Ocultar controles de Google Maps
   :global(.gm-control-active) {
@@ -429,11 +604,23 @@
     display: none !important;
   }
   
-  :global(.gm-style-cc) {
-    display: none !important;
-  }
-  
   :global(.gm-style) {
     pointer-events: none !important;
+  }
+  
+  // Responsive para mobile
+  @media (max-width: 768px) {
+    height: 160px;
+    border-radius: 6px;
+  }
+  
+  @media (max-width: 480px) {
+    height: 140px;
+    border-radius: 4px;
+  }
+  
+  // Ocultar en mobile
+  @media (max-width: 768px) {
+    display: none;
   }
 } 

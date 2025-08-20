@@ -230,7 +230,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         setIsConnecting(false);
       },
       (error) => {
-        console.error("[AISidebar] Firestore messages listener error:", error, "[Error Code: FS-001]");
+        // console.error("[AISidebar] Firestore messages listener error:", error, "[Error Code: FS-001]");
         setError("No se pudo cargar la conversación. Por favor, recarga la página. [Error Code: FS-001]");
         setIsConnecting(false);
       },
@@ -256,10 +256,10 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
             createdBy: data.createdBy,
           };
         });
-        console.log("[AISidebar] Fetched clients:", clients, "[Debug Code: CLIENT-001]");
+        // console.log("[AISidebar] Fetched clients:", clients, "[Debug Code: CLIENT-001]");
         return options.forGemini && !isAdmin ? [] : clients;
       } catch (error) {
-        console.error("[AISidebar] Failed to fetch clients:", error, "[Error Code: CLIENT-002]");
+        // console.error("[AISidebar] Failed to fetch clients:", error, "[Error Code: CLIENT-002]");
         return [];
       }
     },
@@ -317,10 +317,10 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
             };
           }),
         );
-        console.log("[AISidebar] Fetched tasks:", tasks, "[Debug Code: TASK-001]");
+        // console.log("[AISidebar] Fetched tasks:", tasks, "[Debug Code: TASK-001]");
         return options.forGemini && !isAdmin ? [] : tasks.filter((task) => task.createdBy === userId);
       } catch (error) {
-        console.error("[AISidebar] Failed to fetch tasks:", error, "[Error Code: TASK-002]");
+        // console.error("[AISidebar] Failed to fetch tasks:", error, "[Error Code: TASK-002]");
         return [];
       }
     },
@@ -356,7 +356,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           endDate: taskData.endDate ? Timestamp.fromDate(new Date(taskData.endDate)) : Timestamp.now(),
         });
       } catch (error) {
-        console.error("[AISidebar] Failed to create task:", error, "[Error Code: TASK-CREATE-001]");
+        // console.error("[AISidebar] Failed to create task:", error, "[Error Code: TASK-CREATE-001]");
         throw error instanceof Error ? error : new Error("Error al crear la tarea [Error Code: TASK-CREATE-001]");
       }
     },
@@ -396,7 +396,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         }
         return Array.from(messageMap.values());
       });
-      console.log("[AISidebar] Sending message with tempId:", tempId, "[Debug Code: MSG-001]");
+      // console.log("[AISidebar] Sending message with tempId:", tempId, "[Debug Code: MSG-001]");
 
       try {
         // Validación crítica de AppCheck
@@ -445,9 +445,9 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           try {
             const base64Image = await fileToGenerativePart(file);
             imagePart = { inlineData: { data: base64Image, mimeType: file.type } };
-            console.log("[AISidebar] Image converted to base64 for Gemini:", file.name, "[Debug Code: IMG-001]");
+            // console.log("[AISidebar] Image converted to base64 for Gemini:", file.name, "[Debug Code: IMG-001]");
           } catch (error) {
-            console.error("[AISidebar] Failed to convert image to base64:", error, "[Error Code: IMG-002]");
+            // console.error("[AISidebar] Failed to convert image to base64:", error, "[Error Code: IMG-002]");
             throw new Error("Error al procesar la imagen para Gemini [Error Code: IMG-002]");
           }
         }
@@ -461,7 +461,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         };
 
         const prompt = `Eres un asistente útil que puede procesar texto e imágenes. Con base en la siguiente información: ${JSON.stringify({ tasks, clients })}, responde al prompt del usuario: "${messageData.text || "Analiza el archivo adjunto"}". Si se incluye una imagen, analízala y relaciónala con el contexto del prompt. Si el usuario pide crear una tarea, genera un JSON con los campos: clientId, project, name, description, startDate, endDate, status, priority, LeadedBy, AssignedTo, budget, hours. Devuelve la respuesta en texto claro o JSON si aplica.`;
-        console.log("[AISidebar] Generated prompt:", prompt, "[Debug Code: PROMPT-001]");
+        // console.log("[AISidebar] Generated prompt:", prompt, "[Debug Code: PROMPT-001]");
 
         const safetySettings = [
           {
@@ -485,16 +485,16 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
             systemInstruction,
           });
           const result = await model.generateContent(imagePart ? [prompt, imagePart] : [prompt]);
-          console.log("[AISidebar] Raw response from Gemini API:", result, "[Debug Code: RESP-RAW-001]");
+          // console.log("[AISidebar] Raw response from Gemini API:", result, "[Debug Code: RESP-RAW-001]");
 
           if (!result || !result.response || !result.response.text) {
             throw new Error("Respuesta inválida de la API de Gemini [Error Code: API-001]");
           }
 
           textResponse = result.response.text();
-          console.log("[AISidebar] Received response from Gemini API:", textResponse, "[Debug Code: RESP-001]");
+          // console.log("[AISidebar] Received response from Gemini API:", textResponse, "[Debug Code: RESP-001]");
         } catch (error) {
-          console.error("[AISidebar] Gemini API error:", error, "[Error Code: API-002]");
+          // console.error("[AISidebar] Gemini API error:", error, "[Error Code: API-002]");
           throw new Error(`Error al llamar a la API de Gemini: ${error instanceof Error ? error.message : "Desconocido"} [Error Code: API-002]`);
         }
 
@@ -505,7 +505,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
             textResponse = "Tarea creada exitosamente. " + (jsonResponse.description || "");
           }
         } catch {
-          console.log("[AISidebar] Response is not JSON, treating as plain text:", textResponse, "[Debug Code: RESP-002]");
+          // console.log("[AISidebar] Response is not JSON, treating as plain text:", textResponse, "[Debug Code: RESP-002]");
         }
 
         await addDoc(collection(db, "ai_conversations", conversationId, "messages"), {
@@ -525,20 +525,20 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         setError(null);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-        console.error("[AISidebar] Failed to send message:", errorMessage, `[Error Code: ${errorMessage.includes("API") ? errorMessage.split("[")[1]?.split("]")[0] || "API-003" : "GEN-001"}]`);
+        // console.error("[AISidebar] Failed to send message:", errorMessage, `[Error Code: ${errorMessage.includes("API") ? errorMessage.split("[")[1]?.split("]")[0] || "API-003" : "GEN-001"}]`);
         setMessages((prev) =>
           prev.map((msg) => (msg.id === tempId ? { ...msg, isPending: false, hasError: true } : msg)),
         );
         setError(`No se pudo enviar el mensaje: ${errorMessage}`);
       } finally {
         setIsSending(false);
-        console.log("[AISidebar] Message handling completed.", "[Debug Code: MSG-002]");
+        // console.log("[AISidebar] Message handling completed.", "[Debug Code: MSG-002]");
       }
     },
     [user, isSending, isAdmin, getClients, getTasks, createTaskFromGemini],
   );
 
-  const fileToGenerativePart = (file: File): Promise<string> => {
+  const fileToGenerativePart = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -552,7 +552,23 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
       reader.onerror = () => reject(new Error("Error al leer el archivo [Error Code: BASE64-002]"));
       reader.readAsDataURL(file);
     });
-  };
+  }, []);
+
+  const handleCloseSidebar = useCallback(() => {
+    gsap.to(sidebarRef.current, {
+      x: "100%",
+      opacity: 0,
+      duration: 0.3,
+      ease: "power2.in",
+      onComplete: onClose,
+    });
+  }, [onClose]);
+
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>, isUser: boolean) => {
+    e.currentTarget.src = isUser
+      ? "/user-avatar.png"
+      : "https://storage.googleapis.com/aurin-plattform/assets/gemini-icon-logo-png_seeklogo-611605.png";
+  }, []);
 
   if (!isMounted) {
     return null;
@@ -569,15 +585,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
           <div className={styles.controls}>
             <div
               className={styles.arrowLeft}
-              onClick={() =>
-                gsap.to(sidebarRef.current, {
-                  x: "100%",
-                  opacity: 0,
-                  duration: 0.3,
-                  ease: "power2.in",
-                  onComplete: onClose,
-                })
-              }
+              onClick={handleCloseSidebar}
             >
               <Image src="/arrow-left.svg" alt="Cerrar" width={15} height={16} />
             </div>
@@ -599,15 +607,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         <div className={styles.controls}>
           <div
             className={styles.arrowLeft}
-            onClick={() =>
-              gsap.to(sidebarRef.current, {
-                x: "100%",
-                opacity: 0,
-                duration: 0.3,
-                ease: "power2.in",
-                onComplete: onClose,
-              })
-            }
+            onClick={handleCloseSidebar}
           >
             <Image src="/arrow-left.svg" alt="Cerrar" width={15} height={16} />
           </div>
@@ -658,7 +658,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
 
           return (
             <div
-              key={`${m.id}-${index}`}
+              key={m.id}
               data-message-id={m.id}
               className={`${styles.message} ${m.isPending ? styles.pending : ""} ${m.hasError ? styles.error : ""}`}
               ref={index === messages.length - 1 ? lastMessageRef : null}
@@ -669,11 +669,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
                 width={46}
                 height={46}
                 className={styles.avatar}
-                onError={(e) => {
-                  e.currentTarget.src = isUser
-                    ? "/user-avatar.png"
-                    : "https://storage.googleapis.com/aurin-plattform/assets/gemini-icon-logo-png_seeklogo-611605.png";
-                }}
+                onError={(e) => handleImageError(e, isUser)}
               />
               <div className={styles.messageContent}>
                 <div className={styles.messageHeader}>
@@ -697,7 +693,7 @@ const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
                   )}
                   {m.text &&
                     m.text.split("\n").map((line, i) => (
-                      <span key={i}>
+                      <span key={`line-${m.id}-${i}`}>
                         {line}
                         <br />
                       </span>

@@ -17,6 +17,8 @@ import { BiographyInput } from './ui/BiographyInput';
 import LocationDropdown from './ui/LocationDropdown';
 import styles from './ConfigPage.module.scss';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
+import { ExpandableTabs } from './ui/ExpandableTabs';
+import { User, MapPin, Users, Shield, Mail } from 'lucide-react';
 
 // Componentes de iconos de redes sociales con soporte para dark mode
 const SocialIcon: React.FC<{ icon: string; alt: string; className?: string }> = ({ icon, alt, className }) => (
@@ -181,8 +183,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
   const [config, setConfig] = useState<Config | null>(null);
   const [formData, setFormData] = useState<ConfigForm | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{ [team: string]: User[] }>({});
+  const [activeTab, setActiveTab] = useState(0);
+  const [tabChanges, setTabChanges] = useState<{ [key: number]: boolean }>({});
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<{
@@ -195,6 +198,16 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     coverPhoto?: string;
     description?: string;
   }>({});
+
+  // Definir los tabs de configuración
+  const configTabs: Array<{ title: string; icon: any } | { type: "separator" }> = [
+    { title: "Configuración de perfil", icon: User },
+    { title: "Ubicaciones Personalizadas", icon: MapPin },
+    { title: "Equipos", icon: Users },
+    { title: "Ajustes de Perfil", icon: Shield },
+    { type: "separator" },
+    { title: "Notificaciones", icon: Mail },
+  ];
 
   const technologies = [
     'React', 'Node.js', 'TypeScript', 'JavaScript', 'Python', 'SQL', 'MongoDB', 'PostgreSQL',
@@ -489,7 +502,10 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
       prev ? { ...prev, [name]: type === 'checkbox' ? checked : value } : null
     );
     setErrors((prev) => ({ ...prev, [name]: undefined }));
-  }, []);
+    
+    // Marcar que hay cambios en el tab actual
+    setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+  }, [activeTab]);
 
   const handleFormInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, field: { value?: string; onChange: (value: string) => void }) => {
     if (e.ctrlKey || e.metaKey) {
@@ -570,22 +586,26 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
 
   const handleStackChange = useCallback((selectedValues: string[]) => {
     setFormData((prev) => (prev ? { ...prev, stack: selectedValues.slice(0, 40) } : null));
-  }, []);
+    setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+  }, [activeTab]);
 
   const handleTeamsChange = useCallback((selectedTeams: string[]) => {
     setFormData((prev) => (prev ? { ...prev, teams: selectedTeams.slice(0, 3) } : null));
-  }, []);
+    setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+  }, [activeTab]);
 
   const handleRemoveTeam = useCallback((team: string) => {
     setFormData((prev) =>
       prev ? { ...prev, teams: prev.teams?.filter((t) => t !== team) || [] } : null
     );
-  }, []);
+    setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+  }, [activeTab]);
 
   const handlePhoneLadaChange = useCallback((value: string) => {
     setFormData((prev) => (prev ? { ...prev, phoneLada: value } : null));
     setErrors((prev) => ({ ...prev, phone: undefined }));
-  }, []);
+    setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+  }, [activeTab]);
 
   const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     // Extraer solo los dígitos del valor actual
@@ -597,7 +617,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     // Guardar solo los dígitos en el estado
     setFormData((prev) => (prev ? { ...prev, phone: limitedValue } : null));
     setErrors((prev) => ({ ...prev, phone: undefined }));
-  }, []);
+    setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+  }, [activeTab]);
 
   const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -608,7 +629,8 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     if (value.length > 4) formatted += '/' + value.slice(4, 8);
     setFormData((prev) => (prev ? { ...prev, birthDate: formatted } : null));
     setErrors((prev) => ({ ...prev, birthDate: undefined }));
-  }, []);
+    setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+  }, [activeTab]);
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, type: 'profilePhoto' | 'coverPhoto') => {
     const file = e.target.files?.[0];
@@ -623,8 +645,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
           : null
       );
       setErrors((prev) => ({ ...prev, [type]: undefined }));
+      setTabChanges(prev => ({ ...prev, [activeTab]: true }));
     }
-  }, []);
+  }, [activeTab]);
 
   const deleteImageFromGCS = async (filePath: string) => {
     try {
@@ -983,8 +1006,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         coverPhotoUrl = await uploadCoverImage(formData.coverPhotoFile, userId);
       }
 
-      // Eliminada lógica de cambio de contraseña
-
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, {
         notificationsEnabled: formData.notificationsEnabled,
@@ -1026,7 +1047,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
       });
 
       if (onShowSuccessAlert) onShowSuccessAlert('Perfil actualizado exitosamente');
-      setIsEditing(false);
+      
+      // Limpiar los cambios del tab actual
+      setTabChanges(prev => ({ ...prev, [activeTab]: false }));
       localStorage.removeItem(LOCAL_STORAGE_KEY); // Limpiar caché al guardar
     } catch (err) {
       if (onShowFailAlert) onShowFailAlert('Error al guardar los datos, por favor intenta de nuevo', err instanceof Error ? err.message : 'Error desconocido');
@@ -1037,7 +1060,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
 
   // Limpiar localStorage si se descartan cambios
   const handleDiscard = () => {
-    setIsEditing(false);
     setFormData((prev) => {
       if (!prev || !config) return prev;
       return {
@@ -1057,7 +1079,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
         phoneLada: config.phone?.startsWith('+') ? config.phone.split(' ')[0] : '+52',
         city: config.city || '',
         gender: config.gender || '',
-                    portfolio: config.portfolio?.replace(/^https?:\/\//, '') || '',
+        portfolio: config.portfolio?.replace(/^https?:\/\//, '') || '',
         stack: config.stack || [],
         teams: config.teams || [],
         profilePhoto: config.profilePhoto || currentUser.imageUrl || '',
@@ -1074,12 +1096,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
       };
     });
     setErrors({});
+    
+    // Limpiar los cambios del tab actual
+    setTabChanges(prev => ({ ...prev, [activeTab]: false }));
     localStorage.removeItem(LOCAL_STORAGE_KEY);
   };
 
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-  };
+
 
   // Función helper para manejar shortcuts de teclado en inputs
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, fieldName: string) => {
@@ -1261,7 +1284,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
     <>
       <div className={styles.frame239189}>
         <div className={styles.frame239197} style={{ backgroundImage: `url(${formData.coverPhoto})` }}>
-          {isOwnProfile && isEditing && (
+          {isOwnProfile && (
             <button
               className={styles.editCoverButton}
               onClick={() => coverPhotoInputRef.current?.click()}
@@ -1293,7 +1316,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                 className={styles.ellipse11}
                 onError={(e) => console.error('Image load failed:', e)}
               />
-              {isOwnProfile && isEditing && (
+              {isOwnProfile && (
                 <button
                   className={styles.editProfilePhotoButton}
                   onClick={() => profilePhotoInputRef.current?.click()}
@@ -1319,498 +1342,472 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
               <div className={styles.exampleMailCom}>{currentUser.primaryEmailAddress?.emailAddress}</div>
             </div>
           </div>
-          {isOwnProfile && !isEditing && (
-            <div className={styles.frame239191}>
-              <button className={styles.editButton} onClick={toggleEdit}>
-                <Image src="/pencil.svg" alt="Editar" width={16} height={16} className={styles.editButtonIcon} />
-                Editar Perfil
-              </button>
-            </div>
-          )}
+
         </div>
         <div className={styles.content}>
-          <section className={styles.section}>
-            <div className={styles.sectionContent}>
-              <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>
-                <Image src="/circle-user-round.svg" alt="Información" width={20} height={20} className={styles.sectionIcon} />
-                Información General
-              </h2>
-                <div className={styles.stackDescription}>
-                  Completa tu información personal básica para que otros puedan conocerte mejor.
-                </div>
-              </div>
-              <div className={styles.fieldGroup}>
-                <div className={styles.frame239182}>
-                  <div className={styles.label}>Nombre Completo</div>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    placeholder="Escribe tu nombre completo"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                    onKeyDown={(e) => handleInputKeyDown(e, 'fullName')}
-                  />
-                  {errors.fullName && <p className={styles.errorText}>{errors.fullName}</p>}
-                </div>
-                <div className={styles.frame239183}>
-                  <div className={styles.label}>Rol o Cargo</div>
-                  <input
-                    type="text"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    placeholder="¿Cuál es tu cargo actual?"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                    onKeyDown={(e) => handleInputKeyDown(e, 'role')}
-                  />
-                  {errors.role && <p className={styles.errorText}>{errors.role}</p>}
-                </div>
-              </div>
-              <div className={styles.fieldGroup}>
-                <BiographyInput
-                  value={formData.description}
-                  onChange={(value) => {
-                    setFormData((prev) => (prev ? { ...prev, description: value } : null));
-                    setErrors((prev) => ({ ...prev, description: undefined }));
-                  }}
-                  placeholder="Breve descripción personal"
-                  disabled={!isOwnProfile || !isEditing}
-                  maxLength={180}
-                  label="Acerca de ti"
-                  className={styles.input}
-                />
-                {errors.description && <p className={styles.errorText}>{errors.description}</p>}
-              </div>
-              <div className={styles.fieldGroupRow}>
-                <div className={styles.frame239182}>
-                  <div className={styles.label}>Correo Electrónico</div>
-                  <input
-                    type="text"
-                    value={currentUser.primaryEmailAddress?.emailAddress || ''}
-                    placeholder="correo@ejemplo.com"
-                    className={styles.input}
-                    disabled
-                  />
-                </div>
-                <div className={styles.frame239183}>
-                  <div className={styles.label}>Fecha de Nacimiento</div>
-                  <input
-                    type="text"
-                    name="birthDate"
-                    value={formData.birthDate}
-                    onChange={handleDateChange}
-                    placeholder="DD/MM/AAAA"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                    maxLength={10}
-                    onKeyDown={(e) => handleInputKeyDown(e, 'birthDate')}
-                  />
-                  {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
-                </div>
-              </div>
-              <div className={styles.fieldGroupRow}>
-                <div className={styles.frame239182}>
-                  <div className={styles.label}>Teléfono de Contacto</div>
-                  <div className={styles.phoneInputContainer}>
-                    <PhoneCountrySelect
-                      value={formData.phoneLada}
-                      onChange={handlePhoneLadaChange}
-                      disabled={!isOwnProfile || !isEditing}
-                    />
-                    <input
-                      type="text"
-                      name="phone"
-                      value={formatPhoneNumber(formData.phone || '')}
-                      onChange={handlePhoneChange}
-                      placeholder="XXX-XXX-XX-XX"
+          {/* Tabs de configuración */}
+          <div className={styles.configTabsContainer}>
+            <ExpandableTabs
+              tabs={configTabs as any}
+              onChange={(index) => setActiveTab(index || 0)}
+              className="mb-6"
+              hideTextOnMobile={true}
+            />
+          </div>
+
+          {/* Tab: Perfil */}
+          {activeTab === 0 && (
+            <>
+              {/* Información General */}
+              <section className={styles.section}>
+                <div className={styles.sectionContent}>
+                  <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>
+                    <Image src="/circle-user-round.svg" alt="Información" width={20} height={20} className={styles.sectionIcon} />
+                    Información General
+                  </h2>
+                    <div className={styles.stackDescription}>
+                      Completa tu información personal básica para que otros puedan conocerte mejor.
+                    </div>
+                  </div>
+                  <div className={styles.fieldGroup}>
+                    <div className={styles.frame239182}>
+                      <div className={styles.label}>Nombre Completo</div>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={formData.fullName}
+                        onChange={handleInputChange}
+                        placeholder="Escribe tu nombre completo"
+                        className={styles.input}
+                        disabled={!isOwnProfile}
+                        onKeyDown={(e) => handleInputKeyDown(e, 'fullName')}
+                      />
+                      {errors.fullName && <p className={styles.errorText}>{errors.fullName}</p>}
+                    </div>
+                    <div className={styles.frame239183}>
+                      <div className={styles.label}>Rol o Cargo</div>
+                      <input
+                        type="text"
+                        name="role"
+                        value={formData.role}
+                        onChange={handleInputChange}
+                        placeholder="¿Cuál es tu cargo actual?"
+                        className={styles.input}
+                        disabled={!isOwnProfile}
+                        onKeyDown={(e) => handleInputKeyDown(e, 'role')}
+                      />
+                      {errors.role && <p className={styles.errorText}>{errors.role}</p>}
+                    </div>
+                  </div>
+                  <div className={styles.fieldGroup}>
+                    <BiographyInput
+                      value={formData.description}
+                      onChange={(value) => {
+                        setFormData((prev) => (prev ? { ...prev, description: value } : null));
+                        setErrors((prev) => ({ ...prev, description: undefined }));
+                      }}
+                      placeholder="Breve descripción personal"
+                      disabled={!isOwnProfile}
+                      maxLength={180}
+                      label="Acerca de ti"
                       className={styles.input}
-                      disabled={!isOwnProfile || !isEditing}
-                      maxLength={15}
-                      onKeyDown={(e) => handleInputKeyDown(e, 'phone')}
+                    />
+                    {errors.description && <p className={styles.errorText}>{errors.description}</p>}
+                  </div>
+                  <div className={styles.fieldGroupRow}>
+                    <div className={styles.frame239182}>
+                      <div className={styles.label}>Correo Electrónico</div>
+                      <input
+                        type="text"
+                        value={currentUser.primaryEmailAddress?.emailAddress || ''}
+                        placeholder="correo@ejemplo.com"
+                        className={styles.input}
+                        disabled
+                      />
+                    </div>
+                    <div className={styles.frame239183}>
+                      <div className={styles.label}>Fecha de Nacimiento</div>
+                      <input
+                        type="text"
+                        name="birthDate"
+                        value={formData.birthDate}
+                        onChange={handleDateChange}
+                        placeholder="DD/MM/AAAA"
+                        className={styles.input}
+                        disabled={!isOwnProfile}
+                        maxLength={10}
+                        onKeyDown={(e) => handleInputKeyDown(e, 'birthDate')}
+                      />
+                      {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
+                    </div>
+                  </div>
+                  <div className={styles.fieldGroupRow}>
+                    <div className={styles.frame239182}>
+                      <div className={styles.label}>Teléfono de Contacto</div>
+                      <div className={styles.phoneInputContainer}>
+                        <PhoneCountrySelect
+                          value={formData.phoneLada}
+                          onChange={handlePhoneLadaChange}
+                          disabled={!isOwnProfile}
+                        />
+                        <input
+                          type="text"
+                          name="phone"
+                          value={formatPhoneNumber(formData.phone || '')}
+                          onChange={handlePhoneChange}
+                          placeholder="XXX-XXX-XX-XX"
+                          className={styles.input}
+                          disabled={!isOwnProfile}
+                          maxLength={15}
+                          onKeyDown={(e) => handleInputKeyDown(e, 'phone')}
+                        />
+                      </div>
+                      {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
+                    </div>
+                    <div className={styles.frame239183}>
+                      <div className={styles.label}>Ciudad de Residencia</div>
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        placeholder="Ciudad, País"
+                        className={styles.input}
+                        disabled={!isOwnProfile}
+                        onKeyDown={(e) => handleInputKeyDown(e, 'city')}
+                      />
+                    </div>
+                  </div>
+                  <div className={styles.fieldGroupRow}>
+                    <div className={styles.frame239182}>
+                      <div className={styles.label}>Género</div>
+                      <select
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        disabled={!isOwnProfile}
+                      >
+                        <option value="">Selecciona una opción</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Otro">Otro</option>
+                        <option value="Prefiero no decirlo">Prefiero no decirlo</option>
+                      </select>
+                    </div>
+                    <div className={styles.frame239183}>
+                      <div className={styles.label}>Portafolio en Línea</div>
+                      <WebsiteInput
+                        value={formData.portfolio}
+                        onChange={(value) => {
+                          setFormData((prev) => (prev ? { ...prev, portfolio: value } : null));
+                          setErrors((prev) => ({ ...prev, portfolio: undefined }));
+                        }}
+                        placeholder="miportafolio.com"
+                        disabled={!isOwnProfile}
+                        className={styles.input}
+                      />
+                      {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Stack */}
+              <section className={styles.section}>
+                <div className={styles.sectionContent}>
+                  <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>
+                    <Image src="/layers.svg" alt="Stack" width={20} height={20} className={styles.sectionIcon} />
+                    Stack
+                  </h2>
+                    <div className={styles.stackDescription}>
+                      Selecciona las tecnologías y herramientas que usas frecuentemente.
+                    </div>
+                  </div>
+                  <div className={styles.fieldGroup}>
+                    <SearchableDropdown
+                      items={uniqueTechnologies.map(tech => ({
+                        id: tech,
+                        name: tech
+                      }))}
+                      selectedItems={formData.stack || []}
+                      onSelectionChange={handleStackChange}
+                      placeholder="Selecciona tecnologías..."
+                      searchPlaceholder="Buscar tecnologías..."
+                      disabled={!isOwnProfile}
+                      multiple={true}
+                      maxItems={40}
+                      emptyMessage="No se encontraron tecnologías"
+                      className={styles.stackSelect}
                     />
                   </div>
-                  {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
                 </div>
-                <div className={styles.frame239183}>
-                  <div className={styles.label}>Ciudad de Residencia</div>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="Ciudad, País"
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                    onKeyDown={(e) => handleInputKeyDown(e, 'city')}
-                  />
-                </div>
-              </div>
-              <div className={styles.fieldGroupRow}>
-                <div className={styles.frame239182}>
-                  <div className={styles.label}>Género</div>
-                  <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    className={styles.input}
-                    disabled={!isOwnProfile || !isEditing}
-                  >
-                    <option value="">Selecciona una opción</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Femenino">Femenino</option>
-                    <option value="Otro">Otro</option>
-                    <option value="Prefiero no decirlo">Prefiero no decirlo</option>
-                  </select>
-                </div>
-                <div className={styles.frame239183}>
-                  <div className={styles.label}>Portafolio en Línea</div>
-                  <WebsiteInput
-                    value={formData.portfolio}
-                    onChange={(value) => {
-                      setFormData((prev) => (prev ? { ...prev, portfolio: value } : null));
-                      setErrors((prev) => ({ ...prev, portfolio: undefined }));
-                    }}
-                    placeholder="miportafolio.com"
-                    disabled={!isOwnProfile || !isEditing}
-                    className={styles.input}
-                  />
-                  {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
-                </div>
-              </div>
-            </div>
-          </section>
+              </section>
 
-          <section className={styles.section}>
-            <div className={styles.sectionContent}>
-              <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>
-                  <Image src="/map-pinned.svg" alt="Ubicaciones" width={20} height={20} className={styles.sectionIcon} />
-                  Ubicaciones Personalizadas
-                </h2>
-                <div className={styles.stackDescription}>
-                  Configura tus ubicaciones frecuentes para que el sistema pueda detectar automáticamente dónde estás (casa, oficina o fuera).
+              {/* Redes Sociales */}
+              <section className={styles.section}>
+                <div className={styles.sectionContent}>
+                  <h2 className={styles.sectionTitle}>
+                    <Image src="/share-2.svg" alt="Redes Sociales" width={20} height={20} className={styles.sectionIcon} />
+                    Redes Sociales
+                  </h2>
+                  <div className={styles.fieldGroup}>
+                    <div className={styles.stackDescription}>
+                      Agrega tus perfiles de redes sociales para que otros puedan conectarse contigo.
+                    </div>
+                  </div>
+                  
+                  {/* GitHub - Contenedor individual */}
+                  <div className={styles.socialContainer}>
+                    <div className={styles.label}>
+                      <SocialIcon icon="/github.svg" alt="GitHub" />
+                      GitHub
+                    </div>
+                    <input
+                      type="text"
+                      name="github"
+                      value={formData.github || ''}
+                      onChange={handleInputChange}
+                      placeholder="www.example.com/perfil"
+                      className={styles.input}
+                      disabled={!isOwnProfile}
+                      onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                        value: formData.github || '', 
+                        onChange: (value) => {
+                          const event = { target: { name: 'github', value } } as React.ChangeEvent<HTMLInputElement>;
+                          handleInputChange(event);
+                        }
+                      })}
+                    />
+                  </div>
+
+                  {/* LinkedIn - Contenedor individual */}
+                  <div className={styles.socialContainer}>
+                    <div className={styles.label}>
+                      <SocialIcon icon="/linkedin.svg" alt="LinkedIn" />
+                      LinkedIn
+                    </div>
+                    <input
+                      type="text"
+                      name="linkedin"
+                      value={formData.linkedin || ''}
+                      onChange={handleInputChange}
+                      placeholder="www.example.com/perfil"
+                      className={styles.input}
+                      disabled={!isOwnProfile}
+                      onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                        value: formData.linkedin || '', 
+                        onChange: (value) => {
+                          const event = { target: { name: 'linkedin', value } } as React.ChangeEvent<HTMLInputElement>;
+                          handleInputChange(event);
+                        }
+                      })}
+                    />
+                  </div>
+
+                  {/* Twitter - Contenedor individual */}
+                  <div className={styles.socialContainer}>
+                    <div className={styles.label}>
+                      <SocialIcon icon="/twitter.svg" alt="Twitter" />
+                      Twitter / X
+                    </div>
+                    <input
+                      type="text"
+                      name="twitter"
+                      value={formData.twitter || ''}
+                      onChange={handleInputChange}
+                      placeholder="www.example.com/perfil"
+                      className={styles.input}
+                      disabled={!isOwnProfile}
+                      onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                        value: formData.twitter || '', 
+                        onChange: (value) => {
+                          const event = { target: { name: 'twitter', value } } as React.ChangeEvent<HTMLInputElement>;
+                          handleInputChange(event);
+                        }
+                      })}
+                    />
+                  </div>
+
+                  {/* Instagram - Contenedor individual */}
+                  <div className={styles.socialContainer}>
+                    <div className={styles.label}>
+                      <SocialIcon icon="/instagram.svg" alt="Instagram" />
+                      Instagram
+                    </div>
+                    <input
+                      type="text"
+                      name="instagram"
+                      value={formData.instagram || ''}
+                      onChange={handleInputChange}
+                      placeholder="www.example.com/perfil"
+                      className={styles.input}
+                      disabled={!isOwnProfile}
+                      onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                        value: formData.instagram || '', 
+                        onChange: (value) => {
+                          const event = { target: { name: 'instagram', value } } as React.ChangeEvent<HTMLInputElement>;
+                          handleInputChange(event);
+                        }
+                      })}
+                    />
+                  </div>
+
+                  {/* Facebook - Contenedor individual */}
+                  <div className={styles.socialContainer}>
+                    <div className={styles.label}>
+                      <SocialIcon icon="/facebook.svg" alt="Facebook" />
+                      Facebook
+                    </div>
+                    <input
+                      type="text"
+                      name="facebook"
+                      value={formData.facebook || ''}
+                      onChange={handleInputChange}
+                      placeholder="www.example.com/perfil"
+                      className={styles.input}
+                      disabled={!isOwnProfile}
+                      onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                        value: formData.facebook || '', 
+                        onChange: (value) => {
+                          const event = { target: { name: 'facebook', value } } as React.ChangeEvent<HTMLInputElement>;
+                          handleInputChange(event);
+                        }
+                      })}
+                    />
+                  </div>
+
+                  {/* TikTok - Contenedor individual */}
+                  <div className={styles.socialContainer}>
+                    <div className={styles.label}>
+                      <SocialIcon icon="/tiktok.svg" alt="TikTok" />
+                      TikTok
+                    </div>
+                    <input
+                      type="text"
+                      name="tiktok"
+                      value={formData.tiktok || ''}
+                      onChange={handleInputChange}
+                      placeholder="www.example.com/perfil"
+                      className={styles.input}
+                      disabled={!isOwnProfile}
+                      onKeyDown={(e) => handleFormInputKeyDown(e, { 
+                        value: formData.tiktok || '', 
+                        onChange: (value) => {
+                          const event = { target: { name: 'tiktok', value } } as React.ChangeEvent<HTMLInputElement>;
+                          handleInputChange(event);
+                        }
+                      })}
+                    />
+                  </div>
                 </div>
-                                  <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+              </section>
+              
+              {/* Botones de acción para el tab de información general */}
+              {isOwnProfile && tabChanges[0] && (
+                <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button className={styles.discardButton} onClick={handleDiscard}>
+                    Descartar Cambios
+                  </button>
+                  <button className={styles.editButton} onClick={handleSubmit}>
+                    Guardar Cambios
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Tab: Ubicaciones Personalizadas */}
+          {activeTab === 1 && (
+            <section className={styles.section}>
+              <div className={styles.sectionContent}>
+                <div className={styles.sectionHeader}>
+                  <h2 className={styles.sectionTitle}>
+                    <Image src="/map-pinned.svg" alt="Ubicaciones" width={20} height={20} className={styles.sectionIcon} />
+                    Ubicaciones Personalizadas
+                  </h2>
+                  <div className={styles.stackDescription}>
+                    Configura tus ubicaciones frecuentes para que el sistema pueda detectar automáticamente dónde estás (casa, oficina o fuera).
+                  </div>
+                  <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
                     Tus direcciones no se comparten con nadie y están cifradas de extremo a extremo con tecnología AES-256. Solo tú puedes verlas.
                     El resto del equipo únicamente verá si estás en &ldquo;Casa&rdquo;, &ldquo;Oficina&rdquo; o &ldquo;Fuera&rdquo;, sin conocer tu ubicación exacta.
                   </div>
-              </div>
-              
-              <div className={styles.fieldGroup2}>
-                <div className={styles.fieldGroupHeader}>
-                  <h3 className={styles.subsectionTitle}>Ubicación de Casa</h3>
-                  <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    Esta es tu ubicación principal, por ejemplo donde haces home office o trabajas remotamente.
+                </div>
+                
+                <div className={styles.fieldGroup2}>
+                  <div className={styles.fieldGroupHeader}>
+                    <h3 className={styles.subsectionTitle}>Ubicación de Casa</h3>
+                    <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      Esta es tu ubicación principal, por ejemplo donde haces home office o trabajas remotamente.
+                    </div>
+                  </div>
+                  <LocationDropdown
+                    value={formData.homeLocation}
+                    onChange={(location) => {
+                      setFormData((prev) => (prev ? { ...prev, homeLocation: location } : null));
+                      setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+                    }}
+                    placeholder="Busca tu dirección de casa..."
+                    label="Casa"
+                    disabled={!isOwnProfile}
+                    required={false}
+                  />
+                  <div className={styles.securityNote} style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                    Esta dirección está protegida con cifrado AES-256. Nadie en el sistema tiene acceso a tu dirección exacta.
                   </div>
                 </div>
-                <LocationDropdown
-                  value={formData.homeLocation}
-                  onChange={(location) => {
-                    setFormData((prev) => (prev ? { ...prev, homeLocation: location } : null));
-                  }}
-                  placeholder="Busca tu dirección de casa..."
-                  label="Casa"
-                  disabled={!isOwnProfile || !isEditing}
-                  required={false}
-                />
-                <div className={styles.securityNote} style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                  Esta dirección está protegida con cifrado AES-256. Nadie en el sistema tiene acceso a tu dirección exacta.
+                
+                <div className={styles.fieldGroup2}>
+                  <div className={styles.fieldGroupHeader}>
+                    <h3 className={styles.subsectionTitle}>Ubicación Alternativa</h3>
+                    <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      Puedes añadir una segunda ubicación si trabajas desde más de un lugar.
+                    </div>
+                  </div>
+                  <LocationDropdown
+                    value={formData.secondaryLocation}
+                    onChange={(location) => {
+                      setFormData((prev) => (prev ? { ...prev, secondaryLocation: location } : null));
+                      setTabChanges(prev => ({ ...prev, [activeTab]: true }));
+                    }}
+                    placeholder="Busca tu ubicación secundaria (café, coworking, etc.)..."
+                    label="Ubicación Secundaria"
+                    disabled={!isOwnProfile}
+                    required={false}
+                  />
                 </div>
-              </div>
-              
-              <div className={styles.fieldGroup2}>
-                <div className={styles.fieldGroupHeader}>
-                  <h3 className={styles.subsectionTitle}>Ubicación Alternativa</h3>
-                  <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                    Puedes añadir una segunda ubicación si trabajas desde más de un lugar.
+                
+                <div className={styles.privacyDisclaimer}>
+                  <div className={styles.privacyDisclaimerTitle}>
+                    Privacidad garantizada
+                  </div>
+                  <div className={styles.privacyDisclaimerText}>
+                    Tus direcciones están cifradas con algoritmos seguros y almacenadas en Firestore bajo los estándares de cifrado nativo de Google.
+                    Incluso si accedes a tu documento desde Firestore, los datos están encriptados y son ilegibles sin tu clave secreta.
+                    Solo tú puedes ver y modificar tu información de ubicación.
                   </div>
                 </div>
-                <LocationDropdown
-                  value={formData.secondaryLocation}
-                  onChange={(location) => {
-                    setFormData((prev) => (prev ? { ...prev, secondaryLocation: location } : null));
-                  }}
-                  placeholder="Busca tu ubicación secundaria (café, coworking, etc.)..."
-                  label="Ubicación Secundaria"
-                  disabled={!isOwnProfile || !isEditing}
-                  required={false}
-                />
               </div>
               
-              <div className={styles.privacyDisclaimer}>
-                <div className={styles.privacyDisclaimerTitle}>
-                  Privacidad garantizada
+              {/* Botones de acción para el tab de ubicaciones personalizadas */}
+              {isOwnProfile && tabChanges[1] && (
+                <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button className={styles.discardButton} onClick={handleDiscard}>
+                    Descartar Cambios
+                  </button>
+                  <button className={styles.editButton} onClick={handleSubmit}>
+                    Guardar Cambios
+                  </button>
                 </div>
-                <div className={styles.privacyDisclaimerText}>
-                  Tus direcciones están cifradas con algoritmos seguros y almacenadas en Firestore bajo los estándares de cifrado nativo de Google.
-                  Incluso si accedes a tu documento desde Firestore, los datos están encriptados y son ilegibles sin tu clave secreta.
-                  Solo tú puedes ver y modificar tu información de ubicación.
-                </div>
-              </div>
-            </div>
-          </section>
+              )}
+            </section>
+          )}
 
-          <section className={styles.section}>
-            <div className={styles.sectionContent}>
-              <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>
-                <Image src="/layers.svg" alt="Stack" width={20} height={20} className={styles.sectionIcon} />
-                Stack
-              </h2>
-                <div className={styles.stackDescription}>
-                  Selecciona las tecnologías y herramientas que usas frecuentemente.
-                </div>
-              </div>
-              <div className={styles.fieldGroup}>
-                <SearchableDropdown
-                  items={uniqueTechnologies.map(tech => ({
-                    id: tech,
-                    name: tech
-                  }))}
-                  selectedItems={formData.stack || []}
-                  onSelectionChange={handleStackChange}
-                  placeholder="Selecciona tecnologías..."
-                  searchPlaceholder="Buscar tecnologías..."
-                  disabled={!isOwnProfile || !isEditing}
-                  multiple={true}
-                  maxItems={40}
-                  emptyMessage="No se encontraron tecnologías"
-                  className={styles.stackSelect}
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <div className={styles.sectionContent}>
-              <h2 className={styles.sectionTitle}>
-                <Image src="/share-2.svg" alt="Redes Sociales" width={20} height={20} className={styles.sectionIcon} />
-                Redes Sociales
-              </h2>
-              <div className={styles.fieldGroup}>
-                <div className={styles.stackDescription}>
-                  Agrega tus perfiles de redes sociales para que otros puedan conectarse contigo.
-                </div>
-              </div>
-              
-              {/* GitHub - Contenedor individual */}
-              <div className={styles.socialContainer}>
-                <div className={styles.label}>
-                  <SocialIcon icon="/github.svg" alt="GitHub" />
-                  GitHub
-                </div>
-                <input
-                  type="text"
-                  name="github"
-                  value={formData.github || ''}
-                  onChange={handleInputChange}
-                  placeholder="www.example.com/perfil"
-                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
-                  disabled={!isOwnProfile || !isEditing}
-                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
-                    value: formData.github || '', 
-                    onChange: (value) => {
-                      const event = { target: { name: 'github', value } } as React.ChangeEvent<HTMLInputElement>;
-                      handleInputChange(event);
-                    }
-                  })}
-                />
-              </div>
-
-              {/* LinkedIn - Contenedor individual */}
-              <div className={styles.socialContainer}>
-                <div className={styles.label}>
-                  <SocialIcon icon="/linkedin.svg" alt="LinkedIn" />
-                  LinkedIn
-                </div>
-                <input
-                  type="text"
-                  name="linkedin"
-                  value={formData.linkedin || ''}
-                  onChange={handleInputChange}
-                  placeholder="www.example.com/perfil"
-                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
-                  disabled={!isOwnProfile || !isEditing}
-                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
-                    value: formData.linkedin || '', 
-                    onChange: (value) => {
-                      const event = { target: { name: 'linkedin', value } } as React.ChangeEvent<HTMLInputElement>;
-                      handleInputChange(event);
-                    }
-                  })}
-                />
-              </div>
-
-              {/* Twitter - Contenedor individual */}
-              <div className={styles.socialContainer}>
-                <div className={styles.label}>
-                  <SocialIcon icon="/twitter.svg" alt="Twitter" />
-                  Twitter / X
-                </div>
-                <input
-                  type="text"
-                  name="twitter"
-                  value={formData.twitter || ''}
-                  onChange={handleInputChange}
-                  placeholder="www.example.com/perfil"
-                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
-                  disabled={!isOwnProfile || !isEditing}
-                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
-                    value: formData.twitter || '', 
-                    onChange: (value) => {
-                      const event = { target: { name: 'twitter', value } } as React.ChangeEvent<HTMLInputElement>;
-                      handleInputChange(event);
-                    }
-                  })}
-                />
-              </div>
-
-              {/* Instagram - Contenedor individual */}
-              <div className={styles.socialContainer}>
-                <div className={styles.label}>
-                  <SocialIcon icon="/instagram.svg" alt="Instagram" />
-                  Instagram
-                </div>
-                <input
-                  type="text"
-                  name="instagram"
-                  value={formData.instagram || ''}
-                  onChange={handleInputChange}
-                  placeholder="www.example.com/perfil"
-                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
-                  disabled={!isOwnProfile || !isEditing}
-                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
-                    value: formData.instagram || '', 
-                    onChange: (value) => {
-                      const event = { target: { name: 'instagram', value } } as React.ChangeEvent<HTMLInputElement>;
-                      handleInputChange(event);
-                    }
-                  })}
-                />
-              </div>
-
-              {/* Facebook - Contenedor individual */}
-              <div className={styles.socialContainer}>
-                <div className={styles.label}>
-                  <SocialIcon icon="/facebook.svg" alt="Facebook" />
-                  Facebook
-                </div>
-                <input
-                  type="text"
-                  name="facebook"
-                  value={formData.facebook || ''}
-                  onChange={handleInputChange}
-                  placeholder="www.example.com/perfil"
-                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
-                  disabled={!isOwnProfile || !isEditing}
-                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
-                    value: formData.facebook || '', 
-                    onChange: (value) => {
-                      const event = { target: { name: 'facebook', value } } as React.ChangeEvent<HTMLInputElement>;
-                      handleInputChange(event);
-                    }
-                  })}
-                />
-              </div>
-
-              {/* TikTok - Contenedor individual */}
-              <div className={styles.socialContainer}>
-                <div className={styles.label}>
-                  <SocialIcon icon="/tiktok.svg" alt="TikTok" />
-                  TikTok
-                </div>
-                <input
-                  type="text"
-                  name="tiktok"
-                  value={formData.tiktok || ''}
-                  onChange={handleInputChange}
-                  placeholder="www.example.com/perfil"
-                  className={`${styles.input} ${!isOwnProfile || !isEditing ? styles.readOnly : ''}`}
-                  disabled={!isOwnProfile || !isEditing}
-                  onKeyDown={(e) => handleFormInputKeyDown(e, { 
-                    value: formData.tiktok || '', 
-                    onChange: (value) => {
-                      const event = { target: { name: 'tiktok', value } } as React.ChangeEvent<HTMLInputElement>;
-                      handleInputChange(event);
-                    }
-                  })}
-                />
-              </div>
-            </div>
-          </section>
-
-          <motion.section 
-            className={styles.section} 
-            variants={sectionVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <motion.div 
-              className={styles.sectionContent}
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>
-                <Image src="/users-round.svg" alt="Equipos" width={20} height={20} className={styles.sectionIcon} />
-                Equipos
-              </h2>
-                <div className={styles.teamsDescription}>
-                  Escribe y selecciona aquí tus equipos (máximo 3)
-                </div>
-              </div>
-              <div className={styles.fieldGroup} style={{flexDirection: 'row', justifyContent:'space-between', width:"100%"}}>
-                <ConfigDropdown
-                  options={teamsOptions.map((team) => ({ value: team, label: team }))}
-                  value={formData.teams || []}
-                  onChange={handleTeamsChange}
-                  placeholder="Select Teams"
-                  isMulti
-                  disabled={!isOwnProfile || !isEditing}
-                  className={styles.teamsSelect}
-                />
-              </div>
-              
-              <AnimatePresence mode="wait">
-                {formData.teams && formData.teams.length > 0 ? (
-                  <motion.div
-                    variants={tableVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    layout
-                  >
-                    <TeamsTable
-                      teams={formData.teams.map(teamName => ({
-                        name: teamName,
-                        members: teamMembers[teamName] || []
-                      }))}
-                      currentUserId={currentUser?.id}
-                      isEditing={isOwnProfile && isEditing}
-                      onRemoveTeam={isOwnProfile && isEditing ? handleRemoveTeam : undefined}
-                    />
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    className={styles.noDataMessage}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    No perteneces a ningún equipo
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </motion.section>
-          
-          {/* Sección de Seguridad con Sesiones Reales */}
-          {isOwnProfile && (
+          {/* Tab: Equipos */}
+          {activeTab === 2 && (
             <motion.section 
               className={styles.section} 
               variants={sectionVariants}
@@ -1825,279 +1822,379 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
               >
                 <div className={styles.sectionHeader}>
                   <h2 className={styles.sectionTitle}>
-                    <Image 
-                      src="/shield.svg" 
-                      alt="Seguridad" 
-                      width={20} 
-                      height={20} 
-                      className={styles.sectionIcon}
-                      onError={(e) => {
-                        console.error('Error loading shield icon:', e);
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
-                    Seguridad
-                  </h2>
-                  <div className={styles.stackDescription}>
-                    Gestiona tu contraseña y dispositivos activos de forma segura.
+                  <Image src="/users-round.svg" alt="Equipos" width={20} height={20} className={styles.sectionIcon} />
+                  Equipos
+                </h2>
+                  <div className={styles.teamsDescription}>
+                    Escribe y selecciona aquí tus equipos (máximo 3)
                   </div>
+                </div>
+                <div className={styles.fieldGroup} style={{flexDirection: 'row', justifyContent:'space-between', width:"100%"}}>
+                  <ConfigDropdown
+                    options={teamsOptions.map((team) => ({ value: team, label: team }))}
+                    value={formData.teams || []}
+                    onChange={handleTeamsChange}
+                    placeholder="Select Teams"
+                    isMulti
+                    disabled={!isOwnProfile}
+                    className={styles.teamsSelect}
+                  />
                 </div>
                 
-                {/* Sección de Contraseña */}
-                <div className={styles.fieldGroup}>
-                  <div className={styles.clerkSection}>
-                    <div className={styles.clerkSectionHeader}>
-                      <h3 className={styles.clerkSectionTitle}>Contraseña</h3>
-                      <div className={styles.clerkSectionHint}>
-                        Cambia tu contraseña regularmente para mantener tu cuenta segura
-                      </div>
-                    </div>
-                    <div className={styles.clerkSectionContent}>
-                      {!showPasswordForm && (
-                        <div className={styles.clerkSectionItem}>
-                          <p className={styles.clerkPasswordDisplay}>
-                            {currentUser?.passwordEnabled ? '••••••••••' : 'No configurada'}
-                          </p>
-                          {currentUser?.passwordEnabled ? (
-                            <button 
-                              className={styles.clerkButton}
-                              onClick={() => setShowPasswordForm(!showPasswordForm)}
-                            >
-                              Cambiar contraseña
-                            </button>
-                          ) : (
-                            <button 
-                              className={styles.clerkButton}
-                              onClick={() => {
-                                if (onShowFailAlert) {
-                                  onShowFailAlert('Función no disponible', 'Para configurar contraseña, usa la página de Clerk');
-                                }
-                              }}
-                            >
-                              Configurar contraseña
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Form de cambio de contraseña */}
-                      <AnimatePresence>
-                        {showPasswordForm && currentUser?.passwordEnabled && (
-                          <motion.form 
-                            onSubmit={handleChangePassword} 
-                            className={styles.passwordForm}
-                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, height: "auto", scale: 1 }}
-                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                            transition={{ 
-                              duration: 0.3, 
-                              ease: "easeInOut",
-                              height: { duration: 0.4, ease: "easeInOut" }
-                            }}
-                          >
-                          {/* Botón cancelar en la parte superior */}
-                          <div className={styles.passwordFormHeader}>
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                setShowPasswordForm(false);
-                                setCurrentPassword('');
-                                setNewPassword('');
-                                setConfirmPassword('');
-                                setPasswordErrors([]);
-                                setPasswordMatchError(false);
-                              }} 
-                              className={styles.cancelButton}
-                            >
-                              ✕ Cancelar
-                            </button>
-                          </div>
-                          
-                          <div className={styles.fieldGroupColumn}>
-                            <label className={styles.label}>Contraseña Actual</label>
-                            <input
-                              type="password"
-                              value={currentPassword}
-                              onChange={(e) => setCurrentPassword(e.target.value)}
-                              className={styles.input}
-                              placeholder="Ingresa tu contraseña actual"
-                              required
-                            />
-                          </div>
-                          
-                          <div className={styles.fieldGroupColumn}>
-                            <label className={styles.label}>Nueva Contraseña</label>
-                            <input
-                              type="password"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              className={styles.input}
-                              placeholder="Ingresa tu nueva contraseña"
-                              required
-                            />
-                            {/* Indicadores dinámicos de fuerza */}
-                            {newPassword && (
-                              <div className={styles.passwordStrength}>
-                                <div 
-                                  className={styles.strengthBar} 
-                                  style={{ 
-                                    width: `${(passwordStrength / 4) * 100}%`, 
-                                    backgroundColor: passwordStrength < 2 ? '#ef4444' : passwordStrength < 3 ? '#f59e0b' : '#10b981' 
-                                  }} 
-                                />
-                                <ul className={styles.strengthTips}>
-                                  {passwordErrors.map((err, i) => (
-                                    <li key={i} className={styles.strengthTip}>
-                                      {err}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className={styles.fieldGroupColumn}>
-                            <label className={styles.label}>Confirmar Nueva Contraseña</label>
-                            <input
-                              type="password"
-                              value={confirmPassword}
-                              onChange={(e) => {
-                                setConfirmPassword(e.target.value);
-                                setPasswordMatchError(e.target.value !== newPassword && e.target.value !== '');
-                              }}
-                              className={styles.input}
-                              placeholder="Confirma tu nueva contraseña"
-                              required
-                            />
-                            {passwordMatchError && (
-                              <p className={styles.errorText}>Las contraseñas no coinciden</p>
-                            )}
-                          </div>
-                          
-                          <div className={styles.passwordFormActions}>
-                            <button type="submit" className={styles.editButton}>
-                              Guardar Nueva Contraseña
-                            </button>
-                          </div>
-                          </motion.form>
-                        )}
-                      </AnimatePresence>
-                      {currentUser?.twoFactorEnabled && (
-                        <div className={styles.clerkTwoFactorInfo}>
-                          <p>🔐 Autenticación de dos factores habilitada</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sección de Dispositivos Activos */}
-                <div className={styles.fieldGroup}>
-                  <div className={styles.clerkSection}>
-                    <div className={styles.clerkSectionHeader}>
-                      <h3 className={styles.clerkSectionTitle}>Dispositivos Activos</h3>
-                      <div className={styles.clerkSectionHint}>
-                        Revisa y gestiona los dispositivos donde has iniciado sesión
-                      </div>
-                    </div>
-                    <div className={styles.clerkSectionContent}>
-                      {sessionsLoading ? (
-                        <div className={styles.clerkLoading}>
-                          <p>Cargando dispositivos...</p>
-                        </div>
-                      ) : sessions && sessions.length > 0 ? (
-                        <div className={styles.clerkDeviceList}>
-                          {sessions
-                            .sort((a, b) => {
-                              // La sesión actual va primero
-                              const aIsCurrent = a.id === currentSession?.id;
-                              const bIsCurrent = b.id === currentSession?.id;
-                              if (aIsCurrent && !bIsCurrent) return -1;
-                              if (!aIsCurrent && bIsCurrent) return 1;
-                              return 0;
-                            })
-                            .map((session) => {
-                            // Acceder a latestActivity según tu documentación
-                            const activity = session.latestActivity;
-                            console.log('[ConfigPage] Session activity:', activity);
-                            
-                            // Generar etiqueta del dispositivo según tu documentación
-                            const deviceLabel = activity 
-                              ? `${activity.browserName || 'Desconocido'} ${activity.browserVersion || ''} en ${activity.deviceType || 'Dispositivo desconocido'}${activity.isMobile ? ' (Móvil)' : ''}`
-                              : 'Dispositivo desconocido';
-                            
-                            const ipLabel = activity?.ipAddress || 'IP desconocida';
-                            const locationLabel = activity 
-                              ? `${activity.city || 'Ciudad desconocida'}, ${activity.country || 'País desconocido'}`
-                              : 'Ubicación desconocida';
-                            
-                            // Determinar si es el dispositivo actual
-                            const isCurrent = session.id === currentSession?.id;
-                            
-                            return (
-                              <div key={session.id} className={styles.clerkDeviceItem}>
-                                <div className={styles.clerkDevice}>
-                                  <div className={styles.clerkDeviceIcon}>
-                                    {activity?.isMobile ? (
-                                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="670.6 72.3 84 76" width="32" height="32">
-                                        <path fill="#6D6D6D" fillRule="evenodd" d="M712.5 107.2v-.6h.1l.2.1v7.2a.1.1 0 0 1-.2.2l-.1-.3v-6.6Z" clipRule="evenodd"/>
-                                        <path fill="#6D6D6D" fillRule="evenodd" d="M697.4 100v-.7h-.2a.1.1 0 0 0-.1.2v4.4s0 .2.2.2V100Z" clipRule="evenodd"/>
-                                        <path fill="#6D6D6D" fillRule="evenodd" d="M697.4 94v-.7h-.2a.1.1 0 0 0-.1.2v4.4s0 .2.2.2V94Z" clipRule="evenodd"/>
-                                        <path fill="#363636" d="M722.7 78.6c3.6 0 5.5 2.1 5.5 5.7v52.4c0 3.4-2.3 5.3-5.8 5.3H703c-3.8 0-5.8-2.4-5.7-5.4V84.3c0-3.6 2-5.7 5.6-5.7h19.8Z"/>
-                                        <path fill="#363636" stroke="black" strokeWidth="0.5" d="M722.3 79.2c3.7 0 5.4 1.8 5.4 5.4v52c0 3.2-2.2 5-5.5 5h-19c-3.2 0-5.4-2-5.4-5v-52c0-3.6 1.8-5.4 5.5-5.4h19Z"/>
-                                        <path fill="black" fillRule="evenodd" d="M704.9 80.3c.2 0 .3.1.3.4v.2c0 .9.8 1.7 1.6 1.7h11.8c1 0 1.7-.8 1.7-1.7v-.2c0-.3.1-.4.3-.4h3c1.6 0 3 1.7 3 3.3V137c0 1.7-1.5 3.3-3.4 3.3h-21c-2.1 0-3.3-1.3-3.3-3.2V83.6c0-1.6 1.3-3.3 2.9-3.3h3Z" clipRule="evenodd"/>
-                                        <path fillRule="evenodd" d="M715.3 81.2a.3.3 0 0 0-.2-.4.3.3 0 1 0-.2.6.3.3 0 0 0 .4-.2Zm-5.1-.2c0 .2 0 .3.2.3h2.9a.3.3 0 0 0 .2-.3.3.3 0 0 0-.2-.2h-2.9a.3.3 0 0 0-.2.2Z" clipRule="evenodd"/>
-                                      </svg>
-                                    ) : (
-                                      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-                                        <path d="M2.91 1.452c0-.58.077-.83.23-1.079C3.33.166 3.6 0 4.212 0h23.617c.536 0 .765.124.957.332.191.207.268.498.268 1.12v17.013c0 .58-.077.83-.192.996a1.06 1.06 0 0 1-.37.338.968.968 0 0 1-.472.118H3.905c-.306 0-.612-.125-.765-.415-.153-.166-.23-.415-.23-1.037V1.452Z" fill="#000"/>
-                                        <path d="M3.445 19.334h25.072c.115 0 .23-.083.306-.166.077-.083.077-.207.077-.58V1.45c0-.498-.038-.83-.23-.995-.191-.208-.383-.29-.842-.29H4.211c-.498 0-.766.124-.957.331-.153.166-.192.415-.192.954v17.137c0 .374 0 .498.077.581.077.083.191.166.306.166Z" fill="#575757"/>
-                                        <path fillRule="evenodd" clipRule="evenodd" d="M15.999.912a.109.109 0 0 0 .117.006.119.119 0 0 0 .045-.046.132.132 0 0 0 0-.128.119.119 0 0 0-.045-.046.108.108 0 0 0-.117.006.109.109 0 0 0-.118-.006.12.12 0 0 0-.044.046.132.132 0 0 0 0 .128.12.12 0 0 0 .044.046.108.108 0 0 0 .118-.006Z" fill="#000" stroke="#000" strokeWidth="0.3"/>
-                                        <path fillRule="evenodd" clipRule="evenodd" d="M0 19.5v-.207h32v.207s-.727.25-1.531.332c-.536.042-1.416.166-3.407.166H5.091c-1.723 0-3.177-.124-3.828-.207C.613 19.708 0 19.5 0 19.5Z" fill="#444"/>
-                                        <path fillRule="evenodd" clipRule="evenodd" d="M3.941 1.328h24.115v16.349H3.941V1.328Z" fill="#000"/>
-                                      </svg>
-                                    )}
-                                  </div>
-                                  <div className={styles.clerkDeviceInfo}>
-                                    <div className={styles.clerkDeviceHeader}>
-                                      <p className={styles.clerkDeviceName}>{deviceLabel}</p>
-                                      {isCurrent && (
-                                        <span className={styles.clerkDeviceBadge}>Este dispositivo</span>
-                                      )}
-                                    </div>
-                                    <p className={styles.clerkDeviceDetails}>{activity?.browserName || 'Navegador desconocido'}</p>
-                                    <p className={styles.clerkDeviceDetails}>{ipLabel} ({locationLabel})</p>
-                                    <p className={styles.clerkDeviceDetails}>
-                                      {session.lastActiveAt ? new Date(session.lastActiveAt).toLocaleString('es-MX') : 'Desconocido'}
-                                    </p>
-                                  </div>
-                                  <button
-                                    className={styles.clerkRevokeButton}
-                                    onClick={() => handleRevokeSession(session.id)}
-                                    disabled={revokingSessionId === session.id}
-                                  >
-                                    {revokingSessionId === session.id ? 'Cerrando...' : (isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión')}
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className={styles.clerkNoDevices}>
-                          <p>No hay dispositivos activos</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <AnimatePresence mode="wait">
+                  {formData.teams && formData.teams.length > 0 ? (
+                    <motion.div
+                      variants={tableVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      layout
+                    >
+                      <TeamsTable
+                        teams={formData.teams.map(teamName => ({
+                          name: teamName,
+                          members: teamMembers[teamName] || []
+                        }))}
+                        currentUserId={currentUser?.id}
+                        isEditing={isOwnProfile}
+                        onRemoveTeam={isOwnProfile ? handleRemoveTeam : undefined}
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      className={styles.noDataMessage}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      No perteneces a ningún equipo
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
+              
+              {/* Botones de acción para el tab de equipos */}
+              {isOwnProfile && tabChanges[2] && (
+                <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button className={styles.discardButton} onClick={handleDiscard}>
+                    Descartar Cambios
+                  </button>
+                  <button className={styles.editButton} onClick={handleSubmit}>
+                    Guardar Cambios
+                  </button>
+                </div>
+              )}
             </motion.section>
           )}
+
+                    {/* Tab: Ajustes de Perfil */}
+          {activeTab === 3 && (
+            <>
+              {/* Sección de Seguridad con Sesiones Reales */}
+              {isOwnProfile && (
+                <motion.section 
+                  className={styles.section} 
+                  variants={sectionVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.div 
+                    className={styles.sectionContent}
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                  >
+                    <div className={styles.sectionHeader}>
+                      <h2 className={styles.sectionTitle}>
+                        <Image 
+                          src="/shield.svg" 
+                          alt="Seguridad" 
+                          width={20} 
+                          height={20} 
+                          className={styles.sectionIcon}
+                          onError={(e) => {
+                            console.error('Error loading shield icon:', e);
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                        Seguridad
+                      </h2>
+                      <div className={styles.stackDescription}>
+                        Gestiona tu contraseña y dispositivos activos de forma segura.
+                      </div>
+                    </div>
+                    
+                    {/* Sección de Contraseña */}
+                    <div className={styles.fieldGroup}>
+                      <div className={styles.clerkSection}>
+                        <div className={styles.clerkSectionHeader}>
+                          <h3 className={styles.clerkSectionTitle}>Contraseña</h3>
+                          <div className={styles.clerkSectionHint}>
+                            Cambia tu contraseña regularmente para mantener tu cuenta segura
+                          </div>
+                        </div>
+                        <div className={styles.clerkSectionContent}>
+                          {!showPasswordForm && (
+                            <div className={styles.clerkSectionItem}>
+                              <p className={styles.clerkPasswordDisplay}>
+                                {currentUser?.passwordEnabled ? '••••••••••' : 'No configurada'}
+                              </p>
+                              {currentUser?.passwordEnabled ? (
+                                <button 
+                                  className={styles.clerkButton}
+                                  onClick={() => setShowPasswordForm(!showPasswordForm)}
+                                >
+                                  Cambiar contraseña
+                                </button>
+                              ) : (
+                                <button 
+                                  className={styles.clerkButton}
+                                  onClick={() => {
+                                    if (onShowFailAlert) {
+                                      onShowFailAlert('Función no disponible', 'Para configurar contraseña, usa la página de Clerk');
+                                    }
+                                  }}
+                                >
+                                  Configurar contraseña
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Form de cambio de contraseña */}
+                          <AnimatePresence>
+                            {showPasswordForm && currentUser?.passwordEnabled && (
+                              <motion.form 
+                                onSubmit={handleChangePassword} 
+                                className={styles.passwordForm}
+                                initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, height: "auto", scale: 1 }}
+                                exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                                transition={{ 
+                                  duration: 0.3, 
+                                  ease: "easeInOut",
+                                  height: { duration: 0.4, ease: "easeInOut" }
+                                }}
+                              >
+                              {/* Botón cancelar en la parte superior */}
+                              <div className={styles.passwordFormHeader}>
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    setShowPasswordForm(false);
+                                    setCurrentPassword('');
+                                    setNewPassword('');
+                                    setConfirmPassword('');
+                                    setPasswordErrors([]);
+                                    setPasswordMatchError(false);
+                                  }} 
+                                  className={styles.cancelButton}
+                                >
+                                  ✕ Cancelar
+                                </button>
+                              </div>
+                              
+                              <div className={styles.fieldGroupColumn}>
+                                <label className={styles.label}>Contraseña Actual</label>
+                                <input
+                                  type="password"
+                                  value={currentPassword}
+                                  onChange={(e) => setCurrentPassword(e.target.value)}
+                                  className={styles.input}
+                                  placeholder="Ingresa tu contraseña actual"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className={styles.fieldGroupColumn}>
+                                <label className={styles.label}>Nueva Contraseña</label>
+                                <input
+                                  type="password"
+                                  value={newPassword}
+                                  onChange={(e) => setNewPassword(e.target.value)}
+                                  className={styles.input}
+                                  placeholder="Ingresa tu nueva contraseña"
+                                  required
+                                />
+                                {/* Indicadores dinámicos de fuerza */}
+                                {newPassword && (
+                                  <div className={styles.passwordStrength}>
+                                    <div 
+                                      className={styles.strengthBar} 
+                                      style={{ 
+                                        width: `${(passwordStrength / 4) * 100}%`, 
+                                        backgroundColor: passwordStrength < 2 ? '#ef4444' : passwordStrength < 3 ? '#f59e0b' : '#10b981' 
+                                      }} 
+                                    />
+                                    <ul className={styles.strengthTips}>
+                                      {passwordErrors.map((err, i) => (
+                                        <li key={i} className={styles.strengthTip}>
+                                          {err}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className={styles.fieldGroupColumn}>
+                                <label className={styles.label}>Confirmar Nueva Contraseña</label>
+                                <input
+                                  type="password"
+                                  value={confirmPassword}
+                                  onChange={(e) => {
+                                    setConfirmPassword(e.target.value);
+                                    setPasswordMatchError(e.target.value !== newPassword && e.target.value !== '');
+                                  }}
+                                  className={styles.input}
+                                  placeholder="Confirma tu nueva contraseña"
+                                  required
+                                />
+                                {passwordMatchError && (
+                                  <p className={styles.errorText}>Las contraseñas no coinciden</p>
+                                )}
+                              </div>
+                              
+                              <div className={styles.passwordFormActions}>
+                                <button type="submit" className={styles.editButton}>
+                                  Guardar Nueva Contraseña
+                                </button>
+                              </div>
+                              </motion.form>
+                            )}
+                          </AnimatePresence>
+                          {currentUser?.twoFactorEnabled && (
+                            <div className={styles.clerkTwoFactorInfo}>
+                              <p>🔐 Autenticación de dos factores habilitada</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sección de Dispositivos Activos */}
+                    <div className={styles.fieldGroup}>
+                      <div className={styles.clerkSection}>
+                        <div className={styles.clerkSectionHeader}>
+                          <h3 className={styles.clerkSectionTitle}>Dispositivos Activos</h3>
+                          <div className={styles.clerkSectionHint}>
+                            Revisa y gestiona los dispositivos donde has iniciado sesión
+                          </div>
+                        </div>
+                        <div className={styles.clerkSectionContent}>
+                          {sessionsLoading ? (
+                            <div className={styles.clerkLoading}>
+                              <p>Cargando dispositivos...</p>
+                            </div>
+                          ) : sessions && sessions.length > 0 ? (
+                            <div className={styles.clerkDeviceList}>
+                              {sessions
+                                .sort((a, b) => {
+                                  // La sesión actual va primero
+                                  const aIsCurrent = a.id === currentSession?.id;
+                                  const bIsCurrent = b.id === currentSession?.id;
+                                  if (aIsCurrent && !bIsCurrent) return -1;
+                                  if (!aIsCurrent && bIsCurrent) return 1;
+                                  return 0;
+                                })
+                                .map((session) => {
+                                // Acceder a latestActivity según tu documentación
+                                const activity = session.latestActivity;
+                                console.log('[ConfigPage] Session activity:', activity);
+                                
+                                // Generar etiqueta del dispositivo según tu documentación
+                                const deviceLabel = activity 
+                                  ? `${activity.browserName || 'Desconocido'} ${activity.browserVersion || ''} en ${activity.deviceType || 'Dispositivo desconocido'}${activity.isMobile ? ' (Móvil)' : ''}`
+                                  : 'Dispositivo desconocido';
+                                
+                                const ipLabel = activity?.ipAddress || 'IP desconocida';
+                                const locationLabel = activity 
+                                  ? `${activity.city || 'Ciudad desconocida'}, ${activity.country || 'País desconocido'}`
+                                  : 'Ubicación desconocida';
+                                
+                                // Determinar si es el dispositivo actual
+                                const isCurrent = session.id === currentSession?.id;
+                                
+                                return (
+                                  <div key={session.id} className={styles.clerkDeviceItem}>
+                                    <div className={styles.clerkDevice}>
+                                      <div className={styles.clerkDeviceIcon}>
+                                        {activity?.isMobile ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="670.6 72.3 84 76" width="32" height="32">
+                                            <path fill="#6D6D6D" fillRule="evenodd" d="M712.5 107.2v-.6h.1l.2.1v7.2a.1.1 0 0 1-.2.2l-.1-.3v-6.6Z" clipRule="evenodd"/>
+                                            <path fill="#6D6D6D" fillRule="evenodd" d="M697.4 100v-.7h-.2a.1.1 0 0 0-.1.2v4.4s0 .2.2.2V100Z" clipRule="evenodd"/>
+                                            <path fill="#6D6D6D" fillRule="evenodd" d="M697.4 94v-.7h-.2a.1.1 0 0 0-.1.2v4.4s0 .2.2.2V94Z" clipRule="evenodd"/>
+                                            <path fill="#363636" d="M722.7 78.6c3.6 0 5.5 2.1 5.5 5.7v52.4c0 3.4-2.3 5.3-5.8 5.3H703c-3.8 0-5.8-2.4-5.7-5.4V84.3c0-3.6 2-5.7 5.6-5.7h19.8Z"/>
+                                            <path fill="#363636" stroke="black" strokeWidth="0.5" d="M722.3 79.2c3.7 0 5.4 1.8 5.4 5.4v52c0 3.2-2.2 5-5.5 5h-19c-3.2 0-5.4-2-5.4-5v-52c0-3.6 1.8-5.4 5.5-5.4h19Z"/>
+                                            <path fill="black" fillRule="evenodd" d="M704.9 80.3c.2 0 .3.1.3.4v.2c0 .9.8 1.7 1.6 1.7h11.8c1 0 1.7-.8 1.7-1.7v-.2c0-.3.1-.4.3-.4h3c1.6 0 3 1.7 3 3.3V137c0 1.7-1.5 3.3-3.4 3.3h-21c-2.1 0-3.3-1.3-3.3-3.2V83.6c0-1.6 1.3-3.3 2.9-3.3h3Z" clipRule="evenodd"/>
+                                            <path fillRule="evenodd" d="M715.3 81.2a.3.3 0 0 0-.2-.4.3.3 0 1 0-.2.6.3.3 0 0 0 .4-.2Zm-5.1-.2c0 .2 0 .3.2.3h2.9a.3.3 0 0 0 .2-.3.3.3 0 0 0-.2-.2h-2.9a.3.3 0 0 0-.2.2Z" clipRule="evenodd"/>
+                                          </svg>
+                                        ) : (
+                                          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+                                            <path d="M2.91 1.452c0-.58.077-.83.23-1.079C3.33.166 3.6 0 4.212 0h23.617c.536 0 .765.124.957.332.191.207.268.498.268 1.12v17.013c0 .58-.077.83-.192.996a1.06 1.06 0 0 1-.37.338.968.968 0 0 1-.472.118H3.905c-.306 0-.612-.125-.765-.415-.153-.166-.23-.415-.23-1.037V1.452Z" fill="#000"/>
+                                            <path d="M3.445 19.334h25.072c.115 0 .23-.083.306-.166.077-.083.077-.207.077-.58V1.45c0-.498-.038-.83-.23-.995-.191-.208-.383-.29-.842-.29H4.211c-.498 0-.766.124-.957.331-.153.166-.192.415-.192.954v17.137c0 .374 0 .498.077.581.077.083.191.166.306.166Z" fill="#575757"/>
+                                            <path fillRule="evenodd" clipRule="evenodd" d="M15.999.912a.109.109 0 0 0 .117.006.119.119 0 0 0 .045-.046.132.132 0 0 0 0-.128.119.119 0 0 0-.045-.046.108.108 0 0 0-.117.006.109.109 0 0 0-.118-.006.12.12 0 0 0-.044.046.132.132 0 0 0 0 .128.12.12 0 0 0 .044.046.108.108 0 0 0 .118-.006Z" fill="#000" stroke="#000" strokeWidth="0.3"/>
+                                            <path fillRule="evenodd" clipRule="evenodd" d="M0 19.5v-.207h32v.207s-.727.25-1.531.332c-.536.042-1.416.166-3.407.166H5.091c-1.723 0-3.177-.124-3.828-.207C.613 19.708 0 19.5 0 19.5Z" fill="#444"/>
+                                            <path fillRule="evenodd" clipRule="evenodd" d="M3.941 1.328h24.115v16.349H3.941V1.328Z" fill="#000"/>
+                                          </svg>
+                                        )}
+                                      </div>
+                                      <div className={styles.clerkDeviceInfo}>
+                                        <div className={styles.clerkDeviceHeader}>
+                                          <p className={styles.clerkDeviceName}>{deviceLabel}</p>
+                                          {isCurrent && (
+                                            <span className={styles.clerkDeviceBadge}>Este dispositivo</span>
+                                          )}
+                                        </div>
+                                        <p className={styles.clerkDeviceDetails}>{activity?.browserName || 'Navegador desconocido'}</p>
+                                        <p className={styles.clerkDeviceDetails}>{ipLabel} ({locationLabel})</p>
+                                        <p className={styles.clerkDeviceDetails}>
+                                          {session.lastActiveAt ? new Date(session.lastActiveAt).toLocaleString('es-MX') : 'Desconocido'}
+                                        </p>
+                                      </div>
+                                      <button
+                                        className={styles.clerkRevokeButton}
+                                        onClick={() => handleRevokeSession(session.id)}
+                                        disabled={revokingSessionId === session.id}
+                                      >
+                                        {revokingSessionId === session.id ? 'Cerrando...' : (isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión')}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className={styles.clerkNoDevices}>
+                              <p>No hay dispositivos activos</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                  
+                  {/* Botones de acción para el tab de ajustes de perfil */}
+                  {isOwnProfile && tabChanges[3] && (
+                    <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                      <button className={styles.discardButton} onClick={handleDiscard}>
+                        Descartar Cambios
+                      </button>
+                      <button className={styles.editButton} onClick={handleSubmit}>
+                        Guardar Cambios
+                      </button>
+                    </div>
+                  )}
+                </motion.section>
+              )}
+            </>
+          )}
+
+
           
-          {/* Sección de Preferencias de Email */}
-          {isOwnProfile && (
+          {/* Tab: Notificaciones */}
+          {activeTab === 5 && (
             <motion.section 
               className={styles.section} 
               variants={sectionVariants}
@@ -2155,8 +2252,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                                 [key]: e.target.checked,
                               },
                             }));
+                            setTabChanges(prev => ({ ...prev, [activeTab]: true }));
                           }}
-                          disabled={!isOwnProfile || !isEditing}
+                          disabled={!isOwnProfile}
                         />
                         <span className={styles.slider}></span>
                       </label>
@@ -2164,21 +2262,21 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   ))}
                 </div>
               </motion.div>
+              
+              {/* Botones de acción para el tab de notificaciones */}
+              {isOwnProfile && tabChanges[5] && (
+                <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button className={styles.discardButton} onClick={handleDiscard}>
+                    Descartar Cambios
+                  </button>
+                  <button className={styles.editButton} onClick={handleSubmit}>
+                    Guardar Cambios
+                  </button>
+                </div>
+              )}
             </motion.section>
           )}
           
-          {/* Botones de acción al final */}
-          {isOwnProfile && isEditing && (
-            <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button className={styles.discardButton} onClick={handleDiscard}>
-                Descartar Cambios
-              </button>
-              <button className={styles.editButton} onClick={handleSubmit}>
-                Guardar Cambios
-              </button>
-            </div>
-          )}
-
 
         </div>
       </div>

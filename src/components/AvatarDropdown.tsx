@@ -17,6 +17,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [firestoreFullName, setFirestoreFullName] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -47,6 +48,16 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
       if (docSnap.exists()) {
         const data = docSnap.data();
         setProfilePhoto(data.profilePhoto || '');
+        // También obtener el nombre completo de Firestore
+        if (data.fullName) {
+          setFirestoreFullName(data.fullName);
+          // Actualizar el nombre en Clerk si es diferente
+          if (user.fullName !== data.fullName) {
+            user.update({ firstName: data.fullName.split(' ')[0], lastName: data.fullName.split(' ').slice(1).join(' ') }).catch(console.error);
+          }
+        } else {
+          setFirestoreFullName(null);
+        }
       } else {
         setProfilePhoto('');
       }
@@ -55,7 +66,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
     });
 
     return () => unsubscribe();
-  }, [user?.id, isLoaded]);
+  }, [user?.id, isLoaded, user]);
 
   // GSAP animation for dropdown
   useEffect(() => {
@@ -182,7 +193,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         }}
       >
         <div className={styles.dropdownHeader}>
-          <span className={styles.userName}>{user?.fullName || 'Usuario'}</span>
+          <span className={styles.userName}>{firestoreFullName || user?.fullName || 'Usuario'}</span>
           <span className={styles.userEmail}>{user?.emailAddresses[0]?.emailAddress}</span>
         </div>
         
@@ -233,7 +244,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         </div>
       </div>
     );
-  }, [dropdownPosition, handleConfig, handleLogout, isDarkMode, user?.fullName, user?.emailAddresses]);
+  }, [dropdownPosition, handleConfig, handleLogout, isDarkMode, firestoreFullName, user?.fullName, user?.emailAddresses]);
 
   return (
     <>
