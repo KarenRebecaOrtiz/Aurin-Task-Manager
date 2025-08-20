@@ -6,6 +6,15 @@
    ================================================================= */
 @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap');
 
+// Config Tabs Container
+.configTabsContainer {
+  margin-bottom: 1.5rem;
+  
+  .expandableTabs {
+    margin-bottom: 1.5rem;
+  }
+}
+
 // CRYSTALIZED MIXINS
 @mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 10px) {
   background: $bg;

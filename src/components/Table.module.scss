@@ -135,6 +135,18 @@
       transform: translateY(-3px);
     }
   }
+  
+  /* 📱 Aumentar padding en mobile */
+  @media (max-width: 768px) {
+    padding: $spacing-lg 0; // Más padding superior e inferior en mobile
+    margin: 15px 10px 0px 0px; // Aumentar margen superior
+  }
+  
+  /* 📱 Aumentar aún más padding en pantallas muy pequeñas */
+  @media (max-width: 480px) {
+    padding: $spacing-xl 0; // Padding extra en pantallas muy pequeñas
+    margin: 20px 10px 0px 0px; // Margen superior extra
+  }
 }
 
 

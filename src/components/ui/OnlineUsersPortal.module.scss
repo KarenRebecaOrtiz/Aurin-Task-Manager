@@ -253,8 +253,7 @@
 // Responsive design
 @media (max-width: $breakpoint-sm) {
   .onlineUsersPortal {
-    bottom: $spacing-lg;
-    right: $spacing-lg;
+    display: none; // Ocultar en dispositivos móviles
   }
   
   .tooltipContent {
@@ -265,12 +264,18 @@
 
 @media (max-width: 480px) {
   .onlineUsersPortal {
-    bottom: $spacing-sm;
-    right: $spacing-sm;
+    display: none; // Ocultar en dispositivos móviles pequeños
   }
   
   .tooltipContent {
     min-width: 180px;
     max-width: 220px;
+  }
+}
+
+// Ocultar completamente en dispositivos móviles
+@media (max-width: 768px) {
+  .onlineUsersPortal {
+    display: none !important;
   }
 } 

@@ -1,0 +1,162 @@
+// CRYSTALIZED MIXINS
+@mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 10px) {
+  background: $bg;
+  border-radius: $radius;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+@mixin crystal-hover {
+  background: rgba(241, 245, 249, 0.85);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.9),
+    6px 6px 12px rgba(0, 0, 0, 0.08),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+@mixin crystal-dark($bg: rgba(39, 39, 42, 0.7)) {
+  background: $bg;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+.expandableTabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-radius: 1rem;
+  padding: 0.25rem;
+  
+  // Estilos cristalizados básicos sin box-shadow
+  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+  
+  // Hover effect
+  &:hover {
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  
+  // Dark mode
+  :global(body.dark) & {
+    background: rgba(39, 39, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  // Ajustes para mobile
+  @media (max-width: 768px) {
+    gap: 0.25rem;
+    padding: 0.125rem;
+    
+    .tabButton {
+      padding: 0.375rem 0.75rem;
+      
+      &.selected {
+        padding: 0.375rem 0.75rem;
+      }
+    }
+  }
+}
+
+.tabButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+  gap: 0.5rem;
+  
+  // Estilo cristalizado para botones
+  @include crystal-surface(rgba(255, 255, 255, 0.1), 0.75rem);
+  
+  &:hover {
+    @include crystal-hover;
+    transform: translateY(-1px);
+  }
+
+  &.selected {
+    @include crystal-surface(rgba(59, 130, 246, 0.15), 0.75rem);
+    color: #3b82f6;
+    font-weight: 600;
+    
+    &:hover {
+      @include crystal-hover;
+    }
+  }
+
+  &.unselected {
+    color: #6b7280;
+    
+    &:hover {
+      color: #111827;
+    }
+  }
+}
+
+.tabIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  
+  .tabButton:hover & {
+    transform: scale(1.1);
+  }
+  
+  .tabButton.selected & {
+    color: #3b82f6;
+  }
+}
+
+.tabTitle {
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  
+  .tabButton.selected & {
+    font-weight: 600;
+  }
+  
+  // Ocultar texto en mobile cuando hideTextOnMobile esté activado
+  &.hideTextOnMobile {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+}
+
+.separator {
+  margin: 0 0.25rem;
+  height: 24px;
+  width: 1.2px;
+  background: linear-gradient(180deg, transparent, rgba(107, 114, 128, 0.3), transparent);
+  flex-shrink: 0;
+  
+  :global(body.dark) & {
+    background: linear-gradient(180deg, transparent, rgba(156, 163, 175, 0.3), transparent);
+  }
+}

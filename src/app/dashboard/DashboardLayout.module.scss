@@ -7,4 +7,9 @@
   .main {
     flex: 1;
     padding: 2rem;
+    
+    /* 📱 Fijar padding en mobile */
+    @media (max-width: 768px) {
+      padding: 0px !important;
+    }
   }

@@ -203,12 +203,12 @@ function TasksPageContent() {
         setIsInitialLoadComplete(true);
       }
       
-      console.log('[TasksPage] Data synchronized with useDataStore:', {
-        tasksCount: tasks.length,
-        clientsCount: clients.length,
-        usersCount: users.length,
-        isInitialLoadComplete
-      });
+      // console.log('[TasksPage] Data synchronized with useDataStore:', {
+      //   tasksCount: tasks.length,
+      //   clientsCount: clients.length,
+      //   usersCount: users.length,
+      //   isInitialLoadComplete
+      // });
     }
   }, [tasks, clients, users, isInitialLoadComplete]);
 
