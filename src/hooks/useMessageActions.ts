@@ -280,6 +280,38 @@ export const useMessageActions = ({
     return Timestamp.fromDate(endDate);
   };
 
+  // Helper para parsear fechas en formato mexicano (DD/MM/YYYY)
+  const parseMexicanDate = (dateString: string): Date => {
+    try {
+      // Formato esperado: "DD/MM/YYYY" o "D/M/YYYY"
+      const parts = dateString.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Meses en JS son 0-based
+        const year = parseInt(parts[2], 10);
+        
+        // Validar que los números sean válidos
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year) && 
+            day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900) {
+          return new Date(year, month, day);
+        }
+      }
+      
+      // Fallback: intentar con Date constructor
+      const fallbackDate = new Date(dateString);
+      if (!isNaN(fallbackDate.getTime())) {
+        return fallbackDate;
+      }
+      
+      // Si todo falla, usar fecha actual
+      console.warn('[useMessageActions] Invalid date format, using current date:', dateString);
+      return new Date();
+    } catch (error) {
+      console.warn('[useMessageActions] Error parsing date, using current date:', dateString, error);
+      return new Date();
+    }
+  };
+
   const sendTimeMessage = useCallback(async (
     senderId: string,
     senderName: string,
@@ -296,7 +328,7 @@ export const useMessageActions = ({
     try {
       // Usar fecha seleccionada o fallback a now()
       const timestamp = dateString 
-        ? getEndOfDayTimestamp(new Date(dateString))
+        ? getEndOfDayTimestamp(parseMexicanDate(dateString))
         : Timestamp.now();
       
       const timeMessage = dateString 
