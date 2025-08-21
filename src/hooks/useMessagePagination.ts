@@ -97,9 +97,16 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
 
     if (!currentDate || messageDate.toDateString() !== currentDate.toDateString()) {
       if (currentGroup.length > 0 && currentDate) {
+        // Ordenar mensajes dentro del grupo cronológicamente (más antiguos primero)
+        const sortedGroup = [...currentGroup].sort((a, b) => {
+          const aTime = a.timestamp ? (a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
+          const bTime = b.timestamp ? (b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
+          return aTime - bTime; // Orden cronológico: más antiguo primero
+        });
+        
         grouped.push({
           date: currentDate,
-          messages: currentGroup,
+          messages: sortedGroup,
         });
       }
       currentDate = messageDate;
@@ -110,9 +117,16 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
   });
 
   if (currentGroup.length > 0 && currentDate) {
+    // Ordenar el último grupo también
+    const sortedGroup = [...currentGroup].sort((a, b) => {
+      const aTime = a.timestamp ? (a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
+      const bTime = b.timestamp ? (b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
+      return aTime - bTime; // Orden cronológico: más antiguo primero
+    });
+    
     grouped.push({
       date: currentDate,
-      messages: currentGroup,
+      messages: sortedGroup,
     });
   }
 
