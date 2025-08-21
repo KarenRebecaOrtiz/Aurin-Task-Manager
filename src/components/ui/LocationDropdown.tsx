@@ -21,7 +21,7 @@ const LocationMap: React.FC<{ location: PersonalLocation }> = ({ location }) => 
     // Crear el mapa
     const map = new window.google.maps.Map(mapRef.current, {
       center: { lat: location.lat, lng: location.lng },
-      zoom: 15,
+      zoom: 16, // Aumentado para mejor vista
       mapTypeId: window.google.maps.MapTypeId.ROADMAP,
       mapTypeControl: false,
       streetViewControl: false,
@@ -34,6 +34,11 @@ const LocationMap: React.FC<{ location: PersonalLocation }> = ({ location }) => 
       styles: [
         {
           featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }]
+        },
+        {
+          featureType: 'transit',
           elementType: 'labels',
           stylers: [{ visibility: 'off' }]
         }
@@ -49,11 +54,11 @@ const LocationMap: React.FC<{ location: PersonalLocation }> = ({ location }) => 
       title: location.name,
       icon: {
         path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 8,
+        scale: 10, // Aumentado para mejor visibilidad
         fillColor: '#3b82f6',
         fillOpacity: 1,
         strokeColor: '#ffffff',
-        strokeWeight: 2
+        strokeWeight: 3 // Aumentado para mejor visibilidad
       }
     });
 
@@ -62,10 +67,10 @@ const LocationMap: React.FC<{ location: PersonalLocation }> = ({ location }) => 
     // Crear el círculo del radio
     const circle = new window.google.maps.Circle({
       strokeColor: '#3b82f6',
-      strokeOpacity: 0.3,
-      strokeWeight: 2,
+      strokeOpacity: 0.4, // Aumentado para mejor visibilidad
+      strokeWeight: 3, // Aumentado para mejor visibilidad
       fillColor: '#3b82f6',
-      fillOpacity: 0.1,
+      fillOpacity: 0.15, // Aumentado para mejor visibilidad
       map: map,
       center: { lat: location.lat, lng: location.lng },
       radius: location.radius // 50 metros

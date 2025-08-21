@@ -146,12 +146,24 @@ service cloud.firestore {
 
 
 
-    // AI Conversations collection
+    // AI Conversations collection - PERMITIR ACCESO A USUARIOS INVOLUCRADOS EN TAREAS
     match /ai_conversations/{conversationId} {
-      allow read, write: if isAdmin();
+      // Permitir acceso si el usuario está involucrado en la tarea relacionada
+      allow read, write: if request.auth != null && (
+        isAdmin() || 
+        // Verificar si la conversación está relacionada con una tarea donde el usuario está involucrado
+        (resource.data.taskId != null && isInvolvedInTask(resource.data.taskId))
+      );
+      
       match /messages/{messageId} {
-        allow read, create: if isAdmin();
-        allow update, delete: if isAdmin();
+        allow read, create: if request.auth != null && (
+          isAdmin() || 
+          (resource.data.taskId != null && isInvolvedInTask(resource.data.taskId))
+        );
+        allow update, delete: if request.auth != null && (
+          isAdmin() || 
+          (resource.data.taskId != null && isInvolvedInTask(resource.data.taskId))
+        );
       }
     }
 
@@ -187,6 +199,18 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Email Limits collection - Para control de límites de email por usuario
+    match /emailLimits/{userId} {
+      // ✅ PERMITIR LECTURA: Solo el propio usuario puede leer sus límites
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // ✅ PERMITIR ESCRITURA: Solo el propio usuario puede crear/actualizar sus límites
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      
+      // ✅ PERMITIR ELIMINACIÓN: Solo admins pueden eliminar límites
+      allow delete: if isAdmin();
     }
   }
 }

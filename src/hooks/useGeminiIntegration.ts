@@ -4,10 +4,6 @@ import { getGenerativeModel, HarmCategory, HarmBlockThreshold, GenerateContentRe
 import { ai } from '@/lib/firebase';
 import useGeminiStore from '@/stores/geminiStore';
 import { useGeminiContext } from './useGeminiContext';
-import { decryptBatch } from '@/lib/encryption';
-import { useSummaryStore } from '@/stores/summaryStore';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 // Helper function for conditional logging (only in development)
 const debugLog = (message: string, ...args: unknown[]) => {
@@ -25,34 +21,11 @@ const debugError = (message: string, ...args: unknown[]) => {
   }
 };
 
-interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  text: string | null;
-  timestamp: Date | Timestamp;
-  read: boolean;
-  hours?: number;
-  imageUrl?: string | null;
-  fileUrl?: string | null;
-  fileName?: string | null;
-  clientId: string;
-}
 
-// Labels para intervalos de tiempo
-const intervalLabels = {
-  '1day': 'último día',
-  '3days': 'últimos 3 días',
-  '1week': 'última semana',
-  '1month': 'último mes',
-  '6months': 'últimos 6 meses',
-  '1year': 'último año'
-} as const;
 
 export const useGeminiIntegration = (taskId: string) => {
   const { addQuery, setProcessing, setLastQuery, setLastResponse } = useGeminiStore();
   const { getContextText, getContextMessages } = useGeminiContext(taskId);
-  const { setSummary } = useSummaryStore();
 
   // Función de retry con backoff exponencial
   const retry = useCallback(async (fn: () => Promise<GenerateContentResult>, retries = 3, delay = 1000): Promise<GenerateContentResult> => {
@@ -67,84 +40,9 @@ export const useGeminiIntegration = (taskId: string) => {
     throw new Error('Retry failed after all attempts');
   }, []);
 
-  // Función helper para convertir timestamp a Date
-  const timestampToDate = useCallback((timestamp: Date | Timestamp): Date => {
-    if (timestamp instanceof Date) {
-      return timestamp;
-    }
-    if (timestamp instanceof Timestamp) {
-      return timestamp.toDate();
-    }
-    // Si es number, asumir que es timestamp en milisegundos
-    return new Date(timestamp);
-  }, []);
 
-  // Generar respuesta para reformulación
-  const generateReformulation = useCallback(async (
-    mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list',
-    text: string
-  ) => {
-    if (!ai) throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
-    
-    setProcessing(true);
-    setLastQuery(text);
-    
-    try {
-      // Obtener contexto de los últimos mensajes
-      const contextMessages = getContextMessages(3);
-      const context = contextMessages.map(msg => msg.text).join('\n');
-      
-      const prompts = {
-        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el texto: "${text}". Contexto: ${context}`,
-        rewrite: `Reescribe completamente el texto manteniendo el mismo significado: "${text}". Contexto: ${context}`,
-        friendly: `Transforma el texto a un tono más amigable: "${text}". Contexto: ${context}`,
-        professional: `Convierte el texto en una versión más profesional: "${text}". Contexto: ${context}`,
-        concise: `Haz el texto más conciso: "${text}". Contexto: ${context}`,
-        summarize: `Resume el texto en sus puntos más importantes: "${text}". Contexto: ${context}`,
-        keypoints: `Extrae los puntos clave del texto como lista: "${text}". Contexto: ${context}`,
-        list: `Convierte el texto en una lista organizada: "${text}". Contexto: ${context}`,
-      };
-      
-      const generationConfig = { 
-        maxOutputTokens: 800, 
-        temperature: mode === 'rewrite' ? 0.8 : 0.6, 
-        topK: 40, 
-        topP: 0.9 
-      };
-      
-      const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      ];
-      
-      const systemInstruction = `Eres un asistente de escritura experto. Responde únicamente con el texto procesado.`;
-      
-      const model = getGenerativeModel(ai, { 
-        model: 'gemini-1.5-flash', 
-        generationConfig, 
-        safetySettings, 
-        systemInstruction 
-      });
-      
-      const promptText = prompts[mode];
-      
-      const result = await retry(() => model.generateContent(promptText));
-      const response = await result.response.text();
-      
-      if (!response.trim()) throw new Error('📝 Gemini devolvió una respuesta vacía.');
-      
-      // Guardar en store
-      addQuery(taskId, `Reformulación ${mode}: ${text}`, response);
-      setLastResponse(response);
-      
-      return response;
-    } catch (error) {
-      debugError('[useGeminiIntegration] Error en reformulación:', error);
-      throw error;
-    } finally {
-      setProcessing(false);
-    }
-  }, [taskId, addQuery, setProcessing, setLastQuery, setLastResponse, getContextMessages, retry]);
+
+
 
   // Generar respuesta para consultas @gemini
   const generateQueryResponse = useCallback(async (query: string, needsFullContext: boolean = false) => {
@@ -239,103 +137,37 @@ export const useGeminiIntegration = (taskId: string) => {
     }
   }, [taskId, addQuery, setProcessing, setLastQuery, setLastResponse, getContextText, retry]);
 
-  // Generar resumen de actividad
-  const generateSummary = useCallback(async (
-    interval: string, 
-    messages: Message[], 
-    forceRefresh = false
+  // Generar respuesta para reformulación
+  const generateReformulation = useCallback(async (
+    mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list',
+    text: string
   ) => {
-    if (!ai) {
-      throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
-    }
-
+    if (!ai) throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
+    
     setProcessing(true);
+    setLastQuery(text);
     
     try {
-      const cacheKey = `${taskId}_${interval}`;
+      // Obtener contexto de los últimos mensajes
+      const contextMessages = getContextMessages(3);
+      const context = contextMessages.map(msg => msg.text).join('\n');
       
-      // Verificar caché local primero
-      if (!forceRefresh) {
-        const summaries = useSummaryStore.getState().summaries;
-        const localCached = summaries[cacheKey];
-        if (localCached && Date.now() - localCached.timestamp < 3600000) { // 1 hora
-          debugLog('[useGeminiIntegration] Using cached summary from local store');
-          return localCached.text;
-        }
-      }
+      const prompts = {
+        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el texto: "${text}". Contexto: ${context}`,
+        rewrite: `Reescribe completamente el texto manteniendo el mismo significado: "${text}". Contexto: ${context}`,
+        friendly: `Transforma el texto a un tono más amigable: "${text}". Contexto: ${context}`,
+        professional: `Transforma el texto a un tono más profesional y formal: "${text}". Contexto: ${context}`,
+        concise: `Haz el texto más conciso manteniendo toda la información importante: "${text}". Contexto: ${context}`,
+        summarize: `Crea un resumen conciso del texto: "${text}". Contexto: ${context}`,
+        keypoints: `Extrae los puntos clave del texto: "${text}". Contexto: ${context}`,
+        list: `Convierte el texto en una lista organizada: "${text}". Contexto: ${context}`,
+      };
 
-      const now = new Date();
-      let startDate: Date;
-      
-      switch (interval) {
-        case '1day':
-          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          break;
-        case '3days':
-          startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-          break;
-        case '1week':
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case '1month':
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        case '6months':
-          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
-          break;
-        case '1year':
-          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          startDate = new Date(0);
-      }
-
-      const filteredMessages = messages.filter(msg => {
-        if (!msg.timestamp) return false;
-        const msgDate = timestampToDate(msg.timestamp);
-        return msgDate >= startDate;
-      });
-
-      if (filteredMessages.length === 0) {
-        const intervalLabel = intervalLabels[interval as keyof typeof intervalLabels] || interval;
-        return `📊 No hay actividad registrada en los últimos ${intervalLabel.toLowerCase()}. El resumen estaría vacío.`;
-      }
-
-      // Decrypt batch de mensajes para privacidad
-      const decryptedMessages = await decryptBatch(filteredMessages, 10, taskId);
-      
-      const chatContext = decryptedMessages
-        .map(msg => {
-          const date = timestampToDate(msg.timestamp);
-          const timeStr = date.toLocaleDateString('es-MX') + ' ' + date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-          if (msg.hours) {
-            return `[${timeStr}] ${msg.senderName}: Registró ${Math.floor(msg.hours)}h ${Math.round((msg.hours % 1) * 60)}m de tiempo en la tarea`;
-          } else if (msg.text) {
-            return `[${timeStr}] ${msg.senderName}: ${msg.text}`;
-          } else if (msg.imageUrl) {
-            return `[${timeStr}] ${msg.senderName}: Compartió una imagen (${msg.fileName || 'imagen'})`;
-          } else if (msg.fileUrl) {
-            return `[${timeStr}] ${msg.senderName}: Compartió un archivo (${msg.fileName || 'archivo'})`;
-          }
-          return '';
-        })
-        .filter(Boolean)
-        .join('\n');
-
-      const prompt = `Como experto analista de proyectos, genera un resumen ejecutivo y detallado de la actividad en esta tarea durante ${intervalLabels[interval as keyof typeof intervalLabels]}. 
-Analiza el siguiente historial de conversación y actividades:
-${chatContext}
-Proporciona un resumen que incluya:
-1. **📋 Resumen Ejecutivo**: Descripción general de la actividad y progreso
-2. **💬 Actividad de Comunicación**: Número de mensajes, participantes más activos
-3. **⏱️ Tiempo Registrado**: Total de horas trabajadas y por quién
-4. **📎 Archivos Compartidos**: Lista de documentos e imágenes compartidas
-5. **🎯 Puntos Clave**: Decisiones importantes, problemas identificados, próximos pasos
-6. **📈 Estado del Proyecto**: Evaluación del progreso y momentum
-Usa markdown para el formato y sé conciso pero informativo. Si hay poca actividad, menciona esto de manera constructiva.`;
+      const prompt = prompts[mode];
+      if (!prompt) throw new Error(`❌ Modo de reformulación no válido: ${mode}`);
 
       const generationConfig = {
-        maxOutputTokens: 1000,
+        maxOutputTokens: 500,
         temperature: 0.3,
         topK: 20,
         topP: 0.8,
@@ -352,7 +184,7 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         },
       ];
 
-      const systemInstruction = `Eres un analista experto en gestión de proyectos. Creas resúmenes claros, estructurados y actionables de la actividad en tareas. Usa markdown para formatear tu respuesta y proporciona insights valiosos sobre el progreso y la colaboración del equipo.`;
+      const systemInstruction = `Eres un asistente experto en reestructuración de texto. Proporcionas respuestas claras, útiles y bien formateadas. Mantienes el significado original del texto pero lo mejoras según la solicitud del usuario.`;
 
       const model = getGenerativeModel(ai, {
         model: 'gemini-1.5-flash',
@@ -366,40 +198,33 @@ Usa markdown para el formato y sé conciso pero informativo. Si hay poca activid
         throw new Error('🚫 No se recibió respuesta del servidor de Gemini.');
       }
 
-      let summaryText: string;
+      let responseText: string;
       try {
-        summaryText = await result.response.text();
+        responseText = await result.response.text();
       } catch (textError) {
         debugError('[useGeminiIntegration] Error al extraer texto:', textError);
         throw new Error('⚠️ Error al procesar la respuesta de Gemini.');
       }
 
-      if (!summaryText || summaryText.trim().length === 0) {
-        throw new Error('📝 Gemini devolvió un resumen vacío.');
+      if (!responseText || responseText.trim().length === 0) {
+        throw new Error('📝 Gemini devolvió una respuesta vacía.');
       }
 
-      const fullSummaryText = `📊 Resumen de actividad - ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`;
+      setLastResponse(responseText);
+      addQuery(text, responseText, mode);
       
-      // Guardar en caché (local y Firestore)
-      const cacheData = { text: fullSummaryText, timestamp: Date.now() };
-      await setDoc(doc(db, 'summaries', cacheKey), cacheData);
-      setSummary(cacheKey, cacheData);
-
-      debugLog('[useGeminiIntegration] Summary generated and cached successfully');
-      
-      return fullSummaryText;
+      return responseText;
     } catch (error) {
-      debugError('[useGeminiIntegration] Error en generación de resumen:', error);
+      debugError('[useGeminiIntegration] Error en reformulación:', error);
       throw error;
     } finally {
       setProcessing(false);
     }
-  }, [taskId, setProcessing, retry, setSummary, timestampToDate]);
+  }, [taskId, addQuery, setProcessing, setLastQuery, setLastResponse, getContextMessages, retry]);
 
   return {
     generateReformulation,
     generateQueryResponse,
-    generateSummary,
     isProcessing: useGeminiStore(state => state.isProcessing),
     lastQuery: useGeminiStore(state => state.lastQuery),
     lastResponse: useGeminiStore(state => state.lastResponse),

@@ -1,0 +1,22 @@
+.textShimmer {
+  position: relative;
+  display: inline-block;
+  background-size: 250% 100%, auto;
+  background-clip: text;
+  color: transparent;
+  font-family: 'Urbanist', sans-serif;
+  --base-color: #2563eb; // blue.600
+  --base-gradient-color: #bfdbfe; // blue.200
+  --bg: linear-gradient(90deg, #0000 calc(50% - var(--spread)), var(--base-gradient-color), #0000 calc(50% + var(--spread)));
+  background-repeat: no-repeat, padding-box;
+  
+  // Dark mode
+  :global(body.dark) & {
+    --base-color: #1d4ed8; // blue.700
+    --base-gradient-color: #60a5fa; // blue.400
+    --bg: linear-gradient(90deg, #0000 calc(50% - var(--spread)), var(--base-gradient-color), #0000 calc(50% + var(--spread)));
+  }
+  
+  // Background image compuesta
+  background-image: var(--bg), linear-gradient(var(--base-color), var(--base-color));
+} 

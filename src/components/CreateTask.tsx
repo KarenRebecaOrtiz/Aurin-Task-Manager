@@ -568,6 +568,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       clearPersistedData();
       setIsSaving(false);
       
+      window.location.reload();
+      
       // El PopupLoader se cerrará automáticamente y llamará a onComplete
       if (onTaskCreated) {
         setTimeout(() => {

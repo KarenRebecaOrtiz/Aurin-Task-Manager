@@ -598,6 +598,9 @@ const [currentStep, setCurrentStep] = useState(0);
       setIsSaving(false);
       onHasUnsavedChanges(false);
       
+      // ✅ SOLUCIÓN: Recargar página para mostrar la tarea actualizada
+      window.location.reload();
+      
       // El PopupLoader se cerrará automáticamente y llamará a onComplete
       // Cerrar el modal de edición
       onToggle();

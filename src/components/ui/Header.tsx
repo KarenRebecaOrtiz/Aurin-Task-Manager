@@ -18,6 +18,8 @@ import SimpleTooltip from './SimpleTooltip';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useTaskNotificationsSingleton } from '@/hooks/useTaskNotificationsSingleton';
 import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
+import { TextShimmer } from './TextShimmer';
+import { motion } from 'framer-motion';
 
 interface Notification {
   id: string;
@@ -72,7 +74,6 @@ const Header: React.FC<HeaderProps> = ({
   /* ────────────────────────────────────────────
      REFS
   ──────────────────────────────────────────── */
-  const welcomeRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
@@ -180,66 +181,7 @@ const Header: React.FC<HeaderProps> = ({
     setIsNotificationsVisible(isNotificationsOpen);
   }, [isNotificationsOpen]);
 
-  /* ────────────────────────────────────────────
-     EFFECTS – TYPEWRITER WELCOME
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    const el = welcomeRef.current;
-    if (!el || !isLoaded) return;
-    const text = `Te damos la bienvenida de nuevo, ${userName}`;
-    el.innerHTML = '';
-    const textWrapper = document.createElement('span');
-    textWrapper.className = styles.typewriterWrapper;
-    el.appendChild(textWrapper);
-    text.split(' ').forEach((word, idx, arr) => {
-      const span = document.createElement('span');
-      span.className = styles.typewriterChar;
-      span.style.opacity = '0';
-      span.textContent = word;
-      textWrapper.appendChild(span);
-      if (idx < arr.length - 1) textWrapper.appendChild(document.createTextNode(' '));
-      gsap.to(span, {
-        opacity: 1,
-        duration: 0.2,
-        delay: idx * 0.1,
-        ease: 'power1.in',
-      });
-    });
 
-    if (isAdmin) {
-      const buttonWrapper = document.createElement('span');
-      buttonWrapper.className = styles.adminButtonWrapper;
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = styles.adminButton;
-      button.innerHTML = `
-        <span class="${styles.fold}"></span>
-        <div class="${styles.pointsWrapper}">
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-          <i class="${styles.point}"></i>
-        </div>
-        <span class="${styles.inner}">
-          <img
-            src="/verified.svg"
-            alt="Verified Icon"
-            class="${styles.icon}"
-          />
-        </span>
-      `;
-      buttonWrapper.appendChild(button);
-      el.appendChild(buttonWrapper);
-    }
-
-    return () => gsap.killTweensOf(el.querySelectorAll(`.${styles.typewriterChar}`));
-  }, [userName, isLoaded, isAdmin]);
 
   /* ────────────────────────────────────────────
      EFFECTS – SUN/MOON ICON ENTRANCE
@@ -464,7 +406,43 @@ const Header: React.FC<HeaderProps> = ({
           </div>
           <div className={styles.frame14}>
             <div className={styles.title}>
-              <div ref={welcomeRef} className={styles.welcome} />
+              <div className={styles.welcome}>
+                <span className={styles.welcomeText}>
+                  Te damos la bienvenida de nuevo,{' '}
+                  <TextShimmer as="span" className={styles.userNameShimmer}>
+                    {userName}
+                  </TextShimmer>
+                </span>
+                {isAdmin && (
+                  <motion.div 
+                    className={styles.adminBadge}
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 15,
+                      delay: 0.5
+                    }}
+                    whileHover={{ 
+                      scale: 1.15, 
+                      rotate: 5,
+                      transition: { duration: 0.2 }
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className={styles.adminBadgeInner}>
+                      <Image
+                        src="/verified.svg"
+                        alt="Admin Verified"
+                        width={16}
+                        height={16}
+                        className={styles.adminBadgeIcon}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </div>
             </div>
             <div className={styles.text}>
               <div className={styles.subtitle}>{getSubtitle()}</div>

@@ -50,13 +50,14 @@
 .labelIcon {
   opacity: 0.8;
   transition: opacity 0.2s ease;
+  filter: brightness(0) saturate(100%); // Asegura que el SVG sea negro en modo claro
 
   &:hover {
     opacity: 1;
   }
 
   :global(body.dark) & {
-    filter: invert(1) brightness(100%);
+    filter: brightness(0) saturate(100%) invert(1) brightness(100%); // Invierte a blanco en modo oscuro
   }
 }
 
@@ -165,9 +166,10 @@
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  padding: 20px;
 
   :global(body.dark) & {
-    background: #1f2937;
+    background: #222225;
     border-color: #334155;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
   }
@@ -558,8 +560,8 @@
 }
 
 .mapContainer {
-  margin-top: 12px;
-  border-radius: 8px;
+  margin-top: 20px; // Aumentado para más espacio
+  border-radius: 16px; // Aumentado para mejor apariencia
   overflow: hidden;
   border: 1px solid #e2e8f0;
   background: white;
@@ -567,10 +569,14 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  min-height: 280px; // Altura mínima aumentada para asegurar espacio suficiente
+  position: relative; // Para posicionamiento correcto
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); // Sombra sutil
 
   :global(body.dark) & {
-    border-color: #334155;
-    background: #1f2937;
+    border-color: #475569;
+    background: #1e293b;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
   }
   
   // Ocultar mapas en mobile para evitar problemas de overflow
@@ -581,11 +587,12 @@
 
 .map {
   width: 100%;
-  height: 200px;
-  border-radius: 8px;
+  height: 280px; // Aumentado para más espacio
+  border-radius: 16px; // Aumentado para mejor apariencia
   pointer-events: none; // Deshabilita todas las interacciones del mapa
   max-width: 100%;
   box-sizing: border-box;
+  position: relative; // Para posicionamiento correcto
   
   // Ocultar controles de Google Maps
   :global(.gm-control-active) {
@@ -610,13 +617,13 @@
   
   // Responsive para mobile
   @media (max-width: 768px) {
-    height: 160px;
-    border-radius: 6px;
+    height: 220px; // Aumentado para mobile
+    border-radius: 12px;
   }
   
   @media (max-width: 480px) {
-    height: 140px;
-    border-radius: 4px;
+    height: 200px; // Aumentado para mobile pequeño
+    border-radius: 10px;
   }
   
   // Ocultar en mobile

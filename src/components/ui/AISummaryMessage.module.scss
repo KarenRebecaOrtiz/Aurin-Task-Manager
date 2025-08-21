@@ -1,0 +1,362 @@
+.aiSummaryMessage {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  margin: 16px 0;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      
+      .icon {
+        font-size: 20px;
+      }
+      
+      .label {
+        font-size: 16px;
+      }
+      
+      .interval {
+        font-size: 14px;
+        opacity: 0.9;
+        font-weight: 500;
+      }
+    }
+    
+    .metadata {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      .timestamp {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      
+      .loadingIndicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 6px 12px;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        
+        .thinkingDots {
+          display: flex;
+          gap: 4px;
+          
+          span {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            animation: thinking 1.4s infinite ease-in-out;
+            
+            &:nth-child(1) { animation-delay: 0s; }
+            &:nth-child(2) { animation-delay: 0.2s; }
+            &:nth-child(3) { animation-delay: 0.4s; }
+          }
+        }
+        
+        .thinkingText {
+          font-size: 12px;
+          opacity: 0.9;
+          font-style: italic;
+          font-weight: 500;
+        }
+      }
+      
+      .closeButton {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: scale(1.1);
+        }
+        
+        &:active {
+          transform: scale(0.95);
+        }
+      }
+    }
+  }
+
+  .content {
+    padding: 20px;
+    
+    .loadingContent {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      
+      .loadingMessage {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        text-align: center;
+        
+        .loadingIcon {
+          font-size: 32px;
+          animation: pulse 2s infinite ease-in-out;
+        }
+        
+        .loadingText {
+          p {
+            margin: 4px 0;
+            color: #6b7280;
+            font-size: 14px;
+            
+            &:first-child {
+              color: #374151;
+              font-weight: 500;
+            }
+          }
+        }
+      }
+    }
+    
+    .summaryText {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #374151;
+      
+      // Estilos para markdown
+      h1, h2, h3, h4, h5, h6 {
+        margin: 16px 0 8px 0;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      
+      h1 { font-size: 18px; }
+      h2 { font-size: 16px; }
+      h3 { font-size: 15px; }
+      
+      // Estilos para elementos del resumen
+      .summary-h2 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 20px 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+      
+      .summary-h3 {
+        font-size: 15px;
+        font-weight: 600;
+        color: #374151;
+        margin: 16px 0 8px 0;
+      }
+      
+      .summary-ul {
+        margin: 12px 0;
+        padding-left: 20px;
+        
+        .summary-li {
+          margin: 6px 0;
+          line-height: 1.5;
+          color: #4b5563;
+          
+          &::marker {
+            color: #8b5cf6;
+            font-weight: bold;
+          }
+        }
+      }
+      
+      strong {
+        color: #1f2937;
+        font-weight: 600;
+      }
+      
+      em {
+        color: #6b7280;
+        font-style: italic;
+      }
+      
+      // Espaciado entre secciones
+      br + br {
+        margin-top: 16px;
+      }
+    }
+  }
+
+  .footer {
+    padding: 12px 20px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    
+    .note {
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+}
+
+// Dark mode support
+:global(body.dark) .aiSummaryMessage {
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  border-color: #4b5563;
+  
+  .header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  }
+  
+  .content .summaryText {
+    color: #d1d5db;
+    
+    h1, h2, h3, h4, h5, h6 {
+      color: #f9fafb;
+    }
+    
+    strong {
+      color: #f9fafb;
+    }
+    
+    code {
+      background: #374151;
+      color: #fbbf24;
+    }
+  }
+  
+  .footer {
+    background: #111827;
+    border-top-color: #4b5563;
+    
+    .note {
+      color: #9ca3af;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .aiSummaryMessage {
+    margin: 12px 8px;
+    border-radius: 12px;
+    
+    .header {
+      padding: 12px 16px;
+      
+      .title {
+        .label {
+          font-size: 14px;
+        }
+        
+        .interval {
+          font-size: 12px;
+        }
+      }
+      
+      .metadata .timestamp {
+        font-size: 11px;
+      }
+    }
+    
+    .content {
+      padding: 16px;
+      
+      .summaryText {
+        font-size: 13px;
+      }
+    }
+    
+    .footer {
+      padding: 10px 16px;
+    }
+  }
+}
+
+// Animaciones
+@keyframes thinking {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+// Animación de entrada para el mensaje
+.aiSummaryMessage {
+  animation: slideInUp 0.4s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Transiciones suaves para cambios de estado
+.content {
+  transition: all 0.3s ease-in-out;
+}
+
+.loadingContent {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

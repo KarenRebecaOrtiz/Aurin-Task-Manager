@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-interface SummaryCache {
+export interface SummaryCache {
   text: string;
   timestamp: number;
 }

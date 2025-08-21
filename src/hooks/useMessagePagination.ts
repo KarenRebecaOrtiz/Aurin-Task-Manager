@@ -84,87 +84,61 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
   let currentDate: Date | null = null;
   let currentGroup: Message[] = [];
 
-  // Solo loggear si hay mensajes de hoy
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const hasTodayMessages = messages.some(m => {
-    if (!m.timestamp) return false;
-    const messageDate = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : new Date(m.timestamp);
-    return messageDate >= today;
-  });
-
-  if (hasTodayMessages) {
-    console.log('[groupMessagesByDate] 🔍 Debugging mensajes de HOY');
-    console.log('[groupMessagesByDate] Mensajes originales:', messages.map(m => ({
-      id: m.id,
-      timestamp: m.timestamp,
-      text: m.text?.substring(0, 30) || 'No text',
-      hours: m.hours
-    })));
-  }
+  // Debugging removido para limpiar consola
 
   const sortedMessages = [...messages].sort((a, b) => {
-    const aTime = a.timestamp ? (a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
-    const bTime = b.timestamp ? (b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
+    // Usar timestamp real de Firestore (lastModified) si existe, sino timestamp normal
+    const getTimestamp = (msg: Message) => {
+      // Priorizar lastModified para obtener el timestamp real de Firestore
+      if (msg.lastModified) {
+        return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate().getTime() : new Date(msg.lastModified).getTime();
+      }
+      // Fallback a timestamp normal
+      return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate().getTime() : new Date(msg.timestamp).getTime()) : 0;
+    };
+    
+    const aTime = getTimestamp(a);
+    const bTime = getTimestamp(b);
     return bTime - aTime;
   });
 
-  if (hasTodayMessages) {
-    console.log('[groupMessagesByDate] Mensajes ordenados:', sortedMessages.map(m => ({
-      id: m.id,
-      timestamp: m.timestamp,
-      text: m.text?.substring(0, 30) || 'No text',
-      hours: m.hours
-    })));
-  }
+  // Debugging removido para limpiar consola
 
   sortedMessages.forEach((message) => {
     if (message.isDatePill) return;
 
-    const messageDate = message.timestamp ? (message.timestamp instanceof Timestamp ? message.timestamp.toDate() : new Date(message.timestamp)) : new Date();
+    // Usar timestamp real de Firestore para agrupar por fecha
+    const getMessageDate = (msg: Message) => {
+      // Priorizar lastModified para obtener la fecha real
+      if (msg.lastModified) {
+        return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate() : new Date(msg.lastModified);
+      }
+      // Fallback a timestamp normal
+      return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp)) : new Date();
+    };
     
-    // Solo loggear mensajes de hoy
-    if (messageDate >= today) {
-      console.log('[groupMessagesByDate] 📅 Procesando mensaje de HOY:', {
-        id: message.id,
-        timestamp: message.timestamp,
-        messageDate: messageDate.toISOString(),
-        currentDate: currentDate?.toISOString(),
-        isNewGroup: !currentDate || messageDate.toDateString() !== currentDate.toDateString()
-      });
-    }
+    const messageDate = getMessageDate(message);
+    
+    // Debugging removido para limpiar consola
 
-    // Comparar fechas usando YYYY-MM-DD para evitar problemas de zona horaria
-    const messageDateStr = messageDate.toISOString().split('T')[0];
-    const currentDateStr = currentDate ? currentDate.toISOString().split('T')[0] : null;
-    
-    if (!currentDate || messageDateStr !== currentDateStr) {
+    if (!currentDate || messageDate.toDateString() !== currentDate.toDateString()) {
       if (currentGroup.length > 0 && currentDate) {
-        // Ordenar mensajes dentro del grupo cronológicamente (más antiguos primero)
+        // Ordenar mensajes dentro del grupo cronológicamente (más recientes primero - como column-reverse)
         const sortedGroup = [...currentGroup].sort((a, b) => {
-          // Simplificar la comparación de timestamps
-          let aTime = 0;
-          let bTime = 0;
+          // Usar el mismo getTimestamp que arriba para consistencia
+          const getTimestamp = (msg: Message) => {
+            if (msg.lastModified) {
+              return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate().getTime() : new Date(msg.lastModified).getTime();
+            }
+            return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate().getTime() : new Date(msg.timestamp).getTime()) : 0;
+          };
           
-          if (a.timestamp) {
-            aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
-          }
-          
-          if (b.timestamp) {
-            bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
-          }
-          
-          return aTime - bTime; // Orden cronológico: más antiguo primero
+          const aTime = getTimestamp(a);
+          const bTime = getTimestamp(b);
+          return bTime - aTime; // Orden inverso: más reciente primero (column-reverse)
         });
         
-        // Solo loggear grupos que contengan mensajes de hoy
-        if (currentDate >= today) {
-          console.log('[groupMessagesByDate] 📋 Agregando grupo de HOY:', {
-            date: currentDate.toISOString(),
-            messageCount: sortedGroup.length,
-            messages: sortedGroup.map(m => ({ id: m.id, timestamp: m.timestamp }))
-          });
-        }
+        // Debugging removido para limpiar consola
         
         grouped.push({
           date: currentDate,
@@ -179,31 +153,22 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
   });
 
   if (currentGroup.length > 0 && currentDate) {
-    // Ordenar el último grupo también
+    // Ordenar el último grupo también (más recientes primero - como column-reverse)
     const sortedGroup = [...currentGroup].sort((a, b) => {
-      // Simplificar la comparación de timestamps
-      let aTime = 0;
-      let bTime = 0;
+      // Usar el mismo getTimestamp que arriba para consistencia
+      const getTimestamp = (msg: Message) => {
+        if (msg.lastModified) {
+          return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate().getTime() : new Date(msg.lastModified).getTime();
+        }
+        return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate().getTime() : new Date(msg.timestamp).getTime()) : 0;
+      };
       
-      if (a.timestamp) {
-        aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : new Date(a.timestamp).getTime();
-      }
-      
-      if (b.timestamp) {
-        bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : new Date(b.timestamp).getTime();
-      }
-      
-      return aTime - bTime; // Orden cronológico: más antiguo primero
+      const aTime = getTimestamp(a);
+      const bTime = getTimestamp(b);
+      return bTime - aTime; // Orden inverso: más reciente primero (column-reverse)
     });
     
-    // Solo loggear si el último grupo es de hoy
-    if (currentDate >= today) {
-      console.log('[groupMessagesByDate] 📋 Agregando último grupo de HOY:', {
-        date: currentDate.toISOString(),
-        messageCount: sortedGroup.length,
-        messages: sortedGroup.map(m => ({ id: m.id, timestamp: m.timestamp }))
-      });
-    }
+    // Debugging removido para limpiar consola
     
     grouped.push({
       date: currentDate,
@@ -211,16 +176,7 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
     });
   }
 
-  // Solo loggear resultado final si hay mensajes de hoy
-  if (hasTodayMessages) {
-    console.log('[groupMessagesByDate] 🎯 Resultado final (solo grupos con mensajes de HOY):', 
-      grouped.filter(g => g.date >= today).map(g => ({
-        date: g.date.toISOString(),
-        messageCount: g.messages.length,
-        messages: g.messages.map(m => ({ id: m.id, timestamp: m.timestamp }))
-      }))
-    );
-  }
+  // Debugging removido para limpiar consola
 
   return grouped;
 };

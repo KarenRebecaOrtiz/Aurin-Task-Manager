@@ -750,8 +750,9 @@ export default function InputChat({
             }
           };
           
-          await onSendMessage(geminiMessage); // Post as separate message
-          // console.log('[InputChat] Gemini response posted successfully');
+          // Send Gemini message without triggering notifications (handled in usePrivateMessageActions)
+          await onSendMessage(geminiMessage);
+          console.log('[InputChat] Gemini response posted successfully');
           
                  } catch {
            // console.error('[InputChat: Gemini Processing] Error:', error);

@@ -14,11 +14,14 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import { gsap } from 'gsap';
 import { WebsiteInput } from './ui/WebsiteInput';
 import { BiographyInput } from './ui/BiographyInput';
-import LocationDropdown from './ui/LocationDropdown';
 import styles from './ConfigPage.module.scss';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { ExpandableTabs } from './ui/ExpandableTabs';
+import { TextShimmer } from './ui/TextShimmer';
 import { User, MapPin, Users, Shield, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import LocationDropdown from './ui/LocationDropdown';
+import LocationMap from './ui/LocationMap';
 
 // Componentes de iconos de redes sociales con soporte para dark mode
 const SocialIcon: React.FC<{ icon: string; alt: string; className?: string }> = ({ icon, alt, className }) => (
@@ -168,6 +171,7 @@ const tableVariants = {
 const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessAlert, onShowFailAlert }) => {
   const { user: currentUser, isLoaded } = useUser();
   const { session: currentSession } = useSession();
+  const { isAdmin } = useAuth();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sessions, setSessions] = useState<any[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -1337,10 +1341,52 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                 onChange={(e) => handleImageChange(e, 'profilePhoto')}
               />
             </div>
-            <div className={styles.frame239179}>
-              <div className={styles.mainName}>{formData.fullName}</div>
-              <div className={styles.exampleMailCom}>{currentUser.primaryEmailAddress?.emailAddress}</div>
-            </div>
+                          <div className={styles.frame239179}>
+                <motion.div 
+                  className={styles.mainName}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.6,
+                    ease: "easeOut",
+                    delay: 0.2
+                  }}
+                >
+                  <TextShimmer as="span" className={styles.mainNameText}>
+                    {formData.fullName}
+                  </TextShimmer>
+                  {isAdmin && (
+                    <motion.div 
+                      className={styles.adminBadge}
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 200,
+                        damping: 15,
+                        delay: 0.5
+                      }}
+                      whileHover={{ 
+                        scale: 1.15, 
+                        rotate: 5,
+                        transition: { duration: 0.2 }
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <div className={styles.adminBadgeInner}>
+                        <Image
+                          src="/verified.svg"
+                          alt="Admin Verified"
+                          width={16}
+                          height={16}
+                          className={styles.adminBadgeIcon}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+                <div className={styles.exampleMailCom}>{currentUser.primaryEmailAddress?.emailAddress}</div>
+              </div>
           </div>
 
         </div>
@@ -1737,8 +1783,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                   </div>
                 </div>
                 
+                {/* Ubicación de Casa */}
                 <div className={styles.fieldGroup2}>
-                  <div className={styles.fieldGroupHeader}>
+                  <div>
                     <h3 className={styles.subsectionTitle}>Ubicación de Casa</h3>
                     <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                       Esta es tu ubicación principal, por ejemplo donde haces home office o trabajas remotamente.
@@ -1755,13 +1802,20 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                     disabled={!isOwnProfile}
                     required={false}
                   />
-                  <div className={styles.securityNote} style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem', fontStyle: 'italic' }}>
-                    Esta dirección está protegida con cifrado AES-256. Nadie en el sistema tiene acceso a tu dirección exacta.
-                  </div>
+                  {/* Mapa de la ubicación de casa */}
+                  {formData.homeLocation && (
+                    <div className={styles.locationMapContainer}>
+                      <LocationMap location={formData.homeLocation} />
+                      <div className={styles.securityNote} style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                        Esta dirección está protegida con cifrado AES-256. Nadie en el sistema tiene acceso a tu dirección exacta.
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
+                {/* Ubicación Alternativa */}
                 <div className={styles.fieldGroup2}>
-                  <div className={styles.fieldGroupHeader}>
+                  <div>
                     <h3 className={styles.subsectionTitle}>Ubicación Alternativa</h3>
                     <div className={styles.stackDescription} style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                       Puedes añadir una segunda ubicación si trabajas desde más de un lugar.
@@ -1778,9 +1832,16 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                     disabled={!isOwnProfile}
                     required={false}
                   />
+                  {/* Mapa de la ubicación alternativa */}
+                  {formData.secondaryLocation && (
+                    <div className={styles.locationMapContainer}>
+                      <LocationMap location={formData.secondaryLocation} />
+                    </div>
+                  )}
                 </div>
                 
-                <div className={styles.privacyDisclaimer}>
+
+                <div style={{marginTop: '5rem'}} className={styles.privacyDisclaimer}>
                   <div className={styles.privacyDisclaimerTitle}>
                     Privacidad garantizada
                   </div>
@@ -1790,8 +1851,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ userId, onClose, onShowSuccessA
                     Solo tú puedes ver y modificar tu información de ubicación.
                   </div>
                 </div>
+                
+        
               </div>
               
+            
               {/* Botones de acción para el tab de ubicaciones personalizadas */}
               {isOwnProfile && tabChanges[1] && (
                 <div className={styles.frame239191} style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
