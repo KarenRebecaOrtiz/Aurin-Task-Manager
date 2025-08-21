@@ -273,11 +273,15 @@ export const useMessageActions = ({
     }
   }, [task.id]);
 
-  // Helper para crear timestamp al final del día (23:59:59)
-  const getEndOfDayTimestamp = (date: Date): Timestamp => {
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
-    return Timestamp.fromDate(endDate);
+  // Helper para crear timestamp con la hora actual del día seleccionado
+  const getCurrentTimeTimestamp = (date: Date): Timestamp => {
+    const now = new Date();
+    const selectedDate = new Date(date);
+    
+    // Mantener la fecha seleccionada pero con la hora actual
+    selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    
+    return Timestamp.fromDate(selectedDate);
   };
 
   // Helper para parsear fechas en formato mexicano (DD/MM/YYYY)
@@ -343,9 +347,9 @@ export const useMessageActions = ({
     const commentTempId = `temp-comment-${commentClientId}`;
     
     try {
-      // Usar fecha seleccionada o fallback a now()
+      // Usar fecha seleccionada con hora actual o fallback a now()
       const timestamp = dateString 
-        ? getEndOfDayTimestamp(parseMexicanDate(dateString))
+        ? getCurrentTimeTimestamp(parseMexicanDate(dateString))
         : Timestamp.now();
       
       const timeMessage = dateString 
