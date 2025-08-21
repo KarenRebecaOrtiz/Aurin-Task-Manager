@@ -84,16 +84,41 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
   let currentDate: Date | null = null;
   let currentGroup: Message[] = [];
 
+  // Debug: Log de mensajes antes de ordenar
+  console.log('[groupMessagesByDate] Mensajes originales:', messages.map(m => ({
+    id: m.id,
+    timestamp: m.timestamp,
+    text: m.text?.substring(0, 30) || 'No text',
+    hours: m.hours
+  })));
+
   const sortedMessages = [...messages].sort((a, b) => {
     const aTime = a.timestamp ? (a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
     const bTime = b.timestamp ? (b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
     return bTime - aTime;
   });
 
+  // Debug: Log de mensajes después de ordenar
+  console.log('[groupMessagesByDate] Mensajes ordenados:', sortedMessages.map(m => ({
+    id: m.id,
+    timestamp: m.timestamp,
+    text: m.text?.substring(0, 30) || 'No text',
+    hours: m.hours
+  })));
+
   sortedMessages.forEach((message) => {
     if (message.isDatePill) return;
 
     const messageDate = message.timestamp ? (message.timestamp instanceof Timestamp ? message.timestamp.toDate() : new Date(message.timestamp)) : new Date();
+    
+    // Debug: Log de cada mensaje procesado
+    console.log('[groupMessagesByDate] Procesando mensaje:', {
+      id: message.id,
+      timestamp: message.timestamp,
+      messageDate: messageDate.toISOString(),
+      currentDate: currentDate?.toISOString(),
+      isNewGroup: !currentDate || messageDate.toDateString() !== currentDate.toDateString()
+    });
 
     if (!currentDate || messageDate.toDateString() !== currentDate.toDateString()) {
       if (currentGroup.length > 0 && currentDate) {
@@ -102,6 +127,12 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
           const aTime = a.timestamp ? (a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
           const bTime = b.timestamp ? (b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
           return aTime - bTime; // Orden cronológico: más antiguo primero
+        });
+        
+        console.log('[groupMessagesByDate] Agregando grupo:', {
+          date: currentDate.toISOString(),
+          messageCount: sortedGroup.length,
+          messages: sortedGroup.map(m => ({ id: m.id, timestamp: m.timestamp }))
         });
         
         grouped.push({
@@ -124,11 +155,24 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
       return aTime - bTime; // Orden cronológico: más antiguo primero
     });
     
+    console.log('[groupMessagesByDate] Agregando último grupo:', {
+      date: currentDate.toISOString(),
+      messageCount: sortedGroup.length,
+      messages: sortedGroup.map(m => ({ id: m.id, timestamp: m.timestamp }))
+    });
+    
     grouped.push({
       date: currentDate,
       messages: sortedGroup,
     });
   }
+
+  // Debug: Log del resultado final
+  console.log('[groupMessagesByDate] Resultado final:', grouped.map(g => ({
+    date: g.date.toISOString(),
+    messageCount: g.messages.length,
+    messages: g.messages.map(m => ({ id: m.id, timestamp: m.timestamp }))
+  })));
 
   return grouped;
 };
