@@ -293,13 +293,30 @@ export const useMessageActions = ({
         // Validar que los números sean válidos
         if (!isNaN(day) && !isNaN(month) && !isNaN(year) && 
             day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900) {
-          return new Date(year, month, day);
+          const parsedDate = new Date(year, month, day);
+          
+          // Validar que no sea fecha futura
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (parsedDate > today) {
+            console.warn('[useMessageActions] Future date detected, using current date:', dateString);
+            return new Date();
+          }
+          
+          return parsedDate;
         }
       }
       
       // Fallback: intentar con Date constructor
       const fallbackDate = new Date(dateString);
       if (!isNaN(fallbackDate.getTime())) {
+        // Validar que no sea fecha futura
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (fallbackDate > today) {
+          console.warn('[useMessageActions] Future date detected in fallback, using current date:', dateString);
+          return new Date();
+        }
         return fallbackDate;
       }
       
