@@ -1437,8 +1437,8 @@ export default function InputChat({
             />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <div className={styles.dropupContainer} ref={dropupRef}>
-                <button type="button" className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={handleToggleDropup} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con Gemini AI" title="Reformular texto con Gemini AI ✨" aria-expanded={isDropupOpen}>
-                  <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} draggable="false" />
+                <button type="button" className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={handleToggleDropup} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con OpenAI" title="Reformular texto con OpenAI" aria-expanded={isDropupOpen}>
+                  <Image src="/OpenAI.svg" alt="OpenAI" width={16} height={16} draggable="false" />
                 </button>
                 {isDropupOpen && (
                   <div className={styles.dropupMenu} role="menu">

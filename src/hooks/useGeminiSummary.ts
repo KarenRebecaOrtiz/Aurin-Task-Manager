@@ -537,7 +537,7 @@ ${filteredTimers.map(timer => {
         throw new Error('📝 ChatGPT devolvió un resumen vacío.');
       }
 
-      const fullSummaryText = `📊 Resumen de actividad - ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`;
+      const fullSummaryText = ` ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`;
       
       // ✅ MEJORAR EL FORMATO DEL RESUMEN
       const enhancedSummaryText = enhanceSummaryFormat(fullSummaryText, interval);
@@ -601,7 +601,7 @@ ${filteredTimers.map(timer => {
     const closing = randomClosing[Math.floor(Math.random() * randomClosing.length)];
     
     // ✅ AGREGAR TÍTULO PRINCIPAL GRANDE
-    let enhanced = `<h1 style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0 0 20px 0; text-align: center; border-bottom: 3px solid #8b5cf6; padding-bottom: 10px;">📊 Resumen de Actividad</h1>\n\n`;
+    let enhanced = `<h3 style="font-size: 18px; font-weight: 700; color: #1f2937; margin: 0 0 20px 0; text-align: center; border-bottom: 3px solid #8b5cf6; padding-bottom: 10px;"> Resumen de Actividad</h3>\n\n`;
     
     // Mejorar el formato del resumen
     enhanced += summaryText;
@@ -614,11 +614,11 @@ ${filteredTimers.map(timer => {
     enhanced = enhanced.replace(/^\d+\./gm, '• ');
     
     // Agregar emojis a secciones específicas
-    enhanced = enhanced.replace(/^📋/, '📋 **Resumen Ejecutivo**');
-    enhanced = enhanced.replace(/^💬/, '💬 **Comunicación del Equipo**');
-    enhanced = enhanced.replace(/^⏱️/, '⏱️ **Tiempo Registrado**');
-    enhanced = enhanced.replace(/^🎯/, '🎯 **Próximos Pasos**');
-    enhanced = enhanced.replace(/^📈/, '📈 **Estado del Proyecto**');
+    enhanced = enhanced.replace(/^📋/, '**Resumen:**');
+    enhanced = enhanced.replace(/^💬/, '**Comunicación:**');
+    enhanced = enhanced.replace(/^⏱️/, '**Tiempo Registrado:**');
+    enhanced = enhanced.replace(/^🎯/, '**Próximos Pasos:**');
+    enhanced = enhanced.replace(/^📈/, '**Estado del Proyecto:**');
     
     // Agregar mensaje motivacional al final
     enhanced += `\n\n${closing}`;

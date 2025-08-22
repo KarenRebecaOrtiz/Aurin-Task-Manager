@@ -459,7 +459,7 @@ const MessageItem = memo(
         >
           <UserAvatar
             userId={message.senderId}
-            imageUrl={message.senderId === 'gemini' ? '/Gemini.png' : users.find((u) => u.id === message.senderId)?.imageUrl}
+            imageUrl={message.senderId === 'gemini' ? '/Gemini.png' : message.senderId === 'chatgpt' ? '/ChatGPT-Logo.png' : users.find((u) => u.id === message.senderId)?.imageUrl}
             userName={message.senderName}
             size="medium"
             showStatus={true}
@@ -1335,47 +1335,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       setIsGeneratingSummary(true);
       setForceShowLoader(true); // ✅ ACTIVAR ESTADO DE EMERGENCIA
       
-      // ✅ CREAR MENSAJE VIRTUAL DEL LOADER INMEDIATAMENTE
-      const loadingMessage: Message = {
-        id: `loading_summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        senderId: 'ai_loader',
-        senderName: 'OpenAI',
-        text: '', // Texto vacío para indicar que está cargando
-        timestamp: new Date(),
-        read: false,
-        clientId: `loading_summary_${Date.now()}`,
-        isPending: false,
-        hasError: false,
-        isSummary: false,
-        isLoading: true, // ✅ NUEVO FLAG PARA INDICAR QUE ES UN LOADER
-        isDatePill: false // ✅ Asegurar que no se trate como un separador de fecha
-      };
-      
-      // ✅ AGREGAR EL MENSAJE DE LOADING AL CHAT INMEDIATAMENTE
-      try {
-        // ✅ AGREGAR AL FINAL DE LA LISTA DE MENSAJES
-        const currentMessages = useDataStore.getState().messages[task.id] || [];
-        const updatedMessages = [...currentMessages, loadingMessage];
-        useDataStore.getState().setMessages(task.id, updatedMessages);
-        
-        console.log('[ChatSidebar] 📝 Loading message added to chat at the end:', loadingMessage.id);
-        
-        // ✅ VERIFICAR QUE EL MENSAJE SE AGREGÓ CORRECTAMENTE
-        const messagesAfterAdd = useDataStore.getState().messages[task.id] || [];
-        const messageAdded = messagesAfterAdd.find(m => m.id === loadingMessage.id);
-        if (!messageAdded) {
-          console.error('[ChatSidebar] ❌ El mensaje de loading no se agregó correctamente');
-          throw new Error('No se pudo agregar el mensaje de loading');
-        }
-        
-        console.log('[ChatSidebar] ✅ Loading message verified in store at position:', messagesAfterAdd.length - 1);
-      } catch (error) {
-        console.error('[ChatSidebar] ❌ Error agregando mensaje de loading:', error);
-        setIsGeneratingSummary(false);
-        alert('❌ Error al mostrar el loader. Inténtalo de nuevo.');
-        return;
-      }
-      
       try {
         console.log('[ChatSidebar] 🔄 Llamando a generateSummary...');
         // ✅ USAR LA NUEVA FUNCIÓN QUE OBTIENE TODO DESDE FIRESTORE
@@ -1383,11 +1342,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         
         console.log('[ChatSidebar] ✅ Resumen generado exitosamente:', summaryText?.substring(0, 100) + '...');
         
-        // ✅ REEMPLAZAR EL MENSAJE DE LOADING CON EL RESUMEN COMPLETO
+        // ✅ CREAR EL MENSAJE DE RESUMEN COMPLETO
         const summaryMessage: Message = {
           id: `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          senderId: 'openai',
-          senderName: 'OpenAI',
+          senderId: 'chatgpt',
+          senderName: 'ChatGPT',
           text: summaryText,
           timestamp: new Date(),
           read: false,
@@ -1398,48 +1357,33 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           isLoading: false
         };
         
-        // ✅ REEMPLAZAR EL MENSAJE DE LOADING CON EL RESUMEN
+        // ✅ AGREGAR EL RESUMEN AL FINAL DE LA LISTA DE MENSAJES
         const currentMessages = useDataStore.getState().messages[task.id] || [];
-        const updatedMessages = currentMessages.map(m => 
-          m.id === loadingMessage.id ? summaryMessage : m
-        );
+        const updatedMessages = [...currentMessages, summaryMessage];
         useDataStore.getState().setMessages(task.id, updatedMessages);
         
-        console.log('[ChatSidebar] Summary message replaced loading message at the end:', summaryMessage.id);
-
-      } catch (error) {
-        console.error('[ChatSidebar] ❌ Error en handleGenerateSummary:', error);
-        let errorMessage = '❌ Error al generar el resumen.';
-        if (error instanceof Error) {
-          if (error.message.includes('PERMISSION_DENIED')) {
-            errorMessage = '🔒 No tienes permisos para usar la funcionalidad de resúmenes.';
-          } else if (error.message.includes('QUOTA_EXCEEDED')) {
-            errorMessage = '📊 Límite de resúmenes excedido por hoy.';
-          } else {
-            errorMessage = `❌ ${error.message}`;
-          }
-        }
+        console.log('[ChatSidebar] Summary message added to chat at the end:', summaryMessage.id);
         
-        // ✅ REEMPLAZAR EL MENSAJE DE LOADING CON EL ERROR
-        const errorMessageObj: Message = {
-          ...loadingMessage,
-          text: errorMessage,
-          hasError: true,
-          isLoading: false
-        };
-        const currentMessages = useDataStore.getState().messages[task.id] || [];
-        const updatedMessages = currentMessages.map(m => 
-          m.id === loadingMessage.id ? errorMessageObj : m
-        );
-        useDataStore.getState().setMessages(task.id, updatedMessages);
+        // ✅ ACTUALIZAR EL ESTADO LOCAL
+        setCurrentSummary({
+          text: summaryText,
+          interval,
+          timestamp: new Date()
+        });
         
-        alert(errorMessage);
-      } finally {
-        console.log('[ChatSidebar] 🏁 Finalizando handleGenerateSummary');
+        // ✅ LIMPIAR ESTADOS DE LOADING
         setIsGeneratingSummary(false);
-        setForceShowLoader(false); // ✅ LIMPIAR ESTADO DE EMERGENCIA
+        setForceShowLoader(false);
+        
+      } catch (error) {
+        console.error('[ChatSidebar] ❌ Error generando resumen:', error);
+        alert('❌ Error al generar el resumen. Inténtalo de nuevo.');
+        
+        // ✅ LIMPIAR ESTADOS DE LOADING EN CASO DE ERROR
+        setIsGeneratingSummary(false);
+        setForceShowLoader(false);
       }
-    }, [user?.id, task?.id, isGeneratingSummary, generateSummary, addMessage]);
+    }, [user?.id, task?.id, isGeneratingSummary, generateSummary]);
 
     // ✅ FUNCIONES ELIMINADAS - Ya no se usan con el botón simplificado
 
@@ -1686,16 +1630,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                 }}
                 disabled={isGeneratingSummary || messages.length === 0}
                 aria-label="Generar resumen de actividad"
-                title="Generar resumen de actividad 📊 (ignorar caché)"
+                title="Generar resumen de actividad (ignorar caché)"
                 whileTap={{ scale: 0.95, opacity: 0.8 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
               >
                 <Image
                   src="/Robot.svg"
-                  alt="Summarize"
+                  alt="Resumen"
                   width={16}
                   height={16}
                 />
+                <span style={{ marginLeft: '8px', fontSize: '12px' }}>resumen</span>
               </motion.button>
             </div>
           </div>
@@ -1881,9 +1826,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             if (isGeneratingSummary || forceShowLoader) {
               console.log('[ChatSidebar] 🎯 Renderizando loader al inicio (mensajes más recientes):', { isGeneratingSummary, forceShowLoader });
               return (
-                <div style={{ margin: '16px 0' }}>
+                <div style={{ margin: '16px 0' }} key="ai-summary-loader">
                   <AISummaryMessage
-                    summaryText=""
+                    key="ai-summary-loader-component"
+                    summary=""
                     interval="última semana"
                     timestamp={new Date()}
                     onClose={() => {}}
@@ -1904,22 +1850,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             return (
               <React.Fragment key={`${dateKey}-${group.date?.toISOString() || 'unknown'}`}>
                 {group.messages.map((message) => {
-                  // ✅ DEBUG: Verificar si hay mensajes de loading
-                  if (message.isLoading) {
-                    console.log('[ChatSidebar] 🔍 Renderizando mensaje de loading:', message.id);
-                    return (
-                      <AISummaryMessage
-                        key={message.id}
-                        summaryText=""
-                        interval="última semana"
-                        timestamp={message.timestamp instanceof Date ? message.timestamp : new Date()}
-                        onClose={() => {}} // No se puede cerrar un mensaje de loading
-                        isLoading={true}
-                      />
-                    );
-                  }
-
-                  // ✅ Mensaje normal
+                  // ✅ Mensaje normal (eliminamos el mensaje de loading duplicado)
                   return (
                     <MessageItem
                       key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}`}

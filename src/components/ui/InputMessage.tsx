@@ -1013,16 +1013,14 @@ export function InputMessage({
             <div className={styles.dropupContainer} ref={dropupRef}>
               <button
                 type="button"
-                className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${
-                  hasReformulated ? styles.reformulated : ''
-                } ${isProcessing ? 'processing' : ''}`}
+                className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`}
                 onClick={() => setIsDropupOpen((prev) => !prev)}
                 disabled={isSending || isProcessing || !editor || editor.isEmpty}
-                aria-label="Reformular texto con Gemini AI"
-                title="Reformular texto con Gemini AI ✨"
+                aria-label="Reformular texto con ChatGPT"
+                title="Reformular texto con ChatGPT"
                 aria-expanded={isDropupOpen}
               >
-                <Image src="/gemini.svg" alt="Gemini AI" width={16} height={16} draggable="false" />
+                <Image src="/OpenAI.svg" alt="OpenAI" width={16} height={16} draggable="false" />
               </button>
               {isDropupOpen && (
                 <div className={styles.dropupMenu} role="menu">

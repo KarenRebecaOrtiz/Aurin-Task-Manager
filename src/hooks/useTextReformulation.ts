@@ -1,7 +1,5 @@
-// src/hooks/useTextReformulation.ts
+// src/hooks/useTextReformulation.ts - Hook para reformulación de texto usando GPT
 import { useCallback } from 'react';
-import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
-import { ai } from '@/lib/firebase';
 import useTextReformulationStore from '@/stores/textReformulationStore';
 
 // ✅ TIPOS PARA REFORMULACIÓN
@@ -36,10 +34,6 @@ export const useTextReformulation = () => {
     text: string,
     context?: string
   ): Promise<string> => {
-    if (!ai) {
-      throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
-    }
-
     if (!text || text.trim().length === 0) {
       throw new Error('📝 No hay texto para reformular.');
     }
@@ -47,59 +41,49 @@ export const useTextReformulation = () => {
     setProcessing(true);
 
     try {
-      // ✅ CONSTRUIR PROMPT
+      // ✅ CONSTRUIR PROMPT PARA GPT
       const basePrompt = REFORMULATION_PROMPTS[mode];
       const contextInfo = context ? `\n\nContexto de la conversación: ${context}` : '';
       const prompt = `${basePrompt}\n\n"${text}"${contextInfo}`;
 
-      // ✅ CONFIGURACIÓN DE GENERACIÓN
-      const generationConfig = {
-        maxOutputTokens: 500,
-        temperature: 0.3,
-        topK: 20,
-        topP: 0.8,
-      };
-
-      const safetySettings = [
+      // ✅ CONSTRUIR MENSAJES PARA GPT
+      const messages = [
         {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+          role: 'system' as const,
+          content: 'Eres un asistente experto en reestructuración de texto. Proporcionas respuestas claras, útiles y bien formateadas. Mantienes el significado original del texto pero lo mejoras según la solicitud del usuario. Responde únicamente con el texto reformulado, sin explicaciones adicionales.'
         },
         {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
+          role: 'user' as const,
+          content: prompt
+        }
       ];
 
-      const systemInstruction = `Eres un asistente experto en reestructuración de texto. Proporcionas respuestas claras, útiles y bien formateadas. Mantienes el significado original del texto pero lo mejoras según la solicitud del usuario.`;
-
-      // ✅ GENERAR CONTENIDO
-      const model = getGenerativeModel(ai, {
-        model: 'gemini-1.5-flash',
-        generationConfig,
-        safetySettings,
-        systemInstruction,
+      // ✅ LLAMAR A NUESTRA API DE GPT
+      const response = await fetch('/api/generate-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskContext: 'Reformulación de texto',
+          activityContext: prompt,
+          interval: 'texto',
+          messages: messages
+        }),
       });
 
-      const result = await model.generateContent(prompt);
-      if (!result || !result.response) {
-        throw new Error('🚫 No se recibió respuesta del servidor de Gemini.');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`🚫 Error de la API: ${response.status} - ${errorData.error || 'Error desconocido'}`);
       }
 
-      // ✅ EXTRAER TEXTO
-      let responseText: string;
-      try {
-        responseText = await result.response.text();
-      } catch (textError) {
-        console.error('[useTextReformulation] Error al extraer texto:', textError);
-        throw new Error('⚠️ Error al procesar la respuesta de Gemini.');
+      const data = await response.json();
+      
+      if (!data.summary || data.summary.trim().length === 0) {
+        throw new Error('📝 GPT devolvió una respuesta vacía.');
       }
 
-      if (!responseText || responseText.trim().length === 0) {
-        throw new Error('📝 Gemini devolvió una respuesta vacía.');
-      }
-
-      const reformulatedText = responseText.trim();
+      const reformulatedText = data.summary.trim();
 
       // ✅ GUARDAR EN HISTORIAL
       addToHistory({
@@ -141,7 +125,7 @@ export const useTextReformulation = () => {
       }
     }
     
-    throw new Error('❌ Falló la reformulación después de todos los reintentos.');
+    throw new Error('❌ Falló la reformulación con GPT después de todos los reintentos.');
   }, [reformulateText]);
 
   return {
