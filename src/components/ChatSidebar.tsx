@@ -33,7 +33,6 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useShallow } from 'zustand/react/shallow';
 import { notificationService } from '@/services/notificationService';
 
-import { useGeminiIntegration } from '@/hooks/useGeminiIntegration';
 import { useGeminiSummary } from '@/hooks/useGeminiSummary';
 import { deleteTask as deleteTaskFromFirestore } from '@/lib/taskUtils';
 import AISummaryMessage from './ui/AISummaryMessage';
@@ -94,6 +93,7 @@ interface Message {
   } | null;
   isDatePill?: boolean;
   isSummary?: boolean;
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }
 
 interface ChatSidebarProps {
@@ -424,6 +424,8 @@ const MessageItem = memo(
         return contentElements;
       }, [message, formatTimeToHHMMSS, styles, handleImagePreviewClick]);
 
+
+
       if (message.isDatePill) {
         return (
           <div className={styles.datePill}>
@@ -642,6 +644,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const [activeCardDropdown, setActiveCardDropdown] = useState<string | null>(null);
     const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [forceShowLoader, setForceShowLoader] = useState(false); // ✅ ESTADO DE EMERGENCIA PARA EL LOADER
     const [currentSummary, setCurrentSummary] = useState<{
       text: string;
       interval: string;
@@ -1308,22 +1311,70 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const handleGenerateSummary = useCallback(async (interval: string, forceRefresh = false) => {
       console.log('[ChatSidebar] 🚀 handleGenerateSummary iniciado:', { interval, forceRefresh, userId: user?.id, taskId: task?.id });
       
-      if (!user?.id || !task?.id || isGeneratingSummary) {
-        console.log('[ChatSidebar] ❌ Validación fallida:', { hasUser: !!user?.id, hasTask: !!task?.id, isGenerating: isGeneratingSummary });
+      // ✅ VALIDACIONES BÁSICAS
+      if (!user?.id) {
+        console.error('[ChatSidebar] ❌ Usuario no autenticado');
+        alert('❌ Debes estar autenticado para generar resúmenes');
+        return;
+      }
+      
+      if (!task?.id) {
+        console.error('[ChatSidebar] ❌ Tarea no seleccionada');
+        alert('❌ No hay tarea seleccionada');
+        return;
+      }
+      
+      if (isGeneratingSummary) {
+        console.log('[ChatSidebar] ⏳ Ya se está generando un resumen, ignorando clic');
         return;
       }
       
       console.log('[ChatSidebar] ✅ Validación exitosa, iniciando generación...');
-      setIsGeneratingSummary(true);
       
-      // ✅ MOSTRAR INMEDIATAMENTE EL MENSAJE DE LOADING
-      const loadingSummaryData = {
-        text: '',
-        interval,
-        timestamp: new Date()
+      // ✅ FORZAR EL ESTADO DE LOADING INMEDIATAMENTE
+      setIsGeneratingSummary(true);
+      setForceShowLoader(true); // ✅ ACTIVAR ESTADO DE EMERGENCIA
+      
+      // ✅ CREAR MENSAJE VIRTUAL DEL LOADER INMEDIATAMENTE
+      const loadingMessage: Message = {
+        id: `loading_summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        senderId: 'ai_loader',
+        senderName: 'OpenAI',
+        text: '', // Texto vacío para indicar que está cargando
+        timestamp: new Date(),
+        read: false,
+        clientId: `loading_summary_${Date.now()}`,
+        isPending: false,
+        hasError: false,
+        isSummary: false,
+        isLoading: true, // ✅ NUEVO FLAG PARA INDICAR QUE ES UN LOADER
+        isDatePill: false // ✅ Asegurar que no se trate como un separador de fecha
       };
-      console.log('[ChatSidebar] 📝 Configurando loading:', loadingSummaryData);
-      setCurrentSummary(loadingSummaryData);
+      
+      // ✅ AGREGAR EL MENSAJE DE LOADING AL CHAT INMEDIATAMENTE
+      try {
+        // ✅ AGREGAR AL FINAL DE LA LISTA DE MENSAJES
+        const currentMessages = useDataStore.getState().messages[task.id] || [];
+        const updatedMessages = [...currentMessages, loadingMessage];
+        useDataStore.getState().setMessages(task.id, updatedMessages);
+        
+        console.log('[ChatSidebar] 📝 Loading message added to chat at the end:', loadingMessage.id);
+        
+        // ✅ VERIFICAR QUE EL MENSAJE SE AGREGÓ CORRECTAMENTE
+        const messagesAfterAdd = useDataStore.getState().messages[task.id] || [];
+        const messageAdded = messagesAfterAdd.find(m => m.id === loadingMessage.id);
+        if (!messageAdded) {
+          console.error('[ChatSidebar] ❌ El mensaje de loading no se agregó correctamente');
+          throw new Error('No se pudo agregar el mensaje de loading');
+        }
+        
+        console.log('[ChatSidebar] ✅ Loading message verified in store at position:', messagesAfterAdd.length - 1);
+      } catch (error) {
+        console.error('[ChatSidebar] ❌ Error agregando mensaje de loading:', error);
+        setIsGeneratingSummary(false);
+        alert('❌ Error al mostrar el loader. Inténtalo de nuevo.');
+        return;
+      }
       
       try {
         console.log('[ChatSidebar] 🔄 Llamando a generateSummary...');
@@ -1332,34 +1383,29 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         
         console.log('[ChatSidebar] ✅ Resumen generado exitosamente:', summaryText?.substring(0, 100) + '...');
         
-        // ✅ REEMPLAZAR EL LOADING CON EL RESUMEN COMPLETO
-        const summaryData = {
-          text: summaryText,
-          interval,
-          timestamp: new Date()
-        };
-        setCurrentSummary(summaryData);
-        
-        // ✅ CREAR MENSAJE REAL DEL RESUMEN EN EL CHAT
+        // ✅ REEMPLAZAR EL MENSAJE DE LOADING CON EL RESUMEN COMPLETO
         const summaryMessage: Message = {
           id: `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          senderId: 'gemini',
-          senderName: 'Gemini',
+          senderId: 'openai',
+          senderName: 'OpenAI',
           text: summaryText,
           timestamp: new Date(),
           read: false,
           clientId: `summary_${Date.now()}`,
           isPending: false,
           hasError: false,
-          // ✅ AGREGAR FLAG PARA INDICAR QUE ES UN RESUMEN CON FORMATO
-          isSummary: true
+          isSummary: true, // ✅ FLAG PARA INDICAR QUE ES UN RESUMEN CON FORMATO
+          isLoading: false
         };
         
-        // Agregar el mensaje del resumen al store local
-        addMessage(task.id, summaryMessage);
+        // ✅ REEMPLAZAR EL MENSAJE DE LOADING CON EL RESUMEN
+        const currentMessages = useDataStore.getState().messages[task.id] || [];
+        const updatedMessages = currentMessages.map(m => 
+          m.id === loadingMessage.id ? summaryMessage : m
+        );
+        useDataStore.getState().setMessages(task.id, updatedMessages);
         
-        console.log('[ChatSidebar] Summary message added to chat:', summaryMessage.id);
-        console.log('[ChatSidebar] Current messages count after adding summary:', messages.length + 1);
+        console.log('[ChatSidebar] Summary message replaced loading message at the end:', summaryMessage.id);
 
       } catch (error) {
         console.error('[ChatSidebar] ❌ Error en handleGenerateSummary:', error);
@@ -1373,15 +1419,27 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             errorMessage = `❌ ${error.message}`;
           }
         }
-        alert(errorMessage);
         
-        // ✅ LIMPIAR EL ESTADO EN CASO DE ERROR
-        setCurrentSummary(null);
+        // ✅ REEMPLAZAR EL MENSAJE DE LOADING CON EL ERROR
+        const errorMessageObj: Message = {
+          ...loadingMessage,
+          text: errorMessage,
+          hasError: true,
+          isLoading: false
+        };
+        const currentMessages = useDataStore.getState().messages[task.id] || [];
+        const updatedMessages = currentMessages.map(m => 
+          m.id === loadingMessage.id ? errorMessageObj : m
+        );
+        useDataStore.getState().setMessages(task.id, updatedMessages);
+        
+        alert(errorMessage);
       } finally {
         console.log('[ChatSidebar] 🏁 Finalizando handleGenerateSummary');
         setIsGeneratingSummary(false);
+        setForceShowLoader(false); // ✅ LIMPIAR ESTADO DE EMERGENCIA
       }
-    }, [user?.id, task?.id, isGeneratingSummary, generateSummary, addMessage, messages.length]);
+    }, [user?.id, task?.id, isGeneratingSummary, generateSummary, addMessage]);
 
     // ✅ FUNCIONES ELIMINADAS - Ya no se usan con el botón simplificado
 
@@ -1616,7 +1674,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
               <motion.button
                 type="button"
                 className={`${styles.imageButton} ${styles.tooltip} ${styles.summarizeButton} ${isGeneratingSummary ? 'processing' : ''}`}
-                onClick={() => handleGenerateSummary('1week', true)} // ✅ Generar resumen directamente con forceRefresh
+                onClick={() => {
+                  console.log('[ChatSidebar] 🎯 Botón de resumen presionado');
+                  console.log('[ChatSidebar] 📊 Estado actual:', { 
+                    isGeneratingSummary, 
+                    messagesLength: messages.length, 
+                    hasUser: !!user?.id, 
+                    hasTask: !!task?.id 
+                  });
+                  handleGenerateSummary('1week', true);
+                }}
                 disabled={isGeneratingSummary || messages.length === 0}
                 aria-label="Generar resumen de actividad"
                 title="Generar resumen de actividad 📊 (ignorar caché)"
@@ -1799,6 +1866,35 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           {!isLoadingMessages && messages.length === 0 && (
             <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
           )}
+          
+          {/* ✅ DEBUG: Verificar mensajes de loading */}
+          {(() => {
+            const loadingMessages = messages.filter(m => m.isLoading);
+            if (loadingMessages.length > 0) {
+              console.log('[ChatSidebar] 🔍 Mensajes de loading encontrados:', loadingMessages.length, loadingMessages.map(m => ({ id: m.id, isLoading: m.isLoading })));
+            }
+            return null;
+          })()}
+          
+          {/* ✅ LOADER AL INICIO: Mostrar loader SIEMPRE si se está generando un resumen */}
+          {(() => {
+            if (isGeneratingSummary || forceShowLoader) {
+              console.log('[ChatSidebar] 🎯 Renderizando loader al inicio (mensajes más recientes):', { isGeneratingSummary, forceShowLoader });
+              return (
+                <div style={{ margin: '16px 0' }}>
+                  <AISummaryMessage
+                    summaryText=""
+                    interval="última semana"
+                    timestamp={new Date()}
+                    onClose={() => {}}
+                    isLoading={true}
+                  />
+                </div>
+              );
+            }
+            return null;
+          })()}
+          
           {groupedMessages.map((group, groupIndex) => {
             // Validación defensiva para evitar "Invalid time value"
             const dateKey = group.date instanceof Date && !isNaN(group.date.getTime())
@@ -1807,46 +1903,53 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
 
             return (
               <React.Fragment key={`${dateKey}-${group.date?.toISOString() || 'unknown'}`}>
-                {group.messages.map((message) => (
-                <MessageItem
-                    key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}`}
-                  message={message}
-                  users={users}
-                  userId={user?.id}
-                  styles={styles}
-                  setActionMenuOpenId={setActionMenuOpenId}
-                  actionMenuOpenId={actionMenuOpenId}
-                  setEditingMessageId={setEditingMessageId}
-                  setEditingText={setEditingText}
-                  handleDeleteMessage={handleDeleteMessage}
-                  handleRetryMessage={handleRetryMessage}
-                  onOpenRetryModal={handleOpenRetryModal}
-                  setImagePreviewSrc={setImagePreviewSrc}
-                  editingMessageId={editingMessageId}
-                  isDraggingMessage={isDraggingMessage}
-                  draggedMessageId={draggedMessageId}
-                  dragOffset={dragOffset}
-                  onMessageDragStart={handleMessageDragStart}
-                  isNewChunk={newChunkMessageIds.has(message.id)}
-                  isLoadingChunk={isLoadingChunk}
-                  ref={message.id === messages[0]?.id ? lastMessageRef : null}
-                />
-              ))}
-              <DatePill date={group.date} />
-            </React.Fragment>
+                {group.messages.map((message) => {
+                  // ✅ DEBUG: Verificar si hay mensajes de loading
+                  if (message.isLoading) {
+                    console.log('[ChatSidebar] 🔍 Renderizando mensaje de loading:', message.id);
+                    return (
+                      <AISummaryMessage
+                        key={message.id}
+                        summaryText=""
+                        interval="última semana"
+                        timestamp={message.timestamp instanceof Date ? message.timestamp : new Date()}
+                        onClose={() => {}} // No se puede cerrar un mensaje de loading
+                        isLoading={true}
+                      />
+                    );
+                  }
+
+                  // ✅ Mensaje normal
+                  return (
+                    <MessageItem
+                      key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}`}
+                      message={message}
+                      users={users}
+                      userId={user?.id}
+                      styles={styles}
+                      setActionMenuOpenId={setActionMenuOpenId}
+                      actionMenuOpenId={actionMenuOpenId}
+                      setEditingMessageId={setEditingMessageId}
+                      setEditingText={setEditingText}
+                      handleDeleteMessage={handleDeleteMessage}
+                      handleRetryMessage={handleRetryMessage}
+                      onOpenRetryModal={handleOpenRetryModal}
+                      setImagePreviewSrc={setImagePreviewSrc}
+                      editingMessageId={editingMessageId}
+                      isDraggingMessage={isDraggingMessage}
+                      draggedMessageId={draggedMessageId}
+                      dragOffset={dragOffset}
+                      onMessageDragStart={handleMessageDragStart}
+                      isNewChunk={newChunkMessageIds.has(message.id)}
+                      isLoadingChunk={isLoadingChunk}
+                      ref={message.id === messages[0]?.id ? lastMessageRef : null}
+                    />
+                  );
+                })}
+                <DatePill date={group.date} />
+              </React.Fragment>
             );
           })}
-
-          {/* Mostrar resumen de IA si existe */}
-          {currentSummary && (
-            <AISummaryMessage
-              summaryText={currentSummary.text}
-              interval={currentSummary.interval}
-              timestamp={currentSummary.timestamp}
-              onClose={handleCloseSummary}
-              isLoading={!currentSummary.text} // Loading si no hay texto
-            />
-          )}
 
           <LoadMoreButton
             onClick={handleLoadMoreMessages}

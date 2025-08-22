@@ -70,6 +70,8 @@ interface Message {
     text: string | null;
     imageUrl?: string | null;
   } | null;
+  isSummary?: boolean; // Indicates if this message is an AI summary
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }
 
 interface DataStore {

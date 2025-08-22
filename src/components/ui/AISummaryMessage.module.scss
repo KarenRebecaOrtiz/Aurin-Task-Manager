@@ -1,164 +1,107 @@
 .aiSummaryMessage {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  margin: 16px 0;
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
+  width: 100%;
+  height: 80px;
   overflow: hidden;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    box-shadow: 
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    transform: translateY(-2px);
-  }
+  background: linear-gradient(to top, transparent 0%, rgba(255, 255, 255, 0.6) 100%);
+}
 
+.openaiCard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  min-width: 300px;
+  z-index: 10;
+  
+  .logoSpinning {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 24px;
+    color: white;
+    animation: spin 2s linear infinite;
+    
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+  
+  .generatingText {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+  }
+  
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    margin-bottom: 20px;
     
     .title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      
-      .icon {
-        font-size: 20px;
-      }
-      
-      .label {
-        font-size: 16px;
-      }
-      
-      .interval {
-        font-size: 14px;
-        opacity: 0.9;
-        font-weight: 500;
-      }
-    }
-    
-    .metadata {
-      display: flex;
-      align-items: center;
       gap: 12px;
       
-      .timestamp {
-        font-size: 12px;
-        opacity: 0.8;
-      }
-      
-      .loadingIndicator {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(255, 255, 255, 0.15);
-        padding: 6px 12px;
-        border-radius: 20px;
-        backdrop-filter: blur(10px);
-        
-        .thinkingDots {
-          display: flex;
-          gap: 4px;
-          
-          span {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.9);
-            animation: thinking 1.4s infinite ease-in-out;
-            
-            &:nth-child(1) { animation-delay: 0s; }
-            &:nth-child(2) { animation-delay: 0.2s; }
-            &:nth-child(3) { animation-delay: 0.4s; }
-          }
-        }
-        
-        .thinkingText {
-          font-size: 12px;
-          opacity: 0.9;
-          font-style: italic;
-          font-weight: 500;
-        }
-      }
-      
-      .closeButton {
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        border-radius: 50%;
+      .openaiLogo {
         width: 24px;
         height: 24px;
         color: white;
-        font-size: 18px;
-        font-weight: bold;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
         
-        &:hover {
-          background: rgba(255, 255, 255, 0.3);
-          transform: scale(1.1);
-        }
-        
-        &:active {
-          transform: scale(0.95);
+        svg {
+          width: 100%;
+          height: 100%;
         }
       }
+      
+      .label {
+        font-size: 18px;
+        font-weight: 700;
+        color: white;
+      }
     }
-  }
-
-  .content {
-    padding: 20px;
     
-    .loadingContent {
+    .closeButton {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 80px;
+      transition: all 0.2s ease;
       
-      .loadingMessage {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        text-align: center;
-        
-        .loadingIcon {
-          font-size: 32px;
-          animation: pulse 2s infinite ease-in-out;
-        }
-        
-        .loadingText {
-          p {
-            margin: 4px 0;
-            color: #6b7280;
-            font-size: 14px;
-            
-            &:first-child {
-              color: #374151;
-              font-weight: 500;
-            }
-          }
-        }
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+      }
+      
+      &:active {
+        transform: scale(0.95);
       }
     }
-    
+  }
+  
+  .content {
     .summaryText {
       font-size: 14px;
       line-height: 1.6;
-      color: #374151;
+      color: white;
+      text-align: left;
       
       // Estilos para markdown
       h1, h2, h3, h4, h5, h6 {
         margin: 16px 0 8px 0;
         font-weight: 600;
-        color: #1f2937;
+        color: white;
       }
       
       h1 { font-size: 18px; }
@@ -169,16 +112,16 @@
       .summary-h2 {
         font-size: 16px;
         font-weight: 600;
-        color: #1f2937;
+        color: white;
         margin: 20px 0 12px 0;
         padding-bottom: 8px;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.3);
       }
       
       .summary-h3 {
         font-size: 15px;
         font-weight: 600;
-        color: #374151;
+        color: white;
         margin: 16px 0 8px 0;
       }
       
@@ -189,22 +132,22 @@
         .summary-li {
           margin: 6px 0;
           line-height: 1.5;
-          color: #4b5563;
+          color: white;
           
           &::marker {
-            color: #8b5cf6;
+            color: white;
             font-weight: bold;
           }
         }
       }
       
       strong {
-        color: #1f2937;
+        color: white;
         font-weight: 600;
       }
       
       em {
-        color: #6b7280;
+        color: rgba(255, 255, 255, 0.8);
         font-style: italic;
       }
       
@@ -214,149 +157,54 @@
       }
     }
   }
-
-  .footer {
-    padding: 12px 20px;
-    background: #f9fafb;
-    border-top: 1px solid #e5e7eb;
-    
-    .note {
-      font-size: 12px;
-      color: #6b7280;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-  }
-}
-
-// Dark mode support
-:global(body.dark) .aiSummaryMessage {
-  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-  border-color: #4b5563;
-  
-  .header {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  }
-  
-  .content .summaryText {
-    color: #d1d5db;
-    
-    h1, h2, h3, h4, h5, h6 {
-      color: #f9fafb;
-    }
-    
-    strong {
-      color: #f9fafb;
-    }
-    
-    code {
-      background: #374151;
-      color: #fbbf24;
-    }
-  }
-  
-  .footer {
-    background: #111827;
-    border-top-color: #4b5563;
-    
-    .note {
-      color: #9ca3af;
-    }
-  }
 }
 
 // Responsive design
 @media (max-width: 768px) {
-  .aiSummaryMessage {
-    margin: 12px 8px;
-    border-radius: 12px;
+  .openaiCard {
+    margin: 20px;
+    padding: 24px;
+    min-width: auto;
+    width: calc(100% - 40px);
     
-    .header {
-      padding: 12px 16px;
-      
-      .title {
-        .label {
-          font-size: 14px;
-        }
-        
-        .interval {
-          font-size: 12px;
-        }
-      }
-      
-      .metadata .timestamp {
-        font-size: 11px;
-      }
+    .logoSpinning {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 20px;
     }
     
-    .content {
-      padding: 16px;
-      
-      .summaryText {
-        font-size: 13px;
-      }
+    .generatingText {
+      font-size: 16px;
     }
     
-    .footer {
-      padding: 10px 16px;
+    .header .title .label {
+      font-size: 16px;
     }
   }
 }
 
 // Animaciones
-@keyframes thinking {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.5;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
   }
-  40% {
-    transform: scale(1.2);
-    opacity: 1;
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-  }
-}
-
-// Animación de entrada para el mensaje
-.aiSummaryMessage {
+// Animación de entrada para el card
+.openaiCard {
   animation: slideInUp 0.4s ease-out;
 }
 
 @keyframes slideInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translate(-50%, -30%);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Transiciones suaves para cambios de estado
-.content {
-  transition: all 0.3s ease-in-out;
-}
-
-.loadingContent {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+    transform: translate(-50%, -50%);
   }
 }

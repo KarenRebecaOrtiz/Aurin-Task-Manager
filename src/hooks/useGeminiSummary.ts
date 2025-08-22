@@ -1,11 +1,10 @@
 // src/hooks/useGeminiSummary.ts
 import { useState, useCallback, useEffect } from 'react';
-import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
-import { ai } from '@/lib/firebase';
 import { decryptBatch } from '@/lib/encryption';
 import { useSummaryStore, SummaryCache } from '@/stores/summaryStore';
 import { doc, getDoc, setDoc, Timestamp, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useChatGPTIntegration } from './useChatGPTIntegration';
 
 interface Message {
   id: string;
@@ -19,6 +18,8 @@ interface Message {
   fileUrl?: string | null;
   fileName?: string | null;
   clientId: string;
+  isSummary?: boolean; // Indicates if this message is an AI summary
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }
 
 // ✅ INTERFACES COMPLETAS PARA LA INFORMACIÓN DE LA TAREA
@@ -285,11 +286,6 @@ export const useGeminiSummary = (taskId: string) => {
   ) => {
     console.log('[useGeminiSummary] 🚀 generateSummary iniciado:', { interval, messagesCount: messages.length, forceRefresh, taskId });
     
-    if (!ai) {
-      console.error('[useGeminiSummary] ❌ AI no disponible');
-      throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
-    }
-
     // ✅ VALIDAR INTERVALO PRIMERO
     if (!intervalLabels[interval as keyof typeof intervalLabels]) {
       console.error('[useGeminiSummary] ❌ Intervalo inválido:', interval);
@@ -378,7 +374,8 @@ export const useGeminiSummary = (taskId: string) => {
       return timerDate >= startDate;
     });
 
-    if (filteredMessages.length === 0 && filteredTimers.length === 0) {
+    // ✅ VERIFICAR SI HAY ALGUNA ACTIVIDAD PARA PROCESAR
+    if (filteredMessages.length === 0 && filteredTimers.length === 0 && totalTimeInfo.totalHours === 0) {
       const intervalLabel = intervalLabels[interval as keyof typeof intervalLabels] || interval;
       return `📊 No hay actividad registrada en los últimos ${intervalLabel.toLowerCase()}. El resumen estaría vacío.`;
     }
@@ -386,7 +383,7 @@ export const useGeminiSummary = (taskId: string) => {
     // ✅ DECRYPT BATCH DE MENSAJES PARA PRIVACIDAD
     const decryptedMessages = await decryptBatch(filteredMessages, 10, taskId);
     
-    // ✅ CREAR CONTEXTO COMPLETO PARA GEMINI
+    // ✅ CREAR CONTEXTO COMPLETO PARA CHATGPT
     const taskContext = `
 **INFORMACIÓN DE LA TAREA:**
 - **Nombre:** ${task.name}
@@ -406,7 +403,8 @@ export const useGeminiSummary = (taskId: string) => {
 - **Asignados:** ${task.AssignedTo.map(id => users.find(u => u.id === id)?.fullName || 'Desconocido').join(', ')}
 `;
 
-    const chatContext = decryptedMessages
+    // ✅ CONSTRUIR CONTEXTO DE CHAT CON MENSAJES Y ACTIVIDAD
+    let chatContext = decryptedMessages
       .map(msg => {
         const date = timestampToDate(msg.timestamp);
         const timeStr = date.toLocaleDateString('es-MX') + ' ' + date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
@@ -423,6 +421,44 @@ export const useGeminiSummary = (taskId: string) => {
       })
       .filter(Boolean)
       .join('\n');
+    
+    // ✅ AGREGAR INFORMACIÓN DE TIEMPO SI NO HAY MENSAJES
+    if (!chatContext || chatContext.trim().length === 0) {
+      const timeInfo = [];
+      
+      if (totalTimeInfo.totalHours > 0) {
+        timeInfo.push(`⏱️ **Tiempo Total Acumulado:** ${totalTimeInfo.totalHours.toFixed(2)} horas`);
+      }
+      
+      if (totalTimeInfo.timersCount > 0) {
+        timeInfo.push(`📊 **Sesiones de Trabajo:** ${totalTimeInfo.timersCount} timers registrados`);
+      }
+      
+      if (totalTimeInfo.timeMessagesCount > 0) {
+        timeInfo.push(`💬 **Registros de Tiempo:** ${totalTimeInfo.timeMessagesCount} mensajes con tiempo`);
+      }
+      
+      if (timeInfo.length > 0) {
+        chatContext = `**ACTIVIDAD DE TIEMPO REGISTRADA:**\n${timeInfo.join('\n')}`;
+      }
+    }
+
+    // ✅ ASEGURAR QUE chatContext SIEMPRE TENGA UN VALOR VÁLIDO
+    let finalChatContext = chatContext;
+    
+    // Si no hay mensajes, crear un contexto de actividad basado en la información disponible
+    if (!finalChatContext || finalChatContext.trim().length === 0) {
+      const intervalLabel = intervalLabels[interval as keyof typeof intervalLabels];
+      
+      // Crear contexto de actividad basado en timers o información general
+      if (filteredTimers.length > 0) {
+        finalChatContext = `**ACTIVIDAD RECIENTE (${intervalLabel}):** Se registraron ${filteredTimers.length} sesiones de trabajo con timers activos.`;
+      } else if (totalTimeInfo.totalHours > 0) {
+        finalChatContext = `**ACTIVIDAD RECIENTE (${intervalLabel}):** Se han acumulado ${totalTimeInfo.totalHours.toFixed(2)} horas de trabajo en esta tarea.`;
+      } else {
+        finalChatContext = `**ACTIVIDAD RECIENTE (${intervalLabel}):** No se registró actividad específica en este período, pero la tarea está activa y en progreso.`;
+      }
+    }
 
     const timersContext = filteredTimers.length > 0 ? `
 **TIMERS REGISTRADOS:**
@@ -433,123 +469,103 @@ ${filteredTimers.map(timer => {
   const minutes = Math.floor((duration % 3600) / 60);
   return `- ${timer.userName}: ${hours}h ${minutes}m (${startTime.toLocaleDateString('es-MX')})`;
 }).join('\n')}
-` : '';
+` : '**TIMERS REGISTRADOS:** No hay timers activos en este período.';
 
-    const prompt = `Como experto analista de proyectos, genera un resumen ejecutivo y detallado de la actividad en esta tarea durante ${intervalLabels[interval as keyof typeof intervalLabels]}. 
-
-**CONTEXTO COMPLETO DE LA TAREA:**
-${taskContext}
-
-**ACTIVIDAD RECIENTE (${intervalLabels[interval as keyof typeof intervalLabels]}):**
-${chatContext}
-
-**⏱️ TIEMPO TOTAL REGISTRADO:**
-- **Total acumulado:** ${totalTimeInfo.totalHours.toFixed(2)} horas
-- **Timers activos:** ${totalTimeInfo.timersCount} registros
-- **Mensajes con tiempo:** ${totalTimeInfo.timeMessagesCount} registros
-- **Segundos acumulados:** ${totalTimeInfo.accumulatedSeconds} segundos
-
-${timersContext}
-
-**IMPORTANTE:** Genera un resumen que sea:
-- 🎯 **Conciso y directo** (máximo 3-4 párrafos)
-- 😊 **Amigable y motivacional** (sin emojis)
-- 📊 **Estructurado y fácil de leer** (usa markdown para formato)
-- 💡 **Accionable** (con recomendaciones claras)
-
-**Formato requerido:**
-1. **📋 Resumen Ejecutivo** (1 párrafo máximo, tono motivacional)
-2. **💬 Comunicación del Equipo** (bullet points concisos con emojis)
-3. **⏱️ Tiempo Registrado** (formato visual atractivo con emojis, incluye el total real de horas)
-4. **🎯 Próximos Pasos** (lista de 2-3 acciones específicas y motivacionales)
-5. **📈 Estado del Proyecto** (con emoji y tono positivo)
-
-**Ejemplo de tono:**
-- "¡Excelente trabajo equipo! 🎉 Hemos avanzado significativamente..."
-- "Para continuar el momentum, recomiendo..."
-- "El proyecto está en buen camino hacia la finalización..."
-- "¡Seguimos construyendo algo increíble! 🚀"
-
-**Formato markdown específico:**
-- Usa **negritas** para títulos de sección
-- Usa *cursivas* para énfasis
-- Usa • para listas (no números)
-- Agrega emojis relevantes en cada sección
-- Mantén párrafos cortos (2-3 líneas máximo)
-
-**NOTA CRÍTICA:** El tiempo registrado en esta tarea es de **${totalTimeInfo.totalHours.toFixed(2)} horas totales**. Asegúrate de mencionar esto correctamente en la sección de tiempo registrado.
-
-Sé constructivo, motivacional y siempre termina con un mensaje positivo sobre el futuro del proyecto.`;
-
-    const generationConfig = {
-      maxOutputTokens: 1000,
-      temperature: 0.3,
-      topK: 20,
-      topP: 0.8,
-    };
-
-    const safetySettings = [
-      {
-        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-        threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-      },
-      {
-        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-      },
-    ];
-
-    const systemInstruction = `Eres un analista experto en gestión de proyectos. Creas resúmenes claros, estructurados y actionables de la actividad en tareas. Usa markdown para formatear tu respuesta y proporciona insights valiosos sobre el progreso y la colaboración del equipo.`;
-
-    const model = getGenerativeModel(ai, {
-      model: 'gemini-1.5-flash',
-      generationConfig,
-      safetySettings,
-      systemInstruction,
+    // ✅ DEBUG: Verificar que los contextos se construyan correctamente
+    console.log('[useGeminiSummary] 🔍 Contextos construidos:', {
+      taskContextLength: taskContext?.length || 0,
+      chatContextLength: chatContext?.length || 0,
+      finalChatContextLength: finalChatContext?.length || 0,
+      timersContextLength: timersContext?.length || 0,
+      filteredTimersCount: filteredTimers.length,
+      decryptedMessagesCount: decryptedMessages.length,
+      totalTimeInfo: totalTimeInfo,
+      hasActivity: !!(chatContext && chatContext.trim().length > 0),
     });
 
-    const result = await model.generateContent(prompt);
-    if (!result || !result.response) {
-      throw new Error('🚫 No se recibió respuesta del servidor de Gemini.');
-    }
-
-    let summaryText: string;
+    // ✅ GENERAR RESUMEN CON CHATGPT VÍA API ROUTE
     try {
-      summaryText = await result.response.text();
-    } catch (textError) {
-      console.error('[useGeminiSummary] Error al extraer texto:', textError);
-      throw new Error('⚠️ Error al procesar la respuesta de Gemini.');
-    }
-
-    if (!summaryText || summaryText.trim().length === 0) {
-      throw new Error('📝 Gemini devolvió un resumen vacío.');
-    }
-
-    const fullSummaryText = ` Resumen de actividad - ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`;
-    
-    // ✅ MEJORAR EL FORMATO DEL RESUMEN
-    const enhancedSummaryText = enhanceSummaryFormat(fullSummaryText, interval);
-    
-    // Guardar en caché (local y Firestore)
-    const cacheData = { text: enhancedSummaryText, timestamp: Date.now() };
-    
-    try {
-      // Guardar en Firestore primero
-      await setDoc(doc(db, 'summaries', cacheKey), cacheData);
-      console.log('[useGeminiSummary] Summary saved to Firestore successfully');
+      console.log('[useGeminiSummary] 🤖 Generando resumen con ChatGPT...');
       
-      // Luego actualizar caché local
-      setSummary(cacheKey, cacheData);
-      console.log('[useGeminiSummary] Summary cached locally successfully');
-    } catch (firestoreError) {
-      console.error('[useGeminiSummary] Failed to save to Firestore, but keeping local cache:', firestoreError);
-      // Al menos mantener en caché local
-      setSummary(cacheKey, cacheData);
-    }
+      // ✅ VALIDAR QUE TENEMOS TODOS LOS CAMPOS REQUERIDOS
+      if (!finalChatContext || finalChatContext.trim().length === 0) {
+        throw new Error('❌ No se pudo generar contexto de actividad válido para el resumen');
+      }
+      
+      // ✅ DEBUG: Verificar datos antes de enviar
+      const requestData = {
+        taskContext,
+        activityContext: finalChatContext,
+        timersContext,
+        interval: intervalLabels[interval as keyof typeof intervalLabels],
+      };
+      
+      console.log('[useGeminiSummary] 📤 Datos a enviar a la API:', {
+        taskContextLength: taskContext?.length || 0,
+        activityContextLength: finalChatContext?.length || 0,
+        timersContextLength: timersContext?.length || 0,
+        interval: intervalLabels[interval as keyof typeof intervalLabels],
+        taskContext: taskContext?.substring(0, 100) + '...',
+        activityContext: finalChatContext?.substring(0, 100) + '...',
+        timersContext: timersContext?.substring(0, 100) + '...',
+        isValid: !!(taskContext && finalChatContext && intervalLabels[interval as keyof typeof intervalLabels]),
+      });
+      
+      // ✅ LLAMAR A NUESTRA API ROUTE
+      const apiResponse = await fetch('/api/generate-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
 
-    console.log('[useGeminiSummary] Summary generated and cached successfully');
-    
-    return enhancedSummaryText;
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({}));
+        throw new Error(`🚫 Error de la API: ${apiResponse.status} - ${errorData.error || 'Error desconocido'}`);
+      }
+
+      const apiData = await apiResponse.json();
+      
+      if (!apiData.success || !apiData.summary) {
+        throw new Error('📝 La API no devolvió un resumen válido');
+      }
+
+      const summaryText = apiData.summary;
+
+      if (!summaryText || summaryText.trim().length === 0) {
+        throw new Error('📝 ChatGPT devolvió un resumen vacío.');
+      }
+
+      const fullSummaryText = `📊 Resumen de actividad - ${intervalLabels[interval as keyof typeof intervalLabels]}\n\n${summaryText}`;
+      
+      // ✅ MEJORAR EL FORMATO DEL RESUMEN
+      const enhancedSummaryText = enhanceSummaryFormat(fullSummaryText, interval);
+      
+      // Guardar en caché (local y Firestore)
+      const cacheData = { text: enhancedSummaryText, timestamp: Date.now() };
+      
+      try {
+        // Guardar en Firestore primero
+        await setDoc(doc(db, 'summaries', cacheKey), cacheData);
+        console.log('[useGeminiSummary] Summary saved to Firestore successfully');
+        
+        // Luego actualizar caché local
+        setSummary(cacheKey, cacheData);
+        console.log('[useGeminiSummary] Summary cached locally successfully');
+      } catch (firestoreError) {
+        console.error('[useGeminiSummary] Failed to save to Firestore, but keeping local cache:', firestoreError);
+        // Al menos mantener en caché local
+        setSummary(cacheKey, cacheData);
+      }
+
+      console.log('[useGeminiSummary] Summary generated and cached successfully');
+      
+      return enhancedSummaryText;
+    } catch (error) {
+      console.error('[useGeminiSummary] Error generando resumen con ChatGPT:', error);
+      throw error;
+    }
   }, [taskId, setSummary]);
 
   // ✅ FUNCIÓN HELPER PARA MEJORAR EL FORMATO DEL RESUMEN

@@ -26,6 +26,7 @@ import TagDropdown, { TagItem } from '@/components/ui/TagDropdown';
 import { GeminiImageAnalyzer } from '@/components/ui/GeminiImageAnalyzer';
 import { useGeminiIntegration } from '@/hooks/useGeminiIntegration';
 import { useMentionHandler } from '@/hooks/useMentionHandler';
+import { useTextReformulation } from '@/hooks/useTextReformulation';
 // Removido: useGeminiModes ya no se usa después de la refactorización
 // Removido: useGeminiStore ya no se usa directamente después de la refactorización
 
@@ -71,6 +72,8 @@ interface Message {
     text: string | null;
     imageUrl?: string | null;
   } | null;
+  isSummary?: boolean; // Indicates if this message is an AI summary
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }
 
 interface InputChatProps {
@@ -349,7 +352,8 @@ export default function InputChat({
   }, [isClient]);
 
   // Hooks para Gemini y menciones
-  const { generateReformulation, generateQueryResponse } = useGeminiIntegration(taskId);
+  const { generateQueryResponse } = useGeminiIntegration(taskId);
+  const { reformulateText } = useTextReformulation();
   const { showDropdown, handleSelection } = useMentionHandler(editor);
   
   // Estado para menciones
@@ -571,7 +575,7 @@ export default function InputChat({
       // Los prompts ahora se manejan en el hook useGeminiIntegration
       
       // Usar hook de Gemini para reformulación
-      const reformulatedText = await generateReformulation(mode, editor.getText());
+      const reformulatedText = await reformulateText(mode, editor.getText());
       
       if (!reformulatedText.trim()) throw new Error('📝 Gemini devolvió una respuesta vacía.');
       
@@ -588,7 +592,7 @@ export default function InputChat({
     } finally {
       setIsProcessing(false);
     }
-  }, [userId, editor, isProcessing, setReformHistory, generateReformulation, adjustEditorHeight, setHasReformulated]);
+  }, [userId, editor, isProcessing, setReformHistory, reformulateText, adjustEditorHeight, setHasReformulated]);
 
   const handleSend = useCallback(async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
