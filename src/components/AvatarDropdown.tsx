@@ -224,12 +224,12 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
           <button onClick={handleConfig} className={styles.dropdownItem}>
             <Image
               src="/settings.svg"
-              alt="Perfil"
+              alt="Configuración"
               width={16}
               height={16}
               className={styles.dropdownIcon}
             />
-            Perfil
+            Configuración
           </button>
           <button onClick={handleLogout} className={styles.dropdownItem}>
             <Image

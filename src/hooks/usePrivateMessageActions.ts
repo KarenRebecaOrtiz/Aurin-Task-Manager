@@ -117,21 +117,26 @@ export const usePrivateMessageActions = ({
       });
 
       // Create notification using centralized service
-      try {
-        const notificationText = messageData.text 
-          ? `${senderName} te escribió: ${messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text}`
-          : `${senderName} te ha enviado un mensaje privado`;
-          
-        await notificationService.createNotification({
-          userId: senderId,
-          recipientId: receiverId,
-          message: notificationText,
-          type: 'private_message',
-          conversationId,
-        });
-        console.log('[usePrivateMessageActions] Created private message notification');
-      } catch (error) {
-        console.error('[usePrivateMessageActions] Failed to create notification:', error);
+      // Skip notifications for AI/bot messages (like Gemini) to avoid errors
+      if (senderId !== 'gemini' && !senderId.startsWith('ai_')) {
+        try {
+          const notificationText = messageData.text 
+            ? `${senderName} te escribió: ${messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text}`
+            : `${senderName} te ha enviado un mensaje privado`;
+            
+          await notificationService.createNotification({
+            userId: senderId,
+            recipientId: receiverId,
+            message: notificationText,
+            type: 'private_message',
+            conversationId,
+          });
+          console.log('[usePrivateMessageActions] Created private message notification');
+        } catch (error) {
+          console.error('[usePrivateMessageActions] Failed to create notification:', error);
+        }
+      } else {
+        console.log('[usePrivateMessageActions] Skipping notification for AI message from:', senderId);
       }
     } catch (error) {
       console.error('Send message error:', error);

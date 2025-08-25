@@ -328,8 +328,9 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
       const wasAtBottom = lastScrollTop.current >= chat.scrollHeight - chat.clientHeight - 150; // Verificar si estaba cerca del fondo
       
       // Solo hacer scroll si estaba cerca del fondo o si es un mensaje propio
+      // CORRECCIÓN: allMessages[0] es el mensaje más reciente debido a orderBy('timestamp', 'desc')
       const shouldScroll = isAtBottom() || wasAtBottom || 
-        (allMessages.length > 0 && allMessages[allMessages.length - 1]?.senderId === currentUserId);
+        (allMessages.length > 0 && allMessages[0]?.senderId === currentUserId);
       
       if (shouldScroll) {
         // Usar requestAnimationFrame para un scroll más suave

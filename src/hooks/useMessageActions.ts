@@ -27,6 +27,8 @@ interface Message {
     text: string | null;
     imageUrl?: string | null;
   } | null;
+  isSummary?: boolean; // Indicates if this message is an AI summary
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }
 
 interface Task {
@@ -273,11 +275,64 @@ export const useMessageActions = ({
     }
   }, [task.id]);
 
-  // Helper para crear timestamp al final del día (23:59:59)
-  const getEndOfDayTimestamp = (date: Date): Timestamp => {
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
-    return Timestamp.fromDate(endDate);
+  // Helper para crear timestamp con la hora actual del día seleccionado
+  const getCurrentTimeTimestamp = (date: Date): Timestamp => {
+    const now = new Date();
+    const selectedDate = new Date(date);
+    
+    // Mantener la fecha seleccionada pero con la hora actual
+    selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    
+    return Timestamp.fromDate(selectedDate);
+  };
+
+  // Helper para parsear fechas en formato mexicano (DD/MM/YYYY)
+  const parseMexicanDate = (dateString: string): Date => {
+    try {
+      // Formato esperado: "DD/MM/YYYY" o "D/M/YYYY"
+      const parts = dateString.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Meses en JS son 0-based
+        const year = parseInt(parts[2], 10);
+        
+        // Validar que los números sean válidos
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year) && 
+            day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900) {
+          const parsedDate = new Date(year, month, day);
+          
+          // Validar que no sea fecha futura
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (parsedDate > today) {
+            console.warn('[useMessageActions] Future date detected, using current date:', dateString);
+            return new Date();
+          }
+          
+          return parsedDate;
+        }
+      }
+      
+      // Fallback: intentar con Date constructor
+      const fallbackDate = new Date(dateString);
+      if (!isNaN(fallbackDate.getTime())) {
+        // Validar que no sea fecha futura
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (fallbackDate > today) {
+          console.warn('[useMessageActions] Future date detected in fallback, using current date:', dateString);
+          return new Date();
+        }
+        return fallbackDate;
+      }
+      
+      // Si todo falla, usar fecha actual
+      console.warn('[useMessageActions] Invalid date format, using current date:', dateString);
+      return new Date();
+    } catch (error) {
+      console.warn('[useMessageActions] Error parsing date, using current date:', dateString, error);
+      return new Date();
+    }
   };
 
   const sendTimeMessage = useCallback(async (
@@ -294,9 +349,9 @@ export const useMessageActions = ({
     const commentTempId = `temp-comment-${commentClientId}`;
     
     try {
-      // Usar fecha seleccionada o fallback a now()
+      // Usar fecha seleccionada con hora actual o fallback a now()
       const timestamp = dateString 
-        ? getEndOfDayTimestamp(new Date(dateString))
+        ? getCurrentTimeTimestamp(parseMexicanDate(dateString))
         : Timestamp.now();
       
       const timeMessage = dateString 

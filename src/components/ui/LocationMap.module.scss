@@ -1,0 +1,53 @@
+@use '@/app/styles/variables' as *;
+
+.mapContainer {
+  margin-top: 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: white;
+  pointer-events: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 280px;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  :global(body.dark) & {
+    border-color: #475569;
+    background: #1e293b;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.map {
+  width: 100%;
+  height: 280px;
+  border-radius: 16px;
+  pointer-events: none;
+  max-width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  
+  // Ocultar controles de Google Maps
+  :global(.gm-control-active) {
+    display: none !important;
+  }
+  
+  :global(.gm-style-moc) {
+    display: none !important;
+  }
+  
+  :global(.gm-style-mtc) {
+    display: none !important;
+  }
+  
+  :global(.gm-style-cc) {
+    display: none !important;
+  }
+  
+  :global(.gm-style) {
+    pointer-events: none !important;
+  }
+}

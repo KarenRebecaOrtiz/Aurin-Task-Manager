@@ -18,7 +18,8 @@ import SimpleTooltip from './SimpleTooltip';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useTaskNotificationsSingleton } from '@/hooks/useTaskNotificationsSingleton';
 import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
-import { TextShimmer } from '@/components/TextShimmer';
+import { TextShimmer } from './TextShimmer';
+import { motion } from 'framer-motion';
 
 interface Notification {
   id: string;
@@ -73,7 +74,6 @@ const Header: React.FC<HeaderProps> = ({
   /* ────────────────────────────────────────────
      REFS
   ──────────────────────────────────────────── */
-  const welcomeRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
@@ -181,6 +181,7 @@ const Header: React.FC<HeaderProps> = ({
     setIsNotificationsVisible(isNotificationsOpen);
   }, [isNotificationsOpen]);
 
+<<<<<<< HEAD
   /* ────────────────────────────────────────────
      EFFECTS – ADMIN BUTTON INITIALIZATION
    ──────────────────────────────────────────── */
@@ -226,6 +227,9 @@ const Header: React.FC<HeaderProps> = ({
       }
     };
   }, [isLoaded, isAdmin]);
+=======
+
+>>>>>>> staging
 
   /* ────────────────────────────────────────────
      EFFECTS – SUN/MOON ICON ENTRANCE
@@ -451,11 +455,49 @@ const Header: React.FC<HeaderProps> = ({
           <div className={styles.frame14}>
             <div className={styles.title}>
               <div className={styles.welcome}>
+<<<<<<< HEAD
                 <span className={styles.welcomeText}>Te damos la bienvenida de nuevo, </span>
                 <span className={styles.nameContainer}>
                   <TextShimmer duration={3} spread={1.5}>{userName}</TextShimmer>
                 </span>
                 <div ref={welcomeRef} className={styles.adminButtonContainer}></div>
+=======
+                <span className={styles.welcomeText}>
+                  Te damos la bienvenida de nuevo,{' '}
+                  <TextShimmer as="span" className={styles.userNameShimmer}>
+                    {userName}
+                  </TextShimmer>
+                </span>
+                {isAdmin && (
+                  <motion.div 
+                    className={styles.adminBadge}
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 15,
+                      delay: 0.5
+                    }}
+                    whileHover={{ 
+                      scale: 1.15, 
+                      rotate: 5,
+                      transition: { duration: 0.2 }
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className={styles.adminBadgeInner}>
+                      <Image
+                        src="/verified.svg"
+                        alt="Admin Verified"
+                        width={16}
+                        height={16}
+                        className={styles.adminBadgeIcon}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+>>>>>>> staging
               </div>
             </div>
             <div className={styles.text}>

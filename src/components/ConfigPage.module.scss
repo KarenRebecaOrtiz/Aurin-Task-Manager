@@ -9,9 +9,33 @@
 // Config Tabs Container
 .configTabsContainer {
   margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   
   .expandableTabs {
     margin-bottom: 1.5rem;
+  }
+}
+
+.configTabsHeader {
+  flex-shrink: 0;
+}
+
+.configTabsTitle {
+  font-family: "Urbanist", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  white-space: nowrap;
+
+  :global(body.dark) & {
+    color: #e5e7eb;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.125rem;
   }
 }
 
@@ -362,6 +386,9 @@
   font-size: 24px;
   font-family: "Urbanist", sans-serif;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
   :global(body.dark) & {
     color: #d1d5db;
@@ -370,6 +397,135 @@
   @media (max-width: 768px) {
     font-size: 20px;
   }
+}
+
+.adminBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(
+    65.28% 65.28% at 50% 100%,
+    rgba(59, 130, 246, 0.8) 0%,
+    rgba(59, 130, 246, 0) 100%
+  ),
+  linear-gradient(0deg, #3b82f6, #2563eb);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  animation: badgePulse 2s ease-in-out infinite;
+  
+  &:hover {
+    transform: scale(1.15) rotate(5deg);
+    background: radial-gradient(
+      65.28% 65.28% at 50% 100%,
+      rgba(59, 130, 246, 0.9) 0%,
+      rgba(59, 130, 246, 0) 100%
+    ),
+    linear-gradient(0deg, #2563eb, #1d4ed8);
+    animation: badgeShake 0.6s ease-in-out;
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: linear-gradient(
+      177.95deg,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    border-radius: 50%;
+    z-index: 0;
+    animation: badgeGlow 3s ease-in-out infinite;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(59, 130, 246, 0.3),
+      transparent,
+      rgba(59, 130, 246, 0.3),
+      transparent
+    );
+    border-radius: 50%;
+    animation: badgeRotate 4s linear infinite;
+    z-index: -1;
+  }
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 0 rgba(59, 130, 246, 0.4),
+      0 0 20px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 8px rgba(59, 130, 246, 0.1),
+      0 0 30px rgba(59, 130, 246, 0.4);
+  }
+}
+
+@keyframes badgeGlow {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes badgeRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes badgeShake {
+  0%, 100% {
+    transform: scale(1.15) rotate(5deg);
+  }
+  25% {
+    transform: scale(1.15) rotate(-3deg);
+  }
+  75% {
+    transform: scale(1.15) rotate(8deg);
+  }
+}
+
+.adminBadgeInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.adminBadgeIcon {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
 }
 
 .exampleMailCom {
@@ -1617,9 +1773,10 @@
 
 .fieldGroup2 {
   display: flex;
-  gap: 20px;
-  margin-bottom: 15px;
+  gap: 24px; // Aumentado para más espacio entre elementos
+  margin-bottom: 24px; // Aumentado para más espacio entre grupos
   flex-direction: column;
+  position: relative; // Para posicionamiento correcto
 }
 
 .frame239182,
@@ -2417,7 +2574,12 @@
   }
 
   :global(body.dark) & {
-    @include crystal-dark(rgba(55, 65, 81, 0.6));
+    background: rgb(34 34 37);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
 
     &:hover {
       background: rgba(55, 65, 81, 0.8);
@@ -2773,7 +2935,7 @@
   -webkit-backdrop-filter: blur(8px);
 
   :global(body.dark) & {
-    background: rgba(55, 65, 81, 0.3);
+    background: rgb(34 34 37);
     border-color: rgba(255, 255, 255, 0.1);
   }
 
@@ -2925,5 +3087,61 @@
 
 :global(body.dark) .switch input:checked + .slider {
   background-color: rgb(0, 200, 80);
+}
+
+// Contenedor para mapas de ubicaciones
+.locationMapContainer {
+  margin-top: 16px;
+  width: 100%;
+  
+  .mapContainer {
+    margin-top: 16px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    background: white;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 280px;
+    position: relative;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+    :global(body.dark) & {
+      border-color: #475569;
+      background: #1e293b;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  .map {
+    width: 100%;
+    height: 280px;
+    border-radius: 16px;
+    max-width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    
+    // Ocultar controles de Google Maps
+    :global(.gm-control-active) {
+      display: none !important;
+    }
+    
+    :global(.gm-style-moc) {
+      display: none !important;
+    }
+    
+    :global(.gm-style-mtc) {
+      display: none !important;
+    }
+    
+    :global(.gm-style-cc) {
+      display: none !important;
+    }
+    
+    :global(.gm-style) {
+      pointer-events: none !important;
+    }
+  }
 }
 

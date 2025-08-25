@@ -39,6 +39,8 @@ interface Message {
     imageUrl?: string | null;
   } | null;
   isDatePill?: boolean;
+  isSummary?: boolean; // Indicates if this message is an AI summary
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
   encrypted?: {
     encryptedData: string;
     nonce: string;
@@ -84,22 +86,65 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
   let currentDate: Date | null = null;
   let currentGroup: Message[] = [];
 
+  // Debugging removido para limpiar consola
+
   const sortedMessages = [...messages].sort((a, b) => {
-    const aTime = a.timestamp ? (a.timestamp instanceof Timestamp ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
-    const bTime = b.timestamp ? (b.timestamp instanceof Timestamp ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
+    // Usar timestamp real de Firestore (lastModified) si existe, sino timestamp normal
+    const getTimestamp = (msg: Message) => {
+      // Priorizar lastModified para obtener el timestamp real de Firestore
+      if (msg.lastModified) {
+        return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate().getTime() : new Date(msg.lastModified).getTime();
+      }
+      // Fallback a timestamp normal
+      return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate().getTime() : new Date(msg.timestamp).getTime()) : 0;
+    };
+    
+    const aTime = getTimestamp(a);
+    const bTime = getTimestamp(b);
     return bTime - aTime;
   });
+
+  // Debugging removido para limpiar consola
 
   sortedMessages.forEach((message) => {
     if (message.isDatePill) return;
 
-    const messageDate = message.timestamp ? (message.timestamp instanceof Timestamp ? message.timestamp.toDate() : new Date(message.timestamp)) : new Date();
+    // Usar timestamp real de Firestore para agrupar por fecha
+    const getMessageDate = (msg: Message) => {
+      // Priorizar lastModified para obtener la fecha real
+      if (msg.lastModified) {
+        return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate() : new Date(msg.lastModified);
+      }
+      // Fallback a timestamp normal
+      return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp)) : new Date();
+    };
+    
+    const messageDate = getMessageDate(message);
+    
+    // Debugging removido para limpiar consola
 
     if (!currentDate || messageDate.toDateString() !== currentDate.toDateString()) {
       if (currentGroup.length > 0 && currentDate) {
+        // Ordenar mensajes dentro del grupo cronológicamente (más recientes primero - como column-reverse)
+        const sortedGroup = [...currentGroup].sort((a, b) => {
+          // Usar el mismo getTimestamp que arriba para consistencia
+          const getTimestamp = (msg: Message) => {
+            if (msg.lastModified) {
+              return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate().getTime() : new Date(msg.lastModified).getTime();
+            }
+            return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate().getTime() : new Date(msg.timestamp).getTime()) : 0;
+          };
+          
+          const aTime = getTimestamp(a);
+          const bTime = getTimestamp(b);
+          return bTime - aTime; // Orden inverso: más reciente primero (column-reverse)
+        });
+        
+        // Debugging removido para limpiar consola
+        
         grouped.push({
           date: currentDate,
-          messages: currentGroup,
+          messages: sortedGroup,
         });
       }
       currentDate = messageDate;
@@ -110,11 +155,30 @@ export const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
   });
 
   if (currentGroup.length > 0 && currentDate) {
+    // Ordenar el último grupo también (más recientes primero - como column-reverse)
+    const sortedGroup = [...currentGroup].sort((a, b) => {
+      // Usar el mismo getTimestamp que arriba para consistencia
+      const getTimestamp = (msg: Message) => {
+        if (msg.lastModified) {
+          return msg.lastModified instanceof Timestamp ? msg.lastModified.toDate().getTime() : new Date(msg.lastModified).getTime();
+        }
+        return msg.timestamp ? (msg.timestamp instanceof Timestamp ? msg.timestamp.toDate().getTime() : new Date(msg.timestamp).getTime()) : 0;
+      };
+      
+      const aTime = getTimestamp(a);
+      const bTime = getTimestamp(b);
+      return bTime - aTime; // Orden inverso: más reciente primero (column-reverse)
+    });
+    
+    // Debugging removido para limpiar consola
+    
     grouped.push({
       date: currentDate,
-      messages: currentGroup,
+      messages: sortedGroup,
     });
   }
+
+  // Debugging removido para limpiar consola
 
   return grouped;
 };

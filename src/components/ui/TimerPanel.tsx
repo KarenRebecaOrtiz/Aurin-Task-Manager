@@ -17,7 +17,12 @@ import Image from 'next/image';
 const timerFormSchema = z.object({
   time: z.string().min(1, { message: "La hora es requerida*" })
     .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Formato de hora inválido (HH:MM)*" }),
-  date: z.date({ required_error: "La fecha es requerida*" }),
+  date: z.date({ required_error: "La fecha es requerida*" })
+    .refine((date) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset to start of day
+      return date <= today;
+    }, { message: "No puedes añadir tiempo para fechas futuras*" }),
   comment: z.string().optional(),
 });
 
@@ -404,6 +409,25 @@ const TimerPanel = forwardRef<HTMLDivElement, TimerPanelProps>(({
                   onSelect={handleDateSelect}
                   locale={es}
                   weekStartsOn={1}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date > today;
+                  }}
+                  modifiers={{
+                    disabled: (date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date > today;
+                    }
+                  }}
+                  modifiersStyles={{
+                    disabled: {
+                      color: '#9ca3af',
+                      textDecoration: 'line-through',
+                      cursor: 'not-allowed'
+                    }
+                  }}
                 />
               </div>
               {form.formState.errors.date && (

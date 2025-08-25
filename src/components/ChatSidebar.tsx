@@ -33,9 +33,40 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useShallow } from 'zustand/react/shallow';
 import { notificationService } from '@/services/notificationService';
 
-import { useGeminiIntegration } from '@/hooks/useGeminiIntegration';
+import { useGeminiSummary } from '@/hooks/useGeminiSummary';
 import { deleteTask as deleteTaskFromFirestore } from '@/lib/taskUtils';
+import AISummaryMessage from './ui/AISummaryMessage';
 
+// ✅ FUNCIÓN PARA CONVERTIR MARKDOWN A HTML
+const markdownToHtml = (markdown: string): string => {
+  return markdown
+    // Títulos
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    
+    // Negritas y cursivas
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    
+    // Listas
+    .replace(/^• (.*$)/gim, '<li>$1</li>')
+    .replace(/^\- (.*$)/gim, '<li>$1</li>')
+    
+    // Envolver listas en <ul> (sin el flag 's')
+    .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
+    
+    // Saltos de línea
+    .replace(/\n/g, '<br/>')
+    
+    // Párrafos
+    .replace(/(<br\/>)+/g, '</p><p>')
+    .replace(/^(.*)$/gm, '<p>$1</p>')
+    
+    // Limpiar párrafos vacíos
+    .replace(/<p><\/p>/g, '')
+    .replace(/<p><br\/><\/p>/g, '');
+};
 
 interface Message {
   id: string;
@@ -61,6 +92,8 @@ interface Message {
     imageUrl?: string | null;
   } | null;
   isDatePill?: boolean;
+  isSummary?: boolean;
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }
 
 interface ChatSidebarProps {
@@ -301,16 +334,33 @@ const MessageItem = memo(
         }
 
         if (message.text) {
-          // Reemplazar menciones @ con estilos azules
-          const mentionedText = message.text.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
-          contentElements.push(
-            <div key="text" className={styles.messageText} dangerouslySetInnerHTML={{ 
-              __html: sanitizeHtml(mentionedText, { 
-                allowedTags: [...sanitizeHtml.defaults.allowedTags, 'span'], 
-                allowedAttributes: { span: ['class'] } 
-              }) 
-            }} />
-          );
+          // ✅ PROCESAR DIFERENTEMENTE SI ES UN RESUMEN
+          if (message.isSummary) {
+            // Para resúmenes, convertir markdown a HTML primero
+            const htmlContent = markdownToHtml(message.text);
+            contentElements.push(
+              <div key="text" className={`${styles.messageText} ${styles.summaryFormat}`} dangerouslySetInnerHTML={{ 
+                __html: sanitizeHtml(htmlContent, { 
+                  allowedTags: [...sanitizeHtml.defaults.allowedTags, 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'p'], 
+                  allowedAttributes: { 
+                    ...sanitizeHtml.defaults.allowedAttributes,
+                    'class': ['*']
+                  } 
+                }) 
+              }} />
+            );
+          } else {
+            // Para mensajes normales, procesar menciones @
+            const mentionedText = message.text.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+            contentElements.push(
+              <div key="text" className={styles.messageText} dangerouslySetInnerHTML={{ 
+                __html: sanitizeHtml(mentionedText, { 
+                  allowedTags: [...sanitizeHtml.defaults.allowedTags, 'span'], 
+                  allowedAttributes: { span: ['class'] } 
+                }) 
+              }} />
+            );
+          }
         }
 
         if (message.imageUrl) {
@@ -374,6 +424,8 @@ const MessageItem = memo(
         return contentElements;
       }, [message, formatTimeToHHMMSS, styles, handleImagePreviewClick]);
 
+
+
       if (message.isDatePill) {
         return (
           <div className={styles.datePill}>
@@ -407,7 +459,7 @@ const MessageItem = memo(
         >
           <UserAvatar
             userId={message.senderId}
-            imageUrl={message.senderId === 'gemini' ? '/Gemini.png' : users.find((u) => u.id === message.senderId)?.imageUrl}
+            imageUrl={message.senderId === 'gemini' ? '/Gemini.png' : message.senderId === 'chatgpt' ? '/ChatGPT-Logo.png' : users.find((u) => u.id === message.senderId)?.imageUrl}
             userName={message.senderName}
             size="medium"
             showStatus={true}
@@ -589,10 +641,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const [deleteConfirm, setDeleteConfirm] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     // Usar task del store directamente
-    const [activeCardDropdown, setActiveCardDropdown] = useState<'status' | 'team' | 'hours' | null>(null);
+    const [activeCardDropdown, setActiveCardDropdown] = useState<string | null>(null);
     const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
-    const [isSummarizeDropdownOpen, setIsSummarizeDropdownOpen] = useState(false);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [forceShowLoader, setForceShowLoader] = useState(false); // ✅ ESTADO DE EMERGENCIA PARA EL LOADER
+    const [currentSummary, setCurrentSummary] = useState<{
+      text: string;
+      interval: string;
+      timestamp: Date;
+    } | null>(null);
+    const [summaryMessages, setSummaryMessages] = useState<Message[]>([]);
+    const [isGeneratingSummaryMessage, setIsGeneratingSummaryMessage] = useState<Message | null>(null);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [isDetailsDropdownOpen, setIsDetailsDropdownOpen] = useState(false);
             const [isLoadingChunk, setIsLoadingChunk] = useState(false);
@@ -628,6 +687,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     
     // Debug logging disabled to reduce console spam
 
+    // ✅ DEBUG: Verificar el estado del resumen en cada render
+    // console.log('[ChatSidebar] Component rendered with currentSummary:', currentSummary);
+
 
 
     const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -636,7 +698,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
     const hoursDropdownRef = useRef<HTMLDivElement>(null);
     const teamDropdownRef = useRef<HTMLDivElement>(null);
     const timerPanelRef = useRef<HTMLDivElement>(null);
-    const summarizeDropdownRef = useRef<HTMLDivElement>(null);
     const chatRef = useRef<HTMLDivElement>(null);
 
     // Debug hooks: identify which deps cause message pagination to refetch
@@ -892,13 +953,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       setIsDetailsDropdownOpen(!isDetailsDropdownOpen);
     }, [isDetailsDropdownOpen]);
 
-    const handleSummarizeDropdownToggle = useCallback((e: React.MouseEvent) => {
-      e.stopPropagation();
-      setIsSummarizeDropdownOpen((prev) => !prev);
-    }, []);
-
-
-
     const handleStopPropagation = useCallback((e: React.MouseEvent) => {
       e.stopPropagation();
     }, []);
@@ -919,7 +973,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       const handleClickOutside = (event: MouseEvent) => {
         if (isOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
           // No cerrar si hay modales abiertos
-                  if (!isDeletePopupOpen && !isTimerPanelOpen && !isSummarizeDropdownOpen) {
+                  if (!isDeletePopupOpen && !isTimerPanelOpen && !isGeneratingSummary) {
           handleClose();
         }
         }
@@ -932,7 +986,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
-          }, [isOpen, handleClose, isDeletePopupOpen, isTimerPanelOpen, isSummarizeDropdownOpen]);
+          }, [isOpen, handleClose, isDeletePopupOpen, isTimerPanelOpen, isGeneratingSummary]);
 
     useEffect(() => {
       const handleScroll = () => {
@@ -1246,111 +1300,96 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
       };
     }, [retryModalOpen, handleCloseRetryModal]);
 
-    // Usar el hook modular de Gemini para resúmenes
-    const { generateSummary } = useGeminiIntegration(task.id);
+    // Usar el hook específico de Gemini para resúmenes
+    const { generateSummary } = useGeminiSummary(task?.id || '');
+    
+    // ✅ DEBUG: Verificar que task.id esté definido
+    // if (task?.id) {
+    //   console.log('[ChatSidebar] useGeminiSummary hook called with taskId:', task.id);
+    // }
 
     const handleGenerateSummary = useCallback(async (interval: string, forceRefresh = false) => {
-      if (!user?.id || !messages.length || isGeneratingSummary) return;
+      console.log('[ChatSidebar] 🚀 handleGenerateSummary iniciado:', { interval, forceRefresh, userId: user?.id, taskId: task?.id });
+      
+      // ✅ VALIDACIONES BÁSICAS
+      if (!user?.id) {
+        console.error('[ChatSidebar] ❌ Usuario no autenticado');
+        alert('❌ Debes estar autenticado para generar resúmenes');
+        return;
+      }
+      
+      if (!task?.id) {
+        console.error('[ChatSidebar] ❌ Tarea no seleccionada');
+        alert('❌ No hay tarea seleccionada');
+        return;
+      }
+      
+      if (isGeneratingSummary) {
+        console.log('[ChatSidebar] ⏳ Ya se está generando un resumen, ignorando clic');
+        return;
+      }
+      
+      console.log('[ChatSidebar] ✅ Validación exitosa, iniciando generación...');
+      
+      // ✅ FORZAR EL ESTADO DE LOADING INMEDIATAMENTE
       setIsGeneratingSummary(true);
-      setIsSummarizeDropdownOpen(false);
+      setForceShowLoader(true); // ✅ ACTIVAR ESTADO DE EMERGENCIA
       
       try {
-        // Usar el hook modular para generar el resumen
-        const summaryText = await generateSummary(interval, messages, forceRefresh);
+        console.log('[ChatSidebar] 🔄 Llamando a generateSummary...');
+        // ✅ USAR LA NUEVA FUNCIÓN QUE OBTIENE TODO DESDE FIRESTORE
+        const summaryText = await generateSummary(interval, [], forceRefresh);
         
-        // Enviar el resumen como mensaje
-        const summaryMessage: Partial<Message> = {
-          senderId: 'ai-summary',
-          senderName: '🤖 Resumen IA',
+        console.log('[ChatSidebar] ✅ Resumen generado exitosamente:', summaryText?.substring(0, 100) + '...');
+        
+        // ✅ CREAR EL MENSAJE DE RESUMEN COMPLETO
+        const summaryMessage: Message = {
+          id: `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          senderId: 'chatgpt',
+          senderName: 'ChatGPT',
           text: summaryText,
-          read: true,
-          clientId: task.clientId,
+          timestamp: new Date(),
+          read: false,
+          clientId: `summary_${Date.now()}`,
+          isPending: false,
+          hasError: false,
+          isSummary: true, // ✅ FLAG PARA INDICAR QUE ES UN RESUMEN CON FORMATO
+          isLoading: false
         };
-
-        await handleSendMessage(summaryMessage);
-        // console.log('[ChatSidebar] Summary generated and sent successfully');
-
-      } catch (error) {
-        // console.error('[ChatSidebar:GenerateSummary] Error:', error);
-        let errorMessage = '❌ Error al generar el resumen.';
-        if (error instanceof Error) {
-          if (error.message.includes('PERMISSION_DENIED')) {
-            errorMessage = '🔒 No tienes permisos para usar la funcionalidad de resúmenes.';
-          } else if (error.message.includes('QUOTA_EXCEEDED')) {
-            errorMessage = '📊 Límite de resúmenes excedido por hoy.';
-          } else {
-            errorMessage = `❌ ${error.message}`;
-          }
-        }
-        alert(errorMessage);
-      } finally {
+        
+        // ✅ AGREGAR EL RESUMEN AL FINAL DE LA LISTA DE MENSAJES
+        const currentMessages = useDataStore.getState().messages[task.id] || [];
+        const updatedMessages = [...currentMessages, summaryMessage];
+        useDataStore.getState().setMessages(task.id, updatedMessages);
+        
+        console.log('[ChatSidebar] Summary message added to chat at the end:', summaryMessage.id);
+        
+        // ✅ ACTUALIZAR EL ESTADO LOCAL
+        setCurrentSummary({
+          text: summaryText,
+          interval,
+          timestamp: new Date()
+        });
+        
+        // ✅ LIMPIAR ESTADOS DE LOADING
         setIsGeneratingSummary(false);
+        setForceShowLoader(false);
+        
+      } catch (error) {
+        console.error('[ChatSidebar] ❌ Error generando resumen:', error);
+        alert('❌ Error al generar el resumen. Inténtalo de nuevo.');
+        
+        // ✅ LIMPIAR ESTADOS DE LOADING EN CASO DE ERROR
+        setIsGeneratingSummary(false);
+        setForceShowLoader(false);
       }
-    }, [user?.id, messages, isGeneratingSummary, handleSendMessage, task.clientId, generateSummary]);
+    }, [user?.id, task?.id, isGeneratingSummary, generateSummary]);
 
-    // Funciones memoizadas para los botones de resumen
-    const handleSummary1Day = useCallback(() => {
-      handleGenerateSummary('1day');
-    }, [handleGenerateSummary]);
+    // ✅ FUNCIONES ELIMINADAS - Ya no se usan con el botón simplificado
 
-    const handleSummary3Days = useCallback(() => {
-      handleGenerateSummary('3days');
-    }, [handleGenerateSummary]);
-
-    const handleSummary1Week = useCallback(() => {
-      handleGenerateSummary('1week');
-    }, [handleGenerateSummary]);
-
-    const handleSummary1Month = useCallback(() => {
-      handleGenerateSummary('1month');
-    }, [handleGenerateSummary]);
-
-    const handleSummary6Months = useCallback(() => {
-      handleGenerateSummary('6months');
-    }, [handleGenerateSummary]);
-
-    const handleSummary1Year = useCallback(() => {
-      handleGenerateSummary('1year');
-    }, [handleGenerateSummary]);
-
-    const handleSummaryRefresh = useCallback(() => {
-      handleGenerateSummary('1day', true);
-    }, [handleGenerateSummary]);
-
-
-
-    const hasDataForInterval = useCallback((interval: string) => {
-      if (!messages.length) return false;
-      const now = new Date();
-      let startDate: Date;
-      switch (interval) {
-        case '1day':
-          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          break;
-        case '3days':
-          startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-          break;
-        case '1week':
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case '1month':
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-        case '6months':
-          startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
-          break;
-        case '1year':
-          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          return true;
-      }
-      return messages.some(msg => {
-        if (!msg.timestamp) return false;
-        const msgDate = msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : new Date(msg.timestamp);
-        return msgDate >= startDate;
-      });
-    }, [messages]);
+    const handleCloseSummary = useCallback(() => {
+      setCurrentSummary(null);
+    }, []);
 
     const handleCancelReply = useCallback(() => {
       setReplyingTo(null);
@@ -1575,114 +1614,34 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
             <div className={styles.breadcrumb}>
               {clientName} {'>'} {task.project}
             </div>
-            <div className={styles.dropdownContainer} ref={summarizeDropdownRef}>
+            <div className={styles.dropdownContainer}>
               <motion.button
                 type="button"
                 className={`${styles.imageButton} ${styles.tooltip} ${styles.summarizeButton} ${isGeneratingSummary ? 'processing' : ''}`}
-                onClick={handleSummarizeDropdownToggle}
+                onClick={() => {
+                  console.log('[ChatSidebar] 🎯 Botón de resumen presionado');
+                  console.log('[ChatSidebar] 📊 Estado actual:', { 
+                    isGeneratingSummary, 
+                    messagesLength: messages.length, 
+                    hasUser: !!user?.id, 
+                    hasTask: !!task?.id 
+                  });
+                  handleGenerateSummary('1week', true);
+                }}
                 disabled={isGeneratingSummary || messages.length === 0}
                 aria-label="Generar resumen de actividad"
-                title="Generar resumen de actividad 📊"
-                aria-expanded={isSummarizeDropdownOpen}
+                title="Generar resumen de actividad (ignorar caché)"
                 whileTap={{ scale: 0.95, opacity: 0.8 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
               >
                 <Image
                   src="/Robot.svg"
-                  alt="Summarize"
+                  alt="Resumen"
                   width={16}
                   height={16}
                 />
+                <span style={{ marginLeft: '8px', fontSize: '12px' }}>resumen</span>
               </motion.button>
-              {isSummarizeDropdownOpen && (
-                <motion.div
-                  className={styles.dropdownMenu}
-                  role="menu"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  onClick={handleStopPropagation}
-                >
-                  <motion.button
-                    type="button"
-                    className={`${styles.dropdownItem} ${!hasDataForInterval('1day') ? styles.noData : ''}`}
-                    onClick={handleSummary1Day}
-                    disabled={isGeneratingSummary}
-                    role="menuitem"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                    title={!hasDataForInterval('1day') ? 'No hay datos para este período' : 'Generar resumen de 1 día'}
-                  >
-                    📅 1 día
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    className={`${styles.dropdownItem} ${!hasDataForInterval('3days') ? styles.noData : ''}`}
-                    onClick={handleSummary3Days}
-                    disabled={isGeneratingSummary}
-                    role="menuitem"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                    title={!hasDataForInterval('3days') ? 'No hay datos para este período' : 'Generar resumen de 3 días'}
-                  >
-                    📅 3 días
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    className={`${styles.dropdownItem} ${!hasDataForInterval('1week') ? styles.noData : ''}`}
-                    onClick={handleSummary1Week}
-                    disabled={isGeneratingSummary}
-                    role="menuitem"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                    title={!hasDataForInterval('1week') ? 'No hay datos para este período' : 'Generar resumen de 1 semana'}
-                  >
-                    📅 1 semana
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    className={`${styles.dropdownItem} ${!hasDataForInterval('1month') ? styles.noData : ''}`}
-                    onClick={handleSummary1Month}
-                    disabled={isGeneratingSummary}
-                    role="menuitem"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                    title={!hasDataForInterval('1month') ? 'No hay datos para este período' : 'Generar resumen de 1 mes'}
-                  >
-                    📅 1 mes
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    className={`${styles.dropdownItem} ${!hasDataForInterval('6months') ? styles.noData : ''}`}
-                    onClick={handleSummary6Months}
-                    disabled={isGeneratingSummary}
-                    role="menuitem"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                    title={!hasDataForInterval('6months') ? 'No hay datos para este período' : 'Generar resumen de 6 meses'}
-                  >
-                    📅 6 meses
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    className={`${styles.dropdownItem} ${!hasDataForInterval('1year') ? styles.noData : ''}`}
-                    onClick={handleSummary1Year}
-                    disabled={isGeneratingSummary}
-                    role="menuitem"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                    title={!hasDataForInterval('1year') ? 'No hay datos para este período' : 'Generar resumen de 1 año'}
-                  >
-                    📅 1 año
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    className={`${styles.dropdownItem} ${styles.refreshButton}`}
-                    onClick={handleSummaryRefresh}
-                    disabled={isGeneratingSummary}
-                    role="menuitem"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                    title="Actualizar resumen (ignorar caché)"
-                  >
-                    🔄 Actualizar Resumen
-                  </motion.button>
-                </motion.div>
-              )}
             </div>
           </div>
           <motion.div
@@ -1852,6 +1811,36 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           {!isLoadingMessages && messages.length === 0 && (
             <div className={styles.noMessages}>No hay mensajes en esta conversación.</div>
           )}
+          
+          {/* ✅ DEBUG: Verificar mensajes de loading */}
+          {(() => {
+            const loadingMessages = messages.filter(m => m.isLoading);
+            if (loadingMessages.length > 0) {
+              console.log('[ChatSidebar] 🔍 Mensajes de loading encontrados:', loadingMessages.length, loadingMessages.map(m => ({ id: m.id, isLoading: m.isLoading })));
+            }
+            return null;
+          })()}
+          
+          {/* ✅ LOADER AL INICIO: Mostrar loader SIEMPRE si se está generando un resumen */}
+          {(() => {
+            if (isGeneratingSummary || forceShowLoader) {
+              console.log('[ChatSidebar] 🎯 Renderizando loader al inicio (mensajes más recientes):', { isGeneratingSummary, forceShowLoader });
+              return (
+                <div style={{ margin: '16px 0' }} key="ai-summary-loader">
+                  <AISummaryMessage
+                    key="ai-summary-loader-component"
+                    summary=""
+                    interval="última semana"
+                    timestamp={new Date()}
+                    onClose={() => {}}
+                    isLoading={true}
+                  />
+                </div>
+              );
+            }
+            return null;
+          })()}
+          
           {groupedMessages.map((group, groupIndex) => {
             // Validación defensiva para evitar "Invalid time value"
             const dateKey = group.date instanceof Date && !isNaN(group.date.getTime())
@@ -1860,33 +1849,36 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
 
             return (
               <React.Fragment key={`${dateKey}-${group.date?.toISOString() || 'unknown'}`}>
-                {group.messages.map((message) => (
-                <MessageItem
-                    key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}`}
-                  message={message}
-                  users={users}
-                  userId={user?.id}
-                  styles={styles}
-                  setActionMenuOpenId={setActionMenuOpenId}
-                  actionMenuOpenId={actionMenuOpenId}
-                  setEditingMessageId={setEditingMessageId}
-                  setEditingText={setEditingText}
-                  handleDeleteMessage={handleDeleteMessage}
-                  handleRetryMessage={handleRetryMessage}
-                  onOpenRetryModal={handleOpenRetryModal}
-                  setImagePreviewSrc={setImagePreviewSrc}
-                  editingMessageId={editingMessageId}
-                  isDraggingMessage={isDraggingMessage}
-                  draggedMessageId={draggedMessageId}
-                  dragOffset={dragOffset}
-                  onMessageDragStart={handleMessageDragStart}
-                  isNewChunk={newChunkMessageIds.has(message.id)}
-                  isLoadingChunk={isLoadingChunk}
-                  ref={message.id === messages[0]?.id ? lastMessageRef : null}
-                />
-              ))}
-              <DatePill date={group.date} />
-            </React.Fragment>
+                {group.messages.map((message) => {
+                  // ✅ Mensaje normal (eliminamos el mensaje de loading duplicado)
+                  return (
+                    <MessageItem
+                      key={`${message.id || 'mid'}-${message.clientId || 'cid'}-${message.timestamp instanceof Date ? message.timestamp.toISOString() : (message.timestamp ? message.timestamp.toString() : 't0')}`}
+                      message={message}
+                      users={users}
+                      userId={user?.id}
+                      styles={styles}
+                      setActionMenuOpenId={setActionMenuOpenId}
+                      actionMenuOpenId={actionMenuOpenId}
+                      setEditingMessageId={setEditingMessageId}
+                      setEditingText={setEditingText}
+                      handleDeleteMessage={handleDeleteMessage}
+                      handleRetryMessage={handleRetryMessage}
+                      onOpenRetryModal={handleOpenRetryModal}
+                      setImagePreviewSrc={setImagePreviewSrc}
+                      editingMessageId={editingMessageId}
+                      isDraggingMessage={isDraggingMessage}
+                      draggedMessageId={draggedMessageId}
+                      dragOffset={dragOffset}
+                      onMessageDragStart={handleMessageDragStart}
+                      isNewChunk={newChunkMessageIds.has(message.id)}
+                      isLoadingChunk={isLoadingChunk}
+                      ref={message.id === messages[0]?.id ? lastMessageRef : null}
+                    />
+                  );
+                })}
+                <DatePill date={group.date} />
+              </React.Fragment>
             );
           })}
 

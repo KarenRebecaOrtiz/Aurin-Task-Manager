@@ -62,4 +62,6 @@ export interface Message {
     imageUrl?: string | null;
   } | null;
   isDatePill?: boolean; // Indicates if this message is a date separator pill
+  isSummary?: boolean; // Indicates if this message is an AI summary
+  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }

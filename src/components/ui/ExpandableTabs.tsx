@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useOnClickOutside } from "usehooks-ts";
+// import { useOnClickOutside } from "usehooks-ts";
 import { LucideIcon } from "lucide-react";
 import styles from "./ExpandableTabs.module.scss";
 
@@ -66,17 +66,18 @@ export function ExpandableTabs({
   hideTextOnMobile = false,
 }: ExpandableTabsProps) {
   const [selected, setSelected] = React.useState<number | null>(0); // Seleccionar el primer tab por defecto
-  const outsideClickRef = React.useRef(null);
+  // const outsideClickRef = React.useRef(null);
 
   // Notificar el cambio inicial una sola vez
   React.useEffect(() => {
     onChange?.(0);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useOnClickOutside(outsideClickRef, () => {
-    setSelected(null);
-    onChange?.(null);
-  });
+  // Comentado para evitar que se resetee el tab activo al hacer clic en otros elementos
+  // useOnClickOutside(outsideClickRef, () => {
+  //   setSelected(null);
+  //   onChange?.(null);
+  // });
 
   const handleSelect = React.useCallback((index: number) => {
     setSelected(index);
@@ -89,9 +90,14 @@ export function ExpandableTabs({
 
   return (
     <div
-      ref={outsideClickRef}
+      // ref={outsideClickRef}
       className={`${styles.expandableTabs} ${className || ''}`}
     >
+      {/* Título de Configuración */}
+      <div className={styles.configTitle}>
+        <span className={styles.configTitleText}>Seleccionar configuración:</span>
+      </div>
+      
       {tabs.map((tab, globalIndex) => {
         if (tab.type === "separator") {
           return <Separator key={`separator-${globalIndex}`} />;

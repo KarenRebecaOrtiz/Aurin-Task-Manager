@@ -40,6 +40,7 @@
   gap: 0.5rem;
   border-radius: 1rem;
   padding: 0.25rem;
+  width: 100%; // Asegura que ocupe todo el ancho disponible
   
   // Estilos cristalizados básicos sin box-shadow
   background: rgba(241, 245, 249, 0.8);
@@ -71,6 +72,29 @@
       &.selected {
         padding: 0.375rem 0.75rem;
       }
+    }
+  }
+}
+
+.configTitle {
+  display: flex;
+  align-items: center;
+  margin-right: auto; // Empuja el título hacia la izquierda
+  padding: 0.5rem 1rem;
+  
+  .configTitleText {
+    font-family: "Urbanist", sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0e0e0e; // Color azul
+    white-space: nowrap;
+    
+    :global(body.dark) & {
+      color: #e4e4e4; // Azul más claro en dark mode
+    }
+    
+    @media (max-width: 768px) {
+      font-size: 0.875rem;
     }
   }
 }
@@ -114,6 +138,23 @@
       color: #111827;
     }
   }
+  
+  // Dark mode - quitar box-shadow
+  :global(body.dark) & {
+    box-shadow: none;
+    
+    &:hover {
+      box-shadow: none;
+    }
+    
+    &.selected {
+      box-shadow: none;
+      
+      &:hover {
+        box-shadow: none;
+      }
+    }
+  }
 }
 
 .tabIcon {
@@ -128,6 +169,12 @@
   
   .tabButton.selected & {
     color: #3b82f6;
+  }
+  
+  // Dark mode - hacer SVG blanco con filtro brightness 100
+  :global(body.dark) & {
+    filter: brightness(100);
+    color: white;
   }
 }
 
