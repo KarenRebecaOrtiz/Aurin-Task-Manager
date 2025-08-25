@@ -60,3 +60,5 @@ functions/.eslintrc.js
 .env.sentry-build-plugin
 sentry.properties
 .sentryclirc
+# clerk configuration (can include secrets)
+/.clerk/

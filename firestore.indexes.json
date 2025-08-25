@@ -1,86 +1,83 @@
 {
   "indexes": [
     {
-      "collectionGroup": "notifications",
+      "collectionGroup": "advices",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "recipientId",
+          "fieldPath": "creatorId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
+          "fieldPath": "expiry",
+          "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "notifications",
+      "collectionGroup": "conversations",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "recipientId",
-          "order": "ASCENDING"
+          "fieldPath": "participants",
+          "arrayConfig": "CONTAINS"
         },
+        {
+          "fieldPath": "lastMessage.timestamp",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "conversations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "participants",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "lastViewedBy",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
         {
           "fieldPath": "read",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "recipientId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "type",
+          "fieldPath": "senderId",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "timestamp",
-          "order": "DESCENDING"
+          "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "notifications",
+      "collectionGroup": "messages",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "expiresAt",
+          "fieldPath": "senderId",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "taskId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "recipientId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "read",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "notifications",
@@ -98,35 +95,110 @@
           "fieldPath": "read",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "conversations",
+      "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "participants",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "expiresAt",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "lastMessage.timestamp",
+          "fieldPath": "timestamp",
           "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "conversations",
+      "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "participants",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "recipientId",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "lastViewedBy",
+          "fieldPath": "read",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recipientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recipientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "taskId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "recipientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "read",
           "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "archived",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "tasks",
@@ -140,21 +212,8 @@
           "fieldPath": "lastActivity",
           "order": "DESCENDING"
         }
-      ]
-    },
-    {
-      "collectionGroup": "tasks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "LeadedBy",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "lastActivity",
-          "order": "DESCENDING"
-        }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "tasks",
@@ -168,7 +227,91 @@
           "fieldPath": "lastActivity",
           "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "LeadedBy",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "lastActivity",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "todos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "completed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completedDate",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "todos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "currentLocation.isOnline",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "currentLocation.lastUpdated",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "currentLocation.lastUpdated",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "currentLocation.status",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
     }
   ],
   "fieldOverrides": []

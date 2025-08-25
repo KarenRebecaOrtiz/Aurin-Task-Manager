@@ -3727,9 +3727,10 @@
 .imageButton {
   background: #f1f5f9;
   border: none;
-  border-radius: 50%;
-  height: 40px;
-  width: 40px;
+  border-radius: 20px;
+  height: auto;
+  width: auto;
+  font-family: $font-family-primary;
   padding: 6px;
   cursor: pointer;
   transition:
@@ -3791,6 +3792,57 @@
 }
 
 :global(body.dark) .imageButton img {
+  filter: none !important; /* Evita doble inversión por filter: invert(1) inline */
+}
+
+
+
+.imageButton2 {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 20px;
+  height: 40px;
+  width: 40px;
+  font-family: $font-family-primary;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease-in-out,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(0, 0, 0, 0.050);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: #e2e8f0;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+
+
+:global(body.dark) .imageButton2 {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background-color: #2c2c2f;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+:global(body.dark) .imageButton2 img {
   filter: none !important; /* Evita doble inversión por filter: invert(1) inline */
 }
 
@@ -5933,8 +5985,8 @@
   }
 
   .playStopButton,
-  .sendButton,
-  .imageButton {
+  .sendButton
+{
     height: 36px;
     width: 36px;
   }

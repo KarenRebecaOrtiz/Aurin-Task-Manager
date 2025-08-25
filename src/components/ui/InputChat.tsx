@@ -1285,8 +1285,8 @@ export default function InputChat({
                   />
                 </motion.button>
                 
-                {/* Botón Tiempo Personalizado - TEMPORALMENTE DESHABILITADO */}
-                {/* <motion.button 
+                {/* Botón Tiempo Personalizado */}
+                <motion.button 
                   type="button" 
                   className={`${styles['format-button']} ${styles.tooltip}`} 
                   onClick={handleCustomTimeClick}
@@ -1312,7 +1312,7 @@ export default function InputChat({
                     style={{ filter: 'none', fill: '#000000' }} 
                     draggable="false" 
                   />
-                </motion.button> */}
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -1437,19 +1437,19 @@ export default function InputChat({
             />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <div className={styles.dropupContainer} ref={dropupRef}>
-                <button type="button" className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={handleToggleDropup} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con OpenAI" title="Reformular texto con OpenAI" aria-expanded={isDropupOpen}>
+                <button type="button" className={`${styles.imageButton2} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={handleToggleDropup} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con ChatGPT" title="Reformular texto con OpenAI" aria-expanded={isDropupOpen}>
                   <Image src="/OpenAI.svg" alt="OpenAI" width={16} height={16} draggable="false" />
                 </button>
                 {isDropupOpen && (
                   <div className={styles.dropupMenu} role="menu">
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateCorrect} disabled={isProcessing} role="menuitem" title="Corregir ortografía y gramática">✏️ Corregir</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateRewrite} disabled={isProcessing} role="menuitem" title="Reescribir">🔄 Re-escribir</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateFriendly} disabled={isProcessing} role="menuitem" title="Hacer amigable">😊 Hacer amigable</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateProfessional} disabled={isProcessing} role="menuitem" title="Hacer profesional">💼 Hacer profesional</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateConcise} disabled={isProcessing} role="menuitem" title="Hacer conciso">⚡ Hacer conciso</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateSummarize} disabled={isProcessing} role="menuitem" title="Resumir">📝 Resumir</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateKeypoints} disabled={isProcessing} role="menuitem" title="Puntos clave">🎯 Puntos clave</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateList} disabled={isProcessing} role="menuitem" title="Convertir en lista">📋 Convertir en lista</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateCorrect} disabled={isProcessing} role="menuitem" title="Corregir ortografía y gramática">Corregir</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateRewrite} disabled={isProcessing} role="menuitem" title="Reescribir">Re-escribir</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateFriendly} disabled={isProcessing} role="menuitem" title="Hacer amigable">Amigable</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateProfessional} disabled={isProcessing} role="menuitem" title="Hacer profesional">Profesional</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateConcise} disabled={isProcessing} role="menuitem" title="Conciso">⚡ Conciso</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateSummarize} disabled={isProcessing} role="menuitem" title="Resumir">Resumir</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateKeypoints} disabled={isProcessing} role="menuitem" title="Puntos clave">Puntos clave</button>
+                    <button type="button" className={styles.dropupItem} onClick={handleReformulateList} disabled={isProcessing} role="menuitem" title="Convertir en lista">Convertir en lista</button>
                   </div>
                 )}
               </div>
@@ -1458,7 +1458,7 @@ export default function InputChat({
                 disabled={isSending || isProcessing}
                 className={styles.geminiModeDropdown}
               /> */}
-              <button type="button" className={`${styles.imageButton} ${styles.tooltip}`} onClick={handleThumbnailClick} disabled={isSending || isProcessing} aria-label="Adjuntar archivo" title="Adjuntar archivo">
+              <button type="button" className={`${styles.imageButton2} ${styles.tooltip}`} onClick={handleThumbnailClick} disabled={isSending || isProcessing} aria-label="Adjuntar archivo" title="Adjuntar archivo">
                 <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>
               <EmojiSelector onEmojiSelect={handleEmojiSelect} disabled={isSending || isProcessing} value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''} containerRef={containerRef} />

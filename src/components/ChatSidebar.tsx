@@ -1629,8 +1629,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   handleGenerateSummary('1week', true);
                 }}
                 disabled={isGeneratingSummary || messages.length === 0}
-                aria-label="Generar resumen de actividad"
-                title="Generar resumen de actividad (ignorar caché)"
+                aria-label="Generar"
+                title="Generar"
                 whileTap={{ scale: 0.95, opacity: 0.8 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
               >
@@ -1640,7 +1640,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                   width={16}
                   height={16}
                 />
-                <span style={{ marginLeft: '8px', fontSize: '12px' }}>resumen</span>
+                <span style={{ marginLeft: '8px', fontSize: '12px' ,padding: '0px 5px'}}>Resumen</span>
               </motion.button>
             </div>
           </div>

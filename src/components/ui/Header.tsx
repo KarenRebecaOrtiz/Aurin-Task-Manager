@@ -80,6 +80,7 @@ const Header: React.FC<HeaderProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevNotificationsRef = useRef<Notification[]>([]);
 
+
   /* ────────────────────────────────────────────
      STATE
   ──────────────────────────────────────────── */
@@ -181,55 +182,7 @@ const Header: React.FC<HeaderProps> = ({
     setIsNotificationsVisible(isNotificationsOpen);
   }, [isNotificationsOpen]);
 
-<<<<<<< HEAD
-  /* ────────────────────────────────────────────
-     EFFECTS – ADMIN BUTTON INITIALIZATION
-   ──────────────────────────────────────────── */
-  useEffect(() => {
-    const el = welcomeRef.current;
-    if (!el || !isLoaded || !isAdmin) return;
 
-    // Crear el botón de admin
-    const buttonWrapper = document.createElement('span');
-    buttonWrapper.className = styles.adminButtonWrapper;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = styles.adminButton;
-    button.innerHTML = `
-      <span class="${styles.fold}"></span>
-      <div class="${styles.pointsWrapper}">
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-        <i class="${styles.point}"></i>
-      </div>
-      <span class="${styles.inner}">
-        <img
-          src="/verified.svg"
-          alt="Verified Icon"
-          class="${styles.icon}"
-        />
-      </span>
-    `;
-    buttonWrapper.appendChild(button);
-    el.appendChild(buttonWrapper);
-
-    return () => {
-      // Cleanup si es necesario
-      if (el.contains(buttonWrapper)) {
-        el.removeChild(buttonWrapper);
-      }
-    };
-  }, [isLoaded, isAdmin]);
-=======
-
->>>>>>> staging
 
   /* ────────────────────────────────────────────
      EFFECTS – SUN/MOON ICON ENTRANCE
@@ -455,13 +408,6 @@ const Header: React.FC<HeaderProps> = ({
           <div className={styles.frame14}>
             <div className={styles.title}>
               <div className={styles.welcome}>
-<<<<<<< HEAD
-                <span className={styles.welcomeText}>Te damos la bienvenida de nuevo, </span>
-                <span className={styles.nameContainer}>
-                  <TextShimmer duration={3} spread={1.5}>{userName}</TextShimmer>
-                </span>
-                <div ref={welcomeRef} className={styles.adminButtonContainer}></div>
-=======
                 <span className={styles.welcomeText}>
                   Te damos la bienvenida de nuevo,{' '}
                   <TextShimmer as="span" className={styles.userNameShimmer}>
@@ -497,7 +443,6 @@ const Header: React.FC<HeaderProps> = ({
                     </div>
                   </motion.div>
                 )}
->>>>>>> staging
               </div>
             </div>
             <div className={styles.text}>

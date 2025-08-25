@@ -9,21 +9,19 @@ export default function SignUpPage() {
       </div>
       <div className={styles.rightColumn}>
         <SignUp
-
-        appearance={{
+          appearance={{
             elements: {
-            formButtonPrimary: {
+              formButtonPrimary: {
                 fontSize: 18,
                 textTransform: 'none',
                 border: '1px solid #d3df48',
                 color: '#121212',
                 backgroundColor: '#d3df48',
                 '&:hover, &:focus, &:active': {
-                backgroundColor: '#ffffff',
+                  backgroundColor: '#ffffff',
                 },
-            },
-
-            input: {
+              },
+              input: {
                 color: '#ffffff',
                 backgroundColor: '#121212',
                 fontSize: '14px',
@@ -31,50 +29,42 @@ export default function SignUpPage() {
               inputPlaceholder: {
                 color: '#999999', 
               },
-
-            card: {     
+              card: {     
                 backgroundColor: '#121212',
-            },
-
-            logoBox: {     
+              },
+              logoBox: {     
                 borderRadius: '100px',
-            },
-
-            headerTitle: {     
+              },
+              headerTitle: {     
                 color: 'white',
-            },
-
-            socialButtonsBlockButtonText: {
+              },
+              socialButtonsBlockButtonText: {
                 color: 'white',
-            },
-
-            dividerLine: {
+              },
+              dividerLine: {
                 backgroundColor: '#ffffff40',
-            },
-            formFieldLabel: {
+              },
+              formFieldLabel: {
                 color: 'white',
-            },
-            formFieldInput:{
+              },
+              formFieldInput:{
                 backgroundColor: '#121212',
                 border: '1px solid ffffff40'
-            },
-            footer: {
+              },
+              footer: {
                 background: '#121212',
-            },
-            footerActionLink: {
+              },
+              footerActionLink: {
                 color: 'white',
-            },
-            logoImage: {
+              },
+              logoImage: {
                 borderRadius:'100px',
-            },
-            providerIcon__apple: {
+              },
+              providerIcon__apple: {
                 filter: 'invert(100)'
               }
-
-            
             },
-        }}
-
+          }}
           routing='path'
           path='/sign-up'
           signInUrl='/sign-in'

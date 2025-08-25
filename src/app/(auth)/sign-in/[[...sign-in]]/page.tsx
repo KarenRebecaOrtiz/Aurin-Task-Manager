@@ -15,7 +15,7 @@ function mapRange(
   if (fromLow === fromHigh) {
     return toLow;
   }
-  const percentage = (value - fromLow) / (fromHigh - fromLow);
+  const percentage = (value - fromLow) / (fromHigh - toLow);
   return toLow + percentage * (toHigh - toLow);
 }
 
@@ -129,48 +129,6 @@ function AnimatedBackground() {
     </div>
   );
 }
-
-// --- TYPE DEFINITIONS ---
-export interface Testimonial {
-  avatarSrc: string;
-  name: string;
-  handle: string;
-  text: string;
-}
-
-// --- SUB-COMPONENTS ---
-const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, delay: string }) => (
-  <div className={`${styles.testimonialCard} ${styles.animateTestimonial} ${delay}`}>
-    <Image src={testimonial.avatarSrc} alt="avatar" width={50} height={50} className={styles.avatar} />
-    <div className={styles.content}>
-      <p className={styles.name}>{testimonial.name}</p>
-      <p className={styles.handle}>{testimonial.handle}</p>
-      <p className={styles.text}>{testimonial.text}</p>
-    </div>
-  </div>
-);
-
-// Testimonios de ejemplo
-const testimonials: Testimonial[] = [
-  {
-    avatarSrc: "https://randomuser.me/api/portraits/women/57.jpg",
-    name: "María González",
-    handle: "@mariadigital",
-    text: "¡Plataforma increíble! La experiencia de usuario es fluida y las funciones son exactamente lo que necesitaba."
-  },
-  {
-    avatarSrc: "https://randomuser.me/api/portraits/men/64.jpg",
-    name: "Carlos Rodríguez",
-    handle: "@carlostech",
-    text: "Este servicio ha transformado mi forma de trabajar. Diseño limpio, funciones potentes y excelente soporte."
-  },
-  {
-    avatarSrc: "https://randomuser.me/api/portraits/men/32.jpg",
-    name: "David Martínez",
-    handle: "@davidcrea",
-    text: "He probado muchas plataformas, pero esta destaca. Intuitiva, confiable y realmente útil para la productividad."
-  },
-];
 
 export default function SignInPage() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -398,7 +356,7 @@ export default function SignInPage() {
         </div>
       </section>
 
-      {/* Right column: hero image + testimonials */}
+      {/* Right column: hero image */}
       <section className={styles.rightColumn}>
         <div 
           className={`${styles.heroImage} ${isLoaded ? styles.animateSlideRight : ''} ${styles.animateDelay300}`}
@@ -406,14 +364,6 @@ export default function SignInPage() {
             backgroundImage: `url('/aurin.jpg')` 
           }}
         />
-        
-        {testimonials.length > 0 && (
-          <div className={`${styles.testimonialsContainer} ${styles.testimonialsResponsive}`}>
-            <TestimonialCard testimonial={testimonials[0]} delay={isLoaded ? styles.animateDelay1000 : ''} />
-            {testimonials[1] && <TestimonialCard testimonial={testimonials[1]} delay={isLoaded ? styles.animateDelay1200 : ''} />}
-            {testimonials[2] && <TestimonialCard testimonial={testimonials[2]} delay={isLoaded ? styles.animateDelay1400 : ''} />}
-          </div>
-        )}
       </section>
     </div>
   );
