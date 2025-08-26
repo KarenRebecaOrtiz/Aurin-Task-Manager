@@ -29,8 +29,8 @@ export default function RootLayout({
           <head>
             <link
               rel="apple-touch-icon"
-              sizes="180x180"
-              href="/favicon/apple-touch-icon.png"
+              sizes="512x512"
+              href="/aurin.jpg"
             />
             <link
               rel="icon"
@@ -44,7 +44,7 @@ export default function RootLayout({
               sizes="16x16"
               href="/favicon/favicon-16x16.png"
             />
-            <link rel="manifest" href="/favicon/site.webmanifest" />
+            <link rel="manifest" href="/site.webmanifest" />
             <link rel="shortcut icon" href="/favicon/favicon.ico" />
             <link
               rel="icon"
@@ -54,12 +54,20 @@ export default function RootLayout({
             />
             <link
               rel="icon"
-              type="image/png"
+              type="image/jpeg"
               sizes="512x512"
-              href="/favicon/android-chrome-512x512.png"
+              href="/aurin.jpg"
             />
-            <meta name="theme-color" content="#ffffff" />
+            <meta name="theme-color" content="#d3df48" />
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+            <meta name="apple-mobile-web-app-title" content="Aurin" />
+            <meta name="mobile-web-app-capable" content="yes" />
+            <meta name="msapplication-TileColor" content="#d3df48" />
+            <meta name="msapplication-tap-highlight" content="no" />
             <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+            <meta name="application-name" content="Aurin Task Manager" />
+            <meta name="msapplication-TileImage" content="/aurin.jpg" />
             <Script
               src={`https://www.google.com/recaptcha/api.js?render=6Lcxe2UrAAAAAANiSWaLO_46zSm09wRhuYOEHfeb`}
               strategy="beforeInteractive"
