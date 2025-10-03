@@ -6,7 +6,6 @@ import { useUser } from '@clerk/nextjs';
 import Header from '@/components/ui/Header';
 import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
-import OnboardingStepper from '@/components/OnboardingStepper';
 import Selector from '@/components/Selector';
 import MembersTable from '@/components/MembersTable';
 import ClientsTable from '@/components/ClientsTable';
@@ -49,7 +48,6 @@ import ArchiveTable from '@/components/ArchiveTable';
 import EditTask from '@/components/EditTask';
 import CreateTask from '@/components/CreateTask';
 import TasksPageModals from '@/components/TasksPageModals';
-import OnlineUsersPortal from '@/components/ui/OnlineUsersPortal';
 
 // Helper functions for conditional logging (only in development)
 const debugLog = (message: string, ...args: unknown[]) => {
@@ -331,9 +329,6 @@ function TasksPageContent() {
     setIsClientSidebarOpen(true);
   }, []);
 
-  const handleOnboardingComplete = useCallback(() => {
-    // Handle onboarding complete
-  }, []);
 
   // Callbacks para TasksTable - MEMOIZADOS SIN DEPENDENCIAS
   const handleNewTaskOpen = useCallback(() => {
@@ -607,7 +602,6 @@ function TasksPageContent() {
           personalLocations={personalLocations}
         />
       </div>
-      <OnboardingStepper onComplete={handleOnboardingComplete} />
       <div ref={selectorRef} className={styles.selector}>
         <Selector
           selectedContainer={selectedContainer as SelectorContainer}
@@ -790,8 +784,6 @@ export default function TasksPage() {
       {/* Sidebars completamente independientes */}
       <IndependentMessageSidebarRenderer />
       <IndependentChatSidebarRenderer />
-      {/* Portal de usuarios online */}
-      <OnlineUsersPortal maxVisible={5} />
       {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
       <SafariFirebaseAuthFix />
       {/* ProfileCard Modal - Renderizado a nivel de página */}

@@ -4,35 +4,6 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-// Initialize why-did-you-render in development to detect unnecessary re-renders
-const initializeDevelopmentTools = async () => {
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      // Dynamic imports for development-only packages
-      const React = await import('react');
-      const whyDidYouRender = await import('@welldone-software/why-did-you-render');
-      
-      whyDidYouRender.default(React.default, {
-        include: [/TasksTable/, /ChatSidebar/, /ArchiveTable/, /TasksKanban/],
-        trackAllPureComponents: false,
-        trackHooks: true,
-        logOwnerReasons: true,
-      });
-      
-      // Enable use-what-changed globally
-      const { setUseWhatChange } = await import('@simbathesailor/use-what-changed');
-      try {
-        setUseWhatChange(true);
-      } catch {}
-    } catch {
-      // Swallow any init errors silently in development
-    }
-  }
-};
-
-// Initialize development tools
-initializeDevelopmentTools();
-
 Sentry.init({
   dsn: "https://e848c75e7fb4b80429718aeb9949cd8f@o4509510951239680.ingest.us.sentry.io/4509510956220416",
 

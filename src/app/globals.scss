@@ -57,26 +57,12 @@ html.dark,
   --foreground: #121212;
   --border: #D1D5DB;
   --radius: 0.5rem;
-  
-  /* Variables para el OnlineUsersPortal */
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --popover: #ffffff;
-  --popover-foreground: #1f2937;
-  --accent: #f9fafb;
-  --secondary: #f3f4f6;
 }
 
 [data-theme='dark'] {
   --background: #1F2937;
   --foreground: #F9FAFB;
   --border: #4B5563;
-  
-  /* Variables para el OnlineUsersPortal en dark mode */
-  --muted: #374151;
-  --muted-foreground: #9ca3af;
-  --popover: #1f2937;
-  --popover-foreground: #f9fafb;
   --accent: #374151;
   --primary-foreground: #FFFFFF;
   --secondary: #374151;

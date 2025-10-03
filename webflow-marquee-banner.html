@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marquee Banner para Webflow</title>
+    <style>
+        /* Contenedor principal del marquee */
+        .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 0;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        /* Wrapper para la animación */
+        .marquee-wrapper {
+            display: inline-block;
+            animation: marquee-left 30s linear infinite;
+        }
+
+        /* Contenido del marquee */
+        .marquee-content {
+            display: inline-block;
+            padding-right: 100px; /* Espacio entre repeticiones */
+        }
+
+        /* Texto del marquee */
+        .marquee-text {
+            font-family: 'Arial', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            display: inline-block;
+            margin: 0 40px;
+        }
+
+        /* Animación de izquierda a derecha */
+        @keyframes marquee-left {
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        /* Animación de derecha a izquierda */
+        @keyframes marquee-right {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Variación para marquee hacia la derecha */
+        .marquee-right .marquee-wrapper {
+            animation: marquee-right 30s linear infinite;
+        }
+
+        /* Variación con gradiente diferente */
+        .marquee-gradient-2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .marquee-gradient-3 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        /* Efectos hover (opcional) */
+        .marquee-container:hover .marquee-wrapper {
+            animation-play-state: paused;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .marquee-text {
+                font-size: 16px;
+                margin: 0 20px;
+            }
+            
+            .marquee-content {
+                padding-right: 50px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .marquee-text {
+                font-size: 14px;
+                margin: 0 15px;
+            }
+            
+            .marquee-container {
+                padding: 10px 0;
+            }
+        }
+
+        /* Variación con iconos (usando símbolos Unicode) */
+        .marquee-with-icons .marquee-text::before {
+            content: "⭐ ";
+            margin-right: 8px;
+        }
+
+        .marquee-with-icons .marquee-text::after {
+            content: " ⭐";
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- MARQUEE BÁSICO - IZQUIERDA A DERECHA -->
+<div class="marquee-container">
+    <div class="marquee-wrapper">
+        <div class="marquee-content">
+            <span class="marquee-text">🚀 ¡Nuevas funcionalidades disponibles!</span>
+            <span class="marquee-text">✨ Mejora tu productividad</span>
+            <span class="marquee-text">🎯 Alcanza tus objetivos</span>
+            <span class="marquee-text">💡 Innovación constante</span>
+            <span class="marquee-text">🚀 ¡Nuevas funcionalidades disponibles!</span>
+            <span class="marquee-text">✨ Mejora tu productividad</span>
+            <span class="marquee-text">🎯 Alcanza tus objetivos</span>
+            <span class="marquee-text">💡 Innovación constante</span>
+        </div>
+    </div>
+</div>
+
+<br><br>
+
+<!-- MARQUEE DERECHA A IZQUIERDA CON GRADIENTE DIFERENTE -->
+<div class="marquee-container marquee-right marquee-gradient-2">
+    <div class="marquee-wrapper">
+        <div class="marquee-content">
+            <span class="marquee-text">📈 Aumenta tus ventas</span>
+            <span class="marquee-text">🎨 Diseño profesional</span>
+            <span class="marquee-text">⚡ Velocidad optimizada</span>
+            <span class="marquee-text">🔒 Seguridad garantizada</span>
+            <span class="marquee-text">📈 Aumenta tus ventas</span>
+            <span class="marquee-text">🎨 Diseño profesional</span>
+            <span class="marquee-text">⚡ Velocidad optimizada</span>
+            <span class="marquee-text">🔒 Seguridad garantizada</span>
+        </div>
+    </div>
+</div>
+
+<br><br>
+
+<!-- MARQUEE CON GRADIENTE AZUL -->
+<div class="marquee-container marquee-gradient-3">
+    <div class="marquee-wrapper">
+        <div class="marquee-content">
+            <span class="marquee-text">🌟 Experiencia única</span>
+            <span class="marquee-text">🚀 Tecnología avanzada</span>
+            <span class="marquee-text">💎 Calidad premium</span>
+            <span class="marquee-text">🎯 Resultados garantizados</span>
+            <span class="marquee-text">🌟 Experiencia única</span>
+            <span class="marquee-text">🚀 Tecnología avanzada</span>
+            <span class="marquee-text">💎 Calidad premium</span>
+            <span class="marquee-text">🎯 Resultados garantizados</span>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

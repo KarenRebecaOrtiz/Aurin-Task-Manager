@@ -109,30 +109,6 @@
   }
 }
 
-// Estilos para el fondo animado
-.animatedBackground {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.backgroundLayer {
-  position: absolute;
-  inset: -50px;
-  width: calc(100% + 100px);
-  height: calc(100% + 100px);
-}
-
-.maskLayer {
-  width: 100%;
-  height: 100%;
-}
-
-.noiseLayer {
-  position: absolute;
-  inset: 0;
-}
 
 // Estilos para el overlay de carga
 .loadingOverlay {

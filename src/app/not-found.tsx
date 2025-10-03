@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
-import OnboardingStepper from '@/components/OnboardingStepper';
 import Selector from '@/components/Selector';
 import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -77,9 +76,6 @@ function NotFoundContent() {
     console.log('[NotFound] Notification clicked:', notification.id);
   }, []);
   
-  const handleOnboardingComplete = useCallback(() => {
-    console.log('[NotFound] Onboarding completed');
-  }, []);
   
   // Renderizar el contenido principal
   const mainContent = (
@@ -99,7 +95,6 @@ function NotFoundContent() {
         />
       </div>
       
-      <OnboardingStepper onComplete={handleOnboardingComplete} />
       
       <div ref={selectorRef} className={styles.selector}>
         <Selector
