@@ -6,40 +6,20 @@ import ToDoDynamic from '@/components/ToDoDynamic';
 import AvailabilityToggle from '@/components/ui/AvailabilityToggle';
 import GeoClock from '@/components/ui/GeoClock';
 import styles from './Header.module.scss';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
-import { Timestamp } from 'firebase/firestore';
 import AvatarDropdown from '../AvatarDropdown';
-import NotificationDropdown from './NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import SimpleTooltip from './SimpleTooltip';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
-import { useTaskNotificationsSingleton } from '@/hooks/useTaskNotificationsSingleton';
-import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
 import { TextShimmer } from './TextShimmer';
 import { motion } from 'framer-motion';
 
-interface Notification {
-  id: string;
-  userId: string;
-  taskId?: string;
-  message: string;
-  timestamp: Timestamp;
-  read: boolean;
-  recipientId: string;
-  conversationId?: string;
-  type?: string;
-}
 
 interface HeaderProps {
   selectedContainer: 'tareas' | 'cuentas' | 'miembros' | 'config';
   isArchiveTableOpen?: boolean;
-  users: { id: string; fullName: string; firstName?: string; imageUrl: string }[];
-  notifications?: Notification[]; // Hacer opcional
-  onNotificationClick?: (notification: Notification) => void; // Hacer opcional
-  onLimitNotifications?: (notifications: Notification[]) => void; // Hacer opcional
   onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
   isCreateTaskOpen?: boolean;
   isEditTaskOpen?: boolean;
@@ -53,9 +33,6 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({
   selectedContainer,
   isArchiveTableOpen,
-  users,
-  onNotificationClick,
-  onLimitNotifications,
   onChangeContainer,
   isCreateTaskOpen = false,
   isEditTaskOpen = false,
@@ -67,120 +44,24 @@ const Header: React.FC<HeaderProps> = ({
   const { isDarkMode } = useTheme();
   const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
 
-  // Usar los singletons de notificaciones
-  const { taskNotifications } = useTaskNotificationsSingleton();
-  const { messageNotifications } = useMessageNotificationsSingleton();
+  // Notification system removed - using NodeMailer instead
 
   /* ────────────────────────────────────────────
      REFS
   ──────────────────────────────────────────── */
   const wrapperRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
-  const notificationButtonRef = useRef<HTMLButtonElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const prevNotificationsRef = useRef<Notification[]>([]);
+  // Notification refs removed
 
 
   /* ────────────────────────────────────────────
      STATE
   ──────────────────────────────────────────── */
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [hasViewedNotifications, setHasViewedNotifications] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+  // Notification state removed
 
-  // Combinar notificaciones de ambos sistemas
-  const allNotifications: Notification[] = useMemo(() => [
-    ...taskNotifications.map(notif => ({
-      id: notif.id,
-      userId: notif.recipientId,
-      taskId: notif.taskId,
-      message: notif.message,
-      timestamp: notif.timestamp,
-      read: notif.read,
-      recipientId: notif.recipientId,
-      type: notif.type
-    })),
-    ...messageNotifications.map(notif => ({
-      id: notif.conversationId,
-      userId: notif.senderId,
-      conversationId: notif.conversationId,
-      message: notif.lastMessage || 'Nuevo mensaje privado',
-      timestamp: notif.lastMessageTime,
-      read: false,
-      recipientId: '',
-      type: 'private_message'
-    }))
-  ], [taskNotifications, messageNotifications]);
+  // Notification system removed - using NodeMailer instead
 
-  // Calcular conteos basados en las notificaciones combinadas
-  const hasUnread = allNotifications.some((n) => !n.read);
-  const unreadCount = allNotifications.filter((n) => !n.read).length;
-
-  /* ────────────────────────────────────────────
-     EFFECTS – AUDIO INIT
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    audioRef.current = new Audio('/NotificationSound.mp3');
-    return () => audioRef.current?.pause();
-  }, []);
-
-  /* ────────────────────────────────────────────
-     EFFECTS – USER INTERACTION TRACKING
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    const handleInteraction = () => {
-      setHasInteracted(true);
-      document.removeEventListener('click', handleInteraction);
-    };
-    document.addEventListener('click', handleInteraction);
-    return () => document.removeEventListener('click', handleInteraction);
-  }, []);
-
-  /* ────────────────────────────────────────────
-     EFFECTS – WATCH FOR NEW NOTIFICATIONS
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    const newUnread = allNotifications.filter(
-      (n) => !n.read && !prevNotificationsRef.current.some((p) => p.id === n.id),
-    );
-
-    if (newUnread.length > 0) {
-      setHasViewedNotifications(false);
-      if (audioRef.current && (hasInteracted || audioRef.current.autoplay !== false)) {
-        audioRef.current.play().catch(() => {});
-      }
-    }
-
-    if (allNotifications.length > 20) {
-      onLimitNotifications?.(allNotifications);
-    }
-
-    prevNotificationsRef.current = allNotifications;
-  }, [allNotifications, hasInteracted, onLimitNotifications]);
-
-  /* ────────────────────────────────────────────
-     EFFECTS – DROPDOWN POSITION
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    if (isNotificationsOpen && notificationButtonRef.current) {
-      const rect = notificationButtonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-      });
-    }
-  }, [isNotificationsOpen]);
-
-  /* ────────────────────────────────────────────
-     EFFECTS – MARK AS VIEWED WHEN OPENED
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    if (isNotificationsOpen) setHasViewedNotifications(true);
-    // Sincronizar isNotificationsVisible con isNotificationsOpen
-    setIsNotificationsVisible(isNotificationsOpen);
-  }, [isNotificationsOpen]);
+  // All notification effects removed - using NodeMailer instead
 
 
 
@@ -197,58 +78,7 @@ const Header: React.FC<HeaderProps> = ({
     }
   }, []);
 
-  /* ────────────────────────────────────────────
-     EFFECTS – CLOSE DROPDOWN ON OUTSIDE CLICK / ESC
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsNotificationsOpen(false);
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Element;
-      
-      // Si el dropdown no está abierto, no hacer nada
-      if (!isNotificationsOpen) return;
-      
-      // Si el click fue en el botón de notificaciones, no cerrar (ya se maneja en toggleNotifications)
-      if (notificationButtonRef.current?.contains(target)) return;
-      
-      // Si el click fue dentro del dropdown, no cerrar
-      if (target.closest('[data-notification-dropdown]')) return;
-      
-      // Si llegamos aquí, el click fue fuera del dropdown y del botón, entonces cerrar
-      setIsNotificationsOpen(false);
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isNotificationsOpen]);
-
-  /* ────────────────────────────────────────────
-     EFFECTS – BLOCK BODY SCROLL WHEN DROPDOWN IS OPEN
-  ──────────────────────────────────────────── */
-  useEffect(() => {
-    if (isNotificationsOpen) {
-      const scrollPosition = window.scrollY;
-      document.body.classList.add('no-scroll');
-      document.body.style.top = `-${scrollPosition}px`;
-    } else {
-      document.body.classList.remove('no-scroll');
-      document.body.style.top = '';
-      window.scrollTo(0, parseInt(document.body.style.top || '0'));
-    }
-
-    return () => {
-      document.body.classList.remove('no-scroll');
-      document.body.style.top = '';
-    };
-  }, [isNotificationsOpen]);
+  // Notification dropdown effects removed - using NodeMailer instead
 
 
 
@@ -298,65 +128,7 @@ const Header: React.FC<HeaderProps> = ({
     }
   }, [isCreateTaskOpen, isEditTaskOpen, hasUnsavedChanges, onChangeContainer]);
 
-  /* ────────────────────────────────────────────
-     NOTIFICATION BUTTON HANDLERS
-  ──────────────────────────────────────────── */
-  const toggleNotifications = useCallback(() => {
-    const newIsOpen = !isNotificationsOpen;
-    setIsNotificationsOpen(newIsOpen);
-    setHasInteracted(true);
-    
-    // Si se está abriendo el dropdown, marcar como vistas
-    if (newIsOpen) {
-      setHasViewedNotifications(true);
-    }
-  }, [isNotificationsOpen]);
-
-  const handleNotificationClick = useCallback((notification: Notification) => {
-    // Si se proporciona un callback externo, usarlo
-    if (onNotificationClick) {
-      onNotificationClick(notification);
-      return;
-    }
-
-    // Manejo interno de notificaciones
-    try {
-      switch (notification.type) {
-        case 'task_created':
-        case 'task_status_changed':
-        case 'task_deleted':
-        case 'task_archived':
-        case 'task_unarchived':
-        case 'group_message':
-        case 'time_log':
-          if (notification.taskId) {
-            // Aquí podrías abrir el chat de la tarea
-            // Por ahora solo cerramos el dropdown
-            setIsNotificationsOpen(false);
-          }
-          break;
-          
-        case 'private_message':
-          if (notification.conversationId) {
-            // Aquí podrías abrir el chat privado
-            // Por ahora solo cerramos el dropdown
-            setIsNotificationsOpen(false);
-          }
-          break;
-          
-        default:
-          setIsNotificationsOpen(false);
-          break;
-      }
-    } catch {
-      // Silently handle error
-      setIsNotificationsOpen(false);
-    }
-  }, [onNotificationClick]);
-
-  const handleCloseNotifications = useCallback(() => {
-    setIsNotificationsOpen(false);
-  }, []);
+  // Notification handlers removed - using NodeMailer instead
 
   // Handlers para eventos del logo
   const handleLogoClick = useCallback(() => {
@@ -464,47 +236,7 @@ const Header: React.FC<HeaderProps> = ({
             <AvailabilityToggle />
           </div>
 
-          <div className={styles.notificationContainer}>
-            <SimpleTooltip text="Notificaciones">
-              <button
-                ref={notificationButtonRef}
-                className={styles.notificationButton}
-                onClick={toggleNotifications}
-                aria-label="Abrir notificaciones"
-                aria-expanded={isNotificationsOpen}
-                aria-controls="notification-dropdown"
-              >
-                {hasUnread && !hasViewedNotifications ? (
-                  <div className={styles.notification}>
-                    <div className={styles.bellContainer}>
-                      <div className={styles.bell}></div>
-                    </div>
-                    {unreadCount > 0 && (
-                      <span className={styles.notificationCount} aria-live="polite">{unreadCount}</span>
-                    )}
-                  </div>
-                ) : (
-                  <Image
-                    src="/EmptyNotification.svg"
-                    alt="Notificaciones"
-                    width={24}
-                    height={24}
-                    priority
-                    style={{ width: 'auto', height: 'auto' }}
-                  />
-                )}
-              </button>
-            </SimpleTooltip>
-            <NotificationDropdown
-              isVisible={isNotificationsVisible}
-              isOpen={isNotificationsOpen}
-              users={users}
-              dropdownPosition={dropdownPosition}
-              onNotificationClick={handleNotificationClick}
-              onClose={handleCloseNotifications}
-              notifications={allNotifications}
-            />
-          </div>
+          {/* Notification system removed - using NodeMailer instead */}
 
           <div className={styles.AvatarDesktop}>
             <AvatarDropdown onChangeContainer={handleContainerChange} />

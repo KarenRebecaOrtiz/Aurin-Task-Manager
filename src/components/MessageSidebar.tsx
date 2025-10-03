@@ -304,19 +304,7 @@ const MessageSidebar: React.FC<MessageSidebarProps> = ({
   // Efecto para marcar notificaciones como leídas cuando se abre el sidebar
   useEffect(() => {
     if (isOpen && user?.id) {
-      // Mark private message notifications as read
-      const notificationsQuery = query(
-        collection(db, 'notifications'),
-        where('conversationId', '==', conversationId),
-        where('recipientId', '==', user.id),
-        where('read', '==', false)
-      );
-      getDocs(notificationsQuery).then((snapshot) => {
-        const updatePromises = snapshot.docs.map((notifDoc) =>
-          updateDoc(doc(db, 'notifications', notifDoc.id), { read: true })
-        );
-        Promise.all(updatePromises);
-      });
+      // Notification system removed - using NodeMailer instead
     }
   }, [isOpen, user?.id, conversationId]);
 

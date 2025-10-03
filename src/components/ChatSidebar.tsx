@@ -24,14 +24,12 @@ import { updateTaskActivity } from '@/lib/taskUtils';
 import { useMessagePagination } from '@/hooks/useMessagePagination';
 import { useMessageActions } from '@/hooks/useMessageActions';
 import { useMessageDrag } from '@/hooks/useMessageDrag';
-import { useTaskNotifications } from '@/hooks/useTaskNotifications';
 import { useTimerStoreHook } from '@/hooks/useTimerStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSidebarManager } from '@/hooks/useSidebarManager';
 import LoadMoreButton from './ui/LoadMoreButton';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useShallow } from 'zustand/react/shallow';
-import { notificationService } from '@/services/notificationService';
 
 import { useGeminiSummary } from '@/hooks/useGeminiSummary';
 import { deleteTask as deleteTaskFromFirestore } from '@/lib/taskUtils';
@@ -628,7 +626,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
 
     
     const { encryptMessage, decryptMessage } = useEncryption(task?.id || '');
-    const { markAsViewed } = useTaskNotifications();
+    // Notification system removed - using NodeMailer instead
 
     const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
     const [timerInput, setTimerInput] = useState('00:00');
@@ -1037,19 +1035,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         const recipients = new Set<string>([...task.AssignedTo, ...task.LeadedBy]);
         if (task.CreatedBy) recipients.add(task.CreatedBy);
         recipients.delete(user.id);
-        if (recipients.size > 0) {
-          try {
-            await notificationService.createNotificationsForRecipients({
-              userId: user.id,
-              message: `${user.fullName || 'Usuario'} ha cambiado el estado de la tarea "${task.name}" a "${status}"`,
-              type: 'task_status_changed',
-              taskId: task.id,
-            }, Array.from(recipients));
-            // console.warn('[ChatSidebar] Sent status change notifications to:', recipients.size, 'recipients');
-          } catch {
-            // console.warn('[ChatSidebar] Error sending status change notifications:', error);
-          }
-        }
+        // Notification system removed - using NodeMailer instead
         // console.log('[ChatSidebar] Task status updated successfully:', {
         //   taskId: task.id,
         //   newStatus: status,
@@ -1171,37 +1157,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
         });
 
         // Crear notificación solo si hay destinatarios
-        if (recipients.size > 0) {
-          // Determinar el tipo de notificación basado en el contenido
-          const notificationType = messageData.hours ? 'time_log' : 'group_message';
-          
-          const notificationText = messageData.hours
-            ? `${user.firstName || 'Usuario'} registró ${messageData.hours} horas en "${task.name}"`
-            : messageData.text
-              ? `${user.firstName || 'Usuario'} escribió en "${task.name}": ${
-                  messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text
-                }`
-              : `${user.firstName || 'Usuario'} compartió un archivo en "${task.name}"`;
-
-          try {
-            await notificationService.createNotificationsForRecipients({
-              userId: user.id,
-              message: notificationText,
-              type: notificationType,
-              taskId: task.id,
-            }, Array.from(recipients));
-            console.log(`[ChatSidebar] Sent ${notificationType} notifications to:`, recipients.size, 'recipients');
-          } catch (error) {
-            console.error('[ChatSidebar] Error sending notifications:', {
-              error: error instanceof Error ? error.message : JSON.stringify(error),
-              recipients: Array.from(recipients),
-              taskId: task.id,
-              userId: user.id,
-            });
-          }
-        } else {
-          console.log('[ChatSidebar] No recipients for notifications (solo creator)');
-        }
+        // Notification system removed - using NodeMailer instead
 
         await updateTaskActivity(task.id, 'message');
         setReplyingTo(null);
@@ -1523,11 +1479,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
                     useEffect(() => {
         if (isOpen && user?.id) {
           // Mark as viewed only once when sidebar opens
-          const markAsViewedTimeoutId = setTimeout(() => {
-            markAsViewed(task.id).catch(() => {
-              // console.error('[ChatSidebar] Error marking task as viewed:', error);
-            });
-          }, 100); // Small delay to prevent race conditions
+          // Notification system removed - using NodeMailer instead
           
           const batchOperations = async () => {
             try {
@@ -1574,11 +1526,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(
           const batchTimeoutId = setTimeout(batchOperations, 1500);
           
           return () => {
-            clearTimeout(markAsViewedTimeoutId);
+            // Notification system removed
             clearTimeout(batchTimeoutId);
           };
       }
-    }, [isOpen, messages, user?.id, task.id, markAsViewed]);
+    }, [isOpen, messages, user?.id, task.id]);
 
     // Efecto para asegurar que el timer se inicialice correctamente cuando se abre el sidebar
     useEffect(() => {
