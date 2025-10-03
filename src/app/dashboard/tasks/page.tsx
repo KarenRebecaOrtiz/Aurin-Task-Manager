@@ -32,7 +32,6 @@ import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { usePersonalLocations } from '@/hooks/usePersonalLocations';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
-import { useMessageNotificationsSingleton } from '@/hooks/useMessageNotificationsSingleton';
 
 // Función para generar conversationId de manera consistente (igual que en MessageSidebar)
 const generateConversationId = (userId1: string, userId2: string): string => {
@@ -473,8 +472,7 @@ function TasksPageContent() {
 
 
   
-  // Mover useMessageNotifications aquí para evitar re-renders en MembersTable
-  const { getUnreadCountForUser, markConversationAsRead } = useMessageNotificationsSingleton();
+  // Message notifications removed - using NodeMailer instead
   
   const handleMessageSidebarOpen = useCallback((receiverUser: User) => {
     // Usar getState() para evitar re-renders reactivos
@@ -594,7 +592,6 @@ function TasksPageContent() {
         <Header
           selectedContainer={selectedContainer}
           isArchiveTableOpen={isArchiveTableOpen}
-          users={memoizedUsers}
           onChangeContainer={handleContainerChange}
           isCreateTaskOpen={isCreateTaskOpen}
           isEditTaskOpen={isEditTaskOpen}
@@ -680,8 +677,6 @@ function TasksPageContent() {
               onMessageSidebarOpen={handleMessageSidebarOpen}
               externalUsers={users}
               externalTasks={tasks}
-              getUnreadCountForUser={getUnreadCountForUser}
-              markConversationAsRead={markConversationAsRead}
             />
           )}
 

@@ -16,8 +16,6 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { getLastActivityTimestamp, archiveTask, unarchiveTask } from '@/lib/taskUtils';
-import { useTaskNotifications } from '@/hooks/useTaskNotifications';
-import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { tasksTableStore } from '@/stores/tasksTableStore';
@@ -305,8 +303,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   //   setFilteredTasks(effectiveTasks);
   // }, [effectiveTasks, setFilteredTasks]);
 
-  // Usar el hook de notificaciones simplificado
-  const { getUnreadCount, markAsViewed } = useTaskNotifications();
+  // Notification system removed - using NodeMailer instead
 
   // Setup de tasks con actualizaciones en tiempo real - ELIMINAR DUPLICADO
   useEffect(() => {
@@ -498,10 +495,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     // console.log(`[TasksTable] Column ${columnKey} visibility changed to: ${visible}`);
   }, []);
 
-  // ✅ OPTIMIZACIÓN: Memoizar getUnreadCount para estabilizar dependencias
-  const memoizedGetUnreadCount = useCallback((task: Task) => {
-    return getUnreadCount(task);
-  }, [getUnreadCount]);
+  // Notification system removed - using NodeMailer instead
+  const memoizedGetUnreadCount = useCallback(() => {
+    return 0;
+  }, []);
 
   // ✅ FILTRADO DIRECTO: Actualizar filteredTasks cuando cambien los filtros
   useEffect(() => {
@@ -558,10 +555,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const handleTaskRowClick = useCallback(async (task: Task) => {
 
     
-    // OPTIMISTIC UPDATE: Mark task as viewed BEFORE opening sidebar
-    markAsViewed(task.id).catch(() => {
-      // console.error('[TasksTable] Error marking task as viewed');
-    });
+    // Notification system removed - using NodeMailer instead
     
     // Usar los action handlers configurados en TasksTableContainer
     const { openChatSidebar } = useTasksTableActionsStore.getState();
@@ -573,7 +567,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     openChatSidebar(task, clientName);
     
     
-  }, [clients, markAsViewed]);
+  }, [clients]);
 
   useEffect(() => {
     const currentActionMenuRef = actionMenuRef.current;
@@ -722,10 +716,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           : clientB.localeCompare(clientA);
       });
     } else if (sortKey === 'notificationDot') {
-      // ✅ OPTIMIZACIÓN: Usar cache para getUnreadCount en sort
-      sorted.sort((a, b) => {
-        const countA = memoizedGetUnreadCount(a);
-        const countB = memoizedGetUnreadCount(b);
+      // Notification system removed - using NodeMailer instead
+      sorted.sort(() => {
+        const countA = 0;
+        const countB = 0;
         return sortDirection === 'asc' ? countA - countB : countB - countA;
       });
     } else if (sortKey === 'assignedTo') {
@@ -951,14 +945,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     );
   }, []);
 
-  const renderNotificationDotColumn = useCallback((task: Task) => {
-    const updateCount = memoizedGetUnreadCount(task);
-    return (
-      <div className={styles.notificationDotWrapper}>
-        <NotificationDot count={updateCount} />
-      </div>
-    );
-  }, [memoizedGetUnreadCount]);
+  const renderNotificationDotColumn = useCallback(() => {
+    // Notification system removed - using NodeMailer instead
+    return null;
+  }, []);
 
   const renderAssignedToColumn = useCallback((task: Task) => {
     return <AvatarGroup assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={effectiveUsers} currentUserId={userId} />;

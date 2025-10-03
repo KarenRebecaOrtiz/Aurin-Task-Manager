@@ -2,7 +2,6 @@
 import { useState, useCallback } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, Timestamp, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { notificationService } from '@/services/notificationService';
 import { Message } from '@/types';
 
 interface Conversation {
@@ -124,13 +123,7 @@ export const usePrivateMessageActions = ({
             ? `${senderName} te escribió: ${messageData.text.length > 50 ? messageData.text.substring(0, 50) + '...' : messageData.text}`
             : `${senderName} te ha enviado un mensaje privado`;
             
-          await notificationService.createNotification({
-            userId: senderId,
-            recipientId: receiverId,
-            message: notificationText,
-            type: 'private_message',
-            conversationId,
-          });
+          // Notification system removed - using NodeMailer instead
           console.log('[usePrivateMessageActions] Created private message notification');
         } catch (error) {
           console.error('[usePrivateMessageActions] Failed to create notification:', error);

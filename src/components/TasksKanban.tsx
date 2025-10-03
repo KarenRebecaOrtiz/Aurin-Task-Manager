@@ -15,8 +15,6 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTaskNotifications } from '@/hooks/useTaskNotifications';
-import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { tasksKanbanStore } from '@/stores/tasksKanbanStore';
@@ -144,8 +142,6 @@ interface SortableItemProps {
   isTouchDevice: boolean;
   clients: Client[];
   users: User[];
-  getUnreadCount: (task: Task) => number;
-  markAsViewed: (taskId: string) => Promise<void>;
   normalizeStatus: (status: string) => string;
 }
 
@@ -163,8 +159,6 @@ const SortableItem: React.FC<SortableItemProps> = ({
   isTouchDevice,
   clients,
   users,
-  getUnreadCount,
-  markAsViewed,
   normalizeStatus,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -200,10 +194,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
       onClick={async () => {
         
         try {
-          // OPTIMISTIC UPDATE: Mark task as viewed BEFORE opening sidebar
-          markAsViewed(task.id).catch(error => {
-            console.error('[TasksKanban] Error marking task as viewed:', error);
-          });
+          // Notification system removed - using NodeMailer instead
           
           // Usar directamente el store en lugar de props para evitar re-renders
           const { openChatSidebar } = useSidebarStateStore.getState();
@@ -222,13 +213,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         <div className={styles.taskStatusAndName}>
         <div className={styles.taskNameWrapper}>
         <span className={styles.taskName}>{task.name}</span>
-          {(() => {
-            const updateCount = getUnreadCount(task);
-            // Debug logging disabled to reduce console spam
-            return (
-              <NotificationDot count={updateCount} />
-            );
-          })()}
+          {/* Notification system removed - using NodeMailer instead */}
           </div>
           <div className={styles.taskStatus}>
             <Image
@@ -774,8 +759,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
 
 
 
-  // Usar el hook de notificaciones simplificado
-  const { getUnreadCount, markAsViewed } = useTaskNotifications();
+  // Notification system removed - using NodeMailer instead
 
   // Configurar sensores con restricciones para evitar drag accidental
   const sensors = useSensors(
@@ -1321,8 +1305,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
                       isTouchDevice={isTouchDevice}
                       clients={effectiveClients}
                       users={effectiveUsers}
-                      getUnreadCount={getUnreadCount}
-                      markAsViewed={markAsViewed}
                       normalizeStatus={normalizeStatus}
                     />
                   ))}

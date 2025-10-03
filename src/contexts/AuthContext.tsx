@@ -4,9 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useMemo } fr
 import { useUser } from '@clerk/nextjs';
 
 // Importar managers para cleanup
-import { MessageNotificationsManager } from '@/hooks/useMessageNotificationsSingleton';
 import { PrivateMessagePaginationManager } from '@/hooks/usePrivateMessagePaginationSingleton';
-import { TaskNotificationsManager } from '@/hooks/useTaskNotificationsSingleton';
 
 // Define the context shape
 interface AuthContextType {
@@ -64,17 +62,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       if (!user?.id) {
         try {
-          // Cleanup de MessageNotificationsManager
-          const messageManager = MessageNotificationsManager.getInstance();
-          messageManager.cleanupAllListeners();
-          
           // Cleanup de PrivateMessagePaginationManager
           const paginationManager = PrivateMessagePaginationManager.getInstance();
           paginationManager.cleanupAllListeners();
           
-          // Cleanup de TaskNotificationsManager
-          const taskManager = TaskNotificationsManager.getInstance();
-          taskManager.cleanupAllListeners();
+          // Notification managers removed - using NodeMailer instead
         } catch {
           // Silent error handling for cleanup
         }

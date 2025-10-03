@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import { collection, getDocs, query, deleteDoc, doc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
-import { notificationService } from '@/services/notificationService';
+import { emailNotificationService } from '@/services/emailNotificationService';
 
 // Helper function for conditional logging (only in development)
 const debugLog = (message: string, ...args: unknown[]) => {
@@ -342,17 +342,18 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
     if (task.CreatedBy) recipients.add(task.CreatedBy);
     recipients.delete(userId); // Excluir al usuario que realiza la acción
     
+    // Send email notifications to involved users
     if (recipients.size > 0) {
       try {
-        await notificationService.createNotificationsForRecipients({
+        await emailNotificationService.createEmailNotificationsForRecipients({
           userId,
           message: `Usuario eliminó la tarea "${task.name}"`,
           type: 'task_deleted',
           taskId,
         }, Array.from(recipients));
-        debugLog('[taskUtils] Sent delete notifications to:', recipients.size, 'recipients');
+        debugLog('[taskUtils] Sent delete email notifications to:', recipients.size, 'recipients');
       } catch (error) {
-        debugError('[taskUtils] Error sending delete notifications:', error);
+        debugError('[taskUtils] Error sending delete email notifications:', error);
         // No fallar la operación principal por errores de notificación
       }
     }
@@ -389,17 +390,18 @@ export async function archiveTask(taskId: string, userId: string, isAdmin: boole
     if (task.CreatedBy) recipients.add(task.CreatedBy);
     recipients.delete(userId); // Excluir al usuario que realiza la acción
     
+    // Send email notifications to involved users
     if (recipients.size > 0) {
       try {
-        await notificationService.createNotificationsForRecipients({
+        await emailNotificationService.createEmailNotificationsForRecipients({
           userId,
           message: `Usuario archivó la tarea "${task.name}"`,
           type: 'task_archived',
           taskId,
         }, Array.from(recipients));
-        debugLog('[taskUtils] Sent archive notifications to:', recipients.size, 'recipients');
+        debugLog('[taskUtils] Sent archive email notifications to:', recipients.size, 'recipients');
       } catch (error) {
-        debugError('[taskUtils] Error sending archive notifications:', error);
+        debugError('[taskUtils] Error sending archive email notifications:', error);
         // No fallar la operación principal por errores de notificación
       }
     }
@@ -433,17 +435,18 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
     if (task.CreatedBy) recipients.add(task.CreatedBy);
     recipients.delete(userId); // Excluir al usuario que realiza la acción
     
+    // Send email notifications to involved users
     if (recipients.size > 0) {
       try {
-        await notificationService.createNotificationsForRecipients({
+        await emailNotificationService.createEmailNotificationsForRecipients({
           userId,
           message: `Usuario desarchivó la tarea "${task.name}"`,
           type: 'task_unarchived',
           taskId,
         }, Array.from(recipients));
-        debugLog('[taskUtils] Sent unarchive notifications to:', recipients.size, 'recipients');
+        debugLog('[taskUtils] Sent unarchive email notifications to:', recipients.size, 'recipients');
       } catch (error) {
-        debugError('[taskUtils] Error sending unarchive notifications:', error);
+        debugError('[taskUtils] Error sending unarchive email notifications:', error);
         // No fallar la operación principal por errores de notificación
       }
     }

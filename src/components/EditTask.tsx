@@ -22,6 +22,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { z } from "zod";
+import { emailNotificationService } from '@/services/emailNotificationService';
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -533,11 +534,57 @@ const [currentStep, setCurrentStep] = useState(0);
 
       // Actualizar la actividad de la tarea
       await updateTaskActivity(taskId, 'edit');
+
       // Determinar destinatarios (excluyendo al editor)
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
       recipients.delete(user.id);
       
-      // Notification system removed - using NodeMailer instead
+      if (recipients.size > 0) {
+        try {
+          // Determinar el tipo de cambio para notificación más específica
+          let notificationType: string = 'task_status_changed';
+          let notificationMessage = `${user.firstName || "Usuario"} actualizó la tarea ${values.basicInfo.name}`;
+          
+          // Detectar cambios específicos
+          const hasPriorityChanged = values.basicInfo.priority !== defaultValues.basicInfo.priority;
+          const hasDatesChanged = values.basicInfo.startDate !== defaultValues.basicInfo.startDate || 
+                                 values.basicInfo.endDate !== defaultValues.basicInfo.endDate;
+          const hasAssignmentChanged = JSON.stringify(values.teamInfo.AssignedTo) !== JSON.stringify(defaultValues.teamInfo.AssignedTo);
+          
+          if (hasPriorityChanged) {
+            notificationType = 'task_priority_changed';
+            notificationMessage = `${user.firstName || "Usuario"} cambió la prioridad de "${values.basicInfo.name}" a ${values.basicInfo.priority}`;
+          } else if (hasDatesChanged) {
+            notificationType = 'task_dates_changed';
+            notificationMessage = `${user.firstName || "Usuario"} actualizó las fechas de "${values.basicInfo.name}"`;
+          } else if (hasAssignmentChanged) {
+            notificationType = 'task_assignment_changed';
+            notificationMessage = `${user.firstName || "Usuario"} modificó la asignación de "${values.basicInfo.name}"`;
+          }
+
+          // Log para depuración
+          console.log('[EditTask] Detected changes:', {
+            priorityChanged: hasPriorityChanged,
+            datesChanged: hasDatesChanged,
+            assignmentChanged: hasAssignmentChanged,
+            notificationType,
+            recipients: Array.from(recipients),
+          });
+
+          await emailNotificationService.createEmailNotificationsForRecipients({
+            userId: user.id,
+            message: notificationMessage,
+            type: notificationType as any, // Type assertion para compatibilidad
+            taskId,
+          }, Array.from(recipients));
+          
+          console.log(`[EditTask] Sent ${notificationType} notifications to:`, recipients.size, 'recipients');
+        } catch (error) {
+          console.warn('[EditTask] Error sending task update notifications:', error);
+        }
+      } else {
+        console.log('[EditTask] No recipients for notifications (solo editor)');
+      }
 
       // Use parent alert handlers if available, otherwise use local state
       if (onShowSuccessAlert) {

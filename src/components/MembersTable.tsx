@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import UserAvatar from '@/components/ui/UserAvatar';
 
-import NotificationDot from '@/components/ui/NotificationDot';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { membersTableStore } from '@/stores/membersTableStore';
@@ -51,14 +50,12 @@ interface MembersTableProps {
   onMessageSidebarOpen: (user: User) => void;
   externalUsers?: User[];
   externalTasks?: Task[];
-  getUnreadCountForUser?: (userId: string) => number;
-  markConversationAsRead?: (conversationId: string) => Promise<void>;
 }
 
 // (Eliminar definiciones de getCacheKey, saveUsersCache, loadUsersCache, cleanupMembersTableListeners)
 
 const MembersTable: React.FC<MembersTableProps> = memo(
-  ({ onMessageSidebarOpen, externalUsers, externalTasks, getUnreadCountForUser, markConversationAsRead }) => {
+  ({ onMessageSidebarOpen, externalUsers, externalTasks }) => {
     const { user } = useUser();
     const { isLoading } = useAuth();
     
@@ -151,22 +148,10 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           return;
         }
         
-        // Para otros usuarios, abrir chat y marcar como leída si es necesario
-        if (getUnreadCountForUser && markConversationAsRead) {
-          const unreadCount = getUnreadCountForUser(u.id);
-          if (unreadCount > 0) {
-            // Usar el mismo conversationId que usa MessageSidebar
-            const conversationId = generateConversationId(user?.id || '', u.id);
-            try {
-              await markConversationAsRead(conversationId);
-            } catch (error) {
-              console.error('[MembersTable] Error marking conversation as read:', error);
-            }
-          }
-        }
+        // Notification system removed - using NodeMailer instead
         handleMessageSidebarOpen(u);
       }
-    }, [user?.id, getUnreadCountForUser, markConversationAsRead, handleMessageSidebarOpen, handleOpenProfile]);
+    }, [user?.id, handleMessageSidebarOpen, handleOpenProfile]);
 
     // Handler para el click en el avatar - evita que se propague al row click
     const handleAvatarClick = useCallback((e: React.MouseEvent, user: User) => {
@@ -296,9 +281,9 @@ const MembersTable: React.FC<MembersTableProps> = memo(
             bValue = (b.status || 'Sin estado').toLowerCase();
             break;
           case 'messageNotifications':
-            // Ordenar por número de notificaciones no leídas
-            aValue = getUnreadCountForUser ? getUnreadCountForUser(a.id) : 0;
-            bValue = getUnreadCountForUser ? getUnreadCountForUser(b.id) : 0;
+            // Notification system removed - using NodeMailer instead
+            aValue = 0;
+            bValue = 0;
             break;
           default:
             aValue = a.fullName.toLowerCase();
@@ -311,7 +296,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           return aValue < bValue ? 1 : -1;
         }
       });
-    }, [memoizedFilteredUsers, filteredUsers, sortKey, sortDirection, activeProjectsCount, getUnreadCountForUser]);
+    }, [memoizedFilteredUsers, filteredUsers, sortKey, sortDirection, activeProjectsCount]);
 
     // Definir columnas (memoizado y optimizado)
     const columns = useMemo(() => [
@@ -350,13 +335,9 @@ const MembersTable: React.FC<MembersTableProps> = memo(
         label: '',
         width: '10%',
         mobileVisible: false,
-        render: (user: User) => {
-          const unreadCount = getUnreadCountForUser(user.id);
-          return (
-            <div className={styles.notificationDotWrapper}>
-              <NotificationDot count={unreadCount} />
-            </div>
-          );
+        render: () => {
+          // Notification system removed - using NodeMailer instead
+          return null;
         },
       },
       {
@@ -383,7 +364,7 @@ const MembersTable: React.FC<MembersTableProps> = memo(
           <span className={styles.status}>{user.status || 'Sin estado'}</span>
         ),
       },
-    ], [activeProjectsCount, getUnreadCountForUser, isMobile, handleAvatarClick, handleAvatarMouseEnter, handleAvatarMouseLeave]);
+    ], [activeProjectsCount, isMobile, handleAvatarClick, handleAvatarMouseEnter, handleAvatarMouseLeave]);
 
     // Función para manejar cambios de visibilidad de columnas
     const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {

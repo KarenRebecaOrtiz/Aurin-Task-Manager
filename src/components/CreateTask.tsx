@@ -21,6 +21,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { z } from "zod";
+import { emailNotificationService } from '@/services/emailNotificationService';
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -543,7 +544,19 @@ const CreateTask: React.FC<CreateTaskProps> = ({
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
       recipients.delete(user.id);
       
-      // Notification system removed - using NodeMailer instead
+      if (recipients.size > 0) {
+        try {
+          await emailNotificationService.createEmailNotificationsForRecipients({
+            userId: user.id,
+            message: `${user.firstName || "Usuario"} te asignó la tarea ${values.basicInfo.name}`,
+            type: 'task_created',
+            taskId,
+          }, Array.from(recipients));
+          console.log('[CreateTask] Sent task creation email notifications to:', recipients.size, 'recipients');
+        } catch (error) {
+          console.warn('[CreateTask] Error sending task creation notifications:', error);
+        }
+      }
 
       if (onShowSuccessAlert) {
         onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha creado exitosamente.`);
