@@ -3,7 +3,6 @@
 import { useEffect, useRef, useMemo, memo, useCallback, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
 import Table from './Table';
 import ActionMenu from './ui/ActionMenu';
@@ -18,6 +17,7 @@ import { archiveTableStore } from '@/stores/archiveTableStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useTaskArchiving } from '@/hooks/useTaskArchiving';
+import { useTasksCommon } from '@/hooks/useTasksCommon';
 
 interface User {
   id: string;
@@ -146,6 +146,23 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       }
     });
     
+    // ✅ Hook común centralizado
+    const {
+      tasks: commonTasks,
+      clients: commonClients,
+      users: commonUsers,
+      userId: commonUserId,
+      isAdmin: commonIsAdmin,
+      applyTaskFilters,
+      getInvolvedUserIds,
+      canUserViewTask,
+      getClientName,
+      animateClick,
+      createPrioritySelectHandler,
+      createClientSelectHandler,
+      createUserFilterHandler,
+    } = useTasksCommon();
+    
     // Hook para detectar el viewport
     const [isMobile, setIsMobile] = useState(false);
     
@@ -266,14 +283,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       return archived;
     }, [effectiveTasks]);
 
-    // Helper function to get involved user IDs
-    const getInvolvedUserIds = useCallback((task: Task) => {
-      const ids = new Set<string>();
-      if (task.CreatedBy) ids.add(task.CreatedBy);
-      if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
-      if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
-      return Array.from(ids);
-    }, []);
+    // ✅ ELIMINADO: getInvolvedUserIds ahora viene del hook centralizado useTasksCommon
 
     const memoizedFilteredTasks = useMemo(() => {
       const filtered = archivedTasks.filter((task) => {
@@ -306,11 +316,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       setIsUserDropdownOpen(false);
     };
 
-    // Función para obtener el nombre del cliente
-    const getClientName = useCallback((clientId: string) => {
-      const client = effectiveClients.find((c) => c.id === clientId);
-      return client?.name || 'Cliente no encontrado';
-    }, [effectiveClients]);
+    // ✅ ELIMINADO: getClientName ahora viene del hook centralizado useTasksCommon
 
     // ✅ CENTRALIZADO: Usar hook centralizado para desarchivar tareas
     const handleUnarchiveTask = useCallback(async (task: Task) => {
@@ -437,26 +443,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       }
     };
 
-    const animateClick = useCallback((element: HTMLElement) => {
-      gsap.to(element, {
-        scale: 0.95,
-        duration: 0.1,
-        yoyo: true,
-        repeat: 1,
-      });
-    }, []);
-
-    const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      setPriorityFilter(priority);
-      setIsPriorityDropdownOpen(false);
-    };
-
-    const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation();
-      setClientFilter(clientId);
-      setIsClientDropdownOpen(false);
-    };
+    // ✅ CENTRALIZADAS: Funciones de dropdown usando hook centralizado
+    const handlePrioritySelect = createPrioritySelectHandler(setPriorityFilter, setIsPriorityDropdownOpen);
+    const handleClientSelect = createClientSelectHandler(setClientFilter, setIsClientDropdownOpen);
 
     // Función para obtener la clase de la fila
     const getRowClassName = (task: Task) => {

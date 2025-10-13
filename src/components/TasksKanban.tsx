@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { collection, onSnapshot, query } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { DndContext, DragOverlay, closestCenter, useDroppable, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
@@ -22,6 +21,7 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSensors, useSensor, PointerSensor, TouchSensor } from '@dnd-kit/core';
 import { useTaskArchiving } from '@/hooks/useTaskArchiving';
+import { useTasksCommon } from '@/hooks/useTasksCommon';
 
 // Kanban status columns definition
 const statusColumns = [
@@ -703,6 +703,24 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     }
   });
 
+  // ✅ Hook común centralizado
+  const {
+    tasks: commonTasks,
+    clients: commonClients,
+    users: commonUsers,
+    userId: commonUserId,
+    isAdmin: commonIsAdmin,
+    applyTaskFilters,
+    getInvolvedUserIds,
+    canUserViewTask,
+    getClientName,
+    animateClick,
+    createPrioritySelectHandler,
+    createClientSelectHandler,
+    createUserFilterHandler,
+    normalizeStatus,
+  } = useTasksCommon();
+
   // Usa useDataStore/useShallow para obtener tasks, users, clients, etc. directamente
   const tasks = useDataStore(useShallow(state => state.tasks));
   const clients = useDataStore(useShallow(state => state.clients));
@@ -716,67 +734,10 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   const effectiveClients = clients;
   const effectiveUsers = users;
 
-  // Helper function to get involved user IDs
-  const getInvolvedUserIds = useCallback((task: Task) => {
-    const ids = new Set<string>();
-    if (task.CreatedBy) ids.add(task.CreatedBy);
-    if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
-    if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
-    return Array.from(ids);
-  }, []);
+  // ✅ ELIMINADO: getInvolvedUserIds ahora viene del hook centralizado useTasksCommon
 
   // Helper function to normalize status values with memoization
-  const normalizeStatus = useCallback((status: string): string => {
-    // Handle case where status is an Object instead of string
-    if (typeof status === 'object' && status !== null) {
-      status = String(status);
-    }
-    
-    if (!status) {
-      return 'Por Iniciar'; // Default for empty/null status
-    }
-    
-    const normalized = status.trim();
-    
-    // Handle common variations
-    const statusMap: { [key: string]: string } = {
-      'por iniciar': 'Por Iniciar',
-      'por-iniciar': 'Por Iniciar',
-      'pendiente': 'Por Iniciar',
-      'pending': 'Por Iniciar',
-      'to do': 'Por Iniciar',
-      'todo': 'Por Iniciar',
-      'en proceso': 'En Proceso',
-      'en-proceso': 'En Proceso',
-      'in progress': 'En Proceso',
-      'progreso': 'En Proceso',
-      'por finalizar': 'Por Finalizar',
-      'por-finalizar': 'Por Finalizar',
-      'to finish': 'Por Finalizar',
-      'finalizado': 'Finalizado',
-      'finalizada': 'Finalizado',
-      'completed': 'Finalizado',
-      'completado': 'Finalizado',
-      'completada': 'Finalizado',
-      'done': 'Finalizado',
-      'terminado': 'Finalizado',
-      'terminada': 'Finalizado',
-      'finished': 'Finalizado',
-      'backlog': 'Backlog',
-      'cancelado': 'Cancelado',
-      'cancelada': 'Cancelado',
-      'cancelled': 'Cancelado',
-      // Legacy status mapping
-      'diseno': 'Por Iniciar',
-      'diseño': 'Por Iniciar',
-      'design': 'Por Iniciar',
-      'desarrollo': 'En Proceso',
-      'development': 'En Proceso',
-      'dev': 'En Proceso',
-    };
-    
-    return statusMap[normalized.toLowerCase()] || normalized;
-  }, []);
+  // ✅ ELIMINADO: normalizeStatus ahora viene del hook centralizado useTasksCommon
 
 
 
@@ -909,32 +870,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     }
   }, [user?.id, effectiveTasks]);
 
-  // Setup de clients con actualizaciones en tiempo real
-  useEffect(() => {
-    if (!user?.id || effectiveClients.length > 0) return;
-
-    const clientsQuery = query(collection(db, 'clients'));
-    const unsubscribeClients = onSnapshot(
-      clientsQuery,
-      (snapshot) => {
-        const clientsData: Client[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '/empty-image.png',
-        }));
-        
-        // dataStore maneja el estado de loading
-      },
-      (error) => {
-        console.error('[TasksKanban] Error in clients onSnapshot:', error);
-        // dataStore maneja el estado de loading
-      }
-    );
-
-    return () => {
-      unsubscribeClients();
-    };
-  }, [user?.id, effectiveClients]);
+  // ✅ ELIMINADO: Clients ya manejados centralmente por dataStore
+  // No necesitamos setup duplicado de clientes aquí
 
   // Users are now managed centrally by useSharedTasksState
   // No independent user fetching needed
@@ -947,56 +884,11 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     };
   }, []);
 
-  const animateClick = (element: HTMLElement) => {
-    gsap.to(element, {
-      scale: 0.95,
-      opacity: 0.8,
-      duration: 0.15,
-      ease: 'power1.out',
-      yoyo: true,
-      repeat: 1,
-    });
-  };
+  // ✅ ELIMINADO: animateClick ahora viene del hook centralizado useTasksCommon
 
-  const handlePrioritySelect = (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
-    animateClick(e.currentTarget);
-    
-    // Animate filter change
-    const filterIcon = e.currentTarget.querySelector('img');
-    if (filterIcon) {
-      gsap.to(filterIcon, {
-        rotation: 360,
-        scale: 1.2,
-        duration: 0.3,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 1
-      });
-    }
-    
-    setPriorityFilter(priority);
-    setIsPriorityDropdownOpen(false);
-  };
-
-  const handleClientSelect = (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-    animateClick(e.currentTarget);
-    
-    // Animate filter change
-    const filterIcon = e.currentTarget.querySelector('img');
-    if (filterIcon) {
-      gsap.to(filterIcon, {
-        rotation: 360,
-        scale: 1.2,
-        duration: 0.3,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 1
-      });
-    }
-    
-    setClientFilter(clientId);
-    setIsClientDropdownOpen(false);
-  };
+  // ✅ CENTRALIZADAS: Funciones de dropdown usando hook centralizado
+  const handlePrioritySelect = createPrioritySelectHandler(setPriorityFilter, setIsPriorityDropdownOpen);
+  const handleClientSelect = createClientSelectHandler(setClientFilter, setIsClientDropdownOpen);
 
   // Group tasks by status - essential for Kanban functionality
   const groupedTasks = useMemo(() => {

@@ -23,6 +23,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useTaskArchiving } from '@/hooks/useTaskArchiving';
 
 import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
+import { useTasksCommon } from '@/hooks/useTasksCommon';
 
 interface Client {
   id: string;
@@ -304,7 +305,24 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
-  const userId = useMemo(() => user?.id || '', [user]);
+  // ✅ Hook común centralizado
+  const {
+    tasks: commonTasks,
+    clients: commonClients,
+    users: commonUsers,
+    userId,
+    isAdmin: commonIsAdmin,
+    applyTaskFilters,
+    getInvolvedUserIds,
+    canUserViewTask,
+    canUserArchiveTask,
+    getClientName,
+    animateClick,
+    createPrioritySelectHandler,
+    createClientSelectHandler,
+    createUserFilterHandler,
+    getPriorityOrder
+  } = useTasksCommon();
 
   // Usar datos externos si están disponibles, de lo contrario usar datos del store
   const effectiveTasksRef = useRef(effectiveTasks);
@@ -345,16 +363,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   // Users are now managed centrally by useSharedTasksState
   // No independent user fetching needed
 
-  // REMOVIDO: Este useEffect estaba sobrescribiendo el filtrado cada vez que cambiaban los users
+  // ✅ ELIMINADO: getInvolvedUserIds ahora viene del hook centralizado useTasksCommon
   // El filtrado se maneja en memoizedFilteredTasks y se aplica en el useEffect de la línea 392-394
-
-  const getInvolvedUserIds = useCallback((task: Task) => {
-    const ids = new Set<string>();
-    if (task.CreatedBy) ids.add(task.CreatedBy);
-    if (Array.isArray(task.AssignedTo)) task.AssignedTo.forEach((id) => ids.add(id));
-    if (Array.isArray(task.LeadedBy)) task.LeadedBy.forEach((id) => ids.add(id));
-    return Array.from(ids);
-  }, []);
 
   const handleUserFilter = useCallback((id: string) => {
     // Animate filter change
@@ -577,14 +587,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     // Usar los action handlers configurados en TasksTableContainer
     const { openChatSidebar } = useTasksTableActionsStore.getState();
     
-    // Buscar el nombre del cliente
-    const clientName = clients.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
+    // ✅ CENTRALIZADO: Buscar el nombre del cliente usando función común
+    const clientName = getClientName(task.clientId);
     
     // Abrir el sidebar inmediatamente (red dot ya desapareció)
     openChatSidebar(task, clientName);
     
     
-  }, [clients]);
+  }, [getClientName]);
 
   useEffect(() => {
     const currentActionMenuRef = actionMenuRef.current;
@@ -808,16 +818,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     return sorted;
   }, [filteredTasks, sortKey, sortDirection, effectiveClients, effectiveUsers]);
 
-  const animateClick = useCallback((element: HTMLElement) => {
-    gsap.to(element, {
-      scale: 0.95,
-      opacity: 0.8,
-      duration: 0.15,
-      ease: 'power1.out',
-      yoyo: true,
-      repeat: 1,
-    });
-  }, []);
+  // ✅ ELIMINADO: animateClick ahora viene del hook centralizado useTasksCommon
 
   // ✅ OPTIMIZACIÓN: Memoizar handlers para evitar re-renders
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -877,45 +878,9 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     }
   }, [animateClick, isUserDropdownOpen, setIsUserDropdownOpen, setIsPriorityDropdownOpen, setIsClientDropdownOpen]);
 
-  const handlePrioritySelect = useCallback((priority: string, e: React.MouseEvent<HTMLDivElement>) => {
-    animateClick(e.currentTarget);
-    
-    // Animate filter change
-    const filterIcon = e.currentTarget.querySelector('img');
-    if (filterIcon) {
-      gsap.to(filterIcon, {
-        rotation: 360,
-        scale: 1.2,
-        duration: 0.3,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 1
-      });
-    }
-    
-    setPriorityFilter(priority);
-    setIsPriorityDropdownOpen(false);
-  }, [animateClick, setPriorityFilter, setIsPriorityDropdownOpen]);
-
-  const handleClientSelect = useCallback((clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
-    animateClick(e.currentTarget);
-    
-    // Animate filter change
-    const filterIcon = e.currentTarget.querySelector('img');
-    if (filterIcon) {
-      gsap.to(filterIcon, {
-        rotation: 360,
-        scale: 1.2,
-        duration: 0.3,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 1
-      });
-    }
-    
-    setClientFilter(clientId);
-    setIsClientDropdownOpen(false);
-  }, [animateClick, setClientFilter, setIsClientDropdownOpen]);
+  // ✅ CENTRALIZADAS: Funciones de dropdown usando hook centralizado
+  const handlePrioritySelect = createPrioritySelectHandler(setPriorityFilter, setIsPriorityDropdownOpen);
+  const handleClientSelect = createClientSelectHandler(setClientFilter, setIsClientDropdownOpen);
 
   // ✅ CORREGIDO: Memoizar handlers para dropdowns
   const handlePriorityItemClick = useCallback((priority: string) => (e: React.MouseEvent<HTMLDivElement>) => {
