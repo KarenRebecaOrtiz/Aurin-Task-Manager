@@ -17,6 +17,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { archiveTableStore } from '@/stores/archiveTableStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
+import { useTaskArchiving } from '@/hooks/useTaskArchiving';
 
 interface User {
   id: string;
@@ -107,7 +108,6 @@ interface ArchiveTableProps {
   onViewChange: (view: string) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onClose: () => void;
-  onTaskArchive: (task: unknown, action: 'archive' | 'unarchive') => Promise<boolean>;
   onDataRefresh: () => void;
 }
 
@@ -117,11 +117,34 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     onViewChange,
     onDeleteTaskOpen,
     onClose,
-    onTaskArchive,
     onDataRefresh,
   }) => {
     const { user } = useUser();
     const { isAdmin } = useAuth();
+    
+    // ✅ Hook centralizado para archivado/desarchivado
+    const {
+      handleUnarchiveTask: unarchiveTaskCentralized,
+      handleUndo: undoCentralized,
+      undoStack: centralizedUndoStack,
+      showUndo: centralizedShowUndo
+    } = useTaskArchiving({
+      onSuccess: (task, action) => {
+        // Callback para actualizar la UI después de cambios exitosos
+        const currentState = archiveTableStore.getState();
+        if (action === 'unarchive') {
+          // Remover tarea desarchivada del filtrado local (ya que mostramos solo archivadas)
+          currentState.setFilteredTasks(currentState.filteredTasks.filter(t => t.id !== task.id));
+        } else {
+          // Agregar tarea archivada al filtrado local
+          currentState.setFilteredTasks([...currentState.filteredTasks, { ...task, archived: true }]);
+        }
+      },
+      onError: (error, task, action) => {
+        // eslint-disable-next-line no-console
+        console.error(`Error ${action}ing task:`, error);
+      }
+    });
     
     // Hook para detectar el viewport
     const [isMobile, setIsMobile] = useState(false);
@@ -163,8 +186,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       isClientDropdownOpen,
       isUserDropdownOpen,
       userFilter,
-      undoStack,
-      showUndo,
       // Acciones
       setFilteredTasks,
       setSortKey,
@@ -176,8 +197,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       setIsClientDropdownOpen,
       setIsUserDropdownOpen,
       setUserFilter,
-      setUndoStack,
-      setShowUndo,
     } = useStore(
       archiveTableStore,
       useShallow((state) => ({
@@ -192,8 +211,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         isClientDropdownOpen: state.isClientDropdownOpen,
         isUserDropdownOpen: state.isUserDropdownOpen,
         userFilter: state.userFilter,
-        undoStack: state.undoStack,
-        showUndo: state.showUndo,
         // Acciones
         setFilteredTasks: state.setFilteredTasks,
         setSortKey: state.setSortKey,
@@ -205,8 +222,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         setIsClientDropdownOpen: state.setIsClientDropdownOpen,
         setIsUserDropdownOpen: state.setIsUserDropdownOpen,
         setUserFilter: state.setUserFilter,
-        setUndoStack: state.setUndoStack,
-        setShowUndo: state.setShowUndo,
       }))
     );
     
@@ -227,7 +242,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     // CRÍTICO: Actualizar inmediatamente cuando cambien los datos externos
     useEffect(() => {
       if (tasks && tasks.length > 0) {
-        const archivedCount = tasks.filter(t => t.archived === true).length;
+        // Datos disponibles para procesar
       }
     }, [tasks]);
 
@@ -297,10 +312,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       return client?.name || 'Cliente no encontrado';
     }, [effectiveClients]);
 
-    // Handler reforzado para desarchivar - MEJORADO para actualización optimista
+    // ✅ CENTRALIZADO: Usar hook centralizado para desarchivar tareas
     const handleUnarchiveTask = useCallback(async (task: Task) => {
       // ✅ CORREGIDO: Permitir desarchivar a admins Y creadores de la tarea
       if (!isAdmin && task.CreatedBy !== userId) {
+        // eslint-disable-next-line no-console
         console.warn('[ArchiveTable] Unarchive intentado por usuario sin permisos:', { 
           isAdmin, 
           taskCreatedBy: task.CreatedBy, 
@@ -310,92 +326,35 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       }
 
       try {
-        // Guardar en undo stack ANTES de desarchivar
-        const undoItem = {
-          task: { ...task },
-          action: 'unarchive' as const,
-          timestamp: Date.now()
-        };
-        
-        // Actualización optimista del estado local
-        setFilteredTasks(filteredTasks.filter(t => t.id !== task.id));
-        
-        setUndoStack([...undoStack, undoItem]);
-        setShowUndo(true);
-
-        // Limpiar timeout anterior
-        if (undoTimeoutRef.current) {
-          clearTimeout(undoTimeoutRef.current);
-        }
-
-        // Configurar timeout para limpiar undo
-        undoTimeoutRef.current = setTimeout(() => {
-          setShowUndo(false);
-          setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-        }, 3000);
-        
-        // Ejecutar la acción en segundo plano
-        if (onTaskArchive) {
-          console.log('[ArchiveTable] Unarchiving task via central handler:', task.id);
-          onTaskArchive(task, 'unarchive').catch(error => {
-            // Si falla, revertir la actualización optimista
-            console.error('[ArchiveTable] Failed to unarchive task:', error);
-            setFilteredTasks([...filteredTasks, task]);
-            setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-            setShowUndo(false);
-          });
-        }
+        await unarchiveTaskCentralized(task, userId, isAdmin);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('[ArchiveTable] Error unarchiving task:', error);
         if (onDataRefresh) {
           onDataRefresh();
         }
       }
-    }, [isAdmin, userId, onDataRefresh, onTaskArchive, filteredTasks, setFilteredTasks, setUndoStack, setShowUndo, undoStack]);
+    }, [isAdmin, userId, onDataRefresh, unarchiveTaskCentralized]);
 
-    // Función para deshacer - MEJORADA con actualización optimista
-    const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
+    // ✅ CENTRALIZADO: Usar hook centralizado para deshacer
+    const handleUndo = useCallback(async (undoItem?: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
       try {
-        if (onTaskArchive) {
-          console.log('[ArchiveTable] Undoing action:', {
+        // Usar la función centralizada de undo
+        if (undoItem) {
+          const mappedUndoItem = {
+            task: undoItem.task,
             action: undoItem.action,
-            taskId: undoItem.task.id,
-            taskName: undoItem.task.name
-          });
-          
-          // Actualización optimista del estado local
-          if (undoItem.action === 'unarchive') {
-            // Si estamos deshaciendo un desarchivado, volvemos a mostrar la tarea
-            setFilteredTasks([...filteredTasks, undoItem.task]);
-          } else {
-            // Si estamos deshaciendo un archivado, quitamos la tarea
-            setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
-          }
-          
-          // Remover del undo stack inmediatamente
-          setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-          setShowUndo(false);
-          
-          if (undoTimeoutRef.current) {
-            clearTimeout(undoTimeoutRef.current);
-          }
-          
-          // Ejecutar la acción en segundo plano
-          const targetAction = undoItem.action === 'unarchive' ? 'archive' : 'unarchive';
-          onTaskArchive(undoItem.task, targetAction).catch(error => {
-            // Si falla, revertir la actualización optimista
-            console.error('[ArchiveTable] Failed to undo action:', error);
-            if (undoItem.action === 'unarchive') {
-              setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
-            } else {
-              setFilteredTasks([...filteredTasks, undoItem.task]);
-            }
-          });
+            timestamp: undoItem.timestamp
+          };
+          await undoCentralized(mappedUndoItem);
+        } else {
+          await undoCentralized();
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('[ArchiveTable] Error undoing action:', error);
       }
-    }, [onTaskArchive, filteredTasks, setFilteredTasks, setUndoStack, setShowUndo, undoStack]);
+    }, [undoCentralized]);
 
     // Ordenar tareas
     const sortedTasks = useMemo(() => {
@@ -649,30 +608,10 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   }}
                   onArchive={async () => {
                     try {
-                      // Guardar en undo stack
-                      const undoItem = {
-                        task: { ...task },
-                        action: 'unarchive' as const,
-                        timestamp: Date.now()
-                      };
-                      setUndoStack([...undoStack, undoItem]);
-                      setShowUndo(true);
-
-                      // Limpiar timeout anterior
-                      if (undoTimeoutRef.current) {
-                        clearTimeout(undoTimeoutRef.current);
-                      }
-
-                      // Configurar timeout para limpiar undo
-                      undoTimeoutRef.current = setTimeout(() => {
-                        setShowUndo(false);
-                        setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-                      }, 3000);
-                      
-                      // Ejecutar la función de desarchivo
+                      // Usar la función centralizada de desarchivo
                       await handleUnarchiveTask(task);
-                      // setActionMenuOpenId(null); // Remover variable no usada
                     } catch (error) {
+                      // eslint-disable-next-line no-console
                       console.error('[ArchiveTable] Error unarchiving task:', error);
                     }
                   }}
@@ -695,8 +634,8 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     // Cleanup effect for timeouts
     useEffect(() => {
+      const timeoutId = undoTimeoutRef.current;
       return () => {
-        const timeoutId = undoTimeoutRef.current;
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
@@ -1183,7 +1122,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         
         {/* Undo Notification */}
         <AnimatePresence>
-          {showUndo && undoStack.length > 0 && (
+          {centralizedShowUndo && centralizedUndoStack.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1219,13 +1158,13 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   animation: 'pulse 2s infinite'
                 }} />
                 <span>
-                  {undoStack[undoStack.length - 1]?.action === 'unarchive' 
+                  {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive' 
                     ? 'Tarea desarchivada' 
                     : 'Tarea archivada'}
                 </span>
               </div>
               <button
-                onClick={() => handleUndo(undoStack[undoStack.length - 1])}
+                onClick={() => handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1])}
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   border: 'none',

@@ -15,11 +15,12 @@ import avatarStyles from './ui/AvatarGroup.module.scss';
 
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
-import { getLastActivityTimestamp, archiveTask, unarchiveTask } from '@/lib/taskUtils';
+import { getLastActivityTimestamp } from '@/lib/taskUtils';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { tasksTableStore } from '@/stores/tasksTableStore';
 import { useDataStore } from '@/stores/dataStore';
+import { useTaskArchiving } from '@/hooks/useTaskArchiving';
 
 import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
 
@@ -192,6 +193,31 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     openArchiveTable,
     changeView
   } = useTasksTableActionsStore();
+
+  // ✅ Hook centralizado para archivado/desarchivado
+  const {
+    handleArchiveTask: archiveTaskCentralized,
+    handleUndo: undoCentralized,
+    undoStack: centralizedUndoStack,
+    showUndo: centralizedShowUndo
+  } = useTaskArchiving({
+    onSuccess: (task, action) => {
+      // Callback para actualizar la UI después de cambios exitosos
+      if (action === 'archive') {
+        // Remover tarea archivada del filtrado local
+        const currentTasks = tasksTableStore.getState().filteredTasks;
+        setFilteredTasks(currentTasks.filter(t => t.id !== task.id));
+      } else {
+        // Agregar tarea desarchivada al filtrado local
+        const currentTasks = tasksTableStore.getState().filteredTasks;
+        setFilteredTasks([...currentTasks, { ...task, archived: false }]);
+      }
+    },
+    onError: (error, task, action) => {
+      // eslint-disable-next-line no-console
+      console.error(`Error ${action}ing task:`, error);
+    }
+  });
   
   // ✅ Optimizar selectores de dataStore con useShallow para evitar re-renders
   const tasks = useDataStore(useShallow(state => state.tasks));
@@ -248,9 +274,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const isPriorityDropdownOpen = useStore(tasksTableStore, useShallow(state => state.isPriorityDropdownOpen));
   const isClientDropdownOpen = useStore(tasksTableStore, useShallow(state => state.isClientDropdownOpen));
   const isUserDropdownOpen = useStore(tasksTableStore, useShallow(state => state.isUserDropdownOpen));
-  const undoStack = useStore(tasksTableStore, useShallow(state => state.undoStack));
-  const showUndo = useStore(tasksTableStore, useShallow(state => state.showUndo));
-  
   // Acciones
   const setFilteredTasks = useStore(tasksTableStore, useShallow(state => state.setFilteredTasks));
   const setSortKey = useStore(tasksTableStore, useShallow(state => state.setSortKey));
@@ -264,9 +287,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const setIsClientDropdownOpen = useStore(tasksTableStore, useShallow(state => state.setIsClientDropdownOpen));
   const setIsUserDropdownOpen = useStore(tasksTableStore, useShallow(state => state.setIsUserDropdownOpen));
   const setIsLoadingTasks = useStore(tasksTableStore, useShallow(state => state.setIsLoadingTasks));
-  // const setIsLoadingClients = useStore(tasksTableStore, useShallow(state => state.setIsLoadingClients)); // No usado - listeners eliminados
-  const setUndoStack = useStore(tasksTableStore, useShallow(state => state.setUndoStack));
-  const setShowUndo = useStore(tasksTableStore, useShallow(state => state.setShowUndo));
   
   // Debug: Log what's causing re-renders - REMOVED TO REDUCE RE-RENDERS
 
@@ -496,9 +516,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, []);
 
   // Notification system removed - using NodeMailer instead
-  const memoizedGetUnreadCount = useCallback(() => {
-    return 0;
-  }, []);
 
   // ✅ FILTRADO DIRECTO: Actualizar filteredTasks cuando cambien los filtros
   useEffect(() => {
@@ -789,7 +806,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     // });
     
     return sorted;
-  }, [filteredTasks, sortKey, sortDirection, effectiveClients, effectiveUsers, memoizedGetUnreadCount]);
+  }, [filteredTasks, sortKey, sortDirection, effectiveClients, effectiveUsers]);
 
   const animateClick = useCallback((element: HTMLElement) => {
     gsap.to(element, {
@@ -1009,78 +1026,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     setActionMenuOpenId(null);
   }, [openDeleteTask, setActionMenuOpenId]);
 
+  // ✅ CENTRALIZADO: Usar hook centralizado para archivar tareas
   const handleArchiveTask = useCallback(async (task: Task) => {
     try {
-      // ✅ OPTIMISTIC UPDATE: Marcar tarea como archivada inmediatamente en el estado local
-      const updatedTask = { 
-        ...task, 
-        archived: true, 
-        archivedAt: new Date().toISOString(), 
-        archivedBy: userId 
-      };
-      
-      // ✅ ACTUALIZACIÓN OPTIMISTA: Sin interferencias del useEffect
-      
-      // ✅ CLAVE: Actualizar INMEDIATAMENTE el estado local del filtrado para que la tarea desaparezca instantáneamente
-      // Esto es lo que hace que funcione en ArchiveTable - DEBE SER LO PRIMERO
-      setFilteredTasks(filteredTasks.filter(t => t.id !== task.id));
-      
-      // ✅ ACTUALIZACIÓN INMEDIATA: Remover la tarea del filtrado local para que desaparezca instantáneamente
-      if (!externalTasks) {
-        // Actualizar el store de datos para que se refleje en el filtrado
-        const currentTasks = useDataStore.getState().tasks;
-        const updatedTasks = currentTasks.map(t => 
-          t.id === task.id ? updatedTask : t
-        );
-        useDataStore.getState().setTasks(updatedTasks);
-      }
-      
-      // Guardar en undo stack
-      const undoItem = {
-        task: { ...task },
-        action: 'archive' as const,
-        timestamp: Date.now()
-      };
-      setUndoStack([...undoStack, undoItem]);
-      setShowUndo(true);
-
-      // Limpiar timeout anterior
-      if (undoTimeoutRef.current) {
-        clearTimeout(undoTimeoutRef.current);
-      }
-
-      // Configurar timeout para limpiar undo
-      undoTimeoutRef.current = setTimeout(() => {
-        setShowUndo(false);
-        setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-      }, 3000);
-      
-      // Ejecutar la función de archivo
-      await archiveTask(task.id, userId, isAdmin, task);
-      
-      // ✅ OPERACIÓN COMPLETADA: Tarea archivada exitosamente
-      
+      await archiveTaskCentralized(task, userId, isAdmin);
       setActionMenuOpenId(null);
     } catch (error) {
-      // ✅ ROLLBACK: Si falla el archivo, revertir el estado optimista
+      // eslint-disable-next-line no-console
       console.error('Error archiving task:', error);
-      
-      if (!externalTasks) {
-        // Revertir el estado local
-        const currentTasks = useDataStore.getState().tasks;
-        const revertedTasks = currentTasks.map(t => 
-          t.id === task.id ? task : t
-        );
-        useDataStore.getState().setTasks(revertedTasks);
-      }
-      
-      // ✅ CLAVE: Revertir también el estado local del filtrado
-      setFilteredTasks([...filteredTasks, task]);
-      
-      // Mostrar error al usuario (opcional)
-      // Puedes implementar un toast o notificación aquí
     }
-  }, [userId, isAdmin, setUndoStack, undoStack, setShowUndo, setActionMenuOpenId, externalTasks, setFilteredTasks, filteredTasks]);
+  }, [archiveTaskCentralized, userId, isAdmin, setActionMenuOpenId]);
 
   // ✅ CORREGIDO: Memoizar handlers para ActionMenu específicos
   const handleEditTaskForActionMenu = useCallback((taskId: string) => () => {
@@ -1267,115 +1222,29 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     };
   }, []);
 
-  // Función para deshacer
-  const handleUndo = useCallback(async (undoItem: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
-    if (!undoItem || !userId) {
-      // console.error('Cannot undo: missing required data');
-      return;
-    }
-    
-    // ✅ CORREGIDO: Permitir deshacer a admins Y creadores de la tarea
-    const isTaskCreator = undoItem.task.CreatedBy === userId;
-    if (!isAdmin && !isTaskCreator) {
-      // console.error('Cannot undo: user not authorized', {
-      //   isAdmin,
-      //   taskCreatedBy: undoItem.task.CreatedBy,
-      //   currentUserId: userId
-      // });
-      return;
-    }
-
+  // ✅ CENTRALIZADO: Usar hook centralizado para deshacer
+  const handleUndo = useCallback(async (undoItem?: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
     try {
-      // ✅ ACTUALIZACIÓN OPTIMISTA: Sin interferencias del useEffect
-      
-      if (undoItem.action === 'archive') {
-        // ✅ OPTIMISTIC UPDATE: Desarchivar la tarea inmediatamente en el estado local
-        const updatedTask = { 
-          ...undoItem.task, 
-          archived: false, 
-          archivedAt: undefined, 
-          archivedBy: undefined 
+      // Usar la función centralizada de undo
+      if (undoItem) {
+        const mappedUndoItem = {
+          task: undoItem.task,
+          action: undoItem.action,
+          timestamp: undoItem.timestamp
         };
-        
-        // Actualizar el store de datos para que se refleje en el filtrado
-        if (!externalTasks) {
-          const currentTasks = useDataStore.getState().tasks;
-          const updatedTasks = currentTasks.map(t => 
-            t.id === undoItem.task.id ? updatedTask : t
-          );
-          useDataStore.getState().setTasks(updatedTasks);
-          
-          // ✅ CLAVE: Actualizar también el estado local del filtrado para que la tarea aparezca inmediatamente
-          setFilteredTasks([...filteredTasks, updatedTask]);
-        }
-        
-        // Ejecutar la función de desarchivo
-        await unarchiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
-        
-      } else if (undoItem.action === 'unarchive') {
-        // ✅ OPTIMISTIC UPDATE: Archivar la tarea inmediatamente en el estado local
-        const updatedTask = { 
-          ...undoItem.task, 
-          archived: true, 
-          archivedAt: new Date().toISOString(), 
-          archivedBy: userId 
-        };
-        
-        // Actualizar el store de datos para que se refleje en el filtrado
-        if (!externalTasks) {
-          const currentTasks = useDataStore.getState().tasks;
-          const updatedTasks = currentTasks.map(t => 
-            t.id === undoItem.task.id ? updatedTask : t
-          );
-          useDataStore.getState().setTasks(updatedTasks);
-          
-          // ✅ CLAVE: Actualizar también el estado local del filtrado para que la tarea desaparezca inmediatamente
-          setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
-        }
-        
-        // Ejecutar la función de archivo
-        await archiveTask(undoItem.task.id, userId, isAdmin, undoItem.task);
-      }
-      
-      // ✅ OPERACIÓN COMPLETADA: Undo ejecutado exitosamente
-      
-      // Remover del undo stack
-      setUndoStack(undoStack.filter(item => item.timestamp !== undoItem.timestamp));
-      setShowUndo(false);
-      
-      if (undoTimeoutRef.current) {
-        clearTimeout(undoTimeoutRef.current);
+        await undoCentralized(mappedUndoItem);
+      } else {
+        await undoCentralized();
       }
     } catch (error) {
-      // ✅ ROLLBACK: Si falla la operación, revertir el estado optimista
+      // eslint-disable-next-line no-console
       console.error('Error in undo process:', error);
-      
-      if (!externalTasks) {
-        // Revertir el estado local
-        const currentTasks = useDataStore.getState().tasks;
-        const revertedTasks = currentTasks.map(t => 
-          t.id === undoItem.task.id ? undoItem.task : t
-        );
-        useDataStore.getState().setTasks(revertedTasks);
-        
-        // ✅ CLAVE: Revertir también el estado local del filtrado
-        if (undoItem.action === 'archive') {
-          // Si falló el desarchivo, quitar la tarea del filtrado
-          setFilteredTasks(filteredTasks.filter(t => t.id !== undoItem.task.id));
-        } else {
-          // Si falló el archivado, agregar la tarea al filtrado
-          setFilteredTasks([...filteredTasks, undoItem.task]);
-        }
-      }
-      
-              // Mostrar error al usuario (opcional)
-        // Puedes implementar un toast o notificación aquí
     }
-  }, [userId, isAdmin, setUndoStack, setShowUndo, undoStack, externalTasks, setFilteredTasks, filteredTasks]);
+  }, [undoCentralized]);
 
   const handleUndoClick = useCallback(() => {
-    handleUndo(undoStack[undoStack.length - 1]);
-  }, [handleUndo, undoStack]);
+    handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1]);
+  }, [handleUndo, centralizedUndoStack]);
 
   const handleUndoMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
@@ -1392,12 +1261,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   // Cleanup all table listeners when component unmounts
   useEffect(() => {
     return () => {
-  
       cleanupTasksTableListeners();
       
       // Cleanup undo timeout
-      if (undoTimeoutRef.current) {
-        clearTimeout(undoTimeoutRef.current);
+      const timeoutId = undoTimeoutRef.current;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
   }, []);
@@ -1771,7 +1640,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       
       {/* Undo Notification */}
       <AnimatePresence>
-        {showUndo && undoStack.length > 0 && (
+        {centralizedShowUndo && centralizedUndoStack.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1807,7 +1676,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
                 animation: 'pulse 2s infinite'
               }} />
               <span>
-                {undoStack[undoStack.length - 1]?.action === 'unarchive' 
+                {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive' 
                   ? 'Tarea desarchivada' 
                   : 'Tarea archivada'}
               </span>

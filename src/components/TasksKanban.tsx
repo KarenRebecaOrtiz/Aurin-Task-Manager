@@ -21,6 +21,7 @@ import { tasksKanbanStore } from '@/stores/tasksKanbanStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSensors, useSensor, PointerSensor, TouchSensor } from '@dnd-kit/core';
+import { useTaskArchiving } from '@/hooks/useTaskArchiving';
 
 // Kanban status columns definition
 const statusColumns = [
@@ -685,6 +686,23 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   const { user } = useUser();
   const { isAdmin } = useAuth();
 
+  // ✅ Hook centralizado para archivado/desarchivado
+  const {
+    handleArchiveTask: archiveTaskCentralized,
+    handleUndo: undoCentralized,
+    undoStack: centralizedUndoStack,
+    showUndo: centralizedShowUndo
+  } = useTaskArchiving({
+    onSuccess: () => {
+      // En Kanban no necesitamos actualizar filteredTasks locales
+      // El dataStore ya maneja la actualización automática
+    },
+    onError: (error, _task, action) => {
+      // eslint-disable-next-line no-console
+      console.error(`Error ${action}ing task:`, error);
+    }
+  });
+
   // Usa useDataStore/useShallow para obtener tasks, users, clients, etc. directamente
   const tasks = useDataStore(useShallow(state => state.tasks));
   const clients = useDataStore(useShallow(state => state.clients));
@@ -1150,25 +1168,41 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     }
   };
 
-  // Handler para archivar localmente
+  // ✅ CENTRALIZADO: Usar hook centralizado para archivar tareas
   const handleArchiveTask = useCallback(async (task: Task) => {
     if (!isAdmin) {
+      // eslint-disable-next-line no-console
       console.warn('[TasksKanban] Archive intentado por usuario no admin');
       return;
     }
     
     try {
-      
-      // Importar las funciones de archivado
-      const { archiveTask } = await import('@/lib/taskUtils');
-      
-      // Archivar en Firestore
-      await archiveTask(task.id, userId, isAdmin, task);
-      
+      await archiveTaskCentralized(task, userId, isAdmin);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('[TasksKanban] Error archiving task:', error);
     }
-  }, [isAdmin, userId]);
+  }, [isAdmin, userId, archiveTaskCentralized]);
+
+  // ✅ CENTRALIZADO: Usar hook centralizado para deshacer
+  const handleUndo = useCallback(async (undoItem?: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
+    try {
+      // Usar la función centralizada de undo
+      if (undoItem) {
+        const mappedUndoItem = {
+          task: undoItem.task,
+          action: undoItem.action,
+          timestamp: undoItem.timestamp
+        };
+        await undoCentralized(mappedUndoItem);
+      } else {
+        await undoCentralized();
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[TasksKanban] Error undoing action:', error);
+    }
+  }, [undoCentralized]);
 
   if (isLoadingTasks) {
     return (
@@ -1380,6 +1414,76 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         </DragOverlay>
       </DndContext>
       
+      {/* Undo Notification */}
+      <AnimatePresence>
+        {centralizedShowUndo && centralizedUndoStack.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            style={{
+              position: 'fixed',
+              bottom: '20px',
+              right: '20px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              fontSize: '14px',
+              fontWeight: 500,
+              minWidth: '280px',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+                animation: 'pulse 2s infinite'
+              }} />
+              <span>
+                {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive' 
+                  ? 'Tarea desarchivada' 
+                  : 'Tarea archivada'}
+              </span>
+            </div>
+            <button
+              onClick={() => handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1])}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              Deshacer
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
