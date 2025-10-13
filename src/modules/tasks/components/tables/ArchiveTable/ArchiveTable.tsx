@@ -4,20 +4,20 @@ import { useEffect, useRef, useMemo, memo, useCallback, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import Table from './Table';
-import ActionMenu from './ui/ActionMenu';
-import styles from './TasksTable.module.scss';
-import avatarStyles from './ui/AvatarGroup.module.scss';
+import Table from '@/components/Table';
+import ActionMenu from '@/components/ui/ActionMenu';
+import styles from '../TasksTable/TasksTable.module.scss';
+import avatarStyles from '@/components/ui/AvatarGroup.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { archiveTableStore } from '@/stores/archiveTableStore';
+import { archiveTableStore } from '../../../stores/archiveTableStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
-import { useTaskArchiving } from '@/hooks/useTaskArchiving';
-import { useTasksCommon } from '@/hooks/useTasksCommon';
+import { useTaskArchiving } from '../../../hooks/useTaskArchiving';
+import { useTasksCommon } from '../../../hooks/useTasksCommon';
 
 interface User {
   id: string;
@@ -108,6 +108,7 @@ interface ArchiveTableProps {
   onViewChange: (view: string) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onClose: () => void;
+  onTaskArchive?: (task: unknown, action: 'archive' | 'unarchive') => Promise<boolean>;
   onDataRefresh: () => void;
 }
 
@@ -117,6 +118,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     onViewChange,
     onDeleteTaskOpen,
     onClose,
+    onTaskArchive,
     onDataRefresh,
   }) => {
     const { user } = useUser();

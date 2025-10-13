@@ -8,22 +8,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Firebase imports removidos - ya no se usan listeners aquí
 // import { collection, onSnapshot, query } from 'firebase/firestore';
 // import { db } from '@/lib/firebase';
-import Table from './Table';
-import ActionMenu from './ui/ActionMenu';
+import Table from '@/components/Table';
+import ActionMenu from '@/components/ui/ActionMenu';
 import styles from './TasksTable.module.scss';
-import avatarStyles from './ui/AvatarGroup.module.scss';
+import avatarStyles from '@/components/ui/AvatarGroup.module.scss';
 
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { getLastActivityTimestamp } from '@/lib/taskUtils';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { tasksTableStore } from '@/stores/tasksTableStore';
+import { tasksTableStore } from '../../../stores/tasksTableStore';
 import { useDataStore } from '@/stores/dataStore';
-import { useTaskArchiving } from '@/hooks/useTaskArchiving';
+import { useTaskArchiving } from '../../../hooks/useTaskArchiving';
 
-import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
-import { useTasksCommon } from '@/hooks/useTasksCommon';
+import { useTasksTableActionsStore } from '../../../stores/tasksTableActionsStore';
+import { useTasksCommon } from '../../../hooks/useTasksCommon';
 
 interface Client {
   id: string;

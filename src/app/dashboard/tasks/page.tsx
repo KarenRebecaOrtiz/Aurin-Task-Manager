@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect, memo } from 'react';
+import { useRef, useCallback, useEffect, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 
 import Header from '@/components/ui/Header';
@@ -10,7 +10,7 @@ import Selector from '@/components/Selector';
 import MembersTable from '@/components/MembersTable';
 import ClientsTable from '@/components/ClientsTable';
 import TasksTableIsolated from '@/components/TasksTableIsolated';
-import TasksKanban from '@/components/TasksKanban';
+import TasksKanban from '@/modules/tasks/components/tables/KanbanBoard';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
@@ -43,7 +43,7 @@ const generateConversationId = (userId1: string, userId2: string): string => {
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
-import ArchiveTable from '@/components/ArchiveTable';
+import ArchiveTable from '@/modules/tasks/components/tables/ArchiveTable';
 import EditTask from '@/components/EditTask';
 import CreateTask from '@/components/CreateTask';
 import TasksPageModals from '@/components/TasksPageModals';
@@ -149,9 +149,6 @@ function TasksPageContent() {
   const headerRef = useRef<HTMLDivElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-
-  // Memoized values
-  const memoizedUsers = useMemo(() => users, [users]);
 
   // Nuevo: obtener isArchiveTableOpen del store
   const isArchiveTableOpen = useTasksPageStore(useShallow(state => state.isArchiveTableOpen));

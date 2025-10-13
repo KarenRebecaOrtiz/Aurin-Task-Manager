@@ -7,9 +7,9 @@ import { gsap } from 'gsap';
 import { DndContext, DragOverlay, closestCenter, useDroppable, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { db } from '@/lib/firebase';
-import ActionMenu from './ui/ActionMenu';
+import ActionMenu from '@/components/ui/ActionMenu';
 import styles from './TasksKanban.module.scss';
-import avatarStyles from './ui/AvatarGroup.module.scss';
+import avatarStyles from '@/components/ui/AvatarGroup.module.scss';
 
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
@@ -20,8 +20,8 @@ import { tasksKanbanStore } from '@/stores/tasksKanbanStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSensors, useSensor, PointerSensor, TouchSensor } from '@dnd-kit/core';
-import { useTaskArchiving } from '@/hooks/useTaskArchiving';
-import { useTasksCommon } from '@/hooks/useTasksCommon';
+import { useTaskArchiving } from '../../../hooks/useTaskArchiving';
+import { useTasksCommon } from '../../../hooks/useTasksCommon';
 
 // Kanban status columns definition
 const statusColumns = [

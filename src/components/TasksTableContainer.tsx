@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import TasksTable from './TasksTable';
-import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
+import TasksTable from '@/modules/tasks/components/tables/TasksTable';
+import { useTasksTableActionsStore } from '@/modules/tasks/stores/tasksTableActionsStore';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 

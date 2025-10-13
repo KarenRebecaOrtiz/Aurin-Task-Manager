@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import styles from './TasksKanban.module.scss';
+import styles from '@/modules/tasks/components/tables/KanbanBoard/TasksKanban.module.scss';
 
 interface Client {
   id: string;

@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
-import { useTasksTableActionsStore } from '@/stores/tasksTableActionsStore';
+import { useTasksTableActionsStore } from '@/modules/tasks/stores/tasksTableActionsStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
-import TasksTable from './TasksTable';
+import TasksTable from '@/modules/tasks/components/tables/TasksTable';
 
 export default function TasksTableIsolated() {
   const { user } = useUser();
