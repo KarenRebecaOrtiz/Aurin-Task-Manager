@@ -161,7 +161,10 @@ const SortableItem: React.FC<SortableItemProps> = ({
   users,
   normalizeStatus,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !isAdmin // 🔒 Deshabilita drag completamente para no-admins
+  });
 
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -189,7 +192,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
+      {...(isAdmin ? listeners : {})} // 🔒 Solo aplicar listeners si es admin
       className={`${styles.taskCard} ${isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
       onClick={async () => {
         
@@ -1063,6 +1066,11 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
 
   // Drag and drop handlers - essential for Kanban functionality
   const handleDragStart = (event: DragStartEvent) => {
+    // 🔒 Bloquear drag para usuarios no admin
+    if (!isAdmin) {
+      return;
+    }
+
     const taskId = event.active.id;
     const task = effectiveTasks.find(t => t.id === taskId);
     if (task) {

@@ -211,12 +211,14 @@ export const useTimerStore = create<TimerStore>((set, get) => {
           if (timerDoc.exists()) {
             const data = timerDoc.data();
             const serverTime = new Date();
-            
+
             let accumulatedSeconds = data.accumulatedSeconds || 0;
-            
+
             if (data.isRunning && data.startTime) {
               const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
-              accumulatedSeconds = elapsed;
+              // Protección contra timers huérfanos: si el tiempo es absurdo (>24h), tratarlo como 0
+              const MAX_REASONABLE_TIME = 24 * 60 * 60; // 24 horas en segundos
+              accumulatedSeconds = elapsed > MAX_REASONABLE_TIME ? 0 : elapsed;
             }
             
             const newState = {
@@ -241,10 +243,12 @@ export const useTimerStore = create<TimerStore>((set, get) => {
               if (data.deviceId !== currentState.deviceId) {
                 const serverTime = new Date();
                 let accumulatedSeconds = data.accumulatedSeconds || 0;
-                
+
                 if (data.isRunning && data.startTime) {
                   const elapsed = calculateElapsedTime(data.startTime.toDate(), serverTime);
-                  accumulatedSeconds = elapsed;
+                  // Protección contra timers huérfanos: si el tiempo es absurdo (>24h), tratarlo como 0
+                  const MAX_REASONABLE_TIME = 24 * 60 * 60; // 24 horas en segundos
+                  accumulatedSeconds = elapsed > MAX_REASONABLE_TIME ? 0 : elapsed;
                 }
                 
                 set({

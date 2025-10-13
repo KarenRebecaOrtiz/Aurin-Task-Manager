@@ -195,7 +195,7 @@ const [currentStep, setCurrentStep] = useState(0);
   const form = useForm<FormValues>({
     resolver: zodResolver(createFormSchema(includeMembers)),
     defaultValues,
-    mode: "onChange",
+    mode: "onSubmit",
   });
 
   const { isLoading: hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
@@ -215,7 +215,6 @@ const [currentStep, setCurrentStep] = useState(0);
   // Update resolver when includeMembers changes
   useEffect(() => {
     form.clearErrors();
-    form.trigger();
   }, [includeMembers, form]);
 
   // Track unsaved changes

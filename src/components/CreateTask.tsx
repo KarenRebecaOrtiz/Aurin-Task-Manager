@@ -189,7 +189,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
   const form = useForm<FormValues>({
     resolver: zodResolver(createFormSchema(includeMembers)),
     defaultValues,
-    mode: "onChange",
+    mode: "onSubmit",
   });
 
   const { isLoading: hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
@@ -206,7 +206,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
   useEffect(() => {
     form.clearErrors();
-    form.trigger();
   }, [includeMembers, form]);
 
   const defaultValuesRef = useRef(defaultValues);
