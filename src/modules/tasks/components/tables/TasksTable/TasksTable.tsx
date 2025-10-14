@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // import { collection, onSnapshot, query } from 'firebase/firestore';
 // import { db } from '@/lib/firebase';
 import Table from '@/components/Table';
-import ActionMenu from '@/components/ui/ActionMenu';
+import ActionMenu from '../../ui/ActionMenu';
 import styles from './TasksTable.module.scss';
 import avatarStyles from '@/components/ui/AvatarGroup.module.scss';
 

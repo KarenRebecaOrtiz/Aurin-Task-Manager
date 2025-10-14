@@ -7,7 +7,7 @@ import { gsap } from 'gsap';
 import { DndContext, DragOverlay, closestCenter, useDroppable, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { db } from '@/lib/firebase';
-import ActionMenu from '@/components/ui/ActionMenu';
+import ActionMenu from '../../ui/ActionMenu';
 import styles from './TasksKanban.module.scss';
 import avatarStyles from '@/components/ui/AvatarGroup.module.scss';
 

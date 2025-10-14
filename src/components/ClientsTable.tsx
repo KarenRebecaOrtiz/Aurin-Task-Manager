@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
 import Table from './Table';
-import ActionMenu from './ui/ActionMenu';
+import ActionMenu from '@/modules/tasks/components/ui/ActionMenu';
 import styles from './ClientsTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 import SkeletonLoader from '@/components/SkeletonLoader'; // Import SkeletonLoader

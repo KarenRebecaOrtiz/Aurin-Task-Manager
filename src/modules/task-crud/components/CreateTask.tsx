@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
-import { doc, collection, setDoc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, collection, setDoc, addDoc, onSnapshot } from "firebase/firestore";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
@@ -10,14 +10,13 @@ import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import { es } from "date-fns/locale";
 import "react-day-picker/style.css";
-import styles from "@/components/CreateTask.module.scss";
+import styles from "./CreateTask.module.scss";
 import { Timestamp } from "firebase/firestore";
 import { Wizard, WizardStep, WizardProgress, WizardActions } from "@/components/ui/wizard";
 import { toast } from "@/components/ui/use-toast";
 import { useFormPersistence } from "@/components/ui/use-form-persistence";
-import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext'; 
 import { useDataStore } from '@/stores/dataStore';
 import { useKeyboardShortcuts } from "@/components/ui/use-keyboard-shortcuts";
 import { updateTaskActivity } from '@/lib/taskUtils';
@@ -51,9 +50,6 @@ interface Client {
   createdBy: string;
 }
 
-// User interface now imported from central types via dataStore
-
-// Esquema base sin validación condicional
 const baseFormSchema = z.object({
   clientInfo: z.object({
     clientId: z.string().min(1, { message: "Selecciona una cuenta*" }),
@@ -76,7 +72,6 @@ const baseFormSchema = z.object({
   }),
 });
 
-// Función para crear esquema dinámico basado en includeMembers
 const createFormSchema = (includeMembers: boolean) => {
   return baseFormSchema.refine(
     (data) => {
@@ -128,37 +123,36 @@ const stepFields: (keyof FormValues | string)[][] = [
   ["teamInfo.LeadedBy", "teamInfo.AssignedTo"],
 ];
 
-interface EditTaskProps {
+interface CreateTaskProps {
   isOpen: boolean;
   onToggle: () => void;
-  taskId: string;
   onHasUnsavedChanges: (hasChanges: boolean) => void;
   onCreateClientOpen: () => void;
   onEditClientOpen: (client: Client) => void;
   onClientAlertChange?: (alert: { type: "success" | "fail"; message?: string; error?: string } | null) => void;
+  onTaskCreated?: () => void;
   onShowSuccessAlert?: (message: string) => void;
   onShowFailAlert?: (message: string, error?: string) => void;
 }
 
-const EditTask: React.FC<EditTaskProps> = ({
+const CreateTask: React.FC<CreateTaskProps> = ({
   isOpen,
   onToggle,
-  taskId,
   onHasUnsavedChanges,
   onCreateClientOpen,
   onEditClientOpen,
   onClientAlertChange,
+  onTaskCreated,
   onShowSuccessAlert,
   onShowFailAlert,
 }) => {
   const { user } = useUser();
-  const router = useRouter();
   const { isAdmin, isLoading } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
-  // Use users from central dataStore instead of local state
   const users = useDataStore(useShallow(state => state.users));
   const [isSaving, setIsSaving] = useState(false);
-const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+
 
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
@@ -200,38 +194,33 @@ const [currentStep, setCurrentStep] = useState(0);
 
   const { isLoading: hasPersistedData, saveFormData, clearPersistedData } = useFormPersistence(
     form,
-    `edit-task-wizard-${taskId}`,
+    `create-task-wizard`,
     true,
   );
 
-  // Habilitar atajos de teclado
   useKeyboardShortcuts({ enabled: isOpen });
 
-  // Prevent hydration issues
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Update resolver when includeMembers changes
   useEffect(() => {
     form.clearErrors();
   }, [includeMembers, form]);
 
-  // Track unsaved changes
   const defaultValuesRef = useRef(defaultValues);
-  defaultValuesRef.current = defaultValues;
 
-  const checkForChanges = useCallback((value: FormValues) => {
-    saveFormData();
-    const isChanged = Object.keys(value).some((key) => {
-      const current = value[key as keyof FormValues];
+  const checkForChanges = useCallback((value: Partial<FormValues>) => {
+      saveFormData();
+      const isChanged = Object.keys(value).some((key) => {
+        const current = value[key as keyof FormValues];
       const initial = defaultValuesRef.current[key as keyof FormValues];
-      if (Array.isArray(current) && Array.isArray(initial)) {
-        return current.join() !== initial.join();
-      }
-      return current !== initial;
-    });
-    onHasUnsavedChanges(isChanged);
+        if (Array.isArray(current) && Array.isArray(initial)) {
+          return current.join() !== initial.join();
+        }
+        return current !== initial;
+      });
+      onHasUnsavedChanges(isChanged);
   }, [saveFormData, onHasUnsavedChanges]);
 
   useEffect(() => {
@@ -239,13 +228,12 @@ const [currentStep, setCurrentStep] = useState(0);
     return () => subscription.unsubscribe();
   }, [form, checkForChanges]);
 
-  // Reset form when closing
   const resetForm = useCallback(() => {
     form.reset(defaultValuesRef.current);
-    clearPersistedData();
+      clearPersistedData();
     setShowSuccessAlert(false);
     setShowFailAlert(false);
-    onHasUnsavedChanges(false);
+      onHasUnsavedChanges(false);
     setIsStartDateOpen(false);
     setIsEndDateOpen(false);
   }, [form, clearPersistedData, onHasUnsavedChanges]);
@@ -256,15 +244,14 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   }, [isOpen, resetForm]);
 
-  // Handle alert changes
   useEffect(() => {
     if (onClientAlertChange) {
       if (showSuccessAlert || showFailAlert) {
         onClientAlertChange({
           type: showSuccessAlert ? "success" : "fail",
           message: showSuccessAlert
-            ? `La tarea "${form.getValues("basicInfo.name")}" se ha actualizado exitosamente.`
-            : "No se pudo actualizar la tarea.",
+            ? `La tarea "${form.getValues("basicInfo.name")}" se ha creado exitosamente.`
+            : "No se pudo crear la tarea.",
           error: showFailAlert ? failErrorMessage : undefined,
         });
       } else {
@@ -273,36 +260,35 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   }, [onClientAlertChange, showSuccessAlert, showFailAlert, failErrorMessage, form]);
 
-  // Optimized dropdown positions useEffect - only run when dropdowns actually open/close
   const updatePositions = useCallback(() => {
-    if (isStartDateOpen && startDateInputRef.current) {
-      const rect = startDateInputRef.current.getBoundingClientRect();
-      setStartDatePosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
-    if (isEndDateOpen && endDateInputRef.current) {
-      const rect = endDateInputRef.current.getBoundingClientRect();
-      setEndDatePosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
+      if (isStartDateOpen && startDateInputRef.current) {
+        const rect = startDateInputRef.current.getBoundingClientRect();
+        setStartDatePosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+      if (isEndDateOpen && endDateInputRef.current) {
+        const rect = endDateInputRef.current.getBoundingClientRect();
+        setEndDatePosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
 
-    if (isStatusDropdownOpen && statusDropdownRef.current) {
-      const rect = statusDropdownRef.current.getBoundingClientRect();
-      setStatusDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
-    if (isPriorityDropdownOpen && priorityDropdownRef.current) {
-      const rect = priorityDropdownRef.current.getBoundingClientRect();
-      setPriorityDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-              });
+      if (isStatusDropdownOpen && statusDropdownRef.current) {
+        const rect = statusDropdownRef.current.getBoundingClientRect();
+        setStatusDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+      if (isPriorityDropdownOpen && priorityDropdownRef.current) {
+        const rect = priorityDropdownRef.current.getBoundingClientRect();
+        setPriorityDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
       }
 
   }, [
@@ -314,35 +300,35 @@ const [currentStep, setCurrentStep] = useState(0);
 
   const animatePoppers = useCallback(() => {
 
-    if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
-      gsap.fromTo(
-        statusDropdownPopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
-    if (isPriorityDropdownOpen && priorityDropdownPopperRef.current) {
-      gsap.fromTo(
-        priorityDropdownPopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
+      if (isStatusDropdownOpen && statusDropdownPopperRef.current) {
+        gsap.fromTo(
+          statusDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isPriorityDropdownOpen && priorityDropdownPopperRef.current) {
+        gsap.fromTo(
+          priorityDropdownPopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
 
-    if (isStartDateOpen && startDatePopperRef.current) {
-      gsap.fromTo(
-        startDatePopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
-    if (isEndDateOpen && endDatePopperRef.current) {
-      gsap.fromTo(
-        endDatePopperRef.current,
-        { opacity: 0, y: -10, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
-      );
-    }
+      if (isStartDateOpen && startDatePopperRef.current) {
+        gsap.fromTo(
+          startDatePopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
+      if (isEndDateOpen && endDatePopperRef.current) {
+        gsap.fromTo(
+          endDatePopperRef.current,
+          { opacity: 0, y: -10, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: "power2.out" },
+        );
+      }
   }, [
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
@@ -383,7 +369,6 @@ const [currentStep, setCurrentStep] = useState(0);
     animatePoppers,
   ]);
 
-  // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
 
@@ -434,7 +419,6 @@ const [currentStep, setCurrentStep] = useState(0);
     isEndDateOpen,
   ]);
 
-  // Handle scroll to close dropdowns
   useEffect(() => {
     const handleScroll = debounce(() => {
       if (
@@ -457,6 +441,27 @@ const [currentStep, setCurrentStep] = useState(0);
     isStatusDropdownOpen,
     isPriorityDropdownOpen,
   ]);
+  
+  useEffect(() => {
+    const clientsCollection = collection(db, "clients");
+    const unsubscribe = onSnapshot(
+      clientsCollection,
+      (snapshot) => {
+        const clientsData: Client[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name || "",
+          imageUrl: doc.data().imageUrl || "",
+          projects: doc.data().projects || [],
+          createdBy: doc.data().createdBy || "",
+        }));
+        setClients(clientsData);
+      },
+      (error) => {
+        console.error("[CreateTask] Error listening to clients:", error);
+      },
+    );
+    return () => unsubscribe();
+  }, []);
 
   const animateClick = useCallback((element: HTMLElement) => {
     gsap.to(element, {
@@ -520,6 +525,8 @@ const [currentStep, setCurrentStep] = useState(0);
     setShowPopupLoader(true);
     setIsSaving(true);
     try {
+      const taskDocRef = doc(collection(db, "tasks"));
+      const taskId = taskDocRef.id;
       const taskData = {
         ...values.clientInfo,
         ...values.basicInfo,
@@ -527,127 +534,81 @@ const [currentStep, setCurrentStep] = useState(0);
         AssignedTo: includeMembers ? values.teamInfo.AssignedTo || [] : [],
         CreatedBy: user.id,
         createdAt: Timestamp.fromDate(new Date()),
+        id: taskId,
       };
+      await setDoc(taskDocRef, taskData);
 
-      await setDoc(doc(db, "tasks", taskId), taskData);
-
-      // Actualizar la actividad de la tarea
       await updateTaskActivity(taskId, 'edit');
 
-      // Determinar destinatarios (excluyendo al editor)
       const recipients = new Set<string>([...values.teamInfo.LeadedBy, ...(includeMembers ? (values.teamInfo.AssignedTo || []) : [])]);
       recipients.delete(user.id);
       
       if (recipients.size > 0) {
         try {
-          // Determinar el tipo de cambio para notificación más específica
-          let notificationType: string = 'task_status_changed';
-          let notificationMessage = `${user.firstName || "Usuario"} actualizó la tarea ${values.basicInfo.name}`;
-          
-          // Detectar cambios específicos
-          const hasPriorityChanged = values.basicInfo.priority !== defaultValues.basicInfo.priority;
-          const hasDatesChanged = values.basicInfo.startDate !== defaultValues.basicInfo.startDate || 
-                                 values.basicInfo.endDate !== defaultValues.basicInfo.endDate;
-          const hasAssignmentChanged = JSON.stringify(values.teamInfo.AssignedTo) !== JSON.stringify(defaultValues.teamInfo.AssignedTo);
-          
-          if (hasPriorityChanged) {
-            notificationType = 'task_priority_changed';
-            notificationMessage = `${user.firstName || "Usuario"} cambió la prioridad de "${values.basicInfo.name}" a ${values.basicInfo.priority}`;
-          } else if (hasDatesChanged) {
-            notificationType = 'task_dates_changed';
-            notificationMessage = `${user.firstName || "Usuario"} actualizó las fechas de "${values.basicInfo.name}"`;
-          } else if (hasAssignmentChanged) {
-            notificationType = 'task_assignment_changed';
-            notificationMessage = `${user.firstName || "Usuario"} modificó la asignación de "${values.basicInfo.name}"`;
-          }
-
-          // Log para depuración
-          console.log('[EditTask] Detected changes:', {
-            priorityChanged: hasPriorityChanged,
-            datesChanged: hasDatesChanged,
-            assignmentChanged: hasAssignmentChanged,
-            notificationType,
-            recipients: Array.from(recipients),
-          });
-
           await emailNotificationService.createEmailNotificationsForRecipients({
             userId: user.id,
-            message: notificationMessage,
-            type: notificationType as any, // Type assertion para compatibilidad
+            message: `${user.firstName || "Usuario"} te asignó la tarea ${values.basicInfo.name}`,
+            type: 'task_created',
             taskId,
           }, Array.from(recipients));
-          
-          console.log(`[EditTask] Sent ${notificationType} notifications to:`, recipients.size, 'recipients');
+          console.log('[CreateTask] Sent task creation email notifications to:', recipients.size, 'recipients');
         } catch (error) {
-          console.warn('[EditTask] Error sending task update notifications:', error);
+          console.warn('[CreateTask] Error sending task creation notifications:', error);
         }
-      } else {
-        console.log('[EditTask] No recipients for notifications (solo editor)');
       }
 
-      // Use parent alert handlers if available, otherwise use local state
       if (onShowSuccessAlert) {
-        onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha actualizado exitosamente.`);
+        onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha creado exitosamente.`);
       } else {
         setShowSuccessAlert(true);
       }
       
-      form.reset(defaultValuesRef.current);
+      form.reset(defaultValues);
       clearPersistedData();
       setIsSaving(false);
-      onHasUnsavedChanges(false);
       
-      // ✅ SOLUCIÓN: Recargar página para mostrar la tarea actualizada
       window.location.reload();
       
       // El PopupLoader se cerrará automáticamente y llamará a onComplete
-      // Cerrar el modal de edición
-      onToggle();
-      
-      // Redirigir inmediatamente después de guardar exitosamente
-      router.push("/dashboard/tasks");
-      
-      // Cerrar el alert de éxito después de 2 segundos
-      setTimeout(() => {
-        if (onShowSuccessAlert) {
-          // Parent will handle closing
-        } else {
-          setShowSuccessAlert(false);
-        }
-      }, 2000);
-
-      // Inicializar el estado includeMembers basado en si la tarea tiene miembros asignados
-      setIncludeMembers((taskData.AssignedTo && taskData.AssignedTo.length > 0) || false);
+      if (onTaskCreated) {
+        setTimeout(() => {
+          onTaskCreated();
+        }, 2000); 
+      }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Error desconocido al actualizar la tarea.";
-      console.error("Error updating task:", errorMessage);
-
-      let userFriendlyTitle = "❌ Error al Actualizar Tarea";
-      let userFriendlyDescription = "No pudimos actualizar tu tarea en este momento. ";
-
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear la tarea.";
+      console.error("Error saving task:", errorMessage);
+      
+      let userFriendlyTitle = "❌ Error al Crear Tarea";
+      let userFriendlyDescription = "No pudimos crear tu tarea en este momento. ";
+      
       if (errorMessage.includes("permission")) {
         userFriendlyTitle = "🔒 Sin Permisos";
-        userFriendlyDescription = "No tienes permisos para actualizar esta tarea. Solo el creador o un administrador pueden editarla.";
+        userFriendlyDescription = "No tienes permisos para crear esta tarea. Contacta a tu administrador para obtener los permisos necesarios.";
       } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
         userFriendlyTitle = "🌐 Problema de Conexión";
         userFriendlyDescription = "Hay un problema con tu conexión a internet. Verifica tu conexión e intenta nuevamente.";
-      } else if (errorMessage.includes("not-found") || errorMessage.includes("does not exist")) {
-        userFriendlyTitle = "📋 Tarea No Encontrada";
-        userFriendlyDescription = "La tarea que intentas editar ya no existe o fue eliminada por otro usuario.";
+      } else if (errorMessage.includes("quota") || errorMessage.includes("limit")) {
+        userFriendlyTitle = "📊 Límite Alcanzado";
+        userFriendlyDescription = "Se ha alcanzado el límite de tareas permitidas. Contacta a tu administrador para aumentar el límite.";
       } else if (errorMessage.includes("validation") || errorMessage.includes("required")) {
         userFriendlyTitle = "📝 Datos Incompletos";
-        userFriendlyDescription = "Algunos campos requeridos están incompletos. Verifica que todos los campos obligatorios estén llenos.";
+        userFriendlyDescription = "Algunos campos obligatorios están incompletos o contienen errores. Revisa el formulario y completa toda la información requerida.";
+      } else if (errorMessage.includes("timeout")) {
+        userFriendlyTitle = "⏱️ Tiempo de Espera Agotado";
+        userFriendlyDescription = "La operación tardó demasiado en completarse. Tu conexión puede ser lenta, intenta nuevamente.";
+      } else {
+        userFriendlyDescription += "Por favor, verifica todos los campos e intenta nuevamente. Si el problema persiste, contacta al soporte técnico.";
       }
-
+      
       toast({
         title: userFriendlyTitle,
         description: userFriendlyDescription,
         variant: "error",
       });
-
-      // Use parent alert handlers if available, otherwise use local state
+      
       if (onShowFailAlert) {
-        onShowFailAlert("No se pudo actualizar la tarea.", errorMessage);
+        onShowFailAlert("No se pudo crear la tarea.", errorMessage);
       } else {
         setShowFailAlert(true);
         setFailErrorMessage(errorMessage);
@@ -659,7 +620,6 @@ const [currentStep, setCurrentStep] = useState(0);
   };
 
   const validateStep = async (fields: (keyof FormValues | string)[]) => {
-    // Validación especial para el paso 2 (equipo)
     if (fields.includes('teamInfo.AssignedTo') && includeMembers) {
       const assignedTo = form.getValues('teamInfo.AssignedTo');
       if (!assignedTo || assignedTo.length === 0) {
@@ -766,82 +726,6 @@ const [currentStep, setCurrentStep] = useState(0);
     }
   }, []);
 
-  // Fetch task, clients, and users
-  const fetchTask = useCallback(async () => {
-    if (!taskId || !user?.id) return;
-    
-    try {
-      const taskDoc = await getDoc(doc(db, 'tasks', taskId));
-      if (!taskDoc.exists()) {
-        console.warn('[EditTask] Task not found:', taskId);
-        router.push('/dashboard/tasks');
-        return;
-      }
-      const taskData = taskDoc.data();
-      if (!isAdmin && taskData.CreatedBy !== user.id) {
-        console.warn('[EditTask] User not authorized to edit task:', taskId);
-        router.push('/dashboard/tasks');
-        return;
-      }
-      const status = taskData.status === 'Por Comenzar' ? 'Por Iniciar' :
-                     taskData.status === 'Cancelada' ? 'Cancelado' : taskData.status || 'Por Iniciar';
-      const formValues: FormValues = {
-        clientInfo: {
-          clientId: taskData.clientId || '',
-          project: taskData.project || '',
-        },
-        basicInfo: {
-          name: taskData.name || '',
-          description: taskData.description || '',
-          objectives: taskData.objectives || '',
-          startDate: taskData.startDate ? taskData.startDate.toDate() : null,
-          endDate: taskData.endDate ? taskData.endDate.toDate() : null,
-          status: status as FormValues["basicInfo"]["status"],
-          priority: taskData.priority || 'Baja',
-        },
-        teamInfo: {
-          LeadedBy: taskData.LeadedBy || [],
-          AssignedTo: taskData.AssignedTo || [],
-        },
-      };
-      form.reset(formValues);
-
-      // Inicializar el estado includeMembers basado en si la tarea tiene miembros asignados
-      setIncludeMembers((taskData.AssignedTo && taskData.AssignedTo.length > 0) || false);
-    } catch (error) {
-      console.error('[EditTask] Error fetching task:', error);
-      router.push('/dashboard/tasks');
-    }
-  }, [taskId, user?.id, router, form, isAdmin]);
-
-  useEffect(() => {
-    if (!taskId || !user?.id) return;
-
-    const clientsCollection = collection(db, 'clients');
-    const unsubscribeClients = onSnapshot(
-      clientsCollection,
-      (snapshot) => {
-        const clientsData: Client[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '',
-          projects: doc.data().projects || [],
-          createdBy: doc.data().createdBy || '',
-        }));
-        setClients(clientsData);
-      },
-      (error) => {
-        console.error('[EditTask] Error listening to clients:', error);
-      },
-    );
-
-    // Users are now managed centrally by useSharedTasksState
-    // No independent user fetching needed - use dataStore users
-
-    fetchTask();
-    return () => unsubscribeClients();
-  }, [taskId, user?.id, router, fetchTask]);
-
   if (isLoading || !isMounted) {
     return (
       <div className={`${styles.container} ${styles.open}`}>
@@ -858,10 +742,10 @@ const [currentStep, setCurrentStep] = useState(0);
         {isOpen && (
           <>
             <div className={styles.header}>
-              <div className={styles.headerTitle}>Editar Tarea</div>
+              <div className={styles.headerTitle}>Crear Tarea</div>
               <div className={styles.headerProgress}>
-  <WizardProgress totalSteps={stepFields.length} currentStep={currentStep} />
-</div>
+                <WizardProgress totalSteps={stepFields.length} currentStep={currentStep} />
+              </div>
               <button className={styles.toggleButton} onClick={onToggle}>
                 <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
               </button>
@@ -1163,25 +1047,25 @@ const [currentStep, setCurrentStep] = useState(0);
                               {isStatusDropdownOpen &&
                                 createPortal(
                                   <div
-                                    className={styles.dropdownItems}
-                                    style={{
-                                      top: statusDropdownPosition?.top,
-                                      left: statusDropdownPosition?.left,
-                                      position: "absolute",
-                                      zIndex: 150000,
-                                      width: statusDropdownRef.current?.offsetWidth,
-                                    }}
-                                    ref={statusDropdownPopperRef}
-                                  >
+                                      className={styles.dropdownItems}
+                                      style={{
+                                        top: statusDropdownPosition?.top,
+                                        left: statusDropdownPosition?.left,
+                                        position: "absolute",
+                                        zIndex: 150000,
+                                        width: statusDropdownRef.current?.offsetWidth,
+                                      }}
+                                      ref={statusDropdownPopperRef}
+                                    >
                                     {["Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"].map((status) => (
                                       <div
-                                        key={status}
-                                        className={styles.dropdownItem}
-                                        onClick={(e) => handleStatusSelect(status, e)}
-                                      >
-                                        {status}
+                                          key={status}
+                                          className={styles.dropdownItem}
+                                          onClick={(e) => handleStatusSelect(status, e)}
+                                        >
+                                          {status}
                                       </div>
-                                    ))}
+                                      ))}
                                   </div>,
                                   document.body,
                                 )}
@@ -1208,25 +1092,25 @@ const [currentStep, setCurrentStep] = useState(0);
                               {isPriorityDropdownOpen &&
                                 createPortal(
                                   <div
-                                    className={styles.dropdownItems}
-                                    style={{
-                                      top: priorityDropdownPosition?.top,
-                                      left: priorityDropdownPosition?.left,
-                                      position: "absolute",
-                                      zIndex: 150000,
-                                      width: priorityDropdownRef.current?.offsetWidth,
-                                    }}
-                                    ref={priorityDropdownPopperRef}
-                                  >
+                                      className={styles.dropdownItems}
+                                      style={{
+                                        top: priorityDropdownPosition?.top,
+                                        left: priorityDropdownPosition?.left,
+                                        position: "absolute",
+                                        zIndex: 150000,
+                                        width: priorityDropdownRef.current?.offsetWidth,
+                                      }}
+                                      ref={priorityDropdownPopperRef}
+                                    >
                                     {["Baja", "Media", "Alta"].map((priority) => (
                                       <div
-                                        key={priority}
-                                        className={styles.dropdownItem}
-                                        onClick={(e) => handlePrioritySelect(priority, e)}
-                                      >
-                                        {priority}
+                                          key={priority}
+                                          className={styles.dropdownItem}
+                                          onClick={(e) => handlePrioritySelect(priority, e)}
+                                        >
+                                          {priority}
                                       </div>
-                                    ))}
+                                      ))}
                                   </div>,
                                   document.body,
                                 )}
@@ -1272,7 +1156,6 @@ const [currentStep, setCurrentStep] = useState(0);
 
                       </div>
                       
-                      {/* Checkbox para incluir colaboradores */}
                       <div className={styles.formGroup}>
                         <div className={styles.checkboxContainer}>
                           <input
@@ -1289,7 +1172,7 @@ const [currentStep, setCurrentStep] = useState(0);
                       </div>
                       
                       <AnimatePresence>
-                        {includeMembers && (
+                      {includeMembers && (
                           <motion.div 
                             className={styles.formGroup}
                             initial={{ opacity: 0, height: 0, scale: 0.95 }}
@@ -1297,37 +1180,37 @@ const [currentStep, setCurrentStep] = useState(0);
                             exit={{ opacity: 0, height: 0, scale: 0.95 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                           >
-                            <label className={styles.label}>Colaboradores*</label>
-                            <div className={styles.sectionSubtitle}>
+                          <label className={styles.label}>Colaboradores*</label>
+                          <div className={styles.sectionSubtitle}>
                               Agrega a los colaboradores del equipo que trabajarán en la tarea.
-                            </div>
-                            <SearchableDropdown
-                              items={users
-                                .filter(user => !form.watch("teamInfo.LeadedBy").includes(user.id))
-                                .map(user => ({
-                                  id: user.id,
-                                  name: user.fullName,
-                                  imageUrl: user.imageUrl,
-                                  subtitle: user.role
-                                }))}
-                              selectedItems={form.watch("teamInfo.AssignedTo") || []}
-                              onSelectionChange={(selectedIds) => {
-                                form.setValue("teamInfo.AssignedTo", selectedIds);
-                              }}
-                              placeholder="Ej: John Doe"
-                              searchPlaceholder="Buscar colaboradores..."
-                              multiple={true}
-                              emptyMessage={isAdmin 
-                                ? "No hay coincidencias. Invita a nuevos colaboradores."
-                                : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."
-                              }
-                            />
-                            {form.formState.errors.teamInfo?.AssignedTo && (
-                              <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
-                            )}
+                          </div>
+                          <SearchableDropdown
+                            items={users
+                              .filter(user => !form.watch("teamInfo.LeadedBy").includes(user.id))
+                              .map(user => ({
+                                id: user.id,
+                                name: user.fullName,
+                                imageUrl: user.imageUrl,
+                                subtitle: user.role
+                              }))}
+                            selectedItems={form.watch("teamInfo.AssignedTo") || []}
+                            onSelectionChange={(selectedIds) => {
+                              form.setValue("teamInfo.AssignedTo", selectedIds);
+                            }}
+                            placeholder="Ej: John Doe"
+                            searchPlaceholder="Buscar colaboradores..."
+                            multiple={true}
+                            emptyMessage={isAdmin 
+                              ? "No hay coincidencias. Invita a nuevos colaboradores."
+                              : "No hay coincidencias. Pide a un administrador que invite a más colaboradores."
+                            }
+                          />
+                          {form.formState.errors.teamInfo?.AssignedTo && (
+                            <span className={styles.error}>{form.formState.errors.teamInfo.AssignedTo.message}</span>
+                          )}
                  
                           </motion.div>
-                        )}
+                      )}
                       </AnimatePresence>
                     </div>
                   </WizardStep>
@@ -1344,20 +1227,23 @@ const [currentStep, setCurrentStep] = useState(0);
         )}
       </div>
       
-      {/* PopupLoader para mostrar progreso de edición */}
+      {/* PopupLoader para mostrar progreso de creación */}
       <PopupLoader
         isOpen={showPopupLoader}
-        title="Actualizando Tarea"
-        description="Estamos guardando los cambios y enviando notificaciones a los colaboradores..."
+        title="Creando Tarea"
+        description="Estamos procesando tu tarea y enviando notificaciones a los colaboradores..."
         onComplete={() => {
           setShowPopupLoader(false);
-          // El modal ya se cierra y redirige automáticamente
+          // Redirigir al TasksTable
+          if (onTaskCreated) {
+            onTaskCreated();
+          }
         }}
         autoClose={true}
-        autoCloseDelay={2500}
+        autoCloseDelay={3000}
       />
     </>
   );
 };
 
-export default EditTask; 
+export default CreateTask;

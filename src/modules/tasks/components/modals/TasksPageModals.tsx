@@ -6,12 +6,12 @@ import { db } from '@/lib/firebase';
 import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 
-import SimpleDeletePopup from './SimpleDeletePopup';
-import ConfirmExitPopup from './ConfirmExitPopup';
-import ClientOverlay from './ClientOverlay';
-import SuccessAlert from './SuccessAlert';
-import FailAlert from './FailAlert';
-import clientStyles from './ClientsTable.module.scss';
+import SimpleDeletePopup from '@/components/SimpleDeletePopup';
+import ConfirmExitPopup from '@/components/ConfirmExitPopup';
+import ClientOverlay from '@/components/ClientOverlay';
+import SuccessAlert from '@/components/SuccessAlert';
+import FailAlert from '@/components/FailAlert';
+import clientStyles from '@/components/ClientsTable.module.scss';
 
 export default function TasksPageModals() {
   const { user } = useUser();

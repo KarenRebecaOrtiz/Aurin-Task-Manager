@@ -44,9 +44,9 @@ import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import ArchiveTable from '@/modules/tasks/components/tables/ArchiveTable';
-import EditTask from '@/components/EditTask';
-import CreateTask from '@/components/CreateTask';
-import TasksPageModals from '@/components/TasksPageModals';
+import EditTask from '@/modules/task-crud/components/EditTask';
+import CreateTask from '@/modules/task-crud/components/CreateTask';
+import TasksPageModals from '@/modules/tasks/components/modals/TasksPageModals';
 
 // Helper functions for conditional logging (only in development)
 const debugLog = (message: string, ...args: unknown[]) => {
