@@ -4,25 +4,9 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion } from 'framer-motion';
-import UserAvatar from './UserAvatar';
+import UserAvatar from '@/components/ui/UserAvatar';
 import styles from './OptimizedMarquee.module.scss';
-
-interface Advice {
-  id: string;
-  message: string;
-  creatorFirstName: string;
-  creatorId: string;
-  expiry: Timestamp;
-}
-
-interface OptimizedMarqueeProps {
-  speed?: number;
-  showTooltip?: boolean;
-  tooltipText?: string;
-  fontSize?: string;
-  textColor?: string;
-  hoverColor?: string;
-}
+import type { Advice, OptimizedMarqueeProps } from '../types';
 
 const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
   speed = 30,

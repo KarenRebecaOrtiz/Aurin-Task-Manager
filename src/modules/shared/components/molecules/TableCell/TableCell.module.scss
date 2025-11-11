@@ -1,0 +1,112 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.cell {
+  display: flex;
+  align-items: center;
+  padding: $spacing-sm;
+  transition: $transition-base;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+.left {
+  justify-content: flex-start;
+}
+
+.center {
+  justify-content: center;
+}
+
+.right {
+  justify-content: flex-end;
+}
+
+// Client Cell
+.clientCell {
+  @include flex-center;
+  gap: $spacing-sm;
+}
+
+.clientImage {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.clientName {
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.noClient {
+  font-size: 13px;
+  color: $color-text-secondary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}
+
+// Status Cell
+.statusCell {
+  @include flex-center;
+  gap: 6px;
+}
+
+.statusIcon {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.status-Por-Iniciar,
+.status-En-Proceso,
+.status-Por-Finalizar,
+.status-Finalizado,
+.status-Backlog,
+.status-Cancelado {
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+// Priority Cell
+.priorityCell {
+  @include flex-center;
+  gap: 6px;
+}
+
+.priorityIcon {
+  flex-shrink: 0;
+}
+
+.priority-Alta,
+.priority-Media,
+.priority-Baja {
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+
+  :global(body.dark) & {
+    color: #c3c3c3;
+  }
+}
+
+// Action Cell
+.actionCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+}

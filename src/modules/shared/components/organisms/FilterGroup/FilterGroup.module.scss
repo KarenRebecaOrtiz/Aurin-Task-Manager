@@ -1,0 +1,22 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.filterWrapper {
+  position: relative;
+}
+
+.filterTrigger {
+  @include flex-center;
+  gap: $spacing-xs;
+}
+
+.filterIcon {
+  flex-shrink: 0;
+}

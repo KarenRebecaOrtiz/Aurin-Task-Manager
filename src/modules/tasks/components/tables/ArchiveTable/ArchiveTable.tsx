@@ -7,7 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Table from '@/modules/shared/components/ui/Table';
 import ActionMenu from '../../ui/ActionMenu';
 import styles from './ArchiveTable.module.scss';
-import avatarStyles from '@/modules/shared/components/ui/Table/AvatarGroup.module.scss';
+
+// ✅ Nuevos componentes atómicos
+import { SearchInput } from '@/modules/shared/components/atoms/Input';
+import { Button } from '@/modules/shared/components/atoms/Button';
+import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
+import { ClientCell } from '@/modules/shared/components/molecules/TableCell';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
@@ -50,58 +55,8 @@ interface Task {
 
 // type TaskView = 'table' | 'kanban';
 
-interface AvatarGroupProps {
-  assignedUserIds: string[];
-  leadedByUserIds?: string[];
-  users: User[];
-  currentUserId: string;
-}
-
-const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds = [], users, currentUserId }) => {
-  // ✅ ELIMINADO: Logs innecesarios que saturaban la consola
-
-  const avatars = useMemo(() => {
-    if (!Array.isArray(users)) {
-      return [];
-    }
-    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id)).slice(0, 5);
-    return matchedUsers.sort((a, b) => {
-      if (a.id === currentUserId) return -1;
-      if (b.id === currentUserId) return 1;
-      return 0;
-    });
-  }, [assignedUserIds, leadedByUserIds, users, currentUserId]);
-
-  return (
-    <div className={avatarStyles.avatarGroup}>
-      {avatars.length > 0 ? (
-        avatars.map((user) => (
-          <div key={user.id} className={avatarStyles.avatar}>
-            <span className={avatarStyles.avatarName}>{user.fullName}</span>
-            <Image
-              src={user.imageUrl || `https://img.clerk.com/${user.id}`}
-              alt={`${user.fullName}'s avatar`}
-              width={40}
-              height={40}
-              className={avatarStyles.avatarImage}
-              onError={(e) => {
-                // Si falló la imagen de Firestore, intentar Clerk
-                if (e.currentTarget.src === user.imageUrl) {
-                  e.currentTarget.src = `https://img.clerk.com/${user.id}`;
-                } else {
-                  // Si falló Clerk, usar imagen por defecto
-                  e.currentTarget.src = '/empty-image.png';
-                }
-              }}
-            />
-          </div>
-        ))
-      ) : (
-        <span>No asignados</span>
-      )}
-    </div>
-  );
-};
+// ✅ ELIMINADO: AvatarGroup ahora es un componente atómico reutilizable
+// Se importa desde @/modules/shared/components/atoms/Avatar
 
 interface ArchiveTableProps {
   onEditTaskOpen: (taskId: string) => void;
@@ -649,126 +604,26 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         <div className={styles.container}>
           <div className={styles.header} style={{margin:'30px 0px'}}>
             <div className={styles.searchWrapper}>
+              {/* ✅ REFACTORIZADO: Usando Button atómico */}
               <div className={styles.buttonWithTooltip}>
-                <button
-                  className={`${styles.viewButton} ${styles.hideOnMobile}`}
-                  onClick={(e) => {
-                    animateClick(e.currentTarget);
+                <Button
+                  variant="view"
+                  icon="/arrow-left.svg"
+                  iconOnly
+                  onClick={() => {
                     onViewChange('table');
                     onClose();
                   }}
-                >
-                  <Image
-                    src="/arrow-left.svg"
-                    draggable="false"
-                    alt="Volver a tareas"
-                    width={20}
-                    height={20}
-                    style={{
-                      marginLeft: '5px',
-                      transition: 'transform 0.3s ease, filter 0.3s ease',
-                      filter:
-                        'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.filter =
-                        'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.filter =
-                        'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                    }}
-                  />
-                </button>
+                  className={styles.hideOnMobile}
+                  aria-label="Volver a tareas"
+                />
                 <span className={styles.tooltip}>Volver a Tareas</span>
               </div>
-              <input
-                type="text"
-                placeholder="Buscar tareas archivadas..."
+              {/* ✅ REFACTORIZADO: Usando SearchInput atómico */}
+              <SearchInput
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={styles.searchInput}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    setSearchQuery('');
-                  }
-                  if (e.ctrlKey || e.metaKey) {
-                    switch (e.key.toLowerCase()) {
-                      case 'a':
-                        e.preventDefault();
-                        e.currentTarget.select();
-                        break;
-                      case 'c':
-                        e.preventDefault();
-                        const targetC = e.currentTarget as HTMLInputElement;
-                        if (targetC.selectionStart !== targetC.selectionEnd) {
-                          const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-                          navigator.clipboard.writeText(selectedText).catch(() => {
-                            const textArea = document.createElement('textarea');
-                            textArea.value = selectedText;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                          });
-                        }
-                        break;
-                      case 'v':
-                        e.preventDefault();
-                        const targetV = e.currentTarget as HTMLInputElement;
-                        navigator.clipboard.readText().then(text => {
-                          if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                            const start = targetV.selectionStart;
-                            const end = targetV.selectionEnd;
-                            const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
-                            setSearchQuery(newValue);
-                            setTimeout(() => {
-                              targetV.setSelectionRange(start + text.length, start + text.length);
-                            }, 0);
-                          } else {
-                            setSearchQuery(searchQuery + text);
-                          }
-                        }).catch(() => {
-                          document.execCommand('paste');
-                        });
-                        break;
-                      case 'x':
-                        e.preventDefault();
-                        const targetX = e.currentTarget as HTMLInputElement;
-                        if (targetX.selectionStart !== targetX.selectionEnd) {
-                          const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-                          navigator.clipboard.writeText(selectedText).then(() => {
-                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                              const start = targetX.selectionStart;
-                              const end = targetX.selectionEnd;
-                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                              setSearchQuery(newValue);
-                            } else {
-                              setSearchQuery('');
-                            }
-                          }).catch(() => {
-                            const textArea = document.createElement('textarea');
-                            textArea.value = selectedText;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                            if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                              const start = targetX.selectionStart;
-                              const end = targetX.selectionEnd;
-                              const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                              setSearchQuery(newValue);
-                            } else {
-                              setSearchQuery('');
-                            }
-                          });
-                        }
-                        break;
-                    }
-                  }
-                }}
+                onChange={setSearchQuery}
+                placeholder="Buscar tareas archivadas..."
               />
             </div>
           </div>
@@ -802,126 +657,26 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         `}</style>
         <div className={styles.header} style={{margin:'30px 0px'}}>
           <div className={styles.searchWrapper}>
+            {/* ✅ REFACTORIZADO: Usando Button atómico */}
             <div className={styles.buttonWithTooltip}>
-              <button
-                className={`${styles.viewButton} ${styles.hideOnMobile}`}
-                onClick={(e) => {
-                  animateClick(e.currentTarget);
+              <Button
+                variant="view"
+                icon="/arrow-left.svg"
+                iconOnly
+                onClick={() => {
                   onViewChange('table');
                   onClose();
                 }}
-              >
-                <Image
-                  src="/arrow-left.svg"
-                  draggable="false"
-                  alt="Volver a tareas"
-                  width={20}
-                  height={20}
-                  style={{
-                    marginLeft: '5px',
-                    transition: 'transform 0.3s ease, filter 0.3s ease',
-                    filter:
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.84)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.filter =
-                      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-                  }}
-                />
-              </button>
+                className={styles.hideOnMobile}
+                aria-label="Volver a tareas"
+              />
               <span className={styles.tooltip}>Volver a Tareas</span>
             </div>
-            <input
-              type="text"
-              placeholder="Buscar tareas archivadas..."
+            {/* ✅ REFACTORIZADO: Usando SearchInput atómico */}
+            <SearchInput
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={styles.searchInput}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setSearchQuery('');
-                }
-                if (e.ctrlKey || e.metaKey) {
-                  switch (e.key.toLowerCase()) {
-                    case 'a':
-                      e.preventDefault();
-                      e.currentTarget.select();
-                      break;
-                    case 'c':
-                      e.preventDefault();
-                      const targetC = e.currentTarget as HTMLInputElement;
-                      if (targetC.selectionStart !== targetC.selectionEnd) {
-                        const selectedText = searchQuery.substring(targetC.selectionStart || 0, targetC.selectionEnd || 0);
-                        navigator.clipboard.writeText(selectedText).catch(() => {
-                          const textArea = document.createElement('textarea');
-                          textArea.value = selectedText;
-                          document.body.appendChild(textArea);
-                          textArea.select();
-                          document.execCommand('copy');
-                          document.body.removeChild(textArea);
-                        });
-                      }
-                      break;
-                    case 'v':
-                      e.preventDefault();
-                      const targetV = e.currentTarget as HTMLInputElement;
-                      navigator.clipboard.readText().then(text => {
-                        if (typeof targetV.selectionStart === 'number' && typeof targetV.selectionEnd === 'number') {
-                          const start = targetV.selectionStart;
-                          const end = targetV.selectionEnd;
-                          const newValue = searchQuery.substring(0, start) + text + searchQuery.substring(end);
-                          setSearchQuery(newValue);
-                          setTimeout(() => {
-                            targetV.setSelectionRange(start + text.length, start + text.length);
-                          }, 0);
-                        } else {
-                          setSearchQuery(searchQuery + text);
-                        }
-                      }).catch(() => {
-                        document.execCommand('paste');
-                      });
-                      break;
-                    case 'x':
-                      e.preventDefault();
-                      const targetX = e.currentTarget as HTMLInputElement;
-                      if (targetX.selectionStart !== targetX.selectionEnd) {
-                        const selectedText = searchQuery.substring(targetX.selectionStart || 0, targetX.selectionEnd || 0);
-                        navigator.clipboard.writeText(selectedText).then(() => {
-                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                            const start = targetX.selectionStart;
-                            const end = targetX.selectionEnd;
-                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                            setSearchQuery(newValue);
-                          } else {
-                            setSearchQuery('');
-                          }
-                        }).catch(() => {
-                          const textArea = document.createElement('textarea');
-                          textArea.value = selectedText;
-                          document.body.appendChild(textArea);
-                          textArea.select();
-                          document.execCommand('copy');
-                          document.body.removeChild(textArea);
-                          if (typeof targetX.selectionStart === 'number' && typeof targetX.selectionEnd === 'number') {
-                            const start = targetX.selectionStart;
-                            const end = targetX.selectionEnd;
-                            const newValue = searchQuery.substring(0, start) + searchQuery.substring(end);
-                            setSearchQuery(newValue);
-                          } else {
-                            setSearchQuery('');
-                          }
-                        });
-                      }
-                      break;
-                  }
-                }
-              }}
+              onChange={setSearchQuery}
+              placeholder="Buscar tareas archivadas..."
             />
           </div>
           <div className={styles.filtersWrapper}>

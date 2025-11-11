@@ -1,0 +1,232 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.button {
+  @include flex-center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-xl;
+  border-radius: $radius-lg;
+  border: 1px solid $color-border-subtle;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: $transition-base;
+  white-space: nowrap;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .icon {
+    flex-shrink: 0;
+    transition: filter 0.3s ease;
+  }
+
+  .text {
+    flex: 1;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+}
+
+// Sizes
+.small {
+  height: 36px;
+  padding: 6px $spacing-md;
+  font-size: 12px;
+  gap: 6px;
+
+  .icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.medium {
+  height: 48px;
+  padding: $spacing-md $spacing-xl;
+  font-size: 14px;
+
+  @media (max-width: 1024px) {
+    height: 44px;
+    padding: 7px $spacing-md;
+    font-size: 13px;
+  }
+
+  @media (max-width: 768px) {
+    height: 40px;
+    padding: 6px $spacing-md;
+    font-size: 12px;
+  }
+}
+
+.large {
+  height: 56px;
+  padding: $spacing-lg $spacing-2xl;
+  font-size: 16px;
+}
+
+.iconOnly {
+  padding: $spacing-md;
+  aspect-ratio: 1;
+
+  .text {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .text {
+      display: none !important;
+    }
+  }
+}
+
+// Variants
+.primary {
+  @include button-primary($color-btn-primary, $white, $color-btn-primary-hover);
+
+  :global(body.dark) & {
+    background: $color-btn-primary-dark;
+    color: $black;
+
+    &:hover {
+      background: $color-btn-primary-dark-hover;
+    }
+
+    .icon {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
+}
+
+.secondary {
+  @include button-secondary;
+
+  :global(body.dark) & {
+    background: $zinc-800;
+    border: none;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.532);
+
+    &:hover {
+      background: $zinc-700;
+    }
+
+    .icon {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
+}
+
+.filter {
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  color: $color-text-primary;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    @include neomorphic-inset(light);
+  }
+
+  :global(body.dark) & {
+    background: $zinc-800;
+    border: none;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.532);
+
+    .icon {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
+}
+
+.view {
+  background: rgb(168 206 255 / 33%);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+
+  &:active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  :global(body.dark) & {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.2);
+    color: $white !important;
+    box-shadow: none !important;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.18);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    &:active {
+      background: rgba(59, 130, 246, 0.22);
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .icon {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
+}
+
+.action {
+  @include button-secondary;
+  min-width: auto;
+
+  :global(body.dark) & {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+
+    &:hover {
+      background: $zinc-700;
+    }
+
+    .icon {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .button {
+    .text {
+      display: none;
+    }
+
+    &:not(.iconOnly) {
+      padding: $spacing-md;
+    }
+  }
+}

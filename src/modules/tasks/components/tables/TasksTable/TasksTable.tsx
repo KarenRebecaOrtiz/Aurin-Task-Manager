@@ -11,7 +11,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Table from '@/modules/shared/components/ui/Table';
 import ActionMenu from '../../ui/ActionMenu';
 import styles from './TasksTable.module.scss';
-import avatarStyles from '@/modules/shared/components/ui/Table/AvatarGroup.module.scss';
+
+// ✅ Nuevos componentes atómicos y organismos
+import { Button } from '@/modules/shared/components/atoms/Button';
+import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
+import { TableToolbar } from '@/modules/shared/components/organisms/TableToolbar';
+import { FilterGroup } from '@/modules/shared/components/organisms/FilterGroup';
+import { useTaskFilters } from './hooks/useTaskFilters';
 
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
@@ -108,58 +114,12 @@ const normalizeStatus = (status: string): string => {
   return statusMap[normalized.toLowerCase()] || normalized;
 };
 
-interface AvatarGroupProps {
-  assignedUserIds: string[];
-  leadedByUserIds: string[];
-  users: User[];
-  currentUserId: string;
-}
+// ✅ ELIMINADO: AvatarGroup ahora es un componente atómico reutilizable
+// Se importa desde @/modules/shared/components/atoms/Avatar
 
 // Eliminar todo el sistema de caché global
 const cleanupTasksTableListeners = () => {
   
-};
-
-const AvatarGroup: React.FC<AvatarGroupProps> = ({ assignedUserIds, leadedByUserIds, users, currentUserId }) => {
-  // ✅ CORREGIDO: Función local para manejar errores de imagen
-  const handleAvatarImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = '/empty-image.png';
-  }, []);
-
-  const avatars = useMemo(() => {
-    if (!Array.isArray(users)) {
-      // console.warn('[AvatarGroup] Users prop is not an array:', users);
-      return [];
-    }
-    const matchedUsers = users.filter((user) => assignedUserIds.includes(user.id) || leadedByUserIds.includes(user.id)).slice(0, 5);
-    return matchedUsers.sort((a, b) => {
-      if (a.id === currentUserId) return -1;
-      if (b.id === currentUserId) return 1;
-      return 0;
-    });
-  }, [assignedUserIds, leadedByUserIds, users, currentUserId]);
-
-  return (
-    <div className={avatarStyles.avatarGroup}>
-      {avatars.length > 0 ? (
-        avatars.map((user) => (
-          <div key={user.id} className={avatarStyles.avatar}>
-            <span className={avatarStyles.avatarName}>{user.fullName}</span>
-            <Image
-              src={user.imageUrl || '/empty-image.png'}
-              alt={`${user.fullName}'s avatar`}
-              width={40}
-              height={40}
-              className={avatarStyles.avatarImage}
-              onError={handleAvatarImageError}
-            />
-          </div>
-        ))
-      ) : (
-        <span>No asignados</span>
-      )}
-    </div>
-  );
 };
 
 interface TasksTableProps {
@@ -304,6 +264,19 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const clientDropdownRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  // ✅ REFACTORIZADO: Hook de filtros
+  const filters = useTaskFilters({
+    clients: effectiveClients,
+    users: effectiveUsers,
+    priorityFilter,
+    clientFilter,
+    userFilter,
+    setPriorityFilter,
+    setClientFilter,
+    setUserFilter,
+    isAdmin,
+  });
 
   // ✅ Hook común centralizado
   const {
@@ -1327,227 +1300,50 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         `}
       </style>
 
-      <div className={styles.header} style={{margin:'30px 0px'}}>
-        <div className={styles.searchWrapper}>
-          <input
-            type="text"
-            placeholder="Buscar Tareas"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className={styles.searchInput}
-            aria-label="Buscar tareas"
-            disabled={shouldShowLoader}
-            onKeyDown={handleSearchKeyDown}
-          />
-        </div>
-
-        <div className={styles.filtersWrapper}>
-          <div className={styles.buttonWithTooltip}>
-            <button
-              className={`${styles.viewButton} ${styles.hideOnMobile}`}
-              onClick={handleViewButtonClick}
-            >
-              <Image
-                src="/kanban.svg"
-                draggable="false"
-                alt="kanban"
-                width={20}
-                height={20}
-                style={{
-                  marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0))',
-                }}
-                onMouseEnter={handleKanbanImageMouseEnter}
-                onMouseLeave={handleKanbanImageMouseLeave}
-              />
-            </button>
-            <span className={styles.tooltip}>Vista Kanban</span>
-          </div>
-          <div className={styles.buttonWithTooltip}>
-            <button
-              className={styles.viewButton}
-              onClick={handleArchiveButtonClick}
-            >
-              <Image
-                src="/archive.svg"
-                draggable="false"
-                alt="archivo"
-                width={20}
-                height={20}
-                style={{
-                  marginLeft: '5px',
-                  transition: 'transform 0.3s ease, filter 0.3s ease',
-                  filter:
-                    'drop-shadow(0 4px 8px rgba(0, 0, 0, 0)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0))',
-                }}
-                onMouseEnter={handleArchiveImageMouseEnter}
-                onMouseLeave={handleArchiveImageMouseLeave}
-              />
-            </button>
-            <span className={styles.tooltip}>Archivo</span>
-          </div>
-          <div className={styles.buttonWithTooltip}>
-            <div className={styles.filter}>
-              <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
-                <div
-                  className={styles.dropdownTrigger}
-                  onClick={handlePriorityDropdownToggle}
-                >
-                  <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
-                  <span>{priorityFilter || 'Prioridad'}</span>
-                </div>
-                {isPriorityDropdownOpen && (
-                  <AnimatePresence>
-                    <motion.div 
-                      className={styles.dropdownItems}
-                      initial={{ opacity: 0, y: -16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -16 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                    >
-                      {['Alta', 'Media', 'Baja', ''].map((priority, index) => (
-                        <motion.div
-                          key={priority || 'all'}
-                          className={styles.dropdownItem}
-                          onClick={handlePriorityItemClick(priority)}
-                          initial={{ opacity: 0, y: -16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
-                        >
-                          {priority || 'Todos'}
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  </AnimatePresence>
-                )}
-              </div>
-            </div>
-            <span className={styles.tooltip}>Filtrar por Prioridad</span>
-          </div>
-          <div className={styles.buttonWithTooltip}>
-            <div className={styles.filter}>
-              <div className={styles.dropdownContainer} ref={clientDropdownRef}>
-                <div
-                  className={styles.dropdownTrigger}
-                  onClick={handleClientDropdownToggle}
-                >
-                  <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
-                  <span>{effectiveClients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
-                </div>
-                {isClientDropdownOpen && (
-                  <AnimatePresence>
-                    <motion.div 
-                      className={styles.dropdownItems}
-                      initial={{ opacity: 0, y: -16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -16 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                    >
-                      {[{ id: '', name: 'Todos' }, ...effectiveClients].map((client, index) => (
-                        <motion.div
-                          key={client.id || 'all'}
-                          className={styles.dropdownItem}
-                          onClick={handleClientItemClick(client.id)}
-                          initial={{ opacity: 0, y: -16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
-                        >
-                          {client.name}
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  </AnimatePresence>
-                )}
-              </div>
-            </div>
-            <span className={styles.tooltip}>Filtrar por Cuenta</span>
-          </div>
-
-          {isAdmin && (
+      {/* ✅ REFACTORIZADO: Usando TableToolbar */}
+      <TableToolbar
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Buscar Tareas"
+        leftActions={
+          <>
             <div className={styles.buttonWithTooltip}>
-              <div className={styles.filter}>
-                <div className={styles.dropdownContainer} ref={userDropdownRef}>
-                  <div
-                    className={styles.dropdownTrigger}
-                    onClick={handleUserDropdownToggle}
-                  >
-                    <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
-                    <span>
-                      {userFilter === '' 
-                        ? 'Todos' 
-                        : userFilter === 'me' 
-                        ? 'Mis tareas' 
-                        : effectiveUsers.find(u => u.id === userFilter)?.fullName || 'Usuario'}
-                    </span>
-                  </div>
-                  {isUserDropdownOpen && (
-                    <AnimatePresence>
-                      <motion.div 
-                        className={styles.dropdownItems}
-                        initial={{ opacity: 0, y: -16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -16 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                      >
-                        <motion.div
-                          className={styles.dropdownItem}
-                          style={{fontWeight: userFilter === '' ? 700 : 400}}
-                          onClick={handleUserFilterEmpty}
-                          initial={{ opacity: 0, y: -16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: 0 * 0.05 }}
-                        >
-                          Todos
-                        </motion.div>
-                        <motion.div
-                          className={styles.dropdownItem}
-                          style={{fontWeight: userFilter === 'me' ? 700 : 400}}
-                          onClick={handleUserFilterMe}
-                          initial={{ opacity: 0, y: -16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: 1 * 0.05 }}
-                        >
-                          Mis tareas
-                        </motion.div>
-                        {effectiveUsers
-                          .filter((u) => u.id !== userId)
-                          .map((u, index) => (
-                            <motion.div
-                              key={u.id}
-                              className={styles.dropdownItem}
-                              style={{fontWeight: userFilter === u.id ? 700 : 400}}
-                              onClick={handleUserItemClick(u.id)}
-                              initial={{ opacity: 0, y: -16 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
-                            >
-                              {u.fullName}
-                            </motion.div>
-                          ))}
-                      </motion.div>
-                    </AnimatePresence>
-                  )}
-                </div>
-              </div>
-              <span className={styles.tooltip}>Filtrar por Usuario</span>
+              <Button
+                variant="view"
+                icon="/kanban.svg"
+                iconOnly
+                onClick={handleViewButtonClick}
+                className={styles.hideOnMobile}
+                aria-label="Vista Kanban"
+              />
+              <span className={styles.tooltip}>Vista Kanban</span>
             </div>
-          )}
-
-          
+            <div className={styles.buttonWithTooltip}>
+              <Button
+                variant="view"
+                icon="/archive.svg"
+                iconOnly
+                onClick={handleArchiveButtonClick}
+                aria-label="Archivo"
+              />
+              <span className={styles.tooltip}>Archivo</span>
+            </div>
+          </>
+        }
+        filters={<FilterGroup filters={filters} />}
+        rightActions={
           <div className={styles.buttonWithTooltip}>
-            <button
-              className={styles.createButton}
+            <Button
+              variant="primary"
+              icon="/square-dashed-mouse-pointer.svg"
               onClick={handleNewTaskButtonClick}
             >
-              <Image src="/square-dashed-mouse-pointer.svg" alt="New Task" width={16} height={16} />
-              <span className={styles.createButtonText}>Crear Tarea</span>
-            </button>
+              Crear Tarea
+            </Button>
             <span className={styles.tooltip}>Crear Nueva Tarea</span>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <Table
         key={`tasks-table-${effectiveTasksIds}-${filteredTasks.length}`}

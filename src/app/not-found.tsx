@@ -5,7 +5,7 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
 import { Header } from '@/modules/header';
-import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
+import { OptimizedMarquee } from '@/modules/advices';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
 import { AuthProvider } from '@/contexts/AuthContext';

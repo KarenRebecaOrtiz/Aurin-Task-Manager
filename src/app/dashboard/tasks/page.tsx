@@ -4,7 +4,7 @@ import { useRef, useCallback, useEffect, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 
 import { Header } from '@/modules/header';
-import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
+import { OptimizedMarquee } from '@/modules/advices';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
 import MembersTable from '@/modules/members/components/tables/MembersTable';
@@ -680,8 +680,6 @@ function TasksPageContent() {
       <div className={styles.vignetteBottom} />
       <Footer />
       
-      {/* ProfileCard Modal - Rendered as portal at page level */}
-      {/* Removed to avoid duplication - now handled by ProfileCardRenderer */}
     </div>
   );
 
