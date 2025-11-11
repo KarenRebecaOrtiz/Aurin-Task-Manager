@@ -1,16 +1,14 @@
 "use client"
 
-import React, { useState, useEffect, useRef, useCallback } from "react"
+import React, { useEffect, useRef, useCallback } from "react"
 import { gsap } from "gsap"
-import Dock from "./Dock"
 import ToDoDynamic from "./ToDoDynamic"
 import styles from "./ToolbarContainer.module.scss"
 
 export default function ToolbarContainer() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [activeComponent, setActiveComponent] = useState<"dock" | "todo">("dock")
-  const [isVisible, setIsVisible] = useState(true)
   const lastScrollY = useRef(0)
+  const isVisible = useRef(true)
 
   // Manejar animaciones de visibilidad
   const animateVisibility = useCallback((visible: boolean) => {
@@ -19,39 +17,34 @@ export default function ToolbarContainer() {
       opacity: visible ? 1 : 0,
       duration: 0.4,
       ease: visible ? "power2.out" : "power2.in",
-      onComplete: () => setIsVisible(visible),
+      onComplete: () => { isVisible.current = visible },
     })
   }, [])
 
-  // Manejar scroll (replicando Dock)
+  // Manejar scroll
   const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY
 
-    if (currentScrollY > lastScrollY.current && isVisible) {
+    if (currentScrollY > lastScrollY.current && isVisible.current) {
       animateVisibility(false)
-    } else if (currentScrollY < lastScrollY.current && !isVisible) {
+    } else if (currentScrollY < lastScrollY.current && !isVisible.current) {
       animateVisibility(true)
     }
 
     lastScrollY.current = currentScrollY
-  }, [isVisible, animateVisibility])
+  }, [animateVisibility])
 
   // Manejar teclado
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Cmd/Ctrl + K: Ocultar/Mostrar
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !e.shiftKey) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
       e.preventDefault()
-      animateVisibility(!isVisible)
+      animateVisibility(!isVisible.current)
     }
-    // Cmd/Ctrl + Shift + K: Alternar Dock/ToDo
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "k") {
-      e.preventDefault()
-      setActiveComponent((prev) => (prev === "dock" ? "todo" : "dock"))
-    }
-  }, [isVisible, animateVisibility])
+  }, [animateVisibility])
 
   useEffect(() => {
-    // Animación inicial (como Dock)
+    // Animación inicial
     gsap.fromTo(
       containerRef.current,
       { y: 100, opacity: 0 },
@@ -69,25 +62,9 @@ export default function ToolbarContainer() {
     }
   }, [handleScroll, handleKeyDown])
 
-  // Actualizar animaciones cuando cambia isVisible
-  useEffect(() => {
-    animateVisibility(isVisible)
-  }, [isVisible, animateVisibility])
-
   return (
     <div ref={containerRef} className={styles.toolbarContainer}>
-      <div className={styles.componentWrapper}>
-        <div className={`${styles.component} ${activeComponent === "dock" ? styles.active : styles.inactive}`}>
-          <Dock />
-        </div>
-        <div className={`${styles.component} ${activeComponent === "todo" ? styles.active : styles.inactive}`}>
-          <ToDoDynamic />
-        </div>
-      </div>
-      <div className={styles.indicator}>
-        <span className={`${styles.dot} ${activeComponent === "dock" ? styles.activeDot : ""}`}></span>
-        <span className={`${styles.dot} ${activeComponent === "todo" ? styles.activeDot : ""}`}></span>
-      </div>
+      <ToDoDynamic />
     </div>
   )
 }

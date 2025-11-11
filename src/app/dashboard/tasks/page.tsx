@@ -7,8 +7,8 @@ import Header from '@/components/ui/Header';
 import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
-import MembersTable from '@/components/MembersTable';
-import ClientsTable from '@/components/ClientsTable';
+import MembersTable from '@/modules/members/components/tables/MembersTable';
+import ClientsTable from '@/modules/clients/components/tables/ClientsTable';
 import TasksTableIsolated from '@/components/TasksTableIsolated';
 import TasksKanban from '@/modules/tasks/components/tables/KanbanBoard';
 import AISidebar from '@/components/AISidebar';
@@ -16,7 +16,6 @@ import ChatSidebar from '@/components/ChatSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
 import ConfigPage from '@/components/ConfigPage';
 import ProfileCard from '@/components/ProfileCard';
-import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
 import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
 
 // Safari debug components removed for production
@@ -24,7 +23,6 @@ import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
 import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
 import styles from '@/components/TasksPage.module.scss';
 
-import Dock from '@/components/Dock';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -607,8 +605,7 @@ function TasksPageContent() {
           ]}
         />
       </div>
-      <CursorProvider>
-        <div ref={contentRef} className={styles.content}>
+      <div ref={contentRef} className={styles.content}>
           {/* Renderizar CreateTask, EditTask, y ArchiveTable como contenedores principales */}
           {isCreateTaskOpen ? (
             <CreateTask
@@ -684,26 +681,9 @@ function TasksPageContent() {
             />
           )}
         </div>
-        <Cursor>
-          <svg
-            className={styles.cursorIcon}
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 40 40"
-          >
-            <path
-              fill="currentColor"
-              d="M1.8 4.4 7 36.2c.3 1.8 2.6 2.3 3.6.8l3.9-5.7c1.7-2.5 4.5-4.1 7.5-4.3l6.9-.5c1.8-.1 2.5-2.4 1.1-3.5L5 2.5c-1.4-1.1-3.5 0-3.3 1.9Z"
-            />
-          </svg>
-        </Cursor>
-        <CursorFollow>
-          <div className={styles.cursorFollowContent}>{user?.fullName || 'Usuario'}</div>
-        </CursorFollow>
-      </CursorProvider>
       <AISidebar isOpen={false} onClose={handleAISidebarClose} />
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
-      <Dock />
       <Footer />
       
       {/* ProfileCard Modal - Rendered as portal at page level */}

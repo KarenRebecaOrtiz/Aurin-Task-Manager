@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
+import { NextRequest } from 'next/server';
 import { initializeFirebase } from '@/lib/firebase-admin';
+import { requireAuth } from '@/lib/api/auth';
+import { apiSuccess, handleApiError, apiBadRequest } from '@/lib/api/response';
+import { validateUploadFormData } from '@/lib/api/schemas';
 
 const MAX_SIZES = {
   profile: 5 * 1024 * 1024,
@@ -29,31 +31,25 @@ function getStoragePath(type: string, userId: string, conversationId?: string) {
 }
 
 export async function POST(request: NextRequest) {
+  // Authentication check (defense-in-depth)
+  const { error: authError, userId } = await requireAuth();
+  if (authError) return authError;
+
   const { bucket } = await initializeFirebase();
-  let formData: FormData; // Declare outside try block
 
   try {
-    console.log('[API/upload] Received upload request, URL:', request.url);
+    console.log('[API/upload] Received upload request from user:', userId);
 
-    const { userId } = getAuth(request);
-    if (!userId) {
-      console.error('[API/upload] No user authenticated');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Parse and validate FormData
+    const formData = await request.formData();
+    const validation = validateUploadFormData(formData);
+
+    if (!validation.success) {
+      console.error('[API/upload] Validation failed:', validation.error.format());
+      return apiBadRequest('Invalid upload data', validation.error.format());
     }
 
-    formData = await request.formData(); // Assign inside try block
-    const file = formData.get('file');
-    if (!(file instanceof File)) {
-      console.error('[API/upload] Invalid file object in formData', { file });
-      return NextResponse.json({ error: 'Invalid or missing file' }, { status: 400 });
-    }
-    const type = formData.get('type')?.toString();
-    const conversationId = formData.get('conversationId')?.toString();
-
-    if (!type) {
-      console.error('[API/upload] Missing type in formData', { formData: Object.fromEntries(formData) });
-      return NextResponse.json({ error: 'Type is required' }, { status: 400 });
-    }
+    const { file, type, conversationId } = validation.data;
 
     console.log('[API/upload] File received:', {
       name: file.name,
@@ -64,20 +60,31 @@ export async function POST(request: NextRequest) {
       conversationId,
     });
 
-    const maxSize = MAX_SIZES[type as keyof typeof MAX_SIZES] || 5 * 1024 * 1024;
+    // Validate file size
+    const maxSize = MAX_SIZES[type] || 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      console.error(`[API/upload] ${type} exceeds ${maxSize / (1024 * 1024)}MB limit`, { fileSize: file.size });
-      return NextResponse.json({ error: `${type} must not exceed ${maxSize / (1024 * 1024)}MB` }, { status: 400 });
+      console.error(`[API/upload] ${type} exceeds ${maxSize / (1024 * 1024)}MB limit`, {
+        fileSize: file.size
+      });
+      return apiBadRequest(
+        `${type} must not exceed ${maxSize / (1024 * 1024)}MB`,
+        { maxSize, actualSize: file.size }
+      );
     }
 
+    // Validate file extension
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const validExtensions = VALID_EXTENSIONS[type as keyof typeof VALID_EXTENSIONS];
+    const validExtensions = VALID_EXTENSIONS[type];
     if (!validExtensions.includes(fileExtension)) {
       console.error(`[API/upload] Unsupported file extension for ${type}`, { fileExtension });
-      return NextResponse.json({ error: `Unsupported file extension for ${type}. Allowed: ${validExtensions.join(', ')}` }, { status: 400 });
+      return apiBadRequest(
+        `Unsupported file extension for ${type}`,
+        { allowed: validExtensions, received: fileExtension }
+      );
     }
 
-    const storagePath = `${getStoragePath(type, userId, conversationId)}.${fileExtension}`;
+    // Upload to Firebase Storage
+    const storagePath = `${getStoragePath(type, userId!, conversationId)}.${fileExtension}`;
     const storageFile = bucket.file(storagePath);
     const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -90,34 +97,21 @@ export async function POST(request: NextRequest) {
     await storageFile.save(buffer, {
       metadata: {
         contentType: file.type || 'application/octet-stream',
-        userId,
+        userId: userId!,
         type,
       },
     });
 
-    console.log('[API/upload] File uploaded successfully to Firebase Storage');
+    console.log('[API/upload] File uploaded successfully');
     const imageUrl = storageFile.publicUrl();
-    console.log('[API/upload] Image URL obtained:', { imageUrl });
 
-    return NextResponse.json(
-      {
-        url: imageUrl,
-        fileName: file.name,
-        fileType: file.type,
-        filePath: storagePath,
-      },
-      { status: 200 }
-    );
-  } catch (error: unknown) {
-    console.error('[API/upload] Error processing request:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      code: error instanceof Error && 'code' in error ? error.code : undefined,
-      formData: formData ? Object.fromEntries(formData) : 'Not available due to error',
+    return apiSuccess({
+      url: imageUrl,
+      fileName: file.name,
+      fileType: file.type,
+      filePath: storagePath,
     });
-    return NextResponse.json(
-      { error: 'Failed to upload file', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleApiError(error, 'POST /api/upload');
   }
 }

@@ -4,6 +4,7 @@ import Script from "next/script";
 import { Urbanist } from "next/font/google";
 import "./globals.scss";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ModalProvider } from "@/modules/modal";
 
 const urbanist = Urbanist({
   subsets: ["latin"],
@@ -92,7 +93,9 @@ export default function RootLayout({
                 </filter>
               </defs>
             </svg>
-            {children}
+            <ModalProvider>
+              {children}
+            </ModalProvider>
             <Toaster position="top-center" />
             <div id="portal-root" />
           </body>

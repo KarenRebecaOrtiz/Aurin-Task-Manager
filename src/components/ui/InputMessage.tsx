@@ -328,13 +328,14 @@ export function InputMessage({
       if (file) {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await fetch('/api/upload-image', {
+        formData.append('type', 'message');
+        const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
         if (!response.ok) throw new Error('Failed to upload image');
         const data = await response.json();
-        finalMessageData.imageUrl = data.imageUrl;
+        finalMessageData.imageUrl = data.success ? data.data.url : data.imageUrl;
       }
 
       // ✅ OPTIMIZACIÓN: Clear input inmediatamente post-optimistic para UX rápida

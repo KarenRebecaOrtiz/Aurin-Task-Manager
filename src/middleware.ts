@@ -1,35 +1,45 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
+/**
+ * Protected routes that require authentication
+ */
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/api(.*)',
 ]);
 
-// APIs que no requieren autenticación
-const publicApis = [
-  '/api/detect-inactive-users',
-  '/api/reset-status',
-  '/api/init-user-activity',
-  '/api/auto-detect-inactive'
-];
+/**
+ * Public API routes that don't require authentication
+ * Note: These should be carefully reviewed for security implications
+ */
+const isPublicApi = createRouteMatcher([
+  '/api/sendFeedback', // Public feedback endpoint
+  '/api/request-delete', // Public deletion request endpoint
+]);
 
+/**
+ * Clerk Middleware with defense-in-depth protection
+ *
+ * Uses auth().protect() for automatic redirect and better security.
+ * Follows Clerk 2025 best practices.
+ */
 export default clerkMiddleware(async (auth, req) => {
+  // Allow Next.js not-found page
   if (req.nextUrl.pathname === '/_not-found') {
     return NextResponse.next();
   }
-  
-  // Verificar si es una API pública
-  if (publicApis.includes(req.nextUrl.pathname)) {
+
+  // Allow public APIs to bypass authentication
+  if (isPublicApi(req)) {
     return NextResponse.next();
   }
-  
+
+  // Protect all other matched routes using auth().protect()
   if (isProtectedRoute(req)) {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.redirect(new URL('/sign-in', req.url));
-    }
+    await auth.protect();
   }
+
   return NextResponse.next();
 });
 

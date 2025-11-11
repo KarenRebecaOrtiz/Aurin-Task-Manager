@@ -1,13 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useShallow } from 'zustand/react/shallow';
 import { doc, deleteDoc, addDoc, updateDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
-
-import SimpleDeletePopup from '@/components/SimpleDeletePopup';
-import ConfirmExitPopup from '@/components/ConfirmExitPopup';
+import { useModal } from '@/modules/modal';
 import ClientOverlay from '@/components/ClientOverlay';
 import SuccessAlert from '@/components/SuccessAlert';
 import FailAlert from '@/components/FailAlert';
@@ -15,6 +13,7 @@ import clientStyles from '@/components/ClientsTable.module.scss';
 
 export default function TasksPageModals() {
   const { user } = useUser();
+  const { openModal, closeModal } = useModal();
   
   // Optimized selectors to prevent unnecessary re-renders
   const deleteTarget = useTasksPageStore(useShallow(state => state.deleteTarget));
@@ -115,6 +114,76 @@ export default function TasksPageModals() {
     showFail(message);
   };
 
+  // Handle delete popup with new modal system
+  useEffect(() => {
+    if (isDeletePopupOpen && deleteTarget) {
+      openModal({
+        type: 'confirm',
+        variant: 'danger',
+        title: `Eliminar ${deleteTarget.type === 'task' ? 'Tarea' : 'Cuenta'}`,
+        description: `¿Estás seguro de que quieres eliminar esta ${deleteTarget.type === 'task' ? 'tarea' : 'cuenta'}?`,
+        requiresConfirmation: true,
+        confirmationKeyword: 'eliminar',
+        confirmText: 'Confirmar Eliminación',
+        onConfirm: async () => {
+          console.log('[TasksPageModals] Delete popup confirmed for:', deleteTarget);
+          if (deleteTarget.type === 'task') {
+            // ✅ OPTIMISTIC UPDATE: Eliminar inmediatamente del estado local
+            const { deleteTaskOptimistic, addTask } = useDataStore.getState();
+            const deletedTask = deleteTaskOptimistic(deleteTarget.id);
+            
+            if (!deletedTask) {
+              handleShowFailAlert('Tarea no encontrada');
+              return;
+            }
+            
+            try {
+              console.log('[TasksPageModals] Task removed from local state:', deleteTarget.id);
+              
+              // Ahora eliminar de Firestore
+              console.log('[TasksPageModals] Deleting task from Firestore:', deleteTarget.id);
+              await deleteDoc(doc(db, 'tasks', deleteTarget.id));
+              console.log('[TasksPageModals] Task deleted successfully from Firestore');
+              
+              const { closeDeletePopup } = useTasksPageStore.getState();
+              closeDeletePopup();
+              handleShowSuccessAlert('Tarea eliminada exitosamente');
+            } catch (error) {
+              console.error('[TasksPageModals] Error deleting task:', error);
+              
+              // ✅ ROLLBACK: Si falla, restaurar la tarea en el estado local
+              addTask(deletedTask);
+              console.log('[TasksPageModals] Task restored to local state after error');
+              
+              handleShowFailAlert('Error al eliminar la tarea');
+            }
+          }
+        },
+        onCancel: () => {
+          console.log('[TasksPageModals] Delete popup cancelled');
+          const { closeDeletePopup } = useTasksPageStore.getState();
+          closeDeletePopup();
+        },
+      });
+    }
+  }, [isDeletePopupOpen, deleteTarget, openModal]);
+
+  // Handle confirm exit popup with new modal system
+  useEffect(() => {
+    if (isConfirmExitOpen) {
+      openModal({
+        type: 'confirm',
+        variant: 'warning',
+        title: '¿Salir sin guardar?',
+        description: '¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado.',
+        confirmText: 'Salir',
+        cancelText: 'Cancelar',
+        onConfirm: handleConfirmExit,
+        onCancel: handleCancelExit,
+      });
+    }
+  }, [isConfirmExitOpen, openModal]);
+
   return (
     <>
       {/* Alert Components */}
@@ -138,53 +207,7 @@ export default function TasksPageModals() {
         />
       )}
 
-      {/* Delete Popup */}
-      {isDeletePopupOpen && deleteTarget && (
-        <SimpleDeletePopup
-          isOpen={isDeletePopupOpen}
-          title={`Eliminar ${deleteTarget.type === 'task' ? 'Tarea' : 'Cuenta'}`}
-          description={`¿Estás seguro de que quieres eliminar esta ${deleteTarget.type === 'task' ? 'tarea' : 'cuenta'}?`}
-          onConfirm={async () => {
-            console.log('[TasksPageModals] Delete popup confirmed for:', deleteTarget);
-            if (deleteTarget.type === 'task') {
-              // ✅ OPTIMISTIC UPDATE: Eliminar inmediatamente del estado local
-              const { deleteTaskOptimistic, addTask } = useDataStore.getState();
-              const deletedTask = deleteTaskOptimistic(deleteTarget.id);
-              
-              if (!deletedTask) {
-                handleShowFailAlert('Tarea no encontrada');
-                return;
-              }
-              
-              try {
-                console.log('[TasksPageModals] Task removed from local state:', deleteTarget.id);
-                
-                // Ahora eliminar de Firestore
-                console.log('[TasksPageModals] Deleting task from Firestore:', deleteTarget.id);
-                await deleteDoc(doc(db, 'tasks', deleteTarget.id));
-                console.log('[TasksPageModals] Task deleted successfully from Firestore');
-                
-                const { closeDeletePopup } = useTasksPageStore.getState();
-                closeDeletePopup();
-                handleShowSuccessAlert('Tarea eliminada exitosamente');
-              } catch (error) {
-                console.error('[TasksPageModals] Error deleting task:', error);
-                
-                // ✅ ROLLBACK: Si falla, restaurar la tarea en el estado local
-                addTask(deletedTask);
-                console.log('[TasksPageModals] Task restored to local state after error');
-                
-                handleShowFailAlert('Error al eliminar la tarea');
-              }
-            }
-          }}
-          onCancel={() => {
-            console.log('[TasksPageModals] Delete popup cancelled');
-            const { closeDeletePopup } = useTasksPageStore.getState();
-            closeDeletePopup();
-          }}
-        />
-      )}
+      {/* Delete Popup - Migrated to new modal system */}
 
       {/* Client Delete Popup */}
       {isDeleteClientOpen && (
@@ -236,16 +259,7 @@ export default function TasksPageModals() {
         </div>
       )}
 
-      {/* Confirm Exit Popup */}
-      {isConfirmExitOpen && (
-        <ConfirmExitPopup
-          isOpen={isConfirmExitOpen}
-          title="¿Salir sin guardar?"
-          description="¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado."
-          onConfirm={handleConfirmExit}
-          onCancel={handleCancelExit}
-        />
-      )}
+      {/* Confirm Exit Popup - Migrated to new modal system */}
 
       {/* ClientSidebar */}
       {isClientSidebarOpen && clientSidebarData && (

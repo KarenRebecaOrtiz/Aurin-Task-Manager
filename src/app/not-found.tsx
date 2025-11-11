@@ -8,13 +8,11 @@ import Header from '@/components/ui/Header';
 import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
-import { CursorProvider, Cursor, CursorFollow } from '@/components/ui/Cursor';
 import { AuthProvider } from '@/contexts/AuthContext';
 // Removed unused imports for production build
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
-import Dock from '@/components/Dock';
 import Footer from '@/components/ui/Footer';
 import Loader from '@/components/Loader';
 import { FuzzyText } from '@/components/ui/FuzzyText';
@@ -108,8 +106,7 @@ function NotFoundContent() {
         />
       </div>
       
-      <CursorProvider>
-        <div ref={contentRef} className={styles.content}>
+      <div ref={contentRef} className={styles.content}>
           <div className={styles.errorContainer}>
             <div className={styles.fuzzyTextContainer}>
               <FuzzyText
@@ -139,26 +136,9 @@ function NotFoundContent() {
             </p>
           </div>
         </div>
-        <Cursor>
-          <svg
-            className={styles.cursorIcon}
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 40 40"
-          >
-            <path
-              fill="currentColor"
-              d="M1.8 4.4 7 36.2c.3 1.8 2.6 2.3 3.6.8l3.9-5.7c1.7-2.5 4.5-4.1 7.5-4.3l6.9-.5c1.8-.1 2.5-2.4 1.1-3.5L5 2.5c-1.4-1.1-3.5 0-3.3 1.9Z"
-            />
-          </svg>
-        </Cursor>
-        <CursorFollow>
-          <div className={styles.cursorFollowContent}>{user?.fullName || 'Usuario'}</div>
-        </CursorFollow>
-      </CursorProvider>
       
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
-      <Dock />
       <Footer />
     </div>
   );

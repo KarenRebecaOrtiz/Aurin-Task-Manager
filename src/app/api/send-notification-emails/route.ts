@@ -1,78 +1,68 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { config } from '@/lib/config';
-
-// Importación estática de Nodemailer
-import nodemailer from 'nodemailer';
-
 /**
- * API Route para enviar emails de notificación
- * POST /api/send-notification-emails
- * Body: { emails: Array<{ email: string; subject: string; body: string }> }
+ * Send Notification Emails API Route (v1)
+ *
+ * POST /api/send-notification-emails - Send batch notification emails
+ * Requires authentication
  */
+
+import { NextRequest } from 'next/server';
+import nodemailer from 'nodemailer';
+import { config } from '@/lib/config';
+import { requireAuth } from '@/lib/api/auth';
+import { apiSuccess, apiBadRequest, apiServerError, handleApiError } from '@/lib/api/response';
+import { sendNotificationEmailsSchema } from '@/lib/api/schemas';
+
 export async function POST(request: NextRequest) {
+  // ✅ AUTENTICACIÓN REQUERIDA
+  const { error: authError, userId } = await requireAuth();
+  if (authError) return authError;
+
   try {
-    console.log('[API] POST request recibido');
-    
-    // Verificar que Nodemailer esté disponible
-    if (!nodemailer) {
-      console.error('[API] Error: Nodemailer no está disponible');
-      return NextResponse.json(
-        { error: 'Servicio de email no disponible' },
-        { status: 500 }
-      );
-    }
-    
-    const { emails } = await request.json();
-    console.log('[API] Emails recibidos:', emails);
-    
-    if (!emails || !Array.isArray(emails)) {
-      console.log('[API] Error: emails debe ser un array');
-      return NextResponse.json(
-        { error: 'emails debe ser un array' },
-        { status: 400 }
-      );
+    console.log('[API/send-notification-emails] Request from user:', userId);
+
+    // ✅ VALIDAR REQUEST CON ZOD
+    const body = await request.json();
+    const validation = sendNotificationEmailsSchema.safeParse({
+      ...body,
+      userId,
+    });
+
+    if (!validation.success) {
+      console.error('[API/send-notification-emails] Validation failed:', validation.error.format());
+      return apiBadRequest('Invalid email request', validation.error.format());
     }
 
-    // Limitar el número de emails por request para evitar abuso
-    if (emails.length > 100) {
-      console.log('[API] Error: máximo 100 emails por request');
-      return NextResponse.json(
-        { error: 'Máximo 100 emails por request' },
-        { status: 400 }
-      );
-    }
+    const { emails } = validation.data;
 
-    console.log(`[API] Enviando ${emails.length} emails de notificación`);
+    console.log(`[API/send-notification-emails] Sending ${emails.length} notification emails`);
 
-    // Verificar configuración
-    console.log(`[API] Configuración de email:`, {
+    // ✅ VERIFICAR CONFIGURACIÓN DE EMAIL
+    console.log('[API/send-notification-emails] Email config:', {
       user: config.email.user,
       from: config.email.from,
-      hasPass: !!config.email.pass
+      hasPass: !!config.email.pass,
     });
 
     if (!config.email.pass) {
-      console.error('[API] Error: EMAIL_PASS no configurada');
-      return NextResponse.json(
-        { error: 'EMAIL_PASS no configurada' },
-        { status: 500 }
-      );
+      console.error('[API/send-notification-emails] EMAIL_PASS not configured');
+      return apiServerError('Email service not configured');
     }
 
-    // Crear transporter de Nodemailer
-    console.log('[API] Creando transporter...');
-    console.log('[API] Nodemailer disponible:', !!nodemailer);
-    console.log('[API] Nodemailer methods:', Object.keys(nodemailer));
-    
-    if (!nodemailer.createTransporter) {
-      console.error('[API] Error: createTransporter no está disponible en nodemailer');
-      return NextResponse.json(
-        { error: 'Método createTransporter no disponible' },
-        { status: 500 }
-      );
+    // ✅ VERIFICAR NODEMAILER
+    if (!nodemailer) {
+      console.error('[API/send-notification-emails] Nodemailer not available');
+      return apiServerError('Email service not available');
     }
-    
-    const transporter = nodemailer.createTransporter({
+
+    // ✅ CREAR TRANSPORTER
+    console.log('[API/send-notification-emails] Creating transporter...');
+
+    if (!nodemailer.createTransport) {
+      console.error('[API/send-notification-emails] createTransport not available');
+      return apiServerError('Email transport not available');
+    }
+
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: config.email.user,
@@ -80,24 +70,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Verificar que el transporter esté configurado correctamente
+    // ✅ VERIFICAR TRANSPORTER
     try {
-      console.log('[API] Verificando transporter...');
+      console.log('[API/send-notification-emails] Verifying transporter...');
       await transporter.verify();
-      console.log('[API] Transporter verificado correctamente');
+      console.log('[API/send-notification-emails] Transporter verified successfully');
     } catch (verifyError) {
-      console.error('[API] Error verificando transporter:', verifyError);
-      return NextResponse.json(
-        { 
-          error: 'Error de configuración de email',
-          details: verifyError instanceof Error ? verifyError.message : 'Unknown error'
-        },
-        { status: 500 }
+      console.error('[API/send-notification-emails] Transporter verification failed:', verifyError);
+      return apiServerError(
+        'Email configuration error',
+        verifyError instanceof Error ? verifyError.message : 'Unknown error'
       );
     }
 
-    // Enviar emails en batch
-    console.log('[API] Enviando emails...');
+    // ✅ ENVIAR EMAILS EN BATCH
+    console.log('[API/send-notification-emails] Sending emails...');
     const emailPromises = emails.map(async ({ email, subject, body }) => {
       try {
         const result = await transporter.sendMail({
@@ -106,40 +93,35 @@ export async function POST(request: NextRequest) {
           subject,
           html: body,
         });
-        console.log(`[API] Email enviado exitosamente a ${email}:`, result.messageId);
+        console.log(`[API/send-notification-emails] Email sent to ${email}:`, result.messageId);
         return { email, success: true, messageId: result.messageId };
       } catch (error) {
-        console.error(`[API] Error enviando email a ${email}:`, error);
-        return { email, success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        console.error(`[API/send-notification-emails] Failed to send email to ${email}:`, error);
+        return {
+          email,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
       }
     });
 
     const results = await Promise.all(emailPromises);
-    const successful = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
+    const successful = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
 
-    console.log(`[API] Emails enviados: ${successful} exitosos, ${failed} fallidos`);
+    console.log(`[API/send-notification-emails] Batch complete: ${successful} successful, ${failed} failed`);
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       results,
       summary: {
         total: emails.length,
         successful,
         failed,
       },
+      userId, // Para tracking
     });
-
-  } catch (error) {
-    console.error('[API] Error general enviando emails de notificación:', error);
-    return NextResponse.json(
-      { 
-        error: 'Error interno del servidor',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleApiError(error, 'POST /api/send-notification-emails');
   }
 }
 
@@ -147,16 +129,24 @@ export async function POST(request: NextRequest) {
  * GET endpoint para verificar que la API funciona
  */
 export async function GET() {
-  console.log('[API] GET request recibido');
-  return NextResponse.json({
-    message: 'API de envío de emails funcionando',
+  return apiSuccess({
+    message: 'Send Notification Emails API (v1)',
     endpoint: '/api/send-notification-emails',
     method: 'POST',
-    body: '{ "emails": [{ "email": "user@example.com", "subject": "Test", "body": "<p>Test</p>" }] }',
+    authenticated: true,
+    body: {
+      emails: [
+        {
+          email: 'user@example.com',
+          subject: 'Test Subject',
+          body: '<p>Test HTML body</p>',
+        },
+      ],
+    },
     config: {
       user: config.email.user,
       from: config.email.from,
-      hasPass: !!config.email.pass
-    }
+      hasPass: !!config.email.pass,
+    },
   });
 }

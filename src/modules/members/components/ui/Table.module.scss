@@ -1,0 +1,388 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/components' as *;
+
+
+
+.tableContainer {
+  width: 100%;
+  display: block;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+/* ESTADOS VACÍOS */
+.emptyStateTitle {
+  font-family: $font-family-table;
+  font-size: $text-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+  padding-top: $spacing-xl;
+  margin-bottom: $spacing-sm;
+  
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.733);
+  }
+}
+
+.emptyStateSubtitle {
+  font-family: $font-family-table;
+  font-size: $text-base;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
+  text-align: center;
+  
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.733);
+  }
+}
+
+.emptyState {
+  @include flex-column-center;
+  padding: $spacing-4xl 0px;
+  gap: $spacing-2xl;
+}
+
+/* TABLA */
+.table {
+  background: $color-bg-light;
+  border-radius: $radius-2xl;
+  padding: $spacing-lg;
+  box-shadow: $shadow-neomorphic-light;
+  
+  :global(body.dark) & {
+    background: $color-bg-dark;
+    box-shadow: none;
+  }
+}
+
+/* CABECERA */
+.header {
+  @include flex-center;
+  border-bottom: 1px solid $color-border-light;
+  
+  :global(body.dark) & {
+    border-bottom: 1px solid $color-border-dark;
+  }
+}
+
+.headerCell {
+  padding: $spacing-md $spacing-2xl;
+  font-family: $font-family-table;
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  user-select: none;
+  line-height: $leading-normal;
+  max-width: 250px!important;
+  
+  &.sortable {
+    cursor: pointer;
+  }
+  
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+  
+  /* Quitar padding en mobile */
+  @media (max-width: 768px) {
+    padding: 0;
+  }
+}
+
+/* FILAS */
+.row {
+  @include flex-center;
+  align-items: stretch;
+  gap: 0;
+  border-radius: $radius-2xl;
+  position: relative;
+  z-index: 0;
+  cursor: pointer;
+  margin: 10px 10px 0px 0px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: $shadow-neomorphic-light;
+  transition: $transition-base;
+
+  /* Hover mejorado */
+  &:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+  }
+  
+  /* 🌑 Modo oscuro */
+  :global(body.dark) & {
+    background: $color-bg-dark;
+    border: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none !important;
+    
+    &:hover {
+      background: $zinc-800;
+      box-shadow: none !important;
+      transform: translateY(-3px);
+    }
+  }
+  
+  /* 📱 Aumentar padding en mobile */
+  @media (max-width: 768px) {
+    padding: $spacing-lg 0; // Más padding superior e inferior en mobile
+    margin: 15px 10px 0px 0px; // Aumentar margen superior
+  }
+  
+  /* 📱 Aumentar aún más padding en pantallas muy pequeñas */
+  @media (max-width: 480px) {
+    padding: $spacing-xl 0; // Padding extra en pantallas muy pequeñas
+    margin: 20px 10px 0px 0px; // Margen superior extra
+  }
+}
+
+
+
+/* CELDAS */
+.cell {
+  padding: $spacing-md $spacing-2xl;
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-normal;
+  color: $color-text-primary;
+  line-height: $leading-normal;
+  display: flex;
+  align-items: center;
+  max-width: 250px!important;
+  justify-content: flex-start;
+  
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+    
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
+  }
+  
+  /* Quitar padding en mobile */
+  @media (max-width: 768px) {
+    padding: 0;
+  }
+}
+
+/* ACCIONES */
+.actionCell {
+  position: relative;
+}
+
+.actionButton {
+  height: auto;
+  padding: $spacing-sm;
+  border-radius: $radius-sm;
+  border: none;
+  cursor: pointer;
+  @include flex-center;
+  gap: $spacing-xs;
+  transition: $transition-fast;
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  background: none;
+  
+  &:hover {
+    background-color: $zinc-100;
+  }
+  
+  :global(body.dark) & {
+    &:hover {
+      background-color: $zinc-800;
+    }
+    
+    img {
+      @include image-filter-dark;
+    }
+  }
+}
+
+/* IMÁGENES */
+.TasksTable_clientImage__aZq2W {
+  border-radius: $radius-full;
+  box-shadow: $shadow-neomorphic-light;
+  
+  :global(body.dark) & {
+    box-shadow: none !important;
+  }
+}
+
+/* RESPONSIVE */
+.hideOnMobile {
+  @include hide-on-mobile;
+}
+
+/* Mobile-specific styles for ClientsTable */
+@media (max-width: 768px) {
+  .header {
+    .headerCell {
+      padding: $spacing-sm $spacing-md;
+      font-size: 12px;
+      
+      /* Ensure proper alignment for mobile */
+      &:first-child {
+        text-align: left;
+      }
+      
+      &:last-child {
+        text-align: right;
+      }
+    }
+  }
+  
+  .row {
+    .cell {
+      padding: $spacing-sm $spacing-md;
+      
+      /* Ensure proper alignment for mobile */
+      &:first-child {
+        text-align: left;
+      }
+      
+      &:last-child {
+        text-align: right;
+      }
+    }
+  }
+}
+
+/* PAGINACIÓN */
+.pagination {
+  @include flex-center;
+  gap: $spacing-sm;
+  padding: $spacing-lg $spacing-sm;
+  justify-content: flex-end;
+}
+
+.paginationButton {
+  width: 32px;
+  height: 32px;
+  padding: $spacing-sm;
+  background: $color-bg-light;
+  border-radius: $radius-lg;
+  border: none;
+  @include flex-center;
+  cursor: pointer;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
+  transition: $transition-fast;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  &:not(:disabled):hover {
+    background: #e6e8ea;
+  }
+  
+  :global(body.dark) & {
+    background: #212125;
+    box-shadow:
+      inset -2px -2px 4px rgba(0, 0, 0, 0.3),
+      inset 2px 2px 6px rgba(255, 255, 255, 0.02);
+    
+    &:not(:disabled):hover {
+      background: $zinc-900;
+    }
+    
+    img {
+      @include image-filter-dark;
+    }
+  }
+}
+
+.pageInfo {
+  font-family: $font-family-table;
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin: 0 $spacing-sm;
+  
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}
+
+/* ==============================================================
+   🔮 CLIENTS TABLE SPECIFIC STYLES - HEADER & CELL ALIGNMENT
+   ================================================================= */
+
+/* Ensure header and cells have same layout for ClientsTable */
+.clients-table {
+  .header {
+    .headerCell {
+      /* Same layout as cells */
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      max-width: 250px!important;
+      line-height: $leading-normal;
+      
+      /* Specific column alignments */
+      &:nth-child(1) { // Foto
+        justify-content: center;
+        align-items: center;
+      }
+      
+      &:nth-child(2) { // Cuentas
+        justify-content: flex-start;
+      }
+      
+      &:nth-child(3) { // Proyectos Asignados
+        justify-content: flex-start;
+      }
+      
+      &:nth-child(4) { // Acciones
+        justify-content: center;
+        align-items: center;
+      }
+    }
+  }
+  
+  .row {
+    .cell {
+      /* Same layout as header */
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      max-width: 250px!important;
+      line-height: $leading-normal;
+      
+      /* Specific column alignments */
+      &:nth-child(1) { // Foto
+        justify-content: center;
+        align-items: center;
+      }
+      
+      &:nth-child(2) { // Cuentas
+        justify-content: flex-start;
+      }
+      
+      &:nth-child(3) { // Proyectos Asignados
+        justify-content: flex-start;
+      }
+      
+      &:nth-child(4) { // Acciones
+        justify-content: center;
+        align-items: center;
+      }
+    }
+  }
+}

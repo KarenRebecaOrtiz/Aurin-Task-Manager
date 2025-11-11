@@ -1,5 +1,14 @@
-// src/app/api/generate-summary/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+/**
+ * Generate Summary API Route (GPT-4o-mini)
+ *
+ * POST /api/generate-summary - Generate task activity summaries using AI
+ * Requires authentication
+ */
+
+import { NextRequest } from 'next/server';
+import { requireAuth } from '@/lib/api/auth';
+import { apiSuccess, apiBadRequest, apiServerError, handleApiError } from '@/lib/api/response';
+import { generateSummarySchema } from '@/lib/api/schemas';
 
 // ✅ TIPOS PARA LA INTEGRACIÓN CON CHATGPT
 interface ChatGPTMessage {
@@ -15,59 +24,42 @@ interface ChatGPTResponse {
   }>;
 }
 
-interface GenerateSummaryRequest {
-  taskContext: string;
-  activityContext: string;
-  timersContext: string;
-  interval: string;
-}
-
 export async function POST(request: NextRequest) {
+  // ✅ AUTENTICACIÓN REQUERIDA
+  const { error: authError, userId } = await requireAuth();
+  if (authError) return authError;
+
   try {
-    // ✅ VALIDAR REQUEST
-    if (!request.body) {
-      return NextResponse.json(
-        { error: '❌ Cuerpo de la solicitud requerido' },
-        { status: 400 }
-      );
+    console.log('[API/generate-summary] Request from user:', userId);
+
+    // ✅ VALIDAR REQUEST CON ZOD
+    const body = await request.json();
+    const validation = generateSummarySchema.safeParse({
+      ...body,
+      userId,
+    });
+
+    if (!validation.success) {
+      console.error('[API/generate-summary] Validation failed:', validation.error.format());
+      return apiBadRequest('Invalid summary request', validation.error.format());
     }
 
-    const body: GenerateSummaryRequest = await request.json();
-    
+    const { taskContext, activityContext, timersContext, interval } = validation.data;
+
     // ✅ DEBUG: Verificar qué se está recibiendo
-    console.log('[API] 📥 Datos recibidos:', {
-      hasTaskContext: !!body.taskContext,
-      hasActivityContext: !!body.activityContext,
-      hasTimersContext: !!body.timersContext,
-      hasInterval: !!body.interval,
-      taskContextLength: body.taskContext?.length || 0,
-      activityContextLength: body.activityContext?.length || 0,
-      timersContextLength: body.timersContext?.length || 0,
-      interval: body.interval,
-      bodyKeys: Object.keys(body),
+    console.log('[API/generate-summary] Validated data:', {
+      taskContextLength: taskContext.length,
+      activityContextLength: activityContext.length,
+      timersContextLength: timersContext.length,
+      interval,
+      userId,
     });
-    
-    // ✅ VALIDAR CAMPOS REQUERIDOS
-    if (!body.taskContext || !body.activityContext || !body.interval) {
-      console.error('[API] ❌ Validación fallida:', {
-        taskContext: !!body.taskContext,
-        activityContext: !!body.activityContext,
-        interval: !!body.interval,
-      });
-      return NextResponse.json(
-        { error: '❌ Campos requeridos: taskContext, activityContext, interval' },
-        { status: 400 }
-      );
-    }
 
     // ✅ VERIFICAR API KEY
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      console.error('[API] OPENAI_API_KEY no configurada');
-      return NextResponse.json(
-        { error: '🔑 Error de configuración del servidor' },
-        { status: 500 }
-      );
+      console.error('[API/generate-summary] OPENAI_API_KEY not configured');
+      return apiServerError('OpenAI API key not configured');
     }
 
     // ✅ CONSTRUIR MENSAJES PARA CHATGPT (compatible con gpt-4o-mini)
@@ -101,21 +93,21 @@ EJEMPLOS DE TONO:
 - "¡Excelente trabajo equipo! 🎉 Hemos avanzado significativamente..."
 - "Para continuar el momentum, recomiendo..."
 - "El proyecto está en buen camino hacia la finalización..."
-- "¡Seguimos construyendo algo increíble! 🚀"`
+- "¡Seguimos construyendo algo increíble! 🚀"`,
     };
 
     const userMessage: ChatGPTMessage = {
       role: 'user',
-      content: `Genera un resumen ejecutivo y detallado de la actividad en esta tarea durante ${body.interval}.
+      content: `Genera un resumen ejecutivo y detallado de la actividad en esta tarea durante ${interval}.
 
 **CONTEXTO COMPLETO DE LA TAREA:**
-${body.taskContext}
+${taskContext}
 
-**ACTIVIDAD RECIENTE (${body.interval}):**
-${body.activityContext}
+**ACTIVIDAD RECIENTE (${interval}):**
+${activityContext}
 
 **⏱️ TIEMPO TOTAL REGISTRADO:**
-${body.timersContext}
+${timersContext}
 
 **IMPORTANTE:** Genera un resumen que sea:
 - 🎯 Conciso y directo (máximo 3-4 párrafos)
@@ -123,18 +115,13 @@ ${body.timersContext}
 - 📊 Estructurado y fácil de leer (usa markdown para formato)
 - 💡 Accionable (con recomendaciones claras)
 
-Sé constructivo, motivacional y siempre termina con un mensaje positivo sobre el futuro del proyecto.`
+Sé constructivo, motivacional y siempre termina con un mensaje positivo sobre el futuro del proyecto.`,
     };
 
     // ✅ LLAMAR A CHATGPT
-    console.log('[API] 🤖 Llamando a ChatGPT para generar resumen...');
-    console.log('[API] 🔑 API Key configurada:', !!apiKey);
-    console.log('[API] 📝 Mensajes a enviar:', {
-      systemMessageLength: systemMessage.content.length,
-      userMessageLength: userMessage.content.length,
-      model: 'gpt-4o-mini',
-    });
-    
+    console.log('[API/generate-summary] Calling ChatGPT for summary generation...');
+    console.log('[API/generate-summary] Model: gpt-4o-mini');
+
     const requestBody = {
       model: 'gpt-4o-mini',
       messages: [systemMessage, userMessage],
@@ -144,9 +131,7 @@ Sé constructivo, motivacional y siempre termina con un mensaje positivo sobre e
       frequency_penalty: 0.1,
       presence_penalty: 0.1,
     };
-    
-    console.log('[API] 📤 Request body:', JSON.stringify(requestBody, null, 2));
-    
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -158,60 +143,34 @@ Sé constructivo, motivacional y siempre termina con un mensaje positivo sobre e
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('[API] Error de OpenAI:', response.status, errorData);
-      return NextResponse.json(
-        { error: `🚫 Error de OpenAI: ${response.status} - ${errorData.error?.message || 'Error desconocido'}` },
-        { status: 500 }
+      console.error('[API/generate-summary] OpenAI error:', response.status, errorData);
+      return apiServerError(
+        `OpenAI API error: ${response.status}`,
+        errorData.error?.message || 'Unknown error'
       );
     }
 
     const data: ChatGPTResponse = await response.json();
-    
+
     if (!data.choices || data.choices.length === 0) {
-      return NextResponse.json(
-        { error: '📝 ChatGPT no devolvió ninguna respuesta' },
-        { status: 500 }
-      );
+      return apiServerError('ChatGPT returned no response');
     }
 
     const summaryText = data.choices[0].message.content;
-    
+
     if (!summaryText || summaryText.trim().length === 0) {
-      return NextResponse.json(
-        { error: '📝 ChatGPT devolvió una respuesta vacía' },
-        { status: 500 }
-      );
+      return apiServerError('ChatGPT returned empty response');
     }
 
-    console.log('[API] ✅ Resumen generado exitosamente');
-    
+    console.log('[API/generate-summary] Summary generated successfully');
+
     // ✅ RETORNAR RESPUESTA EXITOSA
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       summary: summaryText.trim(),
       timestamp: new Date().toISOString(),
+      userId, // Para tracking
     });
-
-  } catch (error) {
-    console.error('[API] Error generando resumen:', error);
-    
-    // ✅ LOGGING DETALLADO DEL ERROR
-    if (error instanceof Error) {
-      console.error('[API] Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      });
-    } else {
-      console.error('[API] Error desconocido:', error);
-    }
-    
-    return NextResponse.json(
-      { 
-        error: '❌ Error interno del servidor',
-        details: error instanceof Error ? error.message : 'Error desconocido'
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleApiError(error, 'POST /api/generate-summary');
   }
 }
