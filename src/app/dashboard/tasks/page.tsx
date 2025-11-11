@@ -24,7 +24,7 @@ import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
 import styles from '@/components/TasksPage.module.scss';
 
 import Footer from '@/components/ui/Footer';
-import Loader from '@/components/Loader';
+import Loader from '@/modules/loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { usePersonalLocations } from '@/hooks/usePersonalLocations';

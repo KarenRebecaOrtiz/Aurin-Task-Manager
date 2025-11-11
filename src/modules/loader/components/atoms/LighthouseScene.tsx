@@ -112,4 +112,4 @@ const LighthouseScene = () => {
   );
 };
 
-export default LighthouseScene; 
+export default LighthouseScene;

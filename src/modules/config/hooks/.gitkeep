@@ -1,0 +1,23 @@
+# Config Hooks
+
+Custom hooks para el módulo de configuración.
+
+## Hooks Futuros
+
+### useProfileForm.ts
+Maneja la lógica del formulario de perfil.
+
+### useImageUpload.ts
+Maneja la subida de imágenes (perfil, cover).
+
+### useTeamsManagement.ts
+Maneja la gestión de equipos del usuario.
+
+### useSecuritySettings.ts
+Maneja configuración de seguridad y sesiones.
+
+### useFormValidation.ts
+Validación de formularios.
+
+### useAutoSave.ts
+Auto-guardado de cambios.

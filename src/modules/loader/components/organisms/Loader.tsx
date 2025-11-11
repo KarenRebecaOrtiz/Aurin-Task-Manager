@@ -1,20 +1,9 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import styles from './Loader.module.scss';
-import LighthouseScene from './LighthouseScene';
-
-interface LoaderProps {
-  message?: string;
-  isFullPage?: boolean;
-  loadingProgress?: {
-    tasks: boolean;
-    clients: boolean;
-    users: boolean;
-  };
-  isVisible?: boolean;
-  onAnimationComplete?: () => void;
-}
+import styles from '../../styles/Loader.module.scss';
+import LighthouseScene from '../atoms/LighthouseScene';
+import type { LoaderProps } from '../../config/types';
 
 const Loader: React.FC<LoaderProps> = ({ 
   isFullPage = false,

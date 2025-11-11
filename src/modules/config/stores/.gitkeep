@@ -1,0 +1,37 @@
+# Config Stores
+
+Zustand stores para el módulo de configuración.
+
+## Stores Futuros
+
+### configPageStore.ts
+```typescript
+interface ConfigPageState {
+  activeTab: number;
+  isEditing: boolean;
+  hasUnsavedChanges: boolean;
+  tabChanges: boolean[];
+  // ... actions
+}
+```
+
+### profileFormStore.ts
+```typescript
+interface ProfileFormState {
+  formData: ProfileFormData;
+  originalData: ProfileFormData;
+  isLoading: boolean;
+  errors: Record<string, string>;
+  // ... actions
+}
+```
+
+### securityStore.ts
+```typescript
+interface SecurityState {
+  sessions: Session[];
+  twoFactorEnabled: boolean;
+  isLoading: boolean;
+  // ... actions
+}
+```

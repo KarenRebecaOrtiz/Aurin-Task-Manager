@@ -16,7 +16,7 @@ import InputChat from './ui/InputChat';
 import DatePill from './ui/DatePill';
 import styles from './ChatSidebar.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
-import Loader from '@/components/Loader';
+import Loader from '@/modules/loader';
 
 import UserAvatar from './ui/UserAvatar';
 import { useEncryption } from '@/hooks/useEncryption';

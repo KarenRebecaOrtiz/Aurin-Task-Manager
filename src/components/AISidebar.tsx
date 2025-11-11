@@ -21,7 +21,7 @@ import { db, ai, appCheck } from "@/lib/firebase";
 import { gsap } from "gsap";
 import styles from "./AISidebar.module.scss";
 import InputAI from "./ui/InputAI";
-import Loader from '@/components/Loader';
+import Loader from '@/modules/loader';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Extender la interfaz User de Clerk para incluir id

@@ -1,0 +1,11 @@
+# Teams Components
+
+Componentes relacionados con equipos y colaboración.
+
+## Componentes Futuros
+
+- **TeamsTable/** - Tabla de equipos del usuario (migrar desde /components)
+- **TeamCard/** - Card individual de equipo
+- **TeamSelector/** - Selector de equipos
+- **TeamMembersList/** - Lista de miembros de un equipo
+- **TeamInvite/** - Invitar miembros a equipo

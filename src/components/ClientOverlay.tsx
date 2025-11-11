@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import styles from './ClientOverlay.module.scss';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
-import Loader from '@/components/Loader';
+import Loader from '@/modules/loader';
 import { createPortal } from 'react-dom';
 import { invalidateClientsCache } from '@/lib/cache-utils';
 

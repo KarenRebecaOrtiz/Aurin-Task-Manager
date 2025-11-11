@@ -1,0 +1,12 @@
+# Profile Components
+
+Componentes relacionados con el perfil de usuario.
+
+## Componentes Futuros
+
+- **ProfileHeader/** - Header con foto de perfil y cover
+- **ProfileForm/** - Formulario principal de edición
+- **BioSection/** - Sección de biografía
+- **ContactSection/** - Información de contacto
+- **LocationSection/** - Ubicación y zona horaria
+- **SocialLinksSection/** - Redes sociales

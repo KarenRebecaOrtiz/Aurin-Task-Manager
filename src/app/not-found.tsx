@@ -14,7 +14,7 @@ import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import Footer from '@/components/ui/Footer';
-import Loader from '@/components/Loader';
+import Loader from '@/modules/loader';
 import { FuzzyText } from '@/components/ui/FuzzyText';
 
 import styles from './not-found.module.scss';

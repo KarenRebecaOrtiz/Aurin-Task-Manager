@@ -10,7 +10,7 @@ import { memo } from 'react';
 import SuccessAlert from './SuccessAlert';
 import FailAlert from './FailAlert';
 import { useAuth } from '@/contexts/AuthContext';
-import Loader from '@/components/Loader';
+import Loader from '@/modules/loader';
 
 interface ClientSidebarProps {
   isOpen: boolean;

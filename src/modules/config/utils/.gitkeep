@@ -1,0 +1,20 @@
+# Config Utils
+
+Utilidades para el módulo de configuración.
+
+## Utils Futuros
+
+### validation.ts
+Funciones de validación de formularios.
+
+### imageProcessing.ts
+Procesamiento y optimización de imágenes.
+
+### formHelpers.ts
+Helpers para manejo de formularios.
+
+### dateHelpers.ts
+Helpers para manejo de fechas y zonas horarias.
+
+### phoneHelpers.ts
+Helpers para formateo de números telefónicos.

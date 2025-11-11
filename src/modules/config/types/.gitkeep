@@ -1,0 +1,47 @@
+# Config Types
+
+TypeScript types para el módulo de configuración.
+
+## Types Futuros
+
+### profile.types.ts
+```typescript
+interface ProfileFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  biography: string;
+  location: string;
+  timezone: string;
+  website: string;
+  // ...
+}
+```
+
+### security.types.ts
+```typescript
+interface Session {
+  id: string;
+  device: string;
+  location: string;
+  lastActive: string;
+  isCurrent: boolean;
+}
+```
+
+### teams.types.ts
+```typescript
+interface Team {
+  name: string;
+  members: TeamMember[];
+  description?: string;
+}
+
+interface TeamMember {
+  id: string;
+  fullName: string;
+  role: string;
+  profilePhoto?: string;
+}
+```

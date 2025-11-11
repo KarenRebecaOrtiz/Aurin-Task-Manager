@@ -1,0 +1,12 @@
+# Config UI Components
+
+Componentes UI específicos del módulo de configuración.
+
+## Componentes Futuros
+
+- **TabNavigation/** - Navegación entre tabs de configuración
+- **SectionHeader/** - Header de secciones con iconos
+- **ActionButtons/** - Botones de guardar/descartar
+- **FieldGroup/** - Grupo de campos de formulario
+- **SettingToggle/** - Toggle para configuraciones
+- **InfoCard/** - Cards informativos

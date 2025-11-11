@@ -1,0 +1,11 @@
+# Security Components
+
+Componentes relacionados con seguridad y autenticación.
+
+## Componentes Futuros
+
+- **PasswordSection/** - Cambio de contraseña (Clerk)
+- **SessionsTable/** - Tabla de sesiones activas
+- **TwoFactorAuth/** - Configuración 2FA
+- **DevicesTable/** - Dispositivos conectados
+- **SecurityLog/** - Historial de actividad de seguridad
