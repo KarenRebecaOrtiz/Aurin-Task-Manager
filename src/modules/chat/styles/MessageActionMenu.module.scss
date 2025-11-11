@@ -1,0 +1,131 @@
+/**
+ * Message Action Menu - Component Styles
+ * 
+ * Estilos del menú de acciones de mensajes basado en la implementación original.
+ */
+
+@use './variables' as *;
+@use './mixins' as *;
+
+// ============================================================================
+// ACTION DROPDOWN (Portal)
+// ============================================================================
+
+.actionDropdown {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  min-width: 44px;
+  z-index: 100002;
+
+  :global(.dark) & {
+    background: #27272a;
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+}
+
+.actionDropdownContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionDropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  width: 100%;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+
+    :global(.dark) & {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  // Variantes de color
+  &.copy {
+    color: #3b82f6;
+
+    :global(.dark) & {
+      color: #60a5fa;
+    }
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.1);
+
+      :global(.dark) & {
+        background: rgba(96, 165, 250, 0.2);
+      }
+    }
+  }
+
+  &.edit {
+    color: #f59e0b;
+
+    :global(.dark) & {
+      color: #fbbf24;
+    }
+
+    &:hover {
+      background: rgba(245, 158, 11, 0.1);
+
+      :global(.dark) & {
+        background: rgba(251, 191, 36, 0.2);
+      }
+    }
+  }
+
+  &.delete {
+    color: #ef4444;
+
+    :global(.dark) & {
+      color: #f87171;
+    }
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+
+      :global(.dark) & {
+        background: rgba(248, 113, 113, 0.2);
+      }
+    }
+  }
+
+  // Icono
+  img {
+    filter: currentColor;
+  }
+}
+
+// ============================================================================
+// RESPONSIVE
+// ============================================================================
+
+@media (max-width: 768px) {
+  .actionDropdown {
+    min-width: 40px;
+  }
+
+  .actionDropdownItem {
+    padding: 6px;
+  }
+}

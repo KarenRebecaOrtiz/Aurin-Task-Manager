@@ -6,7 +6,7 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { db } from '@/lib/firebase';
-import Table from '@/components/Table';
+import Table from '@/modules/shared/components/ui/Table';
 import ActionMenu from '@/modules/tasks/components/ui/ActionMenu';
 import styles from './ClientsTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext';

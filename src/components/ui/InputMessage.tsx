@@ -24,10 +24,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import sanitizeHtml from 'sanitize-html';
 import { Timestamp } from 'firebase/firestore';
-import { getGenerativeModel, HarmCategory, HarmBlockThreshold } from '@firebase/ai';
-import { ai } from '@/lib/firebase';
 import styles from '../ChatSidebar.module.scss';
-import { EmojiSelector } from './EmojiSelector';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -103,13 +100,10 @@ export function InputMessage({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isDropupOpen, setIsDropupOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [hasReformulated, setHasReformulated] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
-  const dropupRef = useRef<HTMLDivElement>(null);
   const currentConversationId = conversationId || 'default-conversation'; // Usar el prop o un fallback
 
   // Local state for replyingTo if not provided as prop
@@ -187,18 +181,6 @@ export function InputMessage({
     [editor, adjustEditorHeight],
   );
 
-  // Handle click outside for dropup
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (isDropupOpen && !dropupRef.current?.contains(target)) {
-        setIsDropupOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isDropupOpen]);
 
   // Cleanup preview URL
   useEffect(() => {
@@ -209,12 +191,6 @@ export function InputMessage({
     };
   }, [previewUrl]);
 
-  // Reset reformulation state
-  useEffect(() => {
-    if (editor && editor.isEmpty) {
-      setHasReformulated(false);
-    }
-  }, [editor]);
 
   // Handle editing state
   useEffect(() => {
@@ -273,8 +249,6 @@ export function InputMessage({
       return;
     }
 
-    setHasReformulated(false);
-    setIsDropupOpen(false);
 
     const clientId = crypto.randomUUID();
     const tempId = `temp-${clientId}`;
@@ -314,7 +288,6 @@ export function InputMessage({
         editor?.commands.clearContent(true); // Forzar reset completo
         setFile(null);
         setPreviewUrl(null);
-        setHasReformulated(false);
         adjustEditorHeight();
         removeErrorMessage(currentConversationId);
         clearPersistedData();
@@ -654,76 +627,6 @@ export function InputMessage({
     setPreviewUrl(null);
   };
 
-  // Reformulate with Gemini AI
-  const handleReformulate = async (
-    mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list',
-  ) => {
-    if (!userId || !editor || editor.isEmpty || isProcessing) return;
-
-    setIsProcessing(true);
-    setIsDropupOpen(false);
-
-    try {
-      if (!ai) {
-        throw new Error('🤖 El servicio de Gemini AI no está disponible en este momento.');
-      }
-
-      const prompts = {
-        correct: `Corrige todos los errores de ortografía, gramática, puntuación y sintaxis en el siguiente texto, manteniendo el tono y significado original. Solo devuelve el texto corregido: "${editor.getText()}"`,
-        rewrite: `Reescribe completamente el siguiente texto manteniendo el mismo significado, pero usando diferentes palabras y estructuras. Solo devuelve el texto reescrito: "${editor.getText()}"`,
-        friendly: `Transforma el siguiente texto a un tono más amigable, cálido y cercano. Solo devuelve el texto transformado: "${editor.getText()}"`,
-        professional: `Convierte el siguiente texto en una versión más profesional y formal. Solo devuelve el texto profesional: "${editor.getText()}"`,
-        concise: `Haz el siguiente texto más conciso y directo, eliminando redundancias. Solo devuelve el texto conciso: "${editor.getText()}"`,
-        summarize: `Resume el siguiente texto en sus puntos más importantes, manteniendo solo lo esencial. Solo devuelve el resumen: "${editor.getText()}"`,
-        keypoints: `Extrae los puntos clave del siguiente texto y preséntalos como lista. Solo devuelve los puntos clave: "${editor.getText()}"`,
-        list: `Convierte el siguiente texto en una lista organizada con viñetas o numeración. Solo devuelve la lista: "${editor.getText()}"`,
-      };
-
-      const generationConfig = {
-        maxOutputTokens: 800,
-        temperature: mode === 'rewrite' ? 0.8 : 0.6,
-        topK: 40,
-        topP: 0.9,
-      };
-
-      const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      ];
-
-      const systemInstruction = `Eres un asistente de escritura experto. Responde únicamente con el texto procesado, sin explicaciones ni comentarios adicionales.`;
-
-      const model = getGenerativeModel(ai, {
-        model: 'gemini-1.5-flash',
-        generationConfig,
-        safetySettings,
-        systemInstruction,
-      });
-
-      const promptText = prompts[mode];
-      const result = await model.generateContent(promptText);
-      const reformulatedText = await result.response.text();
-
-      if (!reformulatedText.trim()) {
-        throw new Error('📝 Gemini devolvió una respuesta vacía.');
-      }
-
-      typeWriter(reformulatedText.trim(), () => {
-        editor.commands.focus();
-      });
-      setHasReformulated(true);
-    } catch (error) {
-      console.error('[InputMessage:Reformulate] Error:', error);
-      toast({
-        title: 'Error al procesar el texto con Gemini AI',
-        description: '❌ Error al procesar el texto con Gemini AI.',
-        variant: 'error',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const formatButtons = [
     { id: 'bold', icon: '/input/bold.svg', label: 'Negrita', shortcut: 'Ctrl+B' },
     { id: 'italic', icon: '/input/italic.svg', label: 'Cursiva', shortcut: 'Ctrl+I' },
@@ -1011,103 +914,6 @@ export function InputMessage({
         </div>
         <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
           <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-            <div className={styles.dropupContainer} ref={dropupRef}>
-              <button
-                type="button"
-                className={`${styles.imageButton} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`}
-                onClick={() => setIsDropupOpen((prev) => !prev)}
-                disabled={isSending || isProcessing || !editor || editor.isEmpty}
-                aria-label="Reformular texto con ChatGPT"
-                title="Reformular texto con ChatGPT"
-                aria-expanded={isDropupOpen}
-              >
-                <Image src="/OpenAI.svg" alt="OpenAI" width={16} height={16} draggable="false" />
-              </button>
-              {isDropupOpen && (
-                <div className={styles.dropupMenu} role="menu">
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('correct')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Corregir ortografía y gramática"
-                  >
-                    ✏️ Corregir
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('rewrite')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Reescribir el texto con diferentes palabras"
-                  >
-                    🔄 Re-escribir
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('friendly')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Transformar a un tono más amigable y cercano"
-                  >
-                    😊 Hacer amigable
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('professional')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Convertir a un tono más profesional y formal"
-                  >
-                    💼 Hacer profesional
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('concise')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Hacer el texto más conciso y directo"
-                  >
-                    ⚡ Hacer conciso
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('summarize')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Resumir los puntos más importantes"
-                  >
-                    📝 Resumir
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('keypoints')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Extraer los puntos clave como lista"
-                  >
-                    🎯 Puntos clave
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropupItem}
-                    onClick={() => handleReformulate('list')}
-                    disabled={isProcessing}
-                    role="menuitem"
-                    title="Convertir en lista organizada"
-                  >
-                    📋 Convertir en lista
-                  </button>
-                </div>
-              )}
-            </div>
             <button
               type="button"
               className={`${styles.imageButton} ${styles.tooltip}`}
@@ -1125,15 +931,6 @@ export function InputMessage({
                 draggable="false"
               />
             </button>
-            <EmojiSelector
-              onEmojiSelect={(emoji) => {
-                editor?.commands.insertContent(emoji);
-                setTimeout(adjustEditorHeight, 0);
-              }}
-              disabled={isSending || isProcessing}
-              value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''}
-              containerRef={containerRef}
-            />
             <button
               type="submit"
               className={styles.sendButton}

@@ -6,10 +6,10 @@ import { db } from '@/lib/firebase';
 import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 import { useModal } from '@/modules/modal';
-import ClientOverlay from '@/components/ClientOverlay';
+import { ClientOverlay } from '@/modules/clients/components/modals';
 import SuccessAlert from '@/components/SuccessAlert';
 import FailAlert from '@/components/FailAlert';
-import clientStyles from '@/components/ClientsTable.module.scss';
+import clientStyles from '@/modules/clients/components/tables/ClientsTable/ClientsTable.module.scss';
 
 export default function TasksPageModals() {
   const { user } = useUser();

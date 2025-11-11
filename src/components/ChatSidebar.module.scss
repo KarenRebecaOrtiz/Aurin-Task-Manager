@@ -3847,29 +3847,6 @@
 }
 
 // -----------------------------------
-// Emoji Popover y Button
-// -----------------------------------
-.emoji-popover {
-  @include neomorphic-container;
-  padding: 8px;
-  max-height: 192px;
-  overflow-y: auto;
-  width: 320px;
-  position: absolute;
-  bottom: 48px;
-  right: 0;
-  z-index: 50;
-}
-
-.emoji-button {
-  @include neomorphic-button;
-  height: 32px;
-  width: 32px;
-  font-size: 18px;
-  padding: 0;
-}
-
-// -----------------------------------
 // Recording Indicator
 // -----------------------------------
 .recording-indicator {

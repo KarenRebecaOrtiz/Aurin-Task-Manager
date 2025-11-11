@@ -1,0 +1,504 @@
+/**
+ * Message Item - Component Styles
+ * 
+ * Estilos para los mensajes individuales del chat.
+ * Incluye burbujas, acciones, estados (pending, error), etc.
+ */
+
+@use './variables' as *;
+@use './mixins' as *;
+
+// ============================================================================
+// MESSAGE CONTAINER
+// ============================================================================
+
+.messageWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  position: relative;
+  
+  @include fade-in(0.2s);
+}
+
+.message {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  position: relative;
+  transition: opacity 0.2s ease;
+
+  &.pending {
+    opacity: 0.6;
+  }
+
+  &.error {
+    opacity: 0.8;
+  }
+}
+
+// ============================================================================
+// AVATAR
+// ============================================================================
+
+.avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// ============================================================================
+// MESSAGE CONTENT
+// ============================================================================
+
+.messageContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; // Para que funcione text-overflow
+}
+
+.senderName {
+  font-size: 13px;
+  font-weight: 600;
+  color: $chat-text-primary-light;
+  margin-bottom: 2px;
+
+  :global(.dark) & {
+    color: $chat-text-primary-dark;
+  }
+}
+
+.bubble {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 10px 14px;
+  max-width: 100%;
+  word-wrap: break-word;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  :global(.dark) & {
+    background: rgba(39, 39, 42, 0.9);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.messageText {
+  font-size: 14px;
+  line-height: 1.5;
+  color: $chat-text-primary-light;
+  white-space: pre-wrap;
+
+  :global(.dark) & {
+    color: $chat-text-primary-dark;
+  }
+
+  // Estilos para HTML renderizado (markdown)
+  :global {
+    h1, h2, h3 {
+      margin: 8px 0 4px 0;
+      font-weight: 600;
+    }
+
+    h1 { font-size: 18px; }
+    h2 { font-size: 16px; }
+    h3 { font-size: 14px; }
+
+    strong {
+      font-weight: 600;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    ul {
+      margin: 4px 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin: 2px 0;
+    }
+
+    p {
+      margin: 4px 0;
+    }
+  }
+}
+
+// ============================================================================
+// REPLY PREVIEW
+// ============================================================================
+
+.replyPreview {
+  background: rgba(0, 0, 0, 0.05);
+  border-left: 3px solid #3b82f6;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+
+  :global(.dark) & {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.replyAuthor {
+  font-weight: 600;
+  color: #3b82f6;
+  margin-bottom: 2px;
+
+  :global(.dark) & {
+    color: #60a5fa;
+  }
+}
+
+.replyText {
+  color: $chat-text-secondary-light;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.dark) & {
+    color: $chat-text-secondary-dark;
+  }
+}
+
+// ============================================================================
+// IMAGE ATTACHMENT
+// ============================================================================
+
+.imageContainer {
+  margin-top: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  max-width: 300px;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+
+// ============================================================================
+// FILE ATTACHMENT
+// ============================================================================
+
+.fileAttachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  margin-top: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  :global(.dark) & {
+    background: rgba(255, 255, 255, 0.03);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+.fileIcon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 6px;
+}
+
+.fileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  font-size: 13px;
+  font-weight: 500;
+  color: $chat-text-primary-light;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.dark) & {
+    color: $chat-text-primary-dark;
+  }
+}
+
+.fileSize {
+  font-size: 11px;
+  color: $chat-text-secondary-light;
+
+  :global(.dark) & {
+    color: $chat-text-secondary-dark;
+  }
+}
+
+// ============================================================================
+// TIME LOG
+// ============================================================================
+
+.timeLog {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #3b82f6;
+
+  :global(.dark) & {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+}
+
+// ============================================================================
+// METADATA (timestamp, status)
+// ============================================================================
+
+.metadata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.timestamp {
+  font-size: 11px;
+  color: $chat-text-secondary-light;
+
+  :global(.dark) & {
+    color: $chat-text-secondary-dark;
+  }
+}
+
+.statusIcon {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.pending {
+    opacity: 0.5;
+  }
+
+  &.error {
+    color: #ef4444;
+  }
+}
+
+// ============================================================================
+// ACTION MENU
+// ============================================================================
+
+.actionButton {
+  @include neumorphic-button(28px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-left: auto;
+
+  .messageWrapper:hover & {
+    opacity: 1;
+  }
+}
+
+.actionMenu {
+  position: absolute;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 6px;
+  z-index: 1000;
+  min-width: 150px;
+
+  :global(.dark) & {
+    background: #1a1a1a;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.actionMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: $chat-text-primary-light;
+  transition: background 0.2s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &.danger {
+    color: #ef4444;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  :global(.dark) & {
+    color: $chat-text-primary-dark;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+    }
+  }
+}
+
+// ============================================================================
+// ERROR STATE
+// ============================================================================
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #dc2626;
+
+  :global(.dark) & {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+  }
+}
+
+.retryButton {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #dc2626;
+  }
+}
+
+// ============================================================================
+// DRAG INDICATOR (for drag-to-reply)
+// ============================================================================
+
+.dragIndicator {
+  position: absolute;
+  left: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  &.active {
+    opacity: 1;
+  }
+}
+
+// ============================================================================
+// LOADING STATE
+// ============================================================================
+
+.loadingMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  font-size: 14px;
+  color: $chat-text-secondary-light;
+
+  :global(.dark) & {
+    background: rgba(255, 255, 255, 0.03);
+    color: $chat-text-secondary-dark;
+  }
+}
+
+.loadingDots {
+  display: flex;
+  gap: 4px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+    animation: pulse 1.4s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

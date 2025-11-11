@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import Table from '@/components/Table';
+import Table from '@/modules/shared/components/ui/Table';
 import styles from './TeamsTable.module.scss';
 
 interface User {

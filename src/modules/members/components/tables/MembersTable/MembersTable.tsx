@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useCallback, memo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import Table from '../../ui/Table';
+import Table from '@/modules/shared/components/ui/Table';
 import styles from './MembersTable.module.scss';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';

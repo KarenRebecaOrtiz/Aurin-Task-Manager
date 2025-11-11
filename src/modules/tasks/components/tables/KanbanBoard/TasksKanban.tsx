@@ -9,7 +9,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { db } from '@/lib/firebase';
 import ActionMenu from '../../ui/ActionMenu';
 import styles from './TasksKanban.module.scss';
-import avatarStyles from '@/components/ui/AvatarGroup.module.scss';
+import avatarStyles from '@/modules/shared/components/ui/Table/AvatarGroup.module.scss';
 
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';

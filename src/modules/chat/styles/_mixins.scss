@@ -1,0 +1,214 @@
+/**
+ * Chat Module - SCSS Mixins
+ * 
+ * Mixins reutilizables para el módulo de chat.
+ */
+
+@use './variables' as *;
+
+// ============================================================================
+// NEUMORPHIC BUTTON
+// ============================================================================
+
+@mixin neumorphic-button($size: $button-size) {
+  width: $size;
+  height: $size;
+  background: $chat-header-bg-light;
+  border: 1px solid $chat-border-light;
+  border-radius: $button-border-radius;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  /* Sombras neumorfistas */
+  box-shadow:
+    -2px -2px 4px rgba(255, 255, 255, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.05),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+    inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+
+  /* Transiciones */
+  transition:
+    transform $transition-speed $transition-easing,
+    box-shadow $transition-speed $transition-easing,
+    background $transition-speed $transition-easing,
+    border-color $transition-speed $transition-easing;
+  will-change: transform, box-shadow, background, border-color;
+
+  /* Hover: Levitar */
+  &:hover {
+    transform: translateY(-1px) scale(1.05);
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.9),
+      4px 4px 8px rgba(0, 0, 0, 0.08),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
+  }
+
+  /* Active: Presionado */
+  &:active {
+    transform: scale(0.95);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow:
+      inset -1px -1px 3px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 3px rgba(209, 217, 230, 0.2),
+      -1px -1px 3px rgba(255, 255, 255, 0.8),
+      1px 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Modo oscuro */
+  :global(.dark) & {
+    background: $chat-header-bg-dark;
+    border-color: $chat-border-dark;
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.4),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+
+    img[src*=".svg"] {
+      filter: invert(1) grayscale(1) brightness(1.5);
+    }
+
+    &:hover {
+      background: rgba(39, 39, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.04),
+        4px 4px 8px rgba(0, 0, 0, 0.5),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    &:active {
+      background: rgba(39, 39, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -1px -1px 3px rgba(0, 0, 0, 0.35),
+        inset 1px 1px 3px rgba(255, 255, 255, 0.02),
+        -1px -1px 3px rgba(255, 255, 255, 0.03),
+        1px 1px 3px rgba(0, 0, 0, 0.4);
+    }
+  }
+}
+
+// ============================================================================
+// DISABLED STATE
+// ============================================================================
+
+@mixin disabled-state {
+  opacity: 0.5;
+  cursor: not-allowed;
+
+  &:hover {
+    transform: none;
+    box-shadow:
+      -2px -2px 4px rgba(255, 255, 255, 0.8),
+      2px 2px 4px rgba(0, 0, 0, 0.05),
+      inset -1px -1px 2px rgba(255, 255, 255, 0.4),
+      inset 1px 1px 2px rgba(209, 217, 230, 0.2);
+  }
+
+  :global(.dark) & {
+    &:hover {
+      box-shadow:
+        -2px -2px 4px rgba(255, 255, 255, 0.03),
+        2px 2px 4px rgba(0, 0, 0, 0.4),
+        inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+        inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+// ============================================================================
+// NOISE TEXTURE OVERLAY
+// ============================================================================
+
+@mixin noise-texture {
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url($noise-texture-url);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: $noise-opacity-light;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  :global(.dark) &::before {
+    opacity: $noise-opacity-dark;
+  }
+}
+
+// ============================================================================
+// GLASSMORPHISM
+// ============================================================================
+
+@mixin glassmorphism($bg-color: rgba(255, 255, 255, 0.1), $blur: 10px) {
+  background: $bg-color;
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+// ============================================================================
+// SCROLLBAR STYLING
+// ============================================================================
+
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  :global(.dark) & {
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    }
+  }
+}
+
+// ============================================================================
+// FADE IN ANIMATION
+// ============================================================================
+
+@mixin fade-in($duration: 0.3s) {
+  animation: fadeIn $duration ease-in-out;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

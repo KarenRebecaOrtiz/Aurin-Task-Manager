@@ -1,0 +1,38 @@
+/**
+ * Message Action Button - Component Styles
+ * 
+ * Estilos del botón de acciones de mensajes.
+ */
+
+@use './variables' as *;
+@use './mixins' as *;
+
+.actionButton {
+  @include neumorphic-button;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  
+  // Mostrar en hover del mensaje padre
+  :global(.message:hover) & {
+    opacity: 1;
+  }
+
+  // Siempre visible cuando está activo
+  &.active {
+    opacity: 1;
+    background: rgba(59, 130, 246, 0.1);
+
+    :global(.dark) & {
+      background: rgba(96, 165, 250, 0.2);
+    }
+  }
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+
+    :global(.dark) & {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+}

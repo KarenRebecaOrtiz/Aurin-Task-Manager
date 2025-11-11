@@ -7,7 +7,6 @@ import { Timestamp } from 'firebase/firestore';
 import { getGenerativeModel } from '@firebase/ai';
 import { ai } from '@/lib/firebase';
 import styles from '../ChatSidebar.module.scss';
-import { EmojiSelector } from './EmojiSelector';
 import TimerPanel from './TimerPanel';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -26,7 +25,6 @@ import TagDropdown, { TagItem } from '@/components/ui/TagDropdown';
 import { GeminiImageAnalyzer } from '@/components/ui/GeminiImageAnalyzer';
 import { useGeminiIntegration } from '@/hooks/useGeminiIntegration';
 import { useMentionHandler } from '@/hooks/useMentionHandler';
-import { useTextReformulation } from '@/hooks/useTextReformulation';
 // Removido: useGeminiModes ya no se usa después de la refactorización
 // Removido: useGeminiStore ya no se usa directamente después de la refactorización
 
@@ -165,10 +163,7 @@ export default function InputChat({
 }: InputChatProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isTimerMenuOpen, setIsTimerMenuOpen] = useState(false);
-  const [isDropupOpen, setIsDropupOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [hasReformulated, setHasReformulated] = useState(false);
-  const [reformHistory, setReformHistory] = useState<string[]>([]); // Stack de versiones para undo
   const [isClient, setIsClient] = useState(false);
   const [isGeminiMentioned, setIsGeminiMentioned] = useState(false);
   const [geminiQuery, setGeminiQuery] = useState('');
@@ -295,7 +290,6 @@ export default function InputChat({
     // console.log('[InputChat] handleNewMessage ready for pagination hook');
   }, [handleNewMessage]);
   const inputWrapperRef = useRef<HTMLFormElement>(null);
-  const dropupRef = useRef<HTMLDivElement>(null);
   const conversationId = `chat-sidebar-${taskId}`;
 
   const [internalReplyingTo, setInternalReplyingTo] = useState<Message | null>(null);
@@ -353,7 +347,6 @@ export default function InputChat({
 
   // Hooks para Gemini y menciones
   const { generateQueryResponse } = useGeminiIntegration(taskId);
-  const { reformulateText } = useTextReformulation();
   const { showDropdown, handleSelection } = useMentionHandler(editor);
   
   // Estado para menciones
@@ -413,11 +406,10 @@ export default function InputChat({
         const isInsideDatePicker = document.querySelector('.react-datepicker')?.contains(target) || document.querySelector('.react-datepicker-popper')?.contains(target);
         if (!isInsideInputWrapper && !isInsideTimerPanel && !isInsideTimePicker && !isInsideDatePicker) setIsTimerPanelOpen(false);
       }
-      if (isDropupOpen && !dropupRef.current?.contains(target)) setIsDropupOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isTimerPanelOpen, setIsTimerPanelOpen, timerPanelRef, isDropupOpen]);
+  }, [isTimerPanelOpen, setIsTimerPanelOpen, timerPanelRef]);
 
 
 
@@ -429,9 +421,6 @@ export default function InputChat({
     };
   }, [previewUrl]);
 
-  useEffect(() => {
-    if (editor && editor.isEmpty) setHasReformulated(false);
-  }, [editor]);
 
   useEffect(() => {
     if (editingMessageId && editingText && editor) {
@@ -561,38 +550,6 @@ export default function InputChat({
 
 
 
-  const handleReformulate = useCallback(async (mode: 'correct' | 'rewrite' | 'friendly' | 'professional' | 'concise' | 'summarize' | 'keypoints' | 'list') => {
-    if (!userId || !editor || editor.isEmpty || isProcessing) return;
-    setIsProcessing(true);
-    setIsDropupOpen(false);
-    
-    // Guardar versión actual en historial antes de reformular
-    const currentContent = editor.getHTML();
-    setReformHistory(prev => [...prev, currentContent]);
-    
-    try {
-      // Refactorizado según tesis: usar hook de Gemini para reformulación
-      // Los prompts ahora se manejan en el hook useGeminiIntegration
-      
-      // Usar hook de Gemini para reformulación
-      const reformulatedText = await reformulateText(mode, editor.getText());
-      
-      if (!reformulatedText.trim()) throw new Error('📝 Gemini devolvió una respuesta vacía.');
-      
-      // Limpiar editor y insertar texto reformulado
-      editor.commands.clearContent();
-      editor.commands.insertContent(reformulatedText.trim());
-      editor.commands.focus('end');
-      adjustEditorHeight();
-      setHasReformulated(true);
-      
-    } catch {
-      // console.error('[InputChat:Reformulate] Error:', error);
-      toast({ title: 'Error al procesar el texto con Gemini AI', description: '❌ Error al procesar el texto.', variant: 'error' });
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [userId, editor, isProcessing, setReformHistory, reformulateText, adjustEditorHeight, setHasReformulated]);
 
   const handleSend = useCallback(async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
@@ -654,8 +611,6 @@ export default function InputChat({
       return;
     }
 
-    setHasReformulated(false);
-    setIsDropupOpen(false);
     setIsSending(true);
     const clientId = crypto.randomUUID();
 
@@ -709,7 +664,6 @@ export default function InputChat({
       editor?.commands.clearContent(true); // Forzar reset completo
       setFile(null);
       handleRemove();
-      setHasReformulated(false);
       adjustEditorHeight();
       removeErrorMessage(conversationId); // Limpiar mensajes de error en caché
       clearPersistedData(); // Limpiar draft en caché
@@ -779,7 +733,7 @@ export default function InputChat({
     } finally {
       setIsSending(false);
     }
-  }, [userId, editor, file, isSending, isProcessing, editingMessageId, onEditMessage, effectiveReplyingTo, onCancelReply, onCancelEdit, onNewMessageProp, userFirstName, taskId, hasMore, fullContextKeywords, toast, saveErrorMessage, conversationId, removeErrorMessage, handleRemove, setFile, setHasReformulated, setIsDropupOpen, adjustEditorHeight, generateQueryResponse, onSendMessage, previewUrl, setIsSending, clearPersistedData]);
+  }, [userId, editor, file, isSending, isProcessing, editingMessageId, onEditMessage, effectiveReplyingTo, onCancelReply, onCancelEdit, onNewMessageProp, userFirstName, taskId, hasMore, fullContextKeywords, toast, saveErrorMessage, conversationId, removeErrorMessage, handleRemove, setFile, adjustEditorHeight, generateQueryResponse, onSendMessage, previewUrl, setIsSending, clearPersistedData]);
 
   const formatButtons = [
     { id: 'bold', icon: '/input/bold.svg', label: 'Negrita', shortcut: 'Ctrl+B' },
@@ -828,46 +782,8 @@ export default function InputChat({
     }
   }, [editor, adjustEditorHeight]);
 
-  const handleEmojiSelect = useCallback((emoji: string) => {
-    editor?.commands.insertContent(emoji);
-    setTimeout(adjustEditorHeight, 0);
-  }, [editor, adjustEditorHeight]);
 
-  const handleToggleDropup = useCallback(() => {
-    setIsDropupOpen(prev => !prev);
-  }, []);
 
-  const handleReformulateCorrect = useCallback(() => {
-    handleReformulate('correct');
-  }, [handleReformulate]);
-
-  const handleReformulateRewrite = useCallback(() => {
-    handleReformulate('rewrite');
-  }, [handleReformulate]);
-
-  const handleReformulateFriendly = useCallback(() => {
-    handleReformulate('friendly');
-  }, [handleReformulate]);
-
-  const handleReformulateProfessional = useCallback(() => {
-    handleReformulate('professional');
-  }, [handleReformulate]);
-
-  const handleReformulateConcise = useCallback(() => {
-    handleReformulate('concise');
-  }, [handleReformulate]);
-
-  const handleReformulateSummarize = useCallback(() => {
-    handleReformulate('summarize');
-  }, [handleReformulate]);
-
-  const handleReformulateKeypoints = useCallback(() => {
-    handleReformulate('keypoints');
-  }, [handleReformulate]);
-
-  const handleReformulateList = useCallback(() => {
-    handleReformulate('list');
-  }, [handleReformulate]);
 
   const handleMentionSelection = useCallback((selected: { id: string; type: "ai" | "user"; }[]) => {
     const [selectedItem] = selected;
@@ -979,16 +895,6 @@ export default function InputChat({
     // Integrar análisis en el contexto de Gemini
   }, []);
 
-  const handleUndoReformulation = useCallback(() => {
-    if (reformHistory.length > 0) {
-      const previousVersion = reformHistory.pop();
-      if (previousVersion && editor) {
-        editor.commands.setContent(previousVersion);
-        setReformHistory([...reformHistory]);
-        setHasReformulated(reformHistory.length > 0);
-      }
-    }
-  }, [reformHistory, editor]);
 
   const handleTimerToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1114,38 +1020,6 @@ export default function InputChat({
                     <Image src={icon} alt={label} width={16} height={16} className={`${styles[`${id}Svg`]} ${styles.toolbarIcon}`} style={{ filter: 'none', fill: '#000000' }} draggable="false" />
                   </motion.button>
                 ))}
-                
-                {/* Botón Undo para reformulación */}
-                {hasReformulated && reformHistory.length > 0 && (
-                  <motion.button 
-                    type="button" 
-                    className={`${styles['format-button']} ${styles.undoButton} ${styles.tooltip}`} 
-                    onClick={handleUndoReformulation}
-                    disabled={isSending || isProcessing || reformHistory.length === 0}
-                    title="Deshacer reformulación"
-                    aria-label="Deshacer reformulación"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ 
-                      duration: 0.15, 
-                      ease: 'easeOut',
-                      delay: 0.1
-                    }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Image 
-                      src="/rotate-ccw.svg" 
-                      alt="Undo" 
-                      width={16} 
-                      height={16} 
-                      className={styles.toolbarIcon}
-                      style={{ filter: 'none', fill: '#000000' }} 
-                      draggable="false" 
-                    />
-                  </motion.button>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1436,32 +1310,9 @@ export default function InputChat({
               setIsMenuOpen={setIsTimerMenuOpen}
             />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-              <div className={styles.dropupContainer} ref={dropupRef}>
-                <button type="button" className={`${styles.imageButton2} ${styles.tooltip} ${styles.reformulateButton} ${hasReformulated ? styles.reformulated : ''} ${isProcessing ? 'processing' : ''}`} onClick={handleToggleDropup} disabled={isSending || isProcessing || !editor || editor.isEmpty} aria-label="Reformular texto con ChatGPT" title="Reformular texto con OpenAI" aria-expanded={isDropupOpen}>
-                  <Image src="/OpenAI.svg" alt="OpenAI" width={16} height={16} draggable="false" />
-                </button>
-                {isDropupOpen && (
-                  <div className={styles.dropupMenu} role="menu">
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateCorrect} disabled={isProcessing} role="menuitem" title="Corregir ortografía y gramática">Corregir</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateRewrite} disabled={isProcessing} role="menuitem" title="Reescribir">Re-escribir</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateFriendly} disabled={isProcessing} role="menuitem" title="Hacer amigable">Amigable</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateProfessional} disabled={isProcessing} role="menuitem" title="Hacer profesional">Profesional</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateConcise} disabled={isProcessing} role="menuitem" title="Conciso">⚡ Conciso</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateSummarize} disabled={isProcessing} role="menuitem" title="Resumir">Resumir</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateKeypoints} disabled={isProcessing} role="menuitem" title="Puntos clave">Puntos clave</button>
-                    <button type="button" className={styles.dropupItem} onClick={handleReformulateList} disabled={isProcessing} role="menuitem" title="Convertir en lista">Convertir en lista</button>
-                  </div>
-                )}
-              </div>
-              {/* <GeminiModesDropdown
-                onModeSelect={(mode) => setGeminiMode(mode)}
-                disabled={isSending || isProcessing}
-                className={styles.geminiModeDropdown}
-              /> */}
               <button type="button" className={`${styles.imageButton2} ${styles.tooltip}`} onClick={handleThumbnailClick} disabled={isSending || isProcessing} aria-label="Adjuntar archivo" title="Adjuntar archivo">
                 <Image src="/paperclip.svg" alt="Adjuntar" width={16} height={16} style={{ filter: 'invert(100)' }} draggable="false" />
               </button>
-              <EmojiSelector onEmojiSelect={handleEmojiSelect} disabled={isSending || isProcessing} value={editor?.getText().match(/[\p{Emoji}\p{Emoji_Component}]+$/u)?.[0] || ''} containerRef={containerRef} />
               <button type="submit" className={styles.sendButton} disabled={isSending || isProcessing || ((!editor || editor.isEmpty) && !file)} aria-label="Enviar mensaje">
                 <Image src="/arrow-up.svg" alt="Enviar mensaje" width={13} height={13} />
               </button>

@@ -1,0 +1,184 @@
+/**
+ * Message List - Component Styles
+ * 
+ * Estilos para la lista de mensajes con scroll infinito.
+ */
+
+@use './variables' as *;
+@use './mixins' as *;
+
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column; // ✅ NORMAL - no reverse (como el original)
+  min-height: 0;
+  position: relative;
+
+  @include custom-scrollbar;
+}
+
+// ============================================================================
+// LOAD MORE BUTTON
+// ============================================================================
+
+.loadMoreButton {
+  @include neumorphic-button(auto);
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+
+  &:disabled {
+    @include disabled-state;
+  }
+}
+
+.loadMoreText {
+  color: $chat-text-primary-light;
+
+  :global(.dark) & {
+    color: $chat-text-primary-dark;
+  }
+}
+
+// ============================================================================
+// DATE SEPARATOR
+// ============================================================================
+
+.dateSeparator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+
+    :global(.dark) & {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &::before {
+    margin-right: 12px;
+  }
+
+  &::after {
+    margin-left: 12px;
+  }
+}
+
+.dateLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: $chat-text-secondary-light;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+
+  :global(.dark) & {
+    color: $chat-text-secondary-dark;
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+// ============================================================================
+// EMPTY STATE
+// ============================================================================
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 12px;
+}
+
+.emptyIcon {
+  width: 64px;
+  height: 64px;
+  opacity: 0.3;
+}
+
+.emptyText {
+  font-size: 16px;
+  font-weight: 500;
+  color: $chat-text-secondary-light;
+
+  :global(.dark) & {
+    color: $chat-text-secondary-dark;
+  }
+}
+
+.emptySubtext {
+  font-size: 14px;
+  color: $chat-text-secondary-light;
+  opacity: 0.7;
+
+  :global(.dark) & {
+    color: $chat-text-secondary-dark;
+  }
+}
+
+// ============================================================================
+// LOADING STATE
+// ============================================================================
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ============================================================================
+// MESSAGE GROUP
+// ============================================================================
+
+.messageGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+// ============================================================================
+// SCROLL TO BOTTOM BUTTON
+// ============================================================================
+
+.scrollToBottom {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  @include neumorphic-button(40px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+  }
+}

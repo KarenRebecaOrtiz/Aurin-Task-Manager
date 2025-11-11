@@ -1,0 +1,23 @@
+import React from 'react';
+import { useFeedbackForm } from '../../hooks';
+import { FooterInfo, FeedbackForm } from './components';
+import styles from './Footer.module.scss';
+
+const Footer: React.FC = () => {
+  const { feedback, isSubmitting, message, setFeedback, handleSubmit } = useFeedbackForm();
+
+  return (
+    <footer className={styles.footer} style={{ zIndex: 1000 }}>
+      <FooterInfo />
+      <FeedbackForm
+        feedback={feedback}
+        isSubmitting={isSubmitting}
+        onFeedbackChange={setFeedback}
+        onSubmit={handleSubmit}
+      />
+      {message && <p className={styles.message}>{message}</p>}
+    </footer>
+  );
+};
+
+export default Footer;

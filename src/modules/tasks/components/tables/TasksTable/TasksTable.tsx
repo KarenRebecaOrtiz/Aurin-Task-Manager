@@ -8,10 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Firebase imports removidos - ya no se usan listeners aquí
 // import { collection, onSnapshot, query } from 'firebase/firestore';
 // import { db } from '@/lib/firebase';
-import Table from '@/components/Table';
+import Table from '@/modules/shared/components/ui/Table';
 import ActionMenu from '../../ui/ActionMenu';
 import styles from './TasksTable.module.scss';
-import avatarStyles from '@/components/ui/AvatarGroup.module.scss';
+import avatarStyles from '@/modules/shared/components/ui/Table/AvatarGroup.module.scss';
 
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';

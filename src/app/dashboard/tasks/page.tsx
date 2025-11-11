@@ -9,10 +9,9 @@ import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
 import MembersTable from '@/modules/members/components/tables/MembersTable';
 import ClientsTable from '@/modules/clients/components/tables/ClientsTable';
-import TasksTableIsolated from '@/components/TasksTableIsolated';
+import TasksTableIsolated from '@/modules/tasks/components/tables/TasksTableIsolated';
 import TasksKanban from '@/modules/tasks/components/tables/KanbanBoard';
-import AISidebar from '@/components/AISidebar';
-import ChatSidebar from '@/components/ChatSidebar';
+import { ChatSidebar } from '@/modules/chat';
 import MessageSidebar from '@/components/MessageSidebar';
 import { ConfigPage } from '@/modules/config';
 import ProfileCard from '@/components/ProfileCard';
@@ -21,9 +20,9 @@ import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
 // Safari debug components removed for production
 
 import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
-import styles from '@/components/TasksPage.module.scss';
+import styles from './styles/TasksPage.module.scss';
 
-import Footer from '@/components/ui/Footer';
+import { Footer } from '@/modules/footer';
 import Loader from '@/modules/loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
@@ -419,10 +418,6 @@ function TasksPageContent() {
     // Loader animation completed
   }, []);
 
-  const handleAISidebarClose = useCallback(() => {
-    // AI Sidebar is always closed in this context
-  }, []);
-
   const handleClientsTableCacheUpdate = useCallback((_updatedClients: Client[]) => {
     // Actualizar el cache global si es necesario
     // TODO: Implementar actualización del cache cuando sea necesario
@@ -681,7 +676,6 @@ function TasksPageContent() {
             />
           )}
         </div>
-      <AISidebar isOpen={false} onClose={handleAISidebarClose} />
       <div className={styles.vignetteTop} />
       <div className={styles.vignetteBottom} />
       <Footer />

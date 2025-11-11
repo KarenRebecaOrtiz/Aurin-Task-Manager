@@ -13,7 +13,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
-import Footer from '@/components/ui/Footer';
+import { Footer } from '@/modules/footer';
 import Loader from '@/modules/loader';
 import { FuzzyText } from '@/components/ui/FuzzyText';
 
