@@ -20,7 +20,7 @@ import TimerDisplay from '../TimerDisplay';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { decryptBatch } from '@/lib/encryption';
 // Removido: uploadTempImage y useChunkStore ya no se usan después de la refactorización
-import SearchableDropdown, { DropdownItem } from '@/components/ui/SearchableDropdown';
+import SearchableDropdown, { type DropdownItem } from '@/modules/config/components/ui/SearchableDropdown';
 import TagDropdown, { TagItem } from '@/components/ui/TagDropdown';
 // import { GeminiModesDropdown } from '@/components/ui/GeminiModesDropdown';
 import { GeminiImageAnalyzer } from '@/components/ui/GeminiImageAnalyzer';

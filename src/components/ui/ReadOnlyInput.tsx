@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import styles from "../ConfigPage.module.scss";
+import styles from "./ReadOnlyInput.module.scss";
 
 interface ReadOnlyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value?: string;

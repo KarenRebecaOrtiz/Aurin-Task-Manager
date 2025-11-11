@@ -1,0 +1,14 @@
+/**
+ * @module config/components/ui
+ * @description Exportaciones centralizadas de componentes UI del módulo de configuración
+ */
+
+export { default as ConfigDropdown } from './ConfigDropdown';
+export { default as SearchableDropdown } from './SearchableDropdown';
+export { default as PhoneCountrySelect } from './PhoneCountrySelect';
+export { default as LocationDropdown } from './LocationDropdown';
+export { default as LocationMap } from './LocationMap';
+export { WebsiteInput } from './WebsiteInput';
+export { BiographyInput } from './BiographyInput';
+export { default as TeamsTable } from './TeamsTable';
+export { SaveActions } from './SaveActions';

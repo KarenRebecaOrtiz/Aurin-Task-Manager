@@ -3,7 +3,7 @@
 import { useRef, useCallback, useEffect, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 
-import Header from '@/components/ui/Header';
+import { Header } from '@/modules/header';
 import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
@@ -14,7 +14,7 @@ import TasksKanban from '@/modules/tasks/components/tables/KanbanBoard';
 import AISidebar from '@/components/AISidebar';
 import ChatSidebar from '@/components/ChatSidebar';
 import MessageSidebar from '@/components/MessageSidebar';
-import ConfigPage from '@/components/ConfigPage';
+import { ConfigPage } from '@/modules/config';
 import ProfileCard from '@/components/ProfileCard';
 import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
 

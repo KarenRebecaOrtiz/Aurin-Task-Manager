@@ -25,7 +25,7 @@ import { emailNotificationService } from '@/services/emailNotificationService';
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import SearchableDropdown from "@/components/ui/SearchableDropdown";
+import SearchableDropdown from "@/modules/config/components/ui/SearchableDropdown";
 import { useShallow } from "zustand/react/shallow";
 import PopupLoader from "@/components/ui/PopupLoader";
 

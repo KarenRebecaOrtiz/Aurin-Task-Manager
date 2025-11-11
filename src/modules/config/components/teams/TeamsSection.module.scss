@@ -1,0 +1,84 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.selectedTeamsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.teamChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  
+  .removeButton {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.25rem;
+    
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+.teamsDescriptionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.teamDescriptionCard {
+  padding: 1.5rem;
+  background: var(--card-background);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  
+  .teamName {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+  }
+  
+  .teamDescription {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+}
+
+.subsectionTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  
+  .emptyStateText {
+    margin-top: 1rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+  }
+}

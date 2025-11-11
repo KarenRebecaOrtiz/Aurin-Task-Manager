@@ -4,7 +4,7 @@ import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
-import Header from '@/components/ui/Header';
+import { Header } from '@/modules/header';
 import OptimizedMarquee from '@/components/ui/OptimizedMarquee';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
@@ -85,10 +85,6 @@ function NotFoundContent() {
         <Header
           selectedContainer={selectedContainer}
           isArchiveTableOpen={isArchiveTableOpen}
-          users={memoizedUsers}
-          notifications={[]}
-          onNotificationClick={handleNotificationClick}
-          onLimitNotifications={() => {}}
           onChangeContainer={handleContainerChange}
         />
       </div>

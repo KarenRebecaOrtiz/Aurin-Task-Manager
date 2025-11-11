@@ -239,22 +239,32 @@ export function useSharedTasksState(userId: string | undefined) {
     }
 
     // Cargar users
+    console.log('[useSharedTasksState] Starting to fetch users from /api/users');
     try {
       setLocalIsLoadingUsers(true);
       setIsLoadingUsers(true);
-      
+
       const response = await fetch('/api/users');
+      console.log('[useSharedTasksState] Fetch response status:', response.status);
       if (!response.ok) {
         throw new Error(`Failed to fetch users: ${response.status}`);
       }
-      
+
+      const responseData = await response.json();
+      console.log('[useSharedTasksState] Response data structure:', {
+        hasSuccess: 'success' in responseData,
+        hasData: 'data' in responseData,
+        isArray: Array.isArray(responseData),
+      });
+
+      // La API devuelve { success: true, data: [...] }
       const clerkUsers: {
         id: string;
         imageUrl?: string;
         firstName?: string;
         lastName?: string;
         publicMetadata: { role?: string; description?: string };
-      }[] = await response.json();
+      }[] = responseData.success ? responseData.data : responseData;
 
       // OPTIMIZACIÓN: Usar batch getDocs en lugar de Promise.all
       const userIds = clerkUsers.map(user => user.id);
@@ -278,17 +288,24 @@ export function useSharedTasksState(userId: string | undefined) {
 
       // ✅ SOLUCIÓN DRÁSTICA: Solo actualizar si realmente cambió
       const usersDataString = JSON.stringify(usersData);
+      console.log('[useSharedTasksState] Fetched users from API:', usersData.length);
+      console.log('[useSharedTasksState] Users data:', usersData.slice(0, 3));
+
       if (usersDataString !== lastUsersHashRef.current) {
         lastUsersHashRef.current = usersDataString;
         setLocalUsers(usersData);
         setUsers(usersData);
+        console.log('[useSharedTasksState] Updated users in store');
+      } else {
+        console.log('[useSharedTasksState] Users data unchanged, skipping update');
       }
-      
+
       setLocalIsLoadingUsers(false);
       setIsLoadingUsers(false);
       setLocalLoadingProgress(prev => ({ ...prev, users: true }));
       setLoadingProgress({ users: true });
     } catch (error) {
+      console.error('[useSharedTasksState] Error fetching users:', error);
       setLocalIsLoadingUsers(false);
       setIsLoadingUsers(false);
     }

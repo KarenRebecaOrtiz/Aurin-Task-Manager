@@ -330,10 +330,13 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   // Users
   users: [],
   setUsers: (users) => set((state) => {
+    console.log('[useDataStore] setUsers called:', { currentCount: state.users.length, newCount: users.length });
     // Solo actualizar si realmente cambió
     if (JSON.stringify(state.users) !== JSON.stringify(users)) {
+      console.log('[useDataStore] Users changed, updating store');
       return { users };
     }
+    console.log('[useDataStore] Users unchanged, skipping update');
     return state;
   }),
   updateUser: (userId, updates) =>

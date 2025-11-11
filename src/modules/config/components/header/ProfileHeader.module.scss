@@ -1,0 +1,167 @@
+.coverPhoto {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 1rem 1rem 0 0;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    height: 150px;
+  }
+}
+
+.editCoverButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.profileInfo {
+  padding: 0 2rem 1rem 2rem;
+  margin-top: -47px;
+  position: relative;
+  z-index: 5;
+
+  @media (max-width: 768px) {
+    padding: 0 1rem 1rem 1rem;
+  }
+}
+
+.profileContent {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+}
+
+.profilePhotoContainer {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profilePhoto {
+  width: 94px;
+  height: 94px;
+  border-radius: 50%;
+  border: 4px solid var(--bg-primary);
+  object-fit: cover;
+  background-color: var(--bg-secondary);
+}
+
+.editProfilePhotoButton {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--accent-color, #3b82f6);
+  border: 3px solid var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+
+  &:hover {
+    background-color: var(--accent-color-hover, #2563eb);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-bottom: 0.5rem;
+
+  @media (max-width: 768px) {
+    align-items: center;
+    text-align: center;
+  }
+}
+
+.mainName {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mainNameText {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
+}
+
+.adminBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2px;
+  cursor: pointer;
+}
+
+.adminBadgeInner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.adminBadgeIcon {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0 4px rgba(102, 126, 234, 0.5));
+}
+
+.userEmail {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}

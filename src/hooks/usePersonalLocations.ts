@@ -2,12 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PersonalLocation } from '@/components/ConfigPage';
-
-interface PersonalLocations {
-  home?: PersonalLocation;
-  secondary?: PersonalLocation;
-}
+import { PersonalLocations } from '@/modules/config';
 
 export const usePersonalLocations = () => {
   const { user } = useUser();
