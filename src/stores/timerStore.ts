@@ -52,8 +52,11 @@ export const useTimerStore = create<TimerStore>((set, get) => {
   let unsubscribeSnapshot: (() => void) | null = null;
   let performanceStartTime: number | null = null;
   let worker: Worker | null = null;
-  
-  const deviceId = crypto.randomUUID();
+
+  // Generate device ID only on client side
+  const deviceId = typeof window !== 'undefined' && typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   // Inicializar Web Worker
   const initializeWorker = () => {

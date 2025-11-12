@@ -1,0 +1,61 @@
+.buttonWithTooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  &.hideOnMobile {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+}
+
+.viewButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+}
+
+.tooltip {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+
+  .buttonWithTooltip:hover & {
+    opacity: 1;
+  }
+}

@@ -9,7 +9,7 @@ import styles from './AvatarDropdown.module.scss';
 import { gsap } from 'gsap';
 import { createPortal } from 'react-dom';
 import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
-import ThemeToggler from '@/components/ui/ThemeToggler';
+import ThemeToggler from '../../theme-toggler';
 import { useTheme } from '@/contexts/ThemeContext';
 import ProfileCard from '@/components/ProfileCard';
 
@@ -217,7 +217,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
               <span>Tema</span>
             </div>
             <div className={styles.themeToggleContainer}>
-              <ThemeToggler />
+              <ThemeToggler variant="dropdown" size="sm" />
             </div>
           </div>
           

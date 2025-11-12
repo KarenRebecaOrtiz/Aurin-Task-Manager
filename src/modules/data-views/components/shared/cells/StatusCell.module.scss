@@ -1,0 +1,94 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.statusWrapper {
+  @include flex-center;
+  gap: 6px;
+
+  @include dark-mode {
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
+  }
+}
+
+// Status-specific styles
+.status-Por-Iniciar {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}
+
+.status-En-Proceso {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}
+
+.status-Backlog {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}
+
+.status-Por-Finalizar {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}
+
+.status-Finalizado {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}
+
+.status-Cancelado {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}
+
+.status-En-Revisión {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}
+
+.status-Archivado {
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important;
+  }
+}

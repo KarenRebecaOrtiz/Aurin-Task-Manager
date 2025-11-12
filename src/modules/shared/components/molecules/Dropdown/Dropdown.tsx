@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Dropdown.module.scss';
+import { dropdownAnimations } from './animations';
 
 export interface DropdownItem<T = unknown> {
   id: string;
@@ -36,21 +36,9 @@ export const Dropdown = <T = unknown,>({
 }: DropdownProps<T>) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = useCallback(() => {
     if (disabled) return;
-
-    if (triggerRef.current) {
-      gsap.to(triggerRef.current, {
-        scale: 0.98,
-        duration: 0.1,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 1,
-      });
-    }
-
     setIsOpen((prev) => !prev);
   }, [disabled]);
 
@@ -123,30 +111,27 @@ export const Dropdown = <T = unknown,>({
 
   return (
     <div ref={dropdownRef} className={`${styles.dropdown} ${className}`}>
-      <div
-        ref={triggerRef}
+      <motion.div
         className={`${styles.trigger} ${disabled ? styles.disabled : ''}`}
         onClick={handleToggle}
         role="button"
         tabIndex={0}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        {...dropdownAnimations.trigger}
       >
         {trigger || (
           <span className={styles.triggerText}>
             {selectedItem ? selectedItem.label : placeholder}
           </span>
         )}
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
             className={styles.menu}
-            initial={{ opacity: 0, y: -16, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -16, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            {...dropdownAnimations.menu}
             role="listbox"
           >
             {items.map((item, index) => (
@@ -154,9 +139,7 @@ export const Dropdown = <T = unknown,>({
                 key={item.id}
                 className={`${styles.item} ${item.value === value ? styles.selected : ''}`}
                 onClick={createItemClickHandler(item)}
-                initial={{ opacity: 0, y: -16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
+                {...dropdownAnimations.item(index)}
                 role="option"
                 aria-selected={item.value === value}
               >

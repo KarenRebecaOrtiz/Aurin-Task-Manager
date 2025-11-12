@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback } from 'react';
-import Image from 'next/image';
+import React from 'react';
+import { ClientAvatar } from '@/modules/shared/components/atoms/Avatar/ClientAvatar';
 import styles from './TableCell.module.scss';
 
 export interface Client {
@@ -13,33 +13,30 @@ export interface Client {
 export interface ClientCellProps {
   client?: Client;
   showName?: boolean;
-  size?: number;
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
+  isVerified?: boolean;
 }
 
 export const ClientCell: React.FC<ClientCellProps> = ({
   client,
   showName = false,
-  size = 40,
+  size = 'md',
   className = '',
+  isVerified = false,
 }) => {
-  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = '/empty-image.png';
-  }, []);
-
   if (!client) {
     return <span className={styles.noClient}>Sin cuenta</span>;
   }
 
   return (
     <div className={`${styles.clientCell} ${className}`}>
-      <Image
-        src={client.imageUrl || '/empty-image.png'}
-        alt={client.name || 'Client Image'}
-        width={size}
-        height={size}
-        className={styles.clientImage}
-        onError={handleImageError}
+      <ClientAvatar
+        src={client.imageUrl}
+        alt={client.name}
+        fallback={client.name.substring(0, 2).toUpperCase()}
+        size={size}
+        isVerified={isVerified}
       />
       {showName && <span className={styles.clientName}>{client.name}</span>}
     </div>

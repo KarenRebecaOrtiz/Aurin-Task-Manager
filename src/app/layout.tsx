@@ -1,10 +1,10 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import { Toaster } from "sonner";
 import Script from "next/script";
 import { Urbanist } from "next/font/google";
 import "./globals.scss";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ModalProvider } from "@/modules/modal";
+import { SonnerToaster } from "@/modules/sonner";
 
 const urbanist = Urbanist({
   subsets: ["latin"],
@@ -96,7 +96,7 @@ export default function RootLayout({
             <ModalProvider>
               {children}
             </ModalProvider>
-            <Toaster position="top-center" />
+            <SonnerToaster />
             <div id="portal-root" />
           </body>
         </html>

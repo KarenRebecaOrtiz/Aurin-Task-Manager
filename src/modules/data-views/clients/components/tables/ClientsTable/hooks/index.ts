@@ -1,0 +1,1 @@
+export { useClientsTableState } from './useClientsTableState';

@@ -1,0 +1,26 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.priorityWrapper {
+  @include flex-center;
+  gap: 6px;
+
+  @include dark-mode {
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
+  }
+}
+
+// Priority-specific styles
+.priority-Alta,
+.priority-Media,
+.priority-Baja {
+  color: #1e293b; // negro/azul oscuro para light mode
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #c3c3c3 !important; // blanco puro en dark mode
+  }
+}

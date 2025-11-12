@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import Image from 'next/image';
+import { StatusBadge, StatusType } from '@/modules/data-views/components/shared/states';
 import styles from './TableCell.module.scss';
 
 export interface StatusCellProps {
@@ -10,60 +10,41 @@ export interface StatusCellProps {
   className?: string;
 }
 
-const normalizeStatus = (status: string): string => {
-  if (!status) return 'Por Iniciar';
+const normalizeStatusToType = (status: string): StatusType => {
+  if (!status) return 'backlog';
 
-  const normalized = status.trim();
+  const normalized = status.trim().toLowerCase();
 
-  const statusMap: { [key: string]: string } = {
-    'por iniciar': 'Por Iniciar',
-    'por-iniciar': 'Por Iniciar',
-    'pendiente': 'Por Iniciar',
-    'pending': 'Por Iniciar',
-    'to do': 'Por Iniciar',
-    'todo': 'Por Iniciar',
-    'en proceso': 'En Proceso',
-    'en-proceso': 'En Proceso',
-    'in progress': 'En Proceso',
-    'progreso': 'En Proceso',
-    'por finalizar': 'Por Finalizar',
-    'por-finalizar': 'Por Finalizar',
-    'to finish': 'Por Finalizar',
-    'finalizado': 'Finalizado',
-    'finalizada': 'Finalizado',
-    'completed': 'Finalizado',
-    'completado': 'Finalizado',
-    'completada': 'Finalizado',
-    'done': 'Finalizado',
-    'terminado': 'Finalizado',
-    'terminada': 'Finalizado',
-    'finished': 'Finalizado',
-    'backlog': 'Backlog',
-    'cancelado': 'Cancelado',
-    'cancelada': 'Cancelado',
-    'cancelled': 'Cancelado',
+  const statusMap: { [key: string]: StatusType } = {
+    'por iniciar': 'todo',
+    'por-iniciar': 'todo',
+    'pendiente': 'todo',
+    'pending': 'todo',
+    'to do': 'todo',
+    'todo': 'todo',
+    'en proceso': 'in-progress',
+    'en-proceso': 'in-progress',
+    'in progress': 'in-progress',
+    'progreso': 'in-progress',
+    'por finalizar': 'in-review',
+    'por-finalizar': 'in-review',
+    'to finish': 'in-review',
+    'finalizado': 'done',
+    'finalizada': 'done',
+    'completed': 'done',
+    'completado': 'done',
+    'completada': 'done',
+    'done': 'done',
+    'terminado': 'done',
+    'terminada': 'done',
+    'finished': 'done',
+    'backlog': 'backlog',
+    'cancelado': 'archived',
+    'cancelada': 'archived',
+    'cancelled': 'archived',
   };
 
-  return statusMap[normalized.toLowerCase()] || normalized;
-};
-
-const getStatusIcon = (status: string): string => {
-  switch (status) {
-    case 'En Proceso':
-      return '/timer.svg';
-    case 'Backlog':
-      return '/circle-help.svg';
-    case 'Por Iniciar':
-      return '/circle.svg';
-    case 'Cancelado':
-      return '/circle-x.svg';
-    case 'Por Finalizar':
-      return '/circle-check.svg';
-    case 'Finalizado':
-      return '/check-check.svg';
-    default:
-      return '/circle.svg';
-  }
+  return statusMap[normalized] || 'backlog';
 };
 
 export const StatusCell: React.FC<StatusCellProps> = ({
@@ -71,23 +52,11 @@ export const StatusCell: React.FC<StatusCellProps> = ({
   showIcon = true,
   className = '',
 }) => {
-  const normalizedStatus = useMemo(() => normalizeStatus(status), [status]);
-  const icon = useMemo(() => getStatusIcon(normalizedStatus), [normalizedStatus]);
+  const statusType = useMemo(() => normalizeStatusToType(status), [status]);
 
   return (
     <div className={`${styles.statusCell} ${className}`}>
-      {showIcon && (
-        <Image
-          src={icon}
-          alt={normalizedStatus}
-          width={16}
-          height={16}
-          className={styles.statusIcon}
-        />
-      )}
-      <span className={styles[`status-${normalizedStatus.replace(/\s/g, '-')}`]}>
-        {normalizedStatus}
-      </span>
+      <StatusBadge status={statusType} showIcon={showIcon} />
     </div>
   );
 };

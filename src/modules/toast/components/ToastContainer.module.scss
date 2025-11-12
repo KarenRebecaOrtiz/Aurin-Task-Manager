@@ -1,0 +1,58 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ============================================================
+// ToastContainer Styles
+// ============================================================
+
+.toast-group {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  z-index: 10002;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+
+  // Posiciones
+  &.position-top-right {
+    top: $spacing-lg;
+    right: $spacing-lg;
+    align-items: flex-end;
+  }
+
+  &.position-top-center {
+    top: $spacing-lg;
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+  }
+
+  &.position-top-left {
+    top: $spacing-lg;
+    left: $spacing-lg;
+    align-items: flex-start;
+  }
+
+  &.position-bottom-right {
+    bottom: $spacing-lg;
+    right: $spacing-lg;
+    align-items: flex-end;
+  }
+
+  &.position-bottom-center {
+    bottom: $spacing-lg;
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+  }
+
+  &.position-bottom-left {
+    bottom: $spacing-lg;
+    left: $spacing-lg;
+    align-items: flex-start;
+  }
+}

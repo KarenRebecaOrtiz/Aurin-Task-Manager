@@ -9,6 +9,13 @@ export { TextShimmer } from './components/ui/TextShimmer';
 export { default as AvatarDropdown } from './components/ui/AvatarDropdown';
 export { default as ToDoDynamic } from './components/ui/ToDoDynamic';
 
+// Theme Toggler (submódulo completo)
+export { default as ThemeToggler } from './components/theme-toggler';
+export * from './components/theme-toggler/types';
+export * from './components/theme-toggler/hooks';
+export * from './components/theme-toggler/utils';
+export * from './components/theme-toggler/constants';
+
 // Hooks (exportados para reutilización)
 export * from './hooks';
 

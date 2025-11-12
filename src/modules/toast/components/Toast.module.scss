@@ -1,0 +1,182 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ============================================================
+// Toast Component Styles
+// ============================================================
+
+.toast {
+  @include flex-center;
+  width: 330px;
+  height: auto;
+  min-height: 80px;
+  border-radius: $radius-md;
+  box-sizing: border-box;
+  padding: $spacing-sm $spacing-md;
+  background-color: $white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  gap: $spacing-md;
+  animation: slideIn 0.3s ease-out;
+
+  &.toast-success {
+    border-left: 4px solid $color-success;
+
+    .icon-container {
+      background-color: rgba($color-success, 0.15);
+    }
+
+    .icon {
+      color: $color-success;
+    }
+
+    .label {
+      color: $color-success;
+    }
+  }
+
+  &.toast-error {
+    border-left: 4px solid $color-error;
+
+    .icon-container {
+      background-color: rgba($color-error, 0.15);
+    }
+
+    .icon {
+      color: $color-error;
+    }
+
+    .label {
+      color: $color-error;
+    }
+  }
+
+  &.toast-warning {
+    border-left: 4px solid $color-warning;
+
+    .icon-container {
+      background-color: rgba($color-warning, 0.15);
+    }
+
+    .icon {
+      color: $color-warning;
+    }
+
+    .label {
+      color: $color-warning;
+    }
+  }
+
+  &.toast-info {
+    border-left: 4px solid $color-info;
+
+    .icon-container {
+      background-color: rgba($color-info, 0.15);
+    }
+
+    .icon {
+      color: $color-info;
+    }
+
+    .label {
+      color: $color-info;
+    }
+  }
+}
+
+.icon-container {
+  @include flex-center;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.content {
+  @include flex-column;
+  justify-content: center;
+  align-items: flex-start;
+  flex-grow: 1;
+  gap: 2px;
+}
+
+.label {
+  @include typography($text-sm, $font-weight-bold, $color-text-primary, left);
+  margin: 0;
+}
+
+.message {
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary, left);
+  margin: 0;
+}
+
+.error-details {
+  @include typography($text-xs, $font-weight-normal, $color-error, left);
+  margin: 4px 0 0 0;
+}
+
+.action-button {
+  @include button-base($height: auto, $padding: 0.375rem 0.75rem, $radius: $radius-sm);
+  background-color: transparent;
+  color: $primary;
+  font-size: $text-sm;
+  font-weight: $font-weight-bold;
+  border: 1px solid $primary;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: rgba($primary, 0.1);
+  }
+
+  &:active {
+    background-color: rgba($primary, 0.2);
+  }
+}
+
+.close-button {
+  @include flex-center;
+  width: 24px;
+  height: 24px;
+  background-color: transparent;
+  border: none;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font-size: $text-sm;
+  flex-shrink: 0;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: $color-text-primary;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px) translateY(-20px);
+  }
+}

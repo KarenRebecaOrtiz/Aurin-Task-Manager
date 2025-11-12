@@ -1,0 +1,7 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.actionWrapper {
+  @include flex-center;
+  position: relative;
+}

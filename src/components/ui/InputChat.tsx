@@ -22,7 +22,6 @@ import { decryptBatch } from '@/lib/encryption';
 import SearchableDropdown, { type DropdownItem } from '@/modules/config/components/ui/SearchableDropdown';
 import TagDropdown, { TagItem } from '@/components/ui/TagDropdown';
 // import { GeminiModesDropdown } from '@/components/ui/GeminiModesDropdown';
-import { GeminiImageAnalyzer } from '@/components/ui/GeminiImageAnalyzer';
 import { useGeminiIntegration } from '@/hooks/useGeminiIntegration';
 import { useMentionHandler } from '@/hooks/useMentionHandler';
 // Removido: useGeminiModes ya no se usa después de la refactorización
@@ -596,7 +595,6 @@ export default function InputChat({
         editor?.commands.clearContent(true); // Forzar reset completo
         setFile(null);
         handleRemove();
-        setHasReformulated(false);
         adjustEditorHeight();
         removeErrorMessage(conversationId);
         clearPersistedData();
@@ -890,10 +888,6 @@ export default function InputChat({
     e.preventDefault();
   }, []);
 
-  const handleAnalysisComplete = useCallback(() => {
-    // console.log('[InputChat] Image analysis completed:', analysis);
-    // Integrar análisis en el contexto de Gemini
-  }, []);
 
 
   const handleTimerToggle = useCallback((e: React.MouseEvent) => {
@@ -1275,14 +1269,6 @@ export default function InputChat({
               />
             )}
 
-            {/* GeminiImageAnalyzer para análisis de imágenes */}
-            {file && previewUrl && (
-              <GeminiImageAnalyzer
-                taskId={taskId}
-                onAnalysisComplete={handleAnalysisComplete}
-                disabled={isSending || isProcessing}
-              />
-            )}
             
             {/* Drag Overlay para transform */}
             {isDragging && (

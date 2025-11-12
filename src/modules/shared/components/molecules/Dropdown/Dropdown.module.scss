@@ -110,13 +110,11 @@
   border-radius: $radius-sm;
   margin: 2px 4px;
   border: 1px solid $color-border-subtle;
-  @include neomorphic-shadow(light);
   transition: $transition-base;
 
   &:hover {
     transform: translateY(-1px) scale(1.01);
     @include glassmorphism-hover;
-    @include neomorphic-shadow-hover(light);
   }
 
   &:active {

@@ -1,0 +1,21 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.clientWrapper {
+  @include flex-center;
+}
+
+.clientImage {
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.noClient {
+  color: #64748b;
+  font-size: 14px;
+  font-style: italic;
+
+  :global(body.dark) & {
+    color: #9ca3af;
+  }
+}

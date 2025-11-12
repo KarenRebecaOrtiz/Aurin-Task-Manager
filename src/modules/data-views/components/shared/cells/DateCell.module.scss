@@ -1,0 +1,26 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.dateWrapper {
+  @include flex-center;
+}
+
+.date {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 500;
+
+  :global(body.dark) & {
+    color: #e5e7eb;
+  }
+}
+
+.emptyDate {
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+
+  :global(body.dark) & {
+    color: #6b7280;
+  }
+}

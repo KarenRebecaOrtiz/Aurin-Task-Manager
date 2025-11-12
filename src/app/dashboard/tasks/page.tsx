@@ -7,10 +7,10 @@ import { Header } from '@/modules/header';
 import { OptimizedMarquee } from '@/modules/advices';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import Selector from '@/components/Selector';
-import MembersTable from '@/modules/members/components/tables/MembersTable';
-import ClientsTable from '@/modules/clients/components/tables/ClientsTable';
-import TasksTableIsolated from '@/modules/tasks/components/tables/TasksTableIsolated';
-import TasksKanban from '@/modules/tasks/components/tables/KanbanBoard';
+import MembersTable from '@/modules/data-views/members/components/tables/MembersTable';
+import ClientsTable from '@/modules/data-views/clients/components/tables/ClientsTable';
+import TasksTableIsolated from '@/modules/data-views/tasks/components/tables/TasksTableIsolated';
+import TasksKanban from '@/modules/data-views/tasks/components/tables/KanbanBoard';
 import { ChatSidebar } from '@/modules/chat';
 import MessageSidebar from '@/components/MessageSidebar';
 import { ConfigPage } from '@/modules/config';
@@ -40,10 +40,10 @@ const generateConversationId = (userId1: string, userId2: string): string => {
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
-import ArchiveTable from '@/modules/tasks/components/tables/ArchiveTable';
+import ArchiveTable from '@/modules/data-views/tasks/components/tables/ArchiveTable';
 import EditTask from '@/modules/task-crud/components/EditTask';
 import CreateTask from '@/modules/task-crud/components/CreateTask';
-import TasksPageModals from '@/modules/tasks/components/modals/TasksPageModals';
+import TasksPageModals from '@/modules/data-views/tasks/components/modals/TasksPageModals';
 
 // Helper functions for conditional logging (only in development)
 const debugLog = (message: string, ...args: unknown[]) => {
@@ -676,8 +676,6 @@ function TasksPageContent() {
             />
           )}
         </div>
-      <div className={styles.vignetteTop} />
-      <div className={styles.vignetteBottom} />
       <Footer />
       
     </div>

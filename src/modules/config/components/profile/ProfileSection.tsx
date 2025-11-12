@@ -4,9 +4,9 @@ import React from 'react';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
 import { BiographyInput } from '../ui/BiographyInput';
-import { WebsiteInput } from '../ui/WebsiteInput';
 import PhoneCountrySelect from '../ui/PhoneCountrySelect';
 import SearchableDropdown from '../ui/SearchableDropdown';
+import { Input } from '@/modules/shared/components/atoms/Input/Input';
 import { useProfileForm } from '../../hooks';
 import { UNIQUE_TECHNOLOGIES } from '../../constants';
 import { formatPhoneNumber } from '../../utils';
@@ -36,6 +36,11 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
   } = useProfileForm({ userId, onSuccess, onError });
 
   if (!formData) return null;
+
+  const handleGenericInputChange = (name: string) => (value: string) => {
+    const event = { target: { name, value } } as React.ChangeEvent<HTMLInputElement>;
+    handleInputChange(event);
+  };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, field: string) => {
     if (e.key === 'Enter') {
@@ -70,34 +75,26 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             </div>
           </div>
           <div className={styles.fieldGroup}>
-            <div className={styles.frame239182}>
-              <div className={styles.label}>Nombre Completo</div>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                placeholder="Escribe tu nombre completo"
-                className={styles.input}
-                disabled={!isOwnProfile}
-                onKeyDown={(e) => handleInputKeyDown(e, 'fullName')}
-              />
-              {errors.fullName && <p className={styles.errorText}>{errors.fullName}</p>}
-            </div>
-            <div className={styles.frame239183}>
-              <div className={styles.label}>Rol o Cargo</div>
-              <input
-                type="text"
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                placeholder="¿Cuál es tu cargo actual?"
-                className={styles.input}
-                disabled={!isOwnProfile}
-                onKeyDown={(e) => handleInputKeyDown(e, 'role')}
-              />
-              {errors.role && <p className={styles.errorText}>{errors.role}</p>}
-            </div>
+            <Input
+              label="Nombre Completo"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleGenericInputChange('fullName')}
+              placeholder="Escribe tu nombre completo"
+              disabled={!isOwnProfile}
+              onKeyDown={(e) => handleInputKeyDown(e, 'fullName')}
+              error={errors.fullName}
+            />
+            <Input
+              label="Rol o Cargo"
+              name="role"
+              value={formData.role}
+              onChange={handleGenericInputChange('role')}
+              placeholder="¿Cuál es tu cargo actual?"
+              disabled={!isOwnProfile}
+              onKeyDown={(e) => handleInputKeyDown(e, 'role')}
+              error={errors.role}
+            />
           </div>
           <div className={styles.fieldGroup}>
             <BiographyInput
@@ -116,31 +113,25 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             {errors.description && <p className={styles.errorText}>{errors.description}</p>}
           </div>
           <div className={styles.fieldGroupRow}>
-            <div className={styles.frame239182}>
-              <div className={styles.label}>Correo Electrónico</div>
-              <input
-                type="text"
-                value={currentUser?.primaryEmailAddress?.emailAddress || ''}
-                placeholder="correo@ejemplo.com"
-                className={styles.input}
-                disabled
-              />
-            </div>
-            <div className={styles.frame239183}>
-              <div className={styles.label}>Fecha de Nacimiento</div>
-              <input
-                type="text"
-                name="birthDate"
-                value={formData.birthDate || ''}
-                onChange={handleDateChange}
-                placeholder="DD/MM/AAAA"
-                className={styles.input}
-                disabled={!isOwnProfile}
-                maxLength={10}
-                onKeyDown={(e) => handleInputKeyDown(e, 'birthDate')}
-              />
-              {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
-            </div>
+            <Input
+              label="Correo Electrónico"
+              name="email"
+              value={currentUser?.primaryEmailAddress?.emailAddress || ''}
+              onChange={() => {}}
+              placeholder="correo@ejemplo.com"
+              disabled
+            />
+            <Input
+              label="Fecha de Nacimiento"
+              name="birthDate"
+              value={formData.birthDate || ''}
+              onChange={(value) => handleDateChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
+              placeholder="DD/MM/AAAA"
+              disabled={!isOwnProfile}
+              maxLength={10}
+              onKeyDown={(e) => handleInputKeyDown(e, 'birthDate')}
+              error={errors.birthDate}
+            />
           </div>
           <div className={styles.fieldGroupRow}>
             <div className={styles.frame239182}>
@@ -151,33 +142,27 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
                   onChange={handlePhoneLadaChange}
                   disabled={!isOwnProfile}
                 />
-                <input
-                  type="text"
+                <Input
                   name="phone"
                   value={formatPhoneNumber(formData.phone || '')}
-                  onChange={handlePhoneChange}
+                  onChange={(value) => handlePhoneChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
                   placeholder="XXX-XXX-XX-XX"
-                  className={styles.input}
                   disabled={!isOwnProfile}
                   maxLength={15}
                   onKeyDown={(e) => handleInputKeyDown(e, 'phone')}
+                  error={errors.phone}
                 />
               </div>
-              {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
             </div>
-            <div className={styles.frame239183}>
-              <div className={styles.label}>Ciudad de Residencia</div>
-              <input
-                type="text"
-                name="city"
-                value={formData.city || ''}
-                onChange={handleInputChange}
-                placeholder="Ciudad, País"
-                className={styles.input}
-                disabled={!isOwnProfile}
-                onKeyDown={(e) => handleInputKeyDown(e, 'city')}
-              />
-            </div>
+            <Input
+              label="Ciudad de Residencia"
+              name="city"
+              value={formData.city || ''}
+              onChange={handleGenericInputChange('city')}
+              placeholder="Ciudad, País"
+              disabled={!isOwnProfile}
+              onKeyDown={(e) => handleInputKeyDown(e, 'city')}
+            />
           </div>
           <div className={styles.fieldGroupRow}>
             <div className={styles.frame239182}>
@@ -196,21 +181,15 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
                 <option value="Prefiero no decirlo">Prefiero no decirlo</option>
               </select>
             </div>
-            <div className={styles.frame239183}>
-              <div className={styles.label}>Portafolio en Línea</div>
-              <WebsiteInput
-                value={formData.portfolio || ''}
-                onChange={(value) => {
-                  handleInputChange({
-                    target: { name: 'portfolio', value, type: 'text' }
-                  } as React.ChangeEvent<HTMLInputElement>);
-                }}
-                placeholder="miportafolio.com"
-                disabled={!isOwnProfile}
-                className={styles.input}
-              />
-              {errors.portfolio && <p className={styles.errorText}>{errors.portfolio}</p>}
-            </div>
+            <Input
+              label="Portafolio en Línea"
+              name="portfolio"
+              value={formData.portfolio || ''}
+              onChange={handleGenericInputChange('portfolio')}
+              placeholder="miportafolio.com"
+              disabled={!isOwnProfile}
+              error={errors.portfolio}
+            />
           </div>
         </div>
       </section>
@@ -260,96 +239,54 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             </div>
           </div>
           <div className={styles.socialLinksGrid}>
-            <div className={styles.socialLinkField}>
-              <div className={styles.label}>
-                <Image src="/github.svg" alt="GitHub" width={16} height={16} />
-                GitHub
-              </div>
-              <input
-                type="text"
-                name="github"
-                value={formData.github || ''}
-                onChange={handleInputChange}
-                placeholder="usuario"
-                className={styles.input}
-                disabled={!isOwnProfile}
-              />
-            </div>
-            <div className={styles.socialLinkField}>
-              <div className={styles.label}>
-                <Image src="/linkedin.svg" alt="LinkedIn" width={16} height={16} />
-                LinkedIn
-              </div>
-              <input
-                type="text"
-                name="linkedin"
-                value={formData.linkedin || ''}
-                onChange={handleInputChange}
-                placeholder="usuario"
-                className={styles.input}
-                disabled={!isOwnProfile}
-              />
-            </div>
-            <div className={styles.socialLinkField}>
-              <div className={styles.label}>
-                <Image src="/twitter.svg" alt="Twitter" width={16} height={16} />
-                Twitter/X
-              </div>
-              <input
-                type="text"
-                name="twitter"
-                value={formData.twitter || ''}
-                onChange={handleInputChange}
-                placeholder="@usuario"
-                className={styles.input}
-                disabled={!isOwnProfile}
-              />
-            </div>
-            <div className={styles.socialLinkField}>
-              <div className={styles.label}>
-                <Image src="/instagram.svg" alt="Instagram" width={16} height={16} />
-                Instagram
-              </div>
-              <input
-                type="text"
-                name="instagram"
-                value={formData.instagram || ''}
-                onChange={handleInputChange}
-                placeholder="@usuario"
-                className={styles.input}
-                disabled={!isOwnProfile}
-              />
-            </div>
-            <div className={styles.socialLinkField}>
-              <div className={styles.label}>
-                <Image src="/facebook.svg" alt="Facebook" width={16} height={16} />
-                Facebook
-              </div>
-              <input
-                type="text"
-                name="facebook"
-                value={formData.facebook || ''}
-                onChange={handleInputChange}
-                placeholder="usuario"
-                className={styles.input}
-                disabled={!isOwnProfile}
-              />
-            </div>
-            <div className={styles.socialLinkField}>
-              <div className={styles.label}>
-                <Image src="/tiktok.svg" alt="TikTok" width={16} height={16} />
-                TikTok
-              </div>
-              <input
-                type="text"
-                name="tiktok"
-                value={formData.tiktok || ''}
-                onChange={handleInputChange}
-                placeholder="@usuario"
-                className={styles.input}
-                disabled={!isOwnProfile}
-              />
-            </div>
+            <Input
+              label="GitHub"
+              name="github"
+              value={formData.github || ''}
+              onChange={handleGenericInputChange('github')}
+              placeholder="usuario"
+              disabled={!isOwnProfile}
+            />
+            <Input
+              label="LinkedIn"
+              name="linkedin"
+              value={formData.linkedin || ''}
+              onChange={handleGenericInputChange('linkedin')}
+              placeholder="usuario"
+              disabled={!isOwnProfile}
+            />
+            <Input
+              label="Twitter/X"
+              name="twitter"
+              value={formData.twitter || ''}
+              onChange={handleGenericInputChange('twitter')}
+              placeholder="@usuario"
+              disabled={!isOwnProfile}
+            />
+            <Input
+              label="Instagram"
+              name="instagram"
+              value={formData.instagram || ''}
+              onChange={handleGenericInputChange('instagram')}
+              placeholder="@usuario"
+              disabled={!isOwnProfile}
+            />
+            <Input
+              label="Facebook"
+              name="facebook"
+              value={formData.facebook || ''}
+              onChange={handleGenericInputChange('facebook')}
+              placeholder="usuario"
+              disabled={!isOwnProfile}
+            />
+            <Input
+              label="TikTok"
+              name="tiktok"
+              value={formData.tiktok || ''}
+              onChange={handleGenericInputChange('tiktok')}
+              placeholder="@usuario"
+              disabled={!isOwnProfile}
+            />
           </div>
         </div>
       </section>

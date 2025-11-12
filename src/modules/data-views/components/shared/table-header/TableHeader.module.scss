@@ -1,0 +1,116 @@
+.tableHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--color-background-secondary, #ffffff);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  justify-content: space-between;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+.titleSection {
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1f2937);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.searchSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 250px;
+  padding: 0.75rem 1rem;
+  background: var(--color-background-tertiary, #f3f4f6);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+
+  &.focused {
+    background: var(--color-background-primary, #ffffff);
+    border-color: var(--color-primary, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    min-width: 100%;
+  }
+}
+
+.searchIcon {
+  color: var(--color-text-tertiary, #9ca3af);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.95rem;
+  color: var(--color-text-primary, #1f2937);
+
+  &::placeholder {
+    color: var(--color-text-tertiary, #9ca3af);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary, #9ca3af);
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--color-background-hover, #e5e7eb);
+    color: var(--color-text-secondary, #4b5563);
+  }
+
+  &:active {
+    background: var(--color-background-active, #d1d5db);
+  }
+}
+
+.actionsSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

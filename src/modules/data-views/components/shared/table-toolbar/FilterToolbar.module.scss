@@ -1,0 +1,140 @@
+.filterToolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--color-background-secondary, #ffffff);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.filterContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  position: relative;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: var(--color-background-tertiary, #f3f4f6);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary, #1f2937);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--color-background-hover, #e5e7eb);
+    border-color: var(--color-border-hover, #d1d5db);
+  }
+
+  &:active {
+    background: var(--color-background-active, #d1d5db);
+  }
+}
+
+.filterLabel {
+  font-weight: 500;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.5rem;
+  background: var(--color-background-primary, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  min-width: 200px;
+  overflow: hidden;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 0.875rem;
+  color: var(--color-text-primary, #1f2937);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--color-background-hover, #f3f4f6);
+  }
+
+  &.active {
+    background: var(--color-primary-light, #dbeafe);
+    color: var(--color-primary, #3b82f6);
+    font-weight: 500;
+
+    &::before {
+      content: '✓';
+      margin-right: 0.5rem;
+      font-weight: bold;
+    }
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+  }
+}
+
+.optionLabel {
+  flex: 1;
+}
+
+.optionCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.375rem;
+  background: var(--color-background-tertiary, #f3f4f6);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #4b5563);
+}
+
+.clearAllButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: var(--color-danger-light, #fee2e2);
+  border: 1px solid var(--color-danger, #ef4444);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-danger, #ef4444);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--color-danger, #ef4444);
+    color: white;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}

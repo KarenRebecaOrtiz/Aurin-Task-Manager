@@ -4,7 +4,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { memo } from 'react';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
-import styles from '@/modules/tasks/components/ui/ActionMenu.module.scss';
+import styles from '@/modules/data-views/components/ui/ActionMenu.module.scss';
 import { useActionMenuStore } from '@/stores/actionMenuStore';
 import { useShallow } from 'zustand/react/shallow';
 import { motion, AnimatePresence } from 'framer-motion';

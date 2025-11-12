@@ -1,0 +1,6 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.userWrapper {
+  @include flex-center;
+}
