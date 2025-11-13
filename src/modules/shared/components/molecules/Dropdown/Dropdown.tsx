@@ -8,9 +8,9 @@ import { dropdownAnimations } from './animations';
 
 export interface DropdownItem<T = unknown> {
   id: string;
-  label: string;
+  label: string | React.ReactNode;
   value: T;
-  icon?: string;
+  icon?: string | React.ReactNode;
 }
 
 export interface DropdownProps<T = unknown> {
@@ -144,7 +144,13 @@ export const Dropdown = <T = unknown,>({
                 aria-selected={item.value === value}
               >
                 {item.icon && (
-                  <Image src={item.icon} alt="" width={16} height={16} className={styles.itemIcon} />
+                  typeof item.icon === 'string' ? (
+                    <Image src={item.icon} alt="" width={16} height={16} className={styles.itemIcon} />
+                  ) : (
+                    <div className={styles.itemIcon}>
+                      {item.icon}
+                    </div>
+                  )
                 )}
                 <span className={styles.itemLabel}>{item.label}</span>
               </motion.div>

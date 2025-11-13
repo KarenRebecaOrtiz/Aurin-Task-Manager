@@ -57,6 +57,11 @@
   margin-bottom: $spacing-4;
 }
 
+.dialogBody {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .dialogFooter {
   display: flex;
   justify-content: flex-end;

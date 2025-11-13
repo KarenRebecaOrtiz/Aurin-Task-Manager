@@ -49,6 +49,7 @@ export const useArchiveTableState = () => {
   const sortKey = useStore(archiveTableStore, useShallow((state) => state.sortKey));
   const sortDirection = useStore(archiveTableStore, useShallow((state) => state.sortDirection));
   const searchQuery = useStore(archiveTableStore, useShallow((state) => state.searchQuery));
+  const searchCategory = useStore(archiveTableStore, useShallow((state) => state.searchCategory));
   const priorityFilter = useStore(archiveTableStore, useShallow((state) => state.priorityFilter));
   const clientFilter = useStore(archiveTableStore, useShallow((state) => state.clientFilter));
   const userFilter = useStore(archiveTableStore, useShallow((state) => state.userFilter));
@@ -60,6 +61,7 @@ export const useArchiveTableState = () => {
   const setSortKey = useStore(archiveTableStore, useShallow((state) => state.setSortKey));
   const setSortDirection = useStore(archiveTableStore, useShallow((state) => state.setSortDirection));
   const setSearchQuery = useStore(archiveTableStore, useShallow((state) => state.setSearchQuery));
+  const setSearchCategory = useStore(archiveTableStore, useShallow((state) => state.setSearchCategory));
   const setPriorityFilter = useStore(archiveTableStore, useShallow((state) => state.setPriorityFilter));
   const setClientFilter = useStore(archiveTableStore, useShallow((state) => state.setClientFilter));
   const setUserFilter = useStore(archiveTableStore, useShallow((state) => state.setUserFilter));
@@ -89,14 +91,15 @@ export const useArchiveTableState = () => {
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
+    setSearchCategory(null);
     setPriorityFilter('');
     setClientFilter('');
     setUserFilter('');
-  }, [setSearchQuery, setPriorityFilter, setClientFilter, setUserFilter]);
+  }, [setSearchQuery, setSearchCategory, setPriorityFilter, setClientFilter, setUserFilter]);
 
   const hasActiveFilters = useMemo(() => {
-    return !!(searchQuery || priorityFilter || clientFilter || userFilter);
-  }, [searchQuery, priorityFilter, clientFilter, userFilter]);
+    return !!(searchQuery || searchCategory || priorityFilter || clientFilter || userFilter);
+  }, [searchQuery, searchCategory, priorityFilter, clientFilter, userFilter]);
 
   return {
     // Data
@@ -114,7 +117,9 @@ export const useArchiveTableState = () => {
 
     // Search
     searchQuery,
+    searchCategory,
     setSearchQuery,
+    setSearchCategory,
 
     // Filters
     priorityFilter,

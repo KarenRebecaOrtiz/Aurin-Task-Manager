@@ -3,6 +3,34 @@
 
 .clientWrapper {
   @include flex-center;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  position: relative;
+
+  &:hover {
+    transform: scale(1.1);
+    opacity: 0.85;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      box-shadow: 0 0 0 2px var(--primary-color, #3b82f6);
+      pointer-events: none;
+      animation: pulse 1.5s infinite;
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color, #3b82f6);
+    outline-offset: 2px;
+    border-radius: 999px;
+  }
 }
 
 .clientImage {
@@ -17,5 +45,14 @@
 
   :global(body.dark) & {
     color: #9ca3af;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }

@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/modules/header';
 import { OptimizedMarquee } from '@/modules/advices';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
-import Selector from '@/components/Selector';
 import { AuthProvider } from '@/contexts/AuthContext';
 // Removed unused imports for production build
 import { useTasksPageStore } from '@/stores/tasksPageStore';
@@ -91,15 +90,26 @@ function NotFoundContent() {
       
       
       <div ref={selectorRef} className={styles.selector}>
-        <Selector
-          selectedContainer={selectedContainer as 'tareas' | 'cuentas' | 'miembros'}
-          setSelectedContainer={(c: 'tareas' | 'cuentas' | 'miembros') => handleContainerChange(c)}
-          options={[
-            { value: 'tareas', label: 'Inicio' },
-            { value: 'cuentas', label: 'Cuentas' },
-            { value: 'miembros', label: 'Miembros' },
-          ]}
-        />
+        <div className={styles.tabSelector}>
+          <button
+            className={`${styles.tabButton} ${selectedContainer === 'tareas' ? styles.active : ''}`}
+            onClick={() => handleContainerChange('tareas')}
+          >
+            Inicio
+          </button>
+          <button
+            className={`${styles.tabButton} ${selectedContainer === 'cuentas' ? styles.active : ''}`}
+            onClick={() => handleContainerChange('cuentas')}
+          >
+            Cuentas
+          </button>
+          <button
+            className={`${styles.tabButton} ${selectedContainer === 'miembros' ? styles.active : ''}`}
+            onClick={() => handleContainerChange('miembros')}
+          >
+            Miembros
+          </button>
+        </div>
       </div>
       
       <div ref={contentRef} className={styles.content}>

@@ -1,32 +1,12 @@
 import { useMemo, useCallback } from 'react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { tasksTableStore } from '../../../../stores/tasksTableStore';
+import { tasksTableStore } from '@/modules/data-views/tasks/stores/tasksTableStore';
 import { useDataStore } from '@/stores/dataStore';
-import { sortTasks } from '@/modules/data-views/utils';
+import { Task } from '@/types';
+import { sortTasks } from '@/modules/data-views/utils/sortingUtils';
 import { TaskSortKey, SortDirection } from '@/modules/data-views/constants/sortingConstants';
-
-interface Task {
-  id: string;
-  clientId: string;
-  project: string;
-  name: string;
-  description: string;
-  status: string;
-  priority: string;
-  startDate: string | null;
-  endDate: string | null;
-  LeadedBy: string[];
-  AssignedTo: string[];
-  createdAt: string;
-  CreatedBy?: string;
-  lastActivity?: string;
-  hasUnreadUpdates?: boolean;
-  lastViewedBy?: { [userId: string]: string };
-  archived?: boolean;
-  archivedAt?: string;
-  archivedBy?: string;
-}
+import { useAdvancedSearch } from '@/modules/data-views/hooks/useAdvancedSearch';
 
 interface Client {
   id: string;
@@ -63,8 +43,11 @@ export const useTasksTableState = ({
 
   // ==================== Zustand Store Selectors ====================
   const searchQuery = useStore(tasksTableStore, useShallow((state) => state.searchQuery));
+  const searchCategory = useStore(tasksTableStore, useShallow((state) => state.searchCategory));
   const priorityFilter = useStore(tasksTableStore, useShallow((state) => state.priorityFilter));
+  const priorityFilters = useStore(tasksTableStore, useShallow((state) => state.priorityFilters));
   const statusFilter = useStore(tasksTableStore, useShallow((state) => state.statusFilter));
+  const statusFilters = useStore(tasksTableStore, useShallow((state) => state.statusFilters));
   const clientFilter = useStore(tasksTableStore, useShallow((state) => state.clientFilter));
   const userFilter = useStore(tasksTableStore, useShallow((state) => state.userFilter));
   const sortKey = useStore(tasksTableStore, useShallow((state) => state.sortKey));
@@ -72,8 +55,11 @@ export const useTasksTableState = ({
   const actionMenuOpenId = useStore(tasksTableStore, useShallow((state) => state.actionMenuOpenId));
 
   const setSearchQuery = useStore(tasksTableStore, useShallow((state) => state.setSearchQuery));
+  const setSearchCategory = useStore(tasksTableStore, useShallow((state) => state.setSearchCategory));
   const setPriorityFilter = useStore(tasksTableStore, useShallow((state) => state.setPriorityFilter));
+  const setPriorityFilters = useStore(tasksTableStore, useShallow((state) => state.setPriorityFilters));
   const setStatusFilter = useStore(tasksTableStore, useShallow((state) => state.setStatusFilter));
+  const setStatusFilters = useStore(tasksTableStore, useShallow((state) => state.setStatusFilters));
   const setClientFilter = useStore(tasksTableStore, useShallow((state) => state.setClientFilter));
   const setUserFilter = useStore(tasksTableStore, useShallow((state) => state.setUserFilter));
   const setSortKey = useStore(tasksTableStore, useShallow((state) => state.setSortKey));
@@ -124,40 +110,42 @@ export const useTasksTableState = ({
 
   // ==================== Filtering Logic ====================
 
+  // Apply advanced search (searches in task name, description, client name, user names)
+  const searchFiltered = useAdvancedSearch(
+    effectiveTasks,
+    effectiveClients,
+    effectiveUsers,
+    searchQuery,
+    getInvolvedUserIds,
+    searchCategory
+  );
+
   const filteredTasks = useMemo(() => {
-    let result = effectiveTasks;
+    let result = searchFiltered;
 
     // 1. Filter by permissions
     result = result.filter(canUserViewTask);
 
-    // 2. Filter by search query
-    if (searchQuery.trim()) {
-      const lowerQuery = searchQuery.toLowerCase();
-      result = result.filter(task =>
-        task.name?.toLowerCase().includes(lowerQuery) ||
-        task.description?.toLowerCase().includes(lowerQuery) ||
-        task.clientId?.toLowerCase().includes(lowerQuery) ||
-        task.status?.toLowerCase().includes(lowerQuery) ||
-        task.priority?.toLowerCase().includes(lowerQuery)
-      );
-    }
-
-    // 3. Filter by priority
+    // 2. Filter by priority (support both single and multiple filters)
     if (priorityFilter) {
       result = result.filter(task => task.priority === priorityFilter);
+    } else if (priorityFilters.length > 0) {
+      result = result.filter(task => priorityFilters.includes(task.priority));
     }
 
-    // 4. Filter by status
+    // 3. Filter by status (support both single and multiple filters)
     if (statusFilter) {
       result = result.filter(task => task.status === statusFilter);
+    } else if (statusFilters.length > 0) {
+      result = result.filter(task => statusFilters.includes(task.status));
     }
 
-    // 5. Filter by client
+    // 4. Filter by client
     if (clientFilter) {
       result = result.filter(task => task.clientId === clientFilter);
     }
 
-    // 6. Filter by user
+    // 5. Filter by user
     if (userFilter) {
       if (userFilter === 'me') {
         result = result.filter(task => {
@@ -174,11 +162,12 @@ export const useTasksTableState = ({
 
     return result;
   }, [
-    effectiveTasks,
+    searchFiltered,
     canUserViewTask,
-    searchQuery,
     priorityFilter,
+    priorityFilters,
     statusFilter,
+    statusFilters,
     clientFilter,
     userFilter,
     userId,
@@ -210,15 +199,18 @@ export const useTasksTableState = ({
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
+    setSearchCategory(null);
     setPriorityFilter('');
+    setPriorityFilters([]);
     setStatusFilter('');
+    setStatusFilters([]);
     setClientFilter('');
     setUserFilter('');
-  }, [setSearchQuery, setPriorityFilter, setStatusFilter, setClientFilter, setUserFilter]);
+  }, [setSearchQuery, setSearchCategory, setPriorityFilter, setPriorityFilters, setStatusFilter, setStatusFilters, setClientFilter, setUserFilter]);
 
   const hasActiveFilters = useMemo(() => {
-    return !!(searchQuery || priorityFilter || statusFilter || clientFilter || userFilter);
-  }, [searchQuery, priorityFilter, statusFilter, clientFilter, userFilter]);
+    return !!(searchQuery || priorityFilter || priorityFilters.length > 0 || statusFilter || clientFilter || userFilter);
+  }, [searchQuery, priorityFilter, priorityFilters, statusFilter, clientFilter, userFilter]);
 
   // Loading state
   const isLoading = isLoadingTasks || isLoadingClients || isLoadingUsers;
@@ -239,15 +231,21 @@ export const useTasksTableState = ({
 
     // Search
     searchQuery,
+    searchCategory,
     setSearchQuery,
+    setSearchCategory,
 
     // Filters
     priorityFilter,
+    priorityFilters,
     statusFilter,
+    statusFilters,
     clientFilter,
     userFilter,
     setPriorityFilter,
+    setPriorityFilters,
     setStatusFilter,
+    setStatusFilters,
     setClientFilter,
     setUserFilter,
     clearFilters,

@@ -6,9 +6,6 @@ import { useUser } from '@clerk/nextjs';
 import { Header } from '@/modules/header';
 import { OptimizedMarquee } from '@/modules/advices';
 import SyncUserToFirestore from '@/components/SyncUserToFirestore';
-import Selector from '@/components/Selector';
-import MembersTable from '@/modules/data-views/members/components/tables/MembersTable';
-import ClientsTable from '@/modules/data-views/clients/components/tables/ClientsTable';
 import TasksTableIsolated from '@/modules/data-views/tasks/components/tables/TasksTableIsolated';
 import TasksKanban from '@/modules/data-views/tasks/components/tables/KanbanBoard';
 import { ChatSidebar } from '@/modules/chat';
@@ -60,7 +57,7 @@ const debugError = (message: string, ...args: unknown[]) => {
   }
 };
 
-// Componente completamente aislado para TasksTable - similar a MembersTable
+// Componente completamente aislado para TasksTable
 const TasksTableRenderer = memo(() => {
   // Debug logging disabled to reduce console spam
   return <TasksTableIsolated />;
@@ -69,7 +66,7 @@ const TasksTableRenderer = memo(() => {
 TasksTableRenderer.displayName = 'TasksTableRenderer';
 
 // Define types
-type SelectorContainer = 'tareas' | 'cuentas' | 'miembros';
+type SelectorContainer = 'tareas';
 type Container = SelectorContainer | 'config';
 type TaskView = 'table' | 'kanban';
 
@@ -282,12 +279,6 @@ function TasksPageContent() {
     closeCreateTask();
   }, []);
 
-  const handleCreateClientOpen = useCallback(() => {
-    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-    setClientSidebarData({ isEdit: false });
-    setIsClientSidebarOpen(true);
-  }, []);
-
   const handleEditTaskToggle = useCallback(() => {
     if (hasUnsavedChanges) {
       const { openConfirmExitPopup } = useTasksPageStore.getState();
@@ -327,6 +318,13 @@ function TasksPageContent() {
   const handleNewTaskOpen = useCallback(() => {
     const { openCreateTask } = useTasksPageStore.getState();
     openCreateTask();
+  }, []);
+
+  const handleNewClientOpen = useCallback(() => {
+    // Abrir el modal de crear cliente
+    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+    setClientSidebarData({ isEdit: false });
+    setIsClientSidebarOpen(true);
   }, []);
 
   // Callbacks para TasksKanban - MEMOIZADOS SIN DEPENDENCIAS
@@ -418,12 +416,6 @@ function TasksPageContent() {
     // Loader animation completed
   }, []);
 
-  const handleClientsTableCacheUpdate = useCallback((_updatedClients: Client[]) => {
-    // Actualizar el cache global si es necesario
-    // TODO: Implementar actualización del cache cuando sea necesario
-    debugLog('Cache update requested for clients:', _updatedClients.length);
-  }, []);
-
   const handleShowSuccessAlert = useCallback((message: string) => {
     const { showSuccess } = useTasksPageStore.getState();
     showSuccess(message);
@@ -461,42 +453,6 @@ function TasksPageContent() {
   // }, [hasUnsavedChanges]);
 
 
-  
-  // Message notifications removed - using NodeMailer instead
-  
-  const handleMessageSidebarOpen = useCallback((receiverUser: User) => {
-    // Usar getState() para evitar re-renders reactivos
-    const { openMessageSidebar } = useSidebarStateStore.getState();
-    
-    // Usar el mismo conversationId que usa MessageSidebar
-    const currentUserId = user?.id; // Usuario actual (logueado)
-    const receiverId = receiverUser.id; // Usuario receptor
-    const conversationId = generateConversationId(currentUserId || '', receiverId);
-    openMessageSidebar(currentUserId || '', {
-      id: receiverId,
-      imageUrl: receiverUser.imageUrl,
-      fullName: receiverUser.fullName,
-      role: receiverUser.role,
-    }, conversationId);
-  }, [user?.id]);
-
-  const handleEditClientOpen = useCallback((client: Client) => {
-    const { setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
-    setClientSidebarData({
-      client: {
-        ...client,
-        projectCount: client.projects?.length || 0,
-        createdAt: 'createdAt' in client ? (client as { createdAt?: string }).createdAt || new Date().toISOString() : new Date().toISOString(),
-      },
-      isEdit: true,
-    });
-    setIsClientSidebarOpen(true);
-  }, []);
-
-  const handleDeleteClientOpen = useCallback((clientId: string) => {
-    const { setIsDeleteClientOpen } = useTasksPageStore.getState();
-    setIsDeleteClientOpen(clientId);
-  }, []);
 
   // const handleClientAlertChange = useCallback((alert: { type: 'success' | 'fail'; message?: string; error?: string; }) => {
   //   console.log('[TasksPage] handleClientAlertChange called', alert);
@@ -589,17 +545,7 @@ function TasksPageContent() {
           personalLocations={personalLocations}
         />
       </div>
-      <div ref={selectorRef} className={styles.selector}>
-        <Selector
-          selectedContainer={selectedContainer as SelectorContainer}
-          setSelectedContainer={handleSelectorContainerChange}
-          options={[
-            { value: 'tareas', label: 'Inicio' },
-            { value: 'cuentas', label: 'Cuentas' },
-            { value: 'miembros', label: 'Miembros' },
-          ]}
-        />
-      </div>
+    
       <div ref={contentRef} className={styles.content}>
           {/* Renderizar CreateTask, EditTask, y ArchiveTable como contenedores principales */}
           {isCreateTaskOpen ? (
@@ -642,6 +588,7 @@ function TasksPageContent() {
               ) : (
                 <TasksKanban
                   onNewTaskOpen={handleNewTaskOpen}
+                  onNewClientOpen={handleNewClientOpen}
                   onEditTaskOpen={handleTasksKanbanEditTask}
                   onViewChange={handleTasksKanbanViewChange}
                   onDeleteTaskOpen={handleTasksKanbanDeleteTask}
@@ -650,24 +597,6 @@ function TasksPageContent() {
               )}
             </>
           ) : null}
-
-          {selectedContainer === 'cuentas' && (
-            <ClientsTable
-              onCreateOpen={handleCreateClientOpen}
-              onEditOpen={handleEditClientOpen}
-              onDeleteOpen={handleDeleteClientOpen}
-              externalClients={clients.length > 0 ? clients : undefined}
-              onCacheUpdate={handleClientsTableCacheUpdate}
-            />
-          )}
-
-          {selectedContainer === 'miembros' && (
-            <MembersTable
-              onMessageSidebarOpen={handleMessageSidebarOpen}
-              externalUsers={users}
-              externalTasks={tasks}
-            />
-          )}
 
           {selectedContainer === 'config' && (
             <ConfigPage userId={user?.id || ''} onClose={handleConfigPageClose}

@@ -11,10 +11,10 @@
 
 import { useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { gsap } from 'gsap';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
+import { animateClick as animateClickHelper, animateFilterIcon } from '@/modules/data-views/animations';
 
 // Interfaces compartidas
 interface Task {
@@ -194,14 +194,9 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
     return client?.name || 'Cliente no encontrado';
   }, [clients]);
 
-  // ✨ Animación de click
+  // ✨ Animación de click - usando Framer Motion
   const animateClick = useCallback((element: HTMLElement): void => {
-    gsap.to(element, {
-      scale: 0.95,
-      duration: 0.1,
-      yoyo: true,
-      repeat: 1,
-    });
+    animateClickHelper(element);
   }, []);
 
   // 🎯 Factory para handler de selección de prioridad
@@ -211,20 +206,14 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
   ) => {
     return (priority: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
-      
-      // Animación opcional del ícono
-      const filterIcon = e.currentTarget.querySelector('img');
+
+      // Animación opcional del ícono con Framer Motion
+      const filterIcon = e.currentTarget.querySelector('img') as HTMLElement;
       if (filterIcon) {
-        gsap.to(filterIcon, {
-          rotation: 360,
-          scale: 1.2,
-          duration: 0.3,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 1
-        });
+        animateFilterIcon(filterIcon, true);
+        setTimeout(() => animateFilterIcon(filterIcon, false), 300);
       }
-      
+
       setPriorityFilter(priority);
       setIsPriorityDropdownOpen(false);
     };
@@ -237,20 +226,14 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
   ) => {
     return (clientId: string, e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
-      
-      // Animación opcional del ícono
-      const filterIcon = e.currentTarget.querySelector('img');
+
+      // Animación opcional del ícono con Framer Motion
+      const filterIcon = e.currentTarget.querySelector('img') as HTMLElement;
       if (filterIcon) {
-        gsap.to(filterIcon, {
-          rotation: 360,
-          scale: 1.2,
-          duration: 0.3,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 1
-        });
+        animateFilterIcon(filterIcon, true);
+        setTimeout(() => animateFilterIcon(filterIcon, false), 300);
       }
-      
+
       setClientFilter(clientId);
       setIsClientDropdownOpen(false);
     };

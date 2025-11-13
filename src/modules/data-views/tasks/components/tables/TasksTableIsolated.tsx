@@ -33,6 +33,13 @@ export default function TasksTableIsolated() {
         const { openCreateTask } = useTasksPageStore.getState();
         openCreateTask();
       },
+      openNewClient: () => {
+        console.log('[TasksTableIsolated] openNewClient called');
+        const { setContainer, setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
+        setContainer('cuentas');
+        setClientSidebarData({ isEdit: false });
+        setIsClientSidebarOpen(true);
+      },
       openEditTask: (taskId: string) => {
         console.log('[TasksTableIsolated] openEditTask called', taskId);
         const { openEditTask } = useTasksPageStore.getState();

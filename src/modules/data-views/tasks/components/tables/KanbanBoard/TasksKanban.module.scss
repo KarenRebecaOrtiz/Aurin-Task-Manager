@@ -8,14 +8,6 @@
 
 .container {
   padding: $spacing-2xl;
-  background: $color-bg-glass;
-  border-radius: $radius-xl;
-  border: 1px solid $color-border-subtle;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  @include neomorphic-shadow(light);
-  border-radius: 16px 26px 0px 0px;
-
   font-family: $font-family-primary;
   @include flex-column;
   gap: $spacing-lg;
@@ -23,8 +15,6 @@
 
   :global(body.dark) & {
     background: $color-bg-dark;
-    border: none;
-    box-shadow: none;
   }
 }
 

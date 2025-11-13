@@ -7,8 +7,7 @@ import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 import { useModal } from '@/modules/modal';
 import { useSonnerToast } from '@/modules/sonner';
-import { ClientOverlay } from '@/modules/data-views/clients/components/modals';
-import clientStyles from '@/modules/data-views/clients/components/tables/ClientsTable/ClientsTable.module.scss';
+import { AccountDetailsCard } from '@/modules/data-views/clients/components/modals';
 
 export default function TasksPageModals() {
   const { user } = useUser();
@@ -56,34 +55,44 @@ export default function TasksPageModals() {
     setClientSidebarData(null);
   };
 
-  const handleClientSubmit = async (form: { id?: string; name: string; imageFile: File | null; imagePreview: string; projects: string[] }) => {
-    console.log('[TasksPageModals] handleClientSubmit called', form);
-    
+  const handleClientSubmit = async (clientData: any) => {
+    console.log('[TasksPageModals] handleClientSubmit called', clientData);
+
     try {
       const { setIsClientLoading } = useTasksPageStore.getState();
       setIsClientLoading(true);
-      
-      const clientData = {
-        name: form.name,
-        imageUrl: form.imagePreview,
-        projectCount: form.projects.length,
-        projects: form.projects,
-        createdBy: user?.id || 'unknown',
-        createdAt: new Date().toISOString(),
+
+      const dataToSave = {
+        name: clientData.name,
+        imageUrl: clientData.imageUrl,
+        projectCount: clientData.projects?.length || 0,
+        projects: clientData.projects || [],
+        email: clientData.email || '',
+        phone: clientData.phone || '',
+        address: clientData.address || '',
+        industry: clientData.industry || '',
+        website: clientData.website || '',
+        taxId: clientData.taxId || '',
+        notes: clientData.notes || '',
+        isActive: clientData.isActive ?? true,
+        createdBy: clientData.createdBy || user?.id || 'unknown',
+        createdAt: clientData.createdAt || new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        lastModifiedBy: user?.id || 'unknown',
       };
 
-      if (clientSidebarData?.isEdit && form.id) {
+      if (clientSidebarData?.isEdit && clientData.id) {
         // Update existing client
-        const clientRef = doc(db, 'clients', form.id);
+        const clientRef = doc(db, 'clients', clientData.id);
         await updateDoc(clientRef, {
-          ...clientData,
+          ...dataToSave,
           lastActivity: new Date().toISOString(),
         });
         console.log('[TasksPageModals] Client updated successfully');
       } else {
         // Create new client
         const clientsRef = collection(db, 'clients');
-        await addDoc(clientsRef, clientData);
+        await addDoc(clientsRef, dataToSave);
         console.log('[TasksPageModals] Client created successfully');
       }
 
@@ -169,94 +178,72 @@ export default function TasksPageModals() {
     }
   }, [isConfirmExitOpen, openModal]);
 
+  // Handle delete client popup with new modal system
+  useEffect(() => {
+    if (isDeleteClientOpen && typeof isDeleteClientOpen === 'string') {
+      openModal({
+        type: 'confirm',
+        variant: 'danger',
+        title: 'Eliminar Cliente',
+        description: '¿Estás seguro de que quieres eliminar este cliente? Esta acción no se puede deshacer.',
+        requiresConfirmation: true,
+        confirmationKeyword: 'eliminar',
+        confirmText: 'Confirmar Eliminación',
+        onConfirm: async () => {
+          try {
+            await deleteDoc(doc(db, 'clients', isDeleteClientOpen));
+            const { setIsDeleteClientOpen, setDeleteConfirm } = useTasksPageStore.getState();
+            setIsDeleteClientOpen(false);
+            setDeleteConfirm('');
+            success('Cliente eliminado exitosamente');
+          } catch (err) {
+            console.error('Error deleting client:', err);
+            error('Error al eliminar la cuenta');
+          }
+        },
+        onCancel: () => {
+          const { setIsDeleteClientOpen, setDeleteConfirm } = useTasksPageStore.getState();
+          setIsDeleteClientOpen(false);
+          setDeleteConfirm('');
+        },
+      });
+    }
+  }, [isDeleteClientOpen, openModal]);
+
   return (
     <>
       {/* Alert Components - Migrated to Sonner */}
-
       {/* Delete Popup - Migrated to new modal system */}
-
-      {/* Client Delete Popup */}
-      {isDeleteClientOpen && (
-        <div className={clientStyles.popupOverlay}>
-          <div className={clientStyles.deletePopup}>
-            <h2>Confirmar Eliminación</h2>
-            <p>Escribe &apos;Eliminar&apos; para confirmar:</p>
-            <input
-              type="text"
-              value={deleteConfirm}
-              onChange={(e) => {
-                const { setDeleteConfirm } = useTasksPageStore.getState();
-                setDeleteConfirm(e.target.value);
-              }}
-              className={clientStyles.deleteConfirmInput}
-              placeholder="Escribe 'Eliminar'"
-            />
-            <button
-              onClick={async () => {
-                if (deleteConfirm.toLowerCase() === 'eliminar' && typeof isDeleteClientOpen === 'string') {
-                  try {
-                    await deleteDoc(doc(db, 'clients', isDeleteClientOpen));
-                    const { setIsDeleteClientOpen, setDeleteConfirm } = useTasksPageStore.getState();
-                    setIsDeleteClientOpen(false);
-                    setDeleteConfirm('');
-                    success('Cliente eliminado exitosamente');
-                  } catch (err) {
-                    console.error('Error deleting client:', err);
-                    error('Error al eliminar la cuenta');
-                  }
-                }
-              }}
-              disabled={deleteConfirm.toLowerCase() !== 'eliminar'}
-              className={clientStyles.deleteConfirmButton}
-            >
-              Sí, eliminar
-            </button>
-            <button
-              onClick={() => {
-                const { setIsDeleteClientOpen, setDeleteConfirm } = useTasksPageStore.getState();
-                setIsDeleteClientOpen(false);
-                setDeleteConfirm('');
-              }}
-              className={clientStyles.cancelButton}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
+      {/* Client Delete Popup - Migrated to new modal system */}
       {/* Confirm Exit Popup - Migrated to new modal system */}
 
-      {/* ClientSidebar */}
+      {/* AccountDetailsCard - Nuevo modal unificado */}
       {isClientSidebarOpen && clientSidebarData && (
-        <ClientOverlay
+        <AccountDetailsCard
           isOpen={isClientSidebarOpen}
-          isEdit={clientSidebarData.isEdit}
-          initialForm={
+          onClose={handleClientSidebarClose}
+          client={
             clientSidebarData.isEdit && clientSidebarData.client
               ? {
                   id: clientSidebarData.client.id,
                   name: clientSidebarData.client.name,
-                  imageFile: null,
-                  imagePreview: clientSidebarData.client.imageUrl,
-                  projects: clientSidebarData.client.projects.length
-                    ? clientSidebarData.client.projects
-                    : [''],
-                  deleteProjectIndex: null,
-                  deleteConfirm: '',
+                  imageUrl: clientSidebarData.client.imageUrl,
+                  projects: clientSidebarData.client.projects || [],
+                  email: (clientSidebarData.client as any).email || '',
+                  phone: (clientSidebarData.client as any).phone || '',
+                  address: (clientSidebarData.client as any).address || '',
+                  industry: (clientSidebarData.client as any).industry || '',
+                  website: (clientSidebarData.client as any).website || '',
+                  taxId: (clientSidebarData.client as any).taxId || '',
+                  notes: (clientSidebarData.client as any).notes || '',
+                  isActive: (clientSidebarData.client as any).isActive ?? true,
+                  createdAt: clientSidebarData.client.createdAt,
+                  createdBy: clientSidebarData.client.createdBy,
                 }
-              : {
-                  name: '',
-                  imageFile: null,
-                  imagePreview: '',
-                  projects: [''],
-                  deleteProjectIndex: null,
-                  deleteConfirm: '',
-                }
+              : undefined
           }
-          onFormSubmit={handleClientSubmit}
-          onClose={handleClientSidebarClose}
-          isClientLoading={isClientLoading}
+          mode={clientSidebarData.isEdit ? 'edit' : 'create'}
+          onSave={handleClientSubmit}
         />
       )}
 

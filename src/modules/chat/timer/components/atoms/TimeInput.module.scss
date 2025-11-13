@@ -1,0 +1,72 @@
+/**
+ * TimeInput Styles (BLUEPRINT)
+ *
+ * REQUIRED STYLES:
+ *
+ * .timeInput {
+ *   - Display: flex column
+ *   - Align items center
+ *   - Gap between elements: 8px
+ *   - Padding: 16px
+ *   - Background: white or light gray
+ *   - Border-radius: 12px
+ *   - Border: 1px solid #e2e8f0
+ *   - Box-shadow: subtle
+ *   - Max-width: 120px
+ * }
+ *
+ * .incrementButton, .decrementButton {
+ *   - Width: 40px
+ *   - Height: 32px
+ *   - Background: transparent
+ *   - Border: 1px solid #cbd5e1
+ *   - Border-radius: 6px
+ *   - Cursor: pointer
+ *   - Font-size: 18px
+ *   - Color: #64748b
+ *   - Transition: all 0.2s
+ *   - Hover: background #f1f5f9
+ *   - Disabled: opacity 0.5, cursor not-allowed
+ * }
+ *
+ * .inputWrapper {
+ *   - Display: flex column
+ *   - Align items center
+ *   - Gap: 4px
+ * }
+ *
+ * .input {
+ *   - Width: 60px
+ *   - Height: 50px
+ *   - Font-size: 32px
+ *   - Font-weight: 600
+ *   - Text-align: center
+ *   - Border: none
+ *   - Background: transparent
+ *   - Color: #1e293b
+ *   - Outline: none
+ *   - Remove number spinners (appearance: textfield)
+ *   - Focus: color #3b82f6
+ * }
+ *
+ * .label {
+ *   - Font-size: 10px
+ *   - Font-weight: 600
+ *   - Letter-spacing: 0.1em
+ *   - Color: #64748b
+ *   - Text-transform: uppercase
+ * }
+ *
+ * .error {
+ *   - Font-size: 12px
+ *   - Color: #ef4444
+ *   - Text-align: center
+ *   - Margin-top: 8px
+ * }
+ *
+ * // Dark mode support
+ * // Responsive design for mobile
+ */
+
+// TODO: Implement all styles above
+// Reference: /src/components/ui/TimeInput.module.scss if it exists

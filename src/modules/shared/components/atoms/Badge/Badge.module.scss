@@ -33,7 +33,7 @@
 
 // Variants
 .default {
-  background: $color-bg-secondary;
+  background: $zinc-100;
   color: $color-text-secondary;
 
   :global(body.dark) & {

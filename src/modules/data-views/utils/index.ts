@@ -12,8 +12,8 @@ export * from './sortingUtils';
 // Keyboard utilities
 export * from './keyboardUtils';
 
-// Animation utilities
-export * from './animationUtils';
+// ✅ Animation utilities migrated to @/modules/data-views/animations
+// Use: import { animateClick, tableAnimations } from '@/modules/data-views/animations'
 
 // Dropdown utilities
 export * from './dropdownUtils';

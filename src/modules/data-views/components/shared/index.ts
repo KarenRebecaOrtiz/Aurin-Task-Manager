@@ -1,3 +1,7 @@
+// Search Components
+export { TaskSearchBar } from './search';
+export type { SearchCategory } from './search';
+
 // Table Header Components
 export { TableHeader } from './table-header';
 export type { } from './table-header';

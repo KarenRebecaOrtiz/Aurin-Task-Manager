@@ -9,11 +9,8 @@ import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import styles from './ArchiveTable.module.scss';
 
 // ✅ Nuevos componentes atómicos
-import { SearchInput } from '@/modules/shared/components/atoms/Input';
-import { Button } from '@/modules/shared/components/atoms/Button';
-import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
-import { ClientCell } from '@/modules/data-views/components/shared/cells';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
+import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
@@ -21,6 +18,7 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiving';
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
 import { useArchiveTableState } from './hooks/useArchiveTableState';
+import { useAdvancedSearch } from '@/modules/data-views/hooks/useAdvancedSearch';
 
 interface User {
   id: string;
@@ -87,7 +85,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       sortDirection,
       handleSort,
       searchQuery,
+      searchCategory,
       setSearchQuery,
+      setSearchCategory,
       priorityFilter,
       clientFilter,
       userFilter,
@@ -175,27 +175,45 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     // ✅ ELIMINADO: getInvolvedUserIds ahora viene del hook centralizado useTasksCommon
 
+    // Apply advanced search (searches in task name, description, client name, user names)
+    const searchFiltered = useAdvancedSearch(
+      archivedTasks,
+      effectiveClients,
+      effectiveUsers,
+      searchQuery,
+      getInvolvedUserIds,
+      searchCategory
+    );
+
     const memoizedFilteredTasks = useMemo(() => {
-      const filtered = archivedTasks.filter((task) => {
-        // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
+      let result = searchFiltered;
+
+      // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
+      result = result.filter((task) => {
         const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
-        if (!canViewTask) {
-          return false;
-        }
-        
-        const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesPriority = !priorityFilter || task.priority === priorityFilter;
-        const matchesClient = !clientFilter || task.clientId === clientFilter;
-        let matchesUser = true;
-        if (userFilter === 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userId);
-        } else if (userFilter && userFilter !== 'me') {
-          matchesUser = getInvolvedUserIds(task).includes(userFilter);
-        }
-        return matchesSearch && matchesPriority && matchesClient && matchesUser;
+        return canViewTask;
       });
-      return filtered;
-    }, [archivedTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
+
+      // Filter by priority
+      if (priorityFilter) {
+        result = result.filter(task => task.priority === priorityFilter);
+      }
+
+      // Filter by client
+      if (clientFilter) {
+        result = result.filter(task => task.clientId === clientFilter);
+      }
+
+      // Filter by user
+      let filteredByUser = result;
+      if (userFilter === 'me') {
+        filteredByUser = result.filter(task => getInvolvedUserIds(task).includes(userId));
+      } else if (userFilter && userFilter !== 'me') {
+        filteredByUser = result.filter(task => getInvolvedUserIds(task).includes(userFilter));
+      }
+
+      return filteredByUser;
+    }, [searchFiltered, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks);
@@ -206,7 +224,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       setIsUserDropdownOpen(false);
     };
 
-    // ✅ ELIMINADO: getClientName ahora viene del hook centralizado useTasksCommon
 
     // ✅ CENTRALIZADO: Usar hook centralizado para desarchivar tareas
     const handleUnarchiveTask = useCallback(async (task: Task) => {
@@ -529,23 +546,18 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           <TasksHeader
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            searchCategory={searchCategory}
+            setSearchCategory={setSearchCategory}
             onViewChange={(view) => {
               onViewChange(view);
               onClose();
             }}
             onArchiveTableOpen={() => {}}
             onNewTaskOpen={() => {}}
+            onNewClientOpen={() => {}}
             priorityFilter={priorityFilter}
             setPriorityFilter={setPriorityFilter}
-            clientFilter={clientFilter}
-            setClientFilter={setClientFilter}
-            userFilter={userFilter}
-            setUserFilter={setUserFilter}
-            clients={effectiveClients}
-            users={effectiveUsers}
-            userId={user?.id || ''}
-            isAdmin={isAdmin}
-            currentView="table"
+            currentView="archive"
           />
           
           <SkeletonLoader 
@@ -558,17 +570,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     }
 
     return (
-      <motion.div 
-        className={styles.container}
-        initial={{ opacity: 0, y: 20, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ 
-          duration: 0.2, 
-          ease: [0.25, 0.46, 0.45, 0.94],
-          opacity: { duration: 0.15 },
-          scale: { duration: 0.2 }
-        }}
-      >
+      <div className={styles.container}>
         <style jsx>{`
           @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -578,23 +580,18 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         <TasksHeader
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          searchCategory={searchCategory}
+          setSearchCategory={setSearchCategory}
           onViewChange={(view) => {
             onViewChange(view);
             onClose();
           }}
           onArchiveTableOpen={() => {}}
           onNewTaskOpen={() => {}}
+          onNewClientOpen={() => {}}
           priorityFilter={priorityFilter}
           setPriorityFilter={setPriorityFilter}
-          clientFilter={clientFilter}
-          setClientFilter={setClientFilter}
-          userFilter={userFilter}
-          setUserFilter={setUserFilter}
-          clients={effectiveClients}
-          users={effectiveUsers}
-          userId={user?.id || ''}
-          isAdmin={isAdmin}
-          currentView="table"
+          currentView="archive"
         />
 
         <Table
@@ -685,7 +682,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
     );
   },
 );

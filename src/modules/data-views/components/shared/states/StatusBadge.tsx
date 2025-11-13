@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { 
   BookOpen, 
@@ -8,7 +9,10 @@ import {
   Clock, 
   Eye, 
   CheckCheck, 
-  XCircle 
+  XCircle,
+  Signal,
+  SignalHigh,
+  SignalMedium,
 } from 'lucide-react';
 
 export type StatusType = 'backlog' | 'todo' | 'in-progress' | 'in-review' | 'done' | 'archived';
@@ -52,19 +56,28 @@ const statusConfig: Record<StatusType, { label: string; icon: React.ReactNode; c
 };
 
 export const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
-  ({ status, showIcon = true, className, ...props }, ref) => {
+  ({ status, showIcon = true, className }, ref) => {
     const config = statusConfig[status];
     const baseClasses = 'inline-flex items-center gap-2 px-5 py-3 rounded-md text-sm font-medium border border-transparent transition-colors';
 
     return (
-      <span
+      <motion.span
         ref={ref}
         className={cn(baseClasses, config.className, className)}
-        {...props}
+        whileHover={{ scale: 1.05 }}
+        transition={{ duration: 0.2 }}
       >
-        {showIcon && <span className="flex items-center justify-center flex-shrink-0">{config.icon}</span>}
+        {showIcon && (
+          <motion.span 
+            className="flex items-center justify-center flex-shrink-0"
+            whileHover={{ rotate: 12, scale: 1.15 }}
+            transition={{ duration: 0.2 }}
+          >
+            {config.icon}
+          </motion.span>
+        )}
         <span className="leading-none">{config.label}</span>
-      </span>
+      </motion.span>
     );
   }
 );

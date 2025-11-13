@@ -25,6 +25,7 @@ import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon'
 import { normalizeStatus } from '@/modules/data-views/utils';
 import { StatusCell, PriorityCell, ClientCell, UserCell } from '@/modules/data-views/components/shared/cells';
 import { getLastActivityTimestamp } from '@/lib/taskUtils';
+import { tableAnimations } from '@/modules/data-views/animations/tableAnimations';
 
 interface Client {
   id: string;
@@ -115,6 +116,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   // Actions store
   const {
     openNewTask,
+    openNewClient,
     openEditTask,
     openDeleteTask,
     openArchiveTable,
@@ -801,19 +803,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       <TasksHeader
         searchQuery={tableState.searchQuery}
         setSearchQuery={tableState.setSearchQuery}
+        searchCategory={tableState.searchCategory}
+        setSearchCategory={tableState.setSearchCategory}
         onViewChange={changeView}
         onArchiveTableOpen={openArchiveTable}
         onNewTaskOpen={openNewTask}
-        priorityFilter={tableState.priorityFilter}
-        setPriorityFilter={tableState.setPriorityFilter}
-        clientFilter={tableState.clientFilter}
-        setClientFilter={tableState.setClientFilter}
-        userFilter={tableState.userFilter}
-        setUserFilter={tableState.setUserFilter}
-        clients={tableState.effectiveClients}
-        users={tableState.effectiveUsers}
-        userId={user?.id || ''}
-        isAdmin={isAdmin}
+        onNewClientOpen={openNewClient}
+        onPriorityFiltersChange={tableState.setPriorityFilters}
+        onStatusFiltersChange={tableState.setStatusFilters}
         currentView="table"
       />
 
@@ -875,10 +872,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       <AnimatePresence>
         {centralizedShowUndo && centralizedUndoStack.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            {...tableAnimations.undoNotification}
             className={styles.undoNotification}
             style={{
               position: 'fixed',

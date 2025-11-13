@@ -11,7 +11,7 @@ export interface Filter {
   value: unknown;
   options: DropdownItem[];
   onChange: (value: unknown) => void;
-  icon?: string;
+  icon?: string | React.ReactNode;
 }
 
 export interface FilterGroupProps {
@@ -43,13 +43,19 @@ export const FilterGroup: React.FC<FilterGroupProps> = ({
             trigger={
               <div className={styles.filterTrigger}>
                 {filter.icon && (
-                  <Image
-                    src={filter.icon}
-                    alt=""
-                    width={12}
-                    height={12}
-                    className={styles.filterIcon}
-                  />
+                  typeof filter.icon === 'string' ? (
+                    <Image
+                      src={filter.icon}
+                      alt=""
+                      width={12}
+                      height={12}
+                      className={styles.filterIcon}
+                    />
+                  ) : (
+                    <div className={styles.filterIcon}>
+                      {filter.icon}
+                    </div>
+                  )
                 )}
                 <span>{filter.label}</span>
               </div>

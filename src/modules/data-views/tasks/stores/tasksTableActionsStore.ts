@@ -3,6 +3,7 @@ import { create } from 'zustand';
 interface TasksTableActionsState {
   // Actions that TasksTable needs to trigger
   openNewTask: () => void;
+  openNewClient: () => void;
   openEditTask: (taskId: string) => void;
   openDeleteTask: (taskId: string) => void;
   openArchiveTable: () => void;
@@ -14,6 +15,7 @@ interface TasksTableActionsState {
   // Setter for the actual action handlers
   setActionHandlers: (handlers: {
     openNewTask: () => void;
+    openNewClient: () => void;
     openEditTask: (taskId: string) => void;
     openDeleteTask: (taskId: string) => void;
     openArchiveTable: () => void;
@@ -27,6 +29,7 @@ interface TasksTableActionsState {
 export const useTasksTableActionsStore = create<TasksTableActionsState>((set) => ({
   // Default no-op actions
   openNewTask: () => {},
+  openNewClient: () => {},
   openEditTask: () => {},
   openDeleteTask: () => {},
   openArchiveTable: () => {},

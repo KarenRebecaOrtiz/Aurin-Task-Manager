@@ -25,8 +25,11 @@ interface Task {
 type TasksTableState = {
   filteredTasks: Task[];
   searchQuery: string;
-  priorityFilter: string;
+  searchCategory: 'task' | 'client' | 'member' | null;
+  priorityFilter: string; // Keep for backward compatibility with PriorityFilter component
+  priorityFilters: string[]; // New array for multiple priority filters
   statusFilter: string;
+  statusFilters: string[]; // New array for multiple status filters
   clientFilter: string;
   sortKey: string;
   sortDirection: 'asc' | 'desc';
@@ -46,8 +49,11 @@ type TasksTableState = {
 type TasksTableActions = {
   setFilteredTasks: (tasks: Task[]) => void;
   setSearchQuery: (query: string) => void;
+  setSearchCategory: (category: 'task' | 'client' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
+  setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
   setStatusFilter: (filter: string) => void;
+  setStatusFilters: (filters: string[]) => void; // New action for multiple statuses
   setClientFilter: (filter: string) => void;
   setSortKey: (key: string) => void;
   setSortDirection: (dir: 'asc' | 'desc') => void;
@@ -69,8 +75,11 @@ type TasksTableStore = TasksTableState & TasksTableActions;
 export const tasksTableStore = create<TasksTableStore>()((set) => ({
     filteredTasks: [],
     searchQuery: '',
+    searchCategory: null,
     priorityFilter: '',
+    priorityFilters: [], // Initialize empty array for multiple priorities
     statusFilter: '',
+    statusFilters: [], // Initialize empty array for multiple statuses
     clientFilter: '',
     sortKey: 'createdAt',
     sortDirection: 'desc',
@@ -87,8 +96,11 @@ export const tasksTableStore = create<TasksTableStore>()((set) => ({
     userFilter: '',
     setFilteredTasks: (tasks) => set({ filteredTasks: tasks }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    setSearchCategory: (category) => set({ searchCategory: category }),
     setPriorityFilter: (filter) => set({ priorityFilter: filter }),
+    setPriorityFilters: (filters) => set({ priorityFilters: filters }), // New setter for multiple priorities
     setStatusFilter: (filter) => set({ statusFilter: filter }),
+    setStatusFilters: (filters) => set({ statusFilters: filters }), // New setter for multiple statuses
     setClientFilter: (filter) => set({ clientFilter: filter }),
     setSortKey: (key) => set({ sortKey: key }),
     setSortDirection: (dir) => set({ sortDirection: dir }),

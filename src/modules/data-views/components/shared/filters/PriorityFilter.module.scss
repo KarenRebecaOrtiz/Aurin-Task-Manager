@@ -1,0 +1,39 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.priorityFilter {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.filterTrigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 0 $spacing-md;
+  height: 100%;
+  cursor: pointer;
+  border-radius: $radius-md;
+  transition: $transition-base;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  :global(body.dark) & {
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  svg {
+    flex-shrink: 0;
+    transition: $transition-fast;
+  }
+
+  span {
+    font-weight: $font-weight-medium;
+    font-size: $text-sm;
+  }
+}

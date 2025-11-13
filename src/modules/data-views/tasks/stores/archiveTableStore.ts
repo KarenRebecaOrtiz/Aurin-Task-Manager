@@ -27,7 +27,9 @@ type ArchiveTableState = {
   sortKey: string;
   sortDirection: 'asc' | 'desc';
   searchQuery: string;
+  searchCategory: 'task' | 'client' | 'member' | null;
   priorityFilter: string;
+  priorityFilters: string[]; // New array for multiple priority filters
   clientFilter: string;
   actionMenuOpenId: string | null;
   isPriorityDropdownOpen: boolean;
@@ -43,7 +45,9 @@ type ArchiveTableActions = {
   setSortKey: (key: string) => void;
   setSortDirection: (dir: 'asc' | 'desc') => void;
   setSearchQuery: (query: string) => void;
+  setSearchCategory: (category: 'task' | 'client' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
+  setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
   setClientFilter: (filter: string) => void;
   setActionMenuOpenId: (id: string | null) => void;
   setIsPriorityDropdownOpen: (open: boolean) => void;
@@ -61,7 +65,9 @@ export const archiveTableStore = createStore<ArchiveTableStore>()((set) => ({
   sortKey: '',
   sortDirection: 'desc',
   searchQuery: '',
+  searchCategory: null,
   priorityFilter: '',
+  priorityFilters: [], // Initialize empty array for multiple priorities
   clientFilter: '',
   actionMenuOpenId: null,
   isPriorityDropdownOpen: false,
@@ -74,7 +80,9 @@ export const archiveTableStore = createStore<ArchiveTableStore>()((set) => ({
   setSortKey: (key) => set({ sortKey: key }),
   setSortDirection: (dir) => set({ sortDirection: dir }),
   setSearchQuery: (query) => set({ searchQuery: query }),
+  setSearchCategory: (category) => set({ searchCategory: category }),
   setPriorityFilter: (filter) => set({ priorityFilter: filter }),
+  setPriorityFilters: (filters) => set({ priorityFilters: filters }), // New setter for multiple priorities
   setClientFilter: (filter) => set({ clientFilter: filter }),
   setActionMenuOpenId: (id) => set({ actionMenuOpenId: id }),
   setIsPriorityDropdownOpen: (open) => set({ isPriorityDropdownOpen: open }),

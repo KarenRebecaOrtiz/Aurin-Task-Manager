@@ -1,0 +1,84 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/components' as *;
+
+// ==============================================================
+// 🔮 KANBAN COLUMN
+// ==============================================================
+
+.kanbanColumn {
+  min-width: 300px;
+  background: rgba(241, 245, 249, 0.7);
+  border-radius: $radius-xl;
+  padding: $spacing-lg;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid $color-border-subtle;
+  @include neomorphic-shadow(light);
+  position: relative;
+  z-index: 1;
+  @include flex-column;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 0.7);
+    border-radius: 12px;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(body.dark) & {
+    background: $color-bg-glass-dark;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none !important;
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(75, 85, 99, 0.7);
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+        inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  &.draggingOver {
+    background: rgba(241, 245, 249, 0.85);
+    border-color: rgba(59, 130, 246, 0.3);
+    @include neomorphic-shadow-hover(light);
+
+    :global(body.dark) & {
+      background: $color-bg-glass-dark-hover;
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: none !important;
+    }
+  }
+
+  @include responsive(lg) {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+.taskList {
+  @include flex-column;
+  gap: $spacing-md;
+  flex: 1;
+  padding: $spacing-md;
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
+  background-color: #f6f8facf;
+  @include crystallized-scrollbar;
+
+  :global(body.dark) & {
+    background-color: rgba(39, 39, 42, 0.3);
+  }
+}

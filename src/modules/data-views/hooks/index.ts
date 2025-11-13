@@ -2,5 +2,9 @@
 export { useTasksCommon } from './useTasksCommon';
 export { useTaskArchiving } from './useTaskArchiving';
 
+// Advanced search hooks
+export { useAdvancedSearch, useTaskFiltering } from './useAdvancedSearch';
+export type { SearchableTask, SearchableClient, SearchableUser } from './useAdvancedSearch';
+
 // Shared table hooks
 export * from './table';

@@ -1,0 +1,262 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.searchContainer {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.searchInput {
+  @include flex-center;
+  width: 100%;
+  height: 40px;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-lg;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  cursor: text;
+  transition: $transition-base;
+
+  &:hover {
+    transform: translateY(-1px);
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  &:focus {
+    outline: none;
+    transform: translateY(-2px);
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  :global(body.dark) & {
+    background: $zinc-800;
+    border: none;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.532);
+  }
+
+  @media (max-width: 1024px) {
+    height: 38px;
+    padding: $spacing-sm 16px;
+    font-size: 13px;
+  }
+
+  @media (max-width: 768px) {
+    height: 36px;
+    padding: $spacing-xs $spacing-md;
+    font-size: 12px;
+  }
+}
+
+.searchIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: $color-text-secondary;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: $radius-xl;
+  padding: $spacing-sm 0;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  @include crystallized-scrollbar;
+
+  :global(body.dark) & {
+    background: $zinc-800;
+    border: none;
+    box-shadow: none !important;
+  }
+
+  @media (max-width: 1024px) {
+    padding: 6px 0;
+    border-radius: $radius-lg;
+  }
+
+  @media (max-width: 768px) {
+    padding: 4px 0;
+    border-radius: $radius-sm;
+  }
+}
+
+.menuSection {
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  :global(body.dark) & {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.sectionTitle {
+  @include typography(11px, $font-weight-semibold, $color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: $spacing-md;
+  display: block;
+}
+
+.categoryButton {
+  @include flex-center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  @include typography(13px, $font-weight-medium, $color-text-primary);
+  cursor: pointer;
+  @include glassmorphism($color-bg-glass);
+  border-radius: $radius-sm;
+  margin: 2px 4px;
+  border: 1px solid $color-border-subtle;
+  transition: $transition-base;
+  background: transparent;
+
+  &:hover {
+    transform: translateY(-1px) scale(1.01);
+    @include glassmorphism-hover;
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    @include neomorphic-inset(light);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+    font-weight: $font-weight-semibold;
+  }
+
+  :global(body.dark) & {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.532);
+    border: none;
+    box-shadow: none !important;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: $zinc-700;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: none;
+    }
+
+    &:active {
+      background: $zinc-600;
+      box-shadow: none;
+    }
+
+    &.selected {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 6px $spacing-md;
+    font-size: 11px;
+  }
+}
+
+.categoryIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.categoryLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.infoSection {
+  padding: $spacing-md $spacing-lg;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.infoText {
+  @include typography(12px, $font-weight-normal, $color-text-secondary);
+  flex: 1;
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: $color-text-secondary;
+  transition: $transition-base;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $color-text-primary;
+    transform: scale(1.1);
+  }
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+
+    &:hover {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+}
+
+// Priority filter button styles
+.categoryButton {
+  // Badge inside priority buttons should not have additional padding
+  :global(.badge) {
+    margin: 0;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  // When priority button is selected, make the badge more prominent
+  &.selected :global(.badge) {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    transform: scale(1.05);
+  }
+
+  :global(body.dark) &.selected :global(.badge) {
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
+  }
+}

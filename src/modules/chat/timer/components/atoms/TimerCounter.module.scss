@@ -1,0 +1,37 @@
+/**
+ * TimerCounter Styles (BLUEPRINT)
+ *
+ * REFERENCE: Copy and adapt from /src/components/TimerCounter.module.scss
+ *
+ * REQUIRED ADDITIONS:
+ *
+ * .syncIndicator {
+ *   - Position: absolute top-right
+ *   - Display: flex
+ *   - Align items center
+ *   - Padding: 4px
+ * }
+ *
+ * .pulseDot {
+ *   - Width: 8px
+ *   - Height: 8px
+ *   - Background: #3b82f6
+ *   - Border-radius: 50%
+ *   - Animation: pulse 2s infinite
+ * }
+ *
+ * @keyframes pulse {
+ *   0%, 100% { opacity: 1; transform: scale(1); }
+ *   50% { opacity: 0.5; transform: scale(1.2); }
+ * }
+ *
+ * // States for isOptimistic
+ * .timerCounter.optimistic {
+ *   - Border: 2px solid #3b82f6
+ *   - Background: rgba(59, 130, 246, 0.05)
+ * }
+ */
+
+// TODO: Copy base styles from existing TimerCounter.module.scss
+// TODO: Add syncIndicator and pulseDot styles
+// TODO: Add optimistic state styles

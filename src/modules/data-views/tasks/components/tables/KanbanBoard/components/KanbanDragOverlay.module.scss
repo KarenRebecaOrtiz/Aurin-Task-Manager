@@ -1,0 +1,145 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+@use '@/app/styles/components' as *;
+
+// ==============================================================
+// 🔮 KANBAN DRAG OVERLAY
+// ==============================================================
+
+.taskCard {
+  width: 100%;
+  min-width: 200px;
+  height: auto;
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-glass;
+  border-radius: $radius-lg;
+  border: 1px solid $color-border-subtle;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: $text-sm;
+  font-family: $font-family-primary;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  @include neomorphic-shadow(light);
+
+  &.dragging {
+    opacity: 0.9;
+    background: $color-bg-glass-hover;
+    border-color: rgba(59, 130, 246, 0.3);
+    @include neomorphic-shadow-hover(light);
+  }
+
+  :global(body.dark) & {
+    background: $color-bg-glass-dark;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none !important;
+
+    &.dragging {
+      background: $color-bg-glass-dark-hover;
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: none !important;
+    }
+  }
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  padding: 12px;
+  gap: 8px;
+}
+
+.taskName {
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  line-height: 1.4;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.taskDetails {
+  @include flex-column;
+  gap: $spacing-sm;
+}
+
+.taskDetailsRow {
+  @include flex-between;
+  gap: $spacing-sm;
+  align-items: center;
+  width: 100%;
+}
+
+.taskDetailsLeft {
+  @include flex-center;
+  gap: $spacing-sm;
+}
+
+.clientInfo {
+  @include flex-center;
+  gap: $spacing-xs;
+}
+
+.noClient {
+  @include typography($text-xs, $font-weight-normal, $color-text-muted);
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+.priorityWrapper {
+  @include flex-center;
+  gap: $spacing-xs;
+
+  :global(body.dark) & {
+    img[src*=".svg"] {
+      @include image-filter-dark;
+    }
+  }
+}
+
+.priority-Alta {
+  color: $color-text-primary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.priority-Media {
+  color: $color-text-primary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.priority-Baja {
+  color: $color-text-primary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.touchDragIndicator {
+  @include flex-center;
+  padding: $spacing-xs $spacing-sm;
+  margin-top: $spacing-xs;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: $radius-sm;
+  @include typography(10px, $font-weight-medium, #3b82f6);
+  opacity: 0.8;
+
+  span {
+    font-size: 10px;
+  }
+
+  :global(body.dark) & {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+}
