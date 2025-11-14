@@ -3,8 +3,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 
-// Importar managers para cleanup
-import { PrivateMessagePaginationManager } from '@/hooks/usePrivateMessagePaginationSingleton';
 
 // Define the context shape
 interface AuthContextType {
@@ -62,11 +60,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       if (!user?.id) {
         try {
-          // Cleanup de PrivateMessagePaginationManager
-          const paginationManager = PrivateMessagePaginationManager.getInstance();
-          paginationManager.cleanupAllListeners();
-          
           // Notification managers removed - using NodeMailer instead
+          // Private message cleanup removed - handled by chat module
         } catch {
           // Silent error handling for cleanup
         }

@@ -2,7 +2,14 @@
 
 import React, { useMemo, useCallback, useState } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Lazy load the ProfileCard to avoid bundle size issues
+const ProfileCard = dynamic(
+  () => import('@/modules/profile-card/components/ProfileCard'),
+  { ssr: false }
+);
 
 export interface User {
   id: string;
@@ -31,9 +38,22 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
   showTooltip = true,
 }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
 
   const handleAvatarImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.src = '/empty-image.png';
+  }, []);
+
+  const handleAvatarClick = useCallback((user: User, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedUser(user);
+    setIsProfileCardOpen(true);
+  }, []);
+
+  const handleProfileCardClose = useCallback(() => {
+    setIsProfileCardOpen(false);
+    setSelectedUser(null);
   }, []);
 
   const avatars = useMemo(() => {
@@ -74,7 +94,7 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
           return (
             <div
               key={user.id}
-              className="relative rounded-full  transition-all duration-300"
+              className="relative rounded-full transition-all duration-300 cursor-pointer border-2 border-white"
               style={{
                 width: avatarSize,
                 height: avatarSize,
@@ -84,13 +104,25 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
               }}
               onMouseEnter={() => setHoveredIdx(idx)}
               onMouseLeave={() => setHoveredIdx(null)}
+              onClick={(e) => handleAvatarClick(user, e)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSelectedUser(user);
+                  setIsProfileCardOpen(true);
+                }
+              }}
+              title={`Ver perfil de ${user.fullName}`}
             >
               <Image
                 src={user.imageUrl || '/empty-image.png'}
                 alt={`${user.fullName}'s avatar`}
                 width={avatarSize}
                 height={avatarSize}
-                className="rounded-full object-cover w-full h-full border-2 border-white"
+                className="rounded-full object-cover w-full h-full"
                 onError={handleAvatarImageError}
               />
               <AnimatePresence>
@@ -134,6 +166,15 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
           );
         })}
       </div>
+
+      {/* ProfileCard Modal */}
+      {selectedUser && (
+        <ProfileCard
+          isOpen={isProfileCardOpen}
+          userId={selectedUser.id}
+          onClose={handleProfileCardClose}
+        />
+      )}
     </div>
   );
 };

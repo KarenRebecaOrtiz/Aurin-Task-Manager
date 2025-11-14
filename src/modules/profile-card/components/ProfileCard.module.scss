@@ -1,0 +1,576 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 GLASSMORPHISM PROFILE CARD - NUEVO DISEÑO
+// =================================================================
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 16px;
+
+  :global(body.dark) & {
+    background: rgba(0, 0, 0, 0.4);
+  }
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 684px; // max-w-sm
+  margin: 0 auto;
+}
+
+.closeButton {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: $color-text-secondary;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 1);
+    color: $color-text-primary;
+    transform: scale(1.1);
+  }
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.9);
+    color: $color-text-dark-secondary;
+    border-color: $color-border-dark;
+
+    &:hover {
+      background: rgba(50, 50, 50, 1);
+      color: $color-text-dark-primary;
+    }
+  }
+}
+
+.profileCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  padding: 0px;
+  border-radius: 24px;
+  border: 1px solid $color-border-subtle;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+
+  :global(body.dark) & {
+    background: rgb(26 26 26);
+    border-color:rgb(26 26 26);
+    box-shadow: none!important;
+  }
+}
+
+.coverPhotoSection {
+  position: relative;
+  width: 100%;
+  height: 128px;
+  overflow: hidden;
+}
+
+.coverPhoto {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: $color-bg-light;
+}
+
+.profilePhotoOverlay {
+  position: relative;
+  margin-top: -40px;
+  margin-left: 20px;
+  z-index: 10;
+
+  
+  @media (max-width: 640px) {
+    margin-left: 0;
+    align-self: flex-start;
+    margin-left: 32px;
+  }
+}
+
+.contentSection {
+  padding: 0 32px 32px 32px;
+  width: 100%;
+}
+
+.headerSection {
+  display: flex;
+  flex-direction: row;
+  align-items: start;
+  justify-content: start;
+  width: 100%;
+  
+  @media (max-width: 640px) {
+    align-items: start;
+    text-align: center;
+  }
+}
+
+.avatarContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  
+  flex-shrink: 0;
+  
+  @media (max-width: 640px) {
+    margin-bottom: 0;
+  }
+}
+
+.headerSection {
+  display: flex;
+  align-items: start;
+  flex-direction: row;
+  gap: 20px;
+  width: 100%;
+  
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: start;
+    gap: 16px;
+  }
+}
+
+.nameAndBadgeContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+  flex: 1;
+  gap: 12px;
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: bold;
+  color: $color-text-primary;
+  margin: 0;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.title {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-text-primary;
+  text-align: center;
+  text-transform: uppercase;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.bio {
+  text-align: start;
+  font-size: 14px;
+  line-height: 1.5;
+  color: $color-text-secondary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}
+
+.badgeContainer {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0;
+  
+  // Asegurar que el badge se vea bien en el contexto del ProfileCard
+  .badge {
+    transform: scale(0.8);
+    
+    @media (min-width: 640px) {
+      transform: scale(0.9);
+    }
+  }
+  
+  @media (max-width: 640px) {
+    justify-content: center;
+  }
+}
+
+
+
+.messageButton,
+.configButton {
+  /* Estilos base compartidos */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
+  padding: 12px;
+  border-radius: 12px;
+  font-family: "Urbanist", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  margin: 24px 0;
+  border-radius: 999px;
+  background: $color-border-light;
+
+  :global(body.dark) & {
+    background: $color-border-dark;
+  }
+}
+
+/* Información de Contacto */
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 16px 0px;
+  border-radius: 12px;
+  background: white;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid $color-border-subtle;
+
+  :global(body.dark) & {
+    background: rgb(26 26 26);
+    border-color: rgb(26 26 26);
+  }
+}
+
+.contactItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.contactLabel {
+  font-weight: 600;
+  color: $color-text-secondary;
+  min-width: 120px;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}
+
+.contactValue {
+  color: $color-text-primary;
+  font-weight: 500;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.portfolioLink {
+  color: $color-info;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+  :global(body.dark) & {
+    color: #60a5fa;
+
+    &:hover {
+      color: #93c5fd;
+    }
+  }
+}
+
+/* Stack de Tecnologías */
+.stackSection {
+  margin: 16px 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: 12px;
+  text-align: center;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.stackTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.stackTag {
+  padding: 6px 12px;
+  background: rgba(59, 130, 246, 0.1);
+  color: $color-info;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+
+  :global(body.dark) & {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.3);
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.3);
+    }
+  }
+}
+
+.stackMore {
+  padding: 6px 12px;
+  background: rgba(100, 116, 139, 0.1);
+  color: $color-text-secondary;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+
+  :global(body.dark) & {
+    background: rgba(100, 116, 139, 0.2);
+    color: $color-text-dark-secondary;
+    border-color: rgba(100, 116, 139, 0.3);
+  }
+}
+
+/* Equipos */
+.teamsSection {
+  margin: 16px 0;
+}
+
+.teamsTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.teamTag {
+  padding: 6px 12px;
+  background: rgba(34, 197, 94, 0.1);
+  color: $color-success;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+
+  :global(body.dark) & {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.3);
+
+    &:hover {
+      background: rgba(34, 197, 94, 0.3);
+    }
+  }
+}
+
+.socialLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.socialButtonContainer {
+  position: relative;
+}
+
+.socialButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+
+  :global(body.dark) & {
+    background: rgba(60, 60, 60, 0.5);
+
+    &:hover {
+      background: rgba(80, 80, 80, 0.8);
+    }
+  }
+}
+
+.socialIcon {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(60, 60, 60, 0.7);
+  transition: all 0.2s ease;
+
+  :global(body.dark) & {
+    color: rgba(195, 195, 195, 0.7);
+  }
+
+  .socialButton:hover & {
+    color: rgba(60, 60, 60, 1);
+
+    :global(body.dark) & {
+      color: rgba(255, 255, 255, 1);
+    }
+  }
+}
+
+
+
+.tooltip {
+  position: absolute;
+  top: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 6px 12px;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: $color-text-primary;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: all 0.3s ease;
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.9);
+    color: $color-text-dark-primary;
+    border-color: $color-border-dark;
+  }
+
+  &.tooltipVisible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tooltipArrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: $color-border-dark;
+  }
+}
+
+.backgroundGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  z-index: -10;
+  transition: all 0.5s ease;
+  opacity: 0.3;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(168, 85, 247, 0.5) 100%);
+  filter: blur(32px);
+
+  :global(body.dark) & {
+    opacity: 0.2;
+  }
+}
+
+// Estados de carga y error
+.loadingContainer,
+.errorContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: $color-text-secondary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}

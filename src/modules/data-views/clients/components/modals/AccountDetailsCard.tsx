@@ -6,10 +6,14 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  overlayVariants,
+  modalCenterVariants,
+  transitions,
+} from '@/modules/modal/config/animations';
+import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -270,344 +274,364 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardProps> = ({
   const isCreateMode = initialMode === 'create';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={styles.accountDialog}>
-        <DialogHeader>
-          <DialogTitle className={styles.dialogTitle}>
-            <Info className={styles.titleIcon} />
-            {isCreateMode ? 'Crear Nueva Cuenta' : isViewMode ? 'Detalles de la Cuenta' : 'Editar Cuenta'}
-          </DialogTitle>
-        </DialogHeader>
+    <AnimatePresence>
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <motion.div
+            className={styles.overlay}
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <motion.div
+              className={styles.card}
+              variants={modalCenterVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <DialogContent className={styles.accountDialog}>
+                <DialogHeader>
+                  <DialogTitle className={styles.dialogTitle}>
+                    <Info className={styles.titleIcon} />
+                    {isCreateMode ? 'Crear Nueva Cuenta' : isViewMode ? 'Detalles de la Cuenta' : 'Editar Cuenta'}
+                  </DialogTitle>
+                </DialogHeader>
 
-        <DialogBody className={styles.dialogBody}>
-          <div className={styles.contentGrid}>
-            {/* Avatar and Basic Info */}
-            <div className={styles.avatarSection}>
-              <div
-                className={`${styles.avatarWrapper} ${!isViewMode ? styles.editable : ''}`}
-                onClick={() => !isViewMode && fileInputRef.current?.click()}
-                role={!isViewMode ? 'button' : undefined}
-                tabIndex={!isViewMode ? 0 : undefined}
-              >
-                <Image
-                  src={imagePreview}
-                  alt={formData.name || 'Client avatar'}
-                  width={120}
-                  height={120}
-                  className={styles.avatar}
-                />
-                {!isViewMode && (
-                  <div className={styles.avatarOverlay}>
-                    <span>Cambiar imagen</span>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  onChange={handleImageChange}
-                  disabled={isViewMode}
-                />
-              </div>
+                <div className={styles.dialogBody}>
+                  <div className={styles.contentGrid}>
+                    {/* Avatar and Basic Info */}
+                    <div className={styles.avatarSection}>
+                      <div
+                        className={`${styles.avatarWrapper} ${!isViewMode ? styles.editable : ''}`}
+                        onClick={() => !isViewMode && fileInputRef.current?.click()}
+                        role={!isViewMode ? 'button' : undefined}
+                        tabIndex={!isViewMode ? 0 : undefined}
+                      >
+                        <Image
+                          src={imagePreview}
+                          alt={formData.name || 'Client avatar'}
+                          width={120}
+                          height={120}
+                          className={styles.avatar}
+                        />
+                        {!isViewMode && (
+                          <div className={styles.avatarOverlay}>
+                            <span>Cambiar imagen</span>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/gif"
+                          ref={fileInputRef}
+                          style={{ display: 'none' }}
+                          onChange={handleImageChange}
+                          disabled={isViewMode}
+                        />
+                      </div>
 
-              <div className={styles.basicInfo}>
-                <div className={styles.field}>
-                  <Label htmlFor="clientName">Nombre del Cliente *</Label>
-                  {isViewMode ? (
-                    <p className={styles.value}>{formData.name || 'N/A'}</p>
-                  ) : (
-                    <input
-                      id="clientName"
-                      type="text"
-                      placeholder="Ej. Clínica Azul, Tienda Koala"
-                      value={formData.name}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                      className={styles.input}
-                      required
-                    />
-                  )}
-                </div>
+                      <div className={styles.basicInfo}>
+                        <div className={styles.field}>
+                          <Label htmlFor="clientName">Nombre del Cliente *</Label>
+                          {isViewMode ? (
+                            <p className={styles.value}>{formData.name || 'N/A'}</p>
+                          ) : (
+                            <input
+                              id="clientName"
+                              type="text"
+                              placeholder="Ej. Clínica Azul, Tienda Koala"
+                              value={formData.name}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                              className={styles.input}
+                              required
+                            />
+                          )}
+                        </div>
 
-                <div className={styles.field}>
-                  <Label htmlFor="clientStatus">Estado</Label>
-                  <div className={styles.switchField}>
-                    {isViewMode ? (
-                      <span className={`${styles.statusBadge} ${formData.isActive ? styles.active : styles.inactive}`}>
-                        {formData.isActive ? 'Activo' : 'Inactivo'}
-                      </span>
-                    ) : (
-                      <Switch
-                        id="clientStatus"
-                        checked={formData.isActive}
-                        onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
-                      />
+                        <div className={styles.field}>
+                          <Label htmlFor="clientStatus">Estado</Label>
+                          <div className={styles.switchField}>
+                            {isViewMode ? (
+                              <span className={`${styles.statusBadge} ${formData.isActive ? styles.active : styles.inactive}`}>
+                                {formData.isActive ? 'Activo' : 'Inactivo'}
+                              </span>
+                            ) : (
+                              <Switch
+                                id="clientStatus"
+                                checked={formData.isActive}
+                                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact Information */}
+                    <div className={styles.section}>
+                      <h3 className={styles.sectionTitle}>
+                        <User className={styles.sectionIcon} />
+                        Información de Contacto
+                      </h3>
+                      <div className={styles.fieldGrid}>
+                        <div className={styles.field}>
+                          <Label htmlFor="clientEmail">
+                            <Mail className={styles.fieldIcon} />
+                            Email
+                          </Label>
+                          {isViewMode ? (
+                            <p className={styles.value}>{formData.email || 'N/A'}</p>
+                          ) : (
+                            <input
+                              id="clientEmail"
+                              type="email"
+                              placeholder="correo@ejemplo.com"
+                              value={formData.email}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                              className={styles.input}
+                            />
+                          )}
+                        </div>
+
+                        <div className={styles.field}>
+                          <Label htmlFor="clientPhone">
+                            <Phone className={styles.fieldIcon} />
+                            Teléfono
+                          </Label>
+                          {isViewMode ? (
+                            <p className={styles.value}>{formData.phone || 'N/A'}</p>
+                          ) : (
+                            <input
+                              id="clientPhone"
+                              type="tel"
+                              placeholder="+1 234 567 890"
+                              value={formData.phone}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                              className={styles.input}
+                            />
+                          )}
+                        </div>
+
+                        <div className={`${styles.field} ${styles.fullWidth}`}>
+                          <Label htmlFor="clientAddress">
+                            <MapPin className={styles.fieldIcon} />
+                            Dirección
+                          </Label>
+                          {isViewMode ? (
+                            <p className={styles.value}>{formData.address || 'N/A'}</p>
+                          ) : (
+                            <input
+                              id="clientAddress"
+                              type="text"
+                              placeholder="Calle Principal 123, Ciudad"
+                              value={formData.address}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
+                              className={styles.input}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Business Information */}
+                    <div className={styles.section}>
+                      <h3 className={styles.sectionTitle}>
+                        <Building2 className={styles.sectionIcon} />
+                        Información del Negocio
+                      </h3>
+                      <div className={styles.fieldGrid}>
+                        <div className={styles.field}>
+                          <Label htmlFor="clientIndustry">
+                            <Tag className={styles.fieldIcon} />
+                            Industria
+                          </Label>
+                          {isViewMode ? (
+                            <p className={styles.value}>{formData.industry || 'N/A'}</p>
+                          ) : (
+                            <input
+                              id="clientIndustry"
+                              type="text"
+                              placeholder="Ej. Salud, Retail, Tecnología"
+                              value={formData.industry}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, industry: e.target.value }))}
+                              className={styles.input}
+                            />
+                          )}
+                        </div>
+
+                        <div className={styles.field}>
+                          <Label htmlFor="clientWebsite">Sitio Web</Label>
+                          {isViewMode ? (
+                            <p className={styles.value}>
+                              {formData.website ? (
+                                <a href={formData.website} target="_blank" rel="noopener noreferrer" className={styles.link}>
+                                  {formData.website}
+                                </a>
+                              ) : (
+                                'N/A'
+                              )}
+                            </p>
+                          ) : (
+                            <input
+                              id="clientWebsite"
+                              type="url"
+                              placeholder="https://ejemplo.com"
+                              value={formData.website}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, website: e.target.value }))}
+                              className={styles.input}
+                            />
+                          )}
+                        </div>
+
+                        <div className={styles.field}>
+                          <Label htmlFor="clientTaxId">RFC / Tax ID</Label>
+                          {isViewMode ? (
+                            <p className={styles.value}>{formData.taxId || 'N/A'}</p>
+                          ) : (
+                            <input
+                              id="clientTaxId"
+                              type="text"
+                              placeholder="ABC123456XYZ"
+                              value={formData.taxId}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, taxId: e.target.value }))}
+                              className={styles.input}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Projects */}
+                    <div className={styles.section}>
+                      <h3 className={styles.sectionTitle}>
+                        <Briefcase className={styles.sectionIcon} />
+                        Proyectos
+                      </h3>
+                      <div className={styles.projectsList}>
+                        <AnimatePresence mode="popLayout">
+                          {formData.projects.map((project, index) => (
+                            <motion.div
+                              key={index}
+                              className={styles.projectItem}
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              {isViewMode ? (
+                                <p className={styles.projectValue}>{project || `Proyecto ${index + 1}`}</p>
+                              ) : (
+                                <>
+                                  <input
+                                    type="text"
+                                    placeholder={`Proyecto ${index + 1}`}
+                                    value={project}
+                                    onChange={(e) => handleProjectChange(index, e.target.value)}
+                                    className={styles.input}
+                                  />
+                                  {formData.projects.length > 1 && (
+                                    <CrystalButton
+                                      variant="secondary"
+                                      size="small"
+                                      onClick={() => handleRemoveProject(index)}
+                                      className={styles.removeButton}
+                                    >
+                                      ✕
+                                    </CrystalButton>
+                                  )}
+                                </>
+                              )}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+
+                        {!isViewMode && (
+                          <CrystalButton variant="secondary" size="small" onClick={handleAddProject} className={styles.addProjectButton}>
+                            + Añadir Proyecto
+                          </CrystalButton>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div className={`${styles.section} ${styles.fullWidth}`}>
+                      <h3 className={styles.sectionTitle}>
+                        <FileText className={styles.sectionIcon} />
+                        Notas
+                      </h3>
+                      {isViewMode ? (
+                        <p className={styles.value}>{formData.notes || 'Sin notas'}</p>
+                      ) : (
+                        <textarea
+                          placeholder="Agrega notas adicionales sobre este cliente..."
+                          value={formData.notes}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                          className={styles.textarea}
+                          rows={4}
+                        />
+                      )}
+                    </div>
+
+                    {/* Metadata */}
+                    {!isCreateMode && (
+                      <div className={`${styles.section} ${styles.metadata}`}>
+                        <div className={styles.metadataGrid}>
+                          {formData.createdAt && (
+                            <div className={styles.metadataItem}>
+                              <Calendar className={styles.metadataIcon} />
+                              <span className={styles.metadataLabel}>Creado:</span>
+                              <span className={styles.metadataValue}>
+                                {new Date(formData.createdAt).toLocaleDateString('es-MX', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          {formData.lastModified && (
+                            <div className={styles.metadataItem}>
+                              <Calendar className={styles.metadataIcon} />
+                              <span className={styles.metadataLabel}>Última modificación:</span>
+                              <span className={styles.metadataValue}>
+                                {new Date(formData.lastModified).toLocaleDateString('es-MX', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Contact Information */}
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>
-                <User className={styles.sectionIcon} />
-                Información de Contacto
-              </h3>
-              <div className={styles.fieldGrid}>
-                <div className={styles.field}>
-                  <Label htmlFor="clientEmail">
-                    <Mail className={styles.fieldIcon} />
-                    Email
-                  </Label>
-                  {isViewMode ? (
-                    <p className={styles.value}>{formData.email || 'N/A'}</p>
-                  ) : (
-                    <input
-                      id="clientEmail"
-                      type="email"
-                      placeholder="correo@ejemplo.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                      className={styles.input}
-                    />
-                  )}
-                </div>
-
-                <div className={styles.field}>
-                  <Label htmlFor="clientPhone">
-                    <Phone className={styles.fieldIcon} />
-                    Teléfono
-                  </Label>
-                  {isViewMode ? (
-                    <p className={styles.value}>{formData.phone || 'N/A'}</p>
-                  ) : (
-                    <input
-                      id="clientPhone"
-                      type="tel"
-                      placeholder="+1 234 567 890"
-                      value={formData.phone}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                      className={styles.input}
-                    />
-                  )}
-                </div>
-
-                <div className={`${styles.field} ${styles.fullWidth}`}>
-                  <Label htmlFor="clientAddress">
-                    <MapPin className={styles.fieldIcon} />
-                    Dirección
-                  </Label>
-                  {isViewMode ? (
-                    <p className={styles.value}>{formData.address || 'N/A'}</p>
-                  ) : (
-                    <input
-                      id="clientAddress"
-                      type="text"
-                      placeholder="Calle Principal 123, Ciudad"
-                      value={formData.address}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
-                      className={styles.input}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Business Information */}
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>
-                <Building2 className={styles.sectionIcon} />
-                Información del Negocio
-              </h3>
-              <div className={styles.fieldGrid}>
-                <div className={styles.field}>
-                  <Label htmlFor="clientIndustry">
-                    <Tag className={styles.fieldIcon} />
-                    Industria
-                  </Label>
-                  {isViewMode ? (
-                    <p className={styles.value}>{formData.industry || 'N/A'}</p>
-                  ) : (
-                    <input
-                      id="clientIndustry"
-                      type="text"
-                      placeholder="Ej. Salud, Retail, Tecnología"
-                      value={formData.industry}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, industry: e.target.value }))}
-                      className={styles.input}
-                    />
-                  )}
-                </div>
-
-                <div className={styles.field}>
-                  <Label htmlFor="clientWebsite">Sitio Web</Label>
-                  {isViewMode ? (
-                    <p className={styles.value}>
-                      {formData.website ? (
-                        <a href={formData.website} target="_blank" rel="noopener noreferrer" className={styles.link}>
-                          {formData.website}
-                        </a>
-                      ) : (
-                        'N/A'
-                      )}
-                    </p>
-                  ) : (
-                    <input
-                      id="clientWebsite"
-                      type="url"
-                      placeholder="https://ejemplo.com"
-                      value={formData.website}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, website: e.target.value }))}
-                      className={styles.input}
-                    />
-                  )}
-                </div>
-
-                <div className={styles.field}>
-                  <Label htmlFor="clientTaxId">RFC / Tax ID</Label>
-                  {isViewMode ? (
-                    <p className={styles.value}>{formData.taxId || 'N/A'}</p>
-                  ) : (
-                    <input
-                      id="clientTaxId"
-                      type="text"
-                      placeholder="ABC123456XYZ"
-                      value={formData.taxId}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, taxId: e.target.value }))}
-                      className={styles.input}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Projects */}
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>
-                <Briefcase className={styles.sectionIcon} />
-                Proyectos
-              </h3>
-              <div className={styles.projectsList}>
-                <AnimatePresence mode="popLayout">
-                  {formData.projects.map((project, index) => (
-                    <motion.div
-                      key={index}
-                      className={styles.projectItem}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {isViewMode ? (
-                        <p className={styles.projectValue}>{project || `Proyecto ${index + 1}`}</p>
-                      ) : (
-                        <>
-                          <input
-                            type="text"
-                            placeholder={`Proyecto ${index + 1}`}
-                            value={project}
-                            onChange={(e) => handleProjectChange(index, e.target.value)}
-                            className={styles.input}
-                          />
-                          {formData.projects.length > 1 && (
-                            <CrystalButton
-                              variant="secondary"
-                              size="small"
-                              onClick={() => handleRemoveProject(index)}
-                              className={styles.removeButton}
-                            >
-                              ✕
-                            </CrystalButton>
-                          )}
-                        </>
-                      )}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {!isViewMode && (
-                  <CrystalButton variant="secondary" size="small" onClick={handleAddProject} className={styles.addProjectButton}>
-                    + Añadir Proyecto
+                <DialogFooter className={styles.dialogFooter}>
+                  <CrystalButton variant="secondary" onClick={handleCancel} disabled={isSaving}>
+                    {isViewMode ? 'Cerrar' : 'Cancelar'}
                   </CrystalButton>
-                )}
-              </div>
-            </div>
 
-            {/* Notes */}
-            <div className={`${styles.section} ${styles.fullWidth}`}>
-              <h3 className={styles.sectionTitle}>
-                <FileText className={styles.sectionIcon} />
-                Notas
-              </h3>
-              {isViewMode ? (
-                <p className={styles.value}>{formData.notes || 'Sin notas'}</p>
-              ) : (
-                <textarea
-                  placeholder="Agrega notas adicionales sobre este cliente..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                  className={styles.textarea}
-                  rows={4}
-                />
-              )}
-            </div>
-
-            {/* Metadata */}
-            {!isCreateMode && (
-              <div className={`${styles.section} ${styles.metadata}`}>
-                <div className={styles.metadataGrid}>
-                  {formData.createdAt && (
-                    <div className={styles.metadataItem}>
-                      <Calendar className={styles.metadataIcon} />
-                      <span className={styles.metadataLabel}>Creado:</span>
-                      <span className={styles.metadataValue}>
-                        {new Date(formData.createdAt).toLocaleDateString('es-MX', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </span>
-                    </div>
+                  {isViewMode && isAdmin && (
+                    <CrystalButton variant="primary" onClick={() => setMode('edit')}>
+                      Editar
+                    </CrystalButton>
                   )}
-                  {formData.lastModified && (
-                    <div className={styles.metadataItem}>
-                      <Calendar className={styles.metadataIcon} />
-                      <span className={styles.metadataLabel}>Última modificación:</span>
-                      <span className={styles.metadataValue}>
-                        {new Date(formData.lastModified).toLocaleDateString('es-MX', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </span>
-                    </div>
+
+                  {!isViewMode && (
+                    <CrystalButton variant="primary" onClick={handleSave} loading={isSaving} disabled={isSaving}>
+                      {isSaving ? 'Guardando...' : 'Guardar'}
+                    </CrystalButton>
                   )}
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogBody>
-
-        <DialogFooter className={styles.dialogFooter}>
-          <CrystalButton variant="secondary" onClick={handleCancel} disabled={isSaving}>
-            {isViewMode ? 'Cerrar' : 'Cancelar'}
-          </CrystalButton>
-
-          {isViewMode && isAdmin && (
-            <CrystalButton variant="primary" onClick={() => setMode('edit')}>
-              Editar
-            </CrystalButton>
-          )}
-
-          {!isViewMode && (
-            <CrystalButton variant="primary" onClick={handleSave} loading={isSaving} disabled={isSaving}>
-              {isSaving ? 'Guardando...' : 'Guardar'}
-            </CrystalButton>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+                </DialogFooter>
+              </DialogContent>
+            </motion.div>
+          </motion.div>
+        </Dialog>
+      )}
+    </AnimatePresence>
   );
 };
 

@@ -11,8 +11,10 @@
 
 // Organisms
 export { default as ChatSidebar } from './components/ChatSidebar';
+export { default as ChatSidebarVirtualized } from './components/ChatSidebarVirtualized';
 export { ChatHeader } from './components/organisms/ChatHeader';
 export { MessageList } from './components/organisms/MessageList';
+export { VirtualizedMessageList } from './components/organisms/VirtualizedMessageList';
 
 // Molecules
 export { MessageItem } from './components/molecules/MessageItem';
@@ -34,6 +36,7 @@ export {
   useMessagePagination,
   useMessageActions,
 } from './hooks';
+export { useVirtuosoMessages } from './hooks/useVirtuosoMessages';
 
 // ============================================================================
 // STORES

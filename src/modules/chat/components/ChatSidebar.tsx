@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useRef, useCallback, memo, useMemo, useEffect } from "react";
+import React, { useState, useRef, useCallback, memo, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSidebarStateStore } from "@/stores/sidebarStateStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useShallow } from "zustand/react/shallow";
 import styles from "../styles/ChatSidebar.module.scss";
-import { ChatHeader, MessageList } from "./organisms";
+import { ChatHeader } from "./organisms";
+import { VirtualizedMessageList } from "./organisms/VirtualizedMessageList";
 import { InputChat } from "./organisms/InputChat"; // ✅ Usando InputChat MODULAR que replica el original
 import { MessageItem } from "./molecules/MessageItem";
 import { useEncryption } from "@/hooks/useEncryption"; // ✅ USAR HOOK ORIGINAL
-import { useMessagePagination } from "@/hooks/useMessagePagination"; // ✅ USAR HOOK ORIGINAL
+import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages"; // ✅ NUEVO HOOK con virtuoso
 import { useMessageActions } from "@/hooks/useMessageActions"; // ✅ USAR HOOK ORIGINAL
 import type { ChatSidebarProps } from "../types";
 
@@ -39,10 +40,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
   
   // Obtener información del cliente desde dataStore
   const clients = useDataStore(useShallow(state => state.clients));
-  const clientImageUrl = useMemo(() => {
-    if (!task?.clientId) return undefined;
+  const clientData = useMemo(() => {
+    if (!task?.clientId) return null;
     const client = clients.find(c => c.id === task.clientId);
-    return client?.imageUrl || '/empty-image.png';
+    return client ? {
+      id: client.id,
+      name: client.name,
+      imageUrl: client.imageUrl || '/empty-image.png'
+    } : null;
   }, [task?.clientId, clients]);
 
 
@@ -56,23 +61,23 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
     // Callback para nuevos mensajes en tiempo real
   }, []);
 
-  // ✅ Hook original de paginación (tiene todo: Firebase, cache, real-time, etc.)
+  // ✅ Hook nuevo con virtuoso (infinite scroll + ordenamiento correcto)
   const {
     messages,
-    groupedMessages,
+    groupCounts,
+    groupDates,
     isLoadingMore,
     hasMore,
     loadMoreMessages,
-    addOptimisticMessage,
-    updateOptimisticMessage,
-  } = useMessagePagination({
+    initialLoad,
+  } = useVirtuosoMessages({
     taskId: task?.id || '',
-    pageSize: 10,
+    pageSize: 50,
     decryptMessage,
     onNewMessage: handleNewMessage,
   });
 
-  // ✅ Hook original de acciones (tiene Optimistic UI, encriptación, etc.)
+  // ✅ Hook original de acciones (sin optimistic UI, usa real-time listener)
   const {
     sendMessage,
     editMessage,
@@ -82,8 +87,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
   } = useMessageActions({
     task: task as any, // Cast temporal
     encryptMessage,
-    addOptimisticMessage,
-    updateOptimisticMessage,
+    addOptimisticMessage: () => {}, // No usado - real-time listener maneja nuevos mensajes
+    updateOptimisticMessage: () => {},
   });
 
   // Estados de reply/edit locales
@@ -132,20 +137,22 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
           <ChatHeader
             task={task}
             clientName={clientName}
-            clientImageUrl={clientImageUrl}
+            clientImageUrl={clientData?.imageUrl}
             users={users}
             messages={messages}
           />
         </div>
 
-        {/* Content (Messages) */}
+        {/* Content (Messages) - ✅ Lista virtualizada con infinite scroll */}
         <div className={styles.content}>
-          <MessageList
-            groupedMessages={groupedMessages || []} // ✅ Pasar groupedMessages en lugar de messages
+          <VirtualizedMessageList
+            messages={messages}
+            groupCounts={groupCounts}
+            groupDates={groupDates}
             isLoadingMore={isLoadingMore}
             hasMore={hasMore}
             onLoadMore={loadMoreMessages}
-            onInitialLoad={() => {}} // El hook original ya carga automáticamente
+            onInitialLoad={initialLoad}
             renderMessage={(message) => {
               const isOwn = message.senderId === user?.id;
 
@@ -163,11 +170,18 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
                   }}
                   onEdit={(msg) => {
                     setEditingMessageId(msg.id);
+                    setEditingText(msg.text || '');
                   }}
-                  onDelete={(msgId) => deleteMessage(msgId)}
+                  onDelete={(msgId) => {
+                    if (confirm("¿Estás seguro de que quieres eliminar este mensaje?")) {
+                      deleteMessage(msgId);
+                    }
+                  }}
                   onReply={(msg) => setReplyingTo(msg)}
                   onDownload={(msg) => {
-                    // Handle download action
+                    if (msg.fileUrl) {
+                      window.open(msg.fileUrl, '_blank');
+                    }
                   }}
                 />
               );

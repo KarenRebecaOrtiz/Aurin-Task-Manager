@@ -117,9 +117,9 @@ export async function requireAuthProtected(): Promise<AuthResult> {
  * ```
  */
 export function withAuth<T = unknown>(
-  handler: (userId: string) => Promise<NextResponse<T>>
-): () => Promise<NextResponse> {
-  return async () => {
+  handler: (userId: string, ...args: any[]) => Promise<NextResponse<T>>
+): (...args: any[]) => Promise<NextResponse> {
+  return async (...args: any[]) => {
     const { error, userId } = await requireAuth();
 
     if (error || !userId) {
@@ -127,7 +127,7 @@ export function withAuth<T = unknown>(
     }
 
     try {
-      return await handler(userId);
+      return await handler(userId, ...args);
     } catch (handlerError) {
       console.error('[Auth] Handler error:', handlerError);
       throw handlerError;

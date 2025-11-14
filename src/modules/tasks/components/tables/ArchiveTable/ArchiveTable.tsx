@@ -1,0 +1,923 @@
+'use client';
+
+import { useEffect, useRef, useMemo, memo, useCallback, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { motion, AnimatePresence } from 'framer-motion';
+import Table from '@/modules/shared/components/ui/Table';
+import ActionMenu from '../../ui/ActionMenu';
+import styles from './ArchiveTable.module.scss';
+
+// ✅ Nuevos componentes atómicos
+import { SearchInput } from '@/modules/shared/components/atoms/Input';
+import { Button } from '@/modules/shared/components/atoms/Button';
+import { useAuth } from '@/contexts/AuthContext';
+import SkeletonLoader from '@/components/SkeletonLoader';
+import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
+import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
+import { archiveTableStore } from '../../../stores/archiveTableStore';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
+import { useDataStore } from '@/stores/dataStore';
+import { useTaskArchiving } from '../../../hooks/useTaskArchiving';
+import { useTasksCommon } from '../../../hooks/useTasksCommon';
+
+// ✅ NEW: Import shared cell components
+import { ClientCell as SharedClientCell, UserCell, DateCell } from '../../../components/shared/cells';
+
+interface User {
+  id: string;
+  imageUrl: string;
+  fullName: string;
+  role: string;
+}
+
+interface Task {
+  id: string;
+  clientId: string;
+  project: string;
+  name: string;
+  description: string;
+  status: string;
+  priority: string;
+  startDate: string | null;
+  endDate: string | null;
+  LeadedBy: string[];
+  AssignedTo: string[];
+  createdAt: string;
+  CreatedBy?: string;
+  lastActivity?: string;
+  hasUnreadUpdates?: boolean;
+  lastViewedBy?: { [userId: string]: string };
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
+}
+
+// type TaskView = 'table' | 'kanban';
+
+
+interface ArchiveTableProps {
+  onEditTaskOpen: (taskId: string) => void;
+  onViewChange: (view: string) => void;
+  onDeleteTaskOpen: (taskId: string) => void;
+  onClose: () => void;
+  onTaskArchive?: (task: unknown, action: 'archive' | 'unarchive') => Promise<boolean>;
+  onDataRefresh: () => void;
+}
+
+const ArchiveTable: React.FC<ArchiveTableProps> = memo(
+  ({
+    onEditTaskOpen,
+    onViewChange,
+    onDeleteTaskOpen,
+    onClose,
+    onTaskArchive,
+    onDataRefresh,
+  }) => {
+    const { user } = useUser();
+    const { isAdmin } = useAuth();
+    
+    // ✅ Hook centralizado para archivado/desarchivado
+    const {
+      handleUnarchiveTask: unarchiveTaskCentralized,
+      handleUndo: undoCentralized,
+      undoStack: centralizedUndoStack,
+      showUndo: centralizedShowUndo
+    } = useTaskArchiving({
+      onSuccess: (task, action) => {
+        // Callback para actualizar la UI después de cambios exitosos
+        const currentState = archiveTableStore.getState();
+        if (action === 'unarchive') {
+          // Remover tarea desarchivada del filtrado local (ya que mostramos solo archivadas)
+          currentState.setFilteredTasks(currentState.filteredTasks.filter(t => t.id !== task.id));
+        } else {
+          // Agregar tarea archivada al filtrado local
+          currentState.setFilteredTasks([...currentState.filteredTasks, { ...task, archived: true }]);
+        }
+      },
+      onError: (error, task, action) => {
+        // eslint-disable-next-line no-console
+        console.error(`Error ${action}ing task:`, error);
+      }
+    });
+    
+    // ✅ Hook común centralizado
+    const {
+      tasks: commonTasks,
+      clients: commonClients,
+      users: commonUsers,
+      userId: commonUserId,
+      isAdmin: commonIsAdmin,
+      applyTaskFilters,
+      getInvolvedUserIds,
+      canUserViewTask,
+      getClientName,
+      animateClick,
+      createPrioritySelectHandler,
+      createClientSelectHandler,
+      createUserFilterHandler,
+    } = useTasksCommon();
+    
+    // Hook para detectar el viewport
+    const [isMobile, setIsMobile] = useState(false);
+    
+    // Estado para visibilidad de columnas
+    const [visibleColumns, setVisibleColumns] = useState<string[]>([
+      'clientId', 'name', 'notificationDot', 'assignedTo', 'status', 'priority', 'archivedAt', 'action'
+    ]);
+    
+    useEffect(() => {
+      const checkViewport = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      
+      checkViewport();
+      window.addEventListener('resize', checkViewport);
+      
+      return () => window.removeEventListener('resize', checkViewport);
+    }, []);
+    
+    // Usa useDataStore/useShallow para obtener tasks, users, clients, etc. directamente
+    const tasks = useDataStore(useShallow(state => state.tasks));
+    const clients = useDataStore(useShallow(state => state.clients));
+    const users = useDataStore(useShallow(state => state.users));
+    // const isLoadingTasks = useDataStore(useShallow(state => state.isLoadingTasks));
+    // const isLoadingClients = useDataStore(useShallow(state => state.isLoadingClients));
+    // const isLoadingUsers = useDataStore(useShallow(state => state.isLoadingUsers));
+
+    // Optimizar selectores de Zustand para evitar re-renders innecesarios
+    const {
+      // Estado
+      filteredTasks,
+      sortKey,
+      sortDirection,
+      searchQuery,
+      priorityFilter,
+      clientFilter,
+      isPriorityDropdownOpen,
+      isClientDropdownOpen,
+      isUserDropdownOpen,
+      userFilter,
+      // Acciones
+      setFilteredTasks,
+      setSortKey,
+      setSortDirection,
+      setSearchQuery,
+      setPriorityFilter,
+      setClientFilter,
+      setIsPriorityDropdownOpen,
+      setIsClientDropdownOpen,
+      setIsUserDropdownOpen,
+      setUserFilter,
+    } = useStore(
+      archiveTableStore,
+      useShallow((state) => ({
+        // Estado
+        filteredTasks: state.filteredTasks,
+        sortKey: state.sortKey,
+        sortDirection: state.sortDirection,
+        searchQuery: state.searchQuery,
+        priorityFilter: state.priorityFilter,
+        clientFilter: state.clientFilter,
+        isPriorityDropdownOpen: state.isPriorityDropdownOpen,
+        isClientDropdownOpen: state.isClientDropdownOpen,
+        isUserDropdownOpen: state.isUserDropdownOpen,
+        userFilter: state.userFilter,
+        // Acciones
+        setFilteredTasks: state.setFilteredTasks,
+        setSortKey: state.setSortKey,
+        setSortDirection: state.setSortDirection,
+        setSearchQuery: state.setSearchQuery,
+        setPriorityFilter: state.setPriorityFilter,
+        setClientFilter: state.setClientFilter,
+        setIsPriorityDropdownOpen: state.setIsPriorityDropdownOpen,
+        setIsClientDropdownOpen: state.setIsClientDropdownOpen,
+        setIsUserDropdownOpen: state.setIsUserDropdownOpen,
+        setUserFilter: state.setUserFilter,
+      }))
+    );
+    
+    const actionMenuRef = useRef<HTMLDivElement>(null);
+    const priorityDropdownRef = useRef<HTMLDivElement>(null);
+    const clientDropdownRef = useRef<HTMLDivElement>(null);
+    const userDropdownRef = useRef<HTMLDivElement>(null);
+    const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+    const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const userId = useMemo(() => user?.id || '', [user]);
+
+    // ✅ Usar datos externos solo si están disponibles, de lo contrario usar dataStore
+    const effectiveTasks = tasks;
+    const effectiveClients = clients;
+    const effectiveUsers = users;
+
+    // CRÍTICO: Actualizar inmediatamente cuando cambien los datos externos
+    useEffect(() => {
+      if (tasks && tasks.length > 0) {
+        // Datos disponibles para procesar
+      }
+    }, [tasks]);
+
+    useEffect(() => {
+      if (clients && clients.length > 0) {
+        }
+    }, [clients]);
+
+    useEffect(() => {
+      if (users && users.length > 0) {
+      }
+    }, [users]);
+
+    // CRÍTICO: ArchiveTable SIEMPRE filtra tareas NO archivadas (archived: false)
+    const archivedTasks = useMemo(() => {
+      const archived = effectiveTasks.filter(task => {
+        const isArchived = Boolean(task.archived);
+        return isArchived; // Solo mostrar tareas ARCHIVADAS
+      });
+      
+      return archived;
+    }, [effectiveTasks]);
+
+    // ✅ ELIMINADO: getInvolvedUserIds ahora viene del hook centralizado useTasksCommon
+
+    const memoizedFilteredTasks = useMemo(() => {
+      const filtered = archivedTasks.filter((task) => {
+        // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
+        const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
+        if (!canViewTask) {
+          return false;
+        }
+        
+        const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+        const matchesClient = !clientFilter || task.clientId === clientFilter;
+        let matchesUser = true;
+        if (userFilter === 'me') {
+          matchesUser = getInvolvedUserIds(task).includes(userId);
+        } else if (userFilter && userFilter !== 'me') {
+          matchesUser = getInvolvedUserIds(task).includes(userFilter);
+        }
+        return matchesSearch && matchesPriority && matchesClient && matchesUser;
+      });
+      return filtered;
+    }, [archivedTasks, searchQuery, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
+
+    useEffect(() => {
+      setFilteredTasks(memoizedFilteredTasks);
+    }, [memoizedFilteredTasks, setFilteredTasks]);
+
+    const handleUserFilter = (id: string) => {
+      setUserFilter(id);
+      setIsUserDropdownOpen(false);
+    };
+
+    // ✅ ELIMINADO: getClientName ahora viene del hook centralizado useTasksCommon
+
+    // ✅ CENTRALIZADO: Usar hook centralizado para desarchivar tareas
+    const handleUnarchiveTask = useCallback(async (task: Task) => {
+      // ✅ CORREGIDO: Permitir desarchivar a admins Y creadores de la tarea
+      if (!isAdmin && task.CreatedBy !== userId) {
+        // eslint-disable-next-line no-console
+        console.warn('[ArchiveTable] Unarchive intentado por usuario sin permisos:', { 
+          isAdmin, 
+          taskCreatedBy: task.CreatedBy, 
+          currentUserId: userId 
+        });
+        return;
+      }
+
+      try {
+        await unarchiveTaskCentralized(task, userId, isAdmin);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[ArchiveTable] Error unarchiving task:', error);
+        if (onDataRefresh) {
+          onDataRefresh();
+        }
+      }
+    }, [isAdmin, userId, onDataRefresh, unarchiveTaskCentralized]);
+
+    // ✅ CENTRALIZADO: Usar hook centralizado para deshacer
+    const handleUndo = useCallback(async (undoItem?: {task: Task, action: 'archive' | 'unarchive', timestamp: number}) => {
+      try {
+        // Usar la función centralizada de undo
+        if (undoItem) {
+          const mappedUndoItem = {
+            task: undoItem.task,
+            action: undoItem.action,
+            timestamp: undoItem.timestamp
+          };
+          await undoCentralized(mappedUndoItem);
+        } else {
+          await undoCentralized();
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[ArchiveTable] Error undoing action:', error);
+      }
+    }, [undoCentralized]);
+
+    // Ordenar tareas
+    const sortedTasks = useMemo(() => {
+      return [...filteredTasks].sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+
+        switch (sortKey) {
+          case 'name':
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+            break;
+          case 'priority':
+            const priorityOrder = { Alta: 3, Media: 2, Baja: 1 };
+            aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+            bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+            break;
+          case 'status':
+            aValue = a.status.toLowerCase();
+            bValue = b.status.toLowerCase();
+            break;
+          case 'client':
+            aValue = getClientName(a.clientId);
+            bValue = getClientName(b.clientId);
+            break;
+          case 'archivedAt':
+            aValue = a.archivedAt || a.createdAt;
+            bValue = b.archivedAt || b.createdAt;
+            break;
+          case 'lastActivity':
+            aValue = a.lastActivity || a.createdAt;
+            bValue = b.lastActivity || b.createdAt;
+            break;
+          default:
+            aValue = a.createdAt;
+            bValue = b.createdAt;
+        }
+
+        if (sortDirection === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+    }, [filteredTasks, sortKey, sortDirection, getClientName]);
+
+    const handleTaskRowClick = async (task: Task) => {
+      // Marcar la tarea como vista usando el nuevo sistema
+      await markTaskAsViewed(task.id, userId);
+      // Usar directamente el store en lugar de props para evitar re-renders
+      const { openChatSidebar } = useSidebarStateStore.getState();
+      // Buscar el nombre del cliente
+      const clientName = effectiveClients?.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
+      // Actualizar el store directamente
+      openChatSidebar(task, clientName);
+    };
+
+    // Manejar clicks fuera del ActionMenu
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          actionMenuRef.current &&
+          !actionMenuRef.current.contains(event.target as Node) &&
+          !actionButtonRefs.current.has((event.target as Element).closest('button')?.id || '')
+        ) {
+          // setActionMenuOpenId(null); // Remover variable no usada
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []); // Remover variable no usada
+
+    const handleSort = (key: string) => {
+      if (sortKey === key) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortKey(key);
+        setSortDirection('desc');
+      }
+    };
+
+    // ✅ CENTRALIZADAS: Funciones de dropdown usando hook centralizado
+    const handlePrioritySelect = createPrioritySelectHandler(setPriorityFilter, setIsPriorityDropdownOpen);
+    const handleClientSelect = createClientSelectHandler(setClientFilter, setIsClientDropdownOpen);
+
+    // Función para obtener la clase de la fila
+    const getRowClassName = (task: Task) => {
+      let className = styles.taskRow;
+      if (task.hasUnreadUpdates) {
+        className += ` ${styles.unread}`;
+      }
+      return className;
+    };
+
+    // Función para manejar cambios de visibilidad de columnas
+    const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+      setVisibleColumns(prev => {
+        if (visible) {
+          // Agregar columna si no está presente
+          return prev.includes(columnKey) ? prev : [...prev, columnKey];
+        } else {
+          // Remover columna
+          return prev.filter(key => key !== columnKey);
+        }
+      });
+      
+    }, []);
+
+    // Configurar columnas de la tabla - ESPECÍFICO PARA ARCHIVETABLE
+    const baseColumns = [
+      {
+        key: 'clientId',
+        label: 'Cuenta',
+        width: isMobile ? '0%' : '10%',
+        mobileVisible: false,
+      },
+      {
+        key: 'name',
+        label: 'Tarea',
+        width: isMobile ? '70%' : '25%', 
+        mobileVisible: true,
+      },
+      {
+        key: 'assignedTo',
+        label: 'Asignados',
+        width: isMobile ? '0%' : '20%',
+        mobileVisible: false,
+      },
+      {
+        key: 'archivedAt',
+        label: 'Fecha de Archivado',
+        width: isMobile ? '0%' : '20%',
+        mobileVisible: false,
+      },
+      {
+        key: 'action',
+        label: 'Acciones',
+        width: isMobile ? '30%' : '20%',
+        mobileVisible: isMobile, // Mostrar acciones en mobile
+      },
+    ];
+
+    const columns = baseColumns.map((col) => {
+      if (col.key === 'clientId') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            const client = effectiveClients.find((c) => c.id === task.clientId);
+            return <SharedClientCell client={client} />;
+          },
+        };
+      }
+      if (col.key === 'name') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            const hasUpdates = hasUnreadUpdates(task, userId);
+            const updateCount = getUnreadCount(task, userId);
+            return (
+              <div className={styles.taskNameWrapper}>
+                <span className={styles.taskName}>{task.name}</span>
+                {hasUpdates && updateCount > 0 && (
+                  <div className={styles.updateIndicator}>
+                    <div className={styles.updateDotRed}>
+                      <span className={styles.updateDotPing}></span>
+                      <span className={styles.updateDotNumber}>{updateCount}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          },
+        };
+      }
+      if (col.key === 'assignedTo') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            return <UserCell assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={effectiveUsers} currentUserId={userId} />;
+          },
+        };
+      }
+      if (col.key === 'archivedAt') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            return <DateCell date={task.archivedAt} format="short" emptyText="Sin archivar" />;
+          },
+        };
+      }
+      if (col.key === 'action') {
+        return {
+          ...col,
+          render: (task: Task) => {
+            // Admins y creadores pueden ver el ActionMenu en ArchiveTable
+            const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
+            if (!shouldShowActionMenu) {
+              return null;
+            }
+            return (
+                <ActionMenu
+                  task={task}
+                  userId={userId}
+                  onEdit={() => {
+                    onEditTaskOpen(task.id);
+                    // setActionMenuOpenId(null); // Remover variable no usada
+                  }}
+                  onDelete={() => {
+                    onDeleteTaskOpen(task.id);
+                    // setActionMenuOpenId(null); // Remover variable no usada
+                  }}
+                  onArchive={async () => {
+                    try {
+                      // Usar la función centralizada de desarchivo
+                      await handleUnarchiveTask(task);
+                    } catch (error) {
+                      // eslint-disable-next-line no-console
+                      console.error('[ArchiveTable] Error unarchiving task:', error);
+                    }
+                  }}
+                  animateClick={animateClick}
+                  actionMenuRef={actionMenuRef}
+                  actionButtonRef={(el) => {
+                    if (el) {
+                      actionButtonRefs.current.set(task.id, el);
+                    } else {
+                      actionButtonRefs.current.delete(task.id);
+                    }
+                  }}
+                />
+              );
+          },
+        };
+      }
+      return col;
+    });
+
+    // Cleanup effect for timeouts
+    useEffect(() => {
+      const timeoutId = undoTimeoutRef.current;
+      return () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      };
+    }, []);
+
+    // Loading state - show table immediately if external data is available
+    if (!tasks || !clients || !users) {
+      return (
+        <div className={styles.container}>
+          <SkeletonLoader type="tasks" />
+        </div>
+      );
+    }
+
+    // ✅ NUEVO: Mostrar estado vacío elegante cuando no hay tareas archivadas
+    const hasArchivedTasks = tasks.some(task => task.archived);
+    if (!hasArchivedTasks && !searchQuery) {
+      return (
+        <div className={styles.container}>
+          <div className={styles.header} style={{margin:'30px 0px'}}>
+            <div className={styles.searchWrapper}>
+              {/* ✅ REFACTORIZADO: Usando Button atómico */}
+              <div className={styles.buttonWithTooltip}>
+                <Button
+                  variant="view"
+                  icon="/arrow-left.svg"
+                  iconOnly
+                  onClick={() => {
+                    onViewChange('table');
+                    onClose();
+                  }}
+                  className={styles.hideOnMobile}
+                  aria-label="Volver a tareas"
+                />
+                <span className={styles.tooltip}>Volver a Tareas</span>
+              </div>
+              {/* ✅ REFACTORIZADO: Usando SearchInput atómico */}
+              <SearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Buscar tareas archivadas..."
+              />
+            </div>
+          </div>
+          
+          <SkeletonLoader 
+            type="archive" 
+            isEmpty={true}
+            emptyMessage="No hay tareas archivadas"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <motion.div 
+        className={styles.container}
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ 
+          duration: 0.2, 
+          ease: [0.25, 0.46, 0.45, 0.94],
+          opacity: { duration: 0.15 },
+          scale: { duration: 0.2 }
+        }}
+      >
+        <style jsx>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
+        <div className={styles.header} style={{margin:'30px 0px'}}>
+          <div className={styles.searchWrapper}>
+            {/* ✅ REFACTORIZADO: Usando Button atómico */}
+            <div className={styles.buttonWithTooltip}>
+              <Button
+                variant="view"
+                icon="/arrow-left.svg"
+                iconOnly
+                onClick={() => {
+                  onViewChange('table');
+                  onClose();
+                }}
+                className={styles.hideOnMobile}
+                aria-label="Volver a tareas"
+              />
+              <span className={styles.tooltip}>Volver a Tareas</span>
+            </div>
+            {/* ✅ REFACTORIZADO: Usando SearchInput atómico */}
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Buscar tareas archivadas..."
+            />
+          </div>
+          <div className={styles.filtersWrapper}>
+            <div className={styles.buttonWithTooltip}>
+              <div className={styles.filter}>
+                <div className={styles.dropdownContainer} ref={priorityDropdownRef}>
+                  <div
+                    className={styles.dropdownTrigger}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                      if (!isPriorityDropdownOpen) {
+                        setIsClientDropdownOpen(false);
+                        setIsUserDropdownOpen(false);
+                      }
+                    }}
+                  >
+                    <Image className="filterIcon" src="/filter.svg" alt="Priority" width={12} height={12} />
+                    <span>{priorityFilter || 'Prioridad'}</span>
+                  </div>
+                  {isPriorityDropdownOpen && (
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {['Alta', 'Media', 'Baja', ''].map((priority, index) => (
+                          <motion.div
+                          key={priority || 'all'}
+                          className={styles.dropdownItem}
+                          onClick={(e) => handlePrioritySelect(priority, e)}
+                            initial={{ opacity: 0, y: -16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                        >
+                          {priority || 'Todos'}
+                          </motion.div>
+                      ))}
+                      </motion.div>
+                    </AnimatePresence>
+                  )}
+                </div>
+              </div>
+              <span className={styles.tooltip}>Filtrar por Prioridad</span>
+            </div>
+            <div className={styles.buttonWithTooltip}>
+              <div className={styles.filter}>
+                <div className={styles.dropdownContainer} ref={clientDropdownRef}>
+                  <div
+                    className={styles.dropdownTrigger}
+                    onClick={(e) => {
+                      animateClick(e.currentTarget);
+                      setIsClientDropdownOpen(!isClientDropdownOpen);
+                      if (!isClientDropdownOpen) {
+                        setIsPriorityDropdownOpen(false);
+                        setIsUserDropdownOpen(false);
+                      }
+                    }}
+                  >
+                    <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
+                    <span>{effectiveClients.find((c) => c.id === clientFilter)?.name || 'Cuenta'}</span>
+                  </div>
+                  {isClientDropdownOpen && (
+                    <AnimatePresence>
+                      <motion.div 
+                        className={styles.dropdownItems}
+                        initial={{ opacity: 0, y: -16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                      >
+                        {[{ id: '', name: 'Todos' }, ...effectiveClients].map((client, index) => (
+                          <motion.div
+                          key={client.id || 'all'}
+                          className={styles.dropdownItem}
+                          onClick={(e) => handleClientSelect(client.id, e)}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                        >
+                          {client.name}
+                          </motion.div>
+                      ))}
+                      </motion.div>
+                    </AnimatePresence>
+                  )}
+                </div>
+              </div>
+              <span className={styles.tooltip}>Filtrar por Cuenta</span>
+            </div>
+
+            {isAdmin && (
+              <div className={styles.buttonWithTooltip}>
+                <div className={styles.filter}>
+                  <div className={styles.dropdownContainer} ref={userDropdownRef}>
+                    <div
+                      className={styles.dropdownTrigger}
+                      onClick={(e) => {
+                        animateClick(e.currentTarget);
+                        setIsUserDropdownOpen(!isUserDropdownOpen);
+                        if (!isUserDropdownOpen) {
+                          setIsPriorityDropdownOpen(false);
+                          setIsClientDropdownOpen(false);
+                        }
+                      }}
+                    >
+                      <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
+                      <span>
+                        {userFilter === '' 
+                          ? 'Todos' 
+                          : userFilter === 'me' 
+                          ? 'Mis tareas' 
+                          : effectiveUsers.find(u => u.id === userFilter)?.fullName || 'Usuario'}
+                      </span>
+                    </div>
+                    {isUserDropdownOpen && (
+                      <AnimatePresence>
+                        <motion.div 
+                          className={styles.dropdownItems}
+                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                        >
+                          <motion.div
+                          className={styles.dropdownItem}
+                          style={{fontWeight: userFilter === '' ? 700 : 400}}
+                          onClick={() => handleUserFilter('')}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: 0 * 0.05 }}
+                        >
+                          Todos
+                          </motion.div>
+                          <motion.div
+                          className={styles.dropdownItem}
+                          style={{fontWeight: userFilter === 'me' ? 700 : 400}}
+                          onClick={() => handleUserFilter('me')}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.2, delay: 1 * 0.05 }}
+                        >
+                          Mis tareas
+                          </motion.div>
+                        {effectiveUsers
+                          .filter((u) => u.id !== userId)
+                            .map((u, index) => (
+                              <motion.div
+                              key={u.id}
+                              className={styles.dropdownItem}
+                              style={{fontWeight: userFilter === u.id ? 700 : 400}}
+                              onClick={() => handleUserFilter(u.id)}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.2, delay: (index + 2) * 0.05 }}
+                            >
+                              {u.fullName}
+                              </motion.div>
+                          ))}
+                        </motion.div>
+                      </AnimatePresence>
+                    )}
+                  </div>
+                </div>
+                <span className={styles.tooltip}>Filtrar por Usuario</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <Table
+          data={sortedTasks}
+          columns={columns}
+          itemsPerPage={10}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          onRowClick={(task: Task) => {
+            handleTaskRowClick(task);
+          }}
+          getRowClassName={getRowClassName}
+          emptyStateType="archive"
+          enableColumnVisibility={true}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={handleColumnVisibilityChange}
+        />
+        
+        {/* Undo Notification */}
+        <AnimatePresence>
+          {centralizedShowUndo && centralizedUndoStack.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={styles.undoNotification}
+              style={{
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                fontSize: '14px',
+                fontWeight: 500,
+                minWidth: '280px',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  animation: 'pulse 2s infinite'
+                }} />
+                <span>
+                  {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive' 
+                    ? 'Tarea desarchivada' 
+                    : 'Tarea archivada'}
+                </span>
+              </div>
+              <button
+                onClick={() => handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1])}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                Deshacer
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  },
+);
+
+ArchiveTable.displayName = 'ArchiveTable';
+
+export default ArchiveTable; 

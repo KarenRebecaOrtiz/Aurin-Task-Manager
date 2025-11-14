@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom';
 import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
 import ThemeToggler from '../../theme-toggler';
 import { useTheme } from '@/contexts/ThemeContext';
-import ProfileCard from '@/components/ProfileCard';
+import { ProfileCard } from '@/modules/profile-card';
 
 const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
   const { user, isLoaded } = useUser();
@@ -281,8 +281,8 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
       {/* ProfileCard Modal */}
       {isProfileOpen && user && (
         <ProfileCard
+          isOpen={isProfileOpen}
           userId={user.id}
-          imageUrl={profilePhoto || ''}
           onClose={handleCloseProfile}
         />
       )}

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { motion } from 'framer-motion';
-import UserAvatar from '@/components/ui/UserAvatar';
+import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import styles from './OptimizedMarquee.module.scss';
 import type { Advice, OptimizedMarqueeProps } from '../types';
 
@@ -103,7 +103,7 @@ const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
           <UserAvatar 
             userId={advice.creatorId}
             userName={advice.creatorFirstName}
-            size="small"
+            size="sm"
             showStatus={false}
           />
           <span className={styles.messageText}>{advice.message}</span>

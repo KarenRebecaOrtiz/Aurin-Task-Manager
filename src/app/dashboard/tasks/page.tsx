@@ -9,9 +9,8 @@ import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import TasksTableIsolated from '@/modules/data-views/tasks/components/tables/TasksTableIsolated';
 import TasksKanban from '@/modules/data-views/tasks/components/tables/KanbanBoard';
 import { ChatSidebar } from '@/modules/chat';
-import MessageSidebar from '@/components/MessageSidebar';
 import { ConfigPage } from '@/modules/config';
-import ProfileCard from '@/components/ProfileCard';
+import { ProfileCard } from '@/modules/profile-card';
 import PlatformCompatibility from '@/shared/components/system/PlatformCompatibility';
 
 // Safari debug components removed for production
@@ -27,12 +26,6 @@ import { usePersonalLocations } from '@/hooks/usePersonalLocations';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
 
-// Función para generar conversationId de manera consistente (igual que en MessageSidebar)
-const generateConversationId = (userId1: string, userId2: string): string => {
-  // Ordenar los IDs para que siempre sea el mismo conversationId
-  const sortedIds = [userId1, userId2].sort();
-  return `conversation_${sortedIds[0]}_${sortedIds[1]}`;
-};
 
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -634,25 +627,7 @@ function TasksPageContent() {
   );
 }
 
-// Componentes completamente independientes para las sidebars
-const IndependentMessageSidebarRenderer = () => {
-  const { user } = useUser();
-  const { isOpen, sidebarType, messageSidebar, closeMessageSidebar } = useSidebarStateStore();
-  
-  if (!isOpen || sidebarType !== 'message' || !messageSidebar.receiver || !user?.id) {
-    return null;
-  }
-
-          return (
-            <MessageSidebar
-      key="message-sidebar"
-              isOpen={true}
-      onClose={closeMessageSidebar}
-      receiver={messageSidebar.receiver}
-      conversationId={messageSidebar.conversationId || ''}
-    />
-  );
-};
+// Componente independiente para ChatSidebar
 
 const IndependentChatSidebarRenderer = () => {
   const { isOpen, sidebarType, chatSidebar, closeChatSidebar } = useSidebarStateStore();
@@ -676,8 +651,7 @@ export default function TasksPage() {
   return (
     <AuthProvider>
       <TasksPageContent />
-      {/* Sidebars completamente independientes */}
-      <IndependentMessageSidebarRenderer />
+      {/* Chat Sidebar independiente */}
       <IndependentChatSidebarRenderer />
       {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
       <PlatformCompatibility />
@@ -712,8 +686,8 @@ const ProfileCardRenderer = () => {
 
   return (
     <ProfileCard
+      isOpen={true}
       userId={profileCardData.userId}
-      imageUrl={profileCardData.imageUrl}
       onClose={closeProfileCard}
       onChangeContainer={handleProfileCardContainerChange}
     />

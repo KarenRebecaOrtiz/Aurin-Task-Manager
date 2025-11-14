@@ -289,25 +289,25 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     }
     return null;
   },
-  isLoadingTasks: false,
+  isLoadingTasks: true,
   setIsLoadingTasks: (loading) => set({ isLoadingTasks: loading }),
-  
+
   // Clients
   clients: [],
   setClients: (clients) => set((state) => {
     // ✅ OPTIMIZACIÓN: Evitar re-renders si el contenido no cambió realmente
     const currentClientsString = JSON.stringify(state.clients);
     const newClientsString = JSON.stringify(clients);
-    
+
     if (currentClientsString === newClientsString) {
       return state; // No actualizar si el contenido es idéntico
     }
-    
-    console.log('[useDataStore] setClients called:', { 
-      currentCount: state.clients.length, 
-      newCount: clients.length 
+
+    console.log('[useDataStore] setClients called:', {
+      currentCount: state.clients.length,
+      newCount: clients.length
     });
-    
+
     return { clients };
   }),
   updateClient: (clientId, updates) =>
@@ -324,9 +324,9 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     set((state) => ({
       clients: state.clients.filter((client) => client.id !== clientId),
     })),
-  isLoadingClients: false,
+  isLoadingClients: true,
   setIsLoadingClients: (loading) => set({ isLoadingClients: loading }),
-  
+
   // Users
   users: [],
   setUsers: (users) => set((state) => {
@@ -365,7 +365,7 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     set((state) => ({
       users: state.users.filter((user) => user.id !== userId),
     })),
-  isLoadingUsers: false,
+  isLoadingUsers: true,
   setIsLoadingUsers: (loading) => set({ isLoadingUsers: loading }),
   
   // Global loading state
@@ -387,9 +387,9 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       tasks: [],
       clients: [],
       users: [],
-      isLoadingTasks: false,
-      isLoadingClients: false,
-      isLoadingUsers: false,
+      isLoadingTasks: true,
+      isLoadingClients: true,
+      isLoadingUsers: true,
       isInitialLoadComplete: false,
       loadingProgress: {
         tasks: false,

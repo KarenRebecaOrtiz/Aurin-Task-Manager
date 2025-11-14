@@ -1,0 +1,84 @@
+// Status Selector Styles
+$white: #FFFFFF;
+$black: #0F172A;
+$zinc-50: #F1F5F9;
+$border-light: rgba(255, 255, 255, 0.2);
+$primary: #164C22;
+
+@mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 8px) {
+  background: $bg;
+  border-radius: $radius;
+  border: 1px solid $border-light;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.trigger {
+  @include crystal-surface();
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: $black;
+  min-height: 42px;
+  transition: all 0.2s ease;
+
+  &:hover:not(.disabled) {
+    background: rgba(241, 245, 249, 0.85);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(.disabled) {
+    transform: scale(0.98);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  span {
+    flex: 1;
+  }
+}
+
+.dropdown {
+  @include crystal-surface(rgba(255, 255, 255, 0.95), 8px);
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+}
+
+.item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: $black;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(22, 76, 34, 0.1);
+  }
+
+  &.selected {
+    background: rgba(22, 76, 34, 0.15);
+    font-weight: 500;
+    color: $primary;
+  }
+}

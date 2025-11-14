@@ -40,6 +40,7 @@ export function TextShimmer({
           '--spread': `${dynamicSpread}px`,
         } as React.CSSProperties
       }
+      suppressHydrationWarning
     >
       {children}
     </MotionComponent>

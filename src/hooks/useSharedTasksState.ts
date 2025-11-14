@@ -38,9 +38,9 @@ export function useSharedTasksState(userId: string | undefined) {
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [localClients, setLocalClients] = useState<Client[]>([]);
   const [localUsers, setLocalUsers] = useState<User[]>([]);
-  const [localIsLoadingTasks, setLocalIsLoadingTasks] = useState(false);
-  const [localIsLoadingClients, setLocalIsLoadingClients] = useState(false);
-  const [localIsLoadingUsers, setLocalIsLoadingUsers] = useState(false);
+  const [localIsLoadingTasks, setLocalIsLoadingTasks] = useState(true);
+  const [localIsLoadingClients, setLocalIsLoadingClients] = useState(true);
+  const [localIsLoadingUsers, setLocalIsLoadingUsers] = useState(true);
   const [localIsInitialLoadComplete, setLocalIsInitialLoadComplete] = useState(false);
   const [localLoadingProgress, setLocalLoadingProgress] = useState({
     tasks: false,

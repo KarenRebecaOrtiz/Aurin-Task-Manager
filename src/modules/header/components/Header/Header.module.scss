@@ -323,7 +323,7 @@
 
   .welcomeText {
     color: $color-text-primary;
-    @include typography(1.625rem, $font-weight-semibold, $color-text-primary); // 30% más grande que $text-xl (1.25rem)
+    @include typography(2rem, $font-weight-semibold, $color-text-primary); // 30% más grande que $text-xl (1.25rem)
     white-space: nowrap;
 
     :global(body.dark) & {
@@ -367,8 +367,9 @@
   
     .subtitle {
       color: $color-text-secondary;
-      @include typography($text-base, $font-weight-normal, $color-text-secondary);
-  
+      @include typography( $font-weight-normal, $color-text-secondary);
+      font-size: 1rem;
+      
       :global(body.dark) & {
         color: $color-text-dark-secondary;
       }
