@@ -1,8 +1,15 @@
 /**
  * useMessagePagination Hook
- * 
+ *
  * Hook optimizado para paginación de mensajes con real-time updates.
- * Basado en chatsidebarMODULARIZED + conexión Firebase real.
+ * Basado en chatsidebarMODULARIZED + conexión Firebase real + patrones Apple.
+ *
+ * Características agregadas:
+ * - Cache automático para evitar re-fetches al cambiar entre tareas
+ * - Scroll preservation: mantiene posición al volver a una tarea
+ * - Auto-limpieza de cache después de 10 min de inactividad
+ *
+ * @see /Users/karen/Desktop/apps.apple.com-main/shared/utils/src/history.ts
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
@@ -11,6 +18,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useChatStore } from '../stores/chatStore';
 import { firebaseService } from '../services/firebaseService';
+import { chatCache, saveScrollBeforeSwitch, restoreScrollPosition } from '../services/simpleChatCache';
 import type { Message } from '../types';
 
 interface UseMessagePaginationProps {
@@ -141,24 +149,54 @@ export const useMessagePagination = ({
   }, [hasMoreMessages, lastDoc, taskId, pageSize, messages, setHasMore, setIsLoading, prependMessages, scrollContainerRef]);
 
   /**
-   * Carga inicial de mensajes
+   * Carga inicial de mensajes con cache integrado
+   *
+   * Estrategia:
+   * 1. Intenta obtener del cache (instantáneo)
+   * 2. Si hay cache, restaura scroll position
+   * 3. Si no hay cache, fetch desde Firestore
+   * 4. El firebaseService se encarga de cachear automáticamente
    */
   const initialLoad = useCallback(async () => {
-
     if (messages.length > 0 || !taskId) {
       return;
     }
 
     setCurrentTask(taskId);
+
+    // ✅ NUEVO: Intentar restaurar desde cache primero
+    const cached = chatCache.get(taskId);
+
+    if (cached) {
+      console.log(`[useMessagePagination] ⚡ Restoring from cache: ${cached.messages.length} messages`);
+
+      // Procesar mensajes del cache (pueden estar encriptados)
+      const processedMessages = await Promise.all(
+        cached.messages.map(msg => processMessage(msg))
+      );
+
+      // Restaurar estado completo
+      setMessages(taskId, processedMessages.reverse());
+      setLastDoc(cached.lastDoc);
+      setHasMore(taskId, cached.hasMore);
+      setIsLoading(taskId, false);
+
+      // ✅ NUEVO: Restaurar scroll position
+      restoreScrollPosition(scrollContainerRef?.current || null, cached.scrollY);
+
+      return; // No fetch - usamos cache
+    }
+
+    // Cache MISS - cargar desde Firestore
+    console.log('[useMessagePagination] Cache miss - loading from Firestore');
     setIsLoading(taskId, true);
 
     try {
-      // Cargar mensajes iniciales desde Firebase
+      // Cargar mensajes iniciales desde Firebase (auto-cachea)
       const { messages: initialMessages, lastDoc: initialLastDoc } = await firebaseService.loadMessages(
         taskId,
         pageSize
       );
-
 
       // Procesar mensajes (desencriptar si es necesario)
       const processedMessages = await Promise.all(
@@ -177,7 +215,7 @@ export const useMessagePagination = ({
     } finally {
       setIsLoading(taskId, false);
     }
-  }, [messages.length, taskId, pageSize, setCurrentTask, setHasMore, setIsLoading, setMessages, processMessage]);
+  }, [messages.length, taskId, pageSize, setCurrentTask, setHasMore, setIsLoading, setMessages, processMessage, scrollContainerRef]);
 
   /**
    * Estrategia de reconexión con backoff exponencial
@@ -289,6 +327,36 @@ export const useMessagePagination = ({
       }
     };
   }, [taskId, processMessage, addMessage, updateMessage, onNewMessage, getCurrentMessages, attemptReconnect]);
+
+  /**
+   * ✅ NUEVO: Guardar scroll position antes de cambiar de tarea
+   *
+   * Este efecto se ejecuta:
+   * 1. Cuando el componente se desmonta (cambio de tarea)
+   * 2. Antes de que taskId cambie
+   *
+   * Basado en el patrón beforeTransition de Apple History
+   */
+  useEffect(() => {
+    return () => {
+      // Cleanup: guardar scroll antes de cambiar de tarea
+      if (taskId && scrollContainerRef?.current) {
+        saveScrollBeforeSwitch(taskId, scrollContainerRef.current);
+      }
+    };
+  }, [taskId, scrollContainerRef]);
+
+  /**
+   * ✅ NUEVO: Actualizar cache cuando los mensajes cambien (real-time)
+   *
+   * Mantiene el cache sincronizado con el estado actual.
+   * NO resetea el TTL (solo updateMessages, no set).
+   */
+  useEffect(() => {
+    if (taskId && messages.length > 0) {
+      chatCache.updateMessages(taskId, messages);
+    }
+  }, [taskId, messages]);
 
   /**
    * Agrupa mensajes por fecha - ESTILO WHATSAPP
