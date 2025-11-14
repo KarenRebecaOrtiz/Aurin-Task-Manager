@@ -1,56 +1,151 @@
 /**
  * Timer Module - Time Entry Form Component
  *
- * Form for manual time entry with validation.
- * Includes time input, date selector, and comment field.
+ * Complete form for manual time entry with validation
  *
  * @module timer/components/molecules/TimeEntryForm
  */
 
 'use client';
 
-// TODO: Import React, react-hook-form, hooks, atoms, and types
+import React from 'react';
+import type { TimeEntryFormProps } from '../../types/timer.types';
+import { useTimeEntry } from '../../hooks/useTimeEntry';
+import { TimeInput } from '../atoms/TimeInput';
+import { DateSelector } from './DateSelector';
+import styles from './TimeEntryForm.module.scss';
 
-// ============================================================================
-// COMPONENT PROPS
-// ============================================================================
+/**
+ * TimeEntryForm Component
+ *
+ * Complete form for manually entering time worked on a task
+ * - Time input (hours + minutes)
+ * - Date selector
+ * - Optional comment
+ * - Validation and submission
+ *
+ * @param taskId - ID of the task
+ * @param userId - ID of the user
+ * @param onSuccess - Callback on successful submission
+ * @param onCancel - Callback on form cancellation
+ */
+export function TimeEntryForm({
+  taskId,
+  userId,
+  onSuccess,
+  onCancel
+}: TimeEntryFormProps) {
+  const {
+    form,
+    isSubmitting,
+    submitTimeEntry,
+    resetForm,
+    errors
+  } = useTimeEntry(taskId, userId, onSuccess);
 
-// TODO: Define TimeEntryFormProps interface
-//   - taskId: string
-//   - userId: string
-//   - onSuccess?: () => void
-//   - onCancel?: () => void
+  const { register, watch, setValue } = form;
+  const timeValue = watch('time') || '00:00';
+  const dateValue = watch('date') || new Date();
 
-// ============================================================================
-// COMPONENT IMPLEMENTATION
-// ============================================================================
+  // Parse time string to hours/minutes
+  const [hours, minutes] = timeValue.split(':').map(Number);
 
-// TODO: Implement TimeEntryForm component
-//   - Use useTimeEntry hook
-//   - Use Controller from react-hook-form
-//
-//   - Render time input fields:
-//     - Hours input (0-23)
-//     - Minutes input (0-59)
-//     - Use TimeInput component
-//     - Show validation errors
-//
-//   - Render date selector:
-//     - Use DateSelector component
-//     - Show validation errors
-//
-//   - Render comment textarea:
-//     - Optional field
-//     - Character limit indicator
-//
-//   - Render form actions:
-//     - Submit button
-//     - Cancel button
-//     - Show loading state
-//
-//   - Handle form submission
-//   - Show success/error feedback
+  const handleHoursChange = (val: number) => {
+    const newTime = `${String(val).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
+    setValue('time', newTime, { shouldValidate: true });
+  };
 
-// TODO: Export component
+  const handleMinutesChange = (val: number) => {
+    const newTime = `${String(hours || 0).padStart(2, '0')}:${String(val).padStart(2, '0')}`;
+    setValue('time', newTime, { shouldValidate: true });
+  };
 
-export {};
+  const handleDateChange = (date: Date) => {
+    setValue('date', date, { shouldValidate: true });
+  };
+
+  return (
+    <form onSubmit={submitTimeEntry} className={styles.timeEntryForm}>
+      {/* Time Input Section */}
+      <div className={styles.section}>
+        <h3 className={styles.sectionTitle}>Tiempo Invertido</h3>
+        <p className={styles.sectionDesc}>
+          Ingresa el tiempo que dedicaste a esta tarea
+        </p>
+
+        <div className={styles.timeInputs}>
+          <TimeInput
+            value={hours || 0}
+            min={0}
+            max={23}
+            label="HORAS"
+            type="hours"
+            onChange={handleHoursChange}
+            error={errors.time}
+          />
+          <span className={styles.separator}>:</span>
+          <TimeInput
+            value={minutes || 0}
+            min={0}
+            max={59}
+            label="MINUTOS"
+            type="minutes"
+            onChange={handleMinutesChange}
+          />
+        </div>
+      </div>
+
+      {/* Date Selection Section */}
+      <div className={styles.section}>
+        <h3 className={styles.sectionTitle}>Fecha de Trabajo</h3>
+        <p className={styles.sectionDesc}>
+          Selecciona la fecha en que realizaste el trabajo
+        </p>
+        <DateSelector
+          value={dateValue}
+          onChange={handleDateChange}
+          error={errors.date}
+        />
+      </div>
+
+      {/* Comment Section (Optional) */}
+      <div className={styles.section}>
+        <label htmlFor="comment" className={styles.label}>
+          Comentario (opcional)
+        </label>
+        <textarea
+          {...register('comment')}
+          id="comment"
+          className={styles.textarea}
+          placeholder="Añade detalles sobre el trabajo realizado..."
+          rows={3}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      {/* Actions */}
+      <div className={styles.actions}>
+        <button
+          type="button"
+          onClick={() => {
+            resetForm();
+            onCancel?.();
+          }}
+          className={styles.cancelButton}
+          disabled={isSubmitting}
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          className={styles.submitButton}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Guardando...' : 'Añadir Tiempo'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default TimeEntryForm;

@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/modules/shared/components/atoms/Button';
+import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Info, Briefcase, Calendar, User, Mail, Phone, MapPin, Building2, Tag, FileText } from 'lucide-react';
@@ -511,14 +511,14 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardProps> = ({
                             className={styles.input}
                           />
                           {formData.projects.length > 1 && (
-                            <Button
+                            <CrystalButton
                               variant="secondary"
                               size="small"
                               onClick={() => handleRemoveProject(index)}
                               className={styles.removeButton}
                             >
                               ✕
-                            </Button>
+                            </CrystalButton>
                           )}
                         </>
                       )}
@@ -527,9 +527,9 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardProps> = ({
                 </AnimatePresence>
 
                 {!isViewMode && (
-                  <Button variant="secondary" size="small" onClick={handleAddProject} className={styles.addProjectButton}>
+                  <CrystalButton variant="secondary" size="small" onClick={handleAddProject} className={styles.addProjectButton}>
                     + Añadir Proyecto
-                  </Button>
+                  </CrystalButton>
                 )}
               </div>
             </div>
@@ -590,20 +590,20 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardProps> = ({
         </DialogBody>
 
         <DialogFooter className={styles.dialogFooter}>
-          <Button variant="secondary" onClick={handleCancel} disabled={isSaving}>
+          <CrystalButton variant="secondary" onClick={handleCancel} disabled={isSaving}>
             {isViewMode ? 'Cerrar' : 'Cancelar'}
-          </Button>
+          </CrystalButton>
 
           {isViewMode && isAdmin && (
-            <Button variant="primary" onClick={() => setMode('edit')}>
+            <CrystalButton variant="primary" onClick={() => setMode('edit')}>
               Editar
-            </Button>
+            </CrystalButton>
           )}
 
           {!isViewMode && (
-            <Button variant="primary" onClick={handleSave} loading={isSaving} disabled={isSaving}>
+            <CrystalButton variant="primary" onClick={handleSave} loading={isSaving} disabled={isSaving}>
               {isSaving ? 'Guardando...' : 'Guardar'}
-            </Button>
+            </CrystalButton>
           )}
         </DialogFooter>
       </DialogContent>

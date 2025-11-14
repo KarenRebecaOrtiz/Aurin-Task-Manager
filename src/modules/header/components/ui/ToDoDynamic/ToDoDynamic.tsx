@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './ToDoDynamic.module.scss';
-import ToDoDropdown from '@/components/ui/ToDoDropdown';
-import { useTodos } from '@/hooks/useTodos';
-import { useShallow } from 'zustand/react/shallow';
-import { useToDoDropdownStore } from '@/stores/todoDropdownStore';
+import { ToDoDropdown } from './components';
+import { useTodos, useToDoDropdownState, useTodoFiltering } from './hooks';
+import { TODO_UI } from './constants';
 import SimpleTooltip from '@/components/ui/SimpleTooltip';
 
 export default function ToDoDynamic() {
@@ -15,87 +14,21 @@ export default function ToDoDynamic() {
     isVisible, 
     isOpen, 
     dropdownPosition, 
-    setIsVisible, 
-    setIsOpen, 
-    setDropdownPosition, 
-    resetState 
-  } = useToDoDropdownStore(
-    useShallow((state) => ({
-      isVisible: state.isVisible,
-      isOpen: state.isOpen,
-      dropdownPosition: state.dropdownPosition,
-      setIsVisible: state.setIsVisible,
-      setIsOpen: state.setIsOpen,
-      setDropdownPosition: state.setDropdownPosition,
-      resetState: state.resetState,
-    }))
-  );
-  
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  // Calculate dropdown position when opening
-  const handleToggleDropdown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!buttonRef.current) return;
-
-    const buttonRect = buttonRef.current.getBoundingClientRect();
-    const top = buttonRect.bottom + 8;
-    const right = window.innerWidth - buttonRect.right;
-
-    setDropdownPosition({ top, right });
-    setIsVisible(true);
-    setIsOpen(!isOpen);
-  }, [isOpen, setDropdownPosition, setIsVisible, setIsOpen]);
-
-  // Close dropdown
-  const handleCloseDropdown = useCallback(() => {
-    setIsOpen(false);
-    setIsVisible(false);
-    resetState();
-  }, [setIsOpen, setIsVisible, resetState]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      
-      if (buttonRef.current && buttonRef.current.contains(target)) {
-        return;
-      }
-      
-      const dropdown = document.querySelector('[data-todo-dropdown]');
-      if (dropdown && dropdown.contains(target)) {
-        return;
-      }
-      
-      handleCloseDropdown();
-    };
-
-    if (isOpen) {
-      const timeoutId = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside, true);
-      }, 50);
-
-      return () => {
-        clearTimeout(timeoutId);
-        document.removeEventListener('mousedown', handleClickOutside, true);
-      };
-    }
-  }, [isOpen, handleCloseDropdown]);
-
-  const completedTodos = todos.filter((todo) => todo.completed).length;
-  const remainingTodos = todos.length - completedTodos;
+    handleToggleDropdown,
+    handleCloseDropdown,
+    buttonRef
+  } = useToDoDropdownState();
+  const { remainingTodos } = useTodoFiltering(todos, []);
 
   return (
     <>
-      <SimpleTooltip text="Mis To Do">
+      <SimpleTooltip text={TODO_UI.TOOLTIP_TEXT}>
         <button
           ref={buttonRef}
           className={styles.todoButton}
           onClick={handleToggleDropdown}
-          aria-label="Abrir lista de todos"
-          title="Mis Todos"
+          aria-label={TODO_UI.ARIA_LABELS.BUTTON}
+          title={TODO_UI.TOOLTIP_TEXT}
           data-todo-button
         >
           <AnimatePresence mode="wait">

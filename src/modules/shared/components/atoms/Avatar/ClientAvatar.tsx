@@ -68,7 +68,7 @@ export const ClientAvatar: React.FC<ClientAvatarProps> = ({
 }) => {
   return (
     <div className={`relative ${className}`}>
-      <Avatar className={sizeMap[size]}>
+      <Avatar className={`${sizeMap[size]} border-3 border-white`}>
         <AvatarImage src={src} alt={alt} />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>

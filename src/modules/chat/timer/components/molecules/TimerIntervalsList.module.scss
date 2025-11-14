@@ -1,0 +1,278 @@
+/**
+ * Timer Module - TimerIntervalsList Styles
+ */
+
+.intervalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+
+  &.compact {
+    padding: 12px;
+    gap: 8px;
+  }
+}
+
+.intervals {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  // Scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+}
+
+.intervalItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.intervalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.intervalIndex {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.intervalDuration {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.intervalTimes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.time {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.arrow {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+// Empty state
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+// More indicator
+.moreIndicator {
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+// Total row
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.totalLabel {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.totalValue {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+// Compact mode adjustments
+.intervalsList.compact {
+  .intervalItem {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .intervalDuration {
+    font-size: 14px;
+  }
+
+  .intervalTimes {
+    font-size: 12px;
+  }
+
+  .totalRow {
+    padding: 10px;
+  }
+
+  .totalLabel {
+    font-size: 13px;
+  }
+
+  .totalValue {
+    font-size: 16px;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .intervalsList {
+    background: #1e293b;
+    border-color: #475569;
+  }
+
+  .intervals {
+    &::-webkit-scrollbar-track {
+      background: #334155;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #475569;
+
+      &:hover {
+        background: #64748b;
+      }
+    }
+  }
+
+  .intervalItem {
+    background: #334155;
+    border-color: #475569;
+
+    &:hover {
+      background: #3f4d5f;
+      border-color: #64748b;
+    }
+  }
+
+  .intervalIndex {
+    color: #94a3b8;
+    background: #475569;
+  }
+
+  .intervalDuration {
+    color: #60a5fa;
+  }
+
+  .intervalTimes {
+    color: #94a3b8;
+  }
+
+  .arrow {
+    color: #64748b;
+  }
+
+  .emptyText {
+    color: #94a3b8;
+  }
+
+  .moreIndicator {
+    color: #94a3b8;
+    background: #334155;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .intervalsList {
+    padding: 12px;
+  }
+
+  .intervals {
+    max-height: 300px;
+  }
+
+  .intervalDuration {
+    font-size: 14px;
+  }
+
+  .intervalTimes {
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+
+  .totalRow {
+    padding: 10px;
+  }
+
+  .totalLabel {
+    font-size: 12px;
+  }
+
+  .totalValue {
+    font-size: 16px;
+  }
+}

@@ -1,11 +1,12 @@
 /**
  * Timer Module - Organisms Index
  *
- * Export all organism components.
- *
- * @module timer/components/organisms
+ * Export all organism components
  */
 
-// TODO: Export TimerPanel
+export { TimerPanel } from './TimerPanel';
+export { ConfirmTimerSwitch } from './ConfirmTimerSwitch';
 
-export {};
+// Export default exports as well
+export { default as TimerPanelDefault } from './TimerPanel';
+export { default as ConfirmTimerSwitchDefault } from './ConfirmTimerSwitch';

@@ -6,8 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './ClientOverlay.module.scss';
-import SuccessAlert from '@/components/SuccessAlert';
-import FailAlert from '@/components/FailAlert';
+import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import Loader from '@/modules/loader';
 import { createPortal } from 'react-dom';
 import { invalidateClientsCache } from '@/lib/cache-utils';
@@ -49,6 +48,7 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
 }) => {
   const { isAdmin, isLoading } = useAuth();
   const { user } = useUser();
+  const { success, error } = useSonnerToast();
   const [localIsLoading, setLocalIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -259,10 +259,18 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
         // Invalidar cache después de guardar cliente
         invalidateClientsCache();
 
+        // Use Sonner for success notification
+        success('Cliente guardado exitosamente.');
+        
+        // Keep backward compatibility
         setSuccessMessage('Cliente guardado exitosamente.');
         if (onAlertChange) onAlertChange({ type: 'success', message: 'Cliente guardado exitosamente.' });
       } catch (error) {
         console.error('[ClientOverlay] Error saving client:', error);
+        // Use Sonner for error notification
+        error('Error al guardar el cliente.', error.message || 'Unknown error');
+        
+        // Keep backward compatibility
         setFailMessage({
           message: 'Error al guardar el cliente.',
           error: error.message || 'Unknown error',
@@ -690,35 +698,7 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
               </div>
             )}
 
-            <AnimatePresence mode="wait">
-              {successMessage && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <SuccessAlert
-                    message={successMessage}
-                    onClose={() => setSuccessMessage(null)}
-                  />
-                </motion.div>
-              )}
-              {failMessage && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <FailAlert
-                    message={failMessage.message}
-                    error={failMessage.error}
-                    onClose={() => setFailMessage(null)}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Alerts now handled by Sonner - no need for inline alerts */}
           </motion.div>
         </motion.div>
       )}

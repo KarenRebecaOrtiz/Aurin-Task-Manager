@@ -1,0 +1,275 @@
+/**
+ * ToDoDynamic Mixins
+ * Shared SCSS mixins for the ToDoDynamic submódule
+ */
+
+@use '@/app/styles/_mixins' as *;
+@use './variables' as vars;
+
+// ============================================================== 
+// 🎨 GLASSMORPHISM MIXINS
+// ============================================================== 
+
+@mixin glassmorphism-light {
+  background: vars.$button-bg-light;
+  border: 1px solid vars.$border-light;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: vars.$shadow-light;
+}
+
+@mixin glassmorphism-dark {
+  background: vars.$button-bg-dark;
+  border: 1px solid vars.$border-dark;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: vars.$shadow-dark;
+}
+
+@mixin glassmorphism-hover-light {
+  background: vars.$button-bg-hover-light;
+  border-color: vars.$border-hover-light;
+  box-shadow: vars.$shadow-hover-light;
+}
+
+@mixin glassmorphism-hover-dark {
+  background: vars.$button-bg-hover-dark;
+  border-color: vars.$border-hover-dark;
+  box-shadow: vars.$shadow-hover-dark;
+}
+
+@mixin glassmorphism-active-light {
+  background: vars.$button-bg-active-light;
+  border-color: vars.$border-active-light;
+  box-shadow: vars.$shadow-active-light;
+}
+
+@mixin glassmorphism-active-dark {
+  background: vars.$button-bg-active-dark;
+  border-color: vars.$border-active-dark;
+  box-shadow: vars.$shadow-active-dark;
+}
+
+// ============================================================== 
+// 🎨 BUTTON MIXINS
+// ============================================================== 
+
+@mixin todo-button-base {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: vars.$button-size;
+  height: vars.$button-size;
+  border-radius: vars.$button-border-radius !important;
+  opacity: 0.9;
+  z-index: 50;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  @media (max-width: vars.$mobile-breakpoint) {
+    width: vars.$button-mobile-size;
+    height: vars.$button-mobile-size;
+  }
+}
+
+@mixin todo-button-light {
+  @include glassmorphism-light;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+    @include glassmorphism-hover-light;
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+    @include glassmorphism-active-light;
+  }
+}
+
+@mixin todo-button-dark {
+  @include glassmorphism-dark;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+    @include glassmorphism-hover-dark;
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+    @include glassmorphism-active-dark;
+  }
+}
+
+// ============================================================== 
+// 🎨 DROPDOWN MIXINS
+// ============================================================== 
+
+@mixin dropdown-base {
+  position: absolute !important;
+  width: vars.$dropdown-width;
+  max-height: vars.$dropdown-max-height;
+  border-radius: vars.$radius-xl;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: visible;
+  pointer-events: auto;
+  z-index: vars.$z-dropdown;
+  display: flex;
+  flex-direction: column;
+  transform: none !important;
+  will-change: transform;
+
+  @media (max-width: vars.$tablet-breakpoint) {
+    width: vars.$dropdown-width;
+    max-height: vars.$dropdown-mobile-max-height;
+    padding: 10px;
+  }
+
+  @media (max-width: vars.$mobile-breakpoint) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@mixin dropdown-light {
+  background: vars.$dropdown-bg-light;
+  border: 1px solid vars.$border-light;
+  box-shadow: 
+    -8px -8px 16px rgba(255, 255, 255, 0.8),
+    8px 8px 16px rgba(0, 0, 0, 0.05),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+    inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+}
+
+@mixin dropdown-dark {
+  background: vars.$dropdown-bg-dark;
+  border-color: vars.$border-dark;
+  box-shadow: 
+    -8px -8px 16px rgba(0, 0, 0, 0.3),
+    8px 8px 16px rgba(0, 0, 0, 0.2),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+    inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+// ============================================================== 
+// 🎨 INPUT MIXINS
+// ============================================================== 
+
+@mixin input-base {
+  width: 100%;
+  padding: vars.$input-padding;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+
+  &::placeholder {
+    color: vars.$color-text-muted;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+@mixin input-light {
+  background: vars.$input-bg-light;
+  color: #0D0D0D;
+
+  &:focus {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: vars.$input-bg-focus-light;
+  }
+}
+
+@mixin input-dark {
+  background: vars.$input-bg-dark;
+  color: #D1D1D1;
+
+  &::placeholder {
+    color: vars.$color-text-dark-muted;
+  }
+
+  &:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: vars.$input-bg-focus-dark;
+  }
+}
+
+@mixin input-error {
+  border-color: #ef4444;
+  background: rgba(254, 242, 242, 0.9);
+  box-shadow: 
+    -2px -2px 4px rgba(254, 242, 242, 0.8),
+    2px 2px 4px rgba(239, 68, 68, 0.1);
+
+  &:focus {
+    border-color: #dc2626;
+    background: rgba(254, 242, 242, 0.95);
+    box-shadow: 
+      -2px -2px 4px rgba(254, 242, 242, 0.8),
+      2px 2px 4px rgba(239, 68, 68, 0.2);
+  }
+}
+
+@mixin input-error-dark {
+  border-color: #f87171;
+  background: rgba(30, 30, 30, 0.9);
+  box-shadow: 
+    -2px -2px 4px rgba(0, 0, 0, 0.3),
+    2px 2px 4px rgba(248, 113, 113, 0.2);
+
+  &:focus {
+    border-color: #fca5a5;
+    background: rgba(30, 30, 30, 0.95);
+    box-shadow: 
+      -2px -2px 4px rgba(0, 0, 0, 0.3),
+      2px 2px 4px rgba(248, 113, 113, 0.3);
+  }
+}
+
+// ============================================================== 
+// 🎨 SCROLLBAR MIXINS
+// ============================================================== 
+
+@mixin custom-scrollbar-light {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 0.7);
+    border-radius: 12px;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@mixin custom-scrollbar-dark {
+  &::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.7);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}

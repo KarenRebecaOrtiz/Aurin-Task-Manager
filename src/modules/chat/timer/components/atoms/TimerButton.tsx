@@ -13,29 +13,35 @@ import Image from 'next/image';
 import type { TimerButtonProps } from '../../types/timer.types';
 import styles from './TimerButton.module.scss';
 
+// Map variant to icon name
+const variantIconMap = {
+  start: 'Play',
+  pause: 'pause',
+  stop: 'square',
+  reset: 'rotate-ccw',
+};
+
 /**
- * Timer control button with icon
+ * Timer control button with icon based on variant
  *
  * @example
  * ```typescript
  * <TimerButton
- *   icon="Play"
+ *   variant="start"
  *   onClick={handleStart}
  *   disabled={isProcessing}
- *   tooltip="Iniciar timer"
  * />
  * ```
  */
 export function TimerButton({
-  icon,
+  variant,
   onClick,
   disabled = false,
   loading = false,
-  variant = 'default',
   size = 'medium',
-  tooltip,
   className = '',
 }: TimerButtonProps) {
+  const icon = variantIconMap[variant];
   const iconPath = `/icons/${icon}.svg`;
 
   return (
@@ -46,15 +52,15 @@ export function TimerButton({
       } ${className}`}
       onClick={onClick}
       disabled={disabled || loading}
-      title={tooltip}
-      aria-label={tooltip}
+      title={variant}
+      aria-label={variant}
     >
       {loading ? (
         <div className={styles.spinner} />
       ) : (
         <Image
           src={iconPath}
-          alt={icon}
+          alt={variant}
           width={size === 'small' ? 16 : size === 'large' ? 24 : 20}
           height={size === 'small' ? 16 : size === 'large' ? 24 : 20}
           className={styles.icon}

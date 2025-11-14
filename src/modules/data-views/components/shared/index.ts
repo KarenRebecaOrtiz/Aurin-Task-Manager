@@ -20,3 +20,6 @@ export { EmptyTableState, NoResultsState } from './empty-states';
 // Status & Priority Badges
 export { StatusBadge, PriorityBadge } from './states';
 export type { StatusType, PriorityType } from './states';
+
+// Skeleton Loaders
+export { TableSkeletonLoader, KanbanSkeletonLoader, ConfigSkeletonLoader } from './skeleton-loaders';

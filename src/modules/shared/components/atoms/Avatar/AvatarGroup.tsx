@@ -90,7 +90,7 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
                 alt={`${user.fullName}'s avatar`}
                 width={avatarSize}
                 height={avatarSize}
-                className="rounded-full object-cover w-full h-full"
+                className="rounded-full object-cover w-full h-full border-2 border-white"
                 onError={handleAvatarImageError}
               />
               <AnimatePresence>

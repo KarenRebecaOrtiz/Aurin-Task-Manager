@@ -1,5 +1,5 @@
 /**
- * Timer Module - Time Input Component (BLUEPRINT)
+ * Timer Module - Time Input Component
  *
  * Input component for entering hours and minutes manually
  *
@@ -8,160 +8,158 @@
 
 'use client';
 
-// ============================================================================
-// IMPORTS NEEDED
-// ============================================================================
-// import React, { useState, useCallback } from 'react';
-// import type { TimeInputProps } from '../../types/timer.types';
-// import styles from './TimeInput.module.scss';
+import NumberFlow from '@number-flow/react';
+import { Minus, Plus } from 'lucide-react';
+import * as React from 'react';
+import type { TimeInputProps } from '../../types/timer.types';
+import styles from './TimeInput.module.scss';
 
-// ============================================================================
-// COMPONENT SPECIFICATIONS
-// ============================================================================
 /**
  * TimeInput Component
  *
- * REQUIRED FEATURES:
+ * Enhanced time input with increment/decrement buttons and NumberFlow animations
  *
- * 1. INPUT FIELD:
- *    - Number input with min/max validation
- *    - Accept value, min, max, label, type ('hours' | 'minutes')
- *    - onChange callback (value: number) => void
- *    - Optional error prop (string | undefined)
- *
- * 2. INCREMENT/DECREMENT BUTTONS:
- *    - Up arrow button: increase value by 1
- *    - Down arrow button: decrease value by 1
- *    - Disable up button when value >= max
- *    - Disable down button when value <= min
- *    - Handle wraparound: 23 hours -> 0, 59 minutes -> 0
- *
- * 3. FORMATTING:
- *    - Display value with leading zeros (01, 02, etc)
- *    - Use format: value.toString().padStart(2, '0')
- *
- * 4. VALIDATION:
- *    - Clamp value between min and max on blur
- *    - Show error message if error prop provided
- *    - Visual error state (red border)
- *
- * 5. INTERACTION:
- *    - Allow direct typing (numbers only)
- *    - Arrow keys: up/down to increment/decrement
- *    - Mouse wheel: scroll to change value (optional)
- *    - Focus state visual feedback
- *
- * 6. LAYOUT:
- *    - Vertical layout: [Up Arrow] [Input + Label] [Down Arrow]
- *    - Label below input showing "HORAS" or "MINUTOS"
- *    - Input centered with large font size (24px+)
- *
- * 7. STYLING:
- *    - Card-like appearance with border
- *    - Hover effects on buttons
- *    - Active/focus states
- *    - Disabled state when needed
- *
- * @example Usage:
- * <TimeInput
- *   value={hours}
- *   min={0}
- *   max={23}
- *   label="HORAS"
- *   type="hours"
- *   onChange={(newValue) => setHours(newValue)}
- *   error={errors.hours}
- * />
+ * @param value - Current numeric value
+ * @param min - Minimum allowed value
+ * @param max - Maximum allowed value
+ * @param onChange - Callback when value changes
+ * @param label - Label text to display above input
+ * @param type - Type of input ('hours' or 'minutes')
+ * @param error - Error message to display
  */
+export function TimeInput({
+  value = 0,
+  min = 0,
+  max = 23,
+  onChange,
+  label,
+  type = 'hours',
+  error
+}: TimeInputProps) {
+  const defaultValue = React.useRef(value);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [animated, setAnimated] = React.useState(true);
+  const [showCaret, setShowCaret] = React.useState(true);
 
-// ============================================================================
-// COMPONENT STRUCTURE
-// ============================================================================
-/**
- * export function TimeInput({
- *   value,
- *   min = 0,
- *   max = 59,
- *   label,
- *   type = 'minutes',
- *   onChange,
- *   error,
- *   className = '',
- * }: TimeInputProps) {
- *   // STATE
- *   // - Local state for input value (string)
- *   // - Focus state
- *
- *   // HANDLERS
- *   // - handleIncrement: () => void
- *   //   - Increase value by 1
- *   //   - Wraparound at max
- *   //   - Call onChange with new value
- *   //
- *   // - handleDecrement: () => void
- *   //   - Decrease value by 1
- *   //   - Wraparound at min
- *   //   - Call onChange with new value
- *   //
- *   // - handleChange: (e: ChangeEvent) => void
- *   //   - Extract number from input
- *   //   - Validate range
- *   //   - Call onChange
- *   //
- *   // - handleBlur: () => void
- *   //   - Clamp value to range
- *   //   - Format with leading zeros
- *   //
- *   // - handleKeyDown: (e: KeyboardEvent) => void
- *   //   - ArrowUp: increment
- *   //   - ArrowDown: decrement
- *
- *   // RENDER
- *   return (
- *     <div className={styles.timeInput}>
- *       <button
- *         className={styles.incrementButton}
- *         onClick={handleIncrement}
- *         disabled={value >= max}
- *         aria-label="Incrementar"
- *       >
- *         ▲
- *       </button>
- *
- *       <div className={styles.inputWrapper}>
- *         <input
- *           type="number"
- *           value={value.toString().padStart(2, '0')}
- *           onChange={handleChange}
- *           onBlur={handleBlur}
- *           onKeyDown={handleKeyDown}
- *           min={min}
- *           max={max}
- *           className={styles.input}
- *         />
- *         <span className={styles.label}>{label}</span>
- *       </div>
- *
- *       <button
- *         className={styles.decrementButton}
- *         onClick={handleDecrement}
- *         disabled={value <= min}
- *         aria-label="Decrementar"
- *       >
- *         ▼
- *       </button>
- *
- *       {error && <span className={styles.error}>{error}</span>}
- *     </div>
- *   );
- * }
- */
+  // Handle input changes
+  const handleInput: React.ChangeEventHandler<HTMLInputElement> = ({ currentTarget: el }) => {
+    setAnimated(false);
+    let next = value;
 
-// ============================================================================
-// REFERENCE: Existing TimeInput from /components/ui/TimeInput.tsx
-// ============================================================================
-// You can reference the existing TimeInput component for styling ideas
-// Located at: /Users/karen/CascadeProjects/Aurin-Task-Manager/src/components/ui/TimeInput.tsx
-// Adapt it to use the new timer module types and styling
+    if (el.value === '') {
+      next = defaultValue.current;
+    } else {
+      const num = el.valueAsNumber;
+      if (!isNaN(num) && min <= num && num <= max) {
+        next = num;
+      }
+    }
 
-export {};
+    // Manually update the input.value in case the number stays the same e.g. 09 == 9
+    el.value = String(next);
+    onChange?.(next);
+  };
+
+  // Handle increment/decrement button clicks
+  const handlePointerDown = (diff: number) => (event: React.PointerEvent<HTMLButtonElement>) => {
+    setAnimated(true);
+
+    if (event.pointerType === 'mouse') {
+      event?.preventDefault();
+      inputRef.current?.focus();
+    }
+
+    let newVal = value + diff;
+
+    // Handle wraparound for better UX
+    if (newVal > max) {
+      newVal = min; // Wrap to minimum
+    } else if (newVal < min) {
+      newVal = max; // Wrap to maximum
+    }
+
+    onChange?.(newVal);
+  };
+
+  // Handle keyboard arrow keys
+  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (event) => {
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setAnimated(true);
+      const newVal = value >= max ? min : value + 1;
+      onChange?.(newVal);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setAnimated(true);
+      const newVal = value <= min ? max : value - 1;
+      onChange?.(newVal);
+    }
+  };
+
+  return (
+    <div className={`${styles.timeInputContainer} ${error ? styles.hasError : ''}`}>
+      {label && (
+        <span className={styles.label}>
+          {label}
+        </span>
+      )}
+
+      <div className={styles.inputGroup}>
+        <button
+          aria-hidden="true"
+          tabIndex={-1}
+          className={styles.decrementButton}
+          disabled={min != null && value <= min}
+          onPointerDown={handlePointerDown(-1)}
+          type="button"
+        >
+          <Minus className={styles.icon} absoluteStrokeWidth strokeWidth={3.5} />
+        </button>
+
+        <div className={styles.numberContainer}>
+          <input
+            ref={inputRef}
+            className={`${styles.hiddenInput} ${styles.spinHide} ${showCaret ? styles.showCaret : styles.hideCaret}`}
+            style={{ fontKerning: 'none' }}
+            type="number"
+            min={min}
+            step={1}
+            autoComplete="off"
+            inputMode="numeric"
+            max={max}
+            value={value}
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+            aria-label={label}
+          />
+          <NumberFlow
+            value={value}
+            locales="en-US"
+            format={{ useGrouping: false, minimumIntegerDigits: 2 }}
+            aria-hidden="true"
+            animated={animated}
+            onAnimationsStart={() => setShowCaret(false)}
+            onAnimationsFinish={() => setShowCaret(true)}
+            className={styles.numberFlow}
+            willChange
+          />
+        </div>
+
+        <button
+          aria-hidden="true"
+          tabIndex={-1}
+          className={styles.incrementButton}
+          disabled={max != null && value >= max}
+          onPointerDown={handlePointerDown(1)}
+          type="button"
+        >
+          <Plus className={styles.icon} absoluteStrokeWidth strokeWidth={3.5} />
+        </button>
+      </div>
+
+      {error && (
+        <div className={styles.errorMessage}>{error}</div>
+      )}
+    </div>
+  );
+}

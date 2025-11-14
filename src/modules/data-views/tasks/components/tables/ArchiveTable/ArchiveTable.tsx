@@ -12,7 +12,7 @@ import styles from './ArchiveTable.module.scss';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import SkeletonLoader from '@/components/SkeletonLoader';
+import { TableSkeletonLoader, EmptyTableState } from '@/modules/data-views/components/shared';
 import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiving';
@@ -533,7 +533,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     if (!effectiveTasks || !effectiveClients || !effectiveUsers) {
       return (
         <div className={styles.container}>
-          <SkeletonLoader type="tasks" />
+          <TableSkeletonLoader type="archive" />
         </div>
       );
     }
@@ -560,10 +560,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             currentView="archive"
           />
           
-          <SkeletonLoader 
-            type="archive" 
-            isEmpty={true}
-            emptyMessage="No hay tareas archivadas"
+          <EmptyTableState 
+            title="No hay tareas archivadas"
+            description="Las tareas archivadas aparecerán aquí cuando las archives"
           />
         </div>
       );

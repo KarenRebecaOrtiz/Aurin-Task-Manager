@@ -5,7 +5,7 @@ import { useUser } from '@clerk/nextjs';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import SkeletonLoader from '@/components/SkeletonLoader';
+import { KanbanSkeletonLoader, EmptyTableState } from '@/modules/data-views/components/shared';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiving';
@@ -256,7 +256,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
             </div>
           </div>
         </div>
-        <SkeletonLoader type="kanban" rows={6} />
+        <KanbanSkeletonLoader cardsPerColumn={6} />
       </div>
     );
   }
@@ -279,7 +279,10 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           currentView="kanban"
         />
 
-        <SkeletonLoader type="kanban" isEmpty={true} emptyMessage="¡Comienza creando tu primera tarea!" />
+        <EmptyTableState 
+          title="¡Comienza creando tu primera tarea!"
+          description="Las tareas aparecerán aquí organizadas por estado"
+        />
       </div>
     );
   }

@@ -47,7 +47,7 @@ import { timerCache } from './timerCache';
  *
  * @returns Device ID string
  */
-function generateDeviceId(): string {
+export function generateDeviceId(): string {
   // Try to get existing device ID from sessionStorage
   if (typeof window !== 'undefined') {
     const existingId = sessionStorage.getItem('timer-device-id');
@@ -101,10 +101,11 @@ function convertIntervalFromFirestore(interval: FirestoreTimerInterval): TimerIn
 
 /**
  * Create a new timer document in Firestore
+ * Uses subcollection structure: tasks/{taskId}/timers/{userId}
  *
  * @param userId - User ID who owns the timer
  * @param taskId - Task ID this timer is associated with
- * @returns Promise resolving to the created timer ID
+ * @returns Promise resolving to the created timer ID (userId)
  *
  * @example
  * ```typescript
@@ -113,8 +114,8 @@ function convertIntervalFromFirestore(interval: FirestoreTimerInterval): TimerIn
  * ```
  */
 export async function createTimer(userId: string, taskId: string): Promise<string> {
-  const timerId = `${userId}_${taskId}_${Date.now()}`;
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+  // Use subcollection structure: tasks/{taskId}/timers/{userId}
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
 
   const timerData: Omit<TimerDocument, 'id'> = {
     userId,
@@ -132,26 +133,28 @@ export async function createTimer(userId: string, taskId: string): Promise<strin
 
   await setDoc(timerRef, timerData);
 
-  console.log(`[TimerFirebase] Created timer: ${timerId}`);
-  return timerId;
+  console.log(`[TimerFirebase] Created timer: tasks/${taskId}/timers/${userId}`);
+  return userId;
 }
 
 /**
  * Get a timer document from Firestore
+ * Uses subcollection structure: tasks/{taskId}/timers/{userId}
  *
- * @param timerId - Timer ID
+ * @param taskId - Task ID
+ * @param userId - User ID
  * @returns Promise resolving to timer document or null if not found
  *
  * @example
  * ```typescript
- * const timer = await getTimer('user123_task456_1234567890');
+ * const timer = await getTimer('task456', 'user123');
  * if (timer) {
  *   console.log('Timer status:', timer.status);
  * }
  * ```
  */
-export async function getTimer(timerId: string): Promise<TimerDocument | null> {
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+export async function getTimer(taskId: string, userId: string): Promise<TimerDocument | null> {
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
   const timerSnap = await getDoc(timerRef);
 
   if (!timerSnap.exists()) {
@@ -167,51 +170,56 @@ export async function getTimer(timerId: string): Promise<TimerDocument | null> {
 
 /**
  * Update a timer document in Firestore
+ * Uses subcollection structure: tasks/{taskId}/timers/{userId}
  *
- * @param timerId - Timer ID
+ * @param taskId - Task ID
+ * @param userId - User ID
  * @param data - Partial timer data to update
  *
  * @example
  * ```typescript
- * await updateTimer('timer123', {
+ * await updateTimer('task123', 'user456', {
  *   status: TimerStatus.PAUSED,
  *   pausedAt: Timestamp.now()
  * });
  * ```
  */
 export async function updateTimer(
-  timerId: string,
+  taskId: string,
+  userId: string,
   data: Partial<Omit<TimerDocument, 'id'>>
 ): Promise<void> {
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
 
   await updateDoc(timerRef, {
     ...data,
     updatedAt: serverTimestamp(),
   });
 
-  console.log(`[TimerFirebase] Updated timer: ${timerId}`);
+  console.log(`[TimerFirebase] Updated timer: tasks/${taskId}/timers/${userId}`);
 }
 
 /**
  * Delete a timer document from Firestore
+ * Uses subcollection structure: tasks/{taskId}/timers/{userId}
  *
- * @param timerId - Timer ID
+ * @param taskId - Task ID
+ * @param userId - User ID
  *
  * @example
  * ```typescript
- * await deleteTimer('timer123');
+ * await deleteTimer('task123', 'user456');
  * console.log('Timer deleted');
  * ```
  */
-export async function deleteTimer(timerId: string): Promise<void> {
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+export async function deleteTimer(taskId: string, userId: string): Promise<void> {
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
   await deleteDoc(timerRef);
 
   // Also invalidate cache
-  timerCache.invalidate(timerId);
+  timerCache.invalidate(userId);
 
-  console.log(`[TimerFirebase] Deleted timer: ${timerId}`);
+  console.log(`[TimerFirebase] Deleted timer: tasks/${taskId}/timers/${userId}`);
 }
 
 // ============================================================================
@@ -222,16 +230,17 @@ export async function deleteTimer(timerId: string): Promise<void> {
  * Start a timer in Firestore
  * Sets status to running and records start time
  *
- * @param timerId - Timer ID
+ * @param taskId - Task ID
+ * @param userId - User ID
  *
  * @example
  * ```typescript
- * await startTimerInFirestore('timer123');
+ * await startTimerInFirestore('task123', 'user456');
  * console.log('Timer started');
  * ```
  */
-export async function startTimerInFirestore(timerId: string): Promise<void> {
-  await updateTimer(timerId, {
+export async function startTimerInFirestore(taskId: string, userId: string): Promise<void> {
+  await updateTimer(taskId, userId, {
     status: TimerStatus.RUNNING,
     startedAt: serverTimestamp() as Timestamp,
     pausedAt: null,
@@ -239,14 +248,15 @@ export async function startTimerInFirestore(timerId: string): Promise<void> {
     deviceId: generateDeviceId(),
   });
 
-  console.log(`[TimerFirebase] Started timer: ${timerId}`);
+  console.log(`[TimerFirebase] Started timer: tasks/${taskId}/timers/${userId}`);
 }
 
 /**
  * Pause a timer in Firestore
  * Records the interval and updates total seconds
  *
- * @param timerId - Timer ID
+ * @param taskId - Task ID
+ * @param userId - User ID
  * @param interval - Interval to add
  *
  * @example
@@ -256,14 +266,15 @@ export async function startTimerInFirestore(timerId: string): Promise<void> {
  *   end: new Date('2025-01-01T11:00:00'),
  *   duration: 3600
  * };
- * await pauseTimerInFirestore('timer123', interval);
+ * await pauseTimerInFirestore('task123', 'user456', interval);
  * ```
  */
 export async function pauseTimerInFirestore(
-  timerId: string,
+  taskId: string,
+  userId: string,
   interval: TimerInterval
 ): Promise<void> {
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
   const firestoreInterval = convertIntervalToFirestore(interval);
 
   await updateDoc(timerRef, {
@@ -276,14 +287,15 @@ export async function pauseTimerInFirestore(
     [FIRESTORE_FIELDS.DEVICE_ID]: generateDeviceId(),
   });
 
-  console.log(`[TimerFirebase] Paused timer: ${timerId}, duration: ${interval.duration}s`);
+  console.log(`[TimerFirebase] Paused timer: tasks/${taskId}/timers/${userId}, duration: ${interval.duration}s`);
 }
 
 /**
  * Stop a timer in Firestore and update task aggregates
  * This is a two-step operation that should ideally be batched
  *
- * @param timerId - Timer ID
+ * @param taskId - Task ID
+ * @param userId - User ID
  * @param finalInterval - Final interval if timer was running
  *
  * @example
@@ -293,14 +305,15 @@ export async function pauseTimerInFirestore(
  *   end: new Date('2025-01-01T11:00:00'),
  *   duration: 3600
  * };
- * await stopTimerInFirestore('timer123', finalInterval);
+ * await stopTimerInFirestore('task123', 'user456', finalInterval);
  * ```
  */
 export async function stopTimerInFirestore(
-  timerId: string,
+  taskId: string,
+  userId: string,
   finalInterval: TimerInterval
 ): Promise<void> {
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
   const timerSnap = await getDoc(timerRef);
 
   if (!timerSnap.exists()) {
@@ -322,9 +335,9 @@ export async function stopTimerInFirestore(
   });
 
   // Update task aggregates
-  await updateTaskAggregates(currentData.taskId, currentData.userId, finalSeconds);
+  await updateTaskAggregates(taskId, userId, finalSeconds);
 
-  console.log(`[TimerFirebase] Stopped timer: ${timerId}, total: ${finalSeconds}s`);
+  console.log(`[TimerFirebase] Stopped timer: tasks/${taskId}/timers/${userId}, total: ${finalSeconds}s`);
 }
 
 // ============================================================================
@@ -371,25 +384,23 @@ export async function updateTaskAggregates(
  * Stop timer and update task in a single atomic batch operation
  * Preferred over separate stopTimer + updateTaskAggregates calls
  *
- * @param timerId - Timer ID
  * @param taskId - Task ID
  * @param userId - User ID
  * @param interval - Final interval
  *
  * @example
  * ```typescript
- * await batchStopTimer('timer123', 'task456', 'user789', finalInterval);
+ * await batchStopTimer('task456', 'user789', finalInterval);
  * ```
  */
 export async function batchStopTimer(
-  timerId: string,
   taskId: string,
   userId: string,
   interval: TimerInterval
 ): Promise<void> {
   const batch = writeBatch(db);
 
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
   const taskRef = doc(db, TASKS_COLLECTION_NAME, taskId);
 
   // Get current timer data
@@ -423,7 +434,7 @@ export async function batchStopTimer(
   await batch.commit();
 
   console.log(
-    `[TimerFirebase] Batch stopped timer: ${timerId}, added ${hoursToAdd.toFixed(2)}h to task ${taskId}`
+    `[TimerFirebase] Batch stopped timer: tasks/${taskId}/timers/${userId}, added ${hoursToAdd.toFixed(2)}h to task ${taskId}`
   );
 }
 
@@ -484,13 +495,14 @@ export async function addTimeToTaskTransaction(
  * Listen to real-time updates for a specific timer
  * Returns unsubscribe function to stop listening
  *
- * @param timerId - Timer ID
+ * @param taskId - Task ID
+ * @param userId - User ID
  * @param callback - Callback function called on updates
  * @returns Unsubscribe function
  *
  * @example
  * ```typescript
- * const unsubscribe = listenToTimer('timer123', (timer) => {
+ * const unsubscribe = listenToTimer('task123', 'user456', (timer) => {
  *   if (timer) {
  *     console.log('Timer updated:', timer.status);
  *   }
@@ -501,10 +513,11 @@ export async function addTimeToTaskTransaction(
  * ```
  */
 export function listenToTimer(
-  timerId: string,
+  taskId: string,
+  userId: string,
   callback: (data: TimerDocument | null) => void
 ): Unsubscribe {
-  const timerRef = doc(db, TIMER_COLLECTION_NAME, timerId);
+  const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
 
   const unsubscribe = onSnapshot(
     timerRef,
@@ -524,7 +537,7 @@ export function listenToTimer(
       const hasPendingWrites = snapshot.metadata.hasPendingWrites;
 
       // Update cache
-      timerCache.set(timerId, timerDoc, hasPendingWrites);
+      timerCache.set(userId, timerDoc, hasPendingWrites);
 
       callback(timerDoc);
     },
@@ -540,6 +553,7 @@ export function listenToTimer(
 /**
  * Listen to all timers for a specific task
  * Useful for showing all active timers on a task
+ * Uses subcollection structure: tasks/{taskId}/timers
  *
  * @param taskId - Task ID
  * @param callback - Callback function called with array of timers
@@ -556,13 +570,11 @@ export function listenToTaskTimers(
   taskId: string,
   callback: (timers: TimerDocument[]) => void
 ): Unsubscribe {
-  const q = query(
-    collection(db, TIMER_COLLECTION_NAME),
-    where(FIRESTORE_FIELDS.TASK_ID, '==', taskId)
-  );
+  // Use subcollection query
+  const timersCollectionRef = collection(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME);
 
   const unsubscribe = onSnapshot(
-    q,
+    timersCollectionRef,
     (snapshot) => {
       const timers: TimerDocument[] = [];
       snapshot.forEach((doc) => {
@@ -589,6 +601,7 @@ export function listenToTaskTimers(
 
 /**
  * Get all active (running) timers for a task
+ * Uses subcollection structure: tasks/{taskId}/timers
  *
  * @param taskId - Task ID
  * @returns Promise resolving to array of active timers
@@ -600,9 +613,10 @@ export function listenToTaskTimers(
  * ```
  */
 export async function getActiveTimersForTask(taskId: string): Promise<TimerDocument[]> {
+  // Query the subcollection
+  const timersCollectionRef = collection(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME);
   const q = query(
-    collection(db, TIMER_COLLECTION_NAME),
-    where(FIRESTORE_FIELDS.TASK_ID, '==', taskId),
+    timersCollectionRef,
     where(FIRESTORE_FIELDS.STATUS, '==', TimerStatus.RUNNING)
   );
 
@@ -622,7 +636,7 @@ export async function getActiveTimersForTask(taskId: string): Promise<TimerDocum
 
 /**
  * Get a specific user's timer for a task
- * Returns the most recent timer if multiple exist
+ * Uses subcollection structure: tasks/{taskId}/timers/{userId}
  *
  * @param userId - User ID
  * @param taskId - Task ID
@@ -640,36 +654,14 @@ export async function getUserTimerForTask(
   userId: string,
   taskId: string
 ): Promise<TimerDocument | null> {
-  const q = query(
-    collection(db, TIMER_COLLECTION_NAME),
-    where(FIRESTORE_FIELDS.USER_ID, '==', userId),
-    where(FIRESTORE_FIELDS.TASK_ID, '==', taskId)
-  );
-
-  const snapshot = await getDocs(q);
-
-  if (snapshot.empty) {
-    return null;
-  }
-
-  // Return the most recent one if multiple exist
-  const docs = snapshot.docs.sort((a, b) => {
-    const aTime = (a.data().createdAt as Timestamp).toMillis();
-    const bTime = (b.data().createdAt as Timestamp).toMillis();
-    return bTime - aTime; // Most recent first
-  });
-
-  const mostRecent = docs[0];
-  const data = mostRecent.data() as Omit<TimerDocument, 'id'>;
-
-  return {
-    id: mostRecent.id,
-    ...data,
-  };
+  // Directly access the user's timer document in the subcollection
+  return await getTimer(taskId, userId);
 }
 
 /**
  * Get all timers for a user across all tasks
+ * NOTE: This requires collection group query which may be less efficient
+ * Consider using getUserTimerForTask for specific tasks instead
  *
  * @param userId - User ID
  * @returns Promise resolving to array of timers
@@ -681,12 +673,13 @@ export async function getUserTimerForTask(
  * ```
  */
 export async function getAllUserTimers(userId: string): Promise<TimerDocument[]> {
-  const q = query(
+  // Use collection group query to search across all task subcollections
+  const timersQuery = query(
     collection(db, TIMER_COLLECTION_NAME),
     where(FIRESTORE_FIELDS.USER_ID, '==', userId)
   );
 
-  const snapshot = await getDocs(q);
+  const snapshot = await getDocs(timersQuery);
   const timers: TimerDocument[] = [];
 
   snapshot.forEach((doc) => {

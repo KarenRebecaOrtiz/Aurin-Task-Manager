@@ -1,0 +1,146 @@
+/**
+ * ToDoDynamic Variables
+ * Shared SCSS variables for the ToDoDynamic submódule
+ */
+
+@use '@/app/styles/_variables' as *;
+
+// ============================================================== 
+// 🎨 COMPONENT SPECIFIC VARIABLES
+// ============================================================== 
+
+// Dropdown dimensions
+$dropdown-width: 320px;
+$dropdown-max-height: 500px;
+$dropdown-mobile-max-height: 350px;
+
+// Button dimensions
+$button-size: 50px;
+$button-mobile-size: 64px;
+$button-border-radius: 16px;
+
+// Spacing
+$dropdown-padding: 16px 20px;
+$item-padding: 12px 20px;
+$input-padding: 8px 12px 8px 36px;
+
+// Colors - Light mode
+$button-bg-light: rgba(241, 245, 249, 0.7);
+$button-bg-hover-light: rgba(241, 245, 249, 0.9);
+$button-bg-active-light: rgba(241, 245, 249, 0.6);
+$dropdown-bg-light: rgba(241, 245, 249, 0.95);
+$input-bg-light: rgba(255, 255, 255, 0.8);
+$input-bg-focus-light: rgba(255, 255, 255, 0.9);
+
+// Colors - Dark mode
+$button-bg-dark: rgba(30, 30, 30, 0.8);
+$button-bg-hover-dark: rgba(30, 30, 30, 0.9);
+$button-bg-active-dark: rgba(30, 30, 30, 0.6);
+$dropdown-bg-dark: rgba(30, 30, 30, 0.95);
+$input-bg-dark: rgba(30, 30, 30, 0.8);
+$input-bg-focus-dark: rgba(30, 30, 30, 0.9);
+
+// Borders
+$border-light: rgba(255, 255, 255, 0.2);
+$border-hover-light: rgba(255, 255, 255, 0.4);
+$border-active-light: rgba(255, 255, 255, 0.15);
+$border-dark: rgba(255, 255, 255, 0.1);
+$border-hover-dark: rgba(255, 255, 255, 0.3);
+$border-active-dark: rgba(255, 255, 255, 0.05);
+
+// Shadows - Light mode
+$shadow-light: 
+  -6px -6px 12px rgba(255, 255, 255, 0.9),
+  6px 6px 12px rgba(0, 0, 0, 0.08),
+  inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+  inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+
+$shadow-hover-light: 
+  -8px -8px 16px rgba(255, 255, 255, 0.95),
+  8px 8px 16px rgba(0, 0, 0, 0.1),
+  inset -4px -4px 8px rgba(255, 255, 255, 0.6),
+  inset 4px 4px 8px rgba(209, 217, 230, 0.4);
+
+$shadow-active-light: 
+  inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+  inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+
+// Shadows - Dark mode
+$shadow-dark: 
+  -6px -6px 12px rgba(0, 0, 0, 0.3),
+  6px 6px 12px rgba(0, 0, 0, 0.2),
+  inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+  inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+
+$shadow-hover-dark: 
+  -8px -8px 16px rgba(0, 0, 0, 0.4),
+  8px 8px 16px rgba(0, 0, 0, 0.3),
+  inset -4px -4px 8px rgba(255, 255, 255, 0.08),
+  inset 4px 4px 8px rgba(0, 0, 0, 0.15);
+
+$shadow-active-dark: 
+  inset -4px -4px 8px rgba(255, 255, 255, 0.03),
+  inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+
+// Z-index layers
+$z-dropdown: 1001;
+$z-mobile-footer: 20;
+$z-mobile-header: 10;
+
+// Breakpoints
+$mobile-breakpoint: 768px;
+$tablet-breakpoint: 1024px;
+
+// ============================================================== 
+// 🎨 RADIUS VARIABLES (from global styles)
+// ============================================================== 
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+$radius-full: 9999px;
+
+// ============================================================== 
+// 🎨 SPACING VARIABLES (from global styles)
+// ============================================================== 
+
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-2xl: 24px;
+
+// ============================================================== 
+// 🎨 COLOR VARIABLES (from global styles)
+// ============================================================== 
+
+// Text colors
+$color-text-primary: #0f172a;
+$color-text-secondary: #475569;
+$color-text-muted: #64748b;
+$color-text-dark-primary: #f8fafc;
+$color-text-dark-secondary: #cbd5e1;
+$color-text-dark-muted: #64748b;
+
+// Background colors
+$color-bg-glass: rgba(241, 245, 249, 0.8);
+$color-bg-glass-hover: rgba(241, 245, 249, 0.9);
+$color-bg-dark-tertiary: rgba(39, 39, 42, 0.8);
+
+// Border colors
+$color-border-subtle: rgba(255, 255, 255, 0.2);
+
+// Button colors
+$color-btn-primary: #3b82f6;
+
+// Basic colors
+$white: #ffffff;
+$zinc-100: #f4f4f5;
+
+// ============================================================== 
+// 🎨 TRANSITION VARIABLES
+// ============================================================== 
+
+$transition-base: all 0.2s ease;

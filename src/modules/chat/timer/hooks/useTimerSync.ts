@@ -94,8 +94,8 @@ export function useTimerSync(
           status: firebaseTimer.status,
           startedAt: firebaseTimer.startedAt ? firebaseTimer.startedAt.toDate() : null,
           pausedAt: firebaseTimer.pausedAt ? firebaseTimer.pausedAt.toDate() : null,
-          accumulatedSeconds: firebaseTimer.totalSeconds,
-          intervals: firebaseTimer.intervals.map((interval) => ({
+          accumulatedSeconds: firebaseTimer.totalSeconds || 0,
+          intervals: (firebaseTimer.intervals || []).map((interval) => ({
             start: interval.start.toDate(),
             end: interval.end.toDate(),
             duration: interval.duration,
@@ -138,8 +138,8 @@ export function useTimerSync(
 
     console.log('[useTimerSync] Setting up real-time listener for timer:', localTimer.timerId);
 
-    // Set up listener
-    const unsubscribe = listenToTimer(localTimer.timerId, (timerDoc) => {
+    // Set up listener with taskId and userId
+    const unsubscribe = listenToTimer(taskId, userId, (timerDoc) => {
       if (!timerDoc) {
         console.log('[useTimerSync] Timer document deleted');
         return;
@@ -159,8 +159,8 @@ export function useTimerSync(
           status: timerDoc.status,
           startedAt: timerDoc.startedAt ? timerDoc.startedAt.toDate() : null,
           pausedAt: timerDoc.pausedAt ? timerDoc.pausedAt.toDate() : null,
-          accumulatedSeconds: timerDoc.totalSeconds,
-          intervals: timerDoc.intervals.map((interval) => ({
+          accumulatedSeconds: timerDoc.totalSeconds || 0,
+          intervals: (timerDoc.intervals || []).map((interval) => ({
             start: interval.start.toDate(),
             end: interval.end.toDate(),
             duration: interval.duration,
@@ -181,6 +181,7 @@ export function useTimerSync(
     };
   }, [
     taskId,
+    userId,
     enabled,
     isInitialized,
     getTimerForTask,

@@ -1,14 +1,16 @@
 /**
  * Timer Module - Molecules Index
  *
- * Export all molecular components.
- *
- * @module timer/components/molecules
+ * Export all molecule components
  */
 
-// TODO: Export TimerDisplay
-// TODO: Export DateSelector
-// TODO: Export TimeEntryForm
-// TODO: Export TimerIntervalsList
+export { DateSelector } from './DateSelector';
+export { TimeEntryForm } from './TimeEntryForm';
+export { TimerDisplay } from './TimerDisplay';
+export { TimerIntervalsList } from './TimerIntervalsList';
 
-export {};
+// Export default exports as well
+export { default as DateSelectorDefault } from './DateSelector';
+export { default as TimeEntryFormDefault } from './TimeEntryForm';
+export { default as TimerDisplayDefault } from './TimerDisplay';
+export { default as TimerIntervalsListDefault } from './TimerIntervalsList';

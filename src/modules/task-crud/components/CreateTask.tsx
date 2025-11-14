@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SearchableDropdown from "@/modules/config/components/ui/SearchableDropdown";
 import { useShallow } from "zustand/react/shallow";
 import PopupLoader from "@/components/ui/PopupLoader";
+import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -148,6 +149,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 }) => {
   const { user } = useUser();
   const { isAdmin, isLoading } = useAuth();
+  const { success, error } = useSonnerToast();
   const [clients, setClients] = useState<Client[]>([]);
   const users = useDataStore(useShallow(state => state.users));
   const [isSaving, setIsSaving] = useState(false);
@@ -557,6 +559,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         }
       }
 
+      // Use Sonner for success notification
+      success(`La tarea "${values.basicInfo.name}" se ha creado exitosamente.`);
+      
+      // Keep backward compatibility
       if (onShowSuccessAlert) {
         onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha creado exitosamente.`);
       } else {
@@ -607,6 +613,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
         variant: "error",
       });
       
+      // Use Sonner for error notification
+      error("No se pudo crear la tarea.", errorMessage);
+      
+      // Keep backward compatibility
       if (onShowFailAlert) {
         onShowFailAlert("No se pudo crear la tarea.", errorMessage);
       } else {

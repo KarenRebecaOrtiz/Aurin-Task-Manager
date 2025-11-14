@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SearchableDropdown from "@/modules/config/components/ui/SearchableDropdown";
 import { useShallow } from "zustand/react/shallow";
 import PopupLoader from "@/components/ui/PopupLoader";
+import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -154,6 +155,7 @@ const EditTask: React.FC<EditTaskProps> = ({
   const { user } = useUser();
   const router = useRouter();
   const { isAdmin, isLoading } = useAuth();
+  const { success, error } = useSonnerToast();
   const [clients, setClients] = useState<Client[]>([]);
   // Use users from central dataStore instead of local state
   const users = useDataStore(useShallow(state => state.users));
@@ -585,7 +587,10 @@ const [currentStep, setCurrentStep] = useState(0);
         console.log('[EditTask] No recipients for notifications (solo editor)');
       }
 
-      // Use parent alert handlers if available, otherwise use local state
+      // Use Sonner for success notification
+      success(`La tarea "${values.basicInfo.name}" se ha actualizado exitosamente.`);
+      
+      // Use parent alert handlers if available, otherwise use local state (for backward compatibility)
       if (onShowSuccessAlert) {
         onShowSuccessAlert(`La tarea "${values.basicInfo.name}" se ha actualizado exitosamente.`);
       } else {
@@ -645,7 +650,10 @@ const [currentStep, setCurrentStep] = useState(0);
         variant: "error",
       });
 
-      // Use parent alert handlers if available, otherwise use local state
+      // Use Sonner for error notification
+      error("No se pudo actualizar la tarea.", errorMessage);
+      
+      // Use parent alert handlers if available, otherwise use local state (for backward compatibility)
       if (onShowFailAlert) {
         onShowFailAlert("No se pudo actualizar la tarea.", errorMessage);
       } else {

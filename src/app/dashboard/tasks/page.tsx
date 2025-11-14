@@ -12,7 +12,7 @@ import { ChatSidebar } from '@/modules/chat';
 import MessageSidebar from '@/components/MessageSidebar';
 import { ConfigPage } from '@/modules/config';
 import ProfileCard from '@/components/ProfileCard';
-import SafariFirebaseAuthFix from '@/components/SafariFirebaseAuthFix';
+import PlatformCompatibility from '@/shared/components/system/PlatformCompatibility';
 
 // Safari debug components removed for production
 
@@ -676,12 +676,12 @@ export default function TasksPage() {
       <IndependentMessageSidebarRenderer />
       <IndependentChatSidebarRenderer />
       {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
-      <SafariFirebaseAuthFix />
+      <PlatformCompatibility />
       {/* ProfileCard Modal - Renderizado a nivel de página */}
       <ProfileCardRenderer />
       
       {/* Safari Firebase Auth Fix - Solo se ejecuta en Safari */}
-      <SafariFirebaseAuthFix />
+      <PlatformCompatibility />
     </AuthProvider>
   );
 }

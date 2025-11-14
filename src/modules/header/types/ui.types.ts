@@ -9,14 +9,12 @@ export interface LogoSectionProps {
 
 export interface WelcomeSectionProps {
   userName: string;
-  isAdmin: boolean;
   subtitle: string;
   onChangeContainer: (container: ContainerType) => void;
 }
 
 export interface HeaderActionsProps {
   personalLocations?: PersonalLocations;
-  isAdmin: boolean;
   onChangeContainer: (container: ContainerType) => void;
 }
 

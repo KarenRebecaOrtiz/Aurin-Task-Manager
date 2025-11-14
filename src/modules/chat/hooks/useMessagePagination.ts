@@ -144,30 +144,21 @@ export const useMessagePagination = ({
    * Carga inicial de mensajes
    */
   const initialLoad = useCallback(async () => {
-    console.log('[useMessagePagination] initialLoad called', {
-      taskId,
-      messagesLength: messages.length,
-      hasMessages: messages.length > 0,
-    });
 
     if (messages.length > 0 || !taskId) {
-      console.log('[useMessagePagination] Skipping initialLoad - already has messages or no taskId');
       return;
     }
 
-    console.log('[useMessagePagination] Starting initial load for taskId:', taskId);
     setCurrentTask(taskId);
     setIsLoading(taskId, true);
 
     try {
       // Cargar mensajes iniciales desde Firebase
-      console.log('[useMessagePagination] Calling firebaseService.loadMessages');
       const { messages: initialMessages, lastDoc: initialLastDoc } = await firebaseService.loadMessages(
         taskId,
         pageSize
       );
 
-      console.log('[useMessagePagination] Loaded messages:', initialMessages.length);
 
       // Procesar mensajes (desencriptar si es necesario)
       const processedMessages = await Promise.all(
@@ -181,7 +172,6 @@ export const useMessagePagination = ({
         setHasMore(taskId, false);
       }
 
-      console.log('[useMessagePagination] Initial load complete');
     } catch (error) {
       console.error('[useMessagePagination] Error loading initial messages:', error);
     } finally {
@@ -203,14 +193,10 @@ export const useMessagePagination = ({
     // Backoff exponencial: 1s, 2s, 4s, 8s, 16s
     const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
 
-    console.log(
-      `[useMessagePagination] Attempting reconnection ${reconnectAttemptsRef.current}/${maxReconnectAttempts} in ${delay}ms`
-    );
 
     reconnectTimeoutRef.current = setTimeout(() => {
       // Trigger re-setup by updating a dependency
       // El useEffect se encargará de reconectar
-      console.log('[useMessagePagination] Reconnecting listener...');
     }, delay);
   }, [maxReconnectAttempts]);
 

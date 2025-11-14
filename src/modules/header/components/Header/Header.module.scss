@@ -9,48 +9,26 @@
     height: 100%;
     @include flex-between;
     align-items: flex-start;
-    padding-top: $spacing-2xl;
+    padding: 24px 2em 0px 2em;
     z-index: 31000;
   
     @include responsive(sm) {
       flex-direction: column;
       align-items: center;
       gap: $spacing-sm;
-      padding: $spacing-sm 0;
+      padding: $spacing-sm 1em;
     }
   }
 
-  .logoAndWelcomeContainer {
+  .welcomeContainer {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
-    gap: $spacing-lg;
     flex: 1;
 
     @include responsive(sm) {
       flex-direction: column;
       align-items: center;
-      gap: $spacing-sm;
-    }
-  }
-
-  .logoContainer {
-    position: static;
-    z-index: 10;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-
-    &:hover {
-      transform: scale(1.05);
-    }
-
-    @include responsive(sm) {
-      position: relative;
-      margin-bottom: $spacing-sm;
-      order: -1; // Asegura que el logo aparezca primero en mobile
     }
   }
   .typewriterWrapper {
@@ -74,12 +52,6 @@
     align-items: flex-start;
   }
 
-  .adviceContainer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-  }
 
   .todoContainer {
     display: flex;
@@ -351,7 +323,7 @@
 
   .welcomeText {
     color: $color-text-primary;
-    @include typography($text-xl, $font-weight-semibold, $color-text-primary);
+    @include typography(1.625rem, $font-weight-semibold, $color-text-primary); // 30% más grande que $text-xl (1.25rem)
     white-space: nowrap;
 
     :global(body.dark) & {
@@ -380,6 +352,7 @@
   .welcomeText {
     font-family: "Urbanist", sans-serif;
     font-weight: 600;
+    font-size: 1.625rem; // 30% más grande que el tamaño original
     color: inherit;
   }
   

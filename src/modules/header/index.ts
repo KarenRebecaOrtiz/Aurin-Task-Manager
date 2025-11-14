@@ -7,7 +7,9 @@ export { default as AvailabilityToggle } from './components/ui/AvailabilityToggl
 export { default as GeoClock } from './components/ui/GeoClock';
 export { TextShimmer } from './components/ui/TextShimmer';
 export { default as AvatarDropdown } from './components/ui/AvatarDropdown';
-export { default as ToDoDynamic } from './components/ui/ToDoDynamic';
+// ToDoDynamic (submódulo completo)
+export { ToDoDynamic } from './components/ui/ToDoDynamic';
+export * from './components/ui/ToDoDynamic';
 
 // Theme Toggler (submódulo completo)
 export { default as ThemeToggler } from './components/theme-toggler';

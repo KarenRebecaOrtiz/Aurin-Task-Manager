@@ -1,0 +1,163 @@
+/**
+ * Timer Module - DateSelector Styles
+ */
+
+.dateSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+
+  &.hasError {
+    border-color: var(--timer-danger, #ef4444);
+  }
+}
+
+.calendarContainer {
+  display: flex;
+  justify-content: center;
+
+  .dayPicker {
+    // Override DayPicker CSS variables
+    --rdp-cell-size: 40px;
+    --rdp-accent-color: #3b82f6;
+    --rdp-background-color: #dbeafe;
+    --rdp-outline: 2px solid #3b82f6;
+    --rdp-outline-selected: 2px solid #2563eb;
+
+    font-family: inherit;
+
+    // Selected day styling
+    :global(.rdp-day_selected) {
+      background-color: var(--rdp-accent-color);
+      color: white;
+      font-weight: 600;
+    }
+
+    // Today styling
+    :global(.rdp-day_today) {
+      font-weight: 700;
+      color: var(--rdp-accent-color);
+    }
+
+    // Disabled days (future dates)
+    :global(.rdp-day_disabled) {
+      color: #9ca3af;
+      text-decoration: line-through;
+      cursor: not-allowed;
+      opacity: 0.5;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+
+    // Hover effect
+    :global(.rdp-day):not(:global(.rdp-day_disabled)):not(:global(.rdp-day_selected)):hover {
+      background-color: var(--rdp-background-color);
+      cursor: pointer;
+    }
+
+    // Month navigation buttons
+    :global(.rdp-nav_button) {
+      color: #64748b;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: var(--rdp-accent-color);
+      }
+    }
+
+    // Caption (month/year header)
+    :global(.rdp-caption_label) {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    // Week day headers
+    :global(.rdp-head_cell) {
+      color: #64748b;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+  }
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 14px;
+  text-align: center;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .dateSelector {
+    background: #1e293b;
+    border-color: #475569;
+
+    .calendarContainer {
+      .dayPicker {
+        --rdp-accent-color: #60a5fa;
+        --rdp-background-color: #1e3a8a;
+
+        :global(.rdp-caption_label) {
+          color: #f1f5f9;
+        }
+
+        :global(.rdp-head_cell) {
+          color: #94a3b8;
+        }
+
+        :global(.rdp-day) {
+          color: #e2e8f0;
+        }
+
+        :global(.rdp-day_today) {
+          color: var(--rdp-accent-color);
+        }
+
+        :global(.rdp-day_disabled) {
+          color: #64748b;
+        }
+
+        :global(.rdp-nav_button) {
+          color: #94a3b8;
+
+          &:hover {
+            color: var(--rdp-accent-color);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .dateSelector {
+    padding: 12px;
+  }
+
+  .calendarContainer {
+    .dayPicker {
+      --rdp-cell-size: 36px;
+      font-size: 14px;
+
+      :global(.rdp-caption_label) {
+        font-size: 0.9rem;
+      }
+
+      :global(.rdp-head_cell) {
+        font-size: 0.75rem;
+      }
+    }
+  }
+}

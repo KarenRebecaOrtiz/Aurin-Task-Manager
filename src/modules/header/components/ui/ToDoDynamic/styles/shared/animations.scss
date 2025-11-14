@@ -1,0 +1,231 @@
+/**
+ * ToDoDynamic Animations
+ * Shared CSS animations for the ToDoDynamic submódule
+ */
+
+// ============================================================== 
+// 🎬 KEYFRAME ANIMATIONS
+// ============================================================== 
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToTop {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+// ============================================================== 
+// 🎬 ANIMATION CLASSES
+// ============================================================== 
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-slide-in {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+.animate-slide-out {
+  animation: slideOutToTop 0.3s ease-in;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.2s ease-in;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+.animate-scale-out {
+  animation: scaleOut 0.2s ease-in;
+}
+
+// ============================================================== 
+// 🎬 TRANSITION CLASSES
+// ============================================================== 
+
+.transition-base {
+  transition: all 0.2s ease;
+}
+
+.transition-fast {
+  transition: all 0.15s ease;
+}
+
+.transition-slow {
+  transition: all 0.3s ease;
+}
+
+.transition-transform {
+  transition: transform 0.2s ease;
+}
+
+.transition-opacity {
+  transition: opacity 0.2s ease;
+}
+
+.transition-colors {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+// ============================================================== 
+// 🎬 HOVER EFFECTS
+// ============================================================== 
+
+.hover-lift {
+  &:hover {
+    transform: translateY(-2px) scale(1.05);
+  }
+}
+
+.hover-scale {
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.hover-glow {
+  &:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+}
+
+// ============================================================== 
+// 🎬 LOADING STATES
+// ============================================================== 
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: $color-btn-primary;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-dots {
+  display: inline-flex;
+  gap: 4px;
+  
+  &::after {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  &::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.5s ease-in-out infinite 0.5s;
+  }
+}
+
+// ============================================================== 
+// 🎬 MOBILE SPECIFIC ANIMATIONS
+// ============================================================== 
+
+@media (max-width: 768px) {
+  .mobile-slide-up {
+    animation: slideInFromTop 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  .mobile-slide-down {
+    animation: slideOutToTop 0.4s cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  }
+  
+  // Disable hover effects on mobile
+  .hover-lift,
+  .hover-scale,
+  .hover-glow {
+    &:hover {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  }
+}

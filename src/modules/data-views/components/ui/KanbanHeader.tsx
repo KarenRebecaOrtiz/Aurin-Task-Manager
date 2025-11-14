@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import Image from 'next/image';
-import { Button } from '@/modules/shared/components/atoms/Button';
+import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Dropdown, type DropdownItem } from '@/modules/shared/components/molecules/Dropdown';
 import styles from '@/modules/data-views/tasks/components/tables/KanbanBoard/TasksKanban.module.scss';
 
@@ -279,14 +279,14 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
         )}
 
         <div className={styles.buttonWithTooltip}>
-          <Button
+          <CrystalButton
             variant="primary"
             size="medium"
             icon="/circle-plus.svg"
             onClick={onNewTaskOpen}
           >
             Crear Tarea
-          </Button>
+          </CrystalButton>
           <span className={styles.tooltip}>Crear Nueva Tarea</span>
         </div>
       </div>

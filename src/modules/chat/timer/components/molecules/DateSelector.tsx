@@ -1,41 +1,88 @@
 /**
  * Timer Module - Date Selector Component
  *
- * Date picker component for selecting time entry date.
- * Uses react-day-picker with Spanish locale.
- * Prevents future date selection.
+ * Calendar selector for choosing work date (cannot select future dates)
  *
  * @module timer/components/molecules/DateSelector
  */
 
 'use client';
 
-// TODO: Import react-day-picker and types
+import React from 'react';
+import { DayPicker } from 'react-day-picker';
+import { es } from 'date-fns/locale';
+import 'react-day-picker/style.css';
+import type { DateSelectorProps } from '../../types/timer.types';
+import styles from './DateSelector.module.scss';
 
-// ============================================================================
-// COMPONENT PROPS
-// ============================================================================
+/**
+ * DateSelector Component
+ *
+ * Calendar component for selecting work dates
+ * - Prevents selection of future dates
+ * - Spanish locale
+ * - Week starts on Monday
+ *
+ * @param value - Currently selected date
+ * @param onChange - Callback when date changes
+ * @param error - Error message to display
+ * @param disabled - Whether the selector is disabled
+ */
+export function DateSelector({
+  value,
+  onChange,
+  error,
+  disabled = false
+}: DateSelectorProps) {
+  const handleSelect = (date: Date | undefined) => {
+    if (date && onChange) {
+      onChange(date);
+    }
+  };
 
-// TODO: Define DateSelectorProps interface
-//   - value: Date
-//   - onChange: (date: Date) => void
-//   - error?: string
-//   - disabled?: boolean
+  // Set today at midnight for comparison
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-// ============================================================================
-// COMPONENT IMPLEMENTATION
-// ============================================================================
+  // Disable function for future dates
+  const disableFutureDates = (date: Date) => {
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate > today;
+  };
 
-// TODO: Implement DateSelector component
-//   - Use DayPicker from react-day-picker
-//   - Configure Spanish locale (es)
-//   - Set weekStartsOn: 1 (Monday)
-//   - Disable future dates
-//   - Apply custom styles
-//   - Show error message if present
-//   - Handle date selection
-//   - Add disabled state styling
+  return (
+    <div className={`${styles.dateSelector} ${error ? styles.hasError : ''}`}>
+      <div className={styles.calendarContainer}>
+        <DayPicker
+          mode="single"
+          selected={value}
+          onSelect={handleSelect}
+          locale={es}
+          weekStartsOn={1}
+          disabled={disabled || disableFutureDates}
+          modifiers={{
+            disabled: disableFutureDates
+          }}
+          modifiersStyles={{
+            disabled: {
+              color: '#9ca3af',
+              textDecoration: 'line-through',
+              cursor: 'not-allowed',
+              opacity: 0.5
+            }
+          }}
+          className={styles.dayPicker}
+        />
+      </div>
 
-// TODO: Export component
+      {error && (
+        <div className={styles.errorMessage} role="alert">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
 
-export {};
+export default DateSelector;

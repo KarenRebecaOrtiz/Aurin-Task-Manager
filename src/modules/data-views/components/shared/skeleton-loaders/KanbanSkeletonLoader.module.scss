@@ -1,0 +1,174 @@
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.kanbanSkeleton {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  overflow-x: auto;
+  min-height: 400px;
+  width: 100%;
+}
+
+.kanbanColumn {
+  min-width: 280px;
+  max-width: 320px;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  height: fit-content;
+}
+
+.columnHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.columnTitle {
+  height: 20px;
+  width: 120px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.columnCount {
+  height: 16px;
+  width: 30px;
+  border-radius: 12px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.columnCards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonKanbanCard {
+  width: 100%;
+  min-height: 120px;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.skeletonCardHeader {
+  height: 16px;
+  width: 80%;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.skeletonCardContent {
+  height: 12px;
+  width: 90%;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.skeletonCardFooter {
+  height: 20px;
+  width: 60%;
+  border-radius: 4px;
+  opacity: 0.7;
+  margin-top: auto;
+  transition: all 0.3s ease;
+}
+
+.shimmerOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  transform: translateX(-100%);
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+// Dark mode support
+:global(.dark) {
+  .kanbanColumn {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .columnHeader {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .skeletonKanbanCard {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .columnTitle,
+  .columnCount,
+  .skeletonCardHeader,
+  .skeletonCardContent,
+  .skeletonCardFooter {
+    background: rgba(60, 60, 60, 0.6) !important;
+  }
+
+  .shimmerOverlay {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+  }
+}
+
+// Mobile responsiveness
+@media (max-width: 768px) {
+  .kanbanSkeleton {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .kanbanColumn {
+    min-width: 240px;
+    padding: 12px;
+  }
+
+  .skeletonKanbanCard {
+    padding: 10px;
+    min-height: 100px;
+  }
+
+  .columnHeader {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+  }
+}

@@ -128,19 +128,19 @@ service cloud.firestore {
     // Todos collection - REGLAS SIMPLIFICADAS
     match /todos/{todoId} {
       // ✅ PERMITIR LECTURA: Usuarios pueden leer sus propios todos
-      allow read: if request.auth != null && 
+      allow read: if request.auth != null &&
                   resource.data.userId == request.auth.uid;
-      
+
       // ✅ PERMITIR CREACIÓN: Usuarios autenticados pueden crear sus propios todos
-      allow create: if request.auth != null && 
+      allow create: if request.auth != null &&
                    request.resource.data.userId == request.auth.uid;
-      
+
       // ✅ PERMITIR ACTUALIZACIÓN: Usuarios pueden actualizar sus propios todos
-      allow update: if request.auth != null && 
+      allow update: if request.auth != null &&
                    resource.data.userId == request.auth.uid;
-      
+
       // ✅ PERMITIR ELIMINACIÓN: Usuarios pueden eliminar sus propios todos
-      allow delete: if request.auth != null && 
+      allow delete: if request.auth != null &&
                    resource.data.userId == request.auth.uid;
     }
 

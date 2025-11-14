@@ -1,13 +1,11 @@
 import React from 'react';
 import { WelcomeSectionProps } from '../../../types';
 import { TextShimmer } from '../../../components/ui/TextShimmer';
-import { AdminBadge } from './AdminBadge';
 import AvatarDropdown from '../../../components/ui/AvatarDropdown';
 import styles from '../Header.module.scss';
 
 export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   userName,
-  isAdmin,
   subtitle,
   onChangeContainer,
 }) => {
@@ -25,7 +23,6 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
                 {userName}
               </TextShimmer>
             </span>
-            {isAdmin && <AdminBadge />}
           </div>
         </div>
         <div className={styles.text}>

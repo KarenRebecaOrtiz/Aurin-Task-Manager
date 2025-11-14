@@ -478,6 +478,18 @@ export interface TimerPanelProps {
   onSuccess?: () => void;
 }
 
+/**
+ * Props for ConfirmTimerSwitch component
+ */
+export interface ConfirmTimerSwitchProps {
+  isOpen: boolean;
+  currentTaskId: string;
+  newTaskId: string;
+  currentTimerSeconds: number;
+  onConfirm: () => void | Promise<void>;
+  onCancel: () => void;
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================

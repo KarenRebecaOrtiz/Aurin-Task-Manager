@@ -6,7 +6,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ExpandableTabs } from '@/components/ui/ExpandableTabs';
 import { User, MapPin, Users, Shield, Mail } from 'lucide-react';
-import SkeletonLoader from '@/components/SkeletonLoader';
+import { ConfigSkeletonLoader } from '@/modules/data-views/components/shared';
 import { ProfileHeader } from '../header';
 import { ProfileSection } from '../profile';
 import { LocationsSection } from '../locations';
@@ -17,6 +17,7 @@ import { SaveActions } from '../ui';
 import { useConfigPageStore, useProfileFormStore } from '../../stores';
 import { useProfileForm } from '../../hooks';
 import type { Config } from '../../types';
+import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import styles from './ConfigPage.module.scss';
 
 interface ConfigPageProps {
@@ -36,12 +37,24 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   const { activeTab, setActiveTab, tabChanges } = useConfigPageStore();
   const { setFormData } = useProfileFormStore();
   const [loading, setLoading] = useState(true);
+  const { success, error } = useSonnerToast();
+
+  // Create handlers that use both Sonner and legacy callbacks
+  const handleSuccess = (message: string) => {
+    success(message);
+    if (onShowSuccessAlert) onShowSuccessAlert(message);
+  };
+
+  const handleError = (message: string, errorDetails?: string) => {
+    error(message, errorDetails);
+    if (onShowFailAlert) onShowFailAlert(message, errorDetails);
+  };
 
   // Hook para manejar el guardado de configuración
   const { handleSubmit, handleDiscard, isSaving } = useProfileForm({
     userId,
-    onSuccess: onShowSuccessAlert,
-    onError: onShowFailAlert,
+    onSuccess: handleSuccess,
+    onError: handleError,
   });
 
   // Definir los tabs de configuración
@@ -151,7 +164,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   }, [userId, currentUser, isLoaded, onShowFailAlert, setFormData]);
 
   if (loading || !isLoaded) {
-    return <SkeletonLoader type="config" rows={5} />;
+    return <ConfigSkeletonLoader rows={5} />;
   }
 
   if (!currentUser) {

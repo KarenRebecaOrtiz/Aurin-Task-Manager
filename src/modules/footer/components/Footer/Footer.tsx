@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFeedbackForm } from '../../hooks';
-import { FooterInfo, FeedbackForm } from './components';
+import { FooterInfo, FeedbackForm, LogoSection } from './components';
 import styles from './Footer.module.scss';
 
 const Footer: React.FC = () => {
@@ -8,14 +8,17 @@ const Footer: React.FC = () => {
 
   return (
     <footer className={styles.footer} style={{ zIndex: 1000 }}>
-      <FooterInfo />
-      <FeedbackForm
-        feedback={feedback}
-        isSubmitting={isSubmitting}
-        onFeedbackChange={setFeedback}
-        onSubmit={handleSubmit}
-      />
-      {message && <p className={styles.message}>{message}</p>}
+      <LogoSection />
+      <div className={styles.footerContent}>
+        <FooterInfo />
+        <FeedbackForm
+          feedback={feedback}
+          isSubmitting={isSubmitting}
+          onFeedbackChange={setFeedback}
+          onSubmit={handleSubmit}
+        />
+        {message && <p className={styles.message}>{message}</p>}
+      </div>
     </footer>
   );
 };

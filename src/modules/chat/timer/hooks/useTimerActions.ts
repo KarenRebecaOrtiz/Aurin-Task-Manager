@@ -150,7 +150,7 @@ export function useTimerActions(
 
       if (finalSeconds > 0) {
         // Stop the other timer
-        await batchStopTimer(otherTimer.timerId, otherTaskId, userId, finalInterval);
+        await batchStopTimer(otherTaskId, userId, finalInterval);
       }
 
       // Clear from local state
@@ -232,7 +232,7 @@ export function useTimerActions(
 
       // Sync to Firebase with retry
       await retryWithBackoff(
-        () => startTimerInFirestore(timerId),
+        () => startTimerInFirestore(taskId, userId),
         {
           maxAttempts: 3,
           onRetry: (attempt, error) => {
@@ -318,7 +318,7 @@ export function useTimerActions(
 
       // Sync to Firebase with retry
       await retryWithBackoff(
-        () => pauseTimerInFirestore(existingTimer.timerId, interval),
+        () => pauseTimerInFirestore(taskId, userId, interval),
         {
           maxAttempts: 3,
           onRetry: (attempt, error) => {
@@ -348,6 +348,7 @@ export function useTimerActions(
     }
   }, [
     taskId,
+    userId,
     isProcessing,
     getTimerForTask,
     setTimerState,
@@ -393,7 +394,7 @@ export function useTimerActions(
 
       // Use batch operation for atomic update (timer + task aggregates)
       await retryWithBackoff(
-        () => batchStopTimer(existingTimer.timerId, taskId, userId, finalInterval),
+        () => batchStopTimer(taskId, userId, finalInterval),
         {
           maxAttempts: 3,
           onRetry: (attempt, error) => {
@@ -460,7 +461,7 @@ export function useTimerActions(
 
       // Delete from Firebase with retry
       await retryWithBackoff(
-        () => deleteTimer(existingTimer.timerId),
+        () => deleteTimer(taskId, userId),
         {
           maxAttempts: 3,
           onRetry: (attempt, error) => {

@@ -3,8 +3,9 @@ export { SearchInput } from './Input';
 export type { SearchInputProps } from './Input';
 
 // Buttons
-export { Button } from './Button';
-export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
+export { ButtonIsland } from './ButtonIsland';
+export { CrystalButton } from './CrystalButton';
+export type { CrystalButtonProps, CrystalButtonVariant, CrystalButtonSize } from './CrystalButton';
 
 // Badges
 export { Badge } from './Badge';

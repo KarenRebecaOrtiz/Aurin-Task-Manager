@@ -1,72 +1,192 @@
 /**
- * TimeInput Styles (BLUEPRINT)
- *
- * REQUIRED STYLES:
- *
- * .timeInput {
- *   - Display: flex column
- *   - Align items center
- *   - Gap between elements: 8px
- *   - Padding: 16px
- *   - Background: white or light gray
- *   - Border-radius: 12px
- *   - Border: 1px solid #e2e8f0
- *   - Box-shadow: subtle
- *   - Max-width: 120px
- * }
- *
- * .incrementButton, .decrementButton {
- *   - Width: 40px
- *   - Height: 32px
- *   - Background: transparent
- *   - Border: 1px solid #cbd5e1
- *   - Border-radius: 6px
- *   - Cursor: pointer
- *   - Font-size: 18px
- *   - Color: #64748b
- *   - Transition: all 0.2s
- *   - Hover: background #f1f5f9
- *   - Disabled: opacity 0.5, cursor not-allowed
- * }
- *
- * .inputWrapper {
- *   - Display: flex column
- *   - Align items center
- *   - Gap: 4px
- * }
- *
- * .input {
- *   - Width: 60px
- *   - Height: 50px
- *   - Font-size: 32px
- *   - Font-weight: 600
- *   - Text-align: center
- *   - Border: none
- *   - Background: transparent
- *   - Color: #1e293b
- *   - Outline: none
- *   - Remove number spinners (appearance: textfield)
- *   - Focus: color #3b82f6
- * }
- *
- * .label {
- *   - Font-size: 10px
- *   - Font-weight: 600
- *   - Letter-spacing: 0.1em
- *   - Color: #64748b
- *   - Text-transform: uppercase
- * }
- *
- * .error {
- *   - Font-size: 12px
- *   - Color: #ef4444
- *   - Text-align: center
- *   - Margin-top: 8px
- * }
- *
- * // Dark mode support
- * // Responsive design for mobile
+ * Timer Module - TimeInput Styles
  */
 
-// TODO: Implement all styles above
-// Reference: /src/components/ui/TimeInput.module.scss if it exists
+.timeInputContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  border: none !important;
+
+  &.hasError {
+    .inputGroup {
+      border-color: var(--timer-danger, #ef4444);
+    }
+  }
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--timer-gray, #6b7280);
+  text-transform: uppercase;
+}
+
+.inputGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background: var(--timer-bg, #ffffff);
+  border: 2px solid var(--timer-border, #e2e8f0);
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
+
+  &:focus-within {
+    border-color: var(--timer-primary, #3b82f6);
+  }
+}
+
+.decrementButton,
+.incrementButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--timer-bg, #f8fafc);
+  border: 1px solid var(--timer-border, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--timer-text, #1e293b);
+
+  &:hover:not(:disabled) {
+    background: var(--timer-primary, #3b82f6);
+    color: white;
+    border-color: var(--timer-primary, #3b82f6);
+    transform: scale(1.05);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.numberContainer {
+  position: relative;
+  width: 60px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hiddenInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none !important;
+  background: transparent;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  color: transparent;
+  caret-color: var(--timer-primary, #3b82f6);
+  outline: none;
+  z-index: 2;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  &.hideCaret {
+    caret-color: transparent;
+  }
+
+  &.showCaret {
+    caret-color: var(--timer-primary, #3b82f6);
+  }
+}
+
+.numberFlow {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--timer-text, #1e293b);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.errorMessage {
+  font-size: 12px;
+  color: var(--timer-danger, #ef4444);
+  text-align: center;
+  padding: 4px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+}
+
+.spinHide {
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
+  &[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .timeInputContainer {
+    .inputGroup {
+      background: #1e293b;
+      border-color: #334155;
+    }
+
+    .decrementButton,
+    .incrementButton {
+      background: #334155;
+      border-color: #475569;
+      color: #e2e8f0;
+
+      &:hover:not(:disabled) {
+        background: var(--timer-primary, #3b82f6);
+        color: white;
+      }
+    }
+
+    .numberFlow {
+      color: #e2e8f0;
+    }
+
+    .hiddenInput {
+      caret-color: var(--timer-primary, #3b82f6);
+    }
+  }
+
+  .label {
+    color: #94a3b8;
+  }
+}

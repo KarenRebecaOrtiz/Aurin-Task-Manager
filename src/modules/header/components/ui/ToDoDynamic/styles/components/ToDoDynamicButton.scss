@@ -1,0 +1,79 @@
+/**
+ * ToDoDynamicButton Component Styles
+ * Modular styles using shared variables and mixins
+ */
+
+@use '../shared/variables' as vars;
+@use '../shared/mixins' as mixins;
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ============================================================== 
+// 🔮 TODO DYNAMIC BUTTON
+// ============================================================== 
+
+.todoButton {
+  @include mixins.todo-button-base;
+  @include mixins.todo-button-light;
+
+  :global(body.dark) & {
+    @include mixins.todo-button-dark;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    filter: invert(0%) brightness(100%);
+    
+    :global(body.dark) & {
+      filter: invert(100%) brightness(130%) drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+    }
+  }
+}
+
+.todoNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: $color-text-primary;
+  line-height: 1;
+  transition: color 0.2s;
+
+  :global(body.dark) & {
+    color: #fff;
+  }
+}
+
+.todoCount {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background: $color-btn-primary;
+  color: $white;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border: 2px solid rgba(241, 245, 249, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  @include dark-mode {
+    background: $color-btn-primary;
+    border-color: rgba(30, 30, 30, 0.9);
+  }
+}

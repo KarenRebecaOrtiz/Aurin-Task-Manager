@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/modules/shared/components/atoms/Button';
+import { CrystalButton } from '@/modules/shared/components/atoms';
 import { TaskSearchBar, type SearchCategory, type PriorityLevel, type StatusLevel } from '@/modules/data-views/components/shared/search';
 import { ViewSwitcher } from './ViewSwitcher';
 import styles from './TasksHeader.module.scss';
@@ -14,7 +14,7 @@ interface TasksHeaderProps {
   onArchiveTableOpen: () => void;
   onNewTaskOpen: () => void;
   onNewClientOpen?: () => void;
-  onPriorityFiltersChange?: (priorities: PriorityLevel[]) => void;
+  onPriorityFiltersChange?: (priorities: string[]) => void;
   onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
   currentView?: 'table' | 'kanban' | 'archive';
 }
@@ -77,26 +77,26 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
         <div className={styles.rightActions}>
           {onNewClientOpen && (
             <div className={styles.buttonWithTooltip}>
-              <Button
+              <CrystalButton
                 variant="secondary"
                 size="medium"
                 icon="/circle-plus.svg"
                 onClick={onNewClientOpen}
               >
                 Crear Cuenta
-              </Button>
+              </CrystalButton>
               <span className={styles.tooltip}>Crear Nueva Cuenta</span>
             </div>
           )}
           <div className={styles.buttonWithTooltip}>
-            <Button
-              variant="primary"
+            <CrystalButton
+              variant="secondary"
               size="medium"
               icon="/circle-plus.svg"
               onClick={onNewTaskOpen}
             >
               Crear Tarea
-            </Button>
+            </CrystalButton>
             <span className={styles.tooltip}>Crear Nueva Tarea</span>
           </div>
         </div>

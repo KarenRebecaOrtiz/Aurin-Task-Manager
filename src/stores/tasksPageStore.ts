@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 
 // Types
 interface Client {
@@ -226,6 +227,9 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   }),
   
   showSuccess: (message) => {
+    // Use Sonner directly instead of legacy alert system
+    toast.success(message, { duration: 3000 });
+    // Keep store state for backward compatibility
     set({ 
       successMessage: message, 
       showSuccessAlert: true 
@@ -234,6 +238,9 @@ export const useTasksPageStore = create<TasksPageState>((set) => ({
   },
   
   showFail: (message) => {
+    // Use Sonner directly instead of legacy alert system
+    toast.error(message, { duration: 5000 });
+    // Keep store state for backward compatibility
     set({ 
       failMessage: message, 
       showFailAlert: true 
