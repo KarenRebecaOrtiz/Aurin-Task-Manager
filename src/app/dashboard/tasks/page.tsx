@@ -612,18 +612,22 @@ function TasksPageContent() {
 
   return (
     <>
-      {/* Loader con efecto de telón */}
-      <Loader 
-        isFullPage={true} 
-        message="Cargando datos de la aplicación..." 
+      {/*
+        LOADER DESACTIVADO - Nueva arquitectura con cache hace la app instantánea
+        Se mantiene el código para poder reactivarlo si es necesario
+        Para reactivar: cambiar isVisible={false} por isVisible={showLoader}
+      */}
+      <Loader
+        isFullPage={true}
+        message="Cargando datos de la aplicación..."
         loadingProgress={loadingProgress}
-        isVisible={showLoader}
+        isVisible={false}  // ← DESACTIVADO: Cache hace la app instantánea
         onAnimationComplete={handleLoaderAnimationComplete}
       />
 
-      {/* Contenido principal que se renderiza antes de que el loader se oculte */}
-      {contentReady && mainContent}
-      
+      {/* Contenido principal - Ahora se muestra siempre (skeleton loaders manejan la carga) */}
+      {mainContent}
+
       {/* Modales y popups */}
       <TasksPageModals />
     </>

@@ -27,6 +27,32 @@ import {
   type RetryAction,
 } from '@/shared/utils/error-metadata';
 
+// --- Helper Functions ---
+
+/**
+ * Safely convert Firestore Timestamp to ISO string.
+ * Returns current date if timestamp is invalid.
+ */
+const safeTimestampToISO = (timestamp: Timestamp | Date | string | null | undefined): string => {
+  if (!timestamp) return new Date().toISOString();
+  if (timestamp instanceof Timestamp) return timestamp.toDate().toISOString();
+  if (timestamp instanceof Date) return timestamp.toISOString();
+  if (typeof timestamp === 'string') return timestamp;
+  return new Date().toISOString();
+};
+
+/**
+ * Safely convert Firestore Timestamp to ISO string or null.
+ * Returns null if timestamp is invalid.
+ */
+const safeTimestampToISOOrNull = (timestamp: Timestamp | Date | string | null | undefined): string | null => {
+  if (!timestamp) return null;
+  if (timestamp instanceof Timestamp) return timestamp.toDate().toISOString();
+  if (timestamp instanceof Date) return timestamp.toISOString();
+  if (typeof timestamp === 'string') return timestamp;
+  return null;
+};
+
 // --- Cache Keys ---
 const IDB_CACHE_KEY = 'tasks';
 const MEMORY_CACHE_KEY = 'tasks:all';
@@ -74,7 +100,7 @@ export async function getTasks(): Promise<TasksResult> {
       return {
         data: memoryCache.data,
         source: 'cache',
-        promise: fetchTasksFromNetwork(requestStartTime), // Background refresh
+        promise: fetchTasksFromFirebase(requestStartTime), // Background refresh
         metrics: memoryCache.metrics,
       };
     }
@@ -88,13 +114,13 @@ export async function getTasks(): Promise<TasksResult> {
       return {
         data: idbCache,
         source: 'idb',
-        promise: fetchTasksFromNetwork(requestStartTime), // Background refresh
+        promise: fetchTasksFromFirebase(requestStartTime), // Background refresh
       };
     }
 
     // Layer 3: Network (no cache available)
     console.log('[taskService] ❌ MISS: Fetching from network');
-    const tasks = await fetchTasksFromNetwork(requestStartTime);
+    const tasks = await fetchTasksFromFirebase(requestStartTime);
 
     return {
       data: tasks,
@@ -123,7 +149,7 @@ export async function getTasks(): Promise<TasksResult> {
 /**
  * Fetches fresh tasks from Firebase and updates all cache layers.
  */
-async function fetchTasksFromNetwork(requestStartTime?: number): Promise<Task[]> {
+async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]> {
   const startTime = requestStartTime ?? Date.now();
 
   try {
@@ -139,23 +165,31 @@ async function fetchTasksFromNetwork(requestStartTime?: number): Promise<Task[]>
     const snapshot = await getDocs(tasksQuery);
     const responseEndTime = Date.now();
 
-    // --- USER: CUSTOMIZE YOUR DATA MAPPING HERE ---
+    // Map Firestore documents to Task objects
     const tasksData: Task[] = snapshot.docs.map((doc) => {
       const data = doc.data();
+
       return {
         id: doc.id,
-        ...data,
-        // Convert Firestore timestamps to strings
-        createdAt: data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate().toISOString()
-          : data.createdAt,
-        startDate: data.startDate instanceof Timestamp
-          ? data.startDate.toDate().toISOString()
-          : data.startDate,
-        endDate: data.endDate instanceof Timestamp
-          ? data.endDate.toDate().toISOString()
-          : data.endDate,
-      } as Task;
+        clientId: data.clientId || '',
+        project: data.project || '',
+        name: data.name || '',
+        description: data.description || '',
+        status: data.status || '',
+        priority: data.priority || '',
+        startDate: safeTimestampToISOOrNull(data.startDate),
+        endDate: safeTimestampToISOOrNull(data.endDate),
+        LeadedBy: data.LeadedBy || [],
+        AssignedTo: data.AssignedTo || [],
+        createdAt: safeTimestampToISO(data.createdAt),
+        CreatedBy: data.CreatedBy || '',
+        lastActivity: safeTimestampToISO(data.lastActivity),
+        hasUnreadUpdates: data.hasUnreadUpdates || false,
+        lastViewedBy: data.lastViewedBy || {},
+        archived: data.archived || false,
+        archivedAt: safeTimestampToISOOrNull(data.archivedAt),
+        archivedBy: data.archivedBy || '',
+      };
     });
 
     // Create metrics
@@ -258,7 +292,7 @@ export async function archiveTask(taskId: string): Promise<void> {
     console.log(`[taskService] ✅ Task archived successfully: ${taskId}`);
 
     // 7. Refresh cache with fresh data
-    await fetchTasksFromNetwork();
+    await fetchTasksFromFirebase();
   } catch (error) {
     console.error(`[taskService] ❌ Archive failed for task ${taskId}:`, error);
 
@@ -342,7 +376,7 @@ export async function unarchiveTask(taskId: string): Promise<void> {
     optimisticUpdates.delete(updateId);
     console.log(`[taskService] ✅ Task unarchived successfully: ${taskId}`);
 
-    await fetchTasksFromNetwork();
+    await fetchTasksFromFirebase();
   } catch (error) {
     console.error(`[taskService] ❌ Unarchive failed for task ${taskId}:`, error);
 
@@ -394,10 +428,4 @@ function createEnrichedError(error: unknown, context: any): EnrichedError {
   addContext(enrichedError, context);
 
   return enrichedError;
-}
-
-// Re-export for backward compatibility (legacy API)
-export async function fetchTasksFromNetwork(): Promise<{ data: Task[]; source: 'network' }> {
-  const tasks = await fetchTasksFromNetwork();
-  return { data: tasks, source: 'network' };
 }

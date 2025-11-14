@@ -23,6 +23,20 @@ import {
   addContext,
 } from '@/shared/utils/error-metadata';
 
+// --- Helper Functions ---
+
+/**
+ * Safely convert Firestore Timestamp to ISO string.
+ * Returns current date if timestamp is invalid.
+ */
+const safeTimestampToISO = (timestamp: Timestamp | Date | string | null | undefined): string => {
+  if (!timestamp) return new Date().toISOString();
+  if (timestamp instanceof Timestamp) return timestamp.toDate().toISOString();
+  if (timestamp instanceof Date) return timestamp.toISOString();
+  if (typeof timestamp === 'string') return timestamp;
+  return new Date().toISOString();
+};
+
 // --- Cache Keys ---
 const IDB_CACHE_KEY = 'clients';
 const MEMORY_CACHE_KEY = 'clients:all';
@@ -52,7 +66,7 @@ export async function getClients(): Promise<ClientsResult> {
       return {
         data: memoryCache.data,
         source: 'cache',
-        promise: fetchClientsFromNetwork(requestStartTime),
+        promise: fetchClientsFromFirebase(requestStartTime),
         metrics: memoryCache.metrics,
       };
     }
@@ -65,13 +79,13 @@ export async function getClients(): Promise<ClientsResult> {
       return {
         data: idbCache,
         source: 'idb',
-        promise: fetchClientsFromNetwork(requestStartTime),
+        promise: fetchClientsFromFirebase(requestStartTime),
       };
     }
 
     // Layer 3: Network
     console.log('[clientService] ❌ MISS: Fetching from network');
-    const clients = await fetchClientsFromNetwork(requestStartTime);
+    const clients = await fetchClientsFromFirebase(requestStartTime);
 
     return {
       data: clients,
@@ -98,7 +112,7 @@ export async function getClients(): Promise<ClientsResult> {
 /**
  * Fetches fresh clients from Firebase and updates all cache layers.
  */
-async function fetchClientsFromNetwork(requestStartTime?: number): Promise<Client[]> {
+async function fetchClientsFromFirebase(requestStartTime?: number): Promise<Client[]> {
   const startTime = requestStartTime ?? Date.now();
 
   try {
@@ -113,17 +127,18 @@ async function fetchClientsFromNetwork(requestStartTime?: number): Promise<Clien
     const snapshot = await getDocs(clientsQuery);
     const responseEndTime = Date.now();
 
-    // --- USER: CUSTOMIZE YOUR DATA MAPPING HERE ---
+    // Map Firestore documents to Client objects
     const clientsData: Client[] = snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
-        ...data,
-        // Convert Firestore timestamps if needed
-        createdAt: data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate().toISOString()
-          : data.createdAt,
-      } as Client;
+        name: data.name || '',
+        imageUrl: data.imageUrl || '/empty-image.png',
+        projectCount: data.projectCount || 0,
+        projects: data.projects || [],
+        createdBy: data.createdBy || '',
+        createdAt: safeTimestampToISO(data.createdAt),
+      };
     });
 
     // Create metrics

@@ -54,7 +54,7 @@ export async function getUsers(): Promise<UsersResult> {
       return {
         data: memoryCache.data,
         source: 'cache',
-        promise: fetchUsersFromNetwork(requestStartTime),
+        promise: fetchUsersFromAPI(requestStartTime),
         metrics: memoryCache.metrics,
       };
     }
@@ -67,13 +67,13 @@ export async function getUsers(): Promise<UsersResult> {
       return {
         data: idbCache,
         source: 'idb',
-        promise: fetchUsersFromNetwork(requestStartTime),
+        promise: fetchUsersFromAPI(requestStartTime),
       };
     }
 
     // Layer 3: Network
     console.log('[userService] ❌ MISS: Fetching from network');
-    const users = await fetchUsersFromNetwork(requestStartTime);
+    const users = await fetchUsersFromAPI(requestStartTime);
 
     return {
       data: users,
@@ -101,7 +101,7 @@ export async function getUsers(): Promise<UsersResult> {
  * Fetches fresh users from API and Firestore, then updates all cache layers.
  * This is a complex operation that combines two data sources.
  */
-async function fetchUsersFromNetwork(requestStartTime?: number): Promise<User[]> {
+async function fetchUsersFromAPI(requestStartTime?: number): Promise<User[]> {
   const startTime = requestStartTime ?? Date.now();
 
   try {

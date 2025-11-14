@@ -17,9 +17,9 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       <div className={styles.frame14}>
         <div className={styles.title}>
           <div className={styles.welcome}>
-            <span className={styles.welcomeText}>
+            <span className={styles.welcomeText} suppressHydrationWarning>
               Te damos la bienvenida de nuevo,{' '}
-              <TextShimmer as="span" className={styles.userNameShimmer}>
+              <TextShimmer as="span" className={styles.userNameShimmer} suppressHydrationWarning>
                 {userName}
               </TextShimmer>
             </span>
