@@ -13,12 +13,12 @@ import { useProfile } from '../hooks/useProfile';
 import type { ProfileCardProps, SocialLink } from '../types';
 import styles from './ProfileCard.module.scss';
 import {
-  overlayVariants,
-  modalCenterVariants,
-  containerVariants,
+  backdropVariants,
+  panelVariants,
+  contentVariants,
   itemVariants,
   transitions
-} from '@/modules/modal/config/animations';
+} from '@/modules/dialog';
 
 // Iconos SVG simples para redes sociales (mantenidos igual)
 const SocialIcons = {
@@ -135,7 +135,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
         {isOpen && (
           <motion.div
             className={styles.overlay}
-            variants={overlayVariants}
+            variants={backdropVariants}
             initial="hidden"
             animate="visible"
             exit="hidden"
@@ -145,7 +145,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
           >
             <motion.div
               className={styles.card}
-              variants={modalCenterVariants}
+              variants={panelVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -169,7 +169,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
         {isOpen && (
           <motion.div
             className={styles.overlay}
-            variants={overlayVariants}
+            variants={backdropVariants}
             initial="hidden"
             animate="visible"
             exit="hidden"
@@ -179,7 +179,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
           >
             <motion.div
               className={styles.card}
-              variants={modalCenterVariants}
+              variants={panelVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -227,7 +227,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
                       className={styles.coverPhotoSection}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={transitions.ultraFast}
+                      transition={transitions.fast}
                     >
                       <div
                         className={styles.coverPhoto}
@@ -254,7 +254,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
 
                     <motion.div
                       className={styles.contentSection}
-                      variants={containerVariants}
+                      variants={contentVariants}
                       initial="hidden"
                       animate="visible"
                       exit="exit"

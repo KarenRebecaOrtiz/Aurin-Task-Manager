@@ -23,6 +23,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({
         placeholder="Escribe aquí tus comentarios..."
         className={styles.feedbackInput}
         disabled={isSubmitting}
+        suppressHydrationWarning
       />
       <button
         type="submit"

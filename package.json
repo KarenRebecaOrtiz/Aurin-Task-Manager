@@ -23,6 +23,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@firebase/ai": "^1.4.0",
     "@google-cloud/storage": "^7.16.0",
+    "@headlessui/react": "^2.2.9",
     "@hookform/resolvers": "^5.2.2",
     "@lottiefiles/dotlottie-react": "^0.14.1",
     "@number-flow/react": "^0.5.10",

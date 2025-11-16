@@ -5,10 +5,10 @@ import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  overlayVariants,
-  modalCenterVariants,
+  backdropVariants,
+  panelVariants,
   transitions,
-} from '@/modules/modal/config/animations';
+} from '@/modules/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './ClientOverlay.module.scss';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
@@ -442,7 +442,7 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
       {isOpen && (
         <motion.div
           className={styles.overlay}
-          variants={overlayVariants}
+          variants={backdropVariants}
           initial="hidden"
           animate="visible"
           exit="hidden"
@@ -450,7 +450,7 @@ const ClientOverlay: React.FC<ClientOverlayProps> = ({
         >
           <motion.div
             className={styles.modal}
-            variants={modalCenterVariants}
+            variants={panelVariants}
             initial="hidden"
             animate="visible"
             exit="exit"

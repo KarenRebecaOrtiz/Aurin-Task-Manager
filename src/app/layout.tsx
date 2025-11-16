@@ -3,7 +3,7 @@ import Script from "next/script";
 import { Urbanist } from "next/font/google";
 import "./globals.scss";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { ModalProvider } from "@/modules/modal";
+import { DialogProvider } from "@/modules/dialog";
 import { SonnerToaster } from "@/modules/sonner";
 
 const urbanist = Urbanist({
@@ -93,9 +93,9 @@ export default function RootLayout({
                 </filter>
               </defs>
             </svg>
-            <ModalProvider>
+            <DialogProvider>
               {children}
-            </ModalProvider>
+            </DialogProvider>
             <SonnerToaster />
             <div id="portal-root" />
           </body>

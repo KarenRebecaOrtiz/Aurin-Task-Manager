@@ -5,14 +5,14 @@ import { doc, deleteDoc, addDoc, updateDoc, collection } from 'firebase/firestor
 import { db } from '@/lib/firebase';
 import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
-import { useModal } from '@/modules/modal';
+import { useDialog } from '@/modules/dialog';
 import { useSonnerToast } from '@/modules/sonner';
 import { AccountDetailsCard } from '@/modules/data-views/clients/components/modals';
 
 export default function TasksPageModals() {
   const { user } = useUser();
-  const { openModal, closeModal } = useModal();
-  const { success, error } = useSonnerToast();
+  const { openConfirm } = useDialog();
+  const { success, error: showError } = useSonnerToast();
   
   // Optimized selectors to prevent unnecessary re-renders
   const deleteTarget = useTasksPageStore(useShallow(state => state.deleteTarget));
@@ -100,7 +100,7 @@ export default function TasksPageModals() {
       success('Cliente guardado exitosamente');
     } catch (err) {
       console.error('[TasksPageModals] Error saving client:', err);
-      error('Error al guardar el cliente');
+      showError('Error al guardar el cliente');
     } finally {
       const { setIsClientLoading } = useTasksPageStore.getState();
       setIsClientLoading(false);
@@ -108,48 +108,45 @@ export default function TasksPageModals() {
   };
 
 
-  // Handle delete popup with new modal system
+  // Handle delete popup with new dialog system
   useEffect(() => {
     if (isDeletePopupOpen && deleteTarget) {
-      openModal({
-        type: 'confirm',
-        variant: 'danger',
+      openConfirm({
         title: `Eliminar ${deleteTarget.type === 'task' ? 'Tarea' : 'Cuenta'}`,
-        description: `¿Estás seguro de que quieres eliminar esta ${deleteTarget.type === 'task' ? 'tarea' : 'cuenta'}?`,
-        requiresConfirmation: true,
-        confirmationKeyword: 'eliminar',
-        confirmText: 'Confirmar Eliminación',
+        description: `¿Estás seguro de que quieres eliminar esta ${deleteTarget.type === 'task' ? 'tarea' : 'cuenta'}? Esta acción no se puede deshacer.`,
+        variant: 'danger',
+        confirmText: 'Eliminar',
         onConfirm: async () => {
           console.log('[TasksPageModals] Delete popup confirmed for:', deleteTarget);
           if (deleteTarget.type === 'task') {
-            // ✅ OPTIMISTIC UPDATE: Eliminar inmediatamente del estado local
+            // OPTIMISTIC UPDATE: Eliminar inmediatamente del estado local
             const { deleteTaskOptimistic, addTask } = useDataStore.getState();
             const deletedTask = deleteTaskOptimistic(deleteTarget.id);
-            
+
             if (!deletedTask) {
-              error('Tarea no encontrada');
+              showError('Tarea no encontrada');
               return;
             }
-            
+
             try {
               console.log('[TasksPageModals] Task removed from local state:', deleteTarget.id);
-              
+
               // Ahora eliminar de Firestore
               console.log('[TasksPageModals] Deleting task from Firestore:', deleteTarget.id);
               await deleteDoc(doc(db, 'tasks', deleteTarget.id));
               console.log('[TasksPageModals] Task deleted successfully from Firestore');
-              
+
               const { closeDeletePopup } = useTasksPageStore.getState();
               closeDeletePopup();
               success('Tarea eliminada exitosamente');
-            } catch (error) {
-              console.error('[TasksPageModals] Error deleting task:', error);
-              
-              // ✅ ROLLBACK: Si falla, restaurar la tarea en el estado local
+            } catch (err) {
+              console.error('[TasksPageModals] Error deleting task:', err);
+
+              // ROLLBACK: Si falla, restaurar la tarea en el estado local
               addTask(deletedTask);
               console.log('[TasksPageModals] Task restored to local state after error');
-              
-              error('Error al eliminar la tarea');
+
+              showError('Error al eliminar la tarea');
             }
           }
         },
@@ -160,35 +157,31 @@ export default function TasksPageModals() {
         },
       });
     }
-  }, [isDeletePopupOpen, deleteTarget, openModal]);
+  }, [isDeletePopupOpen, deleteTarget, openConfirm, success, showError]);
 
-  // Handle confirm exit popup with new modal system
+  // Handle confirm exit popup with new dialog system
   useEffect(() => {
     if (isConfirmExitOpen) {
-      openModal({
-        type: 'confirm',
-        variant: 'warning',
+      openConfirm({
         title: '¿Salir sin guardar?',
         description: '¿Estás seguro de que quieres salir sin guardar los cambios? Perderás todo el progreso no guardado.',
+        variant: 'warning',
         confirmText: 'Salir',
         cancelText: 'Cancelar',
         onConfirm: handleConfirmExit,
         onCancel: handleCancelExit,
       });
     }
-  }, [isConfirmExitOpen, openModal]);
+  }, [isConfirmExitOpen, openConfirm]);
 
-  // Handle delete client popup with new modal system
+  // Handle delete client popup with new dialog system
   useEffect(() => {
     if (isDeleteClientOpen && typeof isDeleteClientOpen === 'string') {
-      openModal({
-        type: 'confirm',
-        variant: 'danger',
+      openConfirm({
         title: 'Eliminar Cliente',
         description: '¿Estás seguro de que quieres eliminar este cliente? Esta acción no se puede deshacer.',
-        requiresConfirmation: true,
-        confirmationKeyword: 'eliminar',
-        confirmText: 'Confirmar Eliminación',
+        variant: 'danger',
+        confirmText: 'Eliminar',
         onConfirm: async () => {
           try {
             await deleteDoc(doc(db, 'clients', isDeleteClientOpen));
@@ -198,7 +191,7 @@ export default function TasksPageModals() {
             success('Cliente eliminado exitosamente');
           } catch (err) {
             console.error('Error deleting client:', err);
-            error('Error al eliminar la cuenta');
+            showError('Error al eliminar la cuenta');
           }
         },
         onCancel: () => {
@@ -208,7 +201,7 @@ export default function TasksPageModals() {
         },
       });
     }
-  }, [isDeleteClientOpen, openModal]);
+  }, [isDeleteClientOpen, openConfirm, success, showError]);
 
   return (
     <>

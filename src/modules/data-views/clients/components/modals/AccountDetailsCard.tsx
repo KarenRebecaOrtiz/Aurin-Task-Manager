@@ -6,10 +6,10 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  overlayVariants,
-  modalCenterVariants,
+  backdropVariants,
+  panelVariants,
   transitions,
-} from '@/modules/modal/config/animations';
+} from '@/modules/dialog';
 import {
   Dialog,
   DialogClose,
@@ -279,14 +279,14 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardProps> = ({
         <Dialog open={isOpen} onOpenChange={onClose}>
           <motion.div
             className={styles.overlay}
-            variants={overlayVariants}
+            variants={backdropVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
           >
             <motion.div
               className={styles.card}
-              variants={modalCenterVariants}
+              variants={panelVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
