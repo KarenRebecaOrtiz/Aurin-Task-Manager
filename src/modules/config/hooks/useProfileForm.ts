@@ -92,7 +92,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
             gender: data.gender || '',
             portfolio: data.portfolio?.replace(/^https?:\/\//, '') || '',
             stack: data.stack || [],
-            teams: data.teams || [],
             profilePhoto: data.profilePhoto || currentUser.imageUrl || '',
             coverPhoto: data.coverPhoto || '/empty-cover.png',
             profilePhotoFile: null,
@@ -135,7 +134,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
             gender: '',
             portfolio: '',
             stack: [],
-            teams: [],
             profilePhoto: currentUser.imageUrl || '',
             coverPhoto: '/empty-cover.png',
             profilePhotoFile: null,
@@ -192,20 +190,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
   const handleStackChange = useCallback((selectedValues: string[]) => {
     const values = Array.isArray(selectedValues) ? selectedValues : [];
     updateFormData({ stack: values.slice(0, 40) });
-    useConfigPageStore.getState().markTabAsChanged(activeTab);
-  }, [updateFormData, activeTab]);
-
-  /**
-   * Maneja el cambio de equipos
-   */
-  const handleTeamsChange = useCallback((selectedTeams: string | string[]) => {
-    // Convertir a array si es string
-    const teamsArray = Array.isArray(selectedTeams) ? selectedTeams : [selectedTeams];
-
-    // Validar y limitar a máximo 3 equipos
-    const teams = teamsArray.slice(0, 3);
-
-    updateFormData({ teams });
     useConfigPageStore.getState().markTabAsChanged(activeTab);
   }, [updateFormData, activeTab]);
 
@@ -334,7 +318,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         gender: formData.gender,
         portfolio: formData.portfolio ? `https://${formData.portfolio}` : '',
         stack: formData.stack,
-        teams: formData.teams,
         profilePhoto: profilePhotoUrl,
         coverPhoto: coverPhotoUrl,
         status: formData.status || 'Disponible',
@@ -409,7 +392,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
     isSaving,
     handleInputChange,
     handleStackChange,
-    handleTeamsChange,
     handlePhoneLadaChange,
     handlePhoneChange,
     handleSubmit,

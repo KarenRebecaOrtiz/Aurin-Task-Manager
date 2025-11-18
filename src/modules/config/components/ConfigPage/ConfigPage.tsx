@@ -5,11 +5,10 @@ import { useUser } from '@clerk/nextjs';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ExpandableTabs } from '@/components/ui/ExpandableTabs';
-import { User, Users, Shield, Mail } from 'lucide-react';
+import { User, Shield, Mail } from 'lucide-react';
 import { ConfigSkeletonLoader } from '@/modules/data-views/components/shared';
 import { ProfileHeader } from '../header';
 import { ProfileSection } from '../profile';
-import { TeamsSection } from '../teams';
 import { SecuritySection } from '../security';
 import { NotificationsSection } from '../notifications';
 import { SaveActions } from '../ui';
@@ -59,7 +58,6 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   // Definir los tabs de configuración
   const configTabs: Array<{ title: string; icon: any } | { type: "separator" }> = [
     { title: "Configuración de perfil", icon: User },
-    { title: "Equipos", icon: Users },
     { title: "Ajustes de Perfil", icon: Shield },
     { type: "separator" },
     { title: "Notificaciones", icon: Mail },
@@ -216,43 +214,23 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           </>
         )}
 
-        {/* Tab 1: Equipos */}
-        {activeTab === 1 && (
-          <>
-            <TeamsSection
-              userId={userId}
-              isOwnProfile={isOwnProfile}
-              onSuccess={onShowSuccessAlert}
-              onError={onShowFailAlert}
-            />
-            {isOwnProfile && (
-              <SaveActions
-                hasChanges={tabChanges[1] || false}
-                isSaving={isSaving}
-                onSave={handleSubmit}
-                onDiscard={handleDiscard}
-              />
-            )}
-          </>
-        )}
-
-        {/* Tab 2: Seguridad */}
-        {activeTab === 2 && isOwnProfile && (
+        {/* Tab 1: Seguridad */}
+        {activeTab === 1 && isOwnProfile && (
           <SecuritySection
             onSuccess={onShowSuccessAlert}
             onError={onShowFailAlert}
           />
         )}
 
-        {/* Tab 4: Notificaciones */}
-        {activeTab === 4 && (
+        {/* Tab 3: Notificaciones */}
+        {activeTab === 3 && (
           <>
             <NotificationsSection
               isOwnProfile={isOwnProfile}
             />
             {isOwnProfile && (
               <SaveActions
-                hasChanges={tabChanges[4] || false}
+                hasChanges={tabChanges[3] || false}
                 isSaving={isSaving}
                 onSave={handleSubmit}
                 onDiscard={handleDiscard}

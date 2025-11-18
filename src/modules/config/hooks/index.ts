@@ -6,7 +6,6 @@
 export { useProfileForm } from './useProfileForm';
 export { useImageUpload } from './useImageUpload';
 export { useSecuritySettings } from './useSecuritySettings';
-export { useTeamsManagement } from './useTeamsManagement';
 
 // usePersonalLocations se migrará desde /hooks cuando sea necesario
 // export { usePersonalLocations } from './usePersonalLocations';

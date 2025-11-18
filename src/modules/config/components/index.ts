@@ -14,6 +14,5 @@ export { ProfileHeader } from './header';
 
 // Secciones
 export { ProfileSection } from './profile';
-export { TeamsSection } from './teams';
 export { SecuritySection } from './security';
 export { NotificationsSection } from './notifications';

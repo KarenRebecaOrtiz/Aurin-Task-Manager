@@ -15,17 +15,6 @@ export type {
   SocialLinksFormProps,
 } from './profile.types';
 
-// Tipos de equipos
-export type {
-  User,
-  Team,
-  TeamMembersMap,
-  TeamsSectionProps,
-  TeamsTableProps,
-  TeamCardProps,
-  TeamOption,
-} from './teams.types';
-
 // Tipos de seguridad
 export type {
   Session,

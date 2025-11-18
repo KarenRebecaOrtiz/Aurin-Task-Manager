@@ -67,8 +67,6 @@ export interface Config {
   portfolio?: string;
   /** Stack tecnológico (máximo 40) */
   stack?: string[];
-  /** Equipos a los que pertenece (máximo 3) */
-  teams?: string[];
   /** URL de la foto de perfil */
   profilePhoto?: string;
   /** URL de la foto de portada */

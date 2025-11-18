@@ -8,5 +8,4 @@ export { default as SearchableDropdown } from './SearchableDropdown';
 export { default as PhoneCountrySelect } from './PhoneCountrySelect';
 export { WebsiteInput } from './WebsiteInput';
 export { BiographyInput } from './BiographyInput';
-export { default as TeamsTable } from './TeamsTable';
 export { SaveActions } from './SaveActions';
