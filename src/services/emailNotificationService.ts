@@ -21,8 +21,7 @@ async function getUserBasicInfo(userId: string) {
       return userDoc.data();
     }
     return null;
-  } catch (error) {
-    console.warn('[EmailNotificationService] Error getting user info:', error);
+  } catch {
     return null;
   }
 }
@@ -47,10 +46,7 @@ class EmailNotificationService {
       
       // Send email using the email service
       await emailService.sendNotificationEmail(recipientEmail, emailTemplate.subject, emailTemplate.html);
-      
-      console.log('[EmailNotificationService] Email sent successfully to:', recipientEmail);
     } catch (error) {
-      console.error('[EmailNotificationService] Error sending email:', error);
       throw error;
     }
   }
@@ -63,11 +59,8 @@ class EmailNotificationService {
     recipientIds: string[]
   ): Promise<void> {
     if (!recipientIds || recipientIds.length === 0) {
-      console.log('[EmailNotificationService] No recipients provided');
       return;
     }
-
-    console.log('[EmailNotificationService] Sending emails to:', recipientIds.length, 'recipients');
 
     const emailPromises = recipientIds.map(async (recipientId) => {
       try {
@@ -78,13 +71,11 @@ class EmailNotificationService {
         const recipientEmail = recipientInfo?.email || recipientInfo?.emailAddress;
         
         if (!recipientEmail) {
-          console.warn(`[EmailNotificationService] No email found for user ${recipientId}`);
           return;
         }
         
         await this.sendEmailNotification(templateData, recipientEmail, params.type);
-      } catch (error) {
-        console.error(`[EmailNotificationService] Error sending email to ${recipientId}:`, error);
+      } catch {
         // Don't throw - continue with other recipients
       }
     });
@@ -117,8 +108,8 @@ class EmailNotificationService {
           if (creatorInfo) {
             creatorName = creatorInfo.fullName || creatorInfo.firstName || 'Usuario';
           }
-        } catch (error) {
-          console.warn('[EmailNotificationService] Error getting creator name:', error);
+        } catch {
+          // Continue with default name
         }
       }
 
@@ -129,8 +120,8 @@ class EmailNotificationService {
         if (recipientInfo) {
           recipientName = recipientInfo.fullName || recipientInfo.firstName || 'Usuario';
         }
-      } catch (error) {
-        console.warn('[EmailNotificationService] Error getting recipient name:', error);
+      } catch {
+        // Continue with default name
       }
 
       // Prepare URLs
@@ -205,9 +196,7 @@ class EmailNotificationService {
       }
 
       return templateData;
-    } catch (error) {
-      console.error('[EmailNotificationService] Error preparing email template data:', error);
-      
+    } catch {
       // Return minimal data on error
       return {
         recipientName: 'Usuario',

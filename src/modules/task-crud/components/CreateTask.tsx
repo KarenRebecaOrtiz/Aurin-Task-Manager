@@ -13,12 +13,13 @@ import Image from 'next/image';
 import { Wizard, WizardStep, WizardProgress, WizardActions } from '@/components/ui/wizard';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useKeyboardShortcuts } from '@/components/ui/use-keyboard-shortcuts';
+import { useKeyboardShortcuts } from '../hooks/ui/useKeyboardShortcuts';
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { emailNotificationService } from '@/services/emailNotificationService';
 import SearchableDropdown from '@/modules/config/components/ui/SearchableDropdown';
-import PopupLoader from '@/components/ui/PopupLoader';
+import { PopupLoader } from './ui/PopupLoader';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { Small, Muted } from '@/components/ui/Typography';
 
 // Module imports
 import { CreateTaskProps, STEP_FIELDS, FORM_PERSISTENCE_KEYS } from '../types/form';
@@ -255,7 +256,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
                       {hasPersistedData && (
                         <div className={styles.persistedData}>
-                          <span>Progreso guardado restaurado</span>
+                          <Muted>Progreso guardado restaurado</Muted>
                           <button
                             type="button"
                             onClick={() => {
@@ -275,10 +276,10 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
                       {/* Client Selector */}
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Cuenta Asignada*</label>
-                        <div className={styles.sectionSubtitle}>
+                        <Small className={styles.label}>Cuenta Asignada*</Small>
+                        <Muted className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
-                        </div>
+                        </Muted>
                         <SearchableDropdown
                           items={clients.map((client) => ({
                             id: client.id,
@@ -301,7 +302,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           emptyMessage={isAdmin ? EMPTY_MESSAGES.NO_CLIENTS_ADMIN : EMPTY_MESSAGES.NO_CLIENTS_USER}
                         />
                         {form.formState.errors.clientInfo?.clientId && (
-                          <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
+                          <Small className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</Small>
                         )}
 
                         {isAdmin && !form.watch('clientInfo.clientId') && (
@@ -318,8 +319,8 @@ const CreateTask: React.FC<CreateTaskProps> = ({
 
                       {/* Project Selector */}
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Carpeta*</label>
-                        <div className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</div>
+                        <Small className={styles.label}>Carpeta*</Small>
+                        <Muted className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</Muted>
                         <SearchableDropdown
                           items={(() => {
                             const selectedClient = clients.find((c) => c.id === form.getValues('clientInfo.clientId'));
@@ -340,7 +341,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
                           disabled={!form.getValues('clientInfo.clientId')}
                         />
                         {form.formState.errors.clientInfo?.project && (
-                          <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
+                          <Small className={styles.error}>{form.formState.errors.clientInfo.project.message}</Small>
                         )}
 
                         {isAdmin && form.getValues('clientInfo.clientId') && (

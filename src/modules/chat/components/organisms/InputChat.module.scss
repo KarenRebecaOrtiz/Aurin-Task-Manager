@@ -1,0 +1,906 @@
+/**
+ * InputChat Styles - Modular Version
+ * Extracted from monolithic ChatSidebar.module.scss
+ * Contains all styles for the InputChat organism component
+ */
+
+@use '@/app/styles/variables' as *;
+@use 'sass:color';
+@use '@/app/styles/utils' as *;
+
+// ============================================================================
+// EDIT CONTAINER (Message Editing)
+// ============================================================================
+.editContainer {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  animation: slideInEdit 0.3s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .editContent {
+    .editHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+
+      .editLabel {
+        font-size: 12px;
+        font-weight: 600;
+        color: #d97706;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .editCancelButton {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+
+    .editPreview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #92400e;
+
+      .editText {
+        flex: 1;
+        font-style: italic;
+      }
+    }
+
+    .editInputContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .editInput {
+        width: 100%;
+        min-height: 80px;
+        padding: 12px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-family: $font-family-primary;
+        font-size: 14px;
+        line-height: 1.5;
+        resize: vertical;
+        transition: border-color 0.2s ease;
+
+        &:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .ProseMirror {
+          outline: none;
+          min-height: 60px;
+
+          p {
+            margin: 0 0 8px 0;
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+          }
+        }
+      }
+
+      .editActions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+
+        .editSaveButton,
+        .editCancelButton {
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: none;
+        }
+
+        .editSaveButton {
+          background: #3b82f6;
+          color: white;
+
+          &:hover:not(:disabled) {
+            background: #2563eb;
+          }
+
+          &:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+          }
+        }
+
+        .editCancelButton {
+          background: #f3f4f6;
+          color: #374151;
+
+          &:hover {
+            background: #e5e7eb;
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes slideInEdit {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ============================================================================
+// INPUT WRAPPER & PERSISTED DATA
+// ============================================================================
+.inputWrapper {
+  width: 100%;
+}
+
+.persistedData {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #1e40af;
+  font-family: $font-family-primary;
+  font-weight: 500;
+
+  span {
+    flex: 1;
+  }
+
+  button {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: #1e40af;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+  }
+}
+
+:global(body.dark) .persistedData {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+
+  button {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.3);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+  }
+}
+
+// ============================================================================
+// INPUT CONTAINER & FIELD
+// ============================================================================
+.inputContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 16px;
+  position: relative;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.004),
+    6px 6px 12px rgba(0, 0, 0, 0.10);
+  transition: all 0.3s ease-in-out;
+}
+
+.inputContainer:has(.mentionAutocomplete) {
+  margin-bottom: 12px;
+}
+
+:global(body.dark) .inputContainer {
+  background: #1f1f20;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.04),
+    6px 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.input {
+  width: 100%;
+  height: 36px;
+  padding: 8px 12px;
+  background: #f3f3f3;
+  border: none;
+  border-radius: 10px;
+  color: #1b2734d9;
+  font-size: 15px;
+  font-family: $font-family-primary;
+  font-weight: 400;
+  opacity: 0.85;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.03),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+}
+
+.input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow:
+    inset -1px -1px 3px rgba(255, 255, 255, 0.1),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 0 1px #e4e4e4;
+}
+
+:global(body.dark) .input {
+  background-color: rgb(36, 36, 36);
+  color: white;
+}
+
+// ============================================================================
+// TOOLBAR & FORMAT BUTTONS
+// ============================================================================
+.toolbar {
+  @include neomorphic-container;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  justify-content: space-around;
+  border-bottom: 1px solid $border-color;
+
+  &.dark {
+    border-bottom-color: color.adjust($border-color, $lightness: -50%);
+  }
+}
+
+:global(body.dark) .toolbar {
+  background-color: #1f1f20;
+  box-shadow: none;
+  border-bottom: none;
+}
+
+.toolbarIcon {
+  // Add any specific icon styles if needed
+}
+
+.format-button {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 100px;
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(209, 217, 230, 0.8);
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    background: #e2e8f0;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &[data-active="true"] {
+    background: #e6ec94;
+    transform: scale(0.98);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.3),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+
+    &:hover {
+      background: #dfe087;
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+        inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px) scale(0.98);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f8f9fa;
+    box-shadow: none;
+    transform: none;
+
+    &:hover {
+      background: #f8f9fa;
+      box-shadow: none;
+      transform: none;
+    }
+
+    img {
+      filter: grayscale(100%) opacity(0.6) !important;
+    }
+  }
+}
+
+:global(body.dark) .format-button {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background: #2c2c2f;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+    transform: translateY(-1px);
+  }
+
+  &[data-active="true"] {
+    background: #e6ec94;
+    transform: scale(0.98);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.1),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      background: #dfe087;
+      box-shadow:
+        inset -2px -2px 4px rgba(255, 255, 255, 0.15),
+        inset 2px 2px 6px rgba(0, 0, 0, 0.35);
+      transform: translateY(-1px) scale(0.98);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #2a2a2d;
+    box-shadow: none;
+    transform: none;
+
+    &:hover {
+      background: #2a2a2d;
+      box-shadow: none;
+      transform: none;
+    }
+
+    img {
+      filter: grayscale(100%) opacity(0.6) invert(100%) !important;
+    }
+  }
+}
+
+:global(body.dark) .format-button img {
+  filter: invert(100%) brightness(100%) !important;
+}
+
+// ============================================================================
+// ACTION BUTTONS (Send, Play/Stop, Image)
+// ============================================================================
+.playStopButton,
+.sendButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 40px;
+  width: 40px;
+  border-radius: 100px;
+  border: none;
+  background: #f1f5f9;
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(209, 217, 230, 0.8);
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.3s ease,
+    background-color 0.3s ease-in-out;
+  cursor: pointer;
+  padding: 0;
+}
+
+.playStopButton:hover,
+.sendButton:hover {
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+  background: #e4e8ee;
+  transform: translateY(-1px);
+}
+
+:global(body.dark) .playStopButton,
+:global(body.dark) .sendButton {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+:global(body.dark) .playStopButton:hover,
+:global(body.dark) .sendButton:hover {
+  background: #2c2c2f;
+  box-shadow:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+    inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+:global(body.dark) .playStopButton img,
+:global(body.dark) .sendButton img {
+  filter: invert(100%) brightness(100%) !important;
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sendButton:hover {
+  transform: rotate(90deg);
+}
+
+.playStopButton {
+  background: linear-gradient(135deg, #e6f3ff, #dbeafe) !important;
+  box-shadow:
+    -6px -6px 12px #ffffff,
+    6px 6px 12px rgba(59, 130, 246, 0.2) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 50%;
+  height: 40px;
+  width: 40px;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease-in-out,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+
+  &:hover:not(:disabled) {
+    box-shadow:
+      -8px -8px 16px #ffffff,
+      8px 8px 16px rgba(59, 130, 246, 0.3) !important;
+    transform: translateY(-2px);
+  }
+
+  &:active:not(:disabled) {
+    box-shadow:
+      inset -3px -3px 6px rgba(255, 255, 255, 0.8),
+      inset 3px 3px 6px rgba(59, 130, 246, 0.2) !important;
+    transform: translateY(0);
+  }
+}
+
+:global(body.dark) .playStopButton {
+  background: linear-gradient(135deg, #1e3a8a, #1d4ed8) !important;
+  box-shadow:
+    -6px -6px 12px rgba(255, 255, 255, 0.05),
+    6px 6px 12px rgba(59, 130, 246, 0.3) !important;
+  border-color: rgba(147, 197, 253, 0.3);
+
+  &:hover:not(:disabled) {
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.08),
+      8px 8px 16px rgba(59, 130, 246, 0.4) !important;
+  }
+
+  &:active:not(:disabled) {
+    box-shadow:
+      inset -3px -3px 6px rgba(255, 255, 255, 0.1),
+      inset 3px 3px 6px rgba(59, 130, 246, 0.3) !important;
+  }
+
+  img {
+    filter: invert(100%) brightness(130%);
+  }
+}
+
+.imageButton2 {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 20px;
+  height: 40px;
+  width: 40px;
+  font-family: $font-family-primary;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease-in-out,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+  box-shadow:
+    -4px -4px 8px #ffffff,
+    4px 4px 12px rgba(0, 0, 0, 0.050);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: #e2e8f0;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+:global(body.dark) .imageButton2 {
+  background: #1f1f20;
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.04),
+    4px 4px 12px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background-color: #2c2c2f;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+:global(body.dark) .imageButton2 img {
+  filter: none !important;
+}
+
+// ============================================================================
+// REPLY CONTAINER
+// ============================================================================
+.replyContainer {
+  background: #f8f9fa;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  animation: slideInReply 0.3s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .replyContent {
+    .replyHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+
+      .replyLabel {
+        font-size: 12px;
+        font-weight: 600;
+        color: #3b82f6;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .replyCancelButton {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.1);
+        }
+      }
+    }
+
+    .replyPreview {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #6b7280;
+
+      .replyImage {
+        border-radius: 4px;
+        object-fit: cover;
+      }
+
+      .replyText {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+:global(body.dark) .replyContainer {
+  background: #1f2937;
+  border-left-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  .replyContent {
+    .replyHeader {
+      .replyLabel {
+        color: #60a5fa;
+      }
+
+      .replyCancelButton {
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+
+    .replyPreview {
+      color: #d1d5db;
+    }
+  }
+}
+
+@keyframes slideInReply {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ============================================================================
+// IMAGE & FILE PREVIEW
+// ============================================================================
+.imagePreview {
+  position: relative;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.previewImage {
+  border-radius: 4px;
+  width: auto;
+  height: auto;
+  max-width: 100px;
+  max-height: 100px;
+  object-fit: contain;
+}
+
+.removeImageButton {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.filePreview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  padding: 5px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  max-width: 100%;
+}
+
+.fileName {
+  font-size: 12px;
+  color: #666;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(body.dark) .filePreview {
+  background: #374151;
+}
+
+// ============================================================================
+// UPLOAD PROGRESS & PROCESSING
+// ============================================================================
+.uploadProgress {
+  width: 100%;
+  height: 4px;
+  background: #eee;
+  position: relative;
+  margin-top: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--primary, #3b82f6);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.progressText {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.processingSpinner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #3b82f6;
+}
+
+.spinAnimation {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ============================================================================
+// DRAG & DROP
+// ============================================================================
+.dragging {
+  .input {
+    border-color: var(--primary, #3b82f6);
+    background: #f8f9fa;
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+  }
+}
+
+.dragOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary, #3b82f6);
+  font-weight: bold;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: 4px;
+  backdrop-filter: blur(2px);
+}
+
+// ============================================================================
+// MENTION AUTOCOMPLETE
+// ============================================================================
+.mentionAutocomplete {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  width: 256px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+}
+
+// ============================================================================
+// TOOLTIPS
+// ============================================================================
+.tooltip {
+  position: relative;
+
+  &::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: $font-family-primary;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 5px;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    margin-bottom: 1px;
+    pointer-events: none;
+  }
+
+  &:hover::before,
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+// ============================================================================
+// ACTIONS
+// ============================================================================
+.actions {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row;
+}

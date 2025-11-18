@@ -32,6 +32,7 @@ import styles from './TimeEntryForm.module.scss';
 export function TimeEntryForm({
   taskId,
   userId,
+  userName,
   onSuccess,
   onCancel
 }: TimeEntryFormProps) {
@@ -41,7 +42,7 @@ export function TimeEntryForm({
     submitTimeEntry,
     resetForm,
     errors
-  } = useTimeEntry(taskId, userId, onSuccess);
+  } = useTimeEntry(taskId, userId, userName, onSuccess);
 
   const { register, watch, setValue } = form;
   const timeValue = watch('time') || '00:00';

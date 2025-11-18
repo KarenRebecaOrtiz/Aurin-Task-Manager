@@ -442,6 +442,7 @@ export interface DateSelectorProps {
 export interface TimeEntryFormProps {
   taskId: string;
   userId: string;
+  userName: string; // Necesario para crear mensaje de time log
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -474,6 +475,7 @@ export interface TimerPanelProps {
   isOpen: boolean;
   taskId: string;
   userId: string;
+  userName: string; // Nombre completo para time logs
   onClose: () => void;
   onSuccess?: () => void;
 }

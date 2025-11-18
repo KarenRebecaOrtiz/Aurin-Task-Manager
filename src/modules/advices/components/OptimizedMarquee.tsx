@@ -5,6 +5,7 @@ import { collection, onSnapshot, doc, Timestamp, query, where, writeBatch } from
 import { db } from '@/lib/firebase';
 import { motion } from 'framer-motion';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
+import { Small } from '@/components/ui/Typography';
 import styles from './OptimizedMarquee.module.scss';
 import type { Advice, OptimizedMarqueeProps } from '../types';
 
@@ -106,7 +107,7 @@ const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
             size="sm"
             showStatus={false}
           />
-          <span className={styles.messageText}>{advice.message}</span>
+          <Small className={styles.messageText}>{advice.message}</Small>
           {index < advices.length - 1 && <span className={styles.bullet}> • </span>}
         </span>
       ))}
@@ -124,7 +125,7 @@ const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
             transform: `rotateZ(${rotation}deg) translate(-50%, -50%)`,
           }}
         >
-          <p>{hoveredAdvice.creatorFirstName}</p>
+          <Small>{hoveredAdvice.creatorFirstName}</Small>
         </div>
       )}
 

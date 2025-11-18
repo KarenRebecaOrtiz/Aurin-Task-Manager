@@ -5,11 +5,10 @@ import { useUser } from '@clerk/nextjs';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ExpandableTabs } from '@/components/ui/ExpandableTabs';
-import { User, MapPin, Users, Shield, Mail } from 'lucide-react';
+import { User, Users, Shield, Mail } from 'lucide-react';
 import { ConfigSkeletonLoader } from '@/modules/data-views/components/shared';
 import { ProfileHeader } from '../header';
 import { ProfileSection } from '../profile';
-import { LocationsSection } from '../locations';
 import { TeamsSection } from '../teams';
 import { SecuritySection } from '../security';
 import { NotificationsSection } from '../notifications';
@@ -60,7 +59,6 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
   // Definir los tabs de configuración
   const configTabs: Array<{ title: string; icon: any } | { type: "separator" }> = [
     { title: "Configuración de perfil", icon: User },
-    { title: "Ubicaciones Personalizadas", icon: MapPin },
     { title: "Equipos", icon: Users },
     { title: "Ajustes de Perfil", icon: Shield },
     { type: "separator" },
@@ -103,8 +101,6 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             coverPhotoFile: null,
             status: data.status || 'Disponible',
             emailPreferences: data.emailPreferences || { messages: true, creation: true, edition: true, timers: true },
-            homeLocation: data.personalLocations?.home,
-            secondaryLocation: data.personalLocations?.secondary,
             github: data.socialLinks?.github || '',
             linkedin: data.socialLinks?.linkedin || '',
             twitter: data.socialLinks?.twitter || '',
@@ -139,8 +135,6 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
             coverPhotoFile: null,
             status: 'Disponible',
             emailPreferences: { messages: true, creation: true, edition: true, timers: true },
-            homeLocation: undefined,
-            secondaryLocation: undefined,
             github: '',
             linkedin: '',
             twitter: '',
@@ -222,10 +216,10 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           </>
         )}
 
-        {/* Tab 1: Ubicaciones */}
+        {/* Tab 1: Equipos */}
         {activeTab === 1 && (
           <>
-            <LocationsSection
+            <TeamsSection
               userId={userId}
               isOwnProfile={isOwnProfile}
               onSuccess={onShowSuccessAlert}
@@ -242,43 +236,23 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({
           </>
         )}
 
-        {/* Tab 2: Equipos */}
-        {activeTab === 2 && (
-          <>
-            <TeamsSection
-              userId={userId}
-              isOwnProfile={isOwnProfile}
-              onSuccess={onShowSuccessAlert}
-              onError={onShowFailAlert}
-            />
-            {isOwnProfile && (
-              <SaveActions
-                hasChanges={tabChanges[2] || false}
-                isSaving={isSaving}
-                onSave={handleSubmit}
-                onDiscard={handleDiscard}
-              />
-            )}
-          </>
-        )}
-
-        {/* Tab 3: Seguridad */}
-        {activeTab === 3 && isOwnProfile && (
+        {/* Tab 2: Seguridad */}
+        {activeTab === 2 && isOwnProfile && (
           <SecuritySection
             onSuccess={onShowSuccessAlert}
             onError={onShowFailAlert}
           />
         )}
 
-        {/* Tab 5: Notificaciones */}
-        {activeTab === 5 && (
+        {/* Tab 4: Notificaciones */}
+        {activeTab === 4 && (
           <>
             <NotificationsSection
               isOwnProfile={isOwnProfile}
             />
             {isOwnProfile && (
               <SaveActions
-                hasChanges={tabChanges[5] || false}
+                hasChanges={tabChanges[4] || false}
                 isSaving={isSaving}
                 onSave={handleSubmit}
                 onDiscard={handleDiscard}

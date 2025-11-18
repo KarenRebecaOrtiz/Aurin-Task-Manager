@@ -3,14 +3,6 @@
  * @description Exportaciones centralizadas de todos los tipos del módulo de configuración
  */
 
-// Tipos de ubicaciones
-export type {
-  PersonalLocation,
-  PersonalLocations,
-  LocationProps,
-  LocationMapProps,
-} from './locations.types';
-
 // Tipos de perfil
 export type {
   SocialLinks,

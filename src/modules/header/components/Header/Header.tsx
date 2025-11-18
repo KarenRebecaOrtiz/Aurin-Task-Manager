@@ -14,7 +14,6 @@ const Header: React.FC<HeaderProps> = ({
   isCreateTaskOpen = false,
   isEditTaskOpen = false,
   hasUnsavedChanges = false,
-  personalLocations,
 }) => {
   const { user, isLoaded } = useUser();
   
@@ -43,7 +42,6 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <HeaderActions
-        personalLocations={personalLocations}
         onChangeContainer={handleContainerChange}
       />
     </div>

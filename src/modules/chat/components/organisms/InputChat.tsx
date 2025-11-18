@@ -19,12 +19,11 @@ import Underline from '@tiptap/extension-underline';
 import { useEditorPersistence } from '@/modules/chat/hooks/use-form-persistence';
 import { saveErrorMessage, removeErrorMessage, PersistedMessage } from '@/lib/messagePersistence';
 import { toast } from '@/components/ui/use-toast';
-import { TimerPanel } from '@/modules/chat/timer/components/organisms/TimerPanel';
-import TimerDisplay from '@/components/TimerDisplay';
-import { Clock, Play, RotateCcw, Send, CirclePlus, Paperclip, X } from '@/components/animate-ui/icons';
+import { TimerPanel, TimerDisplay } from '../../timer';
+import { Paperclip, X } from '@/components/animate-ui/icons';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import SearchableDropdown, { type DropdownItem } from '@/modules/config/components/ui/SearchableDropdown';
-import styles from '@/components/ChatSidebar.module.scss';
+import styles from './InputChat.module.scss';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -56,6 +55,7 @@ export interface InputChatProps {
   // Task and user info
   taskId: string;
   userId: string;
+  userName: string; // Nombre completo para time logs
   userFirstName?: string;
 
   // Message handlers
@@ -68,17 +68,6 @@ export interface InputChatProps {
   editingMessageId?: string | null;
   editingText?: string;
   onCancelEdit?: () => void;
-
-  // Timer props (for modular TimerPanel)
-  timerSeconds?: number;
-  isTimerRunning?: boolean;
-  onToggleTimer?: (e: React.MouseEvent) => void;
-  onFinalizeTimer?: () => Promise<void>;
-  onResetTimer?: () => Promise<void>;
-  isTimerPanelOpen?: boolean;
-  setIsTimerPanelOpen?: (open: boolean) => void;
-  isRestoringTimer?: boolean;
-  isInitializing?: boolean;
 
   // State
   isSending?: boolean;
@@ -115,6 +104,7 @@ export interface InputChatProps {
 export const InputChat: React.FC<InputChatProps> = ({
   taskId,
   userId,
+  userName,
   userFirstName = 'Usuario',
   onSendMessage,
   onEditMessage,
@@ -125,40 +115,16 @@ export const InputChat: React.FC<InputChatProps> = ({
   onCancelEdit,
   isSending: isSendingProp = false,
   setIsSending: setIsSendingProp,
-  timerInput = '',
-  setTimerInput = () => {},
-  dateInput = new Date(),
-  setDateInput = () => {},
-  commentInput = '',
-  setCommentInput = () => {},
-  onAddTimeEntry = async () => {},
-  timerSeconds = 0,
-  isTimerRunning = false,
-  onToggleTimer = () => {},
-  onFinalizeTimer = async () => {},
-  onResetTimer = async () => {},
-  onToggleTimerPanel = () => {},
-  isTimerPanelOpen: isTimerPanelOpenProp = false,
-  setIsTimerPanelOpen: setIsTimerPanelOpenProp,
-  timerPanelRef,
-  totalHours = '0',
-  isRestoringTimer = false,
-  isInitializing = false,
   users = [],
 }) => {
   // ========== STATE ==========
   const [file, setFile] = useState<File | null>(null);
-  const [isTimerMenuOpen, setIsTimerMenuOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
   const [mentionInput, setMentionInput] = useState("");
   const [mentionOptions, setMentionOptions] = useState<DropdownItem[]>([]);
-
-  // Local state for timer panel if not controlled
-  const [localTimerPanelOpen, setLocalTimerPanelOpen] = useState(false);
-  const isTimerPanelOpen = setIsTimerPanelOpenProp ? isTimerPanelOpenProp : localTimerPanelOpen;
-  const setIsTimerPanelOpen = setIsTimerPanelOpenProp || setLocalTimerPanelOpen;
+  const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
 
   // Local state for sending if not controlled
   const [localSending, setLocalSending] = useState(false);
@@ -737,65 +703,12 @@ export const InputChat: React.FC<InputChatProps> = ({
   }, [onCancelReply, clearPersistedData, conversationId]);
 
   const handleCloseTimerPanel = useCallback(() => {
-    if (setIsTimerPanelOpen) setIsTimerPanelOpen(false);
-  }, [setIsTimerPanelOpen]);
+    setIsTimerPanelOpen(false);
+  }, []);
 
   const handleToggleTimerPanel = useCallback(() => {
-    if (setIsTimerPanelOpen) setIsTimerPanelOpen(!isTimerPanelOpen);
-  }, [setIsTimerPanelOpen, isTimerPanelOpen]);
-
-  const handlePauseTimer = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (isTimerRunning) {
-        onToggleTimer(e);
-        setIsTimerMenuOpen(false);
-      }
-    },
-    [isTimerRunning, onToggleTimer]
-  );
-
-  const handleResetTimer = useCallback(
-    async (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (onResetTimer && timerSeconds > 0) {
-        await onResetTimer();
-        setIsTimerMenuOpen(false);
-      }
-    },
-    [onResetTimer, timerSeconds]
-  );
-
-  const handleFinalizeTimer = useCallback(
-    async (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (isTimerRunning && onFinalizeTimer) {
-        await onFinalizeTimer();
-        setIsTimerMenuOpen(false);
-      }
-    },
-    [isTimerRunning, onFinalizeTimer]
-  );
-
-  const handleTimerToggle = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!isTimerRunning) {
-        onToggleTimer(e);
-        setIsTimerMenuOpen(false);
-      }
-    },
-    [isTimerRunning, onToggleTimer]
-  );
-
-  const handleCustomTimeClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onToggleTimerPanel(e);
-      setIsTimerMenuOpen(false);
-    },
-    [onToggleTimerPanel]
-  );
+    setIsTimerPanelOpen(!isTimerPanelOpen);
+  }, [isTimerPanelOpen]);
 
   const handleMouseDownPreventDefault = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -819,24 +732,7 @@ export const InputChat: React.FC<InputChatProps> = ({
     [mentionOptions, editor]
   );
 
-  // ========== CLICK OUTSIDE TIMER PANEL ==========
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (isTimerPanelOpen) {
-        const isInsideInputWrapper = inputWrapperRef.current?.contains(target);
-        const isInsideTimerPanel = timerPanelRef?.current?.contains(target);
-        const isInsideTimePicker = document.querySelector('.react-time-picker')?.contains(target);
-        const isInsideDatePicker =
-          document.querySelector('.react-datepicker')?.contains(target) ||
-          document.querySelector('.react-datepicker-popper')?.contains(target);
-        if (!isInsideInputWrapper && !isInsideTimerPanel && !isInsideTimePicker && !isInsideDatePicker)
-          setIsTimerPanelOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isTimerPanelOpen, setIsTimerPanelOpen, timerPanelRef]);
+  // Note: Click outside handling for TimerPanel is managed by the TimerPanel component itself
 
   // Cleanup preview URL
   useEffect(() => {
@@ -942,6 +838,7 @@ export const InputChat: React.FC<InputChatProps> = ({
           isOpen={isTimerPanelOpen}
           taskId={taskId}
           userId={userId}
+          userName={userName}
           onClose={handleCloseTimerPanel}
           onSuccess={() => {
             handleCloseTimerPanel();
@@ -962,7 +859,7 @@ export const InputChat: React.FC<InputChatProps> = ({
         >
           {/* Formatting toolbar */}
           <AnimatePresence>
-            {editor && !editor.isEmpty && !isTimerMenuOpen && (
+            {editor && !editor.isEmpty && (
               <motion.div
                 className={styles.toolbar}
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -998,108 +895,6 @@ export const InputChat: React.FC<InputChatProps> = ({
                     />
                   </motion.button>
                 ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Timer menu toolbar */}
-          <AnimatePresence>
-            {isTimerMenuOpen && (
-              <motion.div
-                className={styles.toolbar}
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: 'easeOut', staggerChildren: 0.05, delayChildren: 0.1 }}
-              >
-                {/* Play button */}
-                <motion.button
-                  type="button"
-                  className={`${styles['format-button']} ${styles.tooltip}`}
-                  onClick={handleTimerToggle}
-                  disabled={isTimerRunning}
-                  title="Iniciar"
-                  aria-label="Iniciar"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15, ease: 'easeOut', delay: 0 * 0.02 }}
-                  whileHover={!isTimerRunning ? { scale: 1.05 } : {}}
-                  whileTap={!isTimerRunning ? { scale: 0.95 } : {}}
-                >
-                  <Play animateOnHover />
-                </motion.button>
-
-                {/* Pause button */}
-                <motion.button
-                  type="button"
-                  className={`${styles['format-button']} ${styles.tooltip}`}
-                  onClick={handlePauseTimer}
-                  disabled={!isTimerRunning}
-                  title="Pausar"
-                  aria-label="Pausar"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15, ease: 'easeOut', delay: 1 * 0.02 }}
-                  whileHover={isTimerRunning ? { scale: 1.05 } : {}}
-                  whileTap={isTimerRunning ? { scale: 0.95 } : {}}
-                >
-                  <RotateCcw animateOnHover />
-                </motion.button>
-
-                {/* Reset button */}
-                <motion.button
-                  type="button"
-                  className={`${styles['format-button']} ${styles.tooltip}`}
-                  onClick={handleResetTimer}
-                  disabled={!timerSeconds || timerSeconds === 0}
-                  title="Reiniciar"
-                  aria-label="Reiniciar"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15, ease: 'easeOut', delay: 2 * 0.02 }}
-                  whileHover={timerSeconds > 0 ? { scale: 1.05 } : {}}
-                  whileTap={timerSeconds > 0 ? { scale: 0.95 } : {}}
-                >
-                  <RotateCcw animateOnHover />
-                </motion.button>
-
-                {/* Send timer button */}
-                <motion.button
-                  type="button"
-                  className={`${styles['format-button']} ${styles.tooltip}`}
-                  onClick={handleFinalizeTimer}
-                  disabled={!isTimerRunning}
-                  title="Enviar"
-                  aria-label="Enviar"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15, ease: 'easeOut', delay: 3 * 0.02 }}
-                  whileHover={isTimerRunning ? { scale: 1.05 } : {}}
-                  whileTap={isTimerRunning ? { scale: 0.95 } : {}}
-                >
-                  <Send animateOnHover />
-                </motion.button>
-
-                {/* Custom time button */}
-                <motion.button
-                  type="button"
-                  className={`${styles['format-button']} ${styles.tooltip}`}
-                  onClick={handleCustomTimeClick}
-                  title="Tiempo Personalizado"
-                  aria-label="Tiempo Personalizado"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15, ease: 'easeOut', delay: 4 * 0.02 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <CirclePlus animateOnHover />
-                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -1219,15 +1014,10 @@ export const InputChat: React.FC<InputChatProps> = ({
           {/* Actions bar */}
           <div className={styles.actions}>
             <TimerDisplay
-              timerSeconds={timerSeconds}
-              isTimerRunning={isTimerRunning}
-              onToggleTimer={onToggleTimer}
-              onFinalizeTimer={onFinalizeTimer}
+              taskId={taskId}
+              userId={userId}
+              showControls={true}
               onTogglePanel={handleToggleTimerPanel}
-              isRestoringTimer={!!isRestoringTimer}
-              isInitializing={!!isInitializing}
-              isMenuOpen={isTimerMenuOpen}
-              setIsMenuOpen={setIsTimerMenuOpen}
             />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <button

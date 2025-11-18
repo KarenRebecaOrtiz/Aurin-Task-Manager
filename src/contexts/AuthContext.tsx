@@ -1,13 +1,17 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
-import { useUser } from '@clerk/nextjs';
-
+import { useAuth as useClerkAuth, useUser } from '@clerk/nextjs';
+import { signInWithCustomToken } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 
 // Define the context shape
 interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
+  isSynced: boolean;
+  userId: string | null;
 }
 
 // Create the context
@@ -20,9 +24,13 @@ interface AuthProviderProps {
 
 // AuthProvider component
 export function AuthProvider({ children }: AuthProviderProps) {
+  const { getToken, userId } = useClerkAuth();
   const { user } = useUser();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSynced, setIsSynced] = useState<boolean>(false);
+  const [syncRetryCount, setSyncRetryCount] = useState<number>(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     const checkAdminStatus = () => {
@@ -55,6 +63,67 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAdminStatus();
   }, [user?.id, user?.publicMetadata?.access, user]);
 
+  // Sync Clerk user with Firebase
+  useEffect(() => {
+    if (!userId || !user || isSynced || syncRetryCount > maxRetries) {
+      return;
+    }
+
+    const syncUserToFirebase = async () => {
+      try {
+        // Get Firebase custom token from Clerk
+        const token = await getToken({ template: 'integration_firebase' });
+        if (!token) {
+          throw new Error('Failed to get Firebase token');
+        }
+
+        // Small delay to ensure Clerk is fully ready
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Sign in to Firebase with the custom token
+        const userCredentials = await signInWithCustomToken(auth, token);
+
+        // Prepare user data from Clerk
+        const email = user.emailAddresses[0]?.emailAddress || 'no-email';
+        const displayName = user.firstName || user.lastName
+          ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+          : 'Usuario';
+        const profilePhoto = user.imageUrl || '';
+        const docRef = doc(db, 'users', userId);
+
+        // Get existing user data from Firestore to preserve it
+        const userDoc = await getDoc(docRef);
+        const existingData = userDoc.exists() ? userDoc.data() : {};
+
+        // Merge Clerk data with existing Firestore data
+        const userData = {
+          userId,
+          email,
+          displayName,
+          profilePhoto,
+          ...existingData, // Preserve existing data
+          lastUpdated: new Date().toISOString(),
+        };
+
+        // Update Firestore with merged data
+        await setDoc(docRef, userData, { merge: true });
+
+        // Ensure Firebase ID token is obtained
+        await userCredentials.user.getIdToken();
+
+        setIsSynced(true);
+        setSyncRetryCount(0);
+      } catch (error) {
+        console.error('Firebase sync error:', error);
+        if (syncRetryCount < maxRetries) {
+          setSyncRetryCount((prev) => prev + 1);
+        }
+      }
+    };
+
+    syncUserToFirebase();
+  }, [userId, user, isSynced, getToken, syncRetryCount, maxRetries]);
+
   // Cleanup listeners cuando el usuario se desloguea
   useEffect(() => {
     return () => {
@@ -72,8 +141,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     isAdmin,
-    isLoading
-  }), [isAdmin, isLoading]);
+    isLoading,
+    isSynced,
+    userId: userId || null
+  }), [isAdmin, isLoading, isSynced, userId]);
 
   return (
     <AuthContext.Provider value={contextValue}>

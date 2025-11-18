@@ -12,6 +12,15 @@ import { Timestamp } from 'firebase/firestore';
 // ============================================================================
 
 /**
+ * Reacción emoji a un mensaje
+ */
+export interface MessageReaction {
+  emoji: string; // "👍", "❤️", "😂", etc.
+  userIds: string[]; // IDs de usuarios que reaccionaron
+  count: number;
+}
+
+/**
  * Interfaz principal para mensajes del chat
  * Compatible con src/types/index.ts pero extendida para el módulo de chat
  */
@@ -52,6 +61,9 @@ export interface Message {
   isDatePill?: boolean; // Separador de fecha
   isSummary?: boolean; // Resumen de IA
   isLoading?: boolean; // Estado de carga (para operaciones IA)
+
+  // Reactions
+  reactions?: MessageReaction[];
 }
 
 /**
@@ -109,6 +121,10 @@ export interface Task {
   lastActivity?: string;
   hasUnreadUpdates?: boolean;
   lastViewedBy?: { [userId: string]: string };
+
+  // Time tracking
+  totalHours?: number; // Suma total de tiempo registrado
+  memberHours?: { [userId: string]: number }; // Tiempo por miembro
 }
 
 // ============================================================================

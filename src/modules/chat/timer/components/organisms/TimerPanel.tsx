@@ -21,6 +21,10 @@ import { TimerButton } from '../atoms/TimerButton';
 import { TimerIntervalsList } from '../molecules/TimerIntervalsList';
 import { TimeEntryForm } from '../molecules/TimeEntryForm';
 import { ConfirmTimerSwitch } from './ConfirmTimerSwitch';
+import { Send } from '@/components/animate-ui/icons/send';
+import { Timer } from '@/components/animate-ui/icons/timer';
+import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { firebaseService } from '../../../services/firebaseService';
 import styles from './TimerPanel.module.scss';
 
 /**
@@ -43,6 +47,7 @@ export function TimerPanel({
   isOpen,
   taskId,
   userId,
+  userName,
   onClose,
   onSuccess
 }: TimerPanelProps) {
@@ -52,6 +57,10 @@ export function TimerPanel({
     current: string;
     next: string;
   } | null>(null);
+  const [isSendingLog, setIsSendingLog] = useState(false);
+
+  // Toast notifications
+  const { success: showSuccess, error: showError, info: showInfo } = useSonnerToast();
 
   // Timer state
   const { timerSeconds, isRunning, intervals, status } = useTimerState(taskId);
@@ -93,19 +102,85 @@ export function TimerPanel({
   const seconds = timerSeconds % 60;
 
   // Handlers
+  const handleSendTimelog = async () => {
+    if (timerSeconds === 0) {
+      showInfo('No hay tiempo para enviar');
+      return;
+    }
+
+    if (isRunning) {
+      showInfo('Debes pausar o detener el timer antes de enviar el timelog');
+      return;
+    }
+
+    try {
+      setIsSendingLog(true);
+
+      // Convert seconds to hours
+      const hours = timerSeconds / 3600;
+
+      // Send timelog message to chat
+      await firebaseService.sendTimeLogMessage(
+        taskId,
+        userId,
+        userName,
+        hours,
+        new Date().toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }),
+        undefined // No comment
+      );
+
+      // Reset timer after sending
+      await resetTimer();
+
+      showSuccess('Timelog enviado correctamente');
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error('[TimerPanel] Error sending timelog:', error);
+      showError('Error al enviar el timelog');
+    } finally {
+      setIsSendingLog(false);
+    }
+  };
+
   const handleStop = async () => {
     if (timerSeconds === 0) {
-      alert('No hay tiempo para guardar');
+      showInfo('No hay tiempo para guardar');
       return;
     }
 
     const confirmed = window.confirm(
-      '¿Deseas finalizar el timer? El tiempo se guardará en la tarea.'
+      '¿Deseas finalizar el timer? El tiempo se guardará en la tarea y se enviará un mensaje al chat.'
     );
     if (!confirmed) return;
 
-    await stopTimer();
-    if (onSuccess) onSuccess();
+    try {
+      // Stop timer (this updates task.totalHours)
+      await stopTimer();
+
+      // Send timelog message to chat
+      const hours = timerSeconds / 3600;
+      await firebaseService.sendTimeLogMessage(
+        taskId,
+        userId,
+        userName,
+        hours,
+        new Date().toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }),
+        undefined
+      );
+
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error('[TimerPanel] Error stopping timer:', error);
+      showError('Error al detener el timer');
+    }
   };
 
   const handleReset = async () => {
@@ -138,7 +213,10 @@ export function TimerPanel({
         >
         {/* Header */}
         <div className={styles.header}>
-          <h2 className={styles.title}>Timer</h2>
+          <div className={styles.titleContainer}>
+            <Timer animateOnHover size={24} />
+            <h2 className={styles.title}>Timer</h2>
+          </div>
           {isSyncing && <span className={styles.syncIndicator} title="Sincronizando...">🔄</span>}
           <button onClick={onClose} className={styles.closeButton} aria-label="Cerrar">
             ✕
@@ -154,6 +232,14 @@ export function TimerPanel({
             </button>
           </div>
         )}
+
+        {/* Registro en Tiempo Real Section */}
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionHeading}>Registro en Tiempo Real</h3>
+          <p className={styles.sectionDescription}>
+            Inicia el cronómetro cuando comiences la tarea y detén al finalizar para un registro preciso. No olvides enviar tu entrada para que sea registrada.
+          </p>
+        </div>
 
         {/* Main Timer */}
         <div className={styles.mainTimer}>
@@ -171,6 +257,7 @@ export function TimerPanel({
 
         {/* Controls */}
         <div className={styles.controls}>
+          {/* Play/Pause Toggle Button */}
           <TimerButton
             variant={isRunning ? 'pause' : 'start'}
             onClick={isRunning ? pauseTimer : startTimer}
@@ -178,12 +265,8 @@ export function TimerPanel({
             loading={isProcessing}
             size="large"
           />
-          <TimerButton
-            variant="stop"
-            onClick={handleStop}
-            disabled={isProcessing || timerSeconds === 0}
-            size="large"
-          />
+          
+          {/* Reset Button */}
           <TimerButton
             variant="reset"
             onClick={handleReset}
@@ -192,10 +275,37 @@ export function TimerPanel({
           />
         </div>
 
-        {/* Intervals List */}
+        {/* Send Timelog Button - Only show when paused/stopped with accumulated time */}
+        {!isRunning && timerSeconds > 0 && (
+          <div className={styles.sendTimelogSection}>
+            <button
+              onClick={handleSendTimelog}
+              disabled={isSendingLog || isProcessing}
+              className={styles.sendTimelogButton}
+              title="Enviar timelog al chat"
+              aria-label="Enviar timelog al chat"
+            >
+              {isSendingLog ? (
+                <span>Enviando...</span>
+              ) : (
+                <>
+                  <Send animateOnHover size={20} />
+                  <span>Enviar al Chat</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Work Sessions Section */}
         {intervals.length > 0 && (
           <div className={styles.intervalsSection}>
-            <h3 className={styles.sectionTitle}>Intervalos</h3>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionHeading}>Sesiones de Trabajo</h3>
+              <p className={styles.sectionDescription}>
+                Historial de todas las sesiones cuando pausas y reanudas el cronómetro. El tiempo total se calcula automáticamente.
+              </p>
+            </div>
             <TimerIntervalsList
               intervals={intervals}
               showTotal={true}
@@ -204,15 +314,27 @@ export function TimerPanel({
           </div>
         )}
 
-        {/* Manual Time Entry Toggle */}
+        {/* Manual Time Entry Section */}
         <div className={styles.manualEntrySection}>
+          {/* Section Header */}
+          {!showManualEntry && (
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionHeading}>Entrada Manual</h3>
+              <p className={styles.sectionDescription}>
+                Ingresa el tiempo que dedicaste a esta tarea si ya la completaste o prefieres registrar manualmente.
+              </p>
+            </div>
+          )}
+
+          {/* Toggle Button */}
           <button
             onClick={() => setShowManualEntry(!showManualEntry)}
             className={styles.toggleButton}
           >
-            {showManualEntry ? '▼ Ocultar Entrada Manual' : '▶ Añadir Tiempo Manual'}
+            {showManualEntry ? '− Ocultar entrada manual' : '+ Agregar tiempo manual'}
           </button>
 
+          {/* Form Container */}
           <AnimatePresence>
             {showManualEntry && (
               <motion.div
@@ -224,6 +346,7 @@ export function TimerPanel({
                 <TimeEntryForm
                   taskId={taskId}
                   userId={userId}
+                  userName={userName}
                   onSuccess={() => {
                     setShowManualEntry(false);
                     if (onSuccess) onSuccess();

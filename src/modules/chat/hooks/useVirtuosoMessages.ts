@@ -254,7 +254,10 @@ export const useVirtuosoMessages = ({
   // ============================================================================
 
   useEffect(() => {
-    if (!taskId) return;
+    if (!taskId || isInitialLoad) {
+      // No establecer listener hasta que initialLoad termine
+      return;
+    }
 
     console.log('[useVirtuosoMessages] Setting up real-time listener for:', taskId);
 
@@ -274,32 +277,37 @@ export const useVirtuosoMessages = ({
         for (const change of changes) {
           const messageData = { id: change.doc.id, ...change.doc.data() };
 
-          // Skip si ya procesamos este mensaje
-          if (change.type === 'added' && processedIdsRef.current.has(messageData.id)) {
-            continue;
-          }
-
           const processedMessage = await processMessage(messageData);
 
           if (change.type === 'added') {
-            // Nuevo mensaje - agregar al final
-            processedIdsRef.current.add(messageData.id);
+            // Verificar duplicación TANTO en ref como en array actual
+            if (processedIdsRef.current.has(messageData.id)) {
+              console.log('[useVirtuosoMessages] Skipping duplicate message:', messageData.id);
+              continue;
+            }
+
+            // Doble check: verificar si ya existe en el array
             setMessages((prev) => {
-              const updated = [...prev, processedMessage];
-              return sortMessagesAsc(updated);
+              if (prev.some(msg => msg.id === messageData.id)) {
+                console.log('[useVirtuosoMessages] Message already in array:', messageData.id);
+                return prev;
+              }
+
+              // Nuevo mensaje - agregar al final
+              processedIdsRef.current.add(messageData.id);
+              return [...prev, processedMessage];
             });
 
             if (onNewMessage) {
               onNewMessage();
             }
           } else if (change.type === 'modified') {
-            // Mensaje actualizado
-            setMessages((prev) => {
-              const updated = prev.map((msg) =>
+            // Mensaje actualizado - mantener posición
+            setMessages((prev) =>
+              prev.map((msg) =>
                 msg.id === processedMessage.id ? processedMessage : msg
-              );
-              return sortMessagesAsc(updated);
-            });
+              )
+            );
           } else if (change.type === 'removed') {
             // Mensaje eliminado
             setMessages((prev) => prev.filter((msg) => msg.id !== messageData.id));
@@ -319,7 +327,7 @@ export const useVirtuosoMessages = ({
         unsubscribeRef.current();
       }
     };
-  }, [taskId, processMessage, sortMessagesAsc, onNewMessage]);
+  }, [taskId, processMessage, onNewMessage, isInitialLoad]);
 
   // ============================================================================
   // CLEANUP ON TASK CHANGE

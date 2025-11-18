@@ -6,14 +6,21 @@ import sanitizeHtml from "sanitize-html";
 import styles from "../../styles/MessageItem.module.scss";
 import type { Message, ChatUser } from "../../types";
 import { markdownToHtml, formatMessageTime } from "../../utils";
+import { formatDecimalHoursToReadable } from "../../timer/utils/timerFormatters";
 import { MessageActionButton } from "../atoms/MessageActionButton";
 import { MessageActionMenu } from "./MessageActionMenu";
+import { MessageReactions } from "./MessageReactions";
+import { reactionsService } from "../../services/reactionsService";
+import { getMessagePosition, type MessagePosition } from "../../utils/messageGrouping";
 
 interface MessageItemProps {
   message: Message;
+  prevMessage?: Message | null; // Para grouping
+  nextMessage?: Message | null; // Para grouping
   users: ChatUser[];
   isOwn: boolean;
   userId: string;
+  taskId: string; // Necesario para reactions
   onImagePreview?: (src: string) => void;
   onRetryMessage?: (message: Message) => void;
   onCopy?: (text: string) => void;
@@ -22,6 +29,7 @@ interface MessageItemProps {
   onDelete?: (messageId: string) => void;
   onReply?: (message: Message) => void;
   onDownload?: (message: Message) => void;
+  onReplyClick?: (messageId: string) => void; // Scroll to reply
 }
 
 /**
@@ -39,9 +47,12 @@ export const MessageItem = memo(
     (
       {
         message,
+        prevMessage,
+        nextMessage,
         users,
         isOwn,
         userId,
+        taskId,
         onImagePreview,
         onRetryMessage,
         onCopy,
@@ -50,11 +61,23 @@ export const MessageItem = memo(
         onDelete,
         onReply,
         onDownload,
+        onReplyClick,
       },
       ref
     ) => {
       const actionButtonRef = useRef<HTMLButtonElement>(null);
       const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+
+      // Calcular posición en el grupo
+      const position: MessagePosition = getMessagePosition(
+        message,
+        prevMessage || null,
+        nextMessage || null
+      );
+
+      const showAvatar = position === "single" || position === "last";
+      const showName = position === "single" || position === "first";
+      const showTimestamp = position === "single" || position === "last";
 
       const handleActionButtonClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -83,13 +106,33 @@ export const MessageItem = memo(
         }
       }, [onDelete]);
 
+      const handleAddReaction = useCallback(async (emoji: string) => {
+        try {
+          await reactionsService.toggleReaction(taskId, message.id, emoji, userId);
+        } catch (error) {
+          console.error("Error adding reaction:", error);
+        }
+      }, [taskId, message.id, userId]);
 
+      const handleRemoveReaction = useCallback(async (emoji: string) => {
+        try {
+          await reactionsService.toggleReaction(taskId, message.id, emoji, userId);
+        } catch (error) {
+          console.error("Error removing reaction:", error);
+        }
+      }, [taskId, message.id, userId]);
 
       const handleImageClick = useCallback(() => {
         if (onImagePreview && message.imageUrl) {
           onImagePreview(message.imageUrl);
         }
       }, [message.imageUrl, onImagePreview]);
+
+      const handleDownload = useCallback(() => {
+        if (onDownload) {
+          onDownload(message);
+        }
+      }, [onDownload, message]);
 
       const handleRetry = useCallback(() => {
         if (onRetryMessage) {
@@ -102,7 +145,11 @@ export const MessageItem = memo(
           <>
             {/* Reply Preview */}
             {message.replyTo && (
-              <div className={styles.replyPreview}>
+              <div
+                className={styles.replyPreview}
+                onClick={() => onReplyClick?.(message.replyTo!.id)}
+                style={{ cursor: onReplyClick ? "pointer" : "default" }}
+              >
                 <div className={styles.replyAuthor}>{message.replyTo.senderName}</div>
                 <div className={styles.replyText}>
                   {message.replyTo.text || (message.replyTo.imageUrl && "📷 Imagen")}
@@ -153,8 +200,25 @@ export const MessageItem = memo(
             {message.hours && (
               <div className={styles.timeLog}>
                 <Image src="/Clock.svg" alt="Tiempo" width={16} height={16} />
-                <span>{Math.round(message.hours)} {Math.round(message.hours) !== 1 ? 'horas' : 'hora'} registradas</span>
-                {message.dateString && <span className={styles.timestamp}> • {message.dateString}</span>}
+                <span>{formatDecimalHoursToReadable(message.hours)} registrados</span>
+                {message.dateString && (
+                  <span className={styles.timestamp}>
+                    {' • '}
+                    {(() => {
+                      if (typeof message.dateString === 'string') {
+                        return message.dateString;
+                      }
+                      if (message.dateString instanceof Date) {
+                        return message.dateString.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
+                      }
+                      const dateObj = (message.dateString as any)?.toDate?.();
+                      if (dateObj instanceof Date) {
+                        return dateObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
+                      }
+                      return '';
+                    })()}
+                  </span>
+                )}
               </div>
             )}
           </>
@@ -188,33 +252,48 @@ export const MessageItem = memo(
       return (
         <div
           ref={ref}
-          className={`${styles.messageWrapper} ${message.isPending ? styles.pending : ""} ${
+          className={`${styles.messageWrapper} ${styles[position]} ${message.isPending ? styles.pending : ""} ${
             message.hasError ? styles.error : ""
           }`}
         >
           <div className={styles.message}>
-            {/* Avatar */}
-            <div className={styles.avatar}>
-              <Image
-                src={users.find((u) => u.id === message.senderId)?.imageUrl || "/default-avatar.png"}
-                alt={message.senderName}
-                width={36}
-                height={36}
-              />
-            </div>
+            {/* Avatar - solo en single/last */}
+            {showAvatar ? (
+              <div className={styles.avatar}>
+                <Image
+                  src={users.find((u) => u.id === message.senderId)?.imageUrl || "/default-avatar.png"}
+                  alt={message.senderName}
+                  width={36}
+                  height={36}
+                />
+              </div>
+            ) : (
+              <div className={styles.avatarPlaceholder} />
+            )}
 
             {/* Message Content */}
             <div className={styles.messageContent}>
-              {/* Header */}
-              <div className={styles.metadata}>
-                <span className={styles.senderName}>{message.senderName}</span>
-                <span className={styles.timestamp}>
-                  {message.timestamp ? formatMessageTime(message.timestamp instanceof Date ? message.timestamp : message.timestamp.toDate()) : ""}
-                </span>
-              </div>
+              {/* Header - solo en single/first */}
+              {showName && (
+                <div className={styles.metadata}>
+                  <span className={styles.senderName}>{message.senderName}</span>
+                  {showTimestamp && (
+                    <span className={styles.timestamp}>
+                      {message.timestamp ? formatMessageTime(message.timestamp instanceof Date ? message.timestamp : message.timestamp.toDate()) : ""}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Bubble */}
               <div className={styles.bubble}>{renderMessageContent()}</div>
+
+              {/* Timestamp - solo en single/last si no se mostró arriba */}
+              {!showName && showTimestamp && (
+                <span className={styles.timestamp}>
+                  {message.timestamp ? formatMessageTime(message.timestamp instanceof Date ? message.timestamp : message.timestamp.toDate()) : ""}
+                </span>
+              )}
 
               {/* Status */}
               {renderStatus()}
@@ -227,6 +306,16 @@ export const MessageItem = memo(
               isActive={isActionMenuOpen}
             />
           </div>
+
+          {/* Reactions */}
+          {message.reactions && message.reactions.length > 0 && (
+            <MessageReactions
+              reactions={message.reactions}
+              currentUserId={userId}
+              onAddReaction={handleAddReaction}
+              onRemoveReaction={handleRemoveReaction}
+            />
+          )}
 
           {/* Action Menu */}
           <MessageActionMenu

@@ -1,0 +1,277 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.container {
+  @include flex-column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.label {
+  @include typography($text-sm, $font-weight-medium, $color-text-primary, left);
+  padding-left: 0.25rem;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.dropdownWrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+// Reutilizando estilos del Dropdown compartido
+.trigger {
+  @include flex-center;
+  min-width: 100px;
+  height: 48px;
+  padding: $spacing-md $spacing-xl;
+  border-radius: $radius-lg;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  cursor: pointer;
+  transition: $transition-base;
+
+  &:hover:not(.disabled) {
+    transform: translateY(-2px) scale(1.02);
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  &:active:not(.disabled) {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    @include neomorphic-inset(light);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  :global(body.dark) & {
+    background: $zinc-800;
+    border: none;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.532);
+
+    img {
+      filter: invert(1) grayscale(1) brightness(1.5) !important;
+    }
+  }
+
+  &.error {
+    border-color: $color-error;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 0 0 4px rgba(239, 68, 68, 0.2);
+
+    :global(body.dark) & {
+      border-color: #f87171;
+      box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.3);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    height: 44px;
+    padding: $spacing-md 18px;
+    font-size: 13px;
+  }
+
+  @media (max-width: 768px) {
+    height: 40px;
+    padding: $spacing-sm $spacing-lg;
+    font-size: 12px;
+    min-width: 80px;
+  }
+}
+
+.selectedCountry {
+  @include flex-center;
+  gap: $spacing-sm;
+}
+
+.flag {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.placeholder {
+  color: $color-text-secondary;
+  font-weight: $font-weight-normal;
+}
+
+.triggerText {
+  flex: 1;
+  text-align: left;
+}
+
+// Reutilizando estilos del menu del Dropdown compartido
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: $radius-xl;
+  padding: $spacing-sm 0;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  @include crystallized-scrollbar;
+
+  :global(body.dark) & {
+    background: $zinc-800;
+    border: none;
+    box-shadow: none !important;
+  }
+
+  @media (max-width: 1024px) {
+    padding: 6px 0;
+    border-radius: $radius-lg;
+  }
+
+  @media (max-width: 768px) {
+    padding: 4px 0;
+    border-radius: $radius-sm;
+  }
+}
+
+.searchContainer {
+  padding: $spacing-sm;
+}
+
+.searchInput {
+  @include input-base($height: 40px, $padding: $spacing-sm $spacing-md);
+  @include glassmorphism(rgba(255, 255, 255, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+
+  &:focus {
+    outline: none;
+    border-color: $color-border-focus;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+
+  :global(body.dark) & {
+    background: $zinc-700;
+    border: none;
+    color: white;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    }
+  }
+}
+
+.countryList {
+  max-height: 240px;
+  overflow-y: auto;
+  @include crystallized-scrollbar;
+}
+
+// Reutilizando estilos del item del Dropdown compartido
+.countryItem {
+  @include flex-center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  @include typography(13px, $font-weight-medium, $color-text-primary);
+  cursor: pointer;
+  @include glassmorphism($color-bg-glass);
+  border-radius: $radius-sm;
+  margin: 2px 4px;
+  border: 1px solid $color-border-subtle;
+  transition: $transition-base;
+
+  &:hover {
+    transform: translateY(-1px) scale(1.01);
+    @include glassmorphism-hover;
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    @include neomorphic-inset(light);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+    font-weight: $font-weight-semibold;
+  }
+
+  :global(body.dark) & {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.532);
+    border: none;
+    box-shadow: none !important;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: $zinc-700;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: none;
+    }
+
+    &:active {
+      background: $zinc-600;
+      box-shadow: none;
+    }
+
+    &.selected {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 6px $spacing-md;
+    font-size: 11px;
+  }
+}
+
+.countryFlag {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.countryName {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.countryCode {
+  @include typography($text-sm, $font-weight-normal, $color-text-secondary);
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.errorText {
+  @include typography($text-xs, $font-weight-normal, $color-error, left);
+  padding-left: 0.25rem;
+
+  :global(body.dark) & {
+    color: #f87171;
+  }
+}

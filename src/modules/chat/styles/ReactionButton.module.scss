@@ -1,0 +1,57 @@
+/**
+ * ReactionButton - Component Styles
+ */
+
+@use './variables' as *;
+
+.reactionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  background-color: rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+
+  :global(.dark) & {
+    border-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    transform: scale(1.05);
+
+    :global(.dark) & {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &.active {
+    background-color: rgba(33, 150, 243, 0.1);
+    border-color: rgba(33, 150, 243, 0.3);
+
+    :global(.dark) & {
+      background-color: rgba(33, 150, 243, 0.2);
+      border-color: rgba(33, 150, 243, 0.4);
+    }
+  }
+
+  .emoji {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .count {
+    font-size: 12px;
+    font-weight: 600;
+    color: $chat-text-primary-light;
+
+    :global(.dark) & {
+      color: $chat-text-primary-dark;
+    }
+  }
+}

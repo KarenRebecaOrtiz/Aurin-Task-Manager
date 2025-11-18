@@ -1,11 +1,10 @@
 /**
  * @module config
  * @description Módulo de configuración de usuario - Exportaciones principales
- * 
+ *
  * Este módulo contiene toda la funcionalidad relacionada con la configuración
  * del perfil de usuario, incluyendo:
  * - Gestión de perfil personal
- * - Ubicaciones personalizadas
  * - Equipos y colaboración
  * - Seguridad y sesiones
  */

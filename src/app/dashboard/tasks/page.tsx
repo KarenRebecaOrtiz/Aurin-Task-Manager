@@ -5,7 +5,6 @@ import { useUser } from '@clerk/nextjs';
 
 import { Header } from '@/modules/header';
 import { OptimizedMarquee } from '@/modules/advices';
-import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import TasksTableIsolated from '@/modules/data-views/tasks/components/tables/TasksTableIsolated';
 import TasksKanban from '@/modules/data-views/tasks/components/tables/KanbanBoard';
 import { ChatSidebar } from '@/modules/chat';
@@ -22,7 +21,6 @@ import { Footer } from '@/modules/footer';
 import Loader from '@/modules/loader';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
-import { usePersonalLocations } from '@/hooks/usePersonalLocations';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
 
@@ -119,11 +117,6 @@ function TasksPageContent() {
     loadingProgress
   } = useSharedTasksState(user?.id);
 
-  // Obtener ubicaciones personalizadas del usuario
-  const { personalLocations } = usePersonalLocations();
-  
-
-  
   // Solo suscribirse a los valores que realmente necesitamos para renderizar
   const container = useTasksPageStore(useShallow(state => state.container));
   const taskView = useTasksPageStore(useShallow(state => state.taskView));
@@ -525,8 +518,7 @@ function TasksPageContent() {
   const mainContent = (
     <div className={styles.container}>
       <OptimizedMarquee />
-      <SyncUserToFirestore />
-      
+
       <div ref={headerRef}>
         <Header
           selectedContainer={selectedContainer}
@@ -535,7 +527,6 @@ function TasksPageContent() {
           isCreateTaskOpen={isCreateTaskOpen}
           isEditTaskOpen={isEditTaskOpen}
           hasUnsavedChanges={hasUnsavedChanges}
-          personalLocations={personalLocations}
         />
       </div>
     

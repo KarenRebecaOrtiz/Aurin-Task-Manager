@@ -1,4 +1,4 @@
-import { ContainerType, PersonalLocations } from './header.types';
+import { ContainerType } from './header.types';
 
 export interface LogoSectionProps {
   isDarkMode: boolean;
@@ -14,7 +14,6 @@ export interface WelcomeSectionProps {
 }
 
 export interface HeaderActionsProps {
-  personalLocations?: PersonalLocations;
   onChangeContainer: (container: ContainerType) => void;
 }
 
@@ -28,9 +27,7 @@ export interface AdviceInputProps {
   isAdmin: boolean;
 }
 
-export interface GeoClockProps {
-  personalLocations?: PersonalLocations;
-}
+export interface GeoClockProps {}
 
 export interface AvatarDropdownProps {
   onChangeContainer: (container: ContainerType) => void;

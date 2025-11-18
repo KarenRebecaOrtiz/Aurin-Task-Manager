@@ -49,8 +49,6 @@ export async function getUsers(): Promise<UsersResult> {
     // Layer 1: Memory cache
     const memoryCache = globalRequestCache.get<User[]>(MEMORY_CACHE_KEY);
     if (memoryCache) {
-      console.log('[userService] ⚡ HIT: Memory cache');
-
       return {
         data: memoryCache.data,
         source: 'cache',
@@ -62,8 +60,6 @@ export async function getUsers(): Promise<UsersResult> {
     // Layer 2: IndexedDB cache
     const idbCache = await get<User[]>(IDB_CACHE_KEY);
     if (idbCache) {
-      console.log('[userService] ⚡ HIT: IndexedDB cache');
-
       return {
         data: idbCache,
         source: 'idb',
@@ -72,7 +68,6 @@ export async function getUsers(): Promise<UsersResult> {
     }
 
     // Layer 3: Network
-    console.log('[userService] ❌ MISS: Fetching from network');
     const users = await fetchUsersFromAPI(requestStartTime);
 
     return {
@@ -80,7 +75,6 @@ export async function getUsers(): Promise<UsersResult> {
       source: 'network',
     };
   } catch (error) {
-    console.error('[userService] Error in getUsers:', error);
 
     const enrichedError = createEnrichedError(error, {
       component: 'userService',
@@ -105,10 +99,7 @@ async function fetchUsersFromAPI(requestStartTime?: number): Promise<User[]> {
   const startTime = requestStartTime ?? Date.now();
 
   try {
-    console.log('[userService] 🌐 Fetching from API and Firestore...');
-
     // --- STEP 1: Fetch from Clerk API ---
-    const apiStartTime = Date.now();
     const response = await fetch('/api/users');
 
     if (!response.ok) {
@@ -122,17 +113,12 @@ async function fetchUsersFromAPI(requestStartTime?: number): Promise<User[]> {
     const responseData = await response.json();
     const clerkUsers = responseData.success ? responseData.data : responseData;
 
-    console.log(`[userService] ✅ Fetched ${clerkUsers.length} users from API in ${Date.now() - apiStartTime}ms`);
-
     // --- STEP 2: Enrich with Firestore data ---
-    const firestoreStartTime = Date.now();
     const userIds = clerkUsers.map((user: any) => user.id);
 
     const userDocs = await Promise.all(
       userIds.map((id: string) => getDoc(doc(db, 'users', id)))
     );
-
-    console.log(`[userService] ✅ Enriched ${userDocs.length} users from Firestore in ${Date.now() - firestoreStartTime}ms`);
 
     // --- STEP 3: Map and merge data ---
     const usersData: User[] = clerkUsers.map((clerkUser: any, index: number) => {
@@ -159,11 +145,8 @@ async function fetchUsersFromAPI(requestStartTime?: number): Promise<User[]> {
     // Update all cache layers
     await updateCacheLayers(usersData, metrics);
 
-    console.log(`[userService] ✅ Total fetch time: ${responseEndTime - startTime}ms`);
-
     return usersData;
   } catch (error) {
-    console.error('[userService] Network fetch failed:', error);
 
     // If already enriched error, re-throw
     if (error instanceof EnrichedError) {
@@ -200,7 +183,6 @@ async function updateCacheLayers(users: User[], metrics: RequestMetrics): Promis
  */
 export function invalidateUsersCache(): void {
   globalRequestCache.invalidate(MEMORY_CACHE_KEY);
-  console.log('[userService] Cache invalidated');
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Small, CrystalInput } from '@/components/ui';
 import { useSecuritySettings } from '../../hooks';
 import { formatRelativeTime } from '../../utils';
 import styles from './SecuritySection.module.scss';
@@ -77,25 +77,23 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
           ) : (
             <form onSubmit={handleChangePassword} className={styles.passwordForm}>
               <div className={styles.fieldGroup}>
-                <div className={styles.label}>Contraseña Actual</div>
-                <input
+                <CrystalInput
+                  label="Contraseña Actual"
                   type="password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onChange={setCurrentPassword}
                   placeholder="Ingresa tu contraseña actual"
-                  className={styles.input}
                   required
                 />
               </div>
 
               <div className={styles.fieldGroup}>
-                <div className={styles.label}>Nueva Contraseña</div>
-                <input
+                <CrystalInput
+                  label="Nueva Contraseña"
                   type="password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={setNewPassword}
                   placeholder="Ingresa tu nueva contraseña"
-                  className={styles.input}
                   required
                 />
                 
@@ -111,9 +109,9 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                         }}
                       />
                     </div>
-                    <span className={styles.strengthLabel}>
+                    <Small className={styles.strengthLabel}>
                       {getPasswordStrengthLabel(passwordStrength)}
-                    </span>
+                    </Small>
                   </div>
                 )}
 
@@ -128,18 +126,15 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
               </div>
 
               <div className={styles.fieldGroup}>
-                <div className={styles.label}>Confirmar Nueva Contraseña</div>
-                <input
+                <CrystalInput
+                  label="Confirmar Nueva Contraseña"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={setConfirmPassword}
                   placeholder="Confirma tu nueva contraseña"
-                  className={styles.input}
                   required
+                  error={passwordMatchError ? 'Las contraseñas no coinciden' : undefined}
                 />
-                {passwordMatchError && (
-                  <p className={styles.errorText}>Las contraseñas no coinciden</p>
-                )}
               </div>
 
               <div className={styles.buttonGroup}>
@@ -183,17 +178,17 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                   <div className={styles.sessionInfo}>
                     <div className={styles.sessionHeader}>
                       <Image src="/monitor.svg" alt="Dispositivo" width={16} height={16} />
-                      <span className={styles.sessionDevice}>
+                      <Small className={styles.sessionDevice}>
                         {session.isCurrent ? 'Esta sesión' : 'Otro dispositivo'}
-                      </span>
+                      </Small>
                       {session.isCurrent && (
-                        <span className={styles.currentBadge}>Actual</span>
+                        <Small className={styles.currentBadge}>Actual</Small>
                       )}
                     </div>
                     <div className={styles.sessionDetails}>
-                      <span className={styles.sessionTime}>
+                      <Small className={styles.sessionTime}>
                         Última actividad: {formatRelativeTime(session.lastActiveAt)}
-                      </span>
+                      </Small>
                     </div>
                   </div>
                   {!session.isCurrent && (

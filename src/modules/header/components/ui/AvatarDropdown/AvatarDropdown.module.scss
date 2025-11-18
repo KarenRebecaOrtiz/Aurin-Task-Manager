@@ -209,23 +209,15 @@
   }
 }
 
+// userName - Uses Small component from Typography
 .userName {
   display: block;
-  @include typography($text-sm, $font-weight-semibold, $color-text-primary);
   margin-bottom: 2px;
-
-  :global(body.dark) & {
-    color: $color-text-dark-primary;
-  }
 }
 
+// userEmail - Uses Muted component from Typography
 .userEmail {
   display: block;
-  @include typography($text-xs, $font-weight-normal, $color-text-muted);
-
-  :global(body.dark) & {
-    color: $color-text-dark-muted;
-  }
 }
 
 // ==============================================================

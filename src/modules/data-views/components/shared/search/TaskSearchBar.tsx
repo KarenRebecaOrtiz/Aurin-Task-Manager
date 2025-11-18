@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence, easeOut } from 'framer-motion';
 import { Search, X, ClipboardCheck, GalleryHorizontalEnd, Users } from 'lucide-react';
 import { Badge } from '@/modules/shared/components/atoms/Badge';
+import { Small } from '@/components/ui/Typography';
 import styles from './TaskSearchBar.module.scss';
 
 export type SearchCategory = 'task' | 'client' | 'member';
@@ -246,7 +247,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
           >
             {/* Categorías de búsqueda */}
             <div className={styles.menuSection}>
-              <span className={styles.sectionTitle}>Filtrar por:</span>
+              <Small className={styles.sectionTitle}>Filtrar por:</Small>
               <div className="flex gap-2 flex-wrap">
                 {SEARCH_CATEGORIES.map((category, index) => (
                   <motion.button
@@ -274,7 +275,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
 
             {/* Filtros de prioridad */}
             <div className={styles.menuSection}>
-              <span className={styles.sectionTitle}>Prioridad:</span>
+              <Small className={styles.sectionTitle}>Prioridad:</Small>
               <div className="flex gap-2 flex-wrap">
                 {PRIORITY_FILTERS.map((priority, index) => (
                   <motion.button
@@ -295,7 +296,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
 
             {/* Filtros de estado */}
             <div className={styles.menuSection}>
-              <span className={styles.sectionTitle}>Estado:</span>
+              <Small className={styles.sectionTitle}>Estado:</Small>
               <div className="flex gap-2 flex-wrap">
                 {STATUS_FILTERS.map((status, index) => (
                   <motion.button

@@ -8,6 +8,7 @@ import { createPortal } from 'react-dom';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import Badge from '@/components/Badge';
 import StreakCounter from './StreakCounter/StreakCounter';
+import { Small, Muted } from '@/components/ui/Typography';
 
 import { useProfile } from '../hooks/useProfile';
 import type { ProfileCardProps, SocialLink } from '../types';
@@ -205,7 +206,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
       {isOpen && (
         <motion.div
           className={styles.overlay}
-          variants={overlayVariants}
+          variants={backdropVariants}
           initial="hidden"
           animate="visible"
           exit="hidden"
@@ -215,7 +216,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
         >
           <motion.div
             className={styles.card}
-            variants={modalCenterVariants}
+            variants={panelVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -303,39 +304,41 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
                         )}
                       </motion.div>
 
-                      <motion.p className={styles.bio} variants={itemVariants}>
-                        {profile.description || 'Sin descripción disponible'}
-                      </motion.p>
+                      <motion.div variants={itemVariants}>
+                        <Muted className={styles.bio}>
+                          {profile.description || 'Sin descripción disponible'}
+                        </Muted>
+                      </motion.div>
 
                     {(profile.phone || profile.city || profile.birthDate || profile.gender || profile.portfolio) && (
                       <motion.div className={styles.contactInfo} variants={itemVariants}>
                         {profile.phone && (
                           <div className={styles.contactItem}>
-                            <span className={styles.contactLabel}>Teléfono:</span>
-                            <span className={styles.contactValue}>{profile.phone}</span>
+                            <Small className={styles.contactLabel}>Teléfono:</Small>
+                            <Small className={styles.contactValue}>{profile.phone}</Small>
                           </div>
                         )}
                         {profile.city && (
                           <div className={styles.contactItem}>
-                            <span className={styles.contactLabel}>Ubicación:</span>
-                            <span className={styles.contactValue}>{profile.city}</span>
+                            <Small className={styles.contactLabel}>Ubicación:</Small>
+                            <Small className={styles.contactValue}>{profile.city}</Small>
                           </div>
                         )}
                         {profile.birthDate && (
                           <div className={styles.contactItem}>
-                            <span className={styles.contactLabel}>Fecha de Nacimiento:</span>
-                            <span className={styles.contactValue}>{profile.birthDate}</span>
+                            <Small className={styles.contactLabel}>Fecha de Nacimiento:</Small>
+                            <Small className={styles.contactValue}>{profile.birthDate}</Small>
                           </div>
                         )}
                         {profile.gender && (
                           <div className={styles.contactItem}>
-                            <span className={styles.contactLabel}>Género:</span>
-                            <span className={styles.contactValue}>{profile.gender}</span>
+                            <Small className={styles.contactLabel}>Género:</Small>
+                            <Small className={styles.contactValue}>{profile.gender}</Small>
                           </div>
                         )}
                         {profile.portfolio && (
                           <div className={styles.contactItem}>
-                            <span className={styles.contactLabel}>Portafolio:</span>
+                            <Small className={styles.contactLabel}>Portafolio:</Small>
                             <a 
                               href={profile.portfolio.startsWith('http') ? profile.portfolio : `https://${profile.portfolio}`}
                               target="_blank"

@@ -30,9 +30,28 @@
 .messageWrapper {
   padding: 0 16px;
   margin-bottom: 8px;
+  transition: background-color 0.3s ease;
 
   &:first-child {
     margin-top: 8px;
+  }
+
+  &.highlighted {
+    background-color: rgba(255, 200, 0, 0.15);
+    animation: highlightPulse 2s ease-out;
+
+    :global(.dark) & {
+      background-color: rgba(255, 200, 0, 0.2);
+    }
+  }
+}
+
+@keyframes highlightPulse {
+  0% {
+    background-color: rgba(255, 200, 0, 0.3);
+  }
+  100% {
+    background-color: rgba(255, 200, 0, 0);
   }
 }
 
@@ -41,11 +60,25 @@
 // ============================================================================
 
 .dateSeparator {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 20px 16px;
-  position: relative;
+  backdrop-filter: blur(1px);
+  padding: 8px 0;
+  background:rgba(255, 255, 255, 0.086);
+
+  :global(.dark) & {
+    background: linear-gradient(
+      to bottom,
+      rgba(24, 24, 27, 1) 0%,
+      rgba(24, 24, 27, 0.95) 70%,
+      rgba(24, 24, 27, 0) 100%
+    );
+  }
 
   &::before,
   &::after {
@@ -75,12 +108,14 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 4px 12px;
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
   :global(.dark) & {
     color: $chat-text-secondary-dark;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 }
 

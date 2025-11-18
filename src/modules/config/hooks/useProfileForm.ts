@@ -101,14 +101,12 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
             newPassword: '',
             confirmPassword: '',
             status: data.status || 'Disponible',
-            emailPreferences: data.emailPreferences || { 
-              messages: true, 
-              creation: true, 
-              edition: true, 
-              timers: true 
+            emailPreferences: data.emailPreferences || {
+              messages: true,
+              creation: true,
+              edition: true,
+              timers: true
             },
-            homeLocation: data.personalLocations?.home,
-            secondaryLocation: data.personalLocations?.secondary,
             github: data.socialLinks?.github || '',
             linkedin: data.socialLinks?.linkedin || '',
             twitter: data.socialLinks?.twitter || '',
@@ -341,10 +339,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         coverPhoto: coverPhotoUrl,
         status: formData.status || 'Disponible',
         emailPreferences: formData.emailPreferences,
-        personalLocations: {
-          home: formData.homeLocation || null,
-          secondary: formData.secondaryLocation || null,
-        },
         socialLinks: {
           github: formData.github || '',
           linkedin: formData.linkedin || '',

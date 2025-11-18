@@ -7,6 +7,24 @@ export { default as AvailabilityToggle } from './components/ui/AvailabilityToggl
 export { default as GeoClock } from './components/ui/GeoClock';
 export { TextShimmer } from './components/ui/TextShimmer';
 export { default as AvatarDropdown } from './components/ui/AvatarDropdown';
+
+// Typography Components (re-exported from global design system)
+// Located at: /src/components/ui/Typography
+export {
+  H1,
+  H2,
+  H3,
+  H4,
+  P,
+  Lead,
+  Large,
+  Small,
+  Muted,
+  InlineCode,
+  Blockquote,
+  List,
+  ListItem,
+} from '@/components/ui/Typography';
 // ToDoDynamic (submódulo completo)
 export { ToDoDynamic } from './components/ui/ToDoDynamic';
 export * from './components/ui/ToDoDynamic';

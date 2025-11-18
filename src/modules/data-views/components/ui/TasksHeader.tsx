@@ -3,6 +3,7 @@
 import { CrystalButton } from '@/modules/shared/components/atoms';
 import { TaskSearchBar, type SearchCategory, type PriorityLevel, type StatusLevel } from '@/modules/data-views/components/shared/search';
 import { ViewSwitcher } from './ViewSwitcher';
+import { Small } from '@/components/ui/Typography';
 import styles from './TasksHeader.module.scss';
 
 interface TasksHeaderProps {
@@ -13,7 +14,6 @@ interface TasksHeaderProps {
   onViewChange: (view: 'table' | 'kanban') => void;
   onArchiveTableOpen: () => void;
   onNewTaskOpen: () => void;
-  onNewClientOpen?: () => void;
   onPriorityFiltersChange?: (priorities: string[]) => void;
   onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
   currentView?: 'table' | 'kanban' | 'archive';
@@ -27,7 +27,6 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   onViewChange,
   onArchiveTableOpen,
   onNewTaskOpen,
-  onNewClientOpen,
   onPriorityFiltersChange,
   onStatusFiltersChange,
   currentView = 'table',
@@ -75,19 +74,6 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
       <div className={styles.actionsSection}>
         {/* Right Actions */}
         <div className={styles.rightActions}>
-          {onNewClientOpen && (
-            <div className={styles.buttonWithTooltip}>
-              <CrystalButton
-                variant="secondary"
-                size="medium"
-                icon="/circle-plus.svg"
-                onClick={onNewClientOpen}
-              >
-                Crear Cuenta
-              </CrystalButton>
-              <span className={styles.tooltip}>Crear Nueva Cuenta</span>
-            </div>
-          )}
           <div className={styles.buttonWithTooltip}>
             <CrystalButton
               variant="secondary"
@@ -95,7 +81,7 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
               icon="/circle-plus.svg"
               onClick={onNewTaskOpen}
             >
-              Crear Tarea
+              <Small>Crear Tarea</Small>
             </CrystalButton>
             <span className={styles.tooltip}>Crear Nueva Tarea</span>
           </div>

@@ -61,8 +61,6 @@ export async function getClients(): Promise<ClientsResult> {
     // Layer 1: Memory cache
     const memoryCache = globalRequestCache.get<Client[]>(MEMORY_CACHE_KEY);
     if (memoryCache) {
-      console.log('[clientService] ⚡ HIT: Memory cache');
-
       return {
         data: memoryCache.data,
         source: 'cache',
@@ -74,8 +72,6 @@ export async function getClients(): Promise<ClientsResult> {
     // Layer 2: IndexedDB cache
     const idbCache = await get<Client[]>(IDB_CACHE_KEY);
     if (idbCache) {
-      console.log('[clientService] ⚡ HIT: IndexedDB cache');
-
       return {
         data: idbCache,
         source: 'idb',
@@ -84,7 +80,6 @@ export async function getClients(): Promise<ClientsResult> {
     }
 
     // Layer 3: Network
-    console.log('[clientService] ❌ MISS: Fetching from network');
     const clients = await fetchClientsFromFirebase(requestStartTime);
 
     return {
@@ -92,7 +87,6 @@ export async function getClients(): Promise<ClientsResult> {
       source: 'network',
     };
   } catch (error) {
-    console.error('[clientService] Error in getClients:', error);
 
     const enrichedError = createEnrichedError(error, {
       component: 'clientService',
@@ -116,7 +110,6 @@ async function fetchClientsFromFirebase(requestStartTime?: number): Promise<Clie
   const startTime = requestStartTime ?? Date.now();
 
   try {
-    console.log('[clientService] 🌐 Fetching from Firebase...');
 
     // --- USER: CUSTOMIZE YOUR FIREBASE QUERY HERE ---
     const clientsQuery = query(
@@ -148,11 +141,8 @@ async function fetchClientsFromFirebase(requestStartTime?: number): Promise<Clie
     // Update all cache layers
     await updateCacheLayers(clientsData, metrics);
 
-    console.log(`[clientService] ✅ Fetched ${clientsData.length} clients in ${responseEndTime - startTime}ms`);
-
     return clientsData;
   } catch (error) {
-    console.error('[clientService] Network fetch failed:', error);
 
     const enrichedError = createEnrichedError(error, {
       component: 'clientService',
@@ -184,7 +174,6 @@ async function updateCacheLayers(clients: Client[], metrics: RequestMetrics): Pr
  */
 export function invalidateClientsCache(): void {
   globalRequestCache.invalidate(MEMORY_CACHE_KEY);
-  console.log('[clientService] Cache invalidated');
 }
 
 /**

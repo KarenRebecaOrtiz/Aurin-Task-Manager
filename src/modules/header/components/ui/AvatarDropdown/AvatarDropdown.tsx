@@ -12,6 +12,7 @@ import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
 import ThemeToggler from '../../theme-toggler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ProfileCard } from '@/modules/profile-card';
+import { Small, Muted } from '@/components/ui/Typography';
 
 const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
   const { user, isLoaded } = useUser();
@@ -193,8 +194,8 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
         }}
       >
         <div className={styles.dropdownHeader}>
-          <span className={styles.userName}>{firestoreFullName || user?.fullName || 'Usuario'}</span>
-          <span className={styles.userEmail}>{user?.emailAddresses[0]?.emailAddress}</span>
+          <Small className={styles.userName}>{firestoreFullName || user?.fullName || 'Usuario'}</Small>
+          <Muted className={styles.userEmail}>{user?.emailAddresses[0]?.emailAddress}</Muted>
         </div>
         
         <div className={styles.dropdownMenu}>

@@ -29,45 +29,35 @@ export default function TasksTableIsolated() {
     
     setActionHandlers({
       openNewTask: () => {
-        console.log('[TasksTableIsolated] openNewTask called');
         const { openCreateTask } = useTasksPageStore.getState();
         openCreateTask();
       },
       openNewClient: () => {
-        console.log('[TasksTableIsolated] openNewClient called');
         const { setContainer, setClientSidebarData, setIsClientSidebarOpen } = useTasksPageStore.getState();
         setContainer('cuentas');
         setClientSidebarData({ isEdit: false });
         setIsClientSidebarOpen(true);
       },
       openEditTask: (taskId: string) => {
-        console.log('[TasksTableIsolated] openEditTask called', taskId);
         const { openEditTask } = useTasksPageStore.getState();
         openEditTask(taskId);
       },
       openDeleteTask: (taskId: string) => {
-        console.log('[TasksTableIsolated] openDeleteTask called', taskId);
         const { openDeletePopup } = useTasksPageStore.getState();
-        console.log('[TasksTableIsolated] Calling openDeletePopup with:', { type: 'task', id: taskId });
         openDeletePopup('task', taskId);
-        console.log('[TasksTableIsolated] openDeletePopup called successfully');
       },
       openArchiveTable: () => {
-        console.log('[TasksTableIsolated] openArchiveTable called');
         const { openArchiveTable } = useTasksPageStore.getState();
         openArchiveTable();
       },
       changeView: (view: 'table' | 'kanban') => {
-        console.log('[TasksTableIsolated] changeView called', view);
         const { setTaskView } = useTasksPageStore.getState();
         setTaskView(view);
       },
       openProfile: (user: { id: string; imageUrl: string }) => {
-        console.log('[TasksTableIsolated] openProfile called', user.id);
         // Profile functionality removed
       },
       openMessageSidebar: (user: { id: string; imageUrl: string; fullName: string; role: string }) => {
-        console.log('[TasksTableIsolated] openMessageSidebar called', user.id);
         const { openMessageSidebar } = useSidebarStateStore.getState();
         const conversationId = `conversation_${user.id}_${user?.id}`;
         openMessageSidebar(user?.id || '', {
@@ -88,13 +78,6 @@ export default function TasksTableIsolated() {
   // No depender de isInitialLoadComplete del store ya que puede no estar sincronizado
   const hasData = tasks.length > 0 || clients.length > 0 || users.length > 0;
   
-  // Debug: Log para verificar que los datos se estén recibiendo
-  console.log('[TasksTableIsolated] Data from store:', {
-    tasksCount: tasks.length,
-    clientsCount: clients.length,
-    usersCount: users.length,
-    hasData
-  });
   
   if (!hasData) {
     return null;

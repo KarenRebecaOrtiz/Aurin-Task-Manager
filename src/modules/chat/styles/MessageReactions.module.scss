@@ -1,0 +1,50 @@
+/**
+ * MessageReactions - Component Styles
+ */
+
+@use './variables' as *;
+
+.reactionsContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.reactionsList {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.addReactionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  color: $chat-text-secondary-light;
+  transition: all 0.2s ease;
+
+  :global(.dark) & {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: $chat-text-secondary-dark;
+  }
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-style: solid;
+    color: $chat-text-primary-light;
+
+    :global(.dark) & {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: $chat-text-primary-dark;
+    }
+  }
+}

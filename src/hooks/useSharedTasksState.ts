@@ -101,10 +101,7 @@ export function useSharedTasksState(userId: string | undefined) {
       setLocalIsLoadingTasks(true);
       setIsLoadingTasks(true);
 
-      console.log('[useSharedTasksState] 🚀 Loading tasks...');
       const tasksResult = await getTasks();
-
-      console.log(`[useSharedTasksState] ✅ Tasks loaded from ${tasksResult.source}`);
 
       // Update state only if data changed
       const tasksDataString = JSON.stringify(tasksResult.data);
@@ -121,21 +118,18 @@ export function useSharedTasksState(userId: string | undefined) {
 
       // If data came from cache, update in background
       if (tasksResult.promise) {
-        console.log('[useSharedTasksState] 🔄 Refreshing tasks in background...');
         tasksResult.promise.then((freshTasks) => {
           const freshDataString = JSON.stringify(freshTasks);
           if (freshDataString !== lastTasksHashRef.current) {
             lastTasksHashRef.current = freshDataString;
             setLocalTasks(freshTasks);
             setTasks(freshTasks);
-            console.log('[useSharedTasksState] ✨ Tasks refreshed from network');
           }
-        }).catch((error) => {
-          console.error('[useSharedTasksState] ⚠️ Background refresh failed:', error);
+        }).catch(() => {
+          // Background refresh failed - silently continue
         });
       }
-    } catch (error) {
-      console.error('[useSharedTasksState] ❌ Error loading tasks:', error);
+    } catch {
       setLocalIsLoadingTasks(false);
       setIsLoadingTasks(false);
     }
@@ -145,10 +139,7 @@ export function useSharedTasksState(userId: string | undefined) {
       setLocalIsLoadingClients(true);
       setIsLoadingClients(true);
 
-      console.log('[useSharedTasksState] 🚀 Loading clients...');
       const clientsResult = await getClients();
-
-      console.log(`[useSharedTasksState] ✅ Clients loaded from ${clientsResult.source}`);
 
       // Update state only if data changed
       const clientsDataString = JSON.stringify(clientsResult.data);
@@ -165,21 +156,18 @@ export function useSharedTasksState(userId: string | undefined) {
 
       // Background refresh
       if (clientsResult.promise) {
-        console.log('[useSharedTasksState] 🔄 Refreshing clients in background...');
         clientsResult.promise.then((freshClients) => {
           const freshDataString = JSON.stringify(freshClients);
           if (freshDataString !== lastClientsHashRef.current) {
             lastClientsHashRef.current = freshDataString;
             setLocalClients(freshClients);
             setClients(freshClients);
-            console.log('[useSharedTasksState] ✨ Clients refreshed from network');
           }
-        }).catch((error) => {
-          console.error('[useSharedTasksState] ⚠️ Background refresh failed:', error);
+        }).catch(() => {
+          // Background refresh failed - silently continue
         });
       }
-    } catch (error) {
-      console.error('[useSharedTasksState] ❌ Error loading clients:', error);
+    } catch {
       setLocalIsLoadingClients(false);
       setIsLoadingClients(false);
     }
@@ -189,10 +177,7 @@ export function useSharedTasksState(userId: string | undefined) {
       setLocalIsLoadingUsers(true);
       setIsLoadingUsers(true);
 
-      console.log('[useSharedTasksState] 🚀 Loading users...');
       const usersResult = await getUsers();
-
-      console.log(`[useSharedTasksState] ✅ Users loaded from ${usersResult.source}`);
 
       // Update state only if data changed
       const usersDataString = JSON.stringify(usersResult.data);
@@ -209,21 +194,18 @@ export function useSharedTasksState(userId: string | undefined) {
 
       // Background refresh
       if (usersResult.promise) {
-        console.log('[useSharedTasksState] 🔄 Refreshing users in background...');
         usersResult.promise.then((freshUsers) => {
           const freshDataString = JSON.stringify(freshUsers);
           if (freshDataString !== lastUsersHashRef.current) {
             lastUsersHashRef.current = freshDataString;
             setLocalUsers(freshUsers);
             setUsers(freshUsers);
-            console.log('[useSharedTasksState] ✨ Users refreshed from network');
           }
-        }).catch((error) => {
-          console.error('[useSharedTasksState] ⚠️ Background refresh failed:', error);
+        }).catch(() => {
+          // Background refresh failed - silently continue
         });
       }
-    } catch (error) {
-      console.error('[useSharedTasksState] ❌ Error loading users:', error);
+    } catch {
       setLocalIsLoadingUsers(false);
       setIsLoadingUsers(false);
     }

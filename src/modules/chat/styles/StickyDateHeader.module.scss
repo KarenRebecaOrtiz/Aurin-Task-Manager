@@ -1,0 +1,47 @@
+/**
+ * StickyDateHeader - Component Styles
+ */
+
+@use './variables' as *;
+
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0.9) 80%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+
+  :global(.dark) & {
+    background: linear-gradient(
+      to bottom,
+      rgba(24, 24, 27, 1) 0%,
+      rgba(24, 24, 27, 0.9) 80%,
+      rgba(24, 24, 27, 0) 100%
+    );
+  }
+}
+
+.dateLabel {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: $chat-text-secondary-light;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
+
+  :global(.dark) & {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: $chat-text-secondary-dark;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}

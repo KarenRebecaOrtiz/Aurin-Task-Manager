@@ -11,6 +11,7 @@ import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { addTimeToTaskTransaction } from '../services/timerFirebase';
+import { firebaseService } from '../../services/firebaseService';
 import { parseTimeInput } from '../utils/timerFormatters';
 import { timerFormSchema } from '../utils/timerValidation';
 import { DEFAULT_TIMER_VALUES, SUCCESS_MESSAGES } from '../utils/timerConstants';
@@ -64,6 +65,7 @@ import type { UseTimeEntryReturn, TimeEntryFormData } from '../types/timer.types
 export function useTimeEntry(
   taskId: string,
   userId: string,
+  userName: string,
   onSuccess?: () => void
 ): UseTimeEntryReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,8 +100,22 @@ export function useTimeEntry(
           throw new Error('El tiempo debe ser mayor a cero');
         }
 
-        // Add time to task using transaction
+        // 1. Add time to task.totalHours using transaction (fuente de verdad)
         await addTimeToTaskTransaction(taskId, userId, totalSeconds);
+
+        // 2. Create visual message in chat (solo para historial)
+        await firebaseService.sendTimeLogMessage(
+          taskId,
+          userId,
+          userName,
+          hours + minutes / 60, // Convertir a horas decimales
+          data.date.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          }),
+          data.comment || undefined
+        );
 
         // Success feedback
         console.log(SUCCESS_MESSAGES.TIME_ENTRY_ADDED);
@@ -125,7 +141,7 @@ export function useTimeEntry(
         setIsSubmitting(false);
       }
     },
-    [taskId, userId, isSubmitting, onSuccess, form]
+    [taskId, userId, userName, isSubmitting, onSuccess, form]
   );
 
   /**

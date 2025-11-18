@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 
 import { Header } from '@/modules/header';
 import { OptimizedMarquee } from '@/modules/advices';
-import SyncUserToFirestore from '@/components/SyncUserToFirestore';
 import { AuthProvider } from '@/contexts/AuthContext';
 // Removed unused imports for production build
 import { useTasksPageStore } from '@/stores/tasksPageStore';
@@ -78,8 +77,7 @@ function NotFoundContent() {
   const mainContent = (
     <div className={styles.container}>
       <OptimizedMarquee />
-      <SyncUserToFirestore />
-      
+
       <div ref={headerRef}>
         <Header
           selectedContainer={selectedContainer}

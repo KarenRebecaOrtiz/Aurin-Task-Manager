@@ -1,7 +1,7 @@
 import React from 'react';
 import { WelcomeSectionProps } from '../../../types';
-import { TextShimmer } from '../../../components/ui/TextShimmer';
 import AvatarDropdown from '../../../components/ui/AvatarDropdown';
+import { H2, Muted } from '@/components/ui/Typography';
 import styles from '../Header.module.scss';
 
 export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
@@ -15,19 +15,13 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
         <AvatarDropdown onChangeContainer={onChangeContainer} />
       </div>
       <div className={styles.frame14}>
-        <div className={styles.title}>
-          <div className={styles.welcome}>
-            <span className={styles.welcomeText} suppressHydrationWarning>
-              Te damos la bienvenida de nuevo,{' '}
-              <div className={styles.userNameShimmer} suppressHydrationWarning>
-                {userName}
-              </div>
-            </span>
-          </div>
-        </div>
-        <div className={styles.text}>
-          <div className={styles.subtitle}>{subtitle}</div>
-        </div>
+        <H2 className={styles.welcome}>
+          Te damos la bienvenida de nuevo,{' '}
+          <span className={styles.userNameShimmer} suppressHydrationWarning>
+            {userName}
+          </span>
+        </H2>
+        <Muted className={styles.subtitle}>{subtitle}</Muted>
       </div>
     </div>
   );

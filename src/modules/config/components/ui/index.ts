@@ -6,8 +6,6 @@
 export { default as ConfigDropdown } from './ConfigDropdown';
 export { default as SearchableDropdown } from './SearchableDropdown';
 export { default as PhoneCountrySelect } from './PhoneCountrySelect';
-export { default as LocationDropdown } from './LocationDropdown';
-export { default as LocationMap } from './LocationMap';
 export { WebsiteInput } from './WebsiteInput';
 export { BiographyInput } from './BiographyInput';
 export { default as TeamsTable } from './TeamsTable';

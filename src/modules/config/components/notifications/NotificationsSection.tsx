@@ -3,6 +3,7 @@
 import React, { useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { Small, Muted } from '@/components/ui/Typography';
 import { useProfileFormStore } from '../../stores';
 import styles from './NotificationsSection.module.scss';
 
@@ -102,8 +103,8 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
           {notificationOptions.map(({ key, label, description }) => (
             <div key={key} className={styles.toggleRow}>
               <div className={styles.toggleContent}>
-                <label className={styles.toggleLabel}>{label}</label>
-                <p className={styles.toggleDescription}>{description}</p>
+                <Small className={styles.toggleLabel}>{label}</Small>
+                <Muted className={styles.toggleDescription}>{description}</Muted>
               </div>
               <label className={styles.switch}>
                 <input

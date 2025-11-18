@@ -94,8 +94,6 @@ export async function getTasks(): Promise<TasksResult> {
     // Layer 1: Memory cache (global request cache with TTL)
     const memoryCache = globalRequestCache.get<Task[]>(MEMORY_CACHE_KEY);
     if (memoryCache) {
-      console.log('[taskService] ⚡ HIT: Memory cache');
-
       // Return cached data + fetch fresh in background
       return {
         data: memoryCache.data,
@@ -108,8 +106,6 @@ export async function getTasks(): Promise<TasksResult> {
     // Layer 2: IndexedDB cache (persistent)
     const idbCache = await get<Task[]>(IDB_CACHE_KEY);
     if (idbCache) {
-      console.log('[taskService] ⚡ HIT: IndexedDB cache');
-
       // Return IDB data + fetch fresh in background
       return {
         data: idbCache,
@@ -119,7 +115,6 @@ export async function getTasks(): Promise<TasksResult> {
     }
 
     // Layer 3: Network (no cache available)
-    console.log('[taskService] ❌ MISS: Fetching from network');
     const tasks = await fetchTasksFromFirebase(requestStartTime);
 
     return {
@@ -127,7 +122,6 @@ export async function getTasks(): Promise<TasksResult> {
       source: 'network',
     };
   } catch (error) {
-    console.error('[taskService] Error in getTasks:', error);
 
     // Enrich error with context
     const enrichedError = createEnrichedError(error, {
@@ -153,7 +147,6 @@ async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]
   const startTime = requestStartTime ?? Date.now();
 
   try {
-    console.log('[taskService] 🌐 Fetching from Firebase...');
 
     // --- USER: CUSTOMIZE YOUR FIREBASE QUERY HERE ---
     const tasksQuery = query(
@@ -199,11 +192,8 @@ async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]
     // Update all cache layers
     await updateCacheLayers(tasksData, metrics);
 
-    console.log(`[taskService] ✅ Fetched ${tasksData.length} tasks in ${responseEndTime - startTime}ms`);
-
     return tasksData;
   } catch (error) {
-    console.error('[taskService] Network fetch failed:', error);
 
     const enrichedError = createEnrichedError(error, {
       component: 'taskService',
@@ -239,7 +229,6 @@ export async function archiveTask(taskId: string): Promise<void> {
   const updateId = `archive-${taskId}-${Date.now()}`;
 
   try {
-    console.log(`[taskService] 📦 Archiving task: ${taskId} (optimistic)`);
 
     // 1. Get current cache
     const currentCache = globalRequestCache.get<Task[]>(MEMORY_CACHE_KEY);
@@ -263,7 +252,6 @@ export async function archiveTask(taskId: string): Promise<void> {
         const newData = [...cache.data];
         newData[taskIndex] = originalTask;
         globalRequestCache.set(MEMORY_CACHE_KEY, newData, cache.metrics);
-        console.log(`[taskService] ⏪ Rolled back archive for task: ${taskId}`);
       }
     };
 
@@ -289,12 +277,10 @@ export async function archiveTask(taskId: string): Promise<void> {
 
     // 6. Commit successful - remove from registry
     optimisticUpdates.delete(updateId);
-    console.log(`[taskService] ✅ Task archived successfully: ${taskId}`);
 
     // 7. Refresh cache with fresh data
     await fetchTasksFromFirebase();
   } catch (error) {
-    console.error(`[taskService] ❌ Archive failed for task ${taskId}:`, error);
 
     // Rollback optimistic update
     const update = optimisticUpdates.get(updateId);
@@ -327,7 +313,6 @@ export async function unarchiveTask(taskId: string): Promise<void> {
   const updateId = `unarchive-${taskId}-${Date.now()}`;
 
   try {
-    console.log(`[taskService] 📤 Unarchiving task: ${taskId} (optimistic)`);
 
     // Similar pattern to archiveTask
     const currentCache = globalRequestCache.get<Task[]>(MEMORY_CACHE_KEY);
@@ -349,7 +334,6 @@ export async function unarchiveTask(taskId: string): Promise<void> {
         const newData = [...cache.data];
         newData[taskIndex] = originalTask;
         globalRequestCache.set(MEMORY_CACHE_KEY, newData, cache.metrics);
-        console.log(`[taskService] ⏪ Rolled back unarchive for task: ${taskId}`);
       }
     };
 
@@ -374,11 +358,9 @@ export async function unarchiveTask(taskId: string): Promise<void> {
     });
 
     optimisticUpdates.delete(updateId);
-    console.log(`[taskService] ✅ Task unarchived successfully: ${taskId}`);
 
     await fetchTasksFromFirebase();
   } catch (error) {
-    console.error(`[taskService] ❌ Unarchive failed for task ${taskId}:`, error);
 
     const update = optimisticUpdates.get(updateId);
     if (update) {
@@ -407,7 +389,6 @@ export async function unarchiveTask(taskId: string): Promise<void> {
  */
 export function invalidateTasksCache(): void {
   globalRequestCache.invalidate(MEMORY_CACHE_KEY);
-  console.log('[taskService] Cache invalidated');
 }
 
 /**

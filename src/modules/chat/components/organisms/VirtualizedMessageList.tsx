@@ -15,7 +15,8 @@ interface VirtualizedMessageListProps {
   hasMore: boolean;
   onLoadMore: () => void;
   onInitialLoad: () => void;
-  renderMessage: (message: Message) => React.ReactNode;
+  renderMessage: (message: Message, prevMessage: Message | null, nextMessage: Message | null) => React.ReactNode;
+  scrollToMessageId?: string | null; // Para scroll to reply
 }
 
 /**
@@ -42,9 +43,12 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   onLoadMore,
   onInitialLoad,
   renderMessage,
+  scrollToMessageId,
 }) => {
   const virtuosoRef = useRef<GroupedVirtuosoHandle>(null);
   const hasInitializedRef = useRef(false);
+  const lastMessageIdRef = useRef<string | null>(null); // Track last message
+  const isUserAtBottomRef = useRef(true); // Track user scroll position
 
   // ============================================================================
   // INITIAL LOAD
@@ -58,19 +62,48 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
   }, [onInitialLoad]);
 
   // ============================================================================
-  // SCROLL TO BOTTOM ON NEW MESSAGES
+  // SCROLL TO BOTTOM ON NEW MESSAGES (FIXED)
   // ============================================================================
 
   useEffect(() => {
-    // Cuando llegan nuevos mensajes, scroll to bottom
-    if (messages.length > 0 && virtuosoRef.current) {
+    if (messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    const isNewMessage = lastMessage && lastMessage.id !== lastMessageIdRef.current;
+
+    // Solo scroll si:
+    // 1. Es un mensaje NUEVO (no carga de mensajes antiguos)
+    // 2. El usuario está al final del chat
+    if (isNewMessage && isUserAtBottomRef.current && virtuosoRef.current) {
       virtuosoRef.current.scrollToIndex({
         index: messages.length - 1,
         align: "end",
         behavior: "smooth",
       });
+      lastMessageIdRef.current = lastMessage.id;
     }
-  }, [messages.length]);
+  }, [messages]);
+
+  // ============================================================================
+  // SCROLL TO REPLY (FEATURE 4)
+  // ============================================================================
+
+  useEffect(() => {
+    if (!scrollToMessageId || !virtuosoRef.current) return;
+
+    const messageIndex = messages.findIndex((msg) => msg.id === scrollToMessageId);
+    if (messageIndex === -1) {
+      console.warn(`[VirtualizedMessageList] Message ${scrollToMessageId} not found`);
+      return;
+    }
+
+    // Scroll to message with highlight
+    virtuosoRef.current.scrollToIndex({
+      index: messageIndex,
+      align: "start", // Mostrar al inicio del viewport
+      behavior: "smooth",
+    });
+  }, [scrollToMessageId, messages]);
 
   // ============================================================================
   // CALLBACKS
@@ -112,9 +145,22 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
       const message = messages[index];
       if (!message) return null;
 
-      return <div className={styles.messageWrapper}>{renderMessage(message)}</div>;
+      const prevMessage = index > 0 ? messages[index - 1] : null;
+      const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
+
+      // Highlight si es el mensaje target del scroll
+      const isHighlighted = message.id === scrollToMessageId;
+
+      return (
+        <div
+          className={`${styles.messageWrapper} ${isHighlighted ? styles.highlighted : ""}`}
+          data-message-id={message.id}
+        >
+          {renderMessage(message, prevMessage, nextMessage)}
+        </div>
+      );
     },
-    [messages, renderMessage]
+    [messages, renderMessage, scrollToMessageId]
   );
 
   /**
@@ -140,6 +186,15 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
    */
   const renderFooter = useCallback(() => {
     return <div className={styles.scrollAnchor} />;
+  }, []);
+
+  /**
+   * Callback condicional para followOutput
+   * Solo hace auto-scroll si el usuario está al final
+   */
+  const handleFollowOutput = useCallback((isAtBottom: boolean) => {
+    isUserAtBottomRef.current = isAtBottom;
+    return isAtBottom ? "smooth" : false;
   }, []);
 
   // ============================================================================
@@ -180,7 +235,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
           Footer: renderFooter,
         }}
         initialTopMostItemIndex={messages.length > 0 ? messages.length - 1 : 0}
-        followOutput="smooth"
+        followOutput={handleFollowOutput}
         overscan={200}
         increaseViewportBy={{ top: 200, bottom: 200 }}
         alignToBottom

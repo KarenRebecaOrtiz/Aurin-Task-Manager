@@ -222,6 +222,7 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
           <InputChat
             taskId={task.id}
             userId={user?.id || ''}
+            userName={user?.fullName || 'Usuario'}
             userFirstName={user?.firstName || user?.fullName}
             onSendMessage={handleSendMessage}
             onEditMessage={handleEditMessage}

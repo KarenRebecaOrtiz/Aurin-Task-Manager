@@ -9,16 +9,18 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import type { TimerButtonProps } from '../../types/timer.types';
+import { Play } from '@/components/animate-ui/icons/play';
+import { Pause } from '@/components/animate-ui/icons/pause';
+import { RotateCcw } from '@/components/animate-ui/icons/rotate-ccw';
 import styles from './TimerButton.module.scss';
 
-// Map variant to icon name
+// Map variant to icon component
 const variantIconMap = {
-  start: 'Play',
-  pause: 'pause',
-  stop: 'square',
-  reset: 'rotate-ccw',
+  start: Play,
+  pause: Pause,
+  stop: RotateCcw, // Using rotate-ccw for stop (can be changed to square if needed)
+  reset: RotateCcw,
 };
 
 /**
@@ -41,8 +43,7 @@ export function TimerButton({
   size = 'medium',
   className = '',
 }: TimerButtonProps) {
-  const icon = variantIconMap[variant];
-  const iconPath = `/icons/${icon}.svg`;
+  const IconComponent = variantIconMap[variant];
 
   return (
     <button
@@ -58,13 +59,7 @@ export function TimerButton({
       {loading ? (
         <div className={styles.spinner} />
       ) : (
-        <Image
-          src={iconPath}
-          alt={variant}
-          width={size === 'small' ? 16 : size === 'large' ? 24 : 20}
-          height={size === 'small' ? 16 : size === 'large' ? 24 : 20}
-          className={styles.icon}
-        />
+        <IconComponent animateOnHover size={size === 'small' ? 16 : size === 'large' ? 24 : 20} />
       )}
     </button>
   );

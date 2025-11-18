@@ -187,7 +187,7 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       // ✅ OPTIMIZACIÓN: Solo actualizar si hay cambios reales
       const hasChanges = JSON.stringify(currentMessage) !== JSON.stringify(updatedMessage);
       if (!hasChanges) {
-        return state; // No actualizar si no hay cambios
+        return state;
       }
       
       return {
@@ -259,11 +259,6 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       return state; // No actualizar si el contenido es idéntico
     }
     
-    console.log('[useDataStore] setTasks called:', { 
-      currentCount: state.tasks.length, 
-      newCount: tasks.length 
-    });
-    
     return { tasks };
   }),
   updateTask: (taskId, updates) => set((state) => {
@@ -303,11 +298,6 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       return state; // No actualizar si el contenido es idéntico
     }
 
-    console.log('[useDataStore] setClients called:', {
-      currentCount: state.clients.length,
-      newCount: clients.length
-    });
-
     return { clients };
   }),
   updateClient: (clientId, updates) =>
@@ -330,13 +320,10 @@ export const useDataStore = create<DataStore>()((set, get) => ({
   // Users
   users: [],
   setUsers: (users) => set((state) => {
-    console.log('[useDataStore] setUsers called:', { currentCount: state.users.length, newCount: users.length });
     // Solo actualizar si realmente cambió
     if (JSON.stringify(state.users) !== JSON.stringify(users)) {
-      console.log('[useDataStore] Users changed, updating store');
       return { users };
     }
-    console.log('[useDataStore] Users unchanged, skipping update');
     return state;
   }),
   updateUser: (userId, updates) =>

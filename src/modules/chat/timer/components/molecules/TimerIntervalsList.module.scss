@@ -2,6 +2,71 @@
  * Timer Module - TimerIntervalsList Styles
  */
 
+// Unified Summary Card
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 10px;
+  color: white;
+  margin-bottom: 4px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summaryText {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.summaryTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summaryTotalLabel {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summaryTotalValue {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+:global(body.dark) .summaryCard {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+
+// Session summary hint
+.sessionSummary {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+
+  :global(body.dark) & {
+    color: #94a3b8;
+  }
+}
+
 .intervalsList {
   display: flex;
   flex-direction: column;
@@ -10,6 +75,11 @@
   background: white;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+
+  :global(body.dark) & {
+    background: #1e293b;
+    border-color: #475569;
+  }
 
   &.compact {
     padding: 12px;
@@ -72,10 +142,15 @@
 .intervalIndex {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: #475569;
   background: #e2e8f0;
-  padding: 2px 8px;
+  padding: 4px 10px;
   border-radius: 4px;
+
+  :global(body.dark) & {
+    color: #cbd5e1;
+    background: #475569;
+  }
 }
 
 .intervalDuration {
@@ -135,28 +210,17 @@
   font-weight: 500;
 }
 
-// Total row
+// Total row (deprecated - now in summaryCard)
 .totalRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-radius: 8px;
-  color: white;
-  font-weight: 600;
-  margin-top: 8px;
+  display: none;
 }
 
 .totalLabel {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  display: none;
 }
 
 .totalValue {
-  font-size: 18px;
-  font-weight: 700;
+  display: none;
 }
 
 // Compact mode adjustments
@@ -190,8 +254,8 @@
 // Dark mode support
 @media (prefers-color-scheme: dark) {
   .intervalsList {
-    background: #1e293b;
-    border-color: #475569;
+    background: #f6f6f6;
+    border-color: #f6f6f6;
   }
 
   .intervals {

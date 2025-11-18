@@ -2,12 +2,12 @@
  * Timer Module - Timer State Hook
  *
  * Basic hook for accessing timer state from the store.
- * Provides read-only access to timer data.
+ * Provides read-only access to timer data with real-time updates.
  *
  * @module timer/hooks/useTimerState
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useTimerStateStore } from '../stores/timerStateStore';
 import { TimerStatus } from '../types/timer.types';
@@ -47,17 +47,50 @@ export function useTimerState(taskId: string): UseTimerStateReturn {
     useShallow((state) => state.getTimerForTask(taskId))
   );
 
+  // Local state for real-time counter updates
+  const [currentSeconds, setCurrentSeconds] = useState(timer?.accumulatedSeconds ?? 0);
+
+  // Update counter every second when timer is running
+  useEffect(() => {
+    if (!timer || timer.status !== TimerStatus.RUNNING || !timer.startedAt) {
+      // If not running, use accumulated seconds from store
+      setCurrentSeconds(timer?.accumulatedSeconds ?? 0);
+      return;
+    }
+
+    // Calculate elapsed seconds since start
+    const calculateElapsed = () => {
+      const now = new Date();
+      // Handle both Date objects and strings
+      const startTime = timer.startedAt instanceof Date 
+        ? timer.startedAt 
+        : new Date(timer.startedAt);
+      const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      return timer.accumulatedSeconds + elapsed;
+    };
+
+    // Set initial value
+    setCurrentSeconds(calculateElapsed());
+
+    // Update every second
+    const interval = setInterval(() => {
+      setCurrentSeconds(calculateElapsed());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timer, timer?.status, timer?.startedAt, timer?.accumulatedSeconds]);
+
   // Memoize the return object to prevent re-renders when values don't change
   return useMemo(
     () => ({
-      timerSeconds: timer?.accumulatedSeconds ?? 0,
+      timerSeconds: currentSeconds,
       isRunning: timer?.status === TimerStatus.RUNNING,
       isPaused: timer?.status === TimerStatus.PAUSED,
       intervals: timer?.intervals ?? [],
       status: timer?.status ?? TimerStatus.IDLE,
       lastSyncTime: timer?.lastSyncTime ?? null,
     }),
-    [timer]
+    [currentSeconds, timer]
   );
 }
 

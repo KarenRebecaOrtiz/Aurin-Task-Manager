@@ -3,8 +3,6 @@
  * @description Tipos relacionados con el perfil de usuario
  */
 
-import { PersonalLocations } from './locations.types';
-
 /**
  * Enlaces a redes sociales del usuario
  */
@@ -79,8 +77,6 @@ export interface Config {
   status?: string;
   /** Preferencias de email para notificaciones */
   emailPreferences?: EmailPreferences;
-  /** Ubicaciones personalizadas */
-  personalLocations?: PersonalLocations;
   /** Redes sociales */
   socialLinks?: SocialLinks;
 }
@@ -103,10 +99,6 @@ export interface ConfigForm extends Omit<Config, 'id'> {
   newPassword?: string;
   /** Confirmación de nueva contraseña */
   confirmPassword?: string;
-  /** Ubicación de casa (para formulario) */
-  homeLocation?: PersonalLocations['home'];
-  /** Ubicación secundaria (para formulario) */
-  secondaryLocation?: PersonalLocations['secondary'];
   /** GitHub (campo individual para formulario) */
   github?: string;
   /** LinkedIn (campo individual para formulario) */

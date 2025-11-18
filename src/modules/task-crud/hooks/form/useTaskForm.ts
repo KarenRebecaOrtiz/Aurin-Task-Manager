@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCallback, useEffect, useRef } from 'react';
 import { FormValues, createFormSchema, defaultFormValues } from '../../types/form';
-import { useFormPersistence } from '@/components/ui/use-form-persistence';
+import { useFormPersistence } from './useFormPersistence';
 import { hasFormChanges } from '../../utils/helpers';
 
 interface UseTaskFormOptions {

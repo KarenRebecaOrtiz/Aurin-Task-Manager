@@ -13,12 +13,13 @@ import Image from 'next/image';
 import { Wizard, WizardStep, WizardProgress, WizardActions } from '@/components/ui/wizard';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useKeyboardShortcuts } from '@/components/ui/use-keyboard-shortcuts';
+import { useKeyboardShortcuts } from '../hooks/ui/useKeyboardShortcuts';
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { emailNotificationService } from '@/services/emailNotificationService';
 import SearchableDropdown from '@/modules/config/components/ui/SearchableDropdown';
-import PopupLoader from '@/components/ui/PopupLoader';
+import { PopupLoader } from './ui/PopupLoader';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { Small, Muted } from '@/components/ui/Typography';
 
 // Module imports
 import { EditTaskProps, STEP_FIELDS, FORM_PERSISTENCE_KEYS } from '../types/form';
@@ -333,10 +334,10 @@ const EditTask: React.FC<EditTaskProps> = ({
 
                       {/* Client Selector */}
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Cuenta Asignada*</label>
-                        <div className={styles.sectionSubtitle}>
+                        <Small className={styles.label}>Cuenta Asignada*</Small>
+                        <Muted className={styles.sectionSubtitle}>
                           Selecciona la cuenta a la que se asignará esta tarea.
-                        </div>
+                        </Muted>
                         <SearchableDropdown
                           items={clients.map((client) => ({
                             id: client.id,
@@ -359,7 +360,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                           emptyMessage={isAdmin ? EMPTY_MESSAGES.NO_CLIENTS_ADMIN : EMPTY_MESSAGES.NO_CLIENTS_USER}
                         />
                         {form.formState.errors.clientInfo?.clientId && (
-                          <span className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</span>
+                          <Small className={styles.error}>{form.formState.errors.clientInfo.clientId.message}</Small>
                         )}
 
                         {isAdmin && !form.watch('clientInfo.clientId') && (
@@ -376,8 +377,8 @@ const EditTask: React.FC<EditTaskProps> = ({
 
                       {/* Project Selector */}
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Carpeta*</label>
-                        <div className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</div>
+                        <Small className={styles.label}>Carpeta*</Small>
+                        <Muted className={styles.sectionSubtitle}>Selecciona la carpeta del proyecto.</Muted>
                         <SearchableDropdown
                           items={(() => {
                             const selectedClient = clients.find((c) => c.id === form.getValues('clientInfo.clientId'));
@@ -398,7 +399,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                           disabled={!form.getValues('clientInfo.clientId')}
                         />
                         {form.formState.errors.clientInfo?.project && (
-                          <span className={styles.error}>{form.formState.errors.clientInfo.project.message}</span>
+                          <Small className={styles.error}>{form.formState.errors.clientInfo.project.message}</Small>
                         )}
 
                         {isAdmin && form.getValues('clientInfo.clientId') && (
@@ -425,7 +426,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                       <div className={styles.level1Grid}>
                         <div className={styles.level1Column}>
                           <div className={styles.formGroup}>
-                            <label className={styles.label}>Nombre de la tarea*</label>
+                            <Small className={styles.label}>Nombre de la tarea*</Small>
                             <Controller
                               name="basicInfo.name"
                               control={form.control}
@@ -434,12 +435,12 @@ const EditTask: React.FC<EditTaskProps> = ({
                               )}
                             />
                             {form.formState.errors.basicInfo?.name && (
-                              <span className={styles.error}>{form.formState.errors.basicInfo.name.message}</span>
+                              <Small className={styles.error}>{form.formState.errors.basicInfo.name.message}</Small>
                             )}
                           </div>
 
                           <div className={styles.formGroup}>
-                            <label className={styles.label}>Descripción*</label>
+                            <Small className={styles.label}>Descripción*</Small>
                             <Controller
                               name="basicInfo.description"
                               control={form.control}
@@ -448,14 +449,14 @@ const EditTask: React.FC<EditTaskProps> = ({
                               )}
                             />
                             {form.formState.errors.basicInfo?.description && (
-                              <span className={styles.error}>{form.formState.errors.basicInfo.description.message}</span>
+                              <Small className={styles.error}>{form.formState.errors.basicInfo.description.message}</Small>
                             )}
                           </div>
                         </div>
 
                         <div className={styles.level1Column}>
                           <div className={styles.formGroup}>
-                            <label className={styles.label}>Objetivos</label>
+                            <Small className={styles.label}>Objetivos</Small>
                             <Controller
                               name="basicInfo.objectives"
                               control={form.control}
@@ -467,7 +468,7 @@ const EditTask: React.FC<EditTaskProps> = ({
 
                           <div className={styles.formRow}>
                             <div className={styles.formGroup}>
-                              <label className={styles.label}>Fecha de Inicio*</label>
+                              <Small className={styles.label}>Fecha de Inicio*</Small>
                               <Controller
                                 name="basicInfo.startDate"
                                 control={form.control}
@@ -483,12 +484,12 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 )}
                               />
                               {form.formState.errors.basicInfo?.startDate && (
-                                <span className={styles.error}>{form.formState.errors.basicInfo.startDate.message}</span>
+                                <Small className={styles.error}>{form.formState.errors.basicInfo.startDate.message}</Small>
                               )}
                             </div>
 
                             <div className={styles.formGroup}>
-                              <label className={styles.label}>Fecha de Finalización*</label>
+                              <Small className={styles.label}>Fecha de Finalización*</Small>
                               <Controller
                                 name="basicInfo.endDate"
                                 control={form.control}
@@ -504,7 +505,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                                 )}
                               />
                               {form.formState.errors.basicInfo?.endDate && (
-                                <span className={styles.error}>{form.formState.errors.basicInfo.endDate.message}</span>
+                                <Small className={styles.error}>{form.formState.errors.basicInfo.endDate.message}</Small>
                               )}
                             </div>
                           </div>
@@ -512,7 +513,7 @@ const EditTask: React.FC<EditTaskProps> = ({
 
                         <div className={styles.level1Column}>
                           <div className={styles.formGroup}>
-                            <label className={styles.label}>Estado Inicial*</label>
+                            <Small className={styles.label}>Estado Inicial*</Small>
                             <Controller
                               name="basicInfo.status"
                               control={form.control}
@@ -528,14 +529,14 @@ const EditTask: React.FC<EditTaskProps> = ({
                               )}
                             />
                             {form.formState.errors.basicInfo?.status && (
-                              <span className={styles.error}>{form.formState.errors.basicInfo.status.message}</span>
+                              <Small className={styles.error}>{form.formState.errors.basicInfo.status.message}</Small>
                             )}
                           </div>
                         </div>
 
                         <div className={styles.level1Column}>
                           <div className={styles.formGroup}>
-                            <label className={styles.label}>Prioridad*</label>
+                            <Small className={styles.label}>Prioridad*</Small>
                             <Controller
                               name="basicInfo.priority"
                               control={form.control}
@@ -551,7 +552,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                               )}
                             />
                             {form.formState.errors.basicInfo?.priority && (
-                              <span className={styles.error}>{form.formState.errors.basicInfo.priority.message}</span>
+                              <Small className={styles.error}>{form.formState.errors.basicInfo.priority.message}</Small>
                             )}
                           </div>
                         </div>
@@ -566,10 +567,10 @@ const EditTask: React.FC<EditTaskProps> = ({
 
                       {/* Leader Selector */}
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>Líder del Proyecto*</label>
-                        <div className={styles.sectionSubtitle}>
+                        <Small className={styles.label}>Líder del Proyecto*</Small>
+                        <Muted className={styles.sectionSubtitle}>
                           Selecciona la persona principal responsable de la tarea.
-                        </div>
+                        </Muted>
                         <SearchableDropdown
                           items={users.map((user) => ({
                             id: user.id,
@@ -585,7 +586,7 @@ const EditTask: React.FC<EditTaskProps> = ({
                           emptyMessage={isAdmin ? EMPTY_MESSAGES.NO_USERS_ADMIN : EMPTY_MESSAGES.NO_USERS_USER}
                         />
                         {form.formState.errors.teamInfo?.LeadedBy && (
-                          <span className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</span>
+                          <Small className={styles.error}>{form.formState.errors.teamInfo.LeadedBy.message}</Small>
                         )}
                       </div>
 
@@ -609,10 +610,10 @@ const EditTask: React.FC<EditTaskProps> = ({
                       <AnimatePresence>
                         {includeMembers && (
                           <motion.div className={styles.formGroup} {...scaleIn} transition={transitions.normal}>
-                            <label className={styles.label}>Colaboradores*</label>
-                            <div className={styles.sectionSubtitle}>
+                            <Small className={styles.label}>Colaboradores*</Small>
+                            <Muted className={styles.sectionSubtitle}>
                               Agrega a los colaboradores del equipo que trabajarán en la tarea.
-                            </div>
+                            </Muted>
                             <SearchableDropdown
                               items={users
                                 .filter((user) => !form.watch('teamInfo.LeadedBy').includes(user.id))

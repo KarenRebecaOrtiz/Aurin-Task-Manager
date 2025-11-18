@@ -68,13 +68,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     return users.filter(user => memberIds.includes(user.id));
   }, [task.LeadedBy, task.AssignedTo, users]);
 
-  // Calcular horas totales registradas desde mensajes (redondeado sin decimales)
+  // Leer horas totales desde el campo de la tarea (fuente de verdad)
+  // NO desde mensajes, porque con paginación los mensajes antiguos no están cargados
   const totalHours = useMemo(() => {
-    const total = messages.reduce((sum, msg) => {
-      return sum + (msg.hours || 0);
-    }, 0);
-    return Math.round(total);
-  }, [messages]);
+    return Math.round(task.totalHours || 0);
+  }, [task.totalHours]);
 
   return (
     <div className={styles.header}>

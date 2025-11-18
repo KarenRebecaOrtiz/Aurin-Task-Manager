@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import Image from 'next/image';
 import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Dropdown, type DropdownItem } from '@/modules/shared/components/molecules/Dropdown';
+import { Small, Muted } from '@/components/ui/Typography';
 import styles from '@/modules/data-views/tasks/components/tables/KanbanBoard/TasksKanban.module.scss';
 
 interface Client {
@@ -212,7 +213,7 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
               }}
             />
           </button>
-          <span className={styles.tooltip}>Vista Tabla</span>
+          <Muted className={styles.tooltip}>Vista Tabla</Muted>
         </div>
 
         <div className={styles.buttonWithTooltip}>
@@ -227,7 +228,7 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
             value={priorityFilter}
             onChange={handlePriorityChange}
           />
-          <span className={styles.tooltip}>Filtrar por Prioridad</span>
+          <Muted className={styles.tooltip}>Filtrar por Prioridad</Muted>
         </div>
 
         <div className={styles.buttonWithTooltip}>
@@ -248,7 +249,7 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
             onChange={handleClientChange}
             disabled={isLoadingClients}
           />
-          <span className={styles.tooltip}>Filtrar por Cuenta</span>
+          <Muted className={styles.tooltip}>Filtrar por Cuenta</Muted>
         </div>
 
         {isAdmin && (
@@ -274,7 +275,7 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
               onChange={handleUserChange}
               disabled={isLoadingUsers}
             />
-            <span className={styles.tooltip}>Filtrar por Usuario</span>
+            <Muted className={styles.tooltip}>Filtrar por Usuario</Muted>
           </div>
         )}
 
@@ -285,9 +286,9 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
             icon="/circle-plus.svg"
             onClick={onNewTaskOpen}
           >
-            Crear Tarea
+            <Small>Crear Tarea</Small>
           </CrystalButton>
-          <span className={styles.tooltip}>Crear Nueva Tarea</span>
+          <Muted className={styles.tooltip}>Crear Nueva Tarea</Muted>
         </div>
       </div>
     </div>

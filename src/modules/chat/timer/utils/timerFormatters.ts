@@ -8,7 +8,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
-import type { ParsedTime } from '../types/timer.types';
+import type { ParsedTime, TimerInterval } from '../types/timer.types';
 import { DATE_FORMAT_OPTIONS, DATE_FORMAT_SHORT_OPTIONS } from './timerConstants';
 
 // ============================================================================
@@ -66,6 +66,33 @@ export function formatSecondsToHHMM(seconds: number): string {
 export function formatSecondsToHours(seconds: number, decimals: number = 2): string {
   const hours = seconds / 3600;
   return `${hours.toFixed(decimals)}h`;
+}
+
+/**
+ * Format decimal hours to human-readable format (e.g., "1h 30m")
+ *
+ * @param decimalHours - Hours as decimal number
+ * @returns Formatted string with hours and minutes
+ *
+ * @example
+ * formatDecimalHoursToReadable(1.5); // "1h 30m"
+ * formatDecimalHoursToReadable(0.5); // "30m"
+ * formatDecimalHoursToReadable(2.75); // "2h 45m"
+ */
+export function formatDecimalHoursToReadable(decimalHours: number): string {
+  const hours = Math.floor(decimalHours);
+  const minutes = Math.round((decimalHours - hours) * 60);
+  
+  const parts: string[] = [];
+  
+  if (hours > 0) {
+    parts.push(`${hours}h`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes}m`);
+  }
+  
+  return parts.length > 0 ? parts.join(' ') : '0m';
 }
 
 /**
@@ -150,29 +177,51 @@ export function parseTimeInput(timeString: string): ParsedTime {
 /**
  * Format date for display (long format)
  *
- * @param date - Date to format
+ * @param date - Date to format (can be Date or Timestamp)
  * @returns Formatted date string in Spanish
  *
  * @example
  * formatDateForDisplay(new Date('2025-01-15'));
  * // "15 de enero de 2025"
  */
-export function formatDateForDisplay(date: Date): string {
-  return date.toLocaleDateString('es-MX', DATE_FORMAT_OPTIONS);
+export function formatDateForDisplay(date: Date | Timestamp): string {
+  // Handle Firestore Timestamp objects
+  if (date && typeof (date as any).toDate === 'function') {
+    return (date as Timestamp).toDate().toLocaleDateString('es-MX', DATE_FORMAT_OPTIONS);
+  }
+  
+  // Handle Date objects
+  if (date instanceof Date) {
+    return date.toLocaleDateString('es-MX', DATE_FORMAT_OPTIONS);
+  }
+  
+  // Fallback for invalid input
+  return 'Fecha inválida';
 }
 
 /**
  * Format date for display (short format)
  *
- * @param date - Date to format
+ * @param date - Date to format (can be Date or Timestamp)
  * @returns Formatted date string in Spanish (short)
  *
  * @example
  * formatDateShort(new Date('2025-01-15'));
  * // "15 ene 2025"
  */
-export function formatDateShort(date: Date): string {
-  return date.toLocaleDateString('es-MX', DATE_FORMAT_SHORT_OPTIONS);
+export function formatDateShort(date: Date | Timestamp): string {
+  // Handle Firestore Timestamp objects
+  if (date && typeof (date as any).toDate === 'function') {
+    return (date as Timestamp).toDate().toLocaleDateString('es-MX', DATE_FORMAT_SHORT_OPTIONS);
+  }
+  
+  // Handle Date objects
+  if (date instanceof Date) {
+    return date.toLocaleDateString('es-MX', DATE_FORMAT_SHORT_OPTIONS);
+  }
+  
+  // Fallback for invalid input
+  return 'Fecha inválida';
 }
 
 /**
@@ -206,16 +255,27 @@ export function formatTimestampShort(timestamp: Timestamp): string {
 /**
  * Format date with time
  *
- * @param date - Date to format
+ * @param date - Date to format (can be Date or Timestamp)
  * @returns Formatted date and time string
  *
  * @example
  * formatDateWithTime(new Date('2025-01-15T14:30:00'));
  * // "15 de enero de 2025, 14:30"
  */
-export function formatDateWithTime(date: Date): string {
-  const dateStr = formatDateForDisplay(date);
-  const timeStr = date.toLocaleTimeString('es-MX', {
+export function formatDateWithTime(date: Date | Timestamp): string {
+  // Convert Timestamp to Date if needed
+  let dateObj: Date;
+  
+  if (date instanceof Date) {
+    dateObj = date;
+  } else if (date && typeof (date as any).toDate === 'function') {
+    dateObj = (date as Timestamp).toDate();
+  } else {
+    return 'Hora inválida';
+  }
+  
+  const dateStr = formatDateForDisplay(dateObj);
+  const timeStr = dateObj.toLocaleTimeString('es-MX', {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: 'America/Mexico_City',
@@ -402,6 +462,33 @@ export function formatDecimal(value: number, decimals: number = 2): string {
  */
 export function formatPercentage(value: number, decimals: number = 0): string {
   return `${(value * 100).toFixed(decimals)}%`;
+}
+
+// ============================================================================
+// INTERVAL HELPERS
+// ============================================================================
+
+/**
+ * Ensure interval dates are Date objects (not Timestamps)
+ * Defensive conversion for intervals that might have Timestamps
+ *
+ * @param interval - Timer interval that might have Timestamp objects
+ * @returns Timer interval with guaranteed Date objects
+ */
+export function ensureIntervalDates(interval: any): TimerInterval {
+  const start = interval?.start instanceof Date 
+    ? interval.start 
+    : interval?.start?.toDate?.() || new Date();
+    
+  const end = interval?.end instanceof Date 
+    ? interval.end 
+    : interval?.end?.toDate?.() || new Date();
+    
+  return {
+    start,
+    end,
+    duration: interval?.duration || 0,
+  };
 }
 
 // ============================================================================

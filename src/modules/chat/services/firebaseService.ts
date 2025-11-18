@@ -104,6 +104,48 @@ export class FirebaseService {
   }
 
   /**
+   * Crea un mensaje de time log en el chat (solo visual/histórico)
+   *
+   * NOTA: Este mensaje NO afecta el cálculo de tiempo total.
+   * El tiempo se registra en task.totalHours mediante addTimeToTaskTransaction.
+   * Este mensaje es solo para que los usuarios vean el historial.
+   */
+  async sendTimeLogMessage(
+    taskId: string,
+    userId: string,
+    userName: string,
+    hours: number,
+    dateString: string,
+    comment?: string
+  ): Promise<string> {
+    const text = comment || null;
+
+    const docRef = await addDoc(collection(db, `tasks/${taskId}/messages`), {
+      senderId: userId,
+      senderName: userName,
+      text,
+      encrypted: null, // Time logs no se encriptan
+      timestamp: serverTimestamp(),
+      read: false,
+      hours,
+      dateString,
+      clientId: `timelog-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      // Campos opcionales en null
+      imageUrl: null,
+      fileUrl: null,
+      fileName: null,
+      fileType: null,
+      filePath: null,
+      replyTo: null,
+    });
+
+    await updateTaskActivity(taskId, 'message');
+    chatCache.invalidate(taskId);
+
+    return docRef.id;
+  }
+
+  /**
    * Elimina un mensaje
    *
    * IMPORTANTE: Invalida el cache después de eliminar

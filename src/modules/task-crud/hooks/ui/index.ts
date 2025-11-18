@@ -5,3 +5,4 @@
 
 export { useDropdownPosition, useMultipleDropdowns } from './useDropdownPosition';
 export { useClickOutside, useMultipleClickOutside } from './useClickOutside';
+export { useKeyboardShortcuts } from './useKeyboardShortcuts';

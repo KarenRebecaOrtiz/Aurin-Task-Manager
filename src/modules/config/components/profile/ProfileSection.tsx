@@ -3,10 +3,13 @@
 import React from 'react';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
-import { BiographyInput } from '../ui/BiographyInput';
-import PhoneCountrySelect from '../ui/PhoneCountrySelect';
-import SearchableDropdown from '../ui/SearchableDropdown';
-import { Input } from '@/modules/shared/components/atoms/Input/Input';
+import {
+  CrystalInput,
+  CrystalTextarea,
+  CrystalSelect,
+  CrystalSearchableDropdown,
+  CrystalPhoneSelect,
+} from '@/components/ui';
 import { useProfileForm } from '../../hooks';
 import { UNIQUE_TECHNOLOGIES } from '../../constants';
 import { formatPhoneNumber } from '../../utils';
@@ -75,7 +78,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             </div>
           </div>
           <div className={styles.fieldGroup}>
-            <Input
+            <CrystalInput
               label="Nombre Completo"
               name="fullName"
               value={formData.fullName}
@@ -85,7 +88,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               onKeyDown={(e) => handleInputKeyDown(e, 'fullName')}
               error={errors.fullName}
             />
-            <Input
+            <CrystalInput
               label="Rol o Cargo"
               name="role"
               value={formData.role}
@@ -97,23 +100,23 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             />
           </div>
           <div className={styles.fieldGroup}>
-            <BiographyInput
+            <CrystalTextarea
               value={formData.description || ''}
-              onChange={(value) => {
+              onChange={(e) => {
                 handleInputChange({
-                  target: { name: 'description', value, type: 'text' }
+                  target: { name: 'description', value: e.target.value, type: 'text' }
                 } as React.ChangeEvent<HTMLInputElement>);
               }}
               placeholder="Breve descripción personal"
               disabled={!isOwnProfile}
               maxLength={180}
+              showCharacterCount
               label="Acerca de ti"
-              className={styles.input}
+              error={errors.description}
             />
-            {errors.description && <p className={styles.errorText}>{errors.description}</p>}
           </div>
           <div className={styles.fieldGroupRow}>
-            <Input
+            <CrystalInput
               label="Correo Electrónico"
               name="email"
               value={currentUser?.primaryEmailAddress?.emailAddress || ''}
@@ -121,7 +124,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="correo@ejemplo.com"
               disabled
             />
-            <Input
+            <CrystalInput
               label="Fecha de Nacimiento"
               name="birthDate"
               value={formData.birthDate || ''}
@@ -137,12 +140,12 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             <div className={styles.frame239182}>
               <div className={styles.label}>Teléfono de Contacto</div>
               <div className={styles.phoneInputContainer}>
-                <PhoneCountrySelect
+                <CrystalPhoneSelect
                   value={formData.phoneLada || '+52'}
                   onChange={handlePhoneLadaChange}
                   disabled={!isOwnProfile}
                 />
-                <Input
+                <CrystalInput
                   name="phone"
                   value={formatPhoneNumber(formData.phone || '')}
                   onChange={(value) => handlePhoneChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
@@ -154,7 +157,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
                 />
               </div>
             </div>
-            <Input
+            <CrystalInput
               label="Ciudad de Residencia"
               name="city"
               value={formData.city || ''}
@@ -165,23 +168,20 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             />
           </div>
           <div className={styles.fieldGroupRow}>
-            <div className={styles.frame239182}>
-              <div className={styles.label}>Género</div>
-              <select
-                name="gender"
-                value={formData.gender || ''}
-                onChange={handleInputChange}
-                className={styles.input}
-                disabled={!isOwnProfile}
-              >
-                <option value="">Selecciona una opción</option>
-                <option value="Masculino">Masculino</option>
-                <option value="Femenino">Femenino</option>
-                <option value="Otro">Otro</option>
-                <option value="Prefiero no decirlo">Prefiero no decirlo</option>
-              </select>
-            </div>
-            <Input
+            <CrystalSelect
+              label="Género"
+              name="gender"
+              value={formData.gender || ''}
+              onChange={handleInputChange}
+              disabled={!isOwnProfile}
+            >
+              <option value="">Selecciona una opción</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Otro">Otro</option>
+              <option value="Prefiero no decirlo">Prefiero no decirlo</option>
+            </CrystalSelect>
+            <CrystalInput
               label="Portafolio en Línea"
               name="portfolio"
               value={formData.portfolio || ''}
@@ -207,7 +207,8 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             </div>
           </div>
           <div className={styles.fieldGroup}>
-            <SearchableDropdown
+            <CrystalSearchableDropdown
+              label="Tecnologías"
               items={UNIQUE_TECHNOLOGIES.map(tech => ({
                 id: tech,
                 name: tech
@@ -220,7 +221,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               multiple={true}
               maxItems={40}
               emptyMessage="No se encontraron tecnologías"
-              className={styles.stackSelect}
             />
           </div>
         </div>
@@ -239,7 +239,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             </div>
           </div>
           <div className={styles.socialLinksGrid}>
-            <Input
+            <CrystalInput
               label="GitHub"
               name="github"
               value={formData.github || ''}
@@ -247,7 +247,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="usuario"
               disabled={!isOwnProfile}
             />
-            <Input
+            <CrystalInput
               label="LinkedIn"
               name="linkedin"
               value={formData.linkedin || ''}
@@ -255,7 +255,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="usuario"
               disabled={!isOwnProfile}
             />
-            <Input
+            <CrystalInput
               label="Twitter/X"
               name="twitter"
               value={formData.twitter || ''}
@@ -263,7 +263,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="@usuario"
               disabled={!isOwnProfile}
             />
-            <Input
+            <CrystalInput
               label="Instagram"
               name="instagram"
               value={formData.instagram || ''}
@@ -271,7 +271,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="@usuario"
               disabled={!isOwnProfile}
             />
-            <Input
+            <CrystalInput
               label="Facebook"
               name="facebook"
               value={formData.facebook || ''}
@@ -279,7 +279,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="usuario"
               disabled={!isOwnProfile}
             />
-            <Input
+            <CrystalInput
               label="TikTok"
               name="tiktok"
               value={formData.tiktok || ''}

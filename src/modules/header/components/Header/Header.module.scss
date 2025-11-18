@@ -308,52 +308,20 @@
     }
   }
 
-  .welcome {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-
-    @include responsive(sm) {
-      justify-content: center;
-      text-align: center;
-    }
-  }
-
-  .welcomeText {
-    color: $color-text-primary;
-    @include typography(2rem, $font-weight-semibold, $color-text-primary); // 30% más grande que $text-xl (1.25rem)
-    white-space: nowrap;
-
-    :global(body.dark) & {
-      color: $color-text-dark-primary;
-    }
-  }
-
-  .nameContainer {
-    display: inline-block;
-    margin-left: $spacing-xs;
-  }
-
-  .adminButtonContainer {
-    display: inline-block;
-    margin-left: $spacing-sm;
-    vertical-align: middle;
-  }
-  
+  // Welcome section - Uses H2 component from Typography
   .welcome {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
-  }
-  
-  .welcomeText {
-    font-family: "Urbanist", sans-serif;
-    font-weight: 600;
-    font-size: 1.625rem; // 30% más grande que el tamaño original
-    color: inherit;
+    justify-content: flex-start;
+    margin: 0;
+    padding: 0;
+
+    @include responsive(sm) {
+      justify-content: center;
+      text-align: center;
+    }
   }
   
   .userNameShimmer {
@@ -361,19 +329,10 @@
     color: inherit;
   }
   
-  .text {
-    @include flex-column-center;
-    gap: $spacing-sm;
-  
-    .subtitle {
-      color: $color-text-secondary;
-      @include typography( $font-weight-normal, $color-text-secondary);
-      font-size: 1rem;
-      
-      :global(body.dark) & {
-        color: $color-text-dark-secondary;
-      }
-    }
+  // Subtitle - Uses Muted component from Typography
+  .subtitle {
+    margin: 0;
+    padding: 0;
   }
   
   .frame2147225819 {
