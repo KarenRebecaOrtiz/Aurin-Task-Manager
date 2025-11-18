@@ -88,9 +88,25 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
     setUserFilter(item.value as string);
   }, [setUserFilter]);
 
-  const handleSearchChange = useCallback((newValue: string) => {
-    setSearchQuery(newValue);
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   }, [setSearchQuery]);
+
+  const handleImageMouseEnter = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1.05)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.81)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
+  }, []);
+
+  const handleImageMouseLeave = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
+    e.currentTarget.style.transform = 'scale(1)';
+    e.currentTarget.style.filter =
+      'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
+  }, []);
+
+  const handleViewChangeClick = useCallback(() => {
+    onViewChange('table');
+  }, [onViewChange]);
 
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.ctrlKey || e.metaKey) {
@@ -176,7 +192,7 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
           type="text"
           placeholder="Buscar Tareas"
           value={searchQuery}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={handleSearchChange}
           className={styles.searchInput}
           aria-label="Buscar tareas"
           onKeyDown={handleInputKeyDown}
@@ -187,7 +203,7 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
         <div className={styles.buttonWithTooltip}>
           <button
             className={styles.viewButton}
-            onClick={() => onViewChange('table')}
+            onClick={handleViewChangeClick}
           >
             <Image
               src="/table.svg"
@@ -201,16 +217,8 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
                 filter:
                   'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.filter =
-                  'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.81)) drop-shadow(0 8px 25px rgba(0, 0, 0, 0.93))';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.filter =
-                  'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))';
-              }}
+              onMouseEnter={handleImageMouseEnter}
+              onMouseLeave={handleImageMouseLeave}
             />
           </button>
           <Muted className={styles.tooltip}>Vista Tabla</Muted>

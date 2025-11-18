@@ -4,8 +4,6 @@ import React from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
-import { TextShimmer } from '@/modules/header';
-import { useAuth } from '@/contexts/AuthContext';
 import { useImageUpload } from '../../hooks';
 import { useProfileFormStore } from '../../stores';
 import styles from './ProfileHeader.module.scss';
@@ -18,13 +16,11 @@ interface ProfileHeaderProps {
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
-  userId,
   isOwnProfile,
   onSuccess,
   onError,
 }) => {
   const { user: currentUser } = useUser();
-  const { isAdmin } = useAuth();
   const { formData } = useProfileFormStore();
   const { 
     handleProfilePhotoChange, 
@@ -32,6 +28,19 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     profilePhotoInputRef,
     coverPhotoInputRef
   } = useImageUpload({ onSuccess, onError });
+
+  const handleCoverPhotoClick = React.useCallback(() => {
+    coverPhotoInputRef.current?.click();
+  }, [coverPhotoInputRef]);
+
+  const handleProfilePhotoClick = React.useCallback(() => {
+    profilePhotoInputRef.current?.click();
+  }, [profilePhotoInputRef]);
+
+  const handleImageError = React.useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = '/empty-image.png';
+  }, []);
 
   if (!formData || !currentUser) return null;
 
@@ -45,7 +54,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         {isOwnProfile && (
           <button
             className={styles.editCoverButton}
-            onClick={() => coverPhotoInputRef.current?.click()}
+            onClick={handleCoverPhotoClick}
             aria-label="Editar foto de portada"
           >
             <Image
@@ -76,15 +85,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               width={94}
               height={94}
               className={styles.profilePhoto}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = '/empty-image.png';
-              }}
+              onError={handleImageError}
             />
             {isOwnProfile && (
               <button
                 className={styles.editProfilePhotoButton}
-                onClick={() => profilePhotoInputRef.current?.click()}
+                onClick={handleProfilePhotoClick}
                 aria-label="Editar foto de perfil"
               >
                 <Image
@@ -116,38 +122,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 delay: 0.2
               }}
             >
-              <TextShimmer as="span" className={styles.mainNameText}>
-                {formData.fullName || currentUser.fullName || 'Usuario'}
-              </TextShimmer>
-              {isAdmin && (
-                <motion.div 
-                  className={styles.adminBadge}
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 15,
-                    delay: 0.5
-                  }}
-                  whileHover={{ 
-                    scale: 1.15, 
-                    rotate: 5,
-                    transition: { duration: 0.2 }
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <div className={styles.adminBadgeInner}>
-                    <Image
-                      src="/verified.svg"
-                      alt="Admin Verified"
-                      width={16}
-                      height={16}
-                      className={styles.adminBadgeIcon}
-                    />
-                  </div>
-                </motion.div>
-              )}
+      
             </motion.div>
             <div className={styles.userEmail}>
               {currentUser.primaryEmailAddress?.emailAddress}

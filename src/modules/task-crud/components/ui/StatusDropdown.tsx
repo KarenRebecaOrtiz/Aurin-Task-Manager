@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -44,8 +44,8 @@ const StatusDropdown = () => {
           const userData = userDoc.data();
           setStatus(userData.status || 'Disponible');
         }
-      } catch (error) {
-        console.error('[StatusDropdown] Error fetching user status:', error);
+      } catch {
+        // Error fetching status
       }
     };
 
@@ -53,18 +53,17 @@ const StatusDropdown = () => {
   }, [user?.id]);
 
   // Actualizar el estado en Firestore
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = useCallback(async (newStatus: string) => {
     if (!user?.id) return;
 
     try {
       await updateDoc(doc(db, 'users', user.id), { status: newStatus });
       setStatus(newStatus);
       setIsOpen(false);
-      console.log('[StatusDropdown] Status updated:', newStatus);
-    } catch (error) {
-      console.error('[StatusDropdown] Error updating user status:', error);
+    } catch {
+      // Error updating status
     }
-  };
+  }, [user?.id]);
 
   // Animaciones GSAP
   useEffect(() => {
@@ -88,7 +87,9 @@ const StatusDropdown = () => {
         ease: 'power2.in',
         onComplete: () => {
           // Asegurar que el dropdown esté oculto después de la animación
-          dropdownRef.current!.style.display = 'none';
+          if (dropdownRef.current) {
+            dropdownRef.current.style.display = 'none';
+          }
         },
       });
     }
@@ -98,22 +99,33 @@ const StatusDropdown = () => {
     }
   }, [isOpen]);
 
+  const toggleDropdown = useCallback(() => {
+    setIsOpen((prev) => !prev);
+  }, []);
+
   // Manejo de hover
-  const handleMouseEnterButton = () => {
+  const handleMouseEnterButton = useCallback(() => {
     setIsOpen(true);
-  };
+  }, []);
 
-  const handleMouseLeaveButton = () => {
+  const handleMouseLeaveButton = useCallback(() => {
     // No cerrar inmediatamente, esperar a que el cursor salga del dropdown
-  };
+  }, []);
 
-  const handleMouseEnterDropdown = () => {
+  const handleMouseEnterDropdown = useCallback(() => {
     setIsOpen(true);
-  };
+  }, []);
 
-  const handleMouseLeaveDropdown = () => {
+  const handleMouseLeaveDropdown = useCallback(() => {
     setIsOpen(false);
-  };
+  }, []);
+
+  const handleOptionClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const newStatus = event.currentTarget.dataset.status;
+    if (newStatus) {
+        handleStatusChange(newStatus);
+    }
+  }, [handleStatusChange]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -150,7 +162,7 @@ const StatusDropdown = () => {
       <button
         ref={buttonRef}
         className={styles.availableForBtn}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={toggleDropdown}
         onMouseEnter={handleMouseEnterButton}
         onMouseLeave={handleMouseLeaveButton}
         aria-haspopup="true"
@@ -180,7 +192,8 @@ const StatusDropdown = () => {
               <div
                 key={option.value}
                 className={`${styles.statusOption} ${option.value.replace(' ', '_')}`}
-                onClick={() => handleStatusChange(option.value)}
+                onClick={handleOptionClick}
+                data-status={option.value}
                 role="option"
                 aria-selected={status === option.value}
               >

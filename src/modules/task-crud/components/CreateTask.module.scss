@@ -1,66 +1,18 @@
+@import '@/styles/variables';
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
 // 1. COLOR PALETTE
 $white: #FFFFFF;
 $black: #0F172A;
 $zinc-50: #F1F5F9;
-$zinc-900: #0e0e0e;
 $text-light: #0F172A;
 $primary: #164C22;
 $red-500: #EF4444;
-$border-light: rgba(255, 255, 255, 0.2);
-$border-dark: rgba(255, 255, 255, 0.1);
 $zinc-800: #27272a;
 $zinc-700: #3f3f46;
 $zinc-600: #52525b;
 
-// 2. CRYSTALLIZED MIXINS
-@mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 10px) {
-  background: $bg;
-  border-radius: $radius;
-  border: 1px solid $border-light;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow:
-    -4px -4px 8px rgba(255, 255, 255, 0.8),
-    4px 4px 8px rgba(0, 0, 0, 0.05),
-    inset -2px -2px 4px rgba(255, 255, 255, 0.9),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.05);
-  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
-}
-
-@mixin crystal-hover {
-  transform: translateY(-2px) scale(1.02);
-  background: rgba(241, 245, 249, 0.85);
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.9),
-    6px 6px 12px rgba(0, 0, 0, 0.08),
-    inset -2px -2px 6px rgba(255, 255, 255, 0.95),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-@mixin crystal-active {
-  transform: scale(0.98);
-  background: rgba(241, 245, 249, 0.6);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow:
-    inset 2px 2px 6px rgba(0, 0, 0, 0.1),
-    inset -2px -2px 6px rgba(255, 255, 255, 0.3),
-    -2px -2px 4px rgba(255, 255, 255, 0.8),
-    2px 2px 4px rgba(0, 0, 0, 0.03);
-}
-
-@mixin crystal-dark($bg: $zinc-900) {
-  background: $bg;
-  border-color: $border-dark;
-  box-shadow: none;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
-}
-
-// 3. SPLIDE STYLES
+// 2. SPLIDE STYLES
 .slideshow {
   padding: 0.5rem 0;
   overflow-x: hidden;

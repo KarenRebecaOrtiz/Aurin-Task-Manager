@@ -100,7 +100,7 @@ export function ExpandableTabs({
       
       {tabs.map((tab, globalIndex) => {
         if (tab.type === "separator") {
-          return <Separator key={`separator-${globalIndex}`} />;
+          return <Separator key={`separator-${tab.type}`} />;
         }
 
         // Type assertion para asegurar que es un Tab
@@ -113,7 +113,7 @@ export function ExpandableTabs({
         
         return (
           <motion.button
-            key={`tab-${tabItem.title}-${tabIndex}`}
+            key={`tab-${tabItem.title}`}
             variants={buttonVariants}
             initial={false}
             animate="animate"

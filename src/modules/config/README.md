@@ -32,7 +32,6 @@ src/modules/config/
 ├── hooks/               # Custom hooks
 │   ├── useProfileForm.ts
 │   ├── useImageUpload.ts
-│   ├── useTeamsManagement.ts
 │   └── useSecuritySettings.ts
 ├── types/               # TypeScript types
 │   ├── profile.types.ts
@@ -118,12 +117,6 @@ Maneja la subida de imágenes:
 - Upload a Firebase Storage
 - Manejo de errores
 
-### useTeamsManagement
-Maneja la gestión de equipos:
-- Obtención de equipos
-- Agregar/eliminar equipos
-- Obtención de miembros
-
 ### useSecuritySettings
 Maneja configuración de seguridad:
 - Obtención de sesiones activas
@@ -184,11 +177,11 @@ Cuando se decida modularizar `ConfigPage.tsx`:
 🚧 **En Progreso - 67% Completado**
 
 ### ✅ Completado (Fases 1-6)
-- ✅ Types: Todos los tipos definidos (locations, profile, teams, security)
+- ✅ Types: Todos los tipos definidos (locations, profile, security)
 - ✅ Constants: Tecnologías (300+) y equipos con metadata
 - ✅ Utils: Validación, formateo, procesamiento de imágenes, helpers de formulario
 - ✅ Stores: configPageStore, profileFormStore, securityStore (Zustand)
-- ✅ Hooks: useProfileForm, useImageUpload, useSecuritySettings, useTeamsManagement
+- ✅ Hooks: useProfileForm, useImageUpload, useSecuritySettings
 
 ### ⏳ Pendiente (Fases 7-9)
 - ⏳ Migración de componentes UI desde `/src/components/ui`

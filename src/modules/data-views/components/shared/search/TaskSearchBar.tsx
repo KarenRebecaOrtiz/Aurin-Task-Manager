@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/Input';
 import { motion, AnimatePresence, easeOut } from 'framer-motion';
 import { Search, X, ClipboardCheck, GalleryHorizontalEnd, Users } from 'lucide-react';
 import { Badge } from '@/modules/shared/components/atoms/Badge';
@@ -217,6 +217,25 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
     setSelectedStatuses([]);
   }, []);
 
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const createCategoryHandler = useCallback(
+    (category: SearchCategory) => () => handleCategorySelect(category),
+    [handleCategorySelect]
+  );
+
+  const createPriorityHandler = useCallback(
+    (priority: PriorityLevel) => () => handlePrioritySelect(priority),
+    [handlePrioritySelect]
+  );
+
+  const createStatusHandler = useCallback(
+    (status: StatusLevel) => () => handleStatusSelect(status),
+    [handleStatusSelect]
+  );
+
   return (
     <div className={styles.searchContainer} ref={dropdownRef}>
       {/* Search Input */}
@@ -230,7 +249,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
           }
           value={query}
           onChange={handleInputChange}
-          onFocus={() => setIsFocused(true)}
+          onFocus={handleFocus}
           className={styles.searchInput}
         />
         <div className={styles.searchIcon}>
@@ -253,7 +272,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
                   <motion.button
                     key={category.id}
                     {...itemAnimations(index)}
-                    onClick={() => handleCategorySelect(category.category)}
+                    onClick={createCategoryHandler(category.category)}
                     className={`${styles.categoryButton} ${
                       selectedCategory === category.category ? styles.selected : ''
                     }`}
@@ -281,7 +300,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
                   <motion.button
                     key={priority.id}
                     {...itemAnimations(index + SEARCH_CATEGORIES.length)}
-                    onClick={() => handlePrioritySelect(priority.value)}
+                    onClick={createPriorityHandler(priority.value)}
                     className={`${styles.categoryButton} ${
                       selectedPriorities.includes(priority.value) ? styles.selected : ''
                     }`}
@@ -302,7 +321,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
                   <motion.button
                     key={status.id}
                     {...itemAnimations(index + SEARCH_CATEGORIES.length + PRIORITY_FILTERS.length)}
-                    onClick={() => handleStatusSelect(status.value)}
+                    onClick={createStatusHandler(status.value)}
                     className={`${styles.categoryButton} ${
                       selectedStatuses.includes(status.value) ? styles.selected : ''
                     }`}

@@ -1,3 +1,5 @@
+@import '@/styles/variables';
+
 .coverPhoto {
   position: relative;
   width: 100%;
@@ -14,29 +16,37 @@
 }
 
 .editCoverButton {
+  @include crystal-surface($radius: 50%);
   position: absolute;
   top: 1rem;
   right: 1rem;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
   z-index: 10;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.8);
-    transform: scale(1.1);
+    @include crystal-hover;
   }
 
   &:active {
-    transform: scale(0.95);
+    @include crystal-active;
+  }
+
+  :global(body.dark) & {
+    @include crystal-dark();
+    color: black;
+    background-color: white !important;
+
+    &:hover {
+      background: lighten($zinc-900, 5%);
+    }
+    &:active {
+      background: darken($zinc-900, 5%);
+    }
   }
 }
 
@@ -78,28 +88,37 @@
 }
 
 .editProfilePhotoButton {
+  @include crystal-surface($radius: 50%);
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: 5px;
+  right: 5px;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background-color: var(--accent-color, #3b82f6);
-  border: 3px solid var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
   z-index: 10;
 
   &:hover {
-    background-color: var(--accent-color-hover, #2563eb);
-    transform: scale(1.1);
+    @include crystal-hover;
   }
 
   &:active {
-    transform: scale(0.95);
+    @include crystal-active;
+  }
+
+  :global(body.dark) & {
+    @include crystal-dark();
+    color: black;
+    background-color: white !important;
+
+    &:hover {
+      background: lighten($zinc-900, 5%);
+    }
+    &:active {
+      background: darken($zinc-900, 5%);
+    }
   }
 }
 

@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTasksTableActionsStore } from '../../stores/tasksTableActionsStore';
@@ -8,19 +7,16 @@ import { useTasksPageStore } from '@/stores/tasksPageStore';
 import TasksTable from './TasksTable';
 
 export default function TasksTableIsolated() {
-  const { user } = useUser();
   
   // ✅ SOLUCIÓN: Usar directamente useDataStore para actualización inmediata
   const {
     tasks,
     clients,
     users,
-    isInitialLoadComplete
   } = useDataStore(useShallow(state => ({
     tasks: state.tasks,
     clients: state.clients,
     users: state.users,
-    isInitialLoadComplete: state.isInitialLoadComplete
   })));
 
   // Configure action handlers for TasksTable
@@ -54,7 +50,7 @@ export default function TasksTableIsolated() {
         const { setTaskView } = useTasksPageStore.getState();
         setTaskView(view);
       },
-      openProfile: (user: { id: string; imageUrl: string }) => {
+      openProfile: () => {
         // Profile functionality removed
       },
       openMessageSidebar: (user: { id: string; imageUrl: string; fullName: string; role: string }) => {
@@ -74,8 +70,6 @@ export default function TasksTableIsolated() {
     });
   }, []);
 
-  // ✅ SOLUCIÓN: Mostrar TasksTable solo si hay datos disponibles
-  // No depender de isInitialLoadComplete del store ya que puede no estar sincronizado
   const hasData = tasks.length > 0 || clients.length > 0 || users.length > 0;
   
   
@@ -90,4 +84,5 @@ export default function TasksTableIsolated() {
       externalUsers={users}
     />
   );
-} 
+}
+ 

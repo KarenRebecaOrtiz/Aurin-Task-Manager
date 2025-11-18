@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -76,7 +76,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
     }
   }, [isOpen]);
 
-  const getSocialLinks = (): SocialLink[] => {
+  const getSocialLinks = useCallback((): SocialLink[] => {
     if (!profile?.socialLinks) return [];
     
     const links: SocialLink[] = [];
@@ -96,9 +96,9 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
     });
     
     return links;
-  };
+  }, [profile]);
 
-  const handleContactClick = () => {
+  const handleContactClick = useCallback(() => {
     if (!profile || !currentUser) return;
     
     if (userId === currentUser.id) {
@@ -115,20 +115,24 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
     }, conversationId);
     
     onClose();
-  };
+  }, [profile, currentUser, userId, onClose, openMessageSidebar]);
 
-  const handleConfigClick = () => {
+  const handleConfigClick = useCallback(() => {
     onClose();
     if (onChangeContainer) {
       onChangeContainer('config');
     }
-  };
+  }, [onClose, onChangeContainer]);
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     onClose();
-  };
+  }, [onClose]);
+
+  const handleStopPropagation = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
 
   if (isLoading) {
     return createPortal(
@@ -142,7 +146,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
             exit="hidden"
             transition={transitions.fast}
             onClick={handleOverlayClick}
-            onMouseDown={(e) => e.stopPropagation()}
+            onMouseDown={handleStopPropagation}
           >
             <motion.div
               className={styles.card}
@@ -151,7 +155,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
               animate="visible"
               exit="exit"
               transition={transitions.normal}
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleStopPropagation}
             >
               <div className={styles.loadingContainer}>
                 <p>Cargando perfil...</p>
@@ -176,7 +180,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
             exit="hidden"
             transition={transitions.fast}
             onClick={handleOverlayClick}
-            onMouseDown={(e) => e.stopPropagation()}
+            onMouseDown={handleStopPropagation}
           >
             <motion.div
               className={styles.card}
@@ -185,7 +189,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
               animate="visible"
               exit="exit"
               transition={transitions.normal}
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleStopPropagation}
             >
               <div className={styles.errorContainer}>
                 <p>{error?.message || 'Perfil no disponible'}</p>
@@ -212,7 +216,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
           exit="hidden"
           transition={transitions.fast}
           onClick={handleOverlayClick}
-          onMouseDown={(e) => e.stopPropagation()}
+          onMouseDown={handleStopPropagation}
         >
           <motion.div
             className={styles.card}
@@ -221,7 +225,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
             animate="visible"
             exit="exit"
             transition={transitions.normal}
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleStopPropagation}
           >
             <div className={styles.profileCard}>
                     <motion.div
@@ -356,8 +360,8 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
                       <motion.div className={styles.stackSection} variants={itemVariants}>
                         <h3 className={styles.sectionTitle}>Stack de Tecnologías</h3>
                         <div className={styles.stackTags}>
-                          {profile.stack.map((tech, index) => (
-                            <span key={index} className={styles.stackTag}>
+                          {profile.stack.map((tech) => (
+                            <span key={tech} className={styles.stackTag}>
                               {tech}
                             </span>
                           ))}
@@ -369,8 +373,8 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
                       <motion.div className={styles.teamsSection} variants={itemVariants}>
                         <h3 className={styles.sectionTitle}>Equipos</h3>
                         <div className={styles.teamsTags}>
-                          {profile.teams.map((team, index) => (
-                            <span key={index} className={styles.teamTag}>
+                          {profile.teams.map((team) => (
+                            <span key={team} className={styles.teamTag}>
                               {team}
                             </span>
                           ))}
@@ -408,24 +412,34 @@ interface SocialButtonProps {
   hoveredItem: string | null;
 }
 
-const SocialButton: React.FC<SocialButtonProps> = ({ item, setHoveredItem, hoveredItem }) => (
-  <div className={styles.socialButtonContainer}>
-    <a
-      href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={styles.socialButton}
-      onMouseEnter={() => setHoveredItem(item.id)}
-      onMouseLeave={() => setHoveredItem(null)}
-      aria-label={item.label}
-    >
-      <div className={styles.socialIcon}>
-        {SocialIcons[item.id]}
-      </div>
-    </a>
-    <Tooltip item={item} hoveredItem={hoveredItem} />
-  </div>
-);
+const SocialButton: React.FC<SocialButtonProps> = ({ item, setHoveredItem, hoveredItem }) => {
+  const handleMouseEnter = useCallback(() => {
+    setHoveredItem(item.id);
+  }, [item.id, setHoveredItem]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredItem(null);
+  }, [setHoveredItem]);
+
+  return (
+    <div className={styles.socialButtonContainer}>
+      <a
+        href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.socialButton}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        aria-label={item.label}
+      >
+        <div className={styles.socialIcon}>
+          {SocialIcons[item.id]}
+        </div>
+      </a>
+      <Tooltip item={item} hoveredItem={hoveredItem} />
+    </div>
+  );
+};
 
 interface TooltipProps {
   item: SocialLink;

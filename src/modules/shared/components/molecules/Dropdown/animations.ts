@@ -3,13 +3,15 @@
  * Reutilizable en todos los dropdowns de la aplicación
  */
 
+import { easeOut } from 'framer-motion';
+
 export const dropdownAnimations = {
   // Animación del menú (entrada/salida)
   menu: {
     initial: { opacity: 0, y: -12, scale: 0.95 },
     animate: { opacity: 1, y: 0, scale: 1 },
     exit: { opacity: 0, y: -12, scale: 0.95 },
-    transition: { duration: 0.15, ease: 'easeOut' },
+    transition: { duration: 0.15, ease: easeOut },
   },
 
   // Animación de items individuales con stagger

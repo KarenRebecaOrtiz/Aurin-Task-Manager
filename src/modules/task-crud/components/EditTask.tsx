@@ -5,7 +5,7 @@
  * Modular task editing with wizard flow
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Controller } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,7 +23,6 @@ import { Small, Muted } from '@/components/ui/Typography';
 
 // Module imports
 import { EditTaskProps, STEP_FIELDS, FORM_PERSISTENCE_KEYS } from '../types/form';
-import { Client } from '../types/domain';
 import { useTaskForm } from '../hooks/form/useTaskForm';
 import { useStepValidation } from '../hooks/form/useStepValidation';
 import { useTaskFormData } from '../hooks/data/useTaskData';
@@ -149,8 +148,8 @@ const EditTask: React.FC<EditTaskProps> = ({
         }
 
         setIsLoadingTask(false);
-      } catch (error: any) {
-        console.error('[EditTask] Error loading task:', error);
+      } catch (_error: unknown) {
+        // Error handled silently - user will see toast notification
         toast({
           title: '🔍 Error al cargar la tarea',
           description: 'No se pudo cargar los datos de la tarea. Por favor, intenta nuevamente.',
@@ -181,7 +180,7 @@ const EditTask: React.FC<EditTaskProps> = ({
       closeAllDropdowns();
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isOpen, closeAllDropdowns]);
 
@@ -219,9 +218,9 @@ const EditTask: React.FC<EditTaskProps> = ({
       await updateTaskActivity(taskId, 'edit');
 
       // Determine new members to notify
-      const newLeaders = values.teamInfo.LeadedBy.filter((id: string) => !originalLeadedBy.includes(id));
+      const newLeaders = (values.teamInfo?.LeadedBy || []).filter((id: string) => !originalLeadedBy.includes(id));
       const newMembers = includeMembers
-        ? (values.teamInfo.AssignedTo || []).filter((id: string) => !originalAssignedTo.includes(id))
+        ? ((values.teamInfo?.AssignedTo || [])).filter((id: string) => !originalAssignedTo.includes(id))
         : [];
 
       const newRecipients = new Set<string>([...newLeaders, ...newMembers]);
@@ -234,13 +233,13 @@ const EditTask: React.FC<EditTaskProps> = ({
             {
               userId: user.id,
               message: `${user.firstName || 'Usuario'} te asignó la tarea ${values.basicInfo.name}`,
-              type: 'task_updated',
+              type: 'task_assignment_changed',
               taskId,
             },
             Array.from(newRecipients)
           );
-        } catch (error) {
-          console.warn('[EditTask] Error sending notifications:', error);
+        } catch (_error: unknown) {
+          // Error sending notifications - continue without blocking
         }
       }
 
@@ -255,20 +254,19 @@ const EditTask: React.FC<EditTaskProps> = ({
       setIsSaving(false);
 
       window.location.reload();
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Error desconocido';
-      console.error('[EditTask] Error:', errorMessage);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
 
       const { title, description } = getUserFriendlyErrorMessage(errorMessage);
-      toast({ title, description, variant: 'error' });
+      showError(title, description);
 
-      showError('No se pudo actualizar la tarea.', errorMessage);
       if (onShowFailAlert) {
         onShowFailAlert('No se pudo actualizar la tarea.', errorMessage);
       }
 
       setIsSaving(false);
       setShowPopupLoader(false);
+      onToggle();
     }
   };
 
