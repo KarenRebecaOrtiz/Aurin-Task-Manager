@@ -132,6 +132,7 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
  *
  * @returns 200 with array of tasks
  */
+// @ts-expect-error - withAuth type inference issue with multiple return types
 export const GET = withAuth(async (userId, request: NextRequest) => {
   try {
     console.log('[API] GET /api/tasks - Fetching tasks for user:', userId);
