@@ -19,9 +19,9 @@ export const generateSummarySchema = z.object({
 export type GenerateSummaryInput = z.infer<typeof generateSummarySchema>;
 
 /**
- * Schema for notification email sending
+ * Schema for notification email sending (legacy - for notification batches)
  */
-export const sendNotificationEmailsSchema = z.object({
+export const sendNotificationBatchSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   notifications: z.array(
     z.object({
@@ -34,7 +34,7 @@ export const sendNotificationEmailsSchema = z.object({
   userEmail: z.string().email('Valid email is required'),
 });
 
-export type SendNotificationEmailsInput = z.infer<typeof sendNotificationEmailsSchema>;
+export type SendNotificationBatchInput = z.infer<typeof sendNotificationBatchSchema>;
 
 /**
  * Schema for initializing unread notifications
