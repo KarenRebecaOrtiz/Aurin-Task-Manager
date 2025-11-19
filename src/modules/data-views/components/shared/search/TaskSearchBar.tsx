@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Input } from '@/components/ui/Input';
+import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence, easeOut } from 'framer-motion';
 import { Search, X, ClipboardCheck, GalleryHorizontalEnd, Users } from 'lucide-react';
 import { Badge } from '@/modules/shared/components/atoms/Badge';

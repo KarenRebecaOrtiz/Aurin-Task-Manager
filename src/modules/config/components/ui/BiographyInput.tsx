@@ -3,8 +3,8 @@
 import * as React from "react";
 import { useId } from "react";
 import { useCharacterLimit } from "@/components/hooks/use-character-limit";
-import { Textarea } from "@/components/ui/Textarea";
-import { Label } from "@/components/ui/Label";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import styles from "./BiographyInput.module.scss";
 
 interface BiographyInputProps {
