@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useFirestoreUser } from '../../../hooks'; // Ajustado
 import styles from './AvatarDropdown.module.scss';
@@ -13,7 +14,8 @@ import { ProfileCard } from '@/modules/profile-card';
 import { Small, Muted } from '@/components/ui/Typography';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
 
-const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
+const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
+  const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerk();
   const { firestoreUser } = useFirestoreUser(); // Hook centralizado
@@ -43,9 +45,13 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer: (container: 
 
   // Menu item handlers
   const handleConfig = useCallback(() => {
-    onChangeContainer('config');
+    if (onChangeContainer) {
+      onChangeContainer('config');
+    } else {
+      router.push('/dashboard/settings');
+    }
     setIsDropdownOpen(false);
-  }, [onChangeContainer]);
+  }, [onChangeContainer, router]);
 
   const handleLogout = useCallback(() => {
     signOut();

@@ -540,13 +540,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             setSearchQuery={setSearchQuery}
             searchCategory={searchCategory}
             setSearchCategory={setSearchCategory}
-            onViewChange={handleViewChange}
-            onArchiveTableOpen={handleArchiveTableOpen}
             onNewTaskOpen={handleNewTaskOpen}
             currentView="archive"
           />
-          
-          <EmptyTableState 
+
+          <EmptyTableState
             title="No hay tareas archivadas"
             description="Las tareas archivadas aparecerán aquí cuando las archives"
           />
@@ -567,8 +565,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           setSearchQuery={setSearchQuery}
           searchCategory={searchCategory}
           setSearchCategory={setSearchCategory}
-          onViewChange={handleViewChange}
-          onArchiveTableOpen={handleArchiveTableOpen}
           onNewTaskOpen={handleNewTaskOpen}
           currentView="archive"
         />

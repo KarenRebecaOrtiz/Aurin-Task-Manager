@@ -271,15 +271,12 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           setSearchQuery={setSearchQuery}
           searchCategory={searchCategory}
           setSearchCategory={setSearchCategory}
-          onViewChange={onViewChange}
-          onArchiveTableOpen={onArchiveTableOpen}
           onNewTaskOpen={onNewTaskOpen}
-          onNewClientOpen={onNewClientOpen}
           onPriorityFiltersChange={setPriorityFilters}
           currentView="kanban"
         />
 
-        <EmptyTableState 
+        <EmptyTableState
           title="¡Comienza creando tu primera tarea!"
           description="Las tareas aparecerán aquí organizadas por estado"
         />
@@ -294,10 +291,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         setSearchQuery={setSearchQuery}
         searchCategory={searchCategory}
         setSearchCategory={setSearchCategory}
-        onViewChange={onViewChange}
-        onArchiveTableOpen={onArchiveTableOpen}
         onNewTaskOpen={onNewTaskOpen}
-        onNewClientOpen={onNewClientOpen}
         onPriorityFiltersChange={setPriorityFilters}
         currentView="kanban"
       />

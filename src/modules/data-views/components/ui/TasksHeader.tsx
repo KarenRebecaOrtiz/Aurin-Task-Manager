@@ -11,8 +11,6 @@ interface TasksHeaderProps {
   setSearchQuery: (query: string) => void;
   searchCategory: SearchCategory | null;
   setSearchCategory: (category: SearchCategory | null) => void;
-  onViewChange: (view: 'table' | 'kanban') => void;
-  onArchiveTableOpen: () => void;
   onNewTaskOpen: () => void;
   onPriorityFiltersChange?: (priorities: string[]) => void;
   onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
@@ -24,8 +22,6 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   setSearchQuery,
   searchCategory,
   setSearchCategory,
-  onViewChange,
-  onArchiveTableOpen,
   onNewTaskOpen,
   onPriorityFiltersChange,
   onStatusFiltersChange,
@@ -46,17 +42,8 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
     <div className={styles.toolbar}>
       <div className={styles.searchSection}>
         <div className={styles.leftActions}>
-          {/* View Switcher - Three fixed views */}
-          <ViewSwitcher
-            currentView={currentView === 'kanban' ? 'kanban' : currentView === 'archive' ? 'archive' : 'table'}
-            onViewChange={(view) => {
-              if (view === 'archive') {
-                onArchiveTableOpen();
-              } else {
-                onViewChange(view);
-              }
-            }}
-          />
+          {/* View Switcher - Uses router.push() for navigation */}
+          <ViewSwitcher />
         </div>
 
         {/* Advanced Task Search Bar */}

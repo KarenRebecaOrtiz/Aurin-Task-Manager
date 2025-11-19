@@ -373,14 +373,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           setSearchQuery={tableState.setSearchQuery}
           searchCategory={tableState.searchCategory}
           setSearchCategory={tableState.setSearchCategory}
-          onViewChange={changeView}
-          onArchiveTableOpen={openArchiveTable}
           onNewTaskOpen={openNewTask}
-          onNewClientOpen={openNewClient}
           onPriorityFiltersChange={tableState.setPriorityFilters}
           onStatusFiltersChange={tableState.setStatusFilters}
           currentView="table"
-          disabled
         />
         <TableSkeletonLoader type="tasks" rows={12} />
       </div>
@@ -394,10 +390,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         setSearchQuery={tableState.setSearchQuery}
         searchCategory={tableState.searchCategory}
         setSearchCategory={tableState.setSearchCategory}
-        onViewChange={changeView}
-        onArchiveTableOpen={openArchiveTable}
         onNewTaskOpen={openNewTask}
-        onNewClientOpen={openNewClient}
         onPriorityFiltersChange={tableState.setPriorityFilters}
         onStatusFiltersChange={tableState.setStatusFilters}
         currentView="table"
