@@ -14,7 +14,7 @@ import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiNoContent, apiBadRequest, apiNotFound, apiForbidden, handleApiError } from '@/lib/api/response';
-import { updateTaskSchema, patchTaskSchema, TaskDocument } from '@/lib/validations/task.schema';
+import { updateTaskSchema, patchTaskSchema, Task } from '@/lib/validations/task.schema';
 import { emailNotificationService } from '@/services/emailNotificationService';
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { clerkClient } from '@clerk/nextjs/server';
@@ -43,7 +43,7 @@ async function getTaskById(taskId: string) {
     return null;
   }
 
-  const data = taskDoc.data() as TaskDocument;
+  const data = taskDoc.data() as Task;
   return {
     id: taskDoc.id,
     ...data,
@@ -115,7 +115,7 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
       return apiNotFound('Task');
     }
 
-    const existingTask = existingTaskDoc.data() as TaskDocument;
+    const existingTask = existingTaskDoc.data() as Task;
 
     // Check permissions (creator or admin only)
     const userIsAdmin = await isAdmin(userId);
@@ -140,7 +140,7 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
     }
 
     // Prepare updated task data
-    const updatedTask: TaskDocument = {
+    const updatedTask: Task = {
       ...existingTask,
       ...updateData,
       id: taskId,
@@ -150,7 +150,7 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
       // Convert dates to Firestore Timestamps
       startDate: updateData.startDate ? Timestamp.fromDate(updateData.startDate) : existingTask.startDate,
       endDate: updateData.endDate ? Timestamp.fromDate(updateData.endDate) : existingTask.endDate,
-    } as TaskDocument;
+    } as Task;
 
     // Save updated task
     await setDoc(doc(db, 'tasks', taskId), updatedTask);
@@ -233,7 +233,7 @@ export const DELETE = withAuth(async (userId, request: NextRequest, context: { p
       return apiNotFound('Task');
     }
 
-    const existingTask = existingTaskDoc.data() as TaskDocument;
+    const existingTask = existingTaskDoc.data() as Task;
 
     // Check permissions (creator or admin only)
     const userIsAdmin = await isAdmin(userId);
@@ -273,7 +273,7 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
       return apiNotFound('Task');
     }
 
-    const existingTask = existingTaskDoc.data() as TaskDocument;
+    const existingTask = existingTaskDoc.data() as Task;
 
     // Check permissions (creator or admin only)
     const userIsAdmin = await isAdmin(userId);
