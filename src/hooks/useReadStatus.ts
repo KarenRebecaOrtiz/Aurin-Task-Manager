@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, updateDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { notificationService } from '@/services/notificationService';
 
 interface UseReadStatusOptions {
   debounceDelay?: number;
@@ -67,7 +66,7 @@ export const useReadStatus = (options: UseReadStatusOptions = {}) => {
         } else {
           // Marcar individualmente
           for (const notificationId of notificationIds) {
-            await notificationService.markAsRead(notificationId);
+            await updateDoc(doc(db, 'notifications', notificationId), { read: true });
           }
           console.log('[useReadStatus] Marked', notificationIds.length, 'notifications as read individually');
         }

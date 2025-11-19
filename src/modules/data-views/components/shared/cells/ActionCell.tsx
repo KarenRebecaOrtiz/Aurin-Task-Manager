@@ -10,8 +10,21 @@ import styles from './ActionCell.module.scss';
 
 interface Task {
   id: string;
+  clientId: string;
+  project: string;
+  name: string;
+  description: string;
+  status: string;
+  priority: string;
+  startDate: string | null;
+  endDate: string | null;
+  LeadedBy: string[];
+  AssignedTo: string[];
+  createdAt: string;
   CreatedBy?: string;
-  [key: string]: any;
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 interface ActionCellProps {

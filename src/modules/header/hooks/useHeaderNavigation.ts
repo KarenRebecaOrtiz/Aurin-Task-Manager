@@ -29,6 +29,18 @@ export const useHeaderNavigation = (
             case 'tareas':
               router.push('/dashboard/tasks');
               break;
+            case 'kanban':
+              router.push('/dashboard/kanban');
+              break;
+            case 'archive':
+              router.push('/dashboard/archive');
+              break;
+            case 'files':
+              router.push('/dashboard/files');
+              break;
+            case 'settings':
+              router.push('/dashboard/settings');
+              break;
             case 'config':
               router.push('/dashboard/settings');
               break;

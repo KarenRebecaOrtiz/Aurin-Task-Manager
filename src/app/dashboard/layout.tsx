@@ -15,7 +15,7 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import TasksPageModals from '@/modules/data-views/tasks/components/modals/TasksPageModals';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import tasksStyles from './tasks/styles/TasksPage.module.scss';
@@ -25,6 +25,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
+  const [mounted, setMounted] = useState(false);
 
   // 🚀 LOAD DATA ONCE HERE - all pages use the global store
   useSharedTasksState(user?.id);
@@ -41,16 +42,25 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // If in CreateTask or EditTask, no active element in selector
   const activeContainer = (isCreateTaskOpen || isEditTaskOpen) ? null : selectedContainer;
 
+  // Set mounted after hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Client-side redirect if not authenticated
   useEffect(() => {
-    if (isLoaded && !userId) {
+    if (mounted && isLoaded && !userId) {
       router.push('/sign-in');
     }
-  }, [isLoaded, userId, router]);
+  }, [mounted, isLoaded, userId, router]);
 
-  // Don't render until auth is loaded
-  if (!isLoaded) {
-    return null;
+  // Show loading placeholder during SSR and initial hydration
+  if (!mounted || !isLoaded) {
+    return (
+      <div className={tasksStyles.container}>
+        {/* Empty placeholder that matches the structure */}
+      </div>
+    );
   }
 
   // Don't render if not authenticated

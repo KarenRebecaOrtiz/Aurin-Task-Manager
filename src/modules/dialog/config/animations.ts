@@ -2,6 +2,10 @@ import { Variants, Transition } from 'framer-motion';
 
 // Unified transition timings - smooth and fast
 export const transitions = {
+  ultraFast: {
+    duration: 0.1,
+    ease: [0.32, 0.72, 0, 1], // Custom cubic-bezier for smooth feel
+  } as Transition,
   fast: {
     duration: 0.15,
     ease: [0.32, 0.72, 0, 1], // Custom cubic-bezier for smooth feel

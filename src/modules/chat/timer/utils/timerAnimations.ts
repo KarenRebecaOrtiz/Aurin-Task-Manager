@@ -17,7 +17,7 @@ export const timerPanelAnimations = {
     opacity: 1,
     transition: {
       duration: 0.3,
-      ease: 'easeOut',
+      ease: 'easeOut' as const,
     }
   },
   exit: {
@@ -25,7 +25,7 @@ export const timerPanelAnimations = {
     opacity: 0,
     transition: {
       duration: 0.25,
-      ease: 'easeIn',
+      ease: 'easeIn' as const,
     }
   }
 };
@@ -56,7 +56,7 @@ export const dialogAnimations = {
     y: 0,
     transition: {
       duration: 0.2,
-      ease: 'easeOut'
+      ease: 'easeOut' as const
     }
   },
   exit: {
@@ -65,7 +65,7 @@ export const dialogAnimations = {
     y: 20,
     transition: {
       duration: 0.15,
-      ease: 'easeIn'
+      ease: 'easeIn' as const
     }
   }
 };
@@ -83,7 +83,7 @@ export const collapseAnimations = {
     opacity: 1,
     height: 'auto',
     transition: {
-      height: { duration: 0.3, ease: 'easeOut' },
+      height: { duration: 0.3, ease: 'easeOut' as const },
       opacity: { duration: 0.2, delay: 0.1 }
     }
   },
@@ -91,7 +91,7 @@ export const collapseAnimations = {
     opacity: 0,
     height: 0,
     transition: {
-      height: { duration: 0.25, ease: 'easeIn' },
+      height: { duration: 0.25, ease: 'easeIn' as const },
       opacity: { duration: 0.15 }
     }
   }
@@ -123,7 +123,7 @@ export const pulseAnimations: Variants = {
     transition: {
       duration: 2,
       repeat: Infinity,
-      ease: 'easeInOut'
+      ease: 'easeInOut' as const
     }
   }
 };
@@ -168,7 +168,7 @@ export const slideDownAnimations = {
     height: 'auto',
     transition: {
       duration: 0.3,
-      ease: 'easeOut'
+      ease: 'easeOut' as const
     }
   },
   exit: {
@@ -177,7 +177,7 @@ export const slideDownAnimations = {
     height: 0,
     transition: {
       duration: 0.2,
-      ease: 'easeIn'
+      ease: 'easeIn' as const
     }
   }
 };

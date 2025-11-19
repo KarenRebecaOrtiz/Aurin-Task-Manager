@@ -59,7 +59,7 @@ export const MessageItem = memo(
         onEdit,
         onEditTime,
         onDelete,
-        onReply,
+        _onReply,
         onDownload,
         onReplyClick,
       },
@@ -109,16 +109,16 @@ export const MessageItem = memo(
       const handleAddReaction = useCallback(async (emoji: string) => {
         try {
           await reactionsService.toggleReaction(taskId, message.id, emoji, userId);
-        } catch (error) {
-          console.error("Error adding reaction:", error);
+        } catch {
+          // Silently fail - reactions are non-critical
         }
       }, [taskId, message.id, userId]);
 
       const handleRemoveReaction = useCallback(async (emoji: string) => {
         try {
           await reactionsService.toggleReaction(taskId, message.id, emoji, userId);
-        } catch (error) {
-          console.error("Error removing reaction:", error);
+        } catch {
+          // Silently fail - reactions are non-critical
         }
       }, [taskId, message.id, userId]);
 
@@ -140,6 +140,16 @@ export const MessageItem = memo(
         }
       }, [onRetryMessage, message]);
 
+      const handleReplyClick = useCallback(() => {
+        if (onReplyClick && message.replyTo) {
+          onReplyClick(message.replyTo.id);
+        }
+      }, [onReplyClick, message.replyTo]);
+
+      const handleCloseActionMenu = useCallback(() => {
+        setIsActionMenuOpen(false);
+      }, []);
+
       const renderMessageContent = () => {
         return (
           <>
@@ -147,7 +157,7 @@ export const MessageItem = memo(
             {message.replyTo && (
               <div
                 className={styles.replyPreview}
-                onClick={() => onReplyClick?.(message.replyTo!.id)}
+                onClick={handleReplyClick}
                 style={{ cursor: onReplyClick ? "pointer" : "default" }}
               >
                 <div className={styles.replyAuthor}>{message.replyTo.senderName}</div>
@@ -205,13 +215,13 @@ export const MessageItem = memo(
                   <span className={styles.timestamp}>
                     {' • '}
                     {(() => {
-                      if (typeof message.dateString === 'string') {
-                        return message.dateString;
-                      }
                       if (message.dateString instanceof Date) {
                         return message.dateString.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
                       }
-                      const dateObj = (message.dateString as any)?.toDate?.();
+                      if (typeof message.dateString === 'string') {
+                        return message.dateString;
+                      }
+                      const dateObj = (message.dateString as { toDate?: () => Date })?.toDate?.();
                       if (dateObj instanceof Date) {
                         return dateObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
                       }
@@ -321,7 +331,7 @@ export const MessageItem = memo(
           <MessageActionMenu
             message={message}
             isOpen={isActionMenuOpen}
-            onClose={() => setIsActionMenuOpen(false)}
+            onClose={handleCloseActionMenu}
             triggerRef={actionButtonRef}
             userId={userId}
             onCopy={handleCopy}

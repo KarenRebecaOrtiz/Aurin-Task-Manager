@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { ChevronDown, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserAvatar } from "@/modules/shared/components/atoms/Avatar/UserAvatar";
@@ -22,7 +22,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   clientName,
   clientImageUrl,
   users = [],
-  messages = [],
+  _messages = [],
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
@@ -74,6 +74,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     return Math.round(task.totalHours || 0);
   }, [task.totalHours]);
 
+  const toggleDetails = useCallback(() => {
+    setIsDetailsOpen(prev => !prev);
+  }, []);
+
   return (
     <div className={styles.header}>
       {/* Top Section */}
@@ -109,7 +113,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       {/* Show Details Toggle */}
       <div className={styles.detailsToggle}>
         <button
-          onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+          onClick={toggleDetails}
           className={styles.toggleButton}
         >
           <span>Mostrar Detalles</span>

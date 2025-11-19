@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
+import { ContainerType } from '@/modules/header/types';
 
 // Types
 interface Client {
@@ -23,7 +24,7 @@ interface User {
 
 interface TasksPageState {
   // Container and view state
-  container: 'tareas' | 'cuentas' | 'miembros' | 'config';
+  container: ContainerType;
   taskView: 'table' | 'kanban';
   
   // Modal states
@@ -45,7 +46,7 @@ interface TasksPageState {
   // Form states
   hasUnsavedChanges: boolean;
   deleteConfirm: string;
-  pendingContainer: 'tareas' | 'cuentas' | 'miembros' | 'config' | null;
+  pendingContainer: ContainerType | null;
   
   // Alert states
   showSuccessAlert: boolean;
@@ -65,7 +66,7 @@ interface TasksPageState {
   } | null;
   
   // Actions
-  setContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void;
+  setContainer: (container: ContainerType) => void;
   setTaskView: (view: 'table' | 'kanban') => void;
   
   // Modal actions
@@ -87,7 +88,7 @@ interface TasksPageState {
   // Form actions
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setDeleteConfirm: (confirm: string) => void;
-  setPendingContainer: (container: 'tareas' | 'cuentas' | 'miembros' | 'config' | null) => void;
+  setPendingContainer: (container: ContainerType | null) => void;
   
   // Alert actions
   setShowSuccessAlert: (show: boolean) => void;

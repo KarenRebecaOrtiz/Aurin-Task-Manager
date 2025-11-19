@@ -66,10 +66,10 @@ export const STATUS_ORDER = [
  * Kanban column definitions
  */
 export const KANBAN_COLUMNS = [
-  { id: 'por-iniciar', label: 'Por Iniciar' },
-  { id: 'en-proceso', label: 'En Proceso' },
-  { id: 'backlog', label: 'Backlog' },
-  { id: 'por-finalizar', label: 'Por Finalizar' },
-  { id: 'finalizado', label: 'Finalizado' },
-  { id: 'cancelado', label: 'Cancelado' },
+  { id: 'por-iniciar', label: 'Por Iniciar', value: 'Por Iniciar' },
+  { id: 'en-proceso', label: 'En Proceso', value: 'En Proceso' },
+  { id: 'backlog', label: 'Backlog', value: 'Backlog' },
+  { id: 'por-finalizar', label: 'Por Finalizar', value: 'Por Finalizar' },
+  { id: 'finalizado', label: 'Finalizado', value: 'Finalizado' },
+  { id: 'cancelado', label: 'Cancelado', value: 'Cancelado' },
 ];

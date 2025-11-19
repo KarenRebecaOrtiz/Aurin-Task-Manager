@@ -1,4 +1,4 @@
-export type ContainerType = 'tareas' | 'cuentas' | 'miembros' | 'config';
+export type ContainerType = 'tareas' | 'kanban' | 'archive' | 'files' | 'settings' | 'cuentas' | 'miembros' | 'config';
 
 export interface HeaderProps {
   selectedContainer: ContainerType | null;

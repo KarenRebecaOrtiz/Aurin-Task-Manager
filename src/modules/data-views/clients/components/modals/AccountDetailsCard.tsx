@@ -53,7 +53,9 @@ interface AccountDetailsCardProps {
   onSave?: (client: Client) => Promise<void>;
 }
 
-export const AccountDetailsCard: React.FC<AccountDetailsCardProps> = ({
+type AccountDetailsCardComponentProps = AccountDetailsCardProps;
+
+export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
   isOpen,
   onClose,
   client,

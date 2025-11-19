@@ -46,13 +46,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sendMessage: async (content) => {
     const { currentChatId } = get();
     if (!currentChatId) {
-      console.error("Cannot send message without a chat ID.");
+      set({ error: "Cannot send message without a chat ID." });
       return;
     }
 
     try {
       await chatService.sendMessage(currentChatId, content);
-    } catch (error) {
+    } catch {
       set({ error: 'Failed to send message.' });
     }
   },

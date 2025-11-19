@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { ClientCell, StatusCell, PriorityCell } from '@/modules/shared/components/molecules/TableCell';
-import ActionMenu from '../../../ui/ActionMenu';
+import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import { hasUnreadUpdates, getUnreadCount } from '@/lib/taskUtils';
 import styles from '../TasksTable.module.scss';
 

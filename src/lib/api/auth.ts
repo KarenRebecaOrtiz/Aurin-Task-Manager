@@ -52,51 +52,6 @@ export async function requireAuth(): Promise<AuthResult> {
   return { error: null, userId };
 }
 
-/**
- * Advanced authentication with Clerk's protect() method
- *
- * Uses auth().protect() for automatic redirect handling and better security.
- * Recommended for routes that require strict authentication.
- *
- * @returns Object with error (if unauthenticated) or userId
- *
- * @example
- * ```typescript
- * export async function DELETE() {
- *   const { error, userId } = await requireAuthProtected();
- *   if (error) return error;
- *
- *   // Continue with protected logic
- * }
- * ```
- */
-export async function requireAuthProtected(): Promise<AuthResult> {
-  try {
-    await auth().protect();
-    const { userId } = await auth();
-
-    if (!userId) {
-      return {
-        error: NextResponse.json(
-          { error: 'Unauthorized', message: 'Authentication required' },
-          { status: 401 }
-        ),
-        userId: null,
-      };
-    }
-
-    return { error: null, userId };
-  } catch (error) {
-    console.error('[Auth] Protection failed:', error);
-    return {
-      error: NextResponse.json(
-        { error: 'Unauthorized', message: 'Authentication failed' },
-        { status: 401 }
-      ),
-      userId: null,
-    };
-  }
-}
 
 /**
  * Higher-order function wrapper for authenticated API routes
@@ -135,32 +90,6 @@ export function withAuth<T = unknown>(
   };
 }
 
-/**
- * Higher-order function with protected authentication
- *
- * Similar to withAuth but uses auth().protect() for stricter security.
- *
- * @param handler - Async function that receives userId and returns a response
- * @returns NextResponse with either error or handler result
- */
-export function withAuthProtected<T = unknown>(
-  handler: (userId: string) => Promise<NextResponse<T>>
-): () => Promise<NextResponse> {
-  return async () => {
-    const { error, userId } = await requireAuthProtected();
-
-    if (error || !userId) {
-      return error;
-    }
-
-    try {
-      return await handler(userId);
-    } catch (handlerError) {
-      console.error('[Auth] Handler error:', handlerError);
-      throw handlerError;
-    }
-  };
-}
 
 /**
  * Optional authentication for API routes

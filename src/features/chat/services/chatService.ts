@@ -10,9 +10,9 @@ export const chatService = {
   listenForMessages: (
     chatId: string,
     onNewMessages: (messages: Message[]) => void,
-    onError: (error: string) => void
+    _onError: (error: string) => void
   ) => {
-    console.log(`[chatService] Starting to listen for messages on chat: ${chatId}`);
+    // Placeholder implementation - would use Firebase in production
     
     // In a real implementation, you would use the Firebase SDK here
     // to subscribe to a collection.
@@ -38,17 +38,17 @@ export const chatService = {
     }, 2000);
   },
 
-  stopListening: (chatId: string) => {
-    console.log(`[chatService] Stopping listener for chat: ${chatId}`);
+  stopListening: (_chatId: string) => {
+    // Placeholder implementation - would use Firebase in production
     if (unsubscribe) {
       unsubscribe();
       unsubscribe = null;
     }
   },
 
-  sendMessage: async (chatId: string, content: string): Promise<void> => {
-    console.log(`[chatService] Sending message to chat ${chatId}: ${content}`);
-    
+  sendMessage: async (_chatId: string, _content: string): Promise<void> => {
+    // Placeholder implementation - would use Firebase in production
+
     // In a real implementation, you would use the Firebase SDK here
     // to add a new document to the collection.
     // For example:

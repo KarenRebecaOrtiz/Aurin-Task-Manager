@@ -173,7 +173,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
           <div className={styles.taskDetailsLeft}>
             <div className={styles.clientInfo}>
               {client ? (
-                <ClientAvatar client={client} size={24} />
+                <ClientAvatar client={client} size="sm" />
               ) : (
                 <span className={styles.noClient}>Sin cuenta</span>
               )}
@@ -194,7 +194,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
           leadedByUserIds={task.LeadedBy}
           users={users}
           currentUserId={userId}
-          maxDisplay={5}
+          maxAvatars={5}
         />
       </div>
     </div>

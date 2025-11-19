@@ -163,6 +163,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
                   users={users}
                   isOwn={isOwn}
                   userId={user?.id || ''}
+                  taskId={task?.id || ''}
                   onImagePreview={(url) => setImagePreviewSrc(url)}
                   onRetryMessage={(msg) => resendMessage(msg)}
                   onCopy={async (text) => {
