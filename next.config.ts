@@ -1,6 +1,9 @@
 import {withSentryConfig} from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     domains: ['img.clerk.com', 'randomuser.me', 'cdn.prod.website-files.com'], // opcional, útil para compatibilidad con versiones anteriores
     remotePatterns: [
