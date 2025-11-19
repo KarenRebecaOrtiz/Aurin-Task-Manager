@@ -1,1 +1,1 @@
-export { default } from './AvatarDropdown';
+export { default as AvatarDropdown } from './AvatarDropdown';

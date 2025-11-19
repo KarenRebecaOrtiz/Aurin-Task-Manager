@@ -6,7 +6,7 @@ export { default as AdviceInput } from './components/ui/AdviceInput';
 export { default as AvailabilityToggle } from './components/ui/AvailabilityToggle';
 export { default as GeoClock } from './components/ui/GeoClock';
 export { TextShimmer } from './components/ui/TextShimmer';
-export { default as AvatarDropdown } from './components/ui/AvatarDropdown';
+export { AvatarDropdown } from './components/ui/AvatarDropdown';
 
 // Typography Components (re-exported from global design system)
 // Located at: /src/components/ui/Typography

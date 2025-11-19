@@ -31,7 +31,9 @@ src/modules/header/
 │   │   ├── AvatarDropdown/
 │   │   │   ├── AvatarDropdown.tsx
 │   │   │   ├── AvatarDropdown.module.scss
-│   │   │   └── index.ts
+│   │   │   ├── animations.ts              # ✅ Animaciones centralizadas (Framer Motion)
+│   │   │   ├── index.ts
+│   │   │   └── README.md                  # ✅ Documentación del submódulo
 │   │   └── ToDoDynamic/
 │   │       ├── ToDoDynamic.tsx
 │   │       ├── ToDoDynamic.module.scss

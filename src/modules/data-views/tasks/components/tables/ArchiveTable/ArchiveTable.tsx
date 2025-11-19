@@ -13,19 +13,12 @@ import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { TableSkeletonLoader, EmptyTableState } from '@/modules/data-views/components/shared';
-import { hasUnreadUpdates, markTaskAsViewed, getUnreadCount } from '@/lib/taskUtils';
+import { markTaskAsViewed } from '@/lib/taskUtils';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiving';
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
 import { useArchiveTableState } from './hooks/useArchiveTableState';
 import { useAdvancedSearch } from '@/modules/data-views/hooks/useAdvancedSearch';
-
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
-}
 
 interface Task {
   id: string;
@@ -59,7 +52,6 @@ interface ArchiveTableProps {
   onViewChange: (view: string) => void;
   onDeleteTaskOpen: (taskId: string) => void;
   onClose: () => void;
-  onTaskArchive?: (task: unknown, action: 'archive' | 'unarchive') => Promise<boolean>;
   onDataRefresh: () => void;
 }
 
@@ -69,7 +61,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     onViewChange,
     onDeleteTaskOpen,
     onClose,
-    onTaskArchive,
     onDataRefresh,
   }) => {
     const { user } = useUser();
@@ -91,15 +82,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       priorityFilter,
       clientFilter,
       userFilter,
-      setPriorityFilter,
-      setClientFilter,
-      setUserFilter,
-      setIsPriorityDropdownOpen,
-      setIsClientDropdownOpen,
-      setIsUserDropdownOpen,
-      isPriorityDropdownOpen,
-      isClientDropdownOpen,
-      isUserDropdownOpen,
       setFilteredTasks,
     } = useArchiveTableState();
     
@@ -131,8 +113,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       getInvolvedUserIds,
       getClientName,
       animateClick,
-      createPrioritySelectHandler,
-      createClientSelectHandler,
     } = useTasksCommon();
     
     // Hook para detectar el viewport
@@ -155,9 +135,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
     }, []);
     
     const actionMenuRef = useRef<HTMLDivElement>(null);
-    const priorityDropdownRef = useRef<HTMLDivElement>(null);
-    const clientDropdownRef = useRef<HTMLDivElement>(null);
-    const userDropdownRef = useRef<HTMLDivElement>(null);
     const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
     const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -190,7 +167,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
       // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
       result = result.filter((task) => {
-        const canViewTask = isAdmin || getInvolvedUserIds(task).includes(userId);
+        const canViewTask = isAdmin || getInvolvedUserIds(task as Task).includes(userId);
         return canViewTask;
       });
 
@@ -207,23 +184,17 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       // Filter by user
       let filteredByUser = result;
       if (userFilter === 'me') {
-        filteredByUser = result.filter(task => getInvolvedUserIds(task).includes(userId));
+        filteredByUser = result.filter(task => getInvolvedUserIds(task as Task).includes(userId));
       } else if (userFilter && userFilter !== 'me') {
-        filteredByUser = result.filter(task => getInvolvedUserIds(task).includes(userFilter));
+        filteredByUser = result.filter(task => getInvolvedUserIds(task as Task).includes(userFilter));
       }
 
       return filteredByUser;
     }, [searchFiltered, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
     useEffect(() => {
-      setFilteredTasks(memoizedFilteredTasks);
+      setFilteredTasks(memoizedFilteredTasks as Task[]);
     }, [memoizedFilteredTasks, setFilteredTasks]);
-
-    const handleUserFilter = (id: string) => {
-      setUserFilter(id);
-      setIsUserDropdownOpen(false);
-    };
-
 
     // ✅ CENTRALIZADO: Usar hook centralizado para desarchivar tareas
     const handleUnarchiveTask = useCallback(async (task: Task) => {
@@ -299,7 +270,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             break;
           case 'lastActivity':
             aValue = a.lastActivity || a.createdAt;
-            bValue = b.lastActivity || b.createdAt;
+            bValue = b.lastActivity || a.createdAt;
             break;
           default:
             aValue = a.createdAt;
@@ -314,7 +285,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       });
     }, [filteredTasks, sortKey, sortDirection, getClientName]);
 
-    const handleTaskRowClick = async (task: Task) => {
+    const handleTaskRowClick = useCallback(async (task: Task) => {
       // Marcar la tarea como vista usando el nuevo sistema
       await markTaskAsViewed(task.id, userId);
       // Usar directamente el store en lugar de props para evitar re-renders
@@ -323,7 +294,41 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       const clientName = effectiveClients?.find((c) => c.id === task.clientId)?.name || 'Sin cuenta';
       // Actualizar el store directamente
       openChatSidebar(task, clientName);
-    };
+    }, [userId, effectiveClients]);
+
+    // Handler para error de imagen
+    const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+      e.currentTarget.src = '/empty-image.png';
+    }, []);
+
+    // Handler para editar tarea
+    const createEditHandler = useCallback((taskId: string) => () => {
+      onEditTaskOpen(taskId);
+    }, [onEditTaskOpen]);
+
+    // Handler para eliminar tarea
+    const createDeleteHandler = useCallback((taskId: string) => () => {
+      onDeleteTaskOpen(taskId);
+    }, [onDeleteTaskOpen]);
+
+    // Handler para desarchiver tarea
+    const createArchiveHandler = useCallback((task: Task) => async () => {
+      try {
+        await handleUnarchiveTask(task);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[ArchiveTable] Error unarchiving task:', error);
+      }
+    }, [handleUnarchiveTask]);
+
+    // Handler para ref del botón de acción
+    const createActionButtonRefHandler = useCallback((taskId: string) => (el: HTMLButtonElement | null) => {
+      if (el) {
+        actionButtonRefs.current.set(taskId, el);
+      } else {
+        actionButtonRefs.current.delete(taskId);
+      }
+    }, []);
 
     // Manejar clicks fuera del ActionMenu
     useEffect(() => {
@@ -341,18 +346,10 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []); // Remover variable no usada
 
-    // ✅ CENTRALIZADAS: Funciones de dropdown usando hook centralizado
-    const handlePrioritySelect = createPrioritySelectHandler(setPriorityFilter, setIsPriorityDropdownOpen);
-    const handleClientSelect = createClientSelectHandler(setClientFilter, setIsClientDropdownOpen);
-
     // Función para obtener la clase de la fila
-    const getRowClassName = (task: Task) => {
-      let className = styles.taskRow;
-      if (task.hasUnreadUpdates) {
-        className += ` ${styles.unread}`;
-      }
-      return className;
-    };
+    const getRowClassName = useCallback((task: Task) => {
+      return styles.taskRow;
+    }, []);
 
     // Función para manejar cambios de visibilidad de columnas
     const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
@@ -417,9 +414,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   width={40}
                   height={40}
                   className={styles.clientImage}
-                  onError={(e) => {
-                    e.currentTarget.src = '/empty-image.png';
-                  }}
+                  onError={handleImageError}
                 />
               </div>
             ) : 'Sin cuenta';
@@ -430,19 +425,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return {
           ...col,
           render: (task: Task) => {
-            const hasUpdates = hasUnreadUpdates(task, userId);
-            const updateCount = getUnreadCount(task, userId);
             return (
               <div className={styles.taskNameWrapper}>
                 <span className={styles.taskName}>{task.name}</span>
-                {hasUpdates && updateCount > 0 && (
-                  <div className={styles.updateIndicator}>
-                    <div className={styles.updateDotRed}>
-                      <span className={styles.updateDotPing}></span>
-                      <span className={styles.updateDotNumber}>{updateCount}</span>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           },
@@ -485,32 +470,12 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                 <ActionMenu
                   task={task}
                   userId={userId}
-                  onEdit={() => {
-                    onEditTaskOpen(task.id);
-                    // setActionMenuOpenId(null); // Remover variable no usada
-                  }}
-                  onDelete={() => {
-                    onDeleteTaskOpen(task.id);
-                    // setActionMenuOpenId(null); // Remover variable no usada
-                  }}
-                  onArchive={async () => {
-                    try {
-                      // Usar la función centralizada de desarchivo
-                      await handleUnarchiveTask(task);
-                    } catch (error) {
-                      // eslint-disable-next-line no-console
-                      console.error('[ArchiveTable] Error unarchiving task:', error);
-                    }
-                  }}
+                  onEdit={createEditHandler(task.id)}
+                  onDelete={createDeleteHandler(task.id)}
+                  onArchive={createArchiveHandler(task)}
                   animateClick={animateClick}
                   actionMenuRef={actionMenuRef}
-                  actionButtonRef={(el) => {
-                    if (el) {
-                      actionButtonRefs.current.set(task.id, el);
-                    } else {
-                      actionButtonRefs.current.delete(task.id);
-                    }
-                  }}
+                  actionButtonRef={createActionButtonRefHandler(task.id)}
                 />
               );
           },
@@ -527,6 +492,33 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           clearTimeout(timeoutId);
         }
       };
+    }, []);
+
+    const handleViewChange = useCallback((view: 'table' | 'kanban') => {
+      onViewChange(view);
+      onClose();
+    }, [onViewChange, onClose]);
+
+    const handleNewTaskOpen = useCallback(() => {}, []);
+    const handleArchiveTableOpen = useCallback(() => {}, []);
+
+    const handleRowClick = useCallback((task: Task) => {
+      handleTaskRowClick(task);
+    }, [handleTaskRowClick]);
+    
+    const handleUndoClick = useCallback(() => {
+      const lastUndoItem = centralizedUndoStack.length > 0 ? centralizedUndoStack[centralizedUndoStack.length - 1] : undefined;
+      handleUndo(lastUndoItem);
+    }, [centralizedUndoStack, handleUndo]);
+
+    const handleUndoMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+      e.currentTarget.style.transform = 'scale(1.05)';
+    }, []);
+
+    const handleUndoMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+      e.currentTarget.style.transform = 'scale(1)';
     }, []);
 
     // Loading state - show table immediately if external data is available
@@ -548,15 +540,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             setSearchQuery={setSearchQuery}
             searchCategory={searchCategory}
             setSearchCategory={setSearchCategory}
-            onViewChange={(view) => {
-              onViewChange(view);
-              onClose();
-            }}
-            onArchiveTableOpen={() => {}}
-            onNewTaskOpen={() => {}}
-            onNewClientOpen={() => {}}
-            priorityFilter={priorityFilter}
-            setPriorityFilter={setPriorityFilter}
+            onViewChange={handleViewChange}
+            onArchiveTableOpen={handleArchiveTableOpen}
+            onNewTaskOpen={handleNewTaskOpen}
             currentView="archive"
           />
           
@@ -581,15 +567,9 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           setSearchQuery={setSearchQuery}
           searchCategory={searchCategory}
           setSearchCategory={setSearchCategory}
-          onViewChange={(view) => {
-            onViewChange(view);
-            onClose();
-          }}
-          onArchiveTableOpen={() => {}}
-          onNewTaskOpen={() => {}}
-          onNewClientOpen={() => {}}
-          priorityFilter={priorityFilter}
-          setPriorityFilter={setPriorityFilter}
+          onViewChange={handleViewChange}
+          onArchiveTableOpen={handleArchiveTableOpen}
+          onNewTaskOpen={handleNewTaskOpen}
           currentView="archive"
         />
 
@@ -600,9 +580,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSort={handleSort}
-          onRowClick={(task: Task) => {
-            handleTaskRowClick(task);
-          }}
+          onRowClick={handleRowClick}
           getRowClassName={getRowClassName}
           emptyStateType="archive"
           enableColumnVisibility={true}
@@ -654,7 +632,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                 </span>
               </div>
               <button
-                onClick={() => handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1])}
+                onClick={handleUndoClick}
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   border: 'none',
@@ -663,18 +641,12 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '13px',
-                  fontWeight: 600,
+fontWeight: 600,
                   transition: 'all 0.2s ease',
                   whiteSpace: 'nowrap'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
+                onMouseEnter={handleUndoMouseEnter}
+                onMouseLeave={handleUndoMouseLeave}
               >
                 Deshacer
               </button>
@@ -688,4 +660,5 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
 ArchiveTable.displayName = 'ArchiveTable';
 
-export default ArchiveTable; 
+export default ArchiveTable;
+ 

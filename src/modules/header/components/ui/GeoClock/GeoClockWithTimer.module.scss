@@ -1,0 +1,105 @@
+@use '@/app/styles/variables' as *;
+
+/* ==============================================================
+   🔮 GEO CLOCK WITH TIMER COMPONENT
+   ================================================================= */
+.geoClockWithTimer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition:
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    transform 0.3s ease,
+    border-color 0.3s ease;
+
+  /* ——— Light Mode: Cristalizado ——— */
+  &.light {
+    background: rgba(241, 245, 249, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow:
+      -8px -8px 16px rgba(255, 255, 255, 0.9),
+      8px 8px 16px rgba(0, 0, 0, 0.08),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
+      inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      background: rgba(241, 245, 249, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow:
+        -10px -10px 20px rgba(255, 255, 255, 0.95),
+        10px 10px 20px rgba(0, 0, 0, 0.12),
+        inset -6px -6px 12px rgba(255, 255, 255, 0.6),
+        inset 6px 6px 12px rgba(209, 217, 230, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+      background: rgba(241, 245, 249, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow:
+        -4px -4px 8px rgba(255, 255, 255, 0.85),
+        4px 4px 8px rgba(0, 0, 0, 0.06),
+        inset -2px -2px 4px rgba(255, 255, 255, 0.4),
+        inset 2px 2px 4px rgba(209, 217, 230, 0.2);
+    }
+  }
+
+  /* ——— Dark Mode: Cristalizado ——— */
+  &.dark {
+    background: rgba(30, 30, 30, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow:
+      -6px -6px 12px rgba(0, 0, 0, 0.3),
+      6px 6px 12px rgba(0, 0, 0, 0.2),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+      inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      transform: translateY(-2px) scale(1.05);
+      background: rgba(30, 30, 30, 0.9);
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow:
+        -8px -8px 16px rgba(0, 0, 0, 0.4),
+        8px 8px 16px rgba(0, 0, 0, 0.3),
+        inset -4px -4px 8px rgba(255, 255, 255, 0.08),
+        inset 4px 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    &:active {
+      transform: translateY(0) scale(0.98);
+      background: rgba(30, 30, 30, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset -4px -4px 8px rgba(255, 255, 255, 0.03),
+        inset 4px 4px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+.taskName {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inconsolata', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+
+  .light & {
+    color: #0D0D0D;
+  }
+
+  .dark & {
+    color: #D1D1D1;
+  }
+}
+

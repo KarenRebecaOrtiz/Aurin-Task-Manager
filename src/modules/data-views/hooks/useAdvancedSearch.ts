@@ -13,6 +13,10 @@ export interface SearchableTask {
   LeadedBy?: string[];
   AssignedTo?: string[];
   CreatedBy?: string;
+  project?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdAt?: string;
   [key: string]: any; // Allow additional properties from Task type
 }
 

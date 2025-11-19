@@ -20,6 +20,7 @@ import SearchableDropdown from '@/modules/config/components/ui/SearchableDropdow
 import { PopupLoader } from './ui/PopupLoader';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { Small, Muted } from '@/components/ui/Typography';
+import GoBackButton from '@/components/ui/GoBackButton';
 
 // Module imports
 import { CreateTaskProps, STEP_FIELDS, FORM_PERSISTENCE_KEYS } from '../types/form';
@@ -229,6 +230,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({
     <>
       <motion.div
         className={`${styles.container} ${isOpen ? styles.open : ''} ${isSaving ? styles.saving : ''}`}
+        style={{ position: 'relative' }}
         {...containerAnimation}
         transition={transitions.normal}
       >
@@ -236,13 +238,11 @@ const CreateTask: React.FC<CreateTaskProps> = ({
           <>
             {/* Header */}
             <div className={styles.header}>
+              <GoBackButton onClick={onToggle} />
               <div className={styles.headerTitle}>Crear Tarea</div>
               <div className={styles.headerProgress}>
                 <WizardProgress totalSteps={STEP_FIELDS.length} currentStep={currentStep} />
               </div>
-              <button className={styles.toggleButton} onClick={onToggle}>
-                <Image src="/x.svg" alt="Cerrar" width={16} height={16} />
-              </button>
             </div>
 
             {/* Content */}

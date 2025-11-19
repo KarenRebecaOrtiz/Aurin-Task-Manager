@@ -23,6 +23,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 // useChatSidebarStore removed as it's not being used
+import GoBackButton from '@/components/ui/GoBackButton';
 
 
 import { useTasksPageStore } from '@/stores/tasksPageStore';
@@ -30,7 +31,8 @@ import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import ArchiveTable from '@/modules/data-views/tasks/components/tables/ArchiveTable';
 import EditTask from '@/modules/task-crud/components/EditTask';
-import CreateTask from '@/modules/task-crud/components/CreateTask';
+import { SimplifiedCreateTaskForm } from '@/modules/task-crud/components/forms/SimplifiedCreateTaskForm';
+// import CreateTask from '@/modules/task-crud/components/CreateTask';
 import TasksPageModals from '@/modules/data-views/tasks/components/modals/TasksPageModals';
 
 // Helper functions for conditional logging (only in development)
@@ -530,19 +532,27 @@ function TasksPageContent() {
         />
       </div>
     
-      <div ref={contentRef} className={styles.content}>
+      <div ref={contentRef} className={styles.content} style={{ position: 'relative' }}>
+          {container !== 'tareas' && (
+            <GoBackButton onClick={() => handleContainerChange('tareas')} />
+          )}
           {/* Renderizar CreateTask, EditTask, y ArchiveTable como contenedores principales */}
           {isCreateTaskOpen ? (
-            <CreateTask
+            <SimplifiedCreateTaskForm
               isOpen={isCreateTaskOpen}
-              onToggle={handleCreateTaskToggle}
-              onHasUnsavedChanges={handleCreateTaskHasUnsavedChanges}
-              onCreateClientOpen={handleCreateTaskCreateClientOpen}
-              onEditClientOpen={handleCreateTaskEditClientOpen}
+              onOpenChange={handleCreateTaskToggle}
               onTaskCreated={handleCreateTaskCreated}
-              onShowSuccessAlert={handleShowSuccessAlert}
-              onShowFailAlert={handleShowFailAlert}
             />
+            // <CreateTask
+            //   isOpen={isCreateTaskOpen}
+            //   onToggle={handleCreateTaskToggle}
+            //   onHasUnsavedChanges={handleCreateTaskHasUnsavedChanges}
+            //   onCreateClientOpen={handleCreateTaskCreateClientOpen}
+            //   onEditClientOpen={handleCreateTaskEditClientOpen}
+            //   onTaskCreated={handleCreateTaskCreated}
+            //   onShowSuccessAlert={handleShowSuccessAlert}
+            //   onShowFailAlert={handleShowFailAlert}
+            // />
           ) : isEditTaskOpen && editTaskId ? (
             <EditTask
               isOpen={isEditTaskOpen}

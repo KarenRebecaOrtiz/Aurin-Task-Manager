@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import styles from './Dropdown.module.scss';
@@ -35,11 +36,22 @@ export const Dropdown = <T = unknown,>({
   closeOnSelect = true,
 }: DropdownProps<T>) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = useCallback(() => {
     if (disabled) return;
-    setIsOpen((prev) => !prev);
+    setIsOpen((prev) => {
+      if (!prev && dropdownRef.current) {
+        const rect = dropdownRef.current.getBoundingClientRect();
+        setPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+        });
+      }
+      return !prev;
+    });
   }, [disabled]);
 
   const handleItemClick = useCallback(
@@ -56,6 +68,11 @@ export const Dropdown = <T = unknown,>({
     (item: DropdownItem<T>) => () => handleItemClick(item),
     [handleItemClick]
   );
+
+  // Mount component
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -127,37 +144,45 @@ export const Dropdown = <T = unknown,>({
         )}
       </motion.div>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className={styles.menu}
-            {...dropdownAnimations.menu}
-            role="listbox"
-          >
-            {items.map((item, index) => (
-              <motion.div
-                key={item.id}
-                className={`${styles.item} ${item.value === value ? styles.selected : ''}`}
-                onClick={createItemClickHandler(item)}
-                {...dropdownAnimations.item(index)}
-                role="option"
-                aria-selected={item.value === value}
-              >
-                {item.icon && (
-                  typeof item.icon === 'string' ? (
-                    <Image src={item.icon} alt="" width={16} height={16} className={styles.itemIcon} />
-                  ) : (
-                    <div className={styles.itemIcon}>
-                      {item.icon}
-                    </div>
-                  )
-                )}
-                <span className={styles.itemLabel}>{item.label}</span>
-              </motion.div>
-            ))}
-          </motion.div>
+      {isMounted &&
+        isOpen &&
+        position &&
+        createPortal(
+          <AnimatePresence>
+            <motion.div
+              className={styles.menu}
+              style={{
+                top: position.top,
+                left: position.left,
+              }}
+              {...dropdownAnimations.menu}
+              role="listbox"
+            >
+              {items.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  className={`${styles.item} ${item.value === value ? styles.selected : ''}`}
+                  onClick={createItemClickHandler(item)}
+                  {...dropdownAnimations.item(index)}
+                  role="option"
+                  aria-selected={item.value === value}
+                >
+                  {item.icon && (
+                    typeof item.icon === 'string' ? (
+                      <Image src={item.icon} alt="" width={16} height={16} className={styles.itemIcon} />
+                    ) : (
+                      <div className={styles.itemIcon}>
+                        {item.icon}
+                      </div>
+                    )
+                  )}
+                  <span className={styles.itemLabel}>{item.label}</span>
+                </motion.div>
+              ))}
+            </motion.div>
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };

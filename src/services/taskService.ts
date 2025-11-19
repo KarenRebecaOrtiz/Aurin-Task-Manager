@@ -1,6 +1,5 @@
 /**
  * Task Service - Data layer for task management
- * Inspired by apps.apple.com architecture with:
  * - Promise-based async state management
  * - Optimistic updates with rollback
  * - Request caching with TTL

@@ -1,9 +1,9 @@
 import React from 'react';
 import { HeaderActionsProps } from '../../../types';
-import GeoClock from '../../../components/ui/GeoClock';
+import { GeoClockWithTimer } from '../../../components/ui/GeoClock';
 import { ToDoDynamic } from '../../ui/ToDoDynamic';
 import AvailabilityToggle from '../../../components/ui/AvailabilityToggle';
-import AvatarDropdown from '../../../components/ui/AvatarDropdown';
+import { AvatarDropdown } from '../../ui/AvatarDropdown';
 import styles from '../Header.module.scss';
 
 export const HeaderActions: React.FC<HeaderActionsProps> = ({
@@ -12,7 +12,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   return (
     <div className={styles.headerContainer}>
       <div className={styles.superiorHeader}>
-        <GeoClock />
+        <GeoClockWithTimer />
 
         <div className={styles.todoContainer}>
           <ToDoDynamic />

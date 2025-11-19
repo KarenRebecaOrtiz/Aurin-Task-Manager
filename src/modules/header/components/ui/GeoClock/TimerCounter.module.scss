@@ -1,0 +1,61 @@
+@use '@/app/styles/variables' as *;
+
+.timerCounter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Inconsolata', monospace;
+  letter-spacing: 0.5px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &.running {
+    .light & {
+      color: #22c55e;
+    }
+
+    .dark & {
+      color: #86efac;
+    }
+  }
+
+  &.paused {
+    .light & {
+      color: #a855f7;
+    }
+
+    .dark & {
+      color: #d8b4fe;
+    }
+  }
+}
+
+.separator {
+  font-size: 10px;
+  opacity: 0.7;
+  margin: 0 1px;
+}
+
+.runningIndicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.5s ease-in-out infinite;
+  margin-left: 2px;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}

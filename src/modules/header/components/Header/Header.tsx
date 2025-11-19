@@ -3,7 +3,7 @@
 import { useUser } from '@clerk/nextjs';
 import { useRef } from 'react';
 import { HeaderProps } from '../../types';
-import { useSubtitleContent, useHeaderNavigation } from '../../hooks';
+import { useSubtitleContent, useHeaderNavigation, useFirestoreUser } from '../../hooks';
 import { WelcomeSection, HeaderActions } from './components';
 import styles from './Header.module.scss';
 
@@ -16,11 +16,12 @@ const Header: React.FC<HeaderProps> = ({
   hasUnsavedChanges = false,
 }) => {
   const { user, isLoaded } = useUser();
+  const { firestoreUser } = useFirestoreUser();
   
   const wrapperRef = useRef<HTMLDivElement>(null);
   
   // Computed values
-  const userName = isLoaded && user ? user.firstName || 'Usuario' : 'Usuario';
+  const userName = firestoreUser?.fullName || (isLoaded && user ? user.firstName || 'Usuario' : 'Usuario');
   
   // Custom hooks
   const subtitle = useSubtitleContent(selectedContainer, isArchiveTableOpen);

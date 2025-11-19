@@ -69,7 +69,7 @@
   margin: 20px 16px;
   backdrop-filter: blur(1px);
   padding: 8px 0;
-  background:rgba(255, 255, 255, 0.086);
+  background:#f6f6f6;
 
   :global(.dark) & {
     background: linear-gradient(

@@ -1,6 +1,6 @@
 import React from 'react';
 import { WelcomeSectionProps } from '../../../types';
-import AvatarDropdown from '../../../components/ui/AvatarDropdown';
+import { AvatarDropdown } from '../../ui/AvatarDropdown';
 import { H2, Muted } from '@/components/ui/Typography';
 import styles from '../Header.module.scss';
 
