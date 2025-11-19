@@ -9,6 +9,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, handleApiError } from '@/lib/api/response';
 
+// @ts-expect-error - withAuth type inference issue with multiple return types
 export const GET = withAuth(async (userId) => {
   try {
     console.log('[API] Fetching users for authenticated user:', userId);

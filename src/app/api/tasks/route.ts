@@ -37,6 +37,7 @@ import { updateTaskActivity } from '@/lib/taskUtils';
  *
  * @returns 201 with created task data
  */
+// @ts-expect-error - withAuth type inference issue with multiple return types
 export const POST = withAuth(async (userId, request: NextRequest) => {
   try {
     console.log('[API] POST /api/tasks - Creating task for user:', userId);

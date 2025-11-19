@@ -5,9 +5,9 @@
 import { z } from 'zod';
 
 /**
- * Schema for task summary generation request
+ * Schema for task summary generation request (for notifications context)
  */
-export const generateSummarySchema = z.object({
+export const notificationSummarySchema = z.object({
   taskContext: z.string().min(1, 'Task context is required'),
   activityContext: z.string().optional().default(''),
   timersContext: z.string().optional().default(''),
@@ -16,7 +16,7 @@ export const generateSummarySchema = z.object({
   }),
 });
 
-export type GenerateSummaryInput = z.infer<typeof generateSummarySchema>;
+export type NotificationSummaryInput = z.infer<typeof notificationSummarySchema>;
 
 /**
  * Schema for notification email sending (legacy - for notification batches)
