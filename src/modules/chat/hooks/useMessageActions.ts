@@ -19,7 +19,7 @@ interface UseMessageActionsProps {
     name: string;
     avatarUrl?: string;
   };
-  encryptMessage?: (text: string) => Promise<string>;
+  encryptMessage?: (text: string) => Promise<{ encryptedData: string; nonce: string; tag: string; salt: string }>;
 }
 
 /**
@@ -56,7 +56,7 @@ export const useMessageActions = ({
       if (!text.trim() && !imageUrl && !fileUrl && !hours) return;
 
       // Encriptar texto si es necesario
-      const encryptedText = encryptMessage && text ? await encryptMessage(text) : text;
+      const encrypted = encryptMessage && text ? await encryptMessage(text) : null;
 
       // 1. Crear mensaje optimista
       const optimisticMessage: Message = {
@@ -72,7 +72,12 @@ export const useMessageActions = ({
         fileName: fileName || null,
         hours,
         dateString,
-        replyTo: replyingTo || null,
+        replyTo: replyingTo ? {
+          id: replyingTo.id,
+          senderName: replyingTo.senderName,
+          text: replyingTo.text ?? null,
+          imageUrl: replyingTo.imageUrl
+        } : null,
         isPending: true,
         hasError: false,
       };
@@ -85,14 +90,18 @@ export const useMessageActions = ({
         const messageId = await firebaseService.sendMessage(taskId, {
           senderId: currentUser.id,
           senderName: currentUser.name,
-          text: encryptedText || null,
-          read: false,
+          encrypted,
           imageUrl: imageUrl || null,
           fileUrl: fileUrl || null,
           fileName: fileName || null,
           hours,
           dateString,
-          replyTo: replyingTo || null,
+          replyTo: replyingTo ? {
+            id: replyingTo.id,
+            senderName: replyingTo.senderName,
+            text: replyingTo.text ?? null,
+            imageUrl: replyingTo.imageUrl
+          } : null,
           clientId: optimisticMessage.clientId,
         });
 
@@ -123,7 +132,7 @@ export const useMessageActions = ({
     async (messageId: string, newText: string) => {
       if (!newText.trim()) return;
 
-      const encryptedText = encryptMessage ? await encryptMessage(newText) : newText;
+      const encrypted = encryptMessage ? await encryptMessage(newText) : null;
 
       try {
         // 1. Actualizar optimistamente
@@ -131,7 +140,7 @@ export const useMessageActions = ({
 
         // 2. Actualizar en Firebase
         await firebaseService.updateMessage(taskId, messageId, {
-          text: encryptedText.trim(),
+          encrypted,
         });
 
         // 3. Limpiar estado de edición
@@ -169,18 +178,20 @@ export const useMessageActions = ({
   const handleRetryMessage = useCallback(
     async (message: Message) => {
       // 1. Limpiar estado de error y marcar como pending
-      updateMessage(taskId, message.id, { 
-        hasError: false, 
-        isPending: true 
+      updateMessage(taskId, message.id, {
+        hasError: false,
+        isPending: true
       });
 
       try {
+        // Encriptar texto si es necesario
+        const encrypted = encryptMessage && message.text ? await encryptMessage(message.text) : null;
+
         // 2. Reintentar envío
         const messageId = await firebaseService.sendMessage(taskId, {
           senderId: message.senderId,
           senderName: message.senderName,
-          text: message.text,
-          read: message.read,
+          encrypted,
           imageUrl: message.imageUrl,
           fileUrl: message.fileUrl,
           fileName: message.fileName,
@@ -204,7 +215,7 @@ export const useMessageActions = ({
         });
       }
     },
-    [taskId, updateMessage]
+    [taskId, updateMessage, encryptMessage]
   );
 
   return {

@@ -4,47 +4,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp,
 import { db } from '@/lib/firebase';
 import { updateTaskActivity } from '@/lib/taskUtils';
 import { v4 as uuidv4 } from 'uuid';
-
-interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  text: string | null;
-  timestamp: Timestamp | Date | null;
-  read: boolean;
-  hours?: number;
-  imageUrl?: string | null;
-  fileUrl?: string | null;
-  fileName?: string | null;
-  fileType?: string | null;
-  filePath?: string | null;
-  isPending?: boolean;
-  hasError?: boolean;
-  clientId: string;
-  replyTo?: {
-    id: string;
-    senderName: string;
-    text: string | null;
-    imageUrl?: string | null;
-  } | null;
-  isSummary?: boolean; // Indicates if this message is an AI summary
-  isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
-}
-
-interface Task {
-  id: string;
-  clientId: string;
-  project: string;
-  name: string;
-  description: string;
-  status: string;
-  priority: string;
-  startDate: string | Timestamp | null;
-  endDate: string | Timestamp | null;
-  LeadedBy: string[];
-  AssignedTo: string[];
-  CreatedBy?: string;
-}
+import type { Message, Task } from '@/types';
 
 interface UseMessageActionsProps {
   task: Task;

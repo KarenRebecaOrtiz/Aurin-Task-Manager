@@ -1,3 +1,3 @@
-export { tasksTableStore } from './tasksTableStore';
-export { archiveTableStore } from './archiveTableStore';
-export { useTasksTableActionsStore } from './tasksTableActionsStore';
+export { tasksTableStore } from '../tasks/stores/tasksTableStore';
+export { archiveTableStore } from '../tasks/stores/archiveTableStore';
+export { useTasksTableActionsStore } from '../tasks/stores/tasksTableActionsStore';

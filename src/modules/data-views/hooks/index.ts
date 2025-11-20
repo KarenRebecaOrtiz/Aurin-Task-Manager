@@ -1,6 +1,6 @@
 // Task-specific hooks
-export { useTasksCommon } from './useTasksCommon';
-export { useTaskArchiving } from './useTaskArchiving';
+export { useTasksCommon } from '../tasks/hooks/useTasksCommon';
+export { useTaskArchiving } from '../tasks/hooks/useTaskArchiving';
 
 // Advanced search hooks
 export { useAdvancedSearch, useTaskFiltering } from './useAdvancedSearch';
