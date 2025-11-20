@@ -18,10 +18,8 @@ interface AddressComponent {
   types: string[];
 }
 
-interface GeoClockProps {}
-
-const GeoClock: React.FC<GeoClockProps> = () => {
-  const { isDarkMode } = useTheme();
+const GeoClock: React.FC = () => {
+  const { isDarkMode: _isDarkMode } = useTheme();
   const [time, setTime] = useState<Date | null>(null);
   const [location, setLocation] = useState('Cargando...');
   const [temperature, setTemperature] = useState('Cargando...');

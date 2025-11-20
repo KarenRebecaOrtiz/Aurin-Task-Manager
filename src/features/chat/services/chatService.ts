@@ -1,7 +1,7 @@
 // This is a placeholder for the actual Firebase service.
 // The user would need to implement the Firebase logic here.
 
-import { Message } from '../types';
+import { ChatFeatureMessage } from '../types';
 
 // Placeholder for the Firebase listener unsubscribe function
 let unsubscribe: (() => void) | null = null;
@@ -9,7 +9,7 @@ let unsubscribe: (() => void) | null = null;
 export const chatService = {
   listenForMessages: (
     chatId: string,
-    onNewMessages: (messages: Message[]) => void,
+    onNewMessages: (messages: ChatFeatureMessage[]) => void,
     _onError: (error: string) => void
   ) => {
     // Placeholder implementation - would use Firebase in production
@@ -28,7 +28,7 @@ export const chatService = {
 
     // For now, we'll just simulate receiving a message after 2 seconds.
     setTimeout(() => {
-      const dummyMessage: Message = {
+      const dummyMessage: ChatFeatureMessage = {
         id: '1',
         content: 'Hello from the chat service!',
         senderId: 'system',

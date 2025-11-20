@@ -27,6 +27,8 @@ export interface AdviceInputProps {
   isAdmin: boolean;
 }
 
+// GeoClockProps is intentionally empty - component accepts no props
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface GeoClockProps {}
 
 export interface AvatarDropdownProps {

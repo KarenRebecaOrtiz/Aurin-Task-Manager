@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { chatService } from '../services/chatService';
-import { Message } from '../types';
+import { ChatFeatureMessage } from '../types';
 
 interface ChatState {
-  messages: Message[];
+  messages: ChatFeatureMessage[];
   isLoading: boolean;
   error: string | null;
   currentChatId: string | null;
