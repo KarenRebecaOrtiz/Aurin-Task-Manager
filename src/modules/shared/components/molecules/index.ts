@@ -7,7 +7,6 @@ export { TableCell, ClientCell, StatusCell, PriorityCell } from './TableCell';
 export type {
   TableCellProps,
   ClientCellProps,
-  Client,
   StatusCellProps,
   PriorityCellProps,
   Priority,

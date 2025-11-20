@@ -4,7 +4,7 @@ export interface Client {
   id: string;
   name: string;
   imageUrl: string;
-  projects: string[];
+  projects?: string[];
   projectCount?: number;
   createdBy?: string;
   createdAt?: string;

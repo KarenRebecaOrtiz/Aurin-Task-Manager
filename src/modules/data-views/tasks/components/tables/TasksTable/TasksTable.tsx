@@ -287,7 +287,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   ];
 
   const columns = baseColumns.map((col) => {
-    if (col.key === 'clientId') return { ...col, render: (task: Task) => renderClientColumn(tableState.effectiveClients.find((c) => c.id === task.clientId)) };
+    if (col.key === 'clientId') return { ...col, render: (task: Task) => renderClientColumn(tableState.effectiveClients.find((c) => c.id === task.clientId) as Client | undefined) };
     if (col.key === 'name') return { ...col, render: renderTaskNameColumn };
     if (col.key === 'notificationDot') return { ...col, render: renderNotificationDotColumn };
     if (col.key === 'assignedTo') return { ...col, render: renderAssignedToColumn };
