@@ -3,7 +3,6 @@
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { KanbanSkeletonLoader, EmptyTableState } from '@/modules/data-views/components/shared';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
@@ -11,7 +10,6 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiving';
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
 import { KANBAN_COLUMNS } from '@/modules/data-views/constants';
-import { tableAnimations } from '@/modules/data-views/animations/tableAnimations';
 
 // ✅ Importar componentes modulares
 import { KanbanColumn, KanbanDragOverlay } from './components';
@@ -336,72 +334,68 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
       </DndContext>
 
       {/* Undo Notification */}
-      <AnimatePresence>
-        {centralizedShowUndo && centralizedUndoStack.length > 0 && (
-          <motion.div
-            {...tableAnimations.undoNotification}
+      {centralizedShowUndo && centralizedUndoStack.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#10b981',
+            color: 'white',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            fontSize: '14px',
+            fontWeight: 500,
+            minWidth: '280px',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+              }}
+            />
+            <span>
+              {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive' ? 'Tarea desarchivada' : 'Tarea archivada'}
+            </span>
+          </div>
+          <button
+            onClick={() => handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1])}
             style={{
-              position: 'fixed',
-              bottom: '20px',
-              right: '20px',
-              backgroundColor: '#10b981',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
               color: 'white',
-              padding: '16px 20px',
-              borderRadius: '12px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-              zIndex: 9999,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              fontSize: '14px',
-              fontWeight: 500,
-              minWidth: '280px',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  animation: 'pulse 2s infinite',
-                }}
-              />
-              <span>
-                {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive' ? 'Tarea desarchivada' : 'Tarea archivada'}
-              </span>
-            </div>
-            <button
-              onClick={() => handleUndo(centralizedUndoStack[centralizedUndoStack.length - 1])}
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                border: 'none',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 600,
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              Deshacer
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Deshacer
+          </button>
+        </div>
+      )}
     </div>
   );
 };

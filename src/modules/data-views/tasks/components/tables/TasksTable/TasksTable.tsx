@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useMemo, useCallback, memo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from 'zustand';
-import Table from '@/modules/shared/components/ui/Table';
+import Table from '@/modules/data-views/components/shared/table/Table';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import styles from './TasksTable.module.scss';
 
@@ -27,7 +26,6 @@ import { useTasksTableActionsStore } from '@/modules/data-views/tasks/stores/tas
 import { normalizeStatus } from '@/modules/data-views/utils';
 import { StatusCell, PriorityCell, ClientCell, UserCell } from '@/modules/data-views/components/shared/cells';
 import { getLastActivityTimestamp } from '@/lib/taskUtils';
-import { tableAnimations } from '@/modules/data-views/animations/tableAnimations';
 
 interface Client {
   id: string;
@@ -416,27 +414,22 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           <p>Intenta ajustar los filtros de búsqueda</p>
         </div>
       )}
-      <AnimatePresence>
-        {showUndo && undoStack.length > 0 && (
-          <motion.div
-            {...tableAnimations.undoNotification}
-            className={styles.undoNotification}
+      {showUndo && undoStack.length > 0 && (
+        <div className={styles.undoNotification}>
+          <span>
+            {undoStack[undoStack.length - 1]?.action === 'unarchive'
+              ? 'Tarea desarchivada'
+              : 'Tarea archivada'}
+          </span>
+          <button
+            onClick={handleUndoClick}
+            onMouseEnter={handleUndoMouseEnter}
+            onMouseLeave={handleUndoMouseLeave}
           >
-            <span>
-              {undoStack[undoStack.length - 1]?.action === 'unarchive' 
-                ? 'Tarea desarchivada' 
-                : 'Tarea archivada'}
-            </span>
-            <button
-              onClick={handleUndoClick}
-              onMouseEnter={handleUndoMouseEnter}
-              onMouseLeave={handleUndoMouseLeave}
-            >
-              Deshacer
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Deshacer
+          </button>
+        </div>
+      )}
     </div>
   );
 });

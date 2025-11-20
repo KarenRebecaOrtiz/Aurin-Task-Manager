@@ -29,6 +29,7 @@ import {
 import { db } from "@/lib/firebase";
 import { updateTaskActivity } from "@/lib/taskUtils";
 import { chatCache } from "./simpleChatCache";
+import type { Message } from "../types";
 
 // Re-export para mantener compatibilidad
 export type { DocumentSnapshot } from "firebase/firestore";
@@ -210,7 +211,7 @@ export class FirebaseService {
     const messages = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    }));
+    }) as Message);
 
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
 

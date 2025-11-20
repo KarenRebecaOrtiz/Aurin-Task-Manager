@@ -3,8 +3,7 @@
 import { useEffect, useRef, useMemo, memo, useCallback, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
-import Table from '@/modules/shared/components/ui/Table/Table';
+import Table from '@/modules/data-views/components/shared/table/Table';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import styles from './ArchiveTable.module.scss';
 
@@ -585,70 +584,63 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         />
         
         {/* Undo Notification */}
-        <AnimatePresence>
-          {centralizedShowUndo && centralizedUndoStack.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 50, scale: 0.9 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className={styles.undoNotification}
+        {centralizedShowUndo && centralizedUndoStack.length > 0 && (
+          <div
+            className={styles.undoNotification}
+            style={{
+              position: 'fixed',
+              bottom: '20px',
+              right: '20px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              fontSize: '14px',
+              fontWeight: 500,
+              minWidth: '280px',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: 'white',
+                borderRadius: '50%'
+              }} />
+              <span>
+                {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive'
+                  ? 'Tarea desarchivada'
+                  : 'Tarea archivada'}
+              </span>
+            </div>
+            <button
+              onClick={handleUndoClick}
               style={{
-                position: 'fixed',
-                bottom: '20px',
-                right: '20px',
-                backgroundColor: '#10b981',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
                 color: 'white',
-                padding: '16px 20px',
-                borderRadius: '12px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                zIndex: 9999,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                fontSize: '14px',
-                fontWeight: 500,
-                minWidth: '280px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
               }}
+              onMouseEnter={handleUndoMouseEnter}
+              onMouseLeave={handleUndoMouseLeave}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  animation: 'pulse 2s infinite'
-                }} />
-                <span>
-                  {centralizedUndoStack[centralizedUndoStack.length - 1]?.action === 'unarchive' 
-                    ? 'Tarea desarchivada' 
-                    : 'Tarea archivada'}
-                </span>
-              </div>
-              <button
-                onClick={handleUndoClick}
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap'
-                }}
-                onMouseEnter={handleUndoMouseEnter}
-                onMouseLeave={handleUndoMouseLeave}
-              >
-                Deshacer
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Deshacer
+            </button>
+          </div>
+        )}
       </div>
     );
   },

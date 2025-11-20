@@ -4,7 +4,7 @@ export { default as Header } from './components/Header';
 // Componentes UI (exportados para uso externo si es necesario)
 export { default as AdviceInput } from './components/ui/AdviceInput';
 export { default as AvailabilityToggle } from './components/ui/AvailabilityToggle';
-export { default as GeoClock } from './components/ui/GeoClock';
+export { GeoClock, GeoClockWithTimer } from './components/ui/GeoClock';
 export { TextShimmer } from './components/ui/TextShimmer';
 export { AvatarDropdown } from './components/ui/AvatarDropdown';
 

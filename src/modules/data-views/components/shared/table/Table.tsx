@@ -1,11 +1,9 @@
 'use client';
 
 import React, { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { gsap } from 'gsap';
 import Image from 'next/image';
 import styles from './Table.module.scss';
 import TableHeader, { Column as TableHeaderColumn } from './TableHeader';
-
 
 interface HasId {
   id: string;
@@ -95,20 +93,6 @@ const Table = memo(
   useEffect(() => {
     // Debug logging disabled
   }, [data.length, currentPage, totalPages, startIndex, itemsPerPage, paginatedData.length]);
-
-    useEffect(() => {
-      if (tableRef.current && paginatedData.length > 0) {
-        const rows = tableRef.current.querySelectorAll(`.${styles.row}`);
-        gsap.fromTo(
-          rows,
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: 'power2.out' },
-        );
-        return () => {
-          gsap.killTweensOf(rows);
-        };
-      }
-    }, [paginatedData]);
 
     // Detect mobile screen size
     useEffect(() => {

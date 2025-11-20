@@ -59,7 +59,6 @@ export const MessageItem = memo(
         onEdit,
         onEditTime,
         onDelete,
-        _onReply,
         onDownload,
         onReplyClick,
       },
@@ -215,13 +214,10 @@ export const MessageItem = memo(
                   <span className={styles.timestamp}>
                     {' • '}
                     {(() => {
-                      if (message.dateString instanceof Date) {
-                        return message.dateString.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
-                      }
                       if (typeof message.dateString === 'string') {
                         return message.dateString;
                       }
-                      const dateObj = (message.dateString as { toDate?: () => Date })?.toDate?.();
+                      const dateObj = (message.dateString as any)?.toDate?.();
                       if (dateObj instanceof Date) {
                         return dateObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
                       }

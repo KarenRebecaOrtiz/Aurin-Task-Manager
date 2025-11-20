@@ -22,7 +22,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   clientName,
   clientImageUrl,
   users = [],
-  _messages = [],
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
@@ -176,7 +175,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                           userId={member.id}
                           imageUrl={member.imageUrl}
                           userName={member.fullName}
-                          size="tiny"
+                          size="xs"
                         />
                       </motion.div>
                     ))}
