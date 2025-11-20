@@ -3,6 +3,7 @@
 import { useEffect, useRef, useMemo, useCallback, memo, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useStore } from 'zustand';
+import { Task, Client, User } from '@/types';
 import Table from '@/modules/data-views/components/shared/table/Table';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import styles from './TasksTable.module.scss';
@@ -26,41 +27,6 @@ import { useTasksTableActionsStore } from '@/modules/data-views/tasks/stores/tas
 import { normalizeStatus } from '@/modules/data-views/utils';
 import { StatusCell, PriorityCell, ClientCell, UserCell } from '@/modules/data-views/components/shared/cells';
 import { getLastActivityTimestamp } from '@/lib/taskUtils';
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-}
-
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
-}
-
-interface Task {
-  id: string;
-  clientId: string;
-  project: string;
-  name: string;
-  description: string;
-  status: string;
-  priority: string;
-  startDate: string | null;
-  endDate: string | null;
-  LeadedBy: string[];
-  AssignedTo: string[];
-  createdAt: string;
-  CreatedBy?: string;
-  lastActivity?: string;
-  hasUnreadUpdates?: boolean;
-  lastViewedBy?: { [userId: string]: string };
-  archived?: boolean;
-  archivedAt?: string;
-  archivedBy?: string;
-}
 
 const cleanupTasksTableListeners = () => {
   // Placeholder for cleanup logic
@@ -250,7 +216,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     return '';
   }, []);
 
-  const renderClientColumn = useCallback((client: Client) => <ClientCell client={client} />, []);
+  const renderClientColumn = useCallback((client: Client | undefined) => <ClientCell client={client} />, []);
   const renderTaskNameColumn = useCallback((task: Task) => (
     <div className={styles.taskNameWrapper}><span className={styles.taskName}>{task.name}</span></div>
   ), []);

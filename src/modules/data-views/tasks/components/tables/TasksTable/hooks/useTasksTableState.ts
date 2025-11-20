@@ -3,23 +3,10 @@ import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { tasksTableStore } from '@/modules/data-views/tasks/stores/tasksTableStore';
 import { useDataStore } from '@/stores/dataStore';
-import { Task } from '@/types';
+import { Task, Client, User } from '@/types';
 import { sortTasks } from '@/modules/data-views/utils/sortingUtils';
 import { TaskSortKey, SortDirection } from '@/modules/data-views/constants/sortingConstants';
 import { useAdvancedSearch } from '@/modules/data-views/hooks/useAdvancedSearch';
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-}
-
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
-}
 
 interface UseTasksTableStateProps {
   externalTasks?: Task[];

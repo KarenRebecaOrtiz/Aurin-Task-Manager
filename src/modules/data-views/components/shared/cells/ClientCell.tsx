@@ -8,6 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { Client } from '@/types';
 import styles from './ClientCell.module.scss';
 
 // Lazy load the modal to avoid bundle size issues
@@ -15,25 +16,6 @@ const AccountDetailsCard = dynamic(
   () => import('@/modules/data-views/clients/components/modals/AccountDetailsCard'),
   { ssr: false }
 );
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-  projects: string[];
-  email?: string;
-  phone?: string;
-  address?: string;
-  industry?: string;
-  website?: string;
-  taxId?: string;
-  notes?: string;
-  isActive?: boolean;
-  createdAt?: string;
-  createdBy?: string;
-  lastModified?: string;
-  lastModifiedBy?: string;
-}
 
 interface ClientCellProps {
   client: Client | null | undefined;

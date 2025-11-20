@@ -5,6 +5,7 @@ import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { Client } from '@/types';
 import {
   backdropVariants,
   panelVariants,
@@ -25,25 +26,6 @@ import { SwitchToggle } from '@/components/ui/switch-toggle';
 import { Info, Briefcase, Calendar, User, Mail, Phone, MapPin, Building2, Tag, FileText } from 'lucide-react';
 import styles from './AccountDetailsCard.module.scss';
 import { invalidateClientsCache } from '@/lib/cache-utils';
-
-interface Client {
-  id?: string;
-  name: string;
-  imageUrl: string;
-  projects: string[];
-  email?: string;
-  phone?: string;
-  address?: string;
-  industry?: string;
-  website?: string;
-  taxId?: string;
-  notes?: string;
-  isActive?: boolean;
-  createdAt?: string;
-  createdBy?: string;
-  lastModified?: string;
-  lastModifiedBy?: string;
-}
 
 interface AccountDetailsCardProps {
   isOpen: boolean;
