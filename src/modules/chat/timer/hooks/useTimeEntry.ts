@@ -14,7 +14,7 @@ import { addTimeToTaskTransaction } from '../services/timerFirebase';
 import { firebaseService } from '../../services/firebaseService';
 import { parseTimeInput } from '../utils/timerFormatters';
 import { timerFormSchema } from '../utils/timerValidation';
-import { DEFAULT_TIMER_VALUES, SUCCESS_MESSAGES } from '../utils/timerConstants';
+import { DEFAULT_TIMER_VALUES } from '../utils/timerConstants';
 import type { UseTimeEntryReturn, TimeEntryFormData } from '../types/timer.types';
 
 /**
@@ -88,8 +88,6 @@ export function useTimeEntry(
       try {
         setIsSubmitting(true);
 
-        console.log('[useTimeEntry] Submitting time entry:', data);
-
         // Parse time input
         const { hours, minutes } = parseTimeInput(data.time);
 
@@ -117,9 +115,6 @@ export function useTimeEntry(
           data.comment || undefined
         );
 
-        // Success feedback
-        console.log(SUCCESS_MESSAGES.TIME_ENTRY_ADDED);
-
         // Reset form
         form.reset(DEFAULT_TIMER_VALUES);
 
@@ -128,8 +123,6 @@ export function useTimeEntry(
           onSuccess();
         }
       } catch (error) {
-        console.error('[useTimeEntry] Submission failed:', error);
-
         // Set form error
         form.setError('root', {
           type: 'manual',
@@ -156,8 +149,8 @@ export function useTimeEntry(
    */
   const errors = Object.entries(form.formState.errors).reduce(
     (acc, [key, error]) => {
-      if (error?.message) {
-        acc[key] = error.message;
+      if (error && typeof error === 'object' && 'message' in error) {
+        acc[key] = String(error.message);
       }
       return acc;
     },

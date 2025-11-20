@@ -191,6 +191,11 @@ export const useTaskColumns = ({
           render: (task: Task) => {
             if (!isAdmin) return null;
 
+            const animateClick = (element: HTMLElement) => {
+              element.classList.add(styles.clicked);
+              setTimeout(() => element.classList.remove(styles.clicked), 200);
+            };
+
             return (
               <ActionMenu
                 task={task}
@@ -198,8 +203,9 @@ export const useTaskColumns = ({
                 onEdit={handleEdit(task.id)}
                 onDelete={handleDelete(task.id)}
                 onArchive={handleArchive(task.id)}
-                isOpen={actionMenuOpenId === task.id}
-                onToggle={handleToggle(task.id)}
+                animateClick={animateClick}
+                actionMenuRef={null}
+                actionButtonRef={() => {}}
               />
             );
           },
@@ -208,5 +214,5 @@ export const useTaskColumns = ({
 
       return col;
     });
-  }, [clients, users, userId, isAdmin, handleEdit, handleDelete, handleArchive, actionMenuOpenId, handleToggle]);
+  }, [clients, users, userId, isAdmin, handleEdit, handleDelete, handleArchive]);
 };

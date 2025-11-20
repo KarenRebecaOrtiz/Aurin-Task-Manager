@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ClientAvatar } from '@/modules/shared/components/atoms/Avatar/ClientAvatar';
+import { Client } from '@/types';
 import styles from './TableCell.module.scss';
 
 // Lazy load the modal to avoid bundle size issues
@@ -10,25 +11,6 @@ const AccountDetailsCard = dynamic(
   () => import('@/modules/data-views/clients/components/modals/AccountDetailsCard'),
   { ssr: false }
 );
-
-export interface Client {
-  id?: string;
-  name: string;
-  imageUrl: string;
-  projects: string[];
-  email?: string;
-  phone?: string;
-  address?: string;
-  industry?: string;
-  website?: string;
-  taxId?: string;
-  notes?: string;
-  isActive?: boolean;
-  createdAt?: string;
-  createdBy?: string;
-  lastModified?: string;
-  lastModifiedBy?: string;
-}
 
 export interface ClientCellProps {
   client?: Client;

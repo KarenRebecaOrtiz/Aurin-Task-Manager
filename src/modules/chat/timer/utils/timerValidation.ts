@@ -18,7 +18,7 @@ import { ERROR_MESSAGES, TIME_FORMAT_REGEX, MAX_COMMENT_LENGTH } from './timerCo
  * Schema for time input validation (HH:MM format)
  */
 export const timeInputSchema = z
-  .string()
+  .string({ required_error: ERROR_MESSAGES.TIME_REQUIRED })
   .min(1, { message: ERROR_MESSAGES.TIME_REQUIRED })
   .regex(TIME_FORMAT_REGEX, {
     message: ERROR_MESSAGES.INVALID_TIME_FORMAT,

@@ -1,1 +1,2 @@
-export { default as Table } from './Table';
+// Table component removed - no longer exists
+export {};

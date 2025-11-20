@@ -7,20 +7,12 @@ import { STATUS_ORDER } from '../constants/statusConstants';
 import { PRIORITY_ORDER } from '../constants/priorityConstants';
 import { SortDirection, TaskSortKey } from '../constants/sortingConstants';
 import { normalizeStatus } from './statusUtils';
+import { Task } from '@/types';
 
 /**
  * Generic task interface for sorting
  */
-interface SortableTask {
-  id: string;
-  name: string;
-  status: string;
-  priority: string;
-  clientId: string;
-  createdAt: string;
-  lastActivity?: string;
-  AssignedTo?: string[];
-  LeadedBy?: string[];
+interface SortableTask extends Task {
   [key: string]: any;
 }
 
@@ -168,7 +160,7 @@ export const sortTasks = <T extends SortableTask>(
   clients: Client[] = [],
   users: User[] = []
 ): T[] => {
-  if (!sortKey || sortKey === '') {
+  if (!sortKey) {
     // Default sort by createdAt descending
     return sortByDate(tasks, 'createdAt', 'desc') as T[];
   }

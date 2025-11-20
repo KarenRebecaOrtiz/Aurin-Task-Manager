@@ -42,7 +42,10 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
   const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
 
   const handleAvatarImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = '/empty-image.png';
+    // Fallback to empty image on error
+    if (e.currentTarget.src !== '/empty-image.png') {
+      e.currentTarget.src = '/empty-image.png';
+    }
   }, []);
 
   const handleAvatarClick = useCallback((user: User, e: React.MouseEvent) => {
@@ -118,12 +121,14 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
               title={`Ver perfil de ${user.fullName}`}
             >
               <Image
-                src={user.imageUrl || '/empty-image.png'}
+                src={user.imageUrl && user.imageUrl.trim() ? user.imageUrl : '/empty-image.png'}
                 alt={`${user.fullName}'s avatar`}
                 width={avatarSize}
                 height={avatarSize}
                 className="rounded-full object-cover w-full h-full"
                 onError={handleAvatarImageError}
+                priority={false}
+                loading="lazy"
               />
               <AnimatePresence>
                 {isHovered && showTooltip && (

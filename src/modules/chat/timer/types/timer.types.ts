@@ -212,17 +212,11 @@ export interface TimerSyncStore {
 
 /**
  * Form data for manual time entry
+ * Imported from Zod schema for type safety
  *
- * @interface TimeEntryFormData
+ * @see timerValidation.ts for schema definition
  */
-export interface TimeEntryFormData {
-  /** Time in HH:MM format */
-  time: string;
-  /** Date of the work */
-  date: Date;
-  /** Optional comment */
-  comment?: string;
-}
+export type TimeEntryFormData = import('../utils/timerValidation').TimerFormData;
 
 // ============================================================================
 // HOOK RETURN TYPES
@@ -300,7 +294,7 @@ export interface UseTimerSyncReturn {
  */
 export interface UseTimeEntryReturn {
   /** React Hook Form instance */
-  form: UseFormReturn<TimeEntryFormData>;
+  form: UseFormReturn<TimeEntryFormData, unknown, TimeEntryFormData>;
   /** Whether form is submitting */
   isSubmitting: boolean;
   /** Submit the time entry */

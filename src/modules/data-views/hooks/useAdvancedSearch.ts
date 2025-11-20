@@ -1,22 +1,10 @@
 import { useMemo, useCallback } from 'react';
+import { Task } from '@/types';
 
 /**
  * Tipos de datos soportados para búsqueda avanzada
  */
-export interface SearchableTask {
-  id: string;
-  name?: string;
-  description?: string;
-  status?: string;
-  priority?: string;
-  clientId?: string;
-  LeadedBy?: string[];
-  AssignedTo?: string[];
-  CreatedBy?: string;
-  project?: string;
-  startDate?: string | null;
-  endDate?: string | null;
-  createdAt?: string;
+export interface SearchableTask extends Task {
   [key: string]: any; // Allow additional properties from Task type
 }
 

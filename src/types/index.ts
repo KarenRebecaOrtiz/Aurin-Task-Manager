@@ -8,6 +8,17 @@ export interface Client {
   projects?: string[];
   createdBy?: string;
   createdAt?: string;
+  // Extended fields for detailed client information
+  email?: string;
+  phone?: string;
+  address?: string;
+  industry?: string;
+  website?: string;
+  taxId?: string;
+  notes?: string;
+  isActive?: boolean;
+  lastModified?: string;
+  lastModifiedBy?: string;
 }
 
 export interface User {

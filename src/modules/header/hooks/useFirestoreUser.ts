@@ -34,7 +34,6 @@ export const useFirestoreUser = () => {
             user.update({
               firstName: userData.fullName.split(' ')[0],
               lastName: userData.fullName.split(' ').slice(1).join(' '),
-              imageUrl: userData.profilePhoto,
             }).catch(() => {
               // Manejar error de actualización de Clerk silenciosamente
             });

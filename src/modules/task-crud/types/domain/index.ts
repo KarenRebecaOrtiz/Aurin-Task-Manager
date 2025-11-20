@@ -4,6 +4,7 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
+export type { Client } from '@/types';
 
 // Task Status enum
 export const TASK_STATUSES = [
@@ -21,15 +22,6 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_PRIORITIES = ['Baja', 'Media', 'Alta'] as const;
 
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
-
-// Client interface
-export interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-  projects: string[];
-  createdBy: string;
-}
 
 // Task interface (Firestore document)
 export interface Task {

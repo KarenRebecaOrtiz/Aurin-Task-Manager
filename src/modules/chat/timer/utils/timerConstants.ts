@@ -75,7 +75,7 @@ export const DEFAULT_TIMER_VALUES: TimeEntryFormData = {
   time: '00:00',
   date: new Date(),
   comment: '',
-} as const;
+};
 
 /**
  * Default device ID prefix

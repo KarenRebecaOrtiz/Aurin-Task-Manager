@@ -126,9 +126,14 @@ async function fetchUsersFromAPI(requestStartTime?: number): Promise<User[]> {
       const userData = userDoc.exists() ? userDoc.data() : {};
 
       // --- USER: CUSTOMIZE YOUR DATA MAPPING HERE ---
+      // Validate imageUrl: must be a non-empty string and a valid URL
+      const imageUrl = clerkUser.imageUrl && typeof clerkUser.imageUrl === 'string' && clerkUser.imageUrl.trim() 
+        ? clerkUser.imageUrl 
+        : '/empty-image.png';
+      
       return {
         id: clerkUser.id,
-        imageUrl: clerkUser.imageUrl || '',
+        imageUrl,
         fullName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'Sin nombre',
         role: userData.role || clerkUser.publicMetadata?.role || 'Sin rol',
         description: userData.description || clerkUser.publicMetadata?.description || '',

@@ -4,7 +4,7 @@
  * Used in TasksTable and ArchiveTable
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import ActionMenu from '../../../components/ui/ActionMenu';
 import styles from './ActionCell.module.scss';
 
@@ -35,8 +35,8 @@ interface ActionCellProps {
   onDelete: () => void;
   onArchive: () => void;
   actionButtonRef?: (el: HTMLButtonElement | null) => void;
-  actionMenuOpenId: string | null;
-  onActionMenuToggle: (taskId: string) => void;
+  actionMenuOpenId?: string | null;
+  onActionMenuToggle?: (taskId: string) => void;
   className?: string;
 }
 
@@ -52,16 +52,21 @@ const ActionCell: React.FC<ActionCellProps> = ({
   onDelete,
   onArchive,
   actionButtonRef,
-  actionMenuOpenId,
-  onActionMenuToggle,
   className,
 }) => {
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
   // Check if user has permission to see action menu
   const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
 
   if (!shouldShowActionMenu) {
     return null;
   }
+
+  const animateClick = (element: HTMLElement) => {
+    element.classList.add(styles.clicked);
+    setTimeout(() => element.classList.remove(styles.clicked), 200);
+  };
 
   return (
     <div className={`${styles.actionWrapper} ${className || ''}`}>
@@ -71,9 +76,9 @@ const ActionCell: React.FC<ActionCellProps> = ({
         onEdit={onEdit}
         onDelete={onDelete}
         onArchive={onArchive}
-        actionButtonRef={actionButtonRef}
-        isOpen={actionMenuOpenId === task.id}
-        onToggle={() => onActionMenuToggle(task.id)}
+        animateClick={animateClick}
+        actionMenuRef={actionMenuRef}
+        actionButtonRef={actionButtonRef || (() => {})}
       />
     </div>
   );

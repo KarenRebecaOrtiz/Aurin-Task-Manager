@@ -137,7 +137,7 @@ export const useTimerStateStore = create<TimerStateStore>()(
        */
       clearTimer: (taskId: string) => {
         set((prev) => {
-          const { [taskId]: removed, ...rest } = prev.activeTimers;
+          const { [taskId]: _removed, ...rest } = prev.activeTimers;
           return { activeTimers: rest };
         });
       },
@@ -205,25 +205,30 @@ export const useTimerStateStore = create<TimerStateStore>()(
         currentTaskId: state.currentTaskId,
         currentUserId: state.currentUserId,
       }),
-      // Custom serialization to handle Date objects
-      serialize: (state) => {
-        return JSON.stringify(state, (key, value) => {
-          // Convert Date objects to ISO strings
-          if (value instanceof Date) {
-            return { __type: 'Date', value: value.toISOString() };
-          }
-          return value;
-        });
-      },
-      // Custom deserialization to restore Date objects
-      deserialize: (str) => {
-        return JSON.parse(str, (key, value) => {
-          // Restore Date objects from ISO strings
-          if (value && typeof value === 'object' && value.__type === 'Date') {
-            return new Date(value.value);
-          }
-          return value;
-        });
+      //  storage with serialization to handle Date objects
+      storage: {
+        getItem: (name) => {
+          const str = localStorage.getItem(name);
+          if (!str) return null;
+          return JSON.parse(str, (_key, value) => {
+            // Restore Date objects from ISO strings
+            if (value && typeof value === 'object' && value.__type === 'Date') {
+              return new Date(value.value);
+            }
+            return value;
+          });
+        },
+        setItem: (name, value) => {
+          const str = JSON.stringify(value, (_key, val) => {
+            // Convert Date objects to ISO strings
+            if (val instanceof Date) {
+              return { __type: 'Date', value: val.toISOString() };
+            }
+            return val;
+          });
+          localStorage.setItem(name, str);
+        },
+        removeItem: (name) => localStorage.removeItem(name),
       },
     }
   )

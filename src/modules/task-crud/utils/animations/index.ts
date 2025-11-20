@@ -151,18 +151,20 @@ export const withTransition = (variant: Variants, transition: Transition): Varia
   return {
     ...variant,
     transition,
-  };
+  } as unknown as Variants;
 };
 
 // Get animation with delay
 export const withDelay = (variant: Variants, delay: number): Variants => {
+  const variantObj = variant as Record<string, unknown>;
+  const existingTransition = variantObj.transition as Record<string, unknown> | undefined;
   return {
     ...variant,
     transition: {
-      ...(variant.transition || {}),
+      ...(existingTransition || {}),
       delay,
     },
-  };
+  } as Variants;
 };
 
 // Stagger animation generator

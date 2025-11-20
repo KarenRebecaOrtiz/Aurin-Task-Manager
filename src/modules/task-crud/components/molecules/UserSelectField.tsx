@@ -33,7 +33,7 @@ export function UserSelectField({
   className 
 }: UserSelectFieldProps) {
   return (
-    <Select value={value} onValueChange={onValueChange} modal={true}>
+    <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className={cn("w-full", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

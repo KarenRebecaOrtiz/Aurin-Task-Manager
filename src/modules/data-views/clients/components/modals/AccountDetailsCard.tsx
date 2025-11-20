@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { SwitchToggle } from '@/components/ui/switch-toggle';
 import { Info, Briefcase, Calendar, User, Mail, Phone, MapPin, Building2, Tag, FileText } from 'lucide-react';
 import styles from './AccountDetailsCard.module.scss';
 import { invalidateClientsCache } from '@/lib/cache-utils';
@@ -359,8 +359,7 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
                                 {formData.isActive ? 'Activo' : 'Inactivo'}
                               </span>
                             ) : (
-                              <Switch
-                                id="clientStatus"
+                              <SwitchToggle
                                 checked={formData.isActive}
                                 onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
                               />

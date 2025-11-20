@@ -5,7 +5,7 @@
  * Clicking on the avatar opens the AccountDetailsCard modal
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import styles from './ClientCell.module.scss';
@@ -20,7 +20,7 @@ interface Client {
   id: string;
   name: string;
   imageUrl: string;
-  projects?: string[];
+  projects: string[];
   email?: string;
   phone?: string;
   address?: string;
@@ -50,16 +50,32 @@ const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpda
   const [imageError, setImageError] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleImageError = () => {
+  const handleImageError = useCallback(() => {
     setImageError(true);
-  };
+  }, []);
 
-  const handleAvatarClick = (e: React.MouseEvent) => {
+  const handleAvatarClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent event bubbling
     if (client) {
       setIsModalOpen(true);
     }
-  };
+  }, [client]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const mouseEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      }) as unknown as React.MouseEvent;
+      handleAvatarClick(mouseEvent);
+    }
+  }, [handleAvatarClick]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+  }, []);
 
   if (!client) {
     return <span className={styles.noClient}>Sin cuenta</span>;
@@ -72,29 +88,26 @@ const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpda
         onClick={handleAvatarClick}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleAvatarClick(e as any);
-          }
-        }}
+        onKeyDown={handleKeyDown}
         title={`Ver detalles de ${client.name}`}
       >
         <Image
           style={{ borderRadius: '999px' }}
-          src={imageError ? '/empty-image.png' : (client.imageUrl || '/empty-image.png')}
+          src={imageError ? '/empty-image.png' : (client.imageUrl?.trim() ? client.imageUrl : '/empty-image.png')}
           alt={client.name || 'Client Image'}
           width={40}
           height={40}
           className={styles.clientImage}
           onError={handleImageError}
+          priority={false}
+          loading="lazy"
         />
       </div>
 
       {isModalOpen && (
         <AccountDetailsCard
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={handleCloseModal}
           client={client}
           mode="view"
           onSave={onClientUpdate}
