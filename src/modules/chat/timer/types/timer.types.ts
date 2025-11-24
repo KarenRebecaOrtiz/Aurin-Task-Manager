@@ -450,6 +450,8 @@ export interface TimerDisplayProps {
   showControls?: boolean;
   onTogglePanel?: () => void;
   compact?: boolean;
+  /** Mini/discrete mode: scales to 65% with minimal padding */
+  mini?: boolean;
 }
 
 /**

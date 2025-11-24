@@ -30,13 +30,15 @@ import styles from './TimerDisplay.module.scss';
  * @param showControls - Whether to show control buttons
  * @param onTogglePanel - Callback to open full timer panel
  * @param compact - Whether to use compact display mode
+ * @param mini - Whether to use mini/discrete display mode (65% scale)
  */
 export function TimerDisplay({
   taskId,
   userId,
   showControls = true,
   onTogglePanel,
-  compact = false
+  compact = false,
+  mini = false
 }: TimerDisplayProps) {
   // Timer state
   const { timerSeconds } = useTimerState(taskId);
@@ -66,7 +68,7 @@ export function TimerDisplay({
 
 
   return (
-    <div className={`${styles.timerDisplay} ${compact ? styles.compact : ''}`}>
+    <div className={`${styles.timerDisplay} ${compact ? styles.compact : ''} ${mini ? styles.mini : ''}`}>
       {/* Warning Badge if timer running elsewhere */}
       {runningTimerTaskId && runningTimerTaskId !== taskId && (
         <div className={styles.warningBadge} title={`Timer activo en tarea: ${runningTimerTaskId}`}>

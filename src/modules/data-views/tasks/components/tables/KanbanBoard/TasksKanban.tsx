@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision,
+  CollisionDetection,
+} from '@dnd-kit/core';
 import { useAuth } from '@/contexts/AuthContext';
 import { KanbanSkeletonLoader, EmptyTableState } from '@/modules/data-views/components/shared';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
@@ -159,8 +167,64 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   // Refs
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const lastOverId = useRef<string | null>(null);
+  const recentlyMovedToNewContainer = useRef(false);
 
   const userId = useMemo(() => user?.id || '', [user]);
+
+  /**
+   * Custom collision detection strategy optimized for:
+   * 1. Multiple containers (columns)
+   * 2. Many items per container (up to 100+ items)
+   * 3. Vertical sorting within containers
+   *
+   * This uses a multi-phased approach:
+   * - First, check if pointer is within any droppable
+   * - Then, use closest center for columns
+   * - Finally, fallback to rect intersection
+   */
+  const collisionDetectionStrategy: CollisionDetection = useCallback(
+    (args) => {
+      // Start by finding any droppable containers intersecting with the pointer
+      const pointerCollisions = pointerWithin(args);
+
+      // Collision detection algorithms for droppable containers
+      if (args.droppableContainers.length > 0) {
+        // If there are pointer collisions, use the first one
+        if (pointerCollisions.length > 0) {
+          const firstCollision = pointerCollisions[0];
+
+          // If the collision is with a column (not a task), use it
+          if (statusColumns.some(col => col.id === firstCollision.id)) {
+            return [firstCollision];
+          }
+
+          // If it's a task, return it (will be handled to find parent column)
+          return pointerCollisions;
+        }
+
+        // When dragging over a large list, we want to prioritize columns
+        // Use closestCenter for columns when pointer isn't directly over anything
+        const centeredCollisions = closestCenter(args);
+
+        // Filter to only include column droppables
+        const columnCollisions = centeredCollisions.filter(collision =>
+          statusColumns.some(col => col.id === collision.id)
+        );
+
+        if (columnCollisions.length > 0) {
+          return columnCollisions;
+        }
+
+        // Fallback to closest center for all droppables
+        return centeredCollisions;
+      }
+
+      // Fallback to rectangle intersection
+      return rectIntersection(args);
+    },
+    [statusColumns]
+  );
 
   // Cleanup all table listeners when component unmounts
   useEffect(() => {
@@ -294,7 +358,12 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         currentView="kanban"
       />
 
-      <DndContext collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} sensors={sensors}>
+      <DndContext
+        collisionDetection={collisionDetectionStrategy}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        sensors={sensors}
+      >
         <div className={styles.kanbanBoard}>
           {statusColumns.map((column) => (
             <KanbanColumn

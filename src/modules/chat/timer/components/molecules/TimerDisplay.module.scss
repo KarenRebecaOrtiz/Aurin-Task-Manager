@@ -15,6 +15,14 @@
     padding: 12px;
     gap: 12px;
   }
+
+  &.mini {
+    padding: 4px 6px;
+    gap: 4px;
+    transform: scale(0.65);
+    transform-origin: left center;
+    width: fit-content;
+  }
 }
 
 .warningBadge {
@@ -120,6 +128,22 @@
       background: #3f3f46;
       transform: scale(0.95);
     }
+  }
+}
+
+// Mini mode - Ultra discrete
+.timerDisplay.mini {
+  .warningBadge {
+    display: none; // Hide warning in mini mode
+  }
+
+  .moreButton {
+    width: 24px;
+    height: 24px;
+    padding: 2px;
+    font-size: 12px;
+    border-width: 1px;
+    border-radius: 4px;
   }
 }
 
