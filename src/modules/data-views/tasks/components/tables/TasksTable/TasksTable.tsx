@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback, memo, useState } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useStore } from 'zustand';
 import { Task, Client, User } from '@/types';
@@ -82,10 +82,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
-  const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'clientId', 'name', 'notificationDot', 'assignedTo', 'status', 'priority', 'action'
-  ]);
-
   const effectiveTasksIds = useMemo(
     () => tableState.effectiveTasks.map(t => t.id).join(','),
     [tableState.effectiveTasks]
@@ -107,16 +103,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     getClientName,
     animateClick,
   } = useTasksCommon();
-
-  const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
-    setVisibleColumns(prev => {
-      if (visible) {
-        return prev.includes(columnKey) ? prev : [...prev, columnKey];
-      } else {
-        return prev.filter(key => key !== columnKey);
-      }
-    });
-  }, []);
 
   // ==================== EFFECTS ====================
   useEffect(() => {
@@ -370,9 +356,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         onRowClick={handleTaskRowClick}
         getRowClassName={getRowClassName}
         emptyStateType="tasks"
-        enableColumnVisibility={true}
-        visibleColumns={visibleColumns}
-        onColumnVisibilityChange={handleColumnVisibilityChange}
       />
       {tableState.filteredTasks.length === 0 && (tableState.searchQuery || tableState.priorityFilters.length > 0 || tableState.statusFilters.length > 0 || tableState.clientFilter || tableState.userFilter) && (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>

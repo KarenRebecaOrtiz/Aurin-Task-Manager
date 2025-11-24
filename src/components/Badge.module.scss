@@ -8,9 +8,14 @@
   cursor: pointer;
   border-radius: 5px;
   overflow: hidden;
+  box-shadow: none;
   
   @media (min-width: 640px) {
     width: 130px;
+  }
+
+  :global(body.dark) & {
+    box-shadow: none;
   }
 }
 

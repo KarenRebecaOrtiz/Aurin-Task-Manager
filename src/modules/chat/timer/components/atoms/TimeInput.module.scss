@@ -22,6 +22,10 @@
   letter-spacing: 0.5px;
   color: var(--timer-gray, #6b7280);
   text-transform: uppercase;
+
+  :global(body.dark) & {
+    color: #94a3b8;
+  }
 }
 
 .inputGroup {
@@ -36,6 +40,15 @@
 
   &:focus-within {
     border-color: var(--timer-primary, #3b82f6);
+  }
+
+  :global(body.dark) & {
+    background: #3f3f46;
+    border-color: #52525b;
+
+    &:focus-within {
+      border-color: #60a5fa;
+    }
   }
 }
 
@@ -73,6 +86,18 @@
   .icon {
     width: 18px;
     height: 18px;
+  }
+
+  :global(body.dark) & {
+    background: #3f3f46;
+    border-color: #52525b;
+    color: #f1f5f9;
+
+    &:hover:not(:disabled) {
+      background: #3b82f6;
+      border-color: #60a5fa;
+      color: white;
+    }
   }
 }
 
@@ -132,6 +157,10 @@
   color: var(--timer-text, #1e293b);
   pointer-events: none;
   z-index: 1;
+
+  :global(body.dark) & {
+    color: #f1f5f9;
+  }
 }
 
 .errorMessage {
@@ -147,6 +176,7 @@
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    -moz-appearance: none;
     appearance: none;
     margin: 0;
   }
@@ -154,39 +184,5 @@
   &[type='number'] {
     -moz-appearance: textfield;
     appearance: textfield;
-  }
-}
-
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .timeInputContainer {
-    .inputGroup {
-      background: #1e293b;
-      border-color: #334155;
-    }
-
-    .decrementButton,
-    .incrementButton {
-      background: #334155;
-      border-color: #475569;
-      color: #e2e8f0;
-
-      &:hover:not(:disabled) {
-        background: var(--timer-primary, #3b82f6);
-        color: white;
-      }
-    }
-
-    .numberFlow {
-      color: #e2e8f0;
-    }
-
-    .hiddenInput {
-      caret-color: var(--timer-primary, #3b82f6);
-    }
-  }
-
-  .label {
-    color: #94a3b8;
   }
 }

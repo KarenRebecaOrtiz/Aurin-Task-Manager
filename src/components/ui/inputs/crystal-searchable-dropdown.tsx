@@ -3,6 +3,7 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { Building2, Folder, Users, Plus } from "lucide-react";
 import { dropdownAnimations } from "@/modules/shared/components/molecules/Dropdown/animations";
 import styles from "./crystal-searchable-dropdown.module.scss";
 
@@ -28,6 +29,9 @@ export interface CrystalSearchableDropdownProps {
   emptyMessage?: string;
   className?: string;
   error?: string;
+  fieldType?: 'client' | 'project' | 'user';
+  onCreateNew?: () => void;
+  createNewLabel?: string;
 }
 
 const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearchableDropdownProps>(
@@ -45,6 +49,9 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
       emptyMessage = "No hay elementos disponibles",
       className = "",
       error,
+      fieldType,
+      onCreateNew,
+      createNewLabel = "Crear nuevo",
     },
     ref
   ) => {
@@ -146,6 +153,13 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
       return placeholder;
     };
 
+    const getIcon = () => {
+      if (fieldType === 'client') return <Building2 size={16} className={styles.icon} />;
+      if (fieldType === 'project') return <Folder size={16} className={styles.icon} />;
+      if (fieldType === 'user') return <Users size={16} className={styles.icon} />;
+      return <Building2 size={16} className={styles.icon} />;
+    };
+
     return (
       <div className={`${styles.container} ${className}`} ref={ref}>
         {label && (
@@ -165,6 +179,7 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
             aria-expanded={isOpen}
           >
             <div className={styles.triggerContent}>
+              {getIcon()}
               {hasSelection && !multiple && selectedItemsData[0]?.imageUrl && (
                 <Image
                   src={selectedItemsData[0].imageUrl}
@@ -290,6 +305,34 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
                     <div className={styles.emptyState}>
                       <span>{emptyMessage}</span>
                     </div>
+                  )}
+
+                  {/* Create New Button - Only for client fieldType */}
+                  {onCreateNew && fieldType === 'client' && (
+                    <motion.div
+                      {...dropdownAnimations.item(filteredItems.length)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCreateNew();
+                        setIsOpen(false);
+                        setSearchTerm("");
+                      }}
+                      className={styles.createNewButton}
+                      role="button"
+                    >
+                      <div className={styles.itemContent}>
+                        <div className={styles.createNewIcon}>
+                          <Plus size={20} />
+                        </div>
+                        <div className={styles.itemText}>
+                          <span className={styles.createNewText}>
+                            {searchTerm && filteredItems.length === 0
+                              ? `${createNewLabel} "${searchTerm}"`
+                              : createNewLabel}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
                   )}
                 </div>
 

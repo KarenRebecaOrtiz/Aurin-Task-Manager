@@ -47,14 +47,12 @@ body.no-scroll {
   width: 100%;
 }
 
-// Dark mode global overrides para asegurar que se apliquen
 body.dark,
 html.dark,
 [data-theme="dark"] {
-  background: #18181b !important;
+  background: #151517 !important; // Más oscuro (antes #18181b)
   color: #e4e4e7 !important;
   
-  // Forzar estilos de tabla en dark mode
   .TasksTable_container__q_pIb {
     background: #18181b !important;
     border: none !important;
@@ -281,5 +279,98 @@ html.dark,
   img[src*="HomeGif.gif"],
   img[src*="trash-2.svg"] {
     filter: none;
+  }
+}
+
+// Calendar dark mode styles
+:global(body.dark) {
+  // Calendar container
+  [class*="rdp"] {
+    --rdp-cell-size: 36px;
+    --rdp-accent-color: #3b82f6;
+    --rdp-background-color: #3f3f46;
+    color: #f1f5f9;
+  }
+
+  // Calendar caption (month/year header)
+  .rdp-caption {
+    color: #f1f5f9;
+  }
+
+  .rdp-caption_label {
+    color: #f1f5f9;
+  }
+
+  // Navigation buttons
+  .rdp-nav_button {
+    background: #3f3f46 !important;
+    border-color: #52525b !important;
+    color: #f1f5f9 !important;
+
+    &:hover:not(:disabled) {
+      background: #3f3f46 !important;
+      border-color: #60a5fa !important;
+    }
+  }
+
+  // Day cells
+  .rdp-cell {
+    color: #f1f5f9;
+  }
+
+  .rdp-day {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #f1f5f9;
+
+    &:hover:not(:disabled) {
+      background: #3f3f46;
+      border-color: #52525b;
+    }
+  }
+
+  // Selected day
+  .rdp-day_selected {
+    background: #3b82f6 !important;
+    border-color: #60a5fa !important;
+    color: white !important;
+  }
+
+  // Today indicator
+  .rdp-day_today {
+    background: #3f3f46;
+    border-color: #60a5fa;
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+
+  // Outside days (previous/next month)
+  .rdp-day_outside {
+    color: #64748b;
+    opacity: 0.5;
+  }
+
+  // Disabled days
+  .rdp-day_disabled {
+    color: #64748b;
+    opacity: 0.3;
+  }
+
+  // Day range
+  .rdp-day_range_middle {
+    background: #3f3f46;
+    color: #f1f5f9;
+  }
+
+  .rdp-day_range_start,
+  .rdp-day_range_end {
+    background: #3b82f6 !important;
+    color: white !important;
+  }
+
+  // Head row (day names)
+  .rdp-head_cell {
+    color: #94a3b8;
+    font-weight: 500;
   }
 }

@@ -16,9 +16,13 @@
   border: 1px solid $color-border-subtle;
   @include glassmorphism($color-bg-glass);
   @include neomorphic-shadow(light);
-  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  @include typography(14px, $font-weight-medium, $color-text-primary);
   cursor: text;
   transition: $transition-base;
+
+  &::placeholder {
+    font-size: 14px;
+  }
 
   &:hover {
     transform: translateY(-1px);
@@ -34,10 +38,24 @@
   }
 
   :global(body.dark) & {
-    background: $zinc-800;
-    border: none;
+    background: #27272a;
+    border: 1px solid #3f3f46;
     box-shadow: none;
     color: rgba(255, 255, 255, 0.532);
+
+    &:hover {
+      background: #27272a;
+      border-color: #52525b;
+      transform: translateY(-1px);
+      box-shadow: none;
+    }
+
+    &:focus {
+      background: #27272a;
+      border-color: #52525b;
+      transform: translateY(-2px);
+      box-shadow: none;
+    }
   }
 
   @media (max-width: 1024px) {
@@ -81,8 +99,8 @@
   @include crystallized-scrollbar;
 
   :global(body.dark) & {
-    background: $zinc-800;
-    border: none;
+    background: #27272a;
+    border: 1px solid #3f3f46;
     box-shadow: none !important;
   }
 
@@ -154,24 +172,29 @@
   :global(body.dark) & {
     background: transparent;
     color: rgba(255, 255, 255, 0.532);
-    border: none;
+    border: 1px solid #3f3f46;
     box-shadow: none !important;
     transition: all 0.3s ease;
 
     &:hover {
-      background: $zinc-700;
-      transform: translateY(-2px) scale(1.02);
+      background: #3f3f46;
+      color: rgba(255, 255, 255, 0.9);
+      border-color: #52525b;
+      transform: translateY(-1px) scale(1.01);
       box-shadow: none;
     }
 
     &:active {
-      background: $zinc-600;
+      background: #3f3f46;
+      color: rgba(255, 255, 255, 0.9);
+      border-color: #52525b;
       box-shadow: none;
     }
 
     &.selected {
-      background: rgba(59, 130, 246, 0.2);
-      color: #60a5fa;
+      background: #3f3f46;
+      border-color: #52525b;
+      color: rgba(255, 255, 255, 0.9);
     }
   }
 
@@ -211,6 +234,7 @@
 .infoText {
   @include typography(12px, $font-weight-normal, $color-text-secondary);
   flex: 1;
+  gap: $spacing-md;
 }
 
 .clearButton {

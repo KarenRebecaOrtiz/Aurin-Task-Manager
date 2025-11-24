@@ -4,14 +4,20 @@
   position: fixed;
   inset: 0;
   z-index: $z-dialog;
-  background-color: rgba(0, 0, 0, 0.5);
+  filter: blur(3px);
+  background-color: rgba(194, 194, 194, 0.429);
   animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  :global(.dark) & {
+    background-color: rgba(0, 0, 0, 0.75);
+  }
 }
 
 .dialogContent {
   position: fixed;
   top: 50%;
   left: 50%;
+  max-width: 600px;
   transform: translate(-50%, -50%);
   z-index: $z-dialog;
   width: 100%;
@@ -22,11 +28,16 @@
   border-radius: 25px;
   box-shadow: none;
   animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  overflow-y: auto;
+  overflow: visible;
   padding: 3rem;
-  
+
   &:focus {
     outline: none;
+  }
+
+  :global(.dark) & {
+    background: #1a1a1a;
+    color: #e5e5e5;
   }
 }
 
@@ -70,14 +81,14 @@
 }
 
 .dialogTitle {
-  font-size: $font-size-lg;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
   color: $foreground;
 }
 
 .dialogDescription {
-  font-size: $font-size-sm;
+  font-size: 16px;
   color: $muted-foreground;
   line-height: 1.4;
 }

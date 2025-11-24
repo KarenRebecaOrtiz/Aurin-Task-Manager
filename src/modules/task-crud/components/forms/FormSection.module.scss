@@ -1,0 +1,37 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.formSection {
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  :global(body.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.01em;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.fieldsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem 1.5rem;
+
+  @media (min-width: $breakpoint-md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

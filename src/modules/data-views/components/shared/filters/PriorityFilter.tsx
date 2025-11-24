@@ -23,7 +23,7 @@ export const PriorityFilter: React.FC<PriorityFilterProps> = ({
         id: 'Alta',
         value: 'Alta',
         label: (
-          <Badge variant="error" size="small">
+          <Badge variant="priority-high" size="small">
             Alta
           </Badge>
         ),
@@ -32,7 +32,7 @@ export const PriorityFilter: React.FC<PriorityFilterProps> = ({
         id: 'Media',
         value: 'Media',
         label: (
-          <Badge variant="warning" size="small">
+          <Badge variant="priority-medium" size="small">
             Media
           </Badge>
         ),
@@ -41,7 +41,7 @@ export const PriorityFilter: React.FC<PriorityFilterProps> = ({
         id: 'Baja',
         value: 'Baja',
         label: (
-          <Badge variant="success" size="small">
+          <Badge variant="priority-low" size="small">
             Baja
           </Badge>
         ),

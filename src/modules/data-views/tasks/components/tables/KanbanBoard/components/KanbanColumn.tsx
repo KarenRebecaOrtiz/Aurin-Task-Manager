@@ -86,7 +86,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       className={`${styles.kanbanColumn} ${tasks.length === 0 ? styles.empty : ''}`}
       style={{ touchAction: 'manipulation' }}
     >
-      <KanbanColumnHeader title={title} taskCount={tasks.length} />
+      <KanbanColumnHeader title={title} taskCount={tasks.length} status={columnId} />
 
       <SortableContext
         id={columnId}

@@ -17,17 +17,17 @@ const priorityConfig: Record<PriorityType, { label: string; icon: React.ReactNod
   Alta: {
     label: 'Alta',
     icon: <Signal size={14} />,
-    className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+    className: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400',
   },
   Media: {
     label: 'Media',
     icon: <SignalHigh size={14} />,
-    className: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+    className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
   },
   Baja: {
     label: 'Baja',
     icon: <SignalMedium size={14} />,
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+    className: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
   },
 };
 

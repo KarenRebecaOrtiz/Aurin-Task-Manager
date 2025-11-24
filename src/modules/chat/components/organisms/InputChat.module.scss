@@ -20,6 +20,12 @@
   animation: slideInEdit 0.3s ease-out;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
+  :global(body.dark) & {
+    background: #3f3f46;
+    border-left-color: #f59e0b;
+    box-shadow: none;
+  }
+
   .editContent {
     .editHeader {
       display: flex;
@@ -236,10 +242,9 @@
 }
 
 :global(body.dark) .inputContainer {
-  background: #1f1f20;
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.04),
-    6px 6px 12px rgba(0, 0, 0, 0.4);
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  box-shadow: none;
 }
 
 .input {
@@ -270,8 +275,16 @@
 }
 
 :global(body.dark) .input {
-  background-color: rgb(36, 36, 36);
-  color: white;
+  background-color: #3f3f46 !important;
+  border: 1px solid #52525b !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: none !important;
+
+  &:focus {
+    background-color: #3f3f46 !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3) !important;
+  }
 }
 
 // ============================================================================
@@ -293,14 +306,11 @@
 }
 
 :global(body.dark) .toolbar {
-  background-color: #1f1f20;
+  background-color: #27272a;
+  border-bottom-color: #3f3f46;
   box-shadow: none;
-  border-bottom: none;
 }
 
-.toolbarIcon {
-  // Add any specific icon styles if needed
-}
 
 .format-button {
   background: #f1f5f9;
@@ -365,31 +375,25 @@
 }
 
 :global(body.dark) .format-button {
-  background: #1f1f20;
-  box-shadow:
-    -4px -4px 8px rgba(255, 255, 255, 0.04),
-    4px 4px 12px rgba(0, 0, 0, 0.4);
+  background: #3f3f46;
+  border: 1px solid #52525b;
+  box-shadow: none;
 
   &:hover {
-    background: #2c2c2f;
-    box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+    background: #3f3f46;
+    border-color: #52525b;
+    box-shadow: none;
     transform: translateY(-1px);
   }
 
   &[data-active="true"] {
     background: #e6ec94;
     transform: scale(0.98);
-    box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.1),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
 
     &:hover {
       background: #dfe087;
-      box-shadow:
-        inset -2px -2px 4px rgba(255, 255, 255, 0.15),
-        inset 2px 2px 6px rgba(0, 0, 0, 0.35);
+      box-shadow: none;
       transform: translateY(-1px) scale(0.98);
     }
   }
@@ -397,12 +401,13 @@
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    background: #2a2a2d;
+    background: #3f3f46;
+    border-color: #52525b;
     box-shadow: none;
     transform: none;
 
     &:hover {
-      background: #2a2a2d;
+      background: #3f3f46;
       box-shadow: none;
       transform: none;
     }
@@ -453,18 +458,16 @@
 
 :global(body.dark) .playStopButton,
 :global(body.dark) .sendButton {
-  background: #1f1f20;
-  box-shadow:
-    -4px -4px 8px rgba(255, 255, 255, 0.04),
-    4px 4px 12px rgba(0, 0, 0, 0.4);
+  background: #3f3f46;
+  border-color: #52525b;
+  box-shadow: none;
 }
 
 :global(body.dark) .playStopButton:hover,
 :global(body.dark) .sendButton:hover {
-  background: #2c2c2f;
-  box-shadow:
-    inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+  background: #3f3f46;
+  border-color: #52525b;
+  box-shadow: none;
 }
 
 :global(body.dark) .playStopButton img,
@@ -517,26 +520,24 @@
 }
 
 :global(body.dark) .playStopButton {
-  background: linear-gradient(135deg, #1e3a8a, #1d4ed8) !important;
-  box-shadow:
-    -6px -6px 12px rgba(255, 255, 255, 0.05),
-    6px 6px 12px rgba(59, 130, 246, 0.3) !important;
-  border-color: rgba(147, 197, 253, 0.3);
+  background: #3b82f6 !important;
+  border-color: #60a5fa !important;
+  box-shadow: none !important;
 
   &:hover:not(:disabled) {
-    box-shadow:
-      -8px -8px 16px rgba(255, 255, 255, 0.08),
-      8px 8px 16px rgba(59, 130, 246, 0.4) !important;
+    background: #3b82f6 !important;
+    border-color: #60a5fa !important;
+    box-shadow: none !important;
   }
 
   &:active:not(:disabled) {
-    box-shadow:
-      inset -3px -3px 6px rgba(255, 255, 255, 0.1),
-      inset 3px 3px 6px rgba(59, 130, 246, 0.3) !important;
+    background: #3b82f6 !important;
+    border-color: #60a5fa !important;
+    box-shadow: none !important;
   }
 
   img {
-    filter: invert(100%) brightness(130%);
+    filter: invert(100%) brightness(100%);
   }
 }
 
@@ -570,16 +571,14 @@
 }
 
 :global(body.dark) .imageButton2 {
-  background: #1f1f20;
-  box-shadow:
-    -4px -4px 8px rgba(255, 255, 255, 0.04),
-    4px 4px 12px rgba(0, 0, 0, 0.4);
+  background: #3f3f46;
+  border: 1px solid #52525b;
+  box-shadow: none;
 
   &:hover {
-    background-color: #2c2c2f;
-    box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.3);
+    background-color: #3f3f46;
+    border-color: #52525b;
+    box-shadow: none;
   }
 }
 
@@ -651,9 +650,9 @@
 }
 
 :global(body.dark) .replyContainer {
-  background: #1f2937;
+  background: #3f3f46;
   border-left-color: #3b82f6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 
   .replyContent {
     .replyHeader {
@@ -698,6 +697,11 @@
   border: 1px solid #eee;
   border-radius: 6px;
   background: #fafafa;
+
+  :global(body.dark) & {
+    background: #3f3f46;
+    border-color: #52525b;
+  }
 }
 
 .previewImage {
@@ -746,7 +750,8 @@
 }
 
 :global(body.dark) .filePreview {
-  background: #374151;
+  background: #3f3f46;
+  border-color: #52525b;
 }
 
 // ============================================================================

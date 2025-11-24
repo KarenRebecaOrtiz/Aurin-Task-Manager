@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { CrystalInput } from "@/components/ui/crystal-input"
-import { CrystalSearchableDropdown, type CrystalDropdownItem } from "@/components/ui/crystal-searchable-dropdown"
+import { CrystalInput } from "@/components/ui/inputs/crystal-input"
+import { CrystalSearchableDropdown, type CrystalDropdownItem } from "@/components/ui/inputs/crystal-searchable-dropdown"
 import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"

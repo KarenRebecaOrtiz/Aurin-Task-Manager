@@ -1,0 +1,278 @@
+// Crystal Calendar Dropdown Styles
+$white: #FFFFFF;
+$black: #0F172A;
+$zinc-50: #F1F5F9;
+$border-light: rgba(255, 255, 255, 0.2);
+$primary: #164C22;
+$error-color: #EF4444;
+
+@mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 8px) {
+  background: $bg;
+  border-radius: $radius;
+  border: 1px solid $border-light;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #252525;
+  margin-bottom: 2px;
+  line-height: 1;
+
+  :global(.dark) & {
+    color: #e5e5e5;
+  }
+}
+
+.dropdownWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.trigger {
+  @include crystal-surface();
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: $black;
+  min-height: 42px;
+  transition: all 0.2s ease;
+  width: 100% !important;
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: rgba(241, 245, 249, 0.85);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.error {
+    border-color: $error-color;
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.8),
+      4px 4px 8px rgba(239, 68, 68, 0.1);
+  }
+
+  :global(.dark) & {
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e5e5e5;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      background: #333333;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+    }
+
+    &:active:not(:disabled) {
+      background: #262626;
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow: none;
+    }
+
+    &.error {
+      border-color: #f87171;
+      box-shadow: none;
+    }
+  }
+}
+
+.triggerContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.calendarIcon {
+  flex-shrink: 0;
+  opacity: 1 !important;
+  color: #0F172A;
+
+  :global(.dark) & {
+    color: #e5e5e5 !important;
+    opacity: 1 !important;
+  }
+}
+
+.triggerText {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.placeholder {
+    color: rgba(15, 23, 42, 0.5);
+  }
+
+  :global(.dark) & {
+    color: #e5e5e5 !important;
+
+    &.placeholder {
+      color: rgba(255, 255, 255, 0.6) !important;
+    }
+  }
+}
+
+.chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: #0F172A;
+  opacity: 1;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+
+  :global(.dark) & {
+    filter: invert(1) brightness(0.9) !important;
+    opacity: 1 !important;
+  }
+}
+
+.calendar {
+  @include crystal-surface(rgba(255, 255, 255, 0.95), 12px);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1002;
+  padding: 12px;
+  min-width: 280px;
+  max-width: 320px;
+
+  :global(.dark) & {
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+  }
+
+  .dayPicker {
+    margin: 0;
+    font-family: 'Inter Tight', sans-serif;
+
+    // Override default react-day-picker styles
+    :global {
+      .rdp-months {
+        justify-content: center;
+      }
+
+      .rdp-month {
+        margin: 0;
+      }
+
+      .rdp-day_button {
+        border-radius: 6px;
+        transition: all 0.15s ease;
+
+        &:hover:not([disabled]) {
+          background: rgba(22, 76, 34, 0.1);
+        }
+      }
+
+      .rdp-day_selected {
+        background: $primary !important;
+        color: $white !important;
+        font-weight: 500;
+      }
+
+      .rdp-day_today {
+        font-weight: 600;
+        color: $primary;
+      }
+
+      .rdp-day_disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .rdp-month_caption {
+        font-weight: 600;
+        font-size: 14px;
+        color: $black;
+      }
+
+      .rdp-weekday {
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(15, 23, 42, 0.6);
+      }
+
+      .rdp-nav_button {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+
+        &:hover {
+          background: rgba(22, 76, 34, 0.1);
+        }
+      }
+
+      :global(.dark) & {
+        .rdp-month_caption {
+          color: #e5e5e5;
+        }
+
+        .rdp-weekday {
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .rdp-day_button {
+          color: #e5e5e5;
+
+          &:hover:not([disabled]) {
+            background: rgba(255, 255, 255, 0.1);
+          }
+        }
+
+        .rdp-day_today {
+          color: #60a5fa;
+        }
+
+        .rdp-nav_button {
+          color: #e5e5e5;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+    }
+  }
+}
+
+.errorText {
+  font-size: 12px;
+  color: $error-color;
+  margin-top: 4px;
+
+  :global(.dark) & {
+    color: #f87171;
+  }
+}

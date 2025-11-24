@@ -64,7 +64,7 @@ function IconComponent({ size, ...props }: SquarePlusProps) {
         ry={2}
         variants={variants.rect}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={8}
@@ -73,16 +73,16 @@ function IconComponent({ size, ...props }: SquarePlusProps) {
         y2={12}
         variants={variants.line1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.line
         x1={12}
-        y1={16}
+        y1={8}
         x2={12}
-        y2={8}
+        y2={16}
         variants={variants.line2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

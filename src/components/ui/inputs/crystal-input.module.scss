@@ -1,0 +1,135 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.container {
+  @include flex-column;
+  gap: 6px;
+  width: 100%;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #252525;
+  margin-bottom: 2px;
+  line-height: 1;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.icon {
+  position: absolute;
+  left: 14px;
+  flex-shrink: 0;
+  opacity: 0.6;
+  color: #0F172A;
+  z-index: 1;
+  pointer-events: none;
+
+  :global(body.dark) & {
+    color: white;
+  }
+}
+
+.input {
+  @include input-glassmorphic;
+  width: 100%;
+  padding-left: 38px;
+  color: #0F172A;
+
+  &::placeholder {
+    color: rgba(15, 23, 42, 0.5);
+  }
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9) !important;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.4) !important;
+    }
+  }
+
+  &.error {
+    border-color: $color-error;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 0 0 4px rgba(239, 68, 68, 0.2);
+
+    :global(body.dark) & {
+      border-color: #f87171;
+      box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.3);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+    &:hover {
+      background: rgba(30, 30, 30, 0.85) !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    &:focus {
+      background: rgba(30, 30, 30, 0.9) !important;
+      border-color: #60a5fa !important;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+    }
+
+    &:active {
+      background: rgba(30, 30, 30, 0.6) !important;
+      border-color: rgba(255, 255, 255, 0.05) !important;
+      box-shadow: none !important;
+    }
+  }
+}
+
+.errorText {
+  @include typography($text-xs, $font-weight-normal, $color-error, left);
+  padding-left: 0.25rem;
+
+  :global(body.dark) & {
+    color: #f87171;
+  }
+}
+
+@media (max-width: $breakpoint-lg) {
+  .input {
+    height: 44px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: $breakpoint-sm) {
+  .input {
+    height: 40px;
+    padding: 8px 12px;
+    font-size: 12px;
+    min-width: 150px;
+  }
+}

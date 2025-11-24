@@ -1,23 +1,32 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { CrystalInput } from "@/components/ui/inputs/crystal-input"
+import { CrystalSearchableDropdown } from "@/components/ui/inputs/crystal-searchable-dropdown"
+import { CrystalCalendarDropdown } from "@/components/ui/inputs/crystal-calendar-dropdown"
 import { Separator } from "@/components/ui/separator"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"  // shadcn/ui select component
 import { FormField } from "../shared"
-import { type User, MultiUserSelect } from "../shared"
-import { DatePicker } from "../DatePicker/DatePicker"
-import { PrioritySelector } from "../shared"
+import { type User } from "../shared"
+import { ChipSelector } from "./ChipSelector"
 import { motion } from "framer-motion"
 import { addDays } from "date-fns"
+import { FormSection } from "./FormSection"
+import { FormFooter } from "./FormFooter"
+
+const PRIORITY_OPTIONS = [
+  { value: "Baja", label: "Baja" },
+  { value: "Media", label: "Media" },
+  { value: "Alta", label: "Alta" }
+]
+
+const STATUS_OPTIONS = [
+  { value: 'Por Iniciar', label: 'Por Iniciar' },
+  { value: 'En Proceso', label: 'En Proceso' },
+  { value: 'Backlog', label: 'Backlog' },
+  { value: 'Por Finalizar', label: 'Por Finalizar' },
+  { value: 'Finalizado', label: 'Finalizado' }
+]
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -38,6 +47,7 @@ const listContainerVariants = {
 interface Client {
   id: string
   name: string
+  imageUrl?: string
   projects?: string[]
 }
 
@@ -51,34 +61,51 @@ export interface TaskFormData {
   LeadedBy: string[]
   AssignedTo: string[]
   priority: string
+  status: string
 }
 
 interface TaskFormProps {
   clients: Client[]
   users: User[]
   onSubmit?: (data: TaskFormData) => void
-  onCancel?: () => void
   isLoading?: boolean
+  onCreateClient?: () => void
+  initialData?: TaskFormData | null
+  onCancel?: () => void
+  submitText?: string
 }
 
-export function TaskForm({ 
-  clients, 
-  users, 
-  onSubmit, 
+export function TaskForm({
+  clients,
+  users,
+  onSubmit,
+  isLoading = false,
+  onCreateClient,
+  initialData = null,
   onCancel,
-  isLoading = false 
+  submitText = "Crear Tarea"
 }: TaskFormProps) {
-  const [formData, setFormData] = useState<TaskFormData>({
-    clientId: "",
-    project: "",
-    name: "",
-    description: "",
-    startDate: new Date(),
-    endDate: addDays(new Date(), 7),
-    LeadedBy: [],
-    AssignedTo: [],
-    priority: "Media"
-  })
+  const [formData, setFormData] = useState<TaskFormData>(
+    initialData || {
+      clientId: "",
+      project: "",
+      name: "",
+      description: "",
+      startDate: new Date(),
+      endDate: addDays(new Date(), 7),
+      LeadedBy: [],
+      AssignedTo: [],
+      priority: "Media",
+      status: "Por Iniciar"
+    }
+  )
+
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData)
+    }
+  }, [initialData])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,12 +120,12 @@ export function TaskForm({
     setFormData(prev => ({ ...prev, project: value }))
   }, [])
 
-  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, name: e.target.value }))
+  const handleNameChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, name: value }))
   }, [])
 
-  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, description: e.target.value }))
+  const handleDescriptionChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, description: value }))
   }, [])
 
   const handleStartDateChange = useCallback((date: Date | undefined) => {
@@ -114,6 +141,10 @@ export function TaskForm({
     setFormData(prev => ({ ...prev, priority: value }))
   }, [])
 
+  const handleStatusChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, status: value }))
+  }, [])
+
   const handleLeadersChange = useCallback((selected: string[]) => {
     setFormData(prev => ({ ...prev, LeadedBy: selected }))
   }, [])
@@ -126,167 +157,180 @@ export function TaskForm({
   const projectOptions = selectedClient?.projects || []
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <motion.div 
-        className="grid grid-cols-1 gap-4 sm:grid-cols-6"
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <motion.div
+        className="flex flex-col gap-4"
         variants={listContainerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Cuenta Asignada */}
-        <motion.div className="col-span-full sm:col-span-3" variants={fadeInUp}>
-          <FormField label="Cuenta Asignada" required htmlFor="account">
-            <Select 
-              value={formData.clientId} 
-              onValueChange={handleClientChange}
-            >
-              <SelectTrigger id="account">
-                <SelectValue placeholder="Selecciona una cuenta" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </motion.div>
-
-        {/* Carpeta/Proyecto */}
-        <motion.div className="col-span-full sm:col-span-3" variants={fadeInUp}>
-          <FormField label="Carpeta/Proyecto" required htmlFor="project">
-            <Select 
-              value={formData.project} 
-              onValueChange={handleProjectChange}
-              disabled={!formData.clientId || projectOptions.length === 0}
-            >
-              <SelectTrigger id="project">
-                <SelectValue placeholder="Selecciona una carpeta" />
-              </SelectTrigger>
-              <SelectContent>
-                {projectOptions.map((project) => (
-                  <SelectItem key={project} value={project}>
-                    {project}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </motion.div>
-
-        {/* Nombre de la tarea */}
-        <motion.div className="col-span-full" variants={fadeInUp}>
-          <FormField label="Nombre de la tarea" required htmlFor="task-name">
-            <Input
+        <FormSection>
+          {/* Nombre de la tarea - Full width */}
+          <motion.div variants={fadeInUp} className="md:col-span-2">
+            <CrystalInput
+              label="Nombre de la tarea *"
               type="text"
               id="task-name"
               name="task-name"
               required
-              placeholder="Ingresa el nombre de la tarea"
+              placeholder="Ej. Rediseño de Landing Page Q3"
               value={formData.name}
               onChange={handleNameChange}
             />
-          </FormField>
-        </motion.div>
+          </motion.div>
 
-        {/* Descripción y Objetivos */}
-        <motion.div className="col-span-full" variants={fadeInUp}>
-          <FormField label="Descripción y Objetivos" required htmlFor="description">
-            <Textarea
+          {/* Descripción y Objetivos - Full width */}
+          <motion.div variants={fadeInUp} className="md:col-span-2">
+            <CrystalInput
+              label="Descripción y Objetivos *"
+              type="text"
               id="description"
               name="description"
               required
               placeholder="Describe los objetivos y alcance de la tarea"
-              className="min-h-[100px]"
               value={formData.description}
               onChange={handleDescriptionChange}
             />
-          </FormField>
-        </motion.div>
+          </motion.div>
+        </FormSection>
 
-        {/* Fecha de Inicio */}
-        <motion.div className="col-span-full sm:col-span-3" variants={fadeInUp}>
-          <FormField label="Fecha de Inicio" required htmlFor="start-date">
-            <DatePicker
+        <FormSection>
+          {/* Cuenta Asignada */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <CrystalSearchableDropdown
+              label="Cuenta Asignada *"
+              items={clients.map(client => ({
+                id: client.id,
+                name: client.name,
+                imageUrl: client.imageUrl,
+                subtitle: `${client.projects?.length || 0} proyectos`
+              }))}
+              selectedItems={formData.clientId ? [formData.clientId] : []}
+              onSelectionChange={(selectedIds) => handleClientChange(selectedIds[0] || "")}
+              placeholder="Selecciona una cuenta"
+              searchPlaceholder="Buscar cuenta..."
+              emptyMessage="No hay cuentas disponibles"
+              fieldType="client"
+              onCreateNew={onCreateClient}
+              createNewLabel="Crear nueva cuenta"
+            />
+          </motion.div>
+
+          {/* Carpeta/Proyecto */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <CrystalSearchableDropdown
+              label="Carpeta/Proyecto *"
+              items={projectOptions.map(project => ({
+                id: project,
+                name: project,
+                svgIcon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><style>.cls-1{fill:#0072ff;}</style></defs><title>folder</title><g id="Layer_2" data-name="Layer 2"><path class="cls-1" d="M52,16H34a5.27,5.27,0,0,1-3.77-1.59l-3.9-4A8,8,0,0,0,20.58,8H12a8,8,0,0,0-8,8V52a8,8,0,0,0,8,8H52a8,8,0,0,0,8-8V24A8,8,0,0,0,52,16Z"/></g></svg>`
+              }))}
+              selectedItems={formData.project ? [formData.project] : []}
+              onSelectionChange={(selectedIds) => handleProjectChange(selectedIds[0] || "")}
+              placeholder="Selecciona una carpeta"
+              searchPlaceholder="Buscar carpeta..."
+              emptyMessage="No hay carpetas disponibles"
+              disabled={!formData.clientId || projectOptions.length === 0}
+              fieldType="project"
+            />
+          </motion.div>
+
+          {/* Líder(es) de proyecto */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <CrystalSearchableDropdown
+              label="Líder(es) *"
+              items={users.map(user => ({
+                id: user.id,
+                name: user.fullName,
+                imageUrl: user.imageUrl,
+                subtitle: user.role || ''
+              }))}
+              selectedItems={formData.LeadedBy}
+              onSelectionChange={handleLeadersChange}
+              placeholder="Selecciona líderes"
+              searchPlaceholder="Buscar usuario..."
+              emptyMessage="No hay usuarios disponibles"
+              multiple={true}
+              fieldType="user"
+            />
+          </motion.div>
+
+          {/* Colaboradores */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <CrystalSearchableDropdown
+              label="Colaboradores"
+              items={users.map(user => ({
+                id: user.id,
+                name: user.fullName,
+                imageUrl: user.imageUrl,
+                subtitle: user.role || ''
+              }))}
+              selectedItems={formData.AssignedTo}
+              onSelectionChange={handleCollaboratorsChange}
+              placeholder="Selecciona colaboradores"
+              searchPlaceholder="Buscar usuario..."
+              emptyMessage="No hay usuarios disponibles"
+              multiple={true}
+              fieldType="user"
+            />
+          </motion.div>
+        </FormSection>
+
+        <FormSection>
+          {/* Fecha de Inicio */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <CrystalCalendarDropdown
+              label="Fecha de Inicio *"
               value={formData.startDate}
               onChange={handleStartDateChange}
               placeholder="Selecciona fecha de inicio"
             />
-          </FormField>
-        </motion.div>
+          </motion.div>
 
-        {/* Fecha de Fin */}
-        <motion.div className="col-span-full sm:col-span-3" variants={fadeInUp}>
-          <FormField label="Fecha de Fin" htmlFor="end-date">
-            <DatePicker
+          {/* Fecha de Fin */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <CrystalCalendarDropdown
+              label="Fecha de Fin"
               value={formData.endDate}
               onChange={handleEndDateChange}
               placeholder="Selecciona fecha de fin"
+              minDate={formData.startDate}
             />
-          </FormField>
-        </motion.div>
+          </motion.div>
+        </FormSection>
 
-        {/* Líder de proyecto */}
-        <motion.div className="col-span-full sm:col-span-3" variants={fadeInUp}>
-          <FormField label="Líder(es)" htmlFor="project-leader">
-            <MultiUserSelect
-              users={users}
-              selectedUsers={formData.LeadedBy}
-              onSelectedUsersChange={handleLeadersChange}
-              placeholder="Selecciona líderes"
-            />
-          </FormField>
-        </motion.div>
-
-        {/* Colaboradores */}
-        <motion.div className="col-span-full sm:col-span-3" variants={fadeInUp}>
-          <FormField label="Colaboradores" htmlFor="collaborators">
-            <MultiUserSelect
-              users={users}
-              selectedUsers={formData.AssignedTo}
-              onSelectedUsersChange={handleCollaboratorsChange}
-              placeholder="Selecciona colaboradores"
-            />
-          </FormField>
-        </motion.div>
-
-        <motion.div className="col-span-full my-2" variants={fadeInUp}>
-          <Separator />
-        </motion.div>
-
-        {/* Prioridad */}
-        <motion.div className="col-span-full" variants={fadeInUp}>
-          <FormField label="Prioridad" htmlFor="priority" className="space-y-4">
-            <PrioritySelector
+        <FormSection>
+          {/* Prioridad */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <ChipSelector
+              label="Prioridad *"
+              options={PRIORITY_OPTIONS}
               value={formData.priority}
-              onValueChange={handlePriorityChange}
+              onChange={handlePriorityChange}
+              required
             />
-          </FormField>
-        </motion.div>
+          </motion.div>
+
+          {/* Estado Inicial */}
+          <motion.div className="flex-1" variants={fadeInUp}>
+            <ChipSelector
+              label="Estado Inicial *"
+              options={STATUS_OPTIONS}
+              value={formData.status}
+              onChange={handleStatusChange}
+              required
+            />
+          </motion.div>
+        </FormSection>
       </motion.div>
 
-      <Separator className="my-6" />
-
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          className="w-full sm:w-auto"
-          disabled={isLoading}
-        >
-          Cancelar
-        </Button>
-        <Button 
-          type="submit" 
-          className="w-full sm:w-auto"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Creando...' : 'Crear Tarea'}
-        </Button>
-      </div>
+      {onCancel && (
+        <FormFooter
+          onCancel={onCancel}
+          isLoading={isLoading}
+          submitText={submitText}
+        />
+      )}
     </form>
   )
 }

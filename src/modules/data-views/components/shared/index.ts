@@ -5,8 +5,6 @@ export type { SearchCategory } from './search';
 // Table Header Components
 export { TableHeader } from './table-header';
 export type { } from './table-header';
-export { ColumnVisibilityMenu } from './table-header';
-export type { ColumnOption } from './table-header';
 
 // Table Toolbar Components
 export { FilterToolbar } from './table-toolbar';

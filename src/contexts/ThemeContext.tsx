@@ -22,12 +22,16 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true); // Dark mode por defecto
 
   useEffect(() => {
     // Cargar el tema desde localStorage al montar el componente
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
+    if (savedTheme === 'light') {
+      setIsDarkMode(false);
+      document.body.classList.remove('dark');
+    } else {
+      // Si no hay tema guardado o es dark, aplicar dark mode
       setIsDarkMode(true);
       document.body.classList.add('dark');
     }

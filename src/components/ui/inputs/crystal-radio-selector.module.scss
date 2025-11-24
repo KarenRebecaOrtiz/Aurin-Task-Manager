@@ -1,0 +1,243 @@
+// Crystal Radio Selector Styles
+$white: #FFFFFF;
+$black: #0F172A;
+$zinc-50: #F1F5F9;
+$border-light: rgba(255, 255, 255, 0.2);
+$primary: #164C22;
+$error-color: #EF4444;
+$muted: rgba(15, 23, 42, 0.6);
+
+@mixin crystal-surface($bg: rgba(241, 245, 249, 0.7), $radius: 8px) {
+  background: $bg;
+  border-radius: $radius;
+  border: 1px solid $border-light;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    -4px -4px 8px rgba(255, 255, 255, 0.8),
+    4px 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.label {
+  font-size: 16px;
+  font-weight: 600;
+  color: $black;
+  line-height: 1.4;
+  margin-bottom: 4px;
+
+  .required {
+    color: $error-color;
+    margin-left: 2px;
+  }
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.radioGroup {
+  display: grid;
+  gap: 16px;
+
+  &.gridCols1 {
+    grid-template-columns: 1fr;
+  }
+
+  &.gridCols2 {
+    grid-template-columns: 1fr;
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  &.gridCols3 {
+    grid-template-columns: 1fr;
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+}
+
+.option {
+  @include crystal-surface();
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(.disabled) {
+    background: rgba(241, 245, 249, 0.85);
+    transform: translateY(-2px);
+    box-shadow:
+      -4px -4px 10px rgba(255, 255, 255, 0.9),
+      4px 4px 10px rgba(0, 0, 0, 0.08);
+  }
+
+  &.selected {
+    border-color: rgba(22, 76, 34, 0.3);
+    background: rgba(22, 76, 34, 0.05);
+    box-shadow:
+      -4px -4px 8px rgba(255, 255, 255, 0.9),
+      4px 4px 8px rgba(22, 76, 34, 0.1);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+
+    &:hover:not(.disabled) {
+      background: rgba(30, 30, 30, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+    }
+
+    &.selected {
+      border-color: rgba(59, 130, 246, 0.3);
+      background: rgba(59, 130, 246, 0.1);
+      box-shadow: none;
+    }
+  }
+}
+
+.optionContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.radioWrapper {
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.radioInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.radioButton {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid $primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.9);
+
+  .option:hover:not(.disabled) & {
+    border-color: rgba(22, 76, 34, 0.8);
+    box-shadow: 0 0 0 3px rgba(22, 76, 34, 0.1);
+  }
+
+  .option.selected & {
+    border-color: $primary;
+    background: rgba(22, 76, 34, 0.05);
+  }
+}
+
+.radioInner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: $primary;
+  animation: scaleIn 0.15s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.optionText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.optionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.colorBlue {
+    background-color: #3B82F6;
+  }
+
+  &.colorAmber {
+    background-color: #F59E0B;
+  }
+
+  &.colorRed {
+    background-color: #EF4444;
+  }
+
+  &.colorGreen {
+    background-color: #10B981;
+  }
+}
+
+.optionLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: $black;
+  line-height: 1.4;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.optionDescription {
+  font-size: 12px;
+  color: $muted;
+  line-height: 1.4;
+  margin: 0;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.errorText {
+  font-size: 12px;
+  color: $error-color;
+  margin-top: 4px;
+}

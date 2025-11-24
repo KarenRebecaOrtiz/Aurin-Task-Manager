@@ -94,84 +94,66 @@
   }
 }
 
+// Primera fila: Cliente + Nombre + Action Button
 .taskHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   width: 100%;
-  padding: 12px;
-  gap: 8px;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
 }
 
-.taskStatusAndName {
+.clientInfo {
+  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  align-items: center;
+}
+
+.clientPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: $color-bg-glass;
+  border: 1px solid $color-border-subtle;
+
+  :global(body.dark) & {
+    background: $color-bg-glass-dark;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .taskNameWrapper {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.taskStatus {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  opacity: 0.8;
-
-  :global(body.dark) & {
-    color: $color-text-dark-primary;
-
-    img {
-      filter: invert(1) grayscale(1) brightness(1.5) !important;
-    }
-  }
+  min-width: 0;
 }
 
 .taskName {
   @include typography($text-sm, $font-weight-medium, $color-text-primary);
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   :global(body.dark) & {
     color: $color-text-dark-primary;
   }
 }
 
-.taskDetails {
-  @include flex-column;
-  gap: $spacing-sm;
-}
-
-.taskDetailsRow {
-  @include flex-between;
-  gap: $spacing-sm;
-  align-items: center;
-  width: 100%;
-}
-
-.taskDetailsLeft {
-  @include flex-center;
-  gap: $spacing-sm;
-}
-
-.clientInfo {
-  @include flex-center;
+// Segunda fila: Badges de estado y prioridad
+.badgesRow {
+  display: flex;
   gap: $spacing-xs;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-sm;
 }
 
-.noClient {
-  @include typography($text-xs, $font-weight-normal, $color-text-muted);
-
-  :global(body.dark) & {
-    color: $color-text-dark-muted;
-  }
+// Tercera fila: Avatar Group
+.avatarRow {
+  display: flex;
+  align-items: center;
 }
 
 .priorityWrapper {

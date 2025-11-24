@@ -87,22 +87,27 @@ export const useKanbanDragDrop = ({
       }
 
       const taskId = String(active.id);
-      let targetColumnId = over.id as string;
+      let targetColumnId = String(over.id);
 
-      // Fix: Si over.id NO es una columna válida, buscar la columna padre
-      if (!statusColumns.some((col) => col.id === targetColumnId)) {
-        // Si over es una tarea, usar la columna de esa tarea
+      // Verificar si over.id es una columna válida directamente
+      const isValidColumn = statusColumns.some((col) => col.id === targetColumnId);
+
+      if (!isValidColumn) {
+        // Si over.id no es una columna, intentar encontrar la tarea para obtener su columna
         const overTask = effectiveTasks.find((t) => t.id === targetColumnId);
         if (overTask) {
           const normalized = normalizeStatus(overTask.status);
           targetColumnId = normalized.toLowerCase().replace(/\s+/g, '-');
         } else {
+          // Si no es ni columna ni tarea, salir
+          console.warn('[useKanbanDragDrop] Invalid drop target:', targetColumnId);
           return;
         }
       }
 
-      // Verificar que tenemos una columna válida
+      // Verificar nuevamente que tenemos una columna válida después del mapeo
       if (!statusColumns.some((col) => col.id === targetColumnId)) {
+        console.warn('[useKanbanDragDrop] Invalid target column:', targetColumnId);
         return;
       }
 

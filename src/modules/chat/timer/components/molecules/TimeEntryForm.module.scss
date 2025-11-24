@@ -10,6 +10,11 @@
   background: white;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+
+  :global(body.dark) & {
+    background: #27272a;
+    border-color: #3f3f46;
+  }
 }
 
 .section {
@@ -23,12 +28,20 @@
   font-weight: 600;
   color: #1e293b;
   margin: 0;
+
+  :global(body.dark) & {
+    color: #f1f5f9;
+  }
 }
 
 .sectionDesc {
   font-size: 14px;
   color: #64748b;
   margin: 0;
+
+  :global(body.dark) & {
+    color: #94a3b8;
+  }
 }
 
 .timeInputs {
@@ -39,6 +52,10 @@
   padding: 16px;
   background: #f8fafc;
   border-radius: 12px;
+
+  :global(body.dark) & {
+    background: #3f3f46;
+  }
 }
 
 .separator {
@@ -46,6 +63,10 @@
   font-weight: 700;
   color: #64748b;
   margin: 0 8px;
+
+  :global(body.dark) & {
+    color: #94a3b8;
+  }
 }
 
 .label {
@@ -53,6 +74,10 @@
   font-weight: 500;
   color: #475569;
   margin-bottom: 8px;
+
+  :global(body.dark) & {
+    color: #cbd5e1;
+  }
 }
 
 .textarea {
@@ -80,6 +105,26 @@
     cursor: not-allowed;
     opacity: 0.6;
   }
+
+  :global(body.dark) & {
+    background: #3f3f46;
+    border-color: #52525b;
+    color: #f1f5f9;
+
+    &:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+    }
+
+    &::placeholder {
+      color: #64748b;
+    }
+
+    &:disabled {
+      background: #3f3f46;
+      border-color: #52525b;
+    }
+  }
 }
 
 .actions {
@@ -88,6 +133,10 @@
   justify-content: flex-end;
   padding-top: 8px;
   border-top: 1px solid #e2e8f0;
+
+  :global(body.dark) & {
+    border-top-color: #3f3f46;
+  }
 }
 
 .cancelButton,
@@ -119,6 +168,17 @@
   &:active:not(:disabled) {
     transform: scale(0.98);
   }
+
+  :global(body.dark) & {
+    background: #3f3f46;
+    color: #cbd5e1;
+    border-color: #52525b;
+
+    &:hover:not(:disabled) {
+      background: #3f3f46;
+      border-color: #52525b;
+    }
+  }
 }
 
 .submitButton {
@@ -133,68 +193,20 @@
   &:active:not(:disabled) {
     transform: scale(0.98);
   }
-}
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .timeEntryForm {
-    background: #1e293b;
-    border-color: #475569;
-  }
-
-  .sectionTitle {
-    color: #f1f5f9;
-  }
-
-  .sectionDesc {
-    color: #94a3b8;
-  }
-
-  .timeInputs {
-    background: #334155;
-  }
-
-  .separator {
-    color: #94a3b8;
-  }
-
-  .label {
-    color: #cbd5e1;
-  }
-
-  .textarea {
-    background: #334155;
-    border-color: #475569;
-    color: #f1f5f9;
-
-    &:focus {
-      border-color: #60a5fa;
-    }
-
-    &::placeholder {
-      color: #64748b;
-    }
-
-    &:disabled {
-      background: #1e293b;
-    }
-  }
-
-  .actions {
-    border-top-color: #475569;
-  }
-
-  .cancelButton {
-    background: #334155;
-    color: #cbd5e1;
-    border-color: #475569;
+  :global(body.dark) & {
+    background: #3b82f6;
+    border: 1px solid #60a5fa;
+    box-shadow: none;
 
     &:hover:not(:disabled) {
-      background: #3f4d5f;
-      border-color: #64748b;
+      background: #3b82f6;
+      border-color: #60a5fa;
+      box-shadow: none;
     }
   }
 }
+
 
 // Responsive design
 @media (max-width: 768px) {

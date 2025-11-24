@@ -3,7 +3,7 @@
 @use '@/app/styles/components' as *;
 
 // ==============================================================
-// 🔮 TASKS KANBAN - MODULARIZED STYLES
+// TASKS KANBAN - MODULARIZED STYLES
 // =================================================================
 
 .container {
@@ -12,6 +12,7 @@
   @include flex-column;
   gap: $spacing-lg;
   min-height: calc(100vh - 200px);
+  border-radius: 50px;
 
   :global(body.dark) & {
     background: $color-bg-dark;

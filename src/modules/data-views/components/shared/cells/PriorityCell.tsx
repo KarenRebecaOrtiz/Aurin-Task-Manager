@@ -1,12 +1,11 @@
 /**
  * PriorityCell Component
- * Displays task priority with icon and label
- * Used in TasksTable, ArchiveTable, and can be adapted for Kanban
+ * Displays task priority with badge styling
+ * Used in TasksTable, ArchiveTable
  */
 
 import React from 'react';
-import Image from 'next/image';
-import styles from './PriorityCell.module.scss';
+import { Badge, BadgeVariant } from '@/modules/shared/components/atoms/Badge';
 
 interface PriorityCellProps {
   priority: string;
@@ -14,36 +13,29 @@ interface PriorityCellProps {
 }
 
 /**
- * Maps priority to corresponding icon
+ * Maps priority to Badge variant
  */
-const getPriorityIcon = (priority: string): string => {
-  const iconMap: { [key: string]: string } = {
-    'Alta': '/arrow-up.svg',
-    'Media': '/arrow-right.svg',
-    'Baja': '/arrow-down.svg',
+const getPriorityVariant = (priority: string): BadgeVariant => {
+  const variantMap: { [key: string]: BadgeVariant } = {
+    'Alta': 'priority-high',
+    'Media': 'priority-medium',
+    'Baja': 'priority-low',
   };
 
-  return iconMap[priority] || '/arrow-right.svg';
+  return variantMap[priority] || 'default';
 };
 
 /**
  * PriorityCell Component
- * Renders a priority badge with icon and label
+ * Renders a priority badge with standardized colors
  */
 const PriorityCell: React.FC<PriorityCellProps> = ({ priority, className }) => {
-  const icon = getPriorityIcon(priority);
-  const priorityClass = `priority-${priority}`;
+  const variant = getPriorityVariant(priority);
 
   return (
-    <div className={`${styles.priorityWrapper} ${className || ''}`}>
-      <Image
-        src={icon}
-        alt={priority}
-        width={16}
-        height={16}
-      />
-      <span className={styles[priorityClass]}>{priority}</span>
-    </div>
+    <Badge variant={variant} size="small" className={className}>
+      {priority}
+    </Badge>
   );
 };
 

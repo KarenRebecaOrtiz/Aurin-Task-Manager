@@ -25,34 +25,24 @@ interface TableProps<T extends HasId> {
   getRowClassName?: (item: T) => string;
   emptyStateType?: 'tasks' | 'archive' | 'clients' | 'members' | 'team';
   className?: string;
-  // Nuevas props para funcionalidad de visibilidad de columnas
-  visibleColumns?: string[];
-  onColumnVisibilityChange?: (columnKey: string, visible: boolean) => void;
-  enableColumnVisibility?: boolean; // Para habilitar/deshabilitar esta funcionalidad
 }
 
 const Table = memo(
-  <T extends HasId>({ 
-    data, 
-    columns, 
-    itemsPerPage = 10, 
-    sortKey, 
-    sortDirection, 
-    onSort, 
-    onRowClick, 
-    getRowClassName, 
-    emptyStateType, 
-    className,
-    visibleColumns,
-    onColumnVisibilityChange,
-    enableColumnVisibility = false
+  <T extends HasId>({
+    data,
+    columns,
+    itemsPerPage = 10,
+    sortKey,
+    sortDirection,
+    onSort,
+    onRowClick,
+    getRowClassName,
+    emptyStateType,
+    className
   }: TableProps<T>) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isMobile, setIsMobile] = useState(false);
     const tableRef = useRef<HTMLDivElement>(null);
-
-
-
 
 
 
@@ -68,15 +58,13 @@ const Table = memo(
     }
   }, [currentPage, totalPages, data.length]);
 
-  // ✅ CORREGIDO: Reset de paginación cuando cambian los filtros
   useEffect(() => {
     const handleResetPagination = (event: CustomEvent) => {
       if (event.detail?.reason === 'filterChanged') {
-        setCurrentPage(1); // Reset a la primera página
+        setCurrentPage(1);
       }
     };
 
-    // Escuchar evento personalizado para resetear paginación
     document.addEventListener('resetPagination', handleResetPagination as EventListener);
     
     return () => {
@@ -84,14 +72,11 @@ const Table = memo(
     };
   }, []);
 
-  // ✅ CORREGIDO: Reset automático de paginación cuando cambia el data
   useEffect(() => {
-    setCurrentPage(1); // Reset a la primera página cuando cambian los datos
-  }, [data.length]); // Reset cuando cambia la cantidad de datos
+    setCurrentPage(1)
+  }, [data.length]);
 
-  // ✅ DEBUG: Log temporal para verificar datos
   useEffect(() => {
-    // Debug logging disabled
   }, [data.length, currentPage, totalPages, startIndex, itemsPerPage, paginatedData.length]);
 
     // Detect mobile screen size
@@ -112,20 +97,6 @@ const Table = memo(
       }
       return column.width;
     };
-
-    // Función para determinar si una columna está visible
-    const isColumnVisible = useCallback((columnKey: string): boolean => {
-      if (!enableColumnVisibility || !visibleColumns) return true;
-      return visibleColumns.includes(columnKey);
-    }, [enableColumnVisibility, visibleColumns]);
-
-    // Filtrar columnas visibles para renderizado
-    const visibleColumnsForRender = useMemo(() => {
-      if (!enableColumnVisibility) return columns;
-      return columns.filter(column => isColumnVisible(column.key));
-    }, [columns, enableColumnVisibility, isColumnVisible]);
-
-
 
     const handleCellClick = useCallback((item: T, column: Column<T>) => {
       if (column.key === 'action') {
@@ -215,8 +186,6 @@ const Table = memo(
             sortKey={sortKey}
             sortDirection={sortDirection}
             onSort={onSort}
-            visibleColumns={enableColumnVisibility ? visibleColumns : undefined}
-            onColumnVisibilityChange={enableColumnVisibility ? onColumnVisibilityChange : undefined}
             isMobile={isMobile}
           />
           {paginatedData.length === 0 ? (
@@ -224,7 +193,7 @@ const Table = memo(
           ) : (
             paginatedData.map((item, index) => (
               <div key={item.id || `row-${index}`} className={`${styles.row} ${getRowClassName?.(item) || ''}`}>
-                {visibleColumnsForRender.map((column) => (
+                {columns.map((column) => (
                   <div
                     key={column.key}
                     className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
@@ -297,10 +266,7 @@ const Table = memo(
       prevProps.onRowClick === nextProps.onRowClick &&
       prevProps.getRowClassName === nextProps.getRowClassName &&
       prevProps.emptyStateType === nextProps.emptyStateType &&
-      prevProps.className === nextProps.className &&
-      prevProps.visibleColumns === nextProps.visibleColumns &&
-      prevProps.onColumnVisibilityChange === nextProps.onColumnVisibilityChange &&
-      prevProps.enableColumnVisibility === nextProps.enableColumnVisibility
+      prevProps.className === nextProps.className
     );
   },
 );

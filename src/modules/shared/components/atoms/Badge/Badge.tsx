@@ -3,7 +3,24 @@
 import React from 'react';
 import styles from './Badge.module.scss';
 
-export type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info';
+export type BadgeVariant =
+  | 'default'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'info'
+  // Priority variants
+  | 'priority-high'
+  | 'priority-medium'
+  | 'priority-low'
+  // Status variants
+  | 'status-backlog'
+  | 'status-todo'
+  | 'status-in-progress'
+  | 'status-in-review'
+  | 'status-done'
+  | 'status-archived';
+
 export type BadgeSize = 'small' | 'medium' | 'large';
 
 export interface BadgeProps {

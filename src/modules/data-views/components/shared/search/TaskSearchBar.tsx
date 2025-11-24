@@ -4,9 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence, easeOut } from 'framer-motion';
 import { Search, X, ClipboardCheck, GalleryHorizontalEnd, Users } from 'lucide-react';
-import { Badge } from '@/modules/shared/components/atoms/Badge';
 import { Small } from '@/components/ui/Typography';
 import styles from './TaskSearchBar.module.scss';
+import chipStyles from '@/modules/task-crud/components/forms/ChipSelector.module.scss';
 
 export type SearchCategory = 'task' | 'client' | 'member';
 export type PriorityLevel = 'Alta' | 'Media' | 'Baja';
@@ -23,14 +23,14 @@ export interface PriorityFilter {
   id: string;
   label: string;
   value: PriorityLevel;
-  variant: 'error' | 'warning' | 'success';
+  variant: 'priority-high' | 'priority-medium' | 'priority-low';
 }
 
 export interface StatusFilter {
   id: string;
   label: string;
   value: StatusLevel;
-  variant: 'default' | 'info' | 'warning' | 'success';
+  variant: 'status-backlog' | 'status-todo' | 'status-in-progress' | 'status-in-review' | 'status-done' | 'status-archived';
 }
 
 interface TaskSearchBarProps {
@@ -66,19 +66,19 @@ const PRIORITY_FILTERS: PriorityFilter[] = [
     id: 'alta',
     label: 'Alta',
     value: 'Alta',
-    variant: 'error',
+    variant: 'priority-high',
   },
   {
     id: 'media',
     label: 'Media',
     value: 'Media',
-    variant: 'warning',
+    variant: 'priority-medium',
   },
   {
     id: 'baja',
     label: 'Baja',
     value: 'Baja',
-    variant: 'success',
+    variant: 'priority-low',
   },
 ];
 
@@ -87,25 +87,25 @@ const STATUS_FILTERS: StatusFilter[] = [
     id: 'por-iniciar',
     label: 'Por Iniciar',
     value: 'por-iniciar',
-    variant: 'default',
+    variant: 'status-todo',
   },
   {
     id: 'en-proceso',
     label: 'En Proceso',
     value: 'en-proceso',
-    variant: 'info',
+    variant: 'status-in-progress',
   },
   {
     id: 'por-finalizar',
     label: 'Por Finalizar',
     value: 'por-finalizar',
-    variant: 'warning',
+    variant: 'status-in-review',
   },
   {
     id: 'finalizado',
     label: 'Finalizado',
     value: 'finalizado',
-    variant: 'success',
+    variant: 'status-done',
   },
 ];
 
@@ -301,13 +301,15 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
                     key={priority.id}
                     {...itemAnimations(index + SEARCH_CATEGORIES.length)}
                     onClick={createPriorityHandler(priority.value)}
-                    className={`${styles.categoryButton} ${
-                      selectedPriorities.includes(priority.value) ? styles.selected : ''
+                    className={`${chipStyles.chip} ${chipStyles[priority.variant]} ${
+                      selectedPriorities.includes(priority.value) ? chipStyles.selected : ''
                     }`}
+                    style={{
+                      width: 'auto',
+                      minWidth: 'auto',
+                    }}
                   >
-                    <Badge variant={priority.variant} size="small">
-                      {priority.label}
-                    </Badge>
+                    {priority.label}
                   </motion.button>
                 ))}
               </div>
@@ -322,13 +324,15 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
                     key={status.id}
                     {...itemAnimations(index + SEARCH_CATEGORIES.length + PRIORITY_FILTERS.length)}
                     onClick={createStatusHandler(status.value)}
-                    className={`${styles.categoryButton} ${
-                      selectedStatuses.includes(status.value) ? styles.selected : ''
+                    className={`${chipStyles.chip} ${chipStyles[status.variant]} ${
+                      selectedStatuses.includes(status.value) ? chipStyles.selected : ''
                     }`}
+                    style={{
+                      width: 'auto',
+                      minWidth: 'auto',
+                    }}
                   >
-                    <Badge variant={status.variant} size="small">
-                      {status.label}
-                    </Badge>
+                    {status.label}
                   </motion.button>
                 ))}
               </div>

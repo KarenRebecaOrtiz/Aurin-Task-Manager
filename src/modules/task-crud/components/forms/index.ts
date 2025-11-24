@@ -1,4 +1,4 @@
-export { TaskCreateDialog } from './TaskCreateDialog'
-export { TaskCreateForm } from './TaskCreateForm'
-export { SimplifiedCreateTaskForm } from './SimplifiedCreateTaskForm'
-export type { TaskFormData } from './TaskCreateDialog'
+export { TaskDialog } from './TaskDialog'
+export { TaskForm } from './TaskForm'
+export { ClientDialog } from './ClientDialog'
+export type { TaskFormData } from './TaskForm'

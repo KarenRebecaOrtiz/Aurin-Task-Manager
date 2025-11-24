@@ -72,7 +72,7 @@ export function useSonnerToast() {
       const { duration = 5000, onAction, actionLabel, playSound = true } = options || {};
 
       if (playSound) {
-        playAudio('/Warning.mp3');
+        playAudio('/NotificationSound.mp3');
       }
 
       toast.warning(message, {
@@ -94,7 +94,7 @@ export function useSonnerToast() {
       const { duration = 5000, onAction, actionLabel, playSound = true } = options || {};
 
       if (playSound) {
-        playAudio('/Info.mp3');
+        playAudio('/NotificationSound.mp3');
       }
 
       toast.info(message, {

@@ -82,10 +82,12 @@ $leading-none: 1;
   background: transparent;
   position: sticky;
   top: 0;
+  background-color: white;
   z-index: 10;
 
   :global(body.dark) & {
     border-bottom-color: rgba(255, 255, 255, 0.05);
+    background-color: #131313;
   }
 }
 

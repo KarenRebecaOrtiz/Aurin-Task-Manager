@@ -1,8 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
 import styles from './TableHeader.module.scss';
 
 interface Column<T> {
@@ -21,8 +19,6 @@ interface TableHeaderProps<T> {
   sortKey?: string;
   sortDirection?: 'asc' | 'desc';
   onSort?: (key: string) => void;
-  visibleColumns?: string[]; // Array de keys de columnas visibles
-  onColumnVisibilityChange?: (columnKey: string, visible: boolean) => void;
   isMobile?: boolean;
 }
 
@@ -33,8 +29,6 @@ const TableHeader = <T,>({
   sortKey,
   sortDirection,
   onSort,
-  visibleColumns,
-  onColumnVisibilityChange,
   isMobile = false,
 }: TableHeaderProps<T>) => {
   // Función para obtener el estado de ordenamiento de una columna
@@ -68,19 +62,6 @@ const TableHeader = <T,>({
     }
   }, [onSort, getSortState]);
 
-  // Función para manejar visibilidad de columnas
-  const handleColumnVisibilityToggle = useCallback((columnKey: string) => {
-    if (!onColumnVisibilityChange || !visibleColumns) return;
-    
-    const isVisible = visibleColumns.includes(columnKey);
-    onColumnVisibilityChange(columnKey, !isVisible);
-  }, [onColumnVisibilityChange, visibleColumns]);
-
-  // Función para determinar si una columna está visible
-  const isColumnVisible = useCallback((columnKey: string): boolean => {
-    if (!visibleColumns) return true;
-    return visibleColumns.includes(columnKey);
-  }, [visibleColumns]);
 
   // Función para obtener el ancho de columna
   const getColumnWidth = (column: Column<T>) => {
@@ -109,7 +90,6 @@ const TableHeader = <T,>({
     <div className={styles.header}>
       {columns.map((column) => {
         const sortable = isColumnSortable(column);
-        const visible = isColumnVisible(column.key);
         const sortState = getSortState(column.key);
         const hasLabel = column.label && column.label.trim() !== '';
 
@@ -124,13 +104,11 @@ const TableHeader = <T,>({
             <div
               key={column.key}
               className={`
-                ${styles.headerCell} 
+                ${styles.headerCell}
                 ${!column.mobileVisible ? styles.hideOnMobile : ''}
-                ${!visible ? styles.hidden : ''}
               `}
               style={{
                 width: getColumnWidth(column),
-                opacity: visible ? 1 : 0.3,
               }}
             >
               <div className={styles.sortContainer}>
@@ -144,15 +122,13 @@ const TableHeader = <T,>({
           <div
             key={column.key}
             className={`
-              ${styles.headerCell} 
-              ${sortable ? styles.sortable : ''} 
+              ${styles.headerCell}
+              ${sortable ? styles.sortable : ''}
               ${!column.mobileVisible ? styles.hideOnMobile : ''}
               ${sortState !== 'none' ? styles.sorted : ''}
-              ${!visible ? styles.hidden : ''}
             `}
             style={{
               width: getColumnWidth(column),
-              opacity: visible ? 1 : 0.3,
             }}
             onClick={sortable ? () => handleSort(column.key) : undefined}
             role={sortable ? 'button' : undefined}
@@ -173,60 +149,6 @@ const TableHeader = <T,>({
             <div className={styles.sortContainer}>
               <span className={styles.columnLabel}>{column.label}</span>
             </div>
-
-            {onColumnVisibilityChange &&
-              column.key !== 'action' &&
-              column.key !== 'notificationDot' && (
-                <div className={styles.visibilityContainer}>
-                  <button
-                    className={styles.visibilityButton}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleColumnVisibilityToggle(column.key);
-                    }}
-                    aria-label={
-                      visible
-                        ? `Ocultar columna ${column.label}`
-                        : `Mostrar columna ${column.label}`
-                    }
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'absolute',
-                      top: '50%',
-                      right: '2px',
-                      transform: 'translateY(-50%)',
-                      zIndex: 10
-                    }}
-                  >
-                    <motion.div
-                      animate={{
-                        scale: visible ? 1 : 0.8,
-                        opacity: visible ? 1 : 0.5,
-                      }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <Image
-                        src={visible ? '/eye.svg' : '/eye-closed.svg'}
-                        alt={
-                          visible ? 'Ocultar columna' : 'Mostrar columna'
-                        }
-                        width={7}
-                        height={7}
-                        className={styles.eyeIcon}
-                        style={{ 
-                          width: '15px', 
-                          height: '15px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      />
-                    </motion.div>
-                  </button>
-                </div>
-              )}
           </div>
         );
       })}

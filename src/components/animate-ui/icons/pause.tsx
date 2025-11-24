@@ -92,7 +92,7 @@ function IconComponent({ size, ...props }: PauseProps) {
         rx={1}
         variants={variants.rect1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.rect
         x={6}
@@ -102,7 +102,7 @@ function IconComponent({ size, ...props }: PauseProps) {
         rx={1}
         variants={variants.rect2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

@@ -1,10 +1,10 @@
 'use client';
 
 import { useSortable } from '@dnd-kit/sortable';
-import Image from 'next/image';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { ClientAvatar } from '@/modules/shared/components/atoms/Avatar';
+import { Badge, BadgeVariant } from '@/modules/shared/components/atoms/Badge';
 import styles from './KanbanTaskCard.module.scss';
 
 interface Client {
@@ -59,22 +59,26 @@ interface KanbanTaskCardProps {
   normalizeStatus: (status: string) => string;
 }
 
-const getStatusIcon = (status: string, normalizeStatus: (status: string) => string): string => {
+const getStatusVariant = (status: string, normalizeStatus: (status: string) => string): BadgeVariant => {
   const normalizedStatus = normalizeStatus(status);
-  let icon = '/timer.svg';
-  if (normalizedStatus === 'En Proceso') icon = '/timer.svg';
-  else if (normalizedStatus === 'Backlog') icon = '/circle-help.svg';
-  else if (normalizedStatus === 'Por Iniciar') icon = '/circle.svg';
-  else if (normalizedStatus === 'Cancelado') icon = '/circle-x.svg';
-  else if (normalizedStatus === 'Por Finalizar') icon = '/circle-check.svg';
-  else if (normalizedStatus === 'Finalizado') icon = '/check-check.svg';
-  return icon;
+  const statusMap: { [key: string]: BadgeVariant } = {
+    'Backlog': 'status-backlog',
+    'Por Iniciar': 'status-todo',
+    'En Proceso': 'status-in-progress',
+    'Por Finalizar': 'status-in-review',
+    'Finalizado': 'status-done',
+    'Cancelado': 'status-archived',
+  };
+  return statusMap[normalizedStatus] || 'default';
 };
 
-const getPriorityIcon = (priority: string): string => {
-  if (priority === 'Alta') return '/arrow-up.svg';
-  if (priority === 'Media') return '/arrow-right.svg';
-  return '/arrow-down.svg';
+const getPriorityVariant = (priority: string): BadgeVariant => {
+  const priorityMap: { [key: string]: BadgeVariant } = {
+    'Alta': 'priority-high',
+    'Media': 'priority-medium',
+    'Baja': 'priority-low',
+  };
+  return priorityMap[priority] || 'default';
 };
 
 export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
@@ -118,23 +122,17 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
       className={`${styles.taskCard} ${isDragging ? styles.dragging : ''} ${isAdmin && isTouchDevice ? styles.touchDraggable : ''}`}
       onClick={() => onCardClick(task)}
     >
+      {/* Primera fila: Cliente + Nombre + Action Button */}
       <div className={styles.taskHeader}>
-        <div className={styles.taskStatusAndName}>
-          <div className={styles.taskNameWrapper}>
-            <span className={styles.taskName}>{task.name}</span>
-          </div>
-          <div className={styles.taskStatus}>
-            <Image
-              src={getStatusIcon(task.status, normalizeStatus)}
-              alt={normalizeStatus(task.status)}
-              width={16}
-              height={16}
-              style={{ opacity: 0.7 }}
-            />
-            <span className={styles[`status-${normalizeStatus(task.status).replace(/\s/g, '-')}`]}>
-              {normalizeStatus(task.status)}
-            </span>
-          </div>
+        <div className={styles.clientInfo}>
+          {client ? (
+            <ClientAvatar client={client} size="sm" />
+          ) : (
+            <div className={styles.clientPlaceholder} />
+          )}
+        </div>
+        <div className={styles.taskNameWrapper}>
+          <span className={styles.taskName}>{task.name}</span>
         </div>
         {(isAdmin || task.CreatedBy === userId) && (
           <ActionMenu
@@ -162,33 +160,18 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         )}
       </div>
 
-      {isAdmin && isTouchDevice && (
-        <div className={styles.touchDragIndicator}>
-          <span>👆 Arrastra para mover</span>
-        </div>
-      )}
+      {/* Segunda fila: Tags de estado y prioridad */}
+      <div className={styles.badgesRow}>
+        <Badge variant={getStatusVariant(task.status, normalizeStatus)} size="small">
+          {normalizeStatus(task.status)}
+        </Badge>
+        <Badge variant={getPriorityVariant(task.priority)} size="small">
+          {task.priority}
+        </Badge>
+      </div>
 
-      <div className={styles.taskDetails}>
-        <div className={styles.taskDetailsRow}>
-          <div className={styles.taskDetailsLeft}>
-            <div className={styles.clientInfo}>
-              {client ? (
-                <ClientAvatar client={client} size="sm" />
-              ) : (
-                <span className={styles.noClient}>Sin cuenta</span>
-              )}
-            </div>
-            <div className={styles.priorityWrapper}>
-              <Image
-                src={getPriorityIcon(task.priority)}
-                alt={task.priority}
-                width={16}
-                height={16}
-              />
-              <span className={styles[`priority-${task.priority}`]}>{task.priority}</span>
-            </div>
-          </div>
-        </div>
+      {/* Tercera fila: Avatar Group */}
+      <div className={styles.avatarRow}>
         <AvatarGroup
           assignedUserIds={task.AssignedTo}
           leadedByUserIds={task.LeadedBy}
@@ -197,6 +180,12 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
           maxAvatars={5}
         />
       </div>
+
+      {isAdmin && isTouchDevice && (
+        <div className={styles.touchDragIndicator}>
+          <span>👆 Arrastra para mover</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -95,14 +95,19 @@
 
 // Variants
 .primary {
-  @include button-primary($color-btn-primary, $white, $color-btn-primary-hover);
+  @include button-primary(
+    $color-btn-primary-dark,
+    $black,
+    $color-btn-primary-dark-hover
+  );
 
   :global(body.dark) & {
-    background: $color-btn-primary-dark;
-    color: $black;
+    background: $color-btn-primary;
+    color: $white;
+    background-color: black ;
 
     &:hover {
-      background: $color-btn-primary-dark-hover;
+      background: $color-btn-primary-hover;
     }
 
     .icon {

@@ -10,23 +10,27 @@
   border-radius: $radius-xl;
   white-space: nowrap;
   transition: $transition-base;
+
+  :global(body.dark) & {
+    box-shadow: none !important;
+  }
 }
 
 // Sizes
 .small {
-  padding: 2px 8px;
+  padding: 4px 10px;
   font-size: 11px;
   line-height: 1.2;
 }
 
 .medium {
-  padding: 4px 12px;
+  padding: 6px 14px;
   font-size: 12px;
   line-height: 1.3;
 }
 
 .large {
-  padding: 6px 16px;
+  padding: 8px 18px;
   font-size: 14px;
   line-height: 1.4;
 }
@@ -79,6 +83,102 @@
   :global(body.dark) & {
     background: rgba(59, 130, 246, 0.2);
     color: #60a5fa;
+  }
+}
+
+// ==============================================================
+// Priority variants - matching priority colors
+// ==============================================================
+.priority-high {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+
+  :global(body.dark) & {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+}
+
+.priority-medium {
+  background: rgba(251, 191, 36, 0.1);
+  color: #d97706;
+
+  :global(body.dark) & {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+  }
+}
+
+.priority-low {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+
+  :global(body.dark) & {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+}
+
+// ==============================================================
+// Status variants - matching StatusBadge colors
+// ==============================================================
+.status-backlog {
+  background: rgba(148, 163, 184, 0.1);
+  color: #475569;
+
+  :global(body.dark) & {
+    background: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+  }
+}
+
+.status-todo {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+
+  :global(body.dark) & {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+}
+
+.status-in-progress {
+  background: rgba(251, 191, 36, 0.1);
+  color: #d97706;
+
+  :global(body.dark) & {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+  }
+}
+
+.status-in-review {
+  background: rgba(168, 85, 247, 0.1);
+  color: #7c3aed;
+
+  :global(body.dark) & {
+    background: rgba(168, 85, 247, 0.2);
+    color: #a78bfa;
+  }
+}
+
+.status-done {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+
+  :global(body.dark) & {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+}
+
+.status-archived {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+
+  :global(body.dark) & {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
   }
 }
 

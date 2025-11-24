@@ -129,7 +129,7 @@ function IconComponent({ size, ...props }: LayoutDashboardProps) {
         ry={1}
         variants={variants.rect1}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.rect
         width={7}
@@ -140,7 +140,7 @@ function IconComponent({ size, ...props }: LayoutDashboardProps) {
         ry={1}
         variants={variants.rect2}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.rect
         width={7}
@@ -151,7 +151,7 @@ function IconComponent({ size, ...props }: LayoutDashboardProps) {
         ry={1}
         variants={variants.rect3}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
       <motion.rect
         width={7}
@@ -162,7 +162,7 @@ function IconComponent({ size, ...props }: LayoutDashboardProps) {
         ry={1}
         variants={variants.rect4}
         initial="initial"
-        animate={controls}
+        animate={controls || "initial"}
       />
     </motion.svg>
   );

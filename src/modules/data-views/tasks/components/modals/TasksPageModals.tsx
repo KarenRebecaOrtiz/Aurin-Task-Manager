@@ -8,6 +8,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useDialog } from '@/modules/dialog';
 import { useSonnerToast } from '@/modules/sonner';
 import { AccountDetailsCard } from '@/modules/data-views/clients/components/modals';
+import { TaskDialog } from '@/modules/task-crud/components/forms/TaskDialog';
 
 export default function TasksPageModals() {
   const { user } = useUser();
@@ -23,6 +24,11 @@ export default function TasksPageModals() {
   const clientSidebarData = useTasksPageStore(useShallow(state => state.clientSidebarData));
   const isClientLoading = useTasksPageStore(useShallow(state => state.isClientLoading));
   const deleteConfirm = useTasksPageStore(useShallow(state => state.deleteConfirm));
+  const isCreateTaskOpen = useTasksPageStore(useShallow(state => state.isCreateTaskOpen));
+  const closeCreateTask = useTasksPageStore(useShallow(state => state.closeCreateTask));
+  const isEditTaskOpen = useTasksPageStore(useShallow(state => state.isEditTaskOpen));
+  const editTaskId = useTasksPageStore(useShallow(state => state.editTaskId));
+  const closeEditTask = useTasksPageStore(useShallow(state => state.closeEditTask));
   // Removed session revoke popup - not implemented in store
 
   // Action handlers
@@ -53,6 +59,18 @@ export default function TasksPageModals() {
     const { setIsClientSidebarOpen, setClientSidebarData } = useTasksPageStore.getState();
     setIsClientSidebarOpen(false);
     setClientSidebarData(null);
+  };
+
+  const handleTaskCreated = () => {
+    console.log('[TasksPageModals] handleTaskCreated called');
+    // Toast is shown in TaskDialog component
+    closeCreateTask();
+  };
+
+  const handleTaskUpdated = () => {
+    console.log('[TasksPageModals] handleTaskUpdated called');
+    // Toast is shown in TaskDialog component
+    closeEditTask();
   };
 
   const handleClientSubmit = async (clientData: any) => {
@@ -241,6 +259,21 @@ export default function TasksPageModals() {
       )}
 
       {/* Session Revoke Popup - ELIMINADO - Ahora va directo al modal de Clerk */}
+
+      {/* Task Create Dialog */}
+      <TaskDialog
+        isOpen={isCreateTaskOpen}
+        onOpenChange={closeCreateTask}
+        onTaskCreated={handleTaskCreated}
+      />
+
+      {/* Task Edit Dialog */}
+      <TaskDialog
+        isOpen={isEditTaskOpen}
+        onOpenChange={closeEditTask}
+        onTaskCreated={handleTaskUpdated}
+        taskId={editTaskId || undefined}
+      />
     </>
   );
 } 

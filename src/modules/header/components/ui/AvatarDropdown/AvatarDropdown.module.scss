@@ -57,20 +57,20 @@
   }
 
   :global(body.dark) & {
-    background: rgba(30, 30, 30, 0.7);
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    background: #27272a;
+    border-color: #3f3f46;
+    box-shadow: none;
 
     &:hover {
-      background: rgba(30, 30, 30, 0.85);
-      border-color: rgba(255, 255, 255, 0.2);
-      @include neomorphic-shadow-hover(dark);
+      background: #27272a;
+      border-color: #52525b;
+      box-shadow: none;
     }
 
     &:active {
-      background: rgba(30, 30, 30, 0.6);
-      border-color: rgba(255, 255, 255, 0.05);
-      @include neomorphic-inset(dark);
+      background: #27272a;
+      border-color: #3f3f46;
+      box-shadow: none;
     }
   }
 
@@ -123,9 +123,9 @@
   justify-content: flex-start;
 
   :global(body.dark) & {
-    background: rgba(30, 30, 30, 0.7);
-    color: $color-text-dark-secondary;
-    @include neomorphic-inset(dark);
+    background: #27272a;
+    color: rgba(255, 255, 255, 0.532);
+    box-shadow: none;
   }
 }
 
@@ -178,9 +178,9 @@
   animation: dropdownAppear 0.2s ease-out;
 
   :global(body.dark) & {
-    background: rgba(24, 24, 27, 0.95);
-    border-color: rgba(255, 255, 255, 0.1);
-    @include neomorphic-shadow(dark);
+    background: #27272a;
+    border-color: #3f3f46;
+    box-shadow: none;
   }
 }
 
@@ -204,8 +204,8 @@
   background: rgba(255, 255, 255, 0.1);
 
   :global(body.dark) & {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.02);
+    border-bottom-color: #3f3f46;
+    background: #27272a;
   }
 }
 
@@ -268,20 +268,21 @@
 
   :global(body.dark) & {
     background: transparent;
-    color: $color-text-dark-primary;
+    color: rgba(255, 255, 255, 0.532);
     box-shadow: none;
     border: none;
 
     &:hover {
-      background: $zinc-800;
-      color: $color-text-dark-primary;
-      box-shadow: $shadow-simple-dark;
+      background: #3f3f46;
+      color: rgba(255, 255, 255, 0.9);
+      box-shadow: none;
       border: none;
+      transform: translateY(-1px) scale(1.01);
     }
     &:active {
-      background: $zinc-700;
-      color: $color-text-dark-primary;
-      box-shadow: $shadow-simple-dark;
+      background: #3f3f46;
+      color: rgba(255, 255, 255, 0.9);
+      box-shadow: none;
       border: none;
     }
   }

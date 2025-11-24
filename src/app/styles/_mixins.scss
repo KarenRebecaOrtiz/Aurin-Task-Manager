@@ -180,20 +180,23 @@
 // 🔮 INPUT MIXINS
 // =================================================================
 
-@mixin input-base($height: 48px, $padding: $spacing-xl $spacing-lg, $radius: $radius-lg) {
+@mixin input-base($height: 42px, $padding: 10px 14px, $radius: 8px) {
   width: 100%;
   min-width: 200px;
-  height: $height;
+  min-height: $height;
+  height: auto;
   padding: $padding;
   border-radius: $radius;
   font-family: $font-family-table;
-  font-size: $text-sm;
-  font-weight: $font-weight-medium;
+  font-size: 14px;
+  font-weight: $font-weight-normal;
+  color: #0F172A;
   transition: $transition-base;
   border: 1px solid transparent;
+  line-height: 1.4;
 
   &::placeholder {
-    color: #A0A0A0;
+    color: rgba(15, 23, 42, 0.5);
     font-weight: $font-weight-normal;
   }
 }
