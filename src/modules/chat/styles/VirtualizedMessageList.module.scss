@@ -72,12 +72,8 @@
   background:#f6f6f6;
 
   :global(.dark) & {
-    background: linear-gradient(
-      to bottom,
-      rgba(24, 24, 27, 1) 0%,
-      rgba(24, 24, 27, 0.95) 70%,
-      rgba(24, 24, 27, 0) 100%
-    );
+    background:#121212;
+
   }
 
   &::before,

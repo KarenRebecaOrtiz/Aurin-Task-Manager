@@ -66,18 +66,20 @@ export function TimerDisplay({
   const minutes = Math.floor((timerSeconds % 3600) / 60);
   const seconds = timerSeconds % 60;
 
+  // Export runningTimerTaskId for parent components
+  const hasOtherTimerRunning = runningTimerTaskId && runningTimerTaskId !== taskId;
 
   return (
-    <div className={`${styles.timerDisplay} ${compact ? styles.compact : ''} ${mini ? styles.mini : ''}`}>
-      {/* Warning Badge if timer running elsewhere */}
-      {runningTimerTaskId && runningTimerTaskId !== taskId && (
+    <div className={`${styles.timerDisplay} ${compact ? styles.compact : ''} ${mini ? styles.mini : ''}`} data-running-timer-id={hasOtherTimerRunning ? runningTimerTaskId : undefined}>
+      {/* Warning Badge if timer running elsewhere - HIDDEN in InputChat (moved to persistedData) */}
+      {hasOtherTimerRunning && (
         <div className={styles.warningBadge} title={`Timer activo en tarea: ${runningTimerTaskId}`}>
           <span className={styles.warningIcon}>⚠️</span>
           <span className={styles.warningText}>Timer activo en otra tarea</span>
         </div>
       )}
 
-      {/* Timer Counter */}
+      {/* Timer Counter - Now clickeable to open panel */}
       <TimerCounter
         hours={hours}
         minutes={minutes}
@@ -85,23 +87,9 @@ export function TimerDisplay({
         isOptimistic={isOptimistic}
         syncStatus={confirmationStatus === 'pending' ? 'syncing' : confirmationStatus === 'failed' ? 'error' : 'idle'}
         className={styles.counter}
+        onClick={onTogglePanel}
+        disabled={hasOtherTimerRunning}
       />
-
-      {/* Control Buttons */}
-      {showControls && (
-        <div className={styles.controls}>
-          {onTogglePanel && (
-            <button
-              onClick={onTogglePanel}
-              className={styles.moreButton}
-              disabled={isProcessing}
-              title="Más opciones"
-            >
-              ⚙️
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

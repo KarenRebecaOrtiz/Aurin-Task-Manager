@@ -8,11 +8,13 @@ export { CirclePlus } from './circle-plus';
 export { Clock } from './clock';
 export { LayoutDashboard } from './layout-dashboard';
 export { List } from './list';
+export { MessageCircle } from './message-circle';
 export { Paperclip } from './paperclip';
 export { Play } from './play';
 export { RotateCcw } from './rotate-ccw';
 export { Send } from './send';
 export { SquarePlus } from './square-plus';
+export { Timer } from './timer';
 export { Unplug } from './unplug';
 export { X } from './x';
 

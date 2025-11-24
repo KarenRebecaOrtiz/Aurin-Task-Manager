@@ -23,6 +23,9 @@ import { TimerPanel, TimerDisplay } from '../../timer';
 import { Paperclip, X } from '@/components/animate-ui/icons';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import SearchableDropdown, { type DropdownItem } from '@/modules/config/components/ui/SearchableDropdown';
+import { useTimerActions } from '../../timer/hooks/useTimerActions';
+import { useRouter } from 'next/navigation';
+import { Timer, MessageCircle } from '@/components/animate-ui/icons';
 import styles from './InputChat.module.scss';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -125,6 +128,7 @@ export const InputChat: React.FC<InputChatProps> = ({
   const [mentionInput, setMentionInput] = useState("");
   const [mentionOptions, setMentionOptions] = useState<DropdownItem[]>([]);
   const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
+  const [userAttemptedToStartTimer, setUserAttemptedToStartTimer] = useState(false);
 
   // Local state for sending if not controlled
   const [localSending, setLocalSending] = useState(false);
@@ -135,6 +139,14 @@ export const InputChat: React.FC<InputChatProps> = ({
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const conversationId = `chat-sidebar-${taskId}`;
+  const router = useRouter();
+
+  // ========== TIMER STATE ==========
+  const { runningTimerTaskId } = useTimerActions(taskId, userId, {
+    onConfirmStopOtherTimer: async () => false,
+  });
+  const hasOtherTimerRunning = runningTimerTaskId && runningTimerTaskId !== taskId;
+  const shouldShowTimerWarning = hasOtherTimerRunning && userAttemptedToStartTimer;
 
   // ========== IMAGE UPLOAD HOOK ==========
   const {
@@ -706,13 +718,25 @@ export const InputChat: React.FC<InputChatProps> = ({
     setIsTimerPanelOpen(false);
   }, []);
 
-  const handleToggleTimerPanel = useCallback(() => {
-    setIsTimerPanelOpen(!isTimerPanelOpen);
-  }, [isTimerPanelOpen]);
-
   const handleMouseDownPreventDefault = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
+
+  const handleGoToRunningTask = useCallback(() => {
+    if (runningTimerTaskId) {
+      router.push(`/dashboard/tasks?taskId=${runningTimerTaskId}`);
+    }
+  }, [runningTimerTaskId, router]);
+
+  const handleTimerCounterClick = useCallback(() => {
+    // If there's another timer running, mark attempt (will show banner)
+    if (hasOtherTimerRunning) {
+      setUserAttemptedToStartTimer(true);
+      return;
+    }
+    // Otherwise, open the timer panel normally
+    setIsTimerPanelOpen(true);
+  }, [hasOtherTimerRunning]);
 
   // ========== MENTION HANDLERS ==========
   const handleMentionSelectionChange = useCallback(
@@ -744,21 +768,46 @@ export const InputChat: React.FC<InputChatProps> = ({
   // ========== RENDER ==========
   return (
     <div className={styles.inputWrapper}>
-      {/* Persisted data banner */}
+      {/* Persisted message banner */}
       <AnimatePresence>
         {restoredData && restoredData.content && restoredData.content.trim() && (
           <motion.div
             className={styles.persistedData}
             key="persisted-msg"
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           >
-            <span>Mensaje guardado restaurado</span>
-            <button type="button" onClick={handleClearPersistedData}>
-              Borrar
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <MessageCircle animateOnHover size={20} />
+              <span>Mensaje guardado restaurado</span>
+              <button type="button" onClick={handleClearPersistedData}>
+                Borrar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Timer warning banner - Only shown after user attempts to start timer */}
+      <AnimatePresence>
+        {shouldShowTimerWarning && (
+          <motion.div
+            className={styles.timerWarning}
+            key="timer-warning"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Timer animateOnHover size={20} />
+              <span>Completa el timer en otra tarea primero</span>
+              <button type="button" onClick={handleGoToRunningTask}>
+                Ir
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1017,7 +1066,7 @@ export const InputChat: React.FC<InputChatProps> = ({
               taskId={taskId}
               userId={userId}
               showControls={true}
-              onTogglePanel={handleToggleTimerPanel}
+              onTogglePanel={handleTimerCounterClick}
             />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <button

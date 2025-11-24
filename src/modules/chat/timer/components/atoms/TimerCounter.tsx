@@ -27,6 +27,7 @@ const MotionNumberFlow = motion.create(NumberFlow);
  * @param className - Additional CSS classes
  * @param isOptimistic - Whether showing optimistic update (pending confirmation)
  * @param syncStatus - Current sync status ('idle', 'syncing', 'error')
+ * @param onClick - Optional click handler to make counter interactive
  */
 export function TimerCounter({
   hours,
@@ -34,10 +35,26 @@ export function TimerCounter({
   seconds,
   className = '',
   isOptimistic = false,
-  syncStatus = 'idle'
+  syncStatus = 'idle',
+  onClick,
+  disabled = false
 }: TimerCounterProps) {
+  // Check if timer is at 0
+  const isTimerEmpty = hours === 0 && minutes === 0 && seconds === 0;
+
   return (
-    <div className={`${styles.timerCounter} ${className}`}>
+    <div
+      className={`${styles.timerCounter} ${className} ${onClick ? styles.clickable : ''} ${disabled ? styles.disabledState : ''}`}
+      onClick={() => onClick?.()}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+    >
       {/* Clock Icon */}
       <div className={styles.clockIcon}>
         <svg
@@ -60,46 +77,52 @@ export function TimerCounter({
 
       {/* Time Display */}
       <div className={styles.timeDisplay}>
-        {/* Hours */}
-        <div className={styles.timeUnit}>
-          <MotionNumberFlow
-            value={hours}
-            className={styles.timeNumber}
-            format={{ minimumIntegerDigits: 2 }}
-            aria-label={`${hours} horas`}
-          />
-          <span className={styles.timeLabel}>Horas</span>
-        </div>
+        {isTimerEmpty ? (
+          <span className={styles.emptyTimerText}>Iniciar un Timer</span>
+        ) : (
+          <>
+            {/* Hours */}
+            <div className={styles.timeUnit}>
+              <MotionNumberFlow
+                value={hours}
+                className={styles.timeNumber}
+                format={{ minimumIntegerDigits: 2 }}
+                aria-label={`${hours} horas`}
+              />
+              <span className={styles.timeLabel}>Horas</span>
+            </div>
 
-        <div className={styles.timeSeparator} aria-hidden="true">
-          :
-        </div>
+            <div className={styles.timeSeparator} aria-hidden="true">
+              :
+            </div>
 
-        {/* Minutes */}
-        <div className={styles.timeUnit}>
-          <MotionNumberFlow
-            value={minutes}
-            className={styles.timeNumber}
-            format={{ minimumIntegerDigits: 2 }}
-            aria-label={`${minutes} minutos`}
-          />
-          <span className={styles.timeLabel}>Min</span>
-        </div>
+            {/* Minutes */}
+            <div className={styles.timeUnit}>
+              <MotionNumberFlow
+                value={minutes}
+                className={styles.timeNumber}
+                format={{ minimumIntegerDigits: 2 }}
+                aria-label={`${minutes} minutos`}
+              />
+              <span className={styles.timeLabel}>Min</span>
+            </div>
 
-        <div className={styles.timeSeparator} aria-hidden="true">
-          :
-        </div>
+            <div className={styles.timeSeparator} aria-hidden="true">
+              :
+            </div>
 
-        {/* Seconds */}
-        <div className={styles.timeUnit}>
-          <MotionNumberFlow
-            value={seconds}
-            className={styles.timeNumber}
-            format={{ minimumIntegerDigits: 2 }}
-            aria-label={`${seconds} segundos`}
-          />
-          <span className={styles.timeLabel}>Seg</span>
-        </div>
+            {/* Seconds */}
+            <div className={styles.timeUnit}>
+              <MotionNumberFlow
+                value={seconds}
+                className={styles.timeNumber}
+                format={{ minimumIntegerDigits: 2 }}
+                aria-label={`${seconds} segundos`}
+              />
+              <span className={styles.timeLabel}>Seg</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Sync Status Indicators */}

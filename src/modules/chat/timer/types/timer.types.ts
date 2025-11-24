@@ -418,6 +418,8 @@ export interface TimerCounterProps {
   className?: string;
   isOptimistic?: boolean;
   syncStatus?: TimerSyncStatus;
+  onClick?: () => void;
+  disabled?: boolean;
 }
 
 /**

@@ -31,6 +31,25 @@
       box-shadow: none;
     }
   }
+
+  // Clickable state
+  &.clickable {
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      border-color: #cbd5e1;
+      transform: translateY(-2px) scale(1.01);
+    }
+
+    &:active {
+      transform: translateY(0) scale(0.99);
+    }
+
+    :global(body.dark) &:hover {
+      border-color: #52525b;
+    }
+  }
 }
 
 .clockIcon {
@@ -55,6 +74,31 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.emptyTimerText {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.02em;
+
+  :global(body.dark) & {
+    color: #cbd5e1;
+  }
+}
+
+// Disabled state - Still clickeable but with reduced opacity
+.timerCounter.disabledState {
+  opacity: 0.5;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  &.clickable:active {
+    transform: translateY(0) scale(0.99);
+  }
 }
 
 .timeUnit {

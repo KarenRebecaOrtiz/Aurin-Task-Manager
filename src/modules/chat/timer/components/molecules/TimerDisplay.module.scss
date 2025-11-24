@@ -17,9 +17,9 @@
   }
 
   &.mini {
-    padding: 4px 6px;
-    gap: 4px;
-    transform: scale(0.65);
+    padding: 2px 3px;
+    gap: 2px;
+    transform: scale(0.45);
     transform-origin: left center;
     width: fit-content;
   }
@@ -77,73 +77,17 @@
   }
 }
 
-.controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.moreButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 18px;
-  transition: all 0.2s ease;
-
-  &:hover:not(:disabled) {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    transform: scale(1.05);
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.95);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  :global(body.dark) & {
-    background: #3f3f46;
-    border-color: #52525b;
-    color: rgba(255, 255, 255, 0.9);
-
-    &:hover:not(:disabled) {
-      background: #3f3f46;
-      border-color: #52525b;
-      transform: scale(1.05);
-    }
-
-    &:active:not(:disabled) {
-      background: #3f3f46;
-      transform: scale(0.95);
-    }
-  }
-}
-
 // Mini mode - Ultra discrete
 .timerDisplay.mini {
   .warningBadge {
     display: none; // Hide warning in mini mode
   }
+}
 
-  .moreButton {
-    width: 24px;
-    height: 24px;
-    padding: 2px;
-    font-size: 12px;
-    border-width: 1px;
-    border-radius: 4px;
+// Hide warning badge in InputChat (moved to persistedData)
+.timerDisplay {
+  .warningBadge {
+    display: none;
   }
 }
 
@@ -162,15 +106,5 @@
   .warningBadge {
     font-size: 12px;
     padding: 6px 10px;
-  }
-
-  .controls {
-    gap: 8px;
-  }
-
-  .moreButton {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
   }
 }
