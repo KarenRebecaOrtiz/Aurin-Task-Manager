@@ -1,7 +1,3 @@
-// TODO: Componente de título de sección reutilizable
-// TODO: Props: children (ReactNode), className (opcional)
-// TODO: Aplicar estilos base desde SectionTitle.module.scss
-// TODO: Permitir className adicional para customización
 
 import React from 'react';
 import styles from './SectionTitle.module.scss';

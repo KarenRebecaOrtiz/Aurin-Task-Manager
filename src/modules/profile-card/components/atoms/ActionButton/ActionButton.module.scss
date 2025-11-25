@@ -1,10 +1,5 @@
 @use '@/app/styles/variables' as *;
 
-// TODO: Estilos base para botón de acción reutilizable
-// TODO: Debe soportar tanto variant='config' como variant='message'
-// TODO: Incluir estados hover, active, focus
-// TODO: Tema dark mode
-
 .actionButton {
   /* Estilos base compartidos */
   display: flex;

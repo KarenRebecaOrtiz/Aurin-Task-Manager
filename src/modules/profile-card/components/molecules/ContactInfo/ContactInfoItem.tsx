@@ -1,7 +1,3 @@
-// TODO: Componente para item individual de contacto
-// TODO: Props: label (string), value (string)
-// TODO: Usar componente Small de Typography
-// TODO: Aplicar estilos desde ContactInfo.module.scss
 
 import React from 'react';
 import { Small } from '@/components/ui/Typography';

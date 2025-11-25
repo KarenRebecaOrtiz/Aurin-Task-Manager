@@ -1,8 +1,3 @@
-// TODO: Renderizar lista de enlaces sociales
-// TODO: Props: socialLinks (SocialLink[])
-// TODO: Usar AddedLinkItem del módulo config
-// TODO: Solo renderizar si hay links
-// TODO: Aplicar motion variants para animación
 
 import React from 'react';
 import { motion } from 'framer-motion';

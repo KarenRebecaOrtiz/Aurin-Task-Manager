@@ -23,17 +23,39 @@
 .phoneInputContainer {
   display: flex;
   flex-direction: row;
-  gap: 2px;
-  align-items: flex-start;
+  gap: 0; // No gap - components should be seamlessly joined
+  align-items: stretch; // Changed to stretch for equal heights
   width: 100%;
 
   > div:first-child {
     flex: 0 0 auto;
-    width: 110px;
+    // Width is controlled by CountrySelect component itself
   }
 
   > div:last-child {
     flex: 1;
     min-width: 0;
+
+    // Make input connect seamlessly with dropdown
+    input {
+      border-radius: 0 8px 8px 0 !important; // Only right side rounded
+      border-left: none !important; // Remove left border to connect
+
+      &:focus {
+        border-left: none !important; // Keep border removed on focus
+      }
+    }
+  }
+
+  @media (max-width: 1024px) {
+    > div:last-child input {
+      border-radius: 0 8px 8px 0 !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    > div:last-child input {
+      border-radius: 0 8px 8px 0 !important;
+    }
   }
 }

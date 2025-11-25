@@ -15,8 +15,8 @@ import { db } from '@/lib/firebase';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiNoContent, apiBadRequest, apiNotFound, apiForbidden, handleApiError } from '@/lib/api/response';
 import { updateTaskSchema, patchTaskSchema, Task } from '@/lib/validations/task.schema';
-import { emailNotificationService } from '@/services/emailNotificationService';
-import { updateTaskActivity } from '@/lib/taskUtils';
+import { mailer } from '@/modules/mailer';
+import { updateTaskActivity } from '@/lib/taskUtils.client';
 import { clerkClient } from '@clerk/nextjs/server';
 
 /**
@@ -160,38 +160,60 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
     // Update task activity
     await updateTaskActivity(taskId, 'edit');
 
-    // Detect changes and send targeted notifications
-    const recipients = new Set<string>([
+    // Detect changes and send targeted notifications (using new mailer module)
+    const recipients = [
       ...(updatedTask.LeadedBy || []),
       ...(updatedTask.AssignedTo || [])
-    ]);
-    recipients.delete(userId); // Don't notify the user making the change
+    ];
 
-    if (recipients.size > 0) {
+    if (recipients.length > 0) {
       try {
         // Determine notification type based on changes
-        let notificationType = 'task_status_changed';
-        let notificationMessage = `Se actualizó la tarea "${updatedTask.name}"`;
+        let result;
 
-        if (updateData.priority && updateData.priority !== existingTask.priority) {
-          notificationType = 'task_priority_changed';
-          notificationMessage = `La prioridad de "${updatedTask.name}" cambió a ${updateData.priority}`;
+        if (updateData.status && updateData.status !== existingTask.status) {
+          // Status changed
+          result = await mailer.notifyTaskStatusChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+            oldStatus: existingTask.status,
+            newStatus: updateData.status,
+          });
+        } else if (updateData.priority && updateData.priority !== existingTask.priority) {
+          // Priority changed
+          result = await mailer.notifyTaskPriorityChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+            oldPriority: existingTask.priority,
+            newPriority: updateData.priority,
+          });
         } else if (updateData.startDate !== existingTask.startDate || updateData.endDate !== existingTask.endDate) {
-          notificationType = 'task_dates_changed';
-          notificationMessage = `Las fechas de "${updatedTask.name}" fueron actualizadas`;
-        } else if (JSON.stringify(updateData.AssignedTo) !== JSON.stringify(existingTask.AssignedTo)) {
-          notificationType = 'task_assignment_changed';
-          notificationMessage = `La asignación de "${updatedTask.name}" fue modificada`;
+          // Dates changed
+          result = await mailer.notifyTaskDatesChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+          });
+        } else if (JSON.stringify(updateData.AssignedTo) !== JSON.stringify(existingTask.AssignedTo) ||
+                   JSON.stringify(updateData.LeadedBy) !== JSON.stringify(existingTask.LeadedBy)) {
+          // Assignment changed
+          result = await mailer.notifyTaskAssignmentChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+          });
+        } else {
+          // General update
+          result = await mailer.notifyTaskUpdated({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+          });
         }
 
-        await emailNotificationService.createEmailNotificationsForRecipients({
-          userId,
-          message: notificationMessage,
-          type: notificationType as any,
-          taskId,
-        }, Array.from(recipients));
-
-        console.log('[API] Sent', notificationType, 'notifications to:', recipients.size, 'recipients');
+        console.log('[API] Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
       } catch (notificationError) {
         console.warn('[API] Failed to send notifications:', notificationError);
         // Don't fail the request if notifications fail

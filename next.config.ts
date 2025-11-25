@@ -1,6 +1,8 @@
 import {withSentryConfig} from '@sentry/nextjs';
+import type { NextConfig } from 'next';
+
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -28,6 +30,41 @@ const nextConfig = {
         pathname: '**',
       },
     ],
+  },
+  // Webpack configuration to handle server-only packages
+  webpack: (config, { isServer }) => {
+    // Only apply these configs on the client side
+    if (!isServer) {
+      // Mark server-only packages as external for client-side bundles
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        child_process: false,
+        crypto: false,
+        stream: false,
+        os: false,
+        path: false,
+      };
+
+      // Exclude server-only packages from client bundle
+      config.externals = [...(config.externals || [])];
+
+      // Add regex patterns to exclude nodemailer and related packages
+      config.externals.push({
+        nodemailer: 'nodemailer',
+        'nodemailer/lib/dkim': 'nodemailer/lib/dkim',
+        '@/modules/mailer': '@/modules/mailer',
+      });
+    }
+
+    return config;
+  },
+  // Ensure server-only modules are not bundled for client
+  experimental: {
+    serverComponentsExternalPackages: ['nodemailer'],
   },
 };
 

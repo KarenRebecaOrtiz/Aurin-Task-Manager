@@ -1,0 +1,622 @@
+/**
+ * Task Utils - SERVER ONLY
+ *
+ * Functions that require server-only dependencies (mailer, etc.)
+ * For client-safe utilities, see taskUtils.client.ts
+ */
+
+import { db } from './firebase';
+import { collection, getDocs, query, deleteDoc, doc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { mailer } from '@/modules/mailer';
+import { refreshTasksCache } from '@/services/taskService';
+
+// Re-export all client-safe utilities
+export * from './taskUtils.client';
+
+// Helper function for conditional logging (only in development)
+const debugLog = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.log(message, ...args);
+  }
+};
+
+// Helper function for conditional error logging (only in development)
+const debugError = (message: string, ...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.error(message, ...args);
+  }
+};
+
+interface Task {
+  id: string;
+  AssignedTo: string[];
+  LeadedBy: string[];
+  CreatedBy?: string;
+  name: string;
+  archived?: boolean;
+  archivedAt?: Timestamp | string;
+  archivedBy?: string;
+}
+
+interface TaskWithActivity {
+  lastActivity?: Timestamp | string;
+  createdAt: Timestamp | string;
+  hasUnreadUpdates?: boolean;
+  lastViewedBy?: { [userId: string]: Timestamp | string };
+}
+
+// Cache para debouncing de actualizaciones de actividad
+const activityUpdateCache = new Map<string, { timeout: NodeJS.Timeout; lastUpdate: number }>();
+const ACTIVITY_DEBOUNCE_DELAY = 5000; // 5 segundos
+
+// Función para actualizar la actividad de una tarea con debouncing
+export async function updateTaskActivity(taskId: string, activityType: 'message' | 'status_change' | 'edit' | 'time_entry') {
+  try {
+    // Limpiar timeout anterior si existe
+    if (activityUpdateCache.has(taskId)) {
+      clearTimeout(activityUpdateCache.get(taskId)!.timeout);
+    }
+
+    // Crear nuevo timeout para debouncing
+    const timeout = setTimeout(async () => {
+      try {
+        const now = Timestamp.now();
+        await updateDoc(doc(db, 'tasks', taskId), {
+          lastActivity: now,
+          hasUnreadUpdates: true,
+        });
+        debugLog('[taskUtils] Task activity updated:', { taskId, activityType, timestamp: now });
+        
+        // Limpiar del cache después de la actualización
+        activityUpdateCache.delete(taskId);
+      } catch (error) {
+        debugError('[taskUtils] Error updating task activity:', error);
+        activityUpdateCache.delete(taskId);
+      }
+    }, ACTIVITY_DEBOUNCE_DELAY);
+
+    // Guardar en cache
+    activityUpdateCache.set(taskId, { timeout, lastUpdate: Date.now() });
+  } catch (error) {
+    debugError('[taskUtils] Error setting up activity update:', error);
+  }
+}
+
+// Función para forzar actualización inmediata (para casos críticos)
+export async function forceUpdateTaskActivity(taskId: string, activityType: 'message' | 'status_change' | 'edit' | 'time_entry') {
+  try {
+    // Limpiar timeout si existe
+    if (activityUpdateCache.has(taskId)) {
+      clearTimeout(activityUpdateCache.get(taskId)!.timeout);
+      activityUpdateCache.delete(taskId);
+    }
+
+    const now = Timestamp.now();
+    await updateDoc(doc(db, 'tasks', taskId), {
+      lastActivity: now,
+      hasUnreadUpdates: true,
+    });
+    debugLog('[taskUtils] Task activity force updated:', { taskId, activityType, timestamp: now });
+  } catch (error) {
+    debugError('[taskUtils] Error force updating task activity:', error);
+  }
+}
+
+// Función para limpiar cache de actividad (útil para testing)
+export function clearActivityCache() {
+  activityUpdateCache.forEach(({ timeout }) => clearTimeout(timeout));
+  activityUpdateCache.clear();
+}
+
+// Función para obtener estadísticas de cache
+export function getActivityCacheStats() {
+  return {
+    pendingUpdates: activityUpdateCache.size,
+    cacheEntries: Array.from(activityUpdateCache.entries()).map(([taskId, { lastUpdate }]) => ({
+      taskId,
+      lastUpdate: new Date(lastUpdate),
+      timeSinceUpdate: Date.now() - lastUpdate,
+    })),
+  };
+}
+
+// Función para archivar tareas con batching
+export async function archiveTasks(tasks: Task[], userId: string, isAdmin: boolean) {
+  try {
+    const batch = writeBatch(db);
+    const now = Timestamp.now();
+    
+    tasks.forEach(task => {
+      if (isAdmin || task.CreatedBy === userId) {
+        const taskRef = doc(db, 'tasks', task.id);
+        batch.update(taskRef, {
+          archived: true,
+          archivedAt: now,
+          archivedBy: userId,
+        });
+      }
+    });
+    
+    await batch.commit();
+    debugLog(`[taskUtils] Archived ${tasks.length} tasks successfully`);
+  } catch (error) {
+    debugError('[taskUtils] Error archiving tasks:', error);
+    throw error;
+  }
+}
+
+// Función para desarchivar tareas con batching
+export async function unarchiveTasks(tasks: Task[], userId: string, isAdmin: boolean) {
+  try {
+    const batch = writeBatch(db);
+    
+    tasks.forEach(task => {
+      if (isAdmin || task.CreatedBy === userId) {
+        const taskRef = doc(db, 'tasks', task.id);
+        batch.update(taskRef, {
+          archived: false,
+          archivedAt: null,
+          archivedBy: null,
+        });
+      }
+    });
+    
+    await batch.commit();
+    debugLog(`[taskUtils] Unarchived ${tasks.length} tasks successfully`);
+  } catch (error) {
+    debugError('[taskUtils] Error unarchiving tasks:', error);
+    throw error;
+  }
+}
+
+// Función para eliminar tareas con batching
+export async function deleteTasks(tasks: Task[], userId: string, isAdmin: boolean) {
+  try {
+    const batch = writeBatch(db);
+    
+    tasks.forEach(task => {
+      if (isAdmin || task.CreatedBy === userId) {
+        const taskRef = doc(db, 'tasks', task.id);
+        batch.delete(taskRef);
+      }
+    });
+    
+    await batch.commit();
+    debugLog(`[taskUtils] Deleted ${tasks.length} tasks successfully`);
+  } catch (error) {
+    debugError('[taskUtils] Error deleting tasks:', error);
+    throw error;
+  }
+}
+
+// Función para crear notificaciones en batch
+export async function createBatchNotifications(notifications: Array<{
+  userId: string;
+  taskId: string;
+  message: string;
+  recipientId: string;
+  type: string;
+}>) {
+  try {
+    const batch = writeBatch(db);
+    
+    notifications.forEach(notification => {
+      const notifRef = doc(collection(db, 'notifications'));
+      batch.set(notifRef, {
+        ...notification,
+        timestamp: Timestamp.now(),
+        read: false,
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // 7 días
+      });
+    });
+    
+    await batch.commit();
+    debugLog(`[taskUtils] Created ${notifications.length} notifications in batch`);
+  } catch (error) {
+    debugError('[taskUtils] Error creating batch notifications:', error);
+    throw error;
+  }
+}
+
+// Función para marcar notificaciones como leídas en batch
+export async function markNotificationsAsRead(notificationIds: string[]) {
+  try {
+    const batch = writeBatch(db);
+    
+    notificationIds.forEach(notifId => {
+      const notifRef = doc(db, 'notifications', notifId);
+      batch.update(notifRef, { read: true });
+    });
+    
+    await batch.commit();
+    debugLog(`[taskUtils] Marked ${notificationIds.length} notifications as read`);
+  } catch (error) {
+    debugError('[taskUtils] Error marking notifications as read:', error);
+    throw error;
+  }
+}
+
+// Función para marcar una tarea como vista por un usuario (estilo red social)
+export async function markTaskAsViewed(taskId: string, userId: string) {
+  try {
+    const now = Timestamp.now();
+    
+    // Actualizar el timestamp de última vista para este usuario específico
+    await updateDoc(doc(db, 'tasks', taskId), {
+      [`lastViewedBy.${userId}`]: now,
+    });
+    
+    // Debug logging disabled to reduce console spam
+    
+    // Opcional: Si todos los usuarios asignados han visto la tarea, marcar hasUnreadUpdates como false
+    // Esto es opcional y depende de si quieres que el flag general se mantenga o no
+    // await checkAndUpdateGlobalUnreadStatus(taskId);
+    
+  } catch (error) {
+    debugError('[taskUtils] Error marking task as viewed:', error);
+    throw new Error(`Failed to mark task as viewed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Función para obtener el timestamp de la última actividad de una tarea
+export function getLastActivityTimestamp(task: TaskWithActivity): number {
+  if (task.lastActivity) {
+    return task.lastActivity instanceof Timestamp 
+      ? task.lastActivity.toMillis() 
+      : new Date(task.lastActivity).getTime();
+  }
+  // Si no hay lastActivity, usar createdAt
+  return task.createdAt instanceof Timestamp 
+    ? task.createdAt.toMillis() 
+    : new Date(task.createdAt).getTime();
+}
+
+// Función simple para calcular notificaciones no leídas
+export function getUnreadCount(task: TaskWithActivity, userId: string): number {
+  // ✅ ELIMINADO: Logs innecesarios que saturaban la consola
+
+  // Si no hay userId, no hay notificaciones
+  if (!userId) {
+    return 0;
+  }
+  
+  // Si la tarea no tiene actualizaciones, no hay notificaciones
+  if (!task.hasUnreadUpdates) {
+    return 0;
+  }
+  
+  // Si el usuario nunca ha visto la tarea, tiene 1 notificación
+  if (!task.lastViewedBy || !task.lastViewedBy[userId]) {
+    return 1;
+  }
+  
+  // Si hay última actividad y es más reciente que la última vista
+  if (task.lastActivity) {
+    const lastActivity = task.lastActivity instanceof Timestamp 
+      ? task.lastActivity.toMillis() 
+      : new Date(task.lastActivity).getTime();
+    
+    const lastViewed = task.lastViewedBy[userId] instanceof Timestamp 
+      ? task.lastViewedBy[userId].toMillis() 
+      : new Date(task.lastViewedBy[userId]).getTime();
+    
+    if (lastActivity > lastViewed) {
+      return 1; // Una notificación por tarea no vista
+    }
+  }
+  
+  return 0;
+}
+
+// Función simple para verificar si hay notificaciones
+export function hasUnreadUpdates(task: TaskWithActivity, userId: string): boolean {
+  return getUnreadCount(task, userId) > 0;
+}
+
+export async function deleteTask(taskId: string, userId: string, isAdmin: boolean, task: Task) {
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    // Verificar permisos
+    if (!isAdmin && task.CreatedBy !== userId) {
+      throw new Error('No tienes permisos para eliminar esta tarea');
+    }
+
+    // Eliminar mensajes de la tarea
+    const messagesQuery = query(collection(db, `tasks/${taskId}/messages`));
+    const messagesSnapshot = await getDocs(messagesQuery);
+    const deleteMessagesPromises = messagesSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+    await Promise.all(deleteMessagesPromises);
+    debugLog('[taskUtils] Deleted messages for task:', taskId);
+
+    // Eliminar timers de la tarea
+    const timersQuery = query(collection(db, `tasks/${taskId}/timers`));
+    const timersSnapshot = await getDocs(timersQuery);
+    const deleteTimersPromises = timersSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+    await Promise.all(deleteTimersPromises);
+    debugLog('[taskUtils] Deleted timers for task:', taskId);
+
+    // Eliminar notificaciones existentes para esta tarea
+    const notificationsQuery = query(collection(db, 'notifications'), where('taskId', '==', taskId));
+    const notificationsSnapshot = await getDocs(notificationsQuery);
+    for (const notifDoc of notificationsSnapshot.docs) {
+      await deleteDoc(doc(db, 'notifications', notifDoc.id));
+      debugLog('[taskUtils] Deleted notification:', notifDoc.id);
+    }
+
+    // Send email notifications to involved users (using new mailer module)
+    const recipients = [...task.AssignedTo, ...task.LeadedBy];
+    if (task.CreatedBy) recipients.push(task.CreatedBy);
+
+    if (recipients.length > 0) {
+      try {
+        const result = await mailer.notifyTaskDeleted({
+          recipientIds: recipients,
+          taskId,
+          actorId: userId,
+        });
+        debugLog('[taskUtils] Delete email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+      } catch (error) {
+        debugError('[taskUtils] Error sending delete email notifications:', error);
+        // Don't fail the main operation due to notification errors
+      }
+    }
+
+    // Eliminar tarea
+    await deleteDoc(doc(db, 'tasks', taskId));
+    debugLog('[taskUtils] Task deleted successfully:', taskId);
+
+    // Refrescar caché de taskService con datos actualizados
+    await refreshTasksCache();
+  } catch (error) {
+    throw new Error(`Failed to delete task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+  }
+}
+
+// Función para archivar una tarea
+export async function archiveTask(taskId: string, userId: string, isAdmin: boolean, task: Task) {
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    // Verificar permisos
+    if (!isAdmin && task.CreatedBy !== userId) {
+      throw new Error('No tienes permisos para archivar esta tarea');
+    }
+
+    const now = Timestamp.now();
+    await updateDoc(doc(db, 'tasks', taskId), {
+      archived: true,
+      archivedAt: now,
+      archivedBy: userId,
+    });
+
+    // Send email notifications to involved users (using new mailer module)
+    const recipients = [...task.AssignedTo, ...task.LeadedBy];
+    if (task.CreatedBy) recipients.push(task.CreatedBy);
+
+    if (recipients.length > 0) {
+      try {
+        const result = await mailer.notifyTaskArchived({
+          recipientIds: recipients,
+          taskId,
+          actorId: userId,
+        });
+        debugLog('[taskUtils] Archive email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+      } catch (error) {
+        debugError('[taskUtils] Error sending archive email notifications:', error);
+        // Don't fail the main operation due to notification errors
+      }
+    }
+
+    debugLog('[taskUtils] Task archived successfully:', taskId);
+
+    // Refrescar caché de taskService con datos actualizados
+    await refreshTasksCache();
+  } catch (error) {
+    throw new Error(`Failed to archive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+  }
+}
+
+// Función para desarchivar una tarea
+export async function unarchiveTask(taskId: string, userId: string, isAdmin: boolean, task: Task) {
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    // Verificar permisos
+    if (!isAdmin && task.CreatedBy !== userId) {
+      throw new Error('No tienes permisos para desarchivar esta tarea');
+    }
+
+    await updateDoc(doc(db, 'tasks', taskId), {
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+    });
+
+    // Send email notifications to involved users (using new mailer module)
+    const recipients = [...task.AssignedTo, ...task.LeadedBy];
+    if (task.CreatedBy) recipients.push(task.CreatedBy);
+
+    if (recipients.length > 0) {
+      try {
+        const result = await mailer.notifyTaskUnarchived({
+          recipientIds: recipients,
+          taskId,
+          actorId: userId,
+        });
+        debugLog('[taskUtils] Unarchive email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+      } catch (error) {
+        debugError('[taskUtils] Error sending unarchive email notifications:', error);
+        // Don't fail the main operation due to notification errors
+      }
+    }
+
+    debugLog('[taskUtils] Task unarchived successfully:', taskId);
+
+    // Refrescar caché de taskService con datos actualizados
+    await refreshTasksCache();
+  } catch (error) {
+    throw new Error(`Failed to unarchive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+  }
+}
+
+// Función para inicializar hasUnreadUpdates en tareas existentes
+export async function initializeUnreadUpdates() {
+  try {
+    const tasksQuery = query(collection(db, 'tasks'));
+    const tasksSnapshot = await getDocs(tasksQuery);
+    
+    const updatePromises = tasksSnapshot.docs.map(async (doc) => {
+      const taskData = doc.data();
+      if (taskData.hasUnreadUpdates === undefined) {
+        debugLog('[taskUtils] Initializing hasUnreadUpdates for task:', doc.id);
+        await updateDoc(doc.ref, {
+          hasUnreadUpdates: false,
+        });
+      }
+    });
+    
+    await Promise.all(updatePromises);
+    debugLog('[taskUtils] Initialized hasUnreadUpdates for all tasks');
+  } catch (error) {
+    debugError('[taskUtils] Error initializing unread updates:', error);
+  }
+}
+
+// Función para limpiar status corruptos (IDs random) en la base de datos
+export async function cleanCorruptStatuses() {
+  try {
+    debugLog('[taskUtils] Starting cleanup of corrupt statuses...');
+    
+    const tasksQuery = query(collection(db, 'tasks'));
+    const snapshot = await getDocs(tasksQuery);
+    
+    const batch = writeBatch(db);
+    let cleanedCount = 0;
+    let totalTasks = 0;
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const status = data.status;
+      totalTasks++;
+      
+      // Detectar si es un ID random (base64-like string de ~20+ caracteres)
+      if (status && /^[A-Za-z0-9+/=]{20,}$/.test(status)) {
+        batch.update(docSnap.ref, { status: 'Por Iniciar' });
+        cleanedCount++;
+        debugLog('[taskUtils] Cleaning status for task:', {
+          taskId: docSnap.id,
+          taskName: data.name || 'Unknown',
+          oldStatus: status,
+          newStatus: 'Por Iniciar'
+        });
+      }
+    });
+    
+    if (cleanedCount > 0) {
+      await batch.commit();
+      debugLog(`[taskUtils] Cleanup complete: ${cleanedCount} corrupt statuses fixed out of ${totalTasks} total tasks`);
+    } else {
+      debugLog(`[taskUtils] No corrupt statuses found in ${totalTasks} tasks`);
+    }
+    
+    return { cleanedCount, totalTasks };
+  } catch (error) {
+    debugError('[taskUtils] Error cleaning corrupt statuses:', error);
+    throw new Error(`Failed to clean corrupt statuses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Función para obtener estadísticas de status corruptos (sin modificar)
+export async function getCorruptStatusStats() {
+  try {
+    const tasksQuery = query(collection(db, 'tasks'));
+    const snapshot = await getDocs(tasksQuery);
+    
+    let totalTasks = 0;
+    let corruptTasks = 0;
+    const corruptExamples: Array<{ id: string; name: string; status: string }> = [];
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const status = data.status;
+      totalTasks++;
+      
+      if (status && /^[A-Za-z0-9+/=]{20,}$/.test(status)) {
+        corruptTasks++;
+        if (corruptExamples.length < 5) { // Solo mostrar primeros 5 ejemplos
+          corruptExamples.push({
+            id: docSnap.id,
+            name: data.name || 'Unknown',
+            status: status
+          });
+        }
+      }
+    });
+    
+    debugLog('[taskUtils] Corrupt status statistics:', {
+      totalTasks,
+      corruptTasks,
+      percentage: totalTasks > 0 ? ((corruptTasks / totalTasks) * 100).toFixed(2) + '%' : '0%',
+      examples: corruptExamples
+    });
+    
+    return { totalTasks, corruptTasks, corruptExamples };
+  } catch (error) {
+    debugError('[taskUtils] Error getting corrupt status stats:', error);
+    throw new Error(`Failed to get corrupt status stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Función para limpiar status que son Objects en lugar de strings
+export async function cleanObjectStatuses() {
+  try {
+    debugLog('[taskUtils] Starting cleanup of Object statuses...');
+    
+    const tasksQuery = query(collection(db, 'tasks'));
+    const snapshot = await getDocs(tasksQuery);
+    
+    const batch = writeBatch(db);
+    let cleanedCount = 0;
+    let totalTasks = 0;
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const status = data.status;
+      totalTasks++;
+      
+      // Detectar si el status es un Object en lugar de string
+      if (status && typeof status === 'object' && status !== null) {
+        batch.update(docSnap.ref, { status: 'Por Iniciar' });
+        cleanedCount++;
+        debugLog('[taskUtils] Cleaning Object status for task:', {
+          taskId: docSnap.id,
+          taskName: data.name || 'Unknown',
+          oldStatus: status,
+          statusType: typeof status,
+          newStatus: 'Por Iniciar'
+        });
+      }
+    });
+    
+    if (cleanedCount > 0) {
+      await batch.commit();
+      debugLog(`[taskUtils] Object status cleanup complete: ${cleanedCount} Object statuses fixed out of ${totalTasks} total tasks`);
+    } else {
+      debugLog(`[taskUtils] No Object statuses found in ${totalTasks} tasks`);
+    }
+    
+    return { cleanedCount, totalTasks };
+  } catch (error) {
+    debugError('[taskUtils] Error cleaning Object statuses:', error);
+    throw new Error(`Failed to clean Object statuses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}

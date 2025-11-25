@@ -1,11 +1,3 @@
-// TODO: Header con avatar, nombre, badge y botones
-// TODO: Props: profile, userId, currentUserId, onConfigClick, onMessageClick
-// TODO: Usar ActionButton atom para botones de acción
-// TODO: Usar Badge component para rol
-// TODO: Usar UserAvatar para foto de perfil
-// TODO: Aplicar motion variants para animación
-// TODO: Renderizar botón config solo si es el usuario actual
-// TODO: Renderizar botón mensaje solo si NO es el usuario actual
 
 import React from 'react';
 import { motion } from 'framer-motion';

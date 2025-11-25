@@ -1,11 +1,6 @@
 @use '@/app/styles/variables' as *;
 @use '@/app/styles/mixins' as *;
 
-// TODO: Estilos para tag individual de tecnología
-// TODO: Aplicar efecto glassmorphism
-// TODO: Box shadow con inset para efecto 3D
-// TODO: Tema dark mode
-
 .stackTag {
   @include flex-center;
   gap: $spacing-sm;

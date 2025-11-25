@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { CrystalInput, CrystalPhoneSelect } from '@/components/ui';
+import { CrystalInput } from '@/components/ui';
+import { CountrySelect, getCountryByDialCode, getDefaultCountry, type Country } from '../phone-input';
 import styles from './PhoneInput.module.scss';
 
 interface PhoneInputProps {
@@ -29,14 +30,29 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   maxLength = 15,
   onKeyDown,
 }) => {
+  // Find country by dial code (lada)
+  const currentCountry = React.useMemo(() => {
+    // Try to find by dial code (e.g., "+52")
+    const country = getCountryByDialCode(ladaValue);
+    if (country) return country;
+
+    // For backwards compatibility, default to Mexico if not found
+    return getDefaultCountry();
+  }, [ladaValue]);
+
+  const handleCountryChange = (country: Country) => {
+    onLadaChange(country.dialCode);
+  };
+
   return (
     <div className={styles.phoneInputWrapper}>
       {label && <div className={styles.label}>{label}</div>}
       <div className={styles.phoneInputContainer}>
-        <CrystalPhoneSelect
-          value={ladaValue}
-          onChange={onLadaChange}
+        <CountrySelect
+          value={currentCountry?.code || 'MX'}
+          onChange={handleCountryChange}
           disabled={disabled}
+          hasError={!!error}
         />
         <CrystalInput
           name="phone"
@@ -47,6 +63,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           maxLength={maxLength}
           onKeyDown={onKeyDown}
           error={error}
+          variant="no-icon"
         />
       </div>
     </div>

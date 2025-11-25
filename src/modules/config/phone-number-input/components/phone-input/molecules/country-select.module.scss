@@ -1,0 +1,338 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.dropdownWrapper {
+  position: relative;
+  display: inline-block;
+  width: auto;
+  flex-shrink: 0;
+}
+
+// Trigger button - reusing crystal-dropdown styles
+.trigger {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 110px;
+  height: 48px;
+  padding: 10px 12px;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  color: #0F172A;
+  cursor: pointer;
+  transition: $transition-base;
+
+  // Remove right border radius to connect with input
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  &:hover:not(.disabled) {
+    transform: translateY(-2px) scale(1.02);
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+
+    :global(body.dark) & {
+      background: rgba(30, 30, 30, 0.85) !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      border-right: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  &:active:not(.disabled) {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    @include neomorphic-inset(light);
+
+    :global(body.dark) & {
+      background: rgba(30, 30, 30, 0.6) !important;
+      border-color: rgba(255, 255, 255, 0.05) !important;
+      border-right: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  &.error {
+    border-color: $color-error;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 0 0 4px rgba(239, 68, 68, 0.2);
+
+    :global(body.dark) & {
+      border-color: #f87171;
+      border-right: none !important;
+      box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.3);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    height: 44px;
+    padding: 10px 10px;
+    font-size: 13px;
+    min-width: 100px;
+  }
+
+  @media (max-width: 768px) {
+    height: 40px;
+    padding: 8px 8px;
+    font-size: 12px;
+    min-width: 90px;
+  }
+}
+
+.flag {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.dialCode {
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  @media (max-width: 768px) {
+    font-size: 12px;
+  }
+}
+
+.chevron {
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+  color: #0F172A;
+  width: 16px;
+  height: 16px;
+  filter: brightness(1);
+
+  &.open {
+    transform: rotate(180deg);
+  }
+
+  :global(body.dark) & {
+    filter: brightness(0) invert(1);
+  }
+}
+
+// Menu - reusing crystal-dropdown menu styles
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 320px;
+  max-height: 340px;
+  overflow: hidden;
+  border-radius: $radius-xl;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  @media (max-width: 768px) {
+    min-width: 280px;
+    max-height: 300px;
+    border-radius: $radius-lg;
+  }
+}
+
+.searchContainer {
+  padding: $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+
+  :global(body.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.searchInput {
+  width: 100%;
+  height: 36px;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism(rgba(255, 255, 255, 0.8));
+  font-size: 13px;
+  color: #0F172A;
+  transition: $transition-base;
+
+  &::placeholder {
+    color: #9ca3af;
+    opacity: 0.7;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-border-focus;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  :global(body.dark) & {
+    background: rgba(30, 30, 30, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: none !important;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+    &:focus {
+      background: rgba(30, 30, 30, 0.9) !important;
+      border-color: #60a5fa !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+    }
+  }
+}
+
+.countryList {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: $spacing-xs 0;
+  @include crystallized-scrollbar;
+}
+
+// Country item - reusing crystal-dropdown item styles
+.countryItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  color: #0F172A;
+  cursor: pointer;
+  @include glassmorphism($color-bg-glass);
+  border-radius: $radius-sm;
+  margin: 2px 4px;
+  border: 1px solid $color-border-subtle;
+  transition: $transition-base;
+
+  &:hover {
+    transform: translateY(-1px) scale(1.01);
+    @include glassmorphism-hover;
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    @include neomorphic-inset(light);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+    font-weight: $font-weight-semibold;
+  }
+
+  :global(body.dark) & {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: none !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: none !important;
+    }
+
+    &:active {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow: none !important;
+    }
+
+    &.selected {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    padding: $spacing-sm $spacing-md;
+    font-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 6px $spacing-md;
+    font-size: 11px;
+  }
+}
+
+.countryFlag {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.countryName {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.countryCode {
+  font-size: 13px;
+  font-weight: $font-weight-normal;
+  color: #6b7280;
+  margin-left: auto;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    font-size: 11px;
+  }
+}
+
+.noResults {
+  padding: $spacing-2xl $spacing-lg;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}

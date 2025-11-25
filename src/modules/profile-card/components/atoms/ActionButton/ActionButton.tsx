@@ -1,7 +1,3 @@
-// TODO: Crear componente reutilizable para botones de acción
-// TODO: Props: variant ('config' | 'message'), onClick, ariaLabel, title
-// TODO: Incluir SVG icons dentro del componente según variant
-// TODO: Aplicar estilos desde ActionButton.module.scss
 
 import React from 'react';
 import styles from './ActionButton.module.scss';

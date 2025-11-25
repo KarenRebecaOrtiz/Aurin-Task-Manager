@@ -1,8 +1,3 @@
-// TODO: Renderizar sección de información de contacto
-// TODO: Props: phone, city, birthDate, gender (todos opcionales)
-// TODO: Usar ContactInfoItem para cada item
-// TODO: Solo renderizar si al menos uno de los campos está presente
-// TODO: Aplicar motion variants para animación
 
 import React from 'react';
 import { motion } from 'framer-motion';

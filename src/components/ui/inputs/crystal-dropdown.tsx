@@ -14,6 +14,7 @@ export interface CrystalDropdownItem {
   subtitle?: string;
   disabled?: boolean;
   svgIcon?: string;
+  lucideIcon?: React.ReactNode;
 }
 
 export interface CrystalDropdownProps {
@@ -125,7 +126,7 @@ const CrystalDropdown = React.forwardRef<HTMLDivElement, CrystalDropdownProps>(
       if (fieldType === 'client') return <Building2 size={16} className={styles.icon} />;
       if (fieldType === 'project') return <Folder size={16} className={styles.icon} />;
       if (fieldType === 'user') return <Users size={16} className={styles.icon} />;
-      return <Building2 size={16} className={styles.icon} />;
+      return null;
     };
 
     return (
@@ -165,6 +166,11 @@ const CrystalDropdown = React.forwardRef<HTMLDivElement, CrystalDropdownProps>(
                   className="w-6 h-6"
                   dangerouslySetInnerHTML={{ __html: selectedItemsData[0].svgIcon }}
                 />
+              )}
+              {hasSelection && !multiple && selectedItemsData[0]?.lucideIcon && (
+                <div className={styles.lucideIcon}>
+                  {selectedItemsData[0].lucideIcon}
+                </div>
               )}
               <span className={`${styles.triggerText} ${!hasSelection ? styles.placeholder : ''}`}>
                 {getDisplayText()}
@@ -247,6 +253,11 @@ const CrystalDropdown = React.forwardRef<HTMLDivElement, CrystalDropdownProps>(
                                 className={styles.itemSvg}
                                 dangerouslySetInnerHTML={{ __html: item.svgIcon }}
                               />
+                            )}
+                            {item.lucideIcon && (
+                              <div className={styles.itemLucideIcon}>
+                                {item.lucideIcon}
+                              </div>
                             )}
                             <div className={styles.itemText}>
                               <span className={styles.itemName}>{item.name}</span>

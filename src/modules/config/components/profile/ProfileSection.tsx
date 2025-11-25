@@ -7,8 +7,10 @@ import {
   CrystalSearchableDropdown,
   CrystalCalendarDropdown,
   CrystalDropdown,
+  CrystalTextarea,
 } from '@/components/ui';
 import { User, Hammer, Link } from '@/components/animate-ui/icons';
+import { Mars, Venus, VenusAndMars, CircleDot } from 'lucide-react';
 import { useProfileForm } from '../../hooks';
 import { useProfileFormStore } from '../../stores';
 import { PhoneInput } from '../ui';
@@ -86,10 +88,10 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
   ].filter((link): link is { networkId: string; username: string } => link !== null);
 
   const genderOptions = [
-    { id: 'Masculino', name: 'Masculino' },
-    { id: 'Femenino', name: 'Femenino' },
-    { id: 'Otro', name: 'Otro' },
-    { id: 'Prefiero no decirlo', name: 'Prefiero no decirlo' },
+    { id: 'Masculino', name: 'Masculino', lucideIcon: <Mars size={20} /> },
+    { id: 'Femenino', name: 'Femenino', lucideIcon: <Venus size={20} /> },
+    { id: 'Otro', name: 'Otro', lucideIcon: <VenusAndMars size={20} /> },
+    { id: 'Prefiero no decirlo', name: 'Prefiero no decirlo', lucideIcon: <CircleDot size={20} /> },
   ];
 
   return (
@@ -118,6 +120,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               disabled={!isOwnProfile}
               onKeyDown={handleInputKeyDown}
               error={errors.fullName}
+              variant="no-icon"
             />
             <CrystalInput
               label="Rol o Cargo"
@@ -128,6 +131,21 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               disabled={!isOwnProfile}
               onKeyDown={handleInputKeyDown}
               error={errors.role}
+              variant="no-icon"
+            />
+          </div>
+          <div className={styles.fieldGroupFull}>
+            <CrystalTextarea
+              label="Acerca de ti"
+              name="description"
+              value={formData.description || ''}
+              onChange={handleGenericInputChange('description')}
+              placeholder="Breve descripción personal"
+              disabled={!isOwnProfile}
+              maxLength={180}
+              onKeyDown={handleInputKeyDown}
+              error={errors.description}
+              showCharacterCount={true}
             />
           </div>
           <div className={styles.fieldGroupRow}>
@@ -158,6 +176,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="Ciudad, País"
               disabled={!isOwnProfile}
               onKeyDown={handleInputKeyDown}
+              variant="no-icon"
             />
 
             <PhoneInput
@@ -174,20 +193,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             />
 
           </div>
-          <div className={styles.fieldGroupRow}>
-
-            <CrystalInput
-              label="Acerca de ti"
-              name="description"
-              value={formData.description || ''}
-              onChange={handleGenericInputChange('description')}
-              placeholder="Breve descripción personal"
-              disabled={!isOwnProfile}
-              maxLength={180}
-              onKeyDown={handleInputKeyDown}
-              error={errors.description}
-            />
-          </div>
+       
         </div>
       </section>
 

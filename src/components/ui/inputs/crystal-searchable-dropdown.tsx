@@ -57,12 +57,16 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
   ) => {
     const [isOpen, setIsOpen] = React.useState(false);
     const [searchTerm, setSearchTerm] = React.useState("");
+    const [showAllTags, setShowAllTags] = React.useState(false);
     const wrapperRef = React.useRef<HTMLDivElement>(null);
     const searchInputRef = React.useRef<HTMLInputElement>(null);
     const generatedId = React.useId();
 
     const selectedItemsData = items.filter((item) => selectedItems.includes(item.id));
     const hasSelection = selectedItems.length > 0;
+    const maxVisibleTags = 5;
+    const visibleTags = showAllTags ? selectedItemsData : selectedItemsData.slice(0, maxVisibleTags);
+    const hasMoreTags = selectedItemsData.length > maxVisibleTags;
 
     React.useEffect(() => {
       function handleClickOutside(event: MouseEvent) {
@@ -213,34 +217,58 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
 
           {hasSelection && multiple && (
             <div className={styles.selectedTags}>
-              {selectedItemsData.map((item) => (
-                <div key={item.id} className={styles.tag}>
-                  {item.imageUrl && (
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.name}
-                      width={16}
-                      height={16}
-                      className={styles.tagImage}
-                      onError={(e) => {
-                        e.currentTarget.src = "/empty-image.png";
-                      }}
-                    />
-                  )}
-                  {item.svgIcon && (
-                    <div className={styles.tagSvg} dangerouslySetInnerHTML={{ __html: item.svgIcon }} />
-                  )}
-                  <span className={styles.tagText}>{item.name}</span>
-                  <button
-                    type="button"
-                    className={styles.tagRemove}
-                    onClick={(e) => handleRemoveItem(item.id, e)}
-                    aria-label={`Remove ${item.name}`}
+              <AnimatePresence mode="popLayout">
+                {visibleTags.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    className={styles.tag}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    {item.imageUrl && (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        width={16}
+                        height={16}
+                        className={styles.tagImage}
+                        onError={(e) => {
+                          e.currentTarget.src = "/empty-image.png";
+                        }}
+                      />
+                    )}
+                    {item.svgIcon && (
+                      <div className={styles.tagSvg} dangerouslySetInnerHTML={{ __html: item.svgIcon }} />
+                    )}
+                    <span className={styles.tagText}>{item.name}</span>
+                    <button
+                      type="button"
+                      className={styles.tagRemove}
+                      onClick={(e) => handleRemoveItem(item.id, e)}
+                      aria-label={`Remove ${item.name}`}
+                    >
+                      ×
+                    </button>
+                  </motion.div>
+                ))}
+                {hasMoreTags && (
+                  <motion.button
+                    key="view-more-button"
+                    type="button"
+                    className={styles.viewMoreButton}
+                    onClick={() => setShowAllTags(!showAllTags)}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    aria-label={showAllTags ? "Ver menos" : "Ver más"}
+                  >
+                    {showAllTags ? "Ver menos" : `+${selectedItemsData.length - maxVisibleTags}`}
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </div>
           )}
 

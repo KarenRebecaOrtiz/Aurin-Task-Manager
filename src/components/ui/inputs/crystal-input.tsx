@@ -9,10 +9,11 @@ export interface CrystalInputProps extends Omit<React.ComponentProps<"input">, '
   error?: string;
   onChange?: (value: string) => void;
   icon?: React.ReactNode;
+  variant?: 'with-icon' | 'no-icon';
 }
 
 const CrystalInput = React.forwardRef<HTMLInputElement, CrystalInputProps>(
-  ({ className = "", type = "text", label, error, onChange, id, icon, name, ...props }, ref) => {
+  ({ className = "", type = "text", label, error, onChange, id, icon, name, variant = 'with-icon', ...props }, ref) => {
     const generatedId = React.useId();
     const inputId = id || generatedId;
 
@@ -22,6 +23,7 @@ const CrystalInput = React.forwardRef<HTMLInputElement, CrystalInputProps>(
 
     // Determine default icon based on name/id
     const getDefaultIcon = () => {
+      if (variant === 'no-icon') return null;
       if (icon !== undefined) return icon;
 
       const fieldName = (name || id || '').toLowerCase();
@@ -34,6 +36,8 @@ const CrystalInput = React.forwardRef<HTMLInputElement, CrystalInputProps>(
       return <FileText size={16} className={styles.icon} />;
     };
 
+    const showIcon = variant !== 'no-icon' && getDefaultIcon() !== null;
+
     return (
       <div className={styles.container}>
         {label && (
@@ -42,12 +46,12 @@ const CrystalInput = React.forwardRef<HTMLInputElement, CrystalInputProps>(
           </label>
         )}
         <div className={styles.inputWrapper}>
-          {getDefaultIcon()}
+          {showIcon && getDefaultIcon()}
           <input
             id={inputId}
             type={type}
             name={name}
-            className={`${styles.input} ${error ? styles.error : ''} ${className}`}
+            className={`${styles.input} ${!showIcon ? styles.noIcon : ''} ${error ? styles.error : ''} ${className}`}
             ref={ref}
             onChange={handleChange}
             aria-invalid={!!error}

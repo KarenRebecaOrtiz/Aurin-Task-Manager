@@ -13,8 +13,8 @@ import { db } from '@/lib/firebase';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiCreated, apiBadRequest, handleApiError } from '@/lib/api/response';
 import { createTaskSchema, taskQuerySchema } from '@/lib/validations/task.schema';
-import { emailNotificationService } from '@/services/emailNotificationService';
-import { updateTaskActivity } from '@/lib/taskUtils';
+import { mailer } from '@/modules/mailer';
+import { updateTaskActivity } from '@/lib/taskUtils.client';
 
 /**
  * POST /api/tasks
@@ -78,23 +78,21 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
     // Update task activity
     await updateTaskActivity(taskId, 'edit');
 
-    // Send email notifications to assigned team members (excluding creator)
-    const recipients = new Set<string>([
+    // Send email notifications to assigned team members (using new mailer module)
+    const recipients = [
       ...taskData.LeadedBy,
       ...(taskData.AssignedTo || [])
-    ]);
-    recipients.delete(userId);
+    ];
 
-    if (recipients.size > 0) {
+    if (recipients.length > 0) {
       try {
-        await emailNotificationService.createEmailNotificationsForRecipients({
-          userId,
-          message: `Te han asignado la tarea "${taskData.name}"`,
-          type: 'task_created',
+        const result = await mailer.notifyTaskCreated({
+          recipientIds: recipients,
           taskId,
-        }, Array.from(recipients));
+          actorId: userId,
+        });
 
-        console.log('[API] Sent notifications to:', recipients.size, 'recipients');
+        console.log('[API] Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
       } catch (notificationError) {
         console.warn('[API] Failed to send notifications:', notificationError);
         // Don't fail the request if notifications fail

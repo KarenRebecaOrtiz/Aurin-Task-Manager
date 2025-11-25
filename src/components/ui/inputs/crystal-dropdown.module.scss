@@ -307,6 +307,44 @@
   flex-shrink: 0;
 }
 
+.itemLucideIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0F172A;
+
+  :global(.dark) & {
+    color: #e5e5e5;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.lucideIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0F172A;
+
+  :global(.dark) & {
+    color: #e5e5e5;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .itemText {
   @include flex-column;
   flex: 1;

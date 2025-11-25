@@ -1,5 +1,3 @@
-// TODO: Exportar componentes principales del módulo profile-card
-// TODO: Facilitar imports desde otros módulos
 
 // Main component
 export { default as ProfileCard } from './ProfileCard';

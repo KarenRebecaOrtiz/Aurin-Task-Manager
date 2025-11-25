@@ -84,6 +84,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                   onChange={setCurrentPassword}
                   placeholder="Ingresa tu contraseña actual"
                   required
+                  variant="no-icon"
                 />
               </div>
 
@@ -95,6 +96,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                   onChange={setNewPassword}
                   placeholder="Ingresa tu nueva contraseña"
                   required
+                  variant="no-icon"
                 />
                 
                 {/* Indicador de fuerza */}
@@ -134,6 +136,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
                   placeholder="Confirma tu nueva contraseña"
                   required
                   error={passwordMatchError ? 'Las contraseñas no coinciden' : undefined}
+                  variant="no-icon"
                 />
               </div>
 
