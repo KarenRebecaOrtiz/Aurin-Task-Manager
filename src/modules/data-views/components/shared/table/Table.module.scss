@@ -50,7 +50,6 @@
   background: $color-bg-light;
   border-radius: $radius-2xl;
   padding: $spacing-lg;
-  box-shadow: $shadow-neomorphic-light;
   
   :global(body.dark) & {
     background: $color-bg-dark;

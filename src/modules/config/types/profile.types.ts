@@ -104,6 +104,12 @@ export interface ConfigForm extends Omit<Config, 'id'> {
   /** TikTok (campo individual para formulario) */
   tiktok?: string;
   birthDate?: any;
+  /** Contraseña actual (para cambio de contraseña) */
+  currentPassword?: string;
+  /** Nueva contraseña */
+  newPassword?: string;
+  /** Confirmación de nueva contraseña */
+  confirmPassword?: string;
 }
 
 /**

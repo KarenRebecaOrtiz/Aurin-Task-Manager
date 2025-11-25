@@ -75,6 +75,18 @@ export const buttonVariants = cva(
           "dark:shadow-none",
           "dark:hover:bg-destructive/90 dark:hover:shadow-none",
         ],
+        outline: [
+          // Light Mode: Transparent with border
+          "bg-transparent text-foreground",
+          "border-2 border-border",
+          "shadow-sm",
+          "hover:bg-accent hover:text-accent-foreground",
+          // Dark Mode: Transparent with high-contrast border
+          "dark:bg-transparent dark:text-foreground",
+          "dark:border-border",
+          "dark:shadow-none",
+          "dark:hover:bg-accent dark:hover:text-accent-foreground",
+        ],
       },
       size: {
         sm: "h-8 px-3 text-xs [&_svg]:size-3.5",

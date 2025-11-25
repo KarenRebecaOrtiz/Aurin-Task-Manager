@@ -159,7 +159,7 @@ export const extractPhoneNumber = (fullPhone: string): string => {
  * Formatea un stack de tecnologías para mostrar
  */
 export const formatStackDisplay = (stack: string[], maxItems = 5): string => {
-  if (!stack || stack.length === 0) return 'Sin tecnologías';
+  if (!stack || stack.length === 0) return 'Sin herramientas';
   
   if (stack.length <= maxItems) {
     return stack.join(', ');

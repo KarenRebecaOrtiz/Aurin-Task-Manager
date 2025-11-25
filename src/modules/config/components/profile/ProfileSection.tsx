@@ -156,17 +156,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               disabled={!isOwnProfile}
               onKeyDown={handleInputKeyDown}
             />
-            <CrystalInput
-              label="Portafolio en Línea"
-              name="portfolio"
-              value={formData.portfolio || ''}
-              onChange={handleGenericInputChange('portfolio')}
-              placeholder="miportafolio.com"
-              disabled={!isOwnProfile}
-              error={errors.portfolio}
-            />
-          </div>
-          <div className={styles.fieldGroupRow}>
+
             <PhoneInput
               label="Teléfono de Contacto"
               ladaValue={formData.phoneLada || '+52'}
@@ -179,6 +169,10 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               maxLength={15}
               onKeyDown={handleInputKeyDown}
             />
+
+          </div>
+          <div className={styles.fieldGroupRow}>
+
             <CrystalInput
               label="Acerca de ti"
               name="description"
@@ -200,27 +194,27 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <Image src="/layers.svg" alt="Stack" width={20} height={20} className={styles.sectionIcon} />
-              Stack Tecnológico
+              Stack de Herramientas
             </h2>
             <div className={styles.stackDescription}>
-              Selecciona las tecnologías y herramientas que usas frecuentemente (máximo 40).
+              Selecciona las herramientas y herramientas que usas frecuentemente (máximo 40).
             </div>
           </div>
           <div className={styles.fieldGroup}>
             <CrystalSearchableDropdown
-              label="Tecnologías"
+              label=""
               items={UNIQUE_TECHNOLOGIES.map(tech => ({
                 id: tech,
                 name: tech
               }))}
               selectedItems={formData.stack || []}
               onSelectionChange={handleStackChange}
-              placeholder="Selecciona tecnologías..."
-              searchPlaceholder="Buscar tecnologías..."
+              placeholder="Selecciona herramientas..."
+              searchPlaceholder="Buscar herramientas..."
               disabled={!isOwnProfile}
               multiple={true}
               maxItems={40}
-              emptyMessage="No se encontraron tecnologías"
+              emptyMessage="No se encontraron herramientas"
             />
           </div>
         </div>

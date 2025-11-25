@@ -73,7 +73,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     // Tap animation config
     const tapAnimation = {
       scale: 0.98,
-      transition: { duration: 0.1, ease: "easeInOut" },
+      transition: { duration: 0.1 },
     }
 
     if (asChild) {

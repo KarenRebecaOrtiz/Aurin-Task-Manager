@@ -358,7 +358,7 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
 
                     {profile.stack && profile.stack.length > 0 && (
                       <motion.div className={styles.stackSection} variants={itemVariants}>
-                        <h3 className={styles.sectionTitle}>Stack de Tecnologías</h3>
+                        <h3 className={styles.sectionTitle}>Stack de Herramientas</h3>
                         <div className={styles.stackTags}>
                           {profile.stack.map((tech) => (
                             <span key={tech} className={styles.stackTag}>
