@@ -19,7 +19,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 1.125rem; // 18px - Empty State Heading estándar
+  font-size: text-lg; // 18px - Empty State Heading estándar
   font-weight: 600; // font-semibold
   color: #1f2937; // text-gray-800
   margin: 0;
@@ -38,7 +38,7 @@
 }
 
 .description {
-  font-size: 0.875rem; // 14px - Empty State Description
+  font-size: text-md; // 14px - Empty State Description
   color: #6b7280; // text-gray-600
   line-height: 1.5;
 

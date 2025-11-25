@@ -69,7 +69,7 @@ type TasksTableActions = {
   setUndoStack: (stack: Array<{ task: Task; action: 'archive' | 'unarchive'; timestamp: number }>) => void;
   setShowUndo: (show: boolean) => void;
   setUserFilter: (filter: string) => void;
-  archiveTask: (taskId: string) => Promise<void>;
+  archiveTask: (taskId: string, userId: string) => Promise<void>;
 };
 
 type TasksTableStore = TasksTableState & TasksTableActions;
@@ -117,48 +117,52 @@ export const tasksTableStore = create<TasksTableStore>()((set, get) => ({
     setUndoStack: (stack) => set({ undoStack: stack }),
     setShowUndo: (show) => set({ showUndo: show }),
     setUserFilter: (filter) => set({ userFilter: filter }),
-    archiveTask: async (taskId: string) => {
-      const originalTasks = get().filteredTasks;
-      const taskToArchive = originalTasks.find(t => t.id === taskId);
+    archiveTask: async (taskId: string, userId: string) => {
+      // Check if task is already archived
+      const taskToArchive = get().filteredTasks.find(t => t.id === taskId);
 
       if (!taskToArchive) {
-        console.error("Task not found for archiving:", taskId);
+        console.error("[tasksTableStore] Task not found for archiving:", taskId);
         return;
       }
 
-      // 1. Optimistic Update: Remove the task from the UI immediately
-      set(state => ({
-        filteredTasks: state.filteredTasks.filter(t => t.id !== taskId),
-        undoStack: [...state.undoStack, { task: taskToArchive, action: 'archive', timestamp: Date.now() }],
-        showUndo: true,
-      }));
-
-      // Hide the undo notification after 5 seconds
-      setTimeout(() => {
-        set(state => {
-          // Only hide if the last action is still the one we're timing out
-          if (state.undoStack[state.undoStack.length - 1]?.task.id === taskId) {
-            return { showUndo: false };
-          }
-          return {};
-        });
-      }, 5000);
+      if (taskToArchive.archived) {
+        console.warn("[tasksTableStore] Task is already archived:", taskId);
+        return;
+      }
 
       try {
-        // 2. Call the backend service
-        await taskService.archive(taskId);
-        // On success, do nothing, the UI is already updated.
+        // Add to undo stack before archiving
+        set(state => ({
+          undoStack: [...state.undoStack, { task: taskToArchive, action: 'archive', timestamp: Date.now() }],
+          showUndo: true,
+        }));
+
+        // Hide the undo notification after 5 seconds
+        setTimeout(() => {
+          set(state => {
+            if (state.undoStack[state.undoStack.length - 1]?.task.id === taskId) {
+              return { showUndo: false };
+            }
+            return {};
+          });
+        }, 5000);
+
+        // Call the backend service
+        // The taskService handles optimistic updates to the dataStore
+        // The UI will update reactively when dataStore changes
+        await taskService.archive(taskId, userId);
 
       } catch (error) {
-        // 3. Rollback on error
-        console.error("Failed to archive task, rolling back:", error);
+        console.error("[tasksTableStore] Failed to archive task:", error);
+
+        // Remove from undo stack on error
         set(state => ({
-          filteredTasks: originalTasks,
           undoStack: state.undoStack.filter(item => item.task.id !== taskId),
           showUndo: false,
         }));
-        // Optionally, you can add a global error state to the store 
-        // to show a toast notification to the user.
+
+        throw error;
       }
     },
 }));

@@ -8,6 +8,7 @@ import {
   CrystalCalendarDropdown,
   CrystalDropdown,
 } from '@/components/ui';
+import { User, Hammer, Link } from '@/components/animate-ui/icons';
 import { useProfileForm } from '../../hooks';
 import { useProfileFormStore } from '../../stores';
 import { PhoneInput } from '../ui';
@@ -98,7 +99,9 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
         <div className={styles.sectionContent}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <Image src="/circle-user-round.svg" alt="Información" width={20} height={20} className={styles.sectionIcon} />
+              <div className={styles.sectionIcon}>
+                <User size={20} animateOnHover loop style={{ color: 'white' }} />
+              </div>
               Información General
             </h2>
             <div className={styles.stackDescription}>
@@ -193,7 +196,9 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
         <div className={styles.sectionContent}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              <Image src="/layers.svg" alt="Stack" width={20} height={20} className={styles.sectionIcon} />
+              <div className={styles.sectionIcon}>
+                <Hammer size={20} animateOnHover loop style={{ color: 'white' }} />
+              </div>
               Stack de Herramientas
             </h2>
             <div className={styles.stackDescription}>

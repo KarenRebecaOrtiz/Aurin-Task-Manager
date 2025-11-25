@@ -97,9 +97,15 @@ export const useTasksTableState = ({
 
   // ==================== Filtering Logic ====================
 
+  // Filter out archived tasks FIRST (TasksTable should only show non-archived tasks)
+  const nonArchivedTasks = useMemo(
+    () => effectiveTasks.filter((task) => !task.archived),
+    [effectiveTasks]
+  );
+
   // Apply advanced search (searches in task name, description, client name, user names)
   const searchFiltered = useAdvancedSearch(
-    effectiveTasks,
+    nonArchivedTasks,
     effectiveClients,
     effectiveUsers,
     searchQuery,

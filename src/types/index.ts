@@ -47,6 +47,9 @@ export interface Task {
   lastActivity?: string;
   hasUnreadUpdates?: boolean;
   lastViewedBy?: { [userId: string]: string };
+  archived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 export interface Message {

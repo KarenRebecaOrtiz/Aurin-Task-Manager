@@ -9,7 +9,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CircleCheckBig, LoaderCircle, CheckCheck, Trash2, SquarePlus } from 'lucide-react';
+import { CircleCheckBig, LoaderCircle, CheckCheck, SquarePlus } from 'lucide-react';
 import { AnimateIcon } from '@/components/animate-ui/icons/icon';
 import { ToDoDropdownProps } from '../types';
 import { useTodos } from '../hooks/useTodos';
@@ -27,7 +27,7 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
   dropdownPosition,
   onClose,
 }) => {
-  const { todos, isLoading, error, addTodo, toggleTodo, deleteTodo, getCompletedToday, undoLastCompleted } = useTodos();
+  const { todos, isLoading, error, addTodo, toggleTodo, getCompletedToday, undoLastCompleted } = useTodos();
   const { 
     newTodoText, 
     errorMessage, 
@@ -159,18 +159,8 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
     }
   }, [toggleTodo]);
 
-  // Handle todo delete
-  const handleTodoDelete = useCallback(async (todoId: string) => {
-    try {
-      await deleteTodo(todoId);
-    } catch (err) {
-      // Error handling can be improved with proper error state
-    }
-  }, [deleteTodo]);
-
   // Create optimized handlers to avoid arrow functions in JSX
   const createToggleHandler = useCallback((todoId: string, completed: boolean) => () => handleTodoToggle(todoId, completed), [handleTodoToggle]);
-  const createDeleteHandler = useCallback((todoId: string) => () => handleTodoDelete(todoId), [handleTodoDelete]);
 
   // Handle undo last completed
   const handleUndo = useCallback(async () => {
@@ -307,16 +297,6 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
                   </button>
                   
                   <span className={styles.todoText}>{todo.text}</span>
-                  
-                  <button
-                    className={styles.deleteButton}
-                    onClick={createDeleteHandler(todo.id)}
-                    aria-label={TODO_UI.ARIA_LABELS.DELETE}
-                  >
-                    <AnimateIcon animateOnHover>
-                      <Trash2 className="w-4 h-4" />
-                    </AnimateIcon>
-                  </button>
                 </motion.div>
               ))}
             </AnimatePresence>

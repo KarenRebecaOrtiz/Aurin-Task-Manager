@@ -225,12 +225,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   const handleArchiveTask = useCallback(async (task: Task) => {
     try {
-      await archiveTask(task.id);
+      if (!user?.id) {
+        console.error('User not authenticated');
+        return;
+      }
+      await archiveTask(task.id, user.id);
       tableState.setActionMenuOpenId(null);
     } catch (error) {
       console.error('Error archiving task:', error);
     }
-  }, [archiveTask, tableState.setActionMenuOpenId]);
+  }, [archiveTask, tableState.setActionMenuOpenId, user?.id]);
 
   const handleEditTaskForActionMenu = useCallback((taskId: string) => () => handleEditTask(taskId), [handleEditTask]);
   const handleDeleteTaskForActionMenu = useCallback((taskId: string) => () => handleDeleteTask(taskId), [handleDeleteTask]);

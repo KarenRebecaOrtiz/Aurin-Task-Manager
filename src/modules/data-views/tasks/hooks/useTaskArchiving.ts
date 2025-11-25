@@ -289,16 +289,16 @@ export const useTaskArchiving = (props: UseTaskArchivingProps = {}): UseTaskArch
       if (actionToUndo.action === 'archive') {
         // Si la acción original fue archivar, ahora desarchivamos
         await unarchiveTask(
-          actionToUndo.task.id, 
-          actionToUndo.task.CreatedBy || '', 
+          actionToUndo.task.id,
+          actionToUndo.task.CreatedBy || '',
           true, // Asumimos admin para undo
           actionToUndo.task
         );
       } else {
         // Si la acción original fue desarchivar, ahora archivamos
         await archiveTask(
-          actionToUndo.task.id, 
-          actionToUndo.task.CreatedBy || '', 
+          actionToUndo.task.id,
+          actionToUndo.task.CreatedBy || '',
           true, // Asumimos admin para undo
           actionToUndo.task
         );

@@ -25,6 +25,7 @@ import {
   type ErrorIntent,
   type RetryAction,
 } from '@/shared/utils/error-metadata';
+import { useDataStore } from '@/stores/dataStore';
 
 // --- Helper Functions ---
 
@@ -224,10 +225,11 @@ async function updateCacheLayers(tasks: Task[], metrics: RequestMetrics): Promis
  * Archives a task with optimistic update and rollback capability.
  * Implements Apple's optimistic update pattern.
  */
-export async function archiveTask(taskId: string): Promise<void> {
+export async function archiveTask(taskId: string, userId: string): Promise<void> {
   const updateId = `archive-${taskId}-${Date.now()}`;
 
   try {
+    console.log('[taskService] Archiving task:', taskId);
 
     // 1. Get current cache
     const currentCache = globalRequestCache.get<Task[]>(MEMORY_CACHE_KEY);
@@ -242,7 +244,18 @@ export async function archiveTask(taskId: string): Promise<void> {
     }
 
     const originalTask = currentCache.data[taskIndex];
-    const optimisticTask = { ...originalTask, status: 'archived' };
+
+    // Validate: cannot archive an already archived task
+    if (originalTask.archived) {
+      throw new Error('Task is already archived');
+    }
+
+    const optimisticTask = {
+      ...originalTask,
+      archived: true,
+      archivedAt: new Date().toISOString(),
+      archivedBy: userId
+    };
 
     // 3. Create optimistic update with rollback function
     const rollback = () => {
@@ -262,7 +275,8 @@ export async function archiveTask(taskId: string): Promise<void> {
       rollback,
     });
 
-    // 4. Apply optimistic update to cache
+    // 4. Apply optimistic update to cache only
+    // Note: dataStore updates are handled by useTaskArchiving hook
     const newData = [...currentCache.data];
     newData[taskIndex] = optimisticTask;
     globalRequestCache.set(MEMORY_CACHE_KEY, newData, currentCache.metrics);
@@ -270,22 +284,28 @@ export async function archiveTask(taskId: string): Promise<void> {
     // 5. Update server
     const taskRef = doc(db, 'tasks', taskId);
     await updateDoc(taskRef, {
-      status: 'archived',
+      archived: true,
       archivedAt: Timestamp.now(),
+      archivedBy: userId,
     });
+
+    console.log('[taskService] Successfully archived task:', taskId);
 
     // 6. Commit successful - remove from registry
     optimisticUpdates.delete(updateId);
 
-    // 7. Refresh cache with fresh data
-    await fetchTasksFromFirebase();
+    // 7. Refresh cache with fresh data AND update dataStore
+    const freshTasks = await fetchTasksFromFirebase();
+    useDataStore.getState().setTasks(freshTasks);
   } catch (error) {
+    console.error('[taskService] Error archiving task:', error);
 
     // Rollback optimistic update
     const update = optimisticUpdates.get(updateId);
     if (update) {
       update.rollback();
       optimisticUpdates.delete(updateId);
+      // Note: dataStore rollback is handled by useTaskArchiving hook
     }
 
     // Enrich error
@@ -312,6 +332,7 @@ export async function unarchiveTask(taskId: string): Promise<void> {
   const updateId = `unarchive-${taskId}-${Date.now()}`;
 
   try {
+    console.log('[taskService] Unarchiving task:', taskId);
 
     // Similar pattern to archiveTask
     const currentCache = globalRequestCache.get<Task[]>(MEMORY_CACHE_KEY);
@@ -325,7 +346,18 @@ export async function unarchiveTask(taskId: string): Promise<void> {
     }
 
     const originalTask = currentCache.data[taskIndex];
-    const optimisticTask = { ...originalTask, status: originalTask.status || 'pending' };
+
+    // Validate: cannot unarchive a task that is not archived
+    if (!originalTask.archived) {
+      throw new Error('Task is not archived');
+    }
+
+    const optimisticTask = {
+      ...originalTask,
+      archived: false,
+      archivedAt: undefined,
+      archivedBy: undefined
+    };
 
     const rollback = () => {
       const cache = globalRequestCache.get<Task[]>(MEMORY_CACHE_KEY);
@@ -344,7 +376,8 @@ export async function unarchiveTask(taskId: string): Promise<void> {
       rollback,
     });
 
-    // Apply optimistic update
+    // Apply optimistic update to cache only
+    // Note: dataStore updates are handled by useTaskArchiving hook
     const newData = [...currentCache.data];
     newData[taskIndex] = optimisticTask;
     globalRequestCache.set(MEMORY_CACHE_KEY, newData, currentCache.metrics);
@@ -352,19 +385,26 @@ export async function unarchiveTask(taskId: string): Promise<void> {
     // Update server
     const taskRef = doc(db, 'tasks', taskId);
     await updateDoc(taskRef, {
-      status: originalTask.status || 'pending',
+      archived: false,
       archivedAt: null,
+      archivedBy: null,
     });
+
+    console.log('[taskService] Successfully unarchived task:', taskId);
 
     optimisticUpdates.delete(updateId);
 
-    await fetchTasksFromFirebase();
+    // Refresh cache with fresh data AND update dataStore
+    const freshTasks = await fetchTasksFromFirebase();
+    useDataStore.getState().setTasks(freshTasks);
   } catch (error) {
+    console.error('[taskService] Error unarchiving task:', error);
 
     const update = optimisticUpdates.get(updateId);
     if (update) {
       update.rollback();
       optimisticUpdates.delete(updateId);
+      // Note: dataStore rollback is handled by useTaskArchiving hook
     }
 
     const enrichedError = createEnrichedError(error, {

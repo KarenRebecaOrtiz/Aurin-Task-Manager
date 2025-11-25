@@ -2,21 +2,18 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useFirestoreUser } from '../../../hooks'; // Ajustado
 import styles from './AvatarDropdown.module.scss';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAvailabilityStatus } from '@/hooks/useAvailabilityStatus';
-import ThemeToggler from '../../theme-toggler';
-import { useTheme } from '@/contexts/ThemeContext';
 import { ProfileCard } from '@/modules/profile-card';
 import { Small, Muted } from '@/components/ui/Typography';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
 import { ConfigDialog } from '@/modules/config';
+import { Cog, LogOut } from '@/components/animate-ui/icons';
 
-const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
-  const router = useRouter();
+const AvatarDropdown = () => {
   const { user } = useUser();
   const { signOut } = useClerk();
   const { firestoreUser } = useFirestoreUser(); // Hook centralizado
@@ -26,7 +23,6 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container:
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const { currentStatus: onlineStatus } = useAvailabilityStatus();
-  const { isDarkMode } = useTheme();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -133,58 +129,23 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container:
               <div className={styles.dropdownMenu}>
                 <div className={styles.sectionLabel}>Configuración</div>
 
-                <motion.div
+                <motion.button
+                  onClick={handleConfig}
                   className={styles.dropdownItem}
                   {...dropdownAnimations.item(0)}
                   role="menuitem"
                 >
-                  <div className={styles.dropdownItemContent}>
-                    <Image
-                      src={isDarkMode ? '/sun.svg' : '/moon.svg'}
-                      alt="Tema"
-                      width={16}
-                      height={16}
-                      className={styles.dropdownIcon}
-                      style={{
-                        filter: isDarkMode ? 'brightness(0) invert(1)' : 'none',
-                      }}
-                    />
-                    <span>Tema</span>
-                  </div>
-                  <div className={styles.themeToggleContainer}>
-                    <ThemeToggler variant="dropdown" size="sm" />
-                  </div>
-                </motion.div>
-
-                <motion.button
-                  onClick={handleConfig}
-                  className={styles.dropdownItem}
-                  {...dropdownAnimations.item(1)}
-                  role="menuitem"
-                >
-                  <Image
-                    src="/settings.svg"
-                    alt="Configuración"
-                    width={16}
-                    height={16}
-                    className={styles.dropdownIcon}
-                  />
+                  <Cog size={16} animateOnHover loop className={styles.dropdownIcon} style={{ color: 'white' }} />
                   Configuración
                 </motion.button>
 
                 <motion.button
                   onClick={handleLogout}
                   className={styles.dropdownItem}
-                  {...dropdownAnimations.item(2)}
+                  {...dropdownAnimations.item(1)}
                   role="menuitem"
                 >
-                  <Image
-                    src="/log-out.svg"
-                    alt="Cerrar Sesión"
-                    width={16}
-                    height={16}
-                    className={styles.dropdownIcon}
-                  />
+                  <LogOut size={16} animateOnHover loop className={styles.dropdownIcon} style={{ color: 'white' }} />
                   Cerrar Sesión
                 </motion.button>
               </div>

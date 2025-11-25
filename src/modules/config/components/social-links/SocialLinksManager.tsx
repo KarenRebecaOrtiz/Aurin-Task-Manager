@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, Save, Link2 } from 'lucide-react';
+import { Plus, Save } from 'lucide-react';
+import { Link } from '@/components/animate-ui/icons';
 import { useSocialLinks } from './use-social-links';
 import { NetworkSelector } from './NetworkSelector';
 import { SmartInput } from './SmartInput';
@@ -45,7 +46,7 @@ export function SocialLinksManager({ initialLinks = [], onChange, disabled = fal
       <div className={styles.header}>
         <h2 className={styles.title}>
           <div className={styles.iconWrapper}>
-            <Link2 size={20} />
+            <Link size={20} animateOnHover loop style={{ color: 'white' }} />
           </div>
           Redes Sociales
         </h2>
@@ -123,7 +124,7 @@ export function SocialLinksManager({ initialLinks = [], onChange, disabled = fal
           <div className={styles.divider} />
           <div className={styles.emptyState}>
             <div className={styles.emptyIconWrapper}>
-              <Link2 size={20} className={styles.emptyIcon} />
+              <Link size={20} loop className={styles.emptyIcon} style={{ color: 'white' }} />
             </div>
             <p className={styles.emptyText}>
               No hay links agregados. Selecciona una plataforma y agrega tu perfil.

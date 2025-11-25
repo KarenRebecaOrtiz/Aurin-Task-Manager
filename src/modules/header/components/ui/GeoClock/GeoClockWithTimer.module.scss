@@ -18,18 +18,11 @@
 
   /* ——— Light Mode: Cristalizado ——— */
   &.light {
-    background: rgba(241, 245, 249, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgb(241, 245, 249);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow:
-      -8px -8px 16px rgba(255, 255, 255, 0.9),
-      8px 8px 16px rgba(0, 0, 0, 0.08),
-      inset -4px -4px 8px rgba(255, 255, 255, 0.5),
-      inset 4px 4px 8px rgba(209, 217, 230, 0.3);
+  
 
     &:hover {
-      transform: translateY(-2px) scale(1.02);
       background: rgba(241, 245, 249, 0.85);
       border-color: rgba(255, 255, 255, 0.4);
       box-shadow:
@@ -40,7 +33,6 @@
     }
 
     &:active {
-      transform: translateY(0);
       background: rgba(241, 245, 249, 0.6);
       border-color: rgba(255, 255, 255, 0.15);
       box-shadow:
@@ -60,14 +52,12 @@
     box-shadow: none;
 
     &:hover {
-      transform: translateY(-2px) scale(1.05);
       background: #27272a;
       border-color: #52525b;
       box-shadow: none;
     }
 
     &:active {
-      transform: translateY(0) scale(0.98);
       background: #27272a;
       border-color: #3f3f46;
       box-shadow: none;
