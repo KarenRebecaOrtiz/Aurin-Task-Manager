@@ -9,3 +9,4 @@ export { default as PhoneCountrySelect } from './PhoneCountrySelect';
 export { WebsiteInput } from './WebsiteInput';
 export { BiographyInput } from './BiographyInput';
 export { SaveActions } from './SaveActions';
+export { PhoneInput } from './PhoneInput';

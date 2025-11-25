@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@/components/ui/buttons';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './SaveActions.module.scss';
 
@@ -57,22 +58,21 @@ export const SaveActions: React.FC<SaveActionsProps> = ({
           animate="visible"
           exit="exit"
         >
-          <button
-            type="button"
-            className={styles.discardButton}
+          <Button
+            intent="outline"
             onClick={onDiscard}
             disabled={disabled || isSaving}
           >
-            Descartar Cambios
-          </button>
-          <button
-            type="button"
-            className={styles.saveButton}
+            Cancelar
+          </Button>
+          <Button
+            intent="primary"
             onClick={onSave}
             disabled={disabled || isSaving}
+            isLoading={isSaving}
           >
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-          </button>
+            {isSaving ? 'Guardando...' : 'Guardar'}
+          </Button>
         </motion.div>
       )}
     </AnimatePresence>

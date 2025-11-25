@@ -8,14 +8,14 @@
 }
 
 .label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #252525;
-  margin-bottom: 2px;
-  line-height: 1;
+  font-size: 14px; // text-sm - Form Field Labels estándar
+  font-weight: 600; // font-semibold
+  color: #1f2937; // text-gray-800
+  margin-bottom: 8px; // mb-2
+  letter-spacing: 0.01em; // tracking-wide
 
   :global(body.dark) & {
-    color: $color-text-dark-primary;
+    color: #e5e7eb; // text-gray-200
   }
 }
 
@@ -47,14 +47,18 @@
   color: #0F172A;
 
   &::placeholder {
-    color: rgba(15, 23, 42, 0.5);
+    color: #9ca3af; // text-gray-400 - Placeholder estándar
+    opacity: 0.7;
+    font-size: 14px; // text-sm
+    font-weight: 400; // normal
   }
 
   :global(body.dark) & {
     color: rgba(255, 255, 255, 0.9) !important;
 
     &::placeholder {
-      color: rgba(255, 255, 255, 0.4) !important;
+      color: #6b7280 !important; // text-gray-500 - Placeholder en dark mode
+      opacity: 0.8;
     }
   }
 
@@ -109,11 +113,14 @@
 }
 
 .errorText {
-  @include typography($text-xs, $font-weight-normal, $color-error, left);
+  font-size: 12px; // text-xs - Error Messages estándar
+  font-weight: 500; // font-medium
+  color: #dc2626; // text-red-600
+  margin-top: 4px; // mt-1
   padding-left: 0.25rem;
 
   :global(body.dark) & {
-    color: #f87171;
+    color: #ef4444; // text-red-400
   }
 }
 

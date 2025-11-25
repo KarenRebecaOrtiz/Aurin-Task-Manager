@@ -1,6 +1,6 @@
 "use client"
 
-import { CrystalButton } from "@/modules/shared/components/atoms"
+import { Button } from "@/components/ui/buttons"
 import { Small } from "@/components/ui/Typography"
 
 interface FormFooterProps {
@@ -14,25 +14,22 @@ export function FormFooter({ onCancel, isLoading, submitText = "Crear Tarea" }: 
 
   return (
     <div className="flex justify-end gap-4 px-6 pb-6 border-gray-200">
-      <CrystalButton
+      <Button
         type="button"
-        variant="secondary"
-        size="medium"
+        intent="outline"
         onClick={onCancel}
         disabled={isLoading}
       >
-        <Small>Cancelar</Small>
-      </CrystalButton>
-      <CrystalButton
+        Cancelar
+      </Button>
+      <Button
         type="submit"
-        variant="primary"
-        size="medium"
-        loading={isLoading}
+        intent="primary"
+        isLoading={isLoading}
         disabled={isLoading}
-        icon="/circle-plus.svg"
       >
-        <Small>{isLoading ? loadingText : submitText}</Small>
-      </CrystalButton>
+        {isLoading ? loadingText : submitText}
+      </Button>
     </div>
   )
 }

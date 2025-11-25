@@ -11,8 +11,9 @@ import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
 import { updateTaskActivity } from "@/lib/taskUtils"
 import { emailNotificationService } from "@/services/emailNotificationService"
 import { validateTaskDates } from "../../utils/validation"
-import { FormHeader } from "./FormHeader"
+import { FormFooter } from "./FormFooter"
 import styles from "./TaskDialog.module.scss"
+import { FormHeader } from "./FormHeader"
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -303,10 +304,12 @@ export function TaskDialog({
                     clients={clients}
                     users={users}
                     onSubmit={handleSubmit}
-                    isLoading={isSubmitting}
                     onCreateClient={handleCreateClient}
                     initialData={initialData}
+                  />
+                  <FormFooter
                     onCancel={handleCancel}
+                    isLoading={isSubmitting}
                     submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
                   />
                 </div>

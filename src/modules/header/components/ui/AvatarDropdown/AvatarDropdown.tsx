@@ -13,6 +13,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ProfileCard } from '@/modules/profile-card';
 import { Small, Muted } from '@/components/ui/Typography';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
+import { ConfigDialog } from '@/modules/config';
 
 const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container: 'tareas' | 'cuentas' | 'miembros' | 'config') => void }) => {
   const router = useRouter();
@@ -21,6 +22,7 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container:
   const { firestoreUser } = useFirestoreUser(); // Hook centralizado
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const { currentStatus: onlineStatus } = useAvailabilityStatus();
@@ -45,13 +47,9 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container:
 
   // Menu item handlers
   const handleConfig = useCallback(() => {
-    if (onChangeContainer) {
-      onChangeContainer('config');
-    } else {
-      router.push('/dashboard/settings');
-    }
+    setIsConfigModalOpen(true);
     setIsDropdownOpen(false);
-  }, [onChangeContainer, router]);
+  }, []);
 
   const handleLogout = useCallback(() => {
     signOut();
@@ -201,6 +199,15 @@ const AvatarDropdown = ({ onChangeContainer }: { onChangeContainer?: (container:
           isOpen={isProfileOpen}
           userId={user.id}
           onClose={handleCloseProfile}
+        />
+      )}
+
+      {/* Config Dialog Modal */}
+      {user && (
+        <ConfigDialog
+          isOpen={isConfigModalOpen}
+          onOpenChange={setIsConfigModalOpen}
+          userId={user.id}
         />
       )}
     </>

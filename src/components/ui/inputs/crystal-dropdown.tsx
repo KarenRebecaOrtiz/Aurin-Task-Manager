@@ -1,0 +1,312 @@
+"use client";
+
+import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import { Building2, Folder, Users, Plus } from "lucide-react";
+import { dropdownAnimations } from "@/modules/shared/components/molecules/Dropdown/animations";
+import styles from "./crystal-dropdown.module.scss";
+
+export interface CrystalDropdownItem {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  subtitle?: string;
+  disabled?: boolean;
+  svgIcon?: string;
+}
+
+export interface CrystalDropdownProps {
+  items: CrystalDropdownItem[];
+  selectedItems?: string[];
+  onSelectionChange: (selectedIds: string[]) => void;
+  label?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  multiple?: boolean;
+  maxItems?: number;
+  emptyMessage?: string;
+  className?: string;
+  error?: string;
+  fieldType?: 'client' | 'project' | 'user';
+  onCreateNew?: () => void;
+  createNewLabel?: string;
+}
+
+const CrystalDropdown = React.forwardRef<HTMLDivElement, CrystalDropdownProps>(
+  (
+    {
+      items,
+      selectedItems = [],
+      onSelectionChange,
+      label,
+      placeholder = "Seleccionar...",
+      disabled = false,
+      multiple = false,
+      maxItems,
+      emptyMessage = "No hay elementos disponibles",
+      className = "",
+      error,
+      fieldType,
+      onCreateNew,
+      createNewLabel = "Crear nuevo",
+    },
+    ref
+  ) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const wrapperRef = React.useRef<HTMLDivElement>(null);
+    const generatedId = React.useId();
+
+    const selectedItemsData = items.filter((item) => selectedItems.includes(item.id));
+    const hasSelection = selectedItems.length > 0;
+
+    React.useEffect(() => {
+      function handleClickOutside(event: MouseEvent) {
+        if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+          setIsOpen(false);
+        }
+      }
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, []);
+
+    const handleItemClick = React.useCallback(
+      (itemId: string) => {
+        if (multiple) {
+          const isSelected = selectedItems.includes(itemId);
+          let newSelection: string[];
+
+          if (isSelected) {
+            newSelection = selectedItems.filter((id) => id !== itemId);
+          } else {
+            if (maxItems && selectedItems.length >= maxItems) {
+              return;
+            }
+            newSelection = [...selectedItems, itemId];
+          }
+
+          onSelectionChange(newSelection);
+        } else {
+          onSelectionChange([itemId]);
+          setIsOpen(false);
+        }
+      },
+      [multiple, selectedItems, onSelectionChange, maxItems]
+    );
+
+    const handleRemoveItem = React.useCallback(
+      (itemId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newSelection = selectedItems.filter((id) => id !== itemId);
+        onSelectionChange(newSelection);
+      },
+      [selectedItems, onSelectionChange]
+    );
+
+    const getDisplayText = () => {
+      if (!hasSelection) return placeholder;
+
+      if (multiple) {
+        if (selectedItemsData.length === 1) {
+          return selectedItemsData[0].name;
+        } else if (selectedItemsData.length > 1) {
+          return `${selectedItemsData.length} elementos seleccionados`;
+        }
+      } else {
+        return selectedItemsData[0]?.name || placeholder;
+      }
+
+      return placeholder;
+    };
+
+    const getIcon = () => {
+      if (fieldType === 'client') return <Building2 size={16} className={styles.icon} />;
+      if (fieldType === 'project') return <Folder size={16} className={styles.icon} />;
+      if (fieldType === 'user') return <Users size={16} className={styles.icon} />;
+      return <Building2 size={16} className={styles.icon} />;
+    };
+
+    return (
+      <div className={`${styles.container} ${className}`} ref={ref}>
+        {label && (
+          <label htmlFor={generatedId} className={styles.label}>
+            {label}
+          </label>
+        )}
+
+        <div className={styles.dropdownWrapper} ref={wrapperRef}>
+          <button
+            id={generatedId}
+            type="button"
+            className={`${styles.trigger} ${error ? styles.error : ''}`}
+            onClick={() => !disabled && setIsOpen(!isOpen)}
+            disabled={disabled}
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
+          >
+            <div className={styles.triggerContent}>
+              {getIcon()}
+              {hasSelection && !multiple && selectedItemsData[0]?.imageUrl && (
+                <Image
+                  src={selectedItemsData[0].imageUrl}
+                  alt={selectedItemsData[0].name}
+                  width={24}
+                  height={24}
+                  className="rounded-full"
+                  onError={(e) => {
+                    e.currentTarget.src = "/empty-image.png";
+                  }}
+                />
+              )}
+              {hasSelection && !multiple && selectedItemsData[0]?.svgIcon && (
+                <div
+                  className="w-6 h-6"
+                  dangerouslySetInnerHTML={{ __html: selectedItemsData[0].svgIcon }}
+                />
+              )}
+              <span className={`${styles.triggerText} ${!hasSelection ? styles.placeholder : ''}`}>
+                {getDisplayText()}
+              </span>
+            </div>
+            <Image
+              src="/chevron-down.svg"
+              alt="arrow"
+              width={16}
+              height={16}
+              className={`${styles.chevron} ${isOpen ? styles.open : ''}`}
+            />
+          </button>
+
+          {hasSelection && multiple && (
+            <div className={styles.selectedTags}>
+              {selectedItemsData.map((item) => (
+                <div key={item.id} className={styles.tag}>
+                  {item.imageUrl && (
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.name}
+                      width={16}
+                      height={16}
+                      className={styles.tagImage}
+                      onError={(e) => {
+                        e.currentTarget.src = "/empty-image.png";
+                      }}
+                    />
+                  )}
+                  {item.svgIcon && (
+                    <div className={styles.tagSvg} dangerouslySetInnerHTML={{ __html: item.svgIcon }} />
+                  )}
+                  <span className={styles.tagText}>{item.name}</span>
+                  <button
+                    type="button"
+                    className={styles.tagRemove}
+                    onClick={(e) => handleRemoveItem(item.id, e)}
+                    aria-label={`Remove ${item.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div {...dropdownAnimations.menu} className={styles.menu} role="listbox">
+                <div className={styles.itemsContainer}>
+                  {items.length > 0 ? (
+                    items.map((item, idx) => {
+                      if (item.disabled) return null;
+                      const isSelected = selectedItems.includes(item.id);
+                      return (
+                        <motion.div
+                          key={item.id}
+                          {...dropdownAnimations.item(idx)}
+                          onClick={() => handleItemClick(item.id)}
+                          className={`${styles.item} ${isSelected ? styles.selected : ''}`}
+                          role="option"
+                          aria-selected={isSelected}
+                        >
+                          <div className={styles.itemContent}>
+                            {item.imageUrl && (
+                              <Image
+                                src={item.imageUrl}
+                                alt={item.name}
+                                width={32}
+                                height={32}
+                                className={styles.itemImage}
+                                onError={(e) => {
+                                  e.currentTarget.src = "/empty-image.png";
+                                }}
+                              />
+                            )}
+                            {item.svgIcon && (
+                              <div
+                                className={styles.itemSvg}
+                                dangerouslySetInnerHTML={{ __html: item.svgIcon }}
+                              />
+                            )}
+                            <div className={styles.itemText}>
+                              <span className={styles.itemName}>{item.name}</span>
+                              {item.subtitle && (
+                                <span className={styles.itemSubtitle}>{item.subtitle}</span>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <div className={styles.emptyState}>
+                      <span>{emptyMessage}</span>
+                    </div>
+                  )}
+
+                  {/* Create New Button - Only for client fieldType */}
+                  {onCreateNew && fieldType === 'client' && (
+                    <motion.div
+                      {...dropdownAnimations.item(items.length)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCreateNew();
+                        setIsOpen(false);
+                      }}
+                      className={styles.createNewButton}
+                      role="button"
+                    >
+                      <div className={styles.itemContent}>
+                        <div className={styles.createNewIcon}>
+                          <Plus size={20} />
+                        </div>
+                        <div className={styles.itemText}>
+                          <span className={styles.createNewText}>{createNewLabel}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+
+                {maxItems && selectedItems.length >= maxItems && (
+                  <div className={styles.maxItemsWarning}>
+                    Máximo {maxItems} elementos permitidos
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {error && (
+          <span className={styles.errorText} role="alert">
+            {error}
+          </span>
+        )}
+      </div>
+    );
+  }
+);
+CrystalDropdown.displayName = "CrystalDropdown";
+
+export { CrystalDropdown };

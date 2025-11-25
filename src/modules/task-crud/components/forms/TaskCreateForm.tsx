@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/buttons";
 import { CrystalInput } from "@/components/ui/inputs/crystal-input"
 import { CrystalSearchableDropdown, type CrystalDropdownItem } from "@/components/ui/inputs/crystal-searchable-dropdown"
 import { Separator } from "@/components/ui/separator"
@@ -241,13 +241,13 @@ export function TaskCreateForm({ onSubmit, onCancel }: TaskCreateFormProps) {
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
         <Button
           type="button"
-          variant="outline"
+          intent="outline"
           onClick={onCancel}
           className="w-full sm:w-auto"
         >
           Cancelar
         </Button>
-        <Button type="submit" className="w-full sm:w-auto">
+        <Button type="submit" intent="primary" className="w-full sm:w-auto">
           Crear Tarea
         </Button>
       </div>

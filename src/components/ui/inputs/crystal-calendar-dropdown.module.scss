@@ -25,14 +25,14 @@ $error-color: #EF4444;
 }
 
 .label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #252525;
-  margin-bottom: 2px;
-  line-height: 1;
+  font-size: 14px; // text-sm - Form Field Labels estándar
+  font-weight: 600; // font-semibold
+  color: #1f2937; // text-gray-800
+  margin-bottom: 8px; // mb-2
+  letter-spacing: 0.01em; // tracking-wide
 
   :global(.dark) & {
-    color: #e5e5e5;
+    color: #e5e7eb; // text-gray-200
   }
 }
 

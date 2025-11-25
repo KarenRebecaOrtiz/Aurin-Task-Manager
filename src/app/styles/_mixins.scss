@@ -50,14 +50,18 @@
 }
 
 // ==============================================================
-// 🔮 GLASSMORPHISM MIXINS
+// 🔮 GLASSMORPHISM MIXINS (FLAT FOR LIGHT MODE)
 // =================================================================
 
 @mixin glassmorphism($bg: $color-bg-glass, $border: $color-border-subtle, $blur: 8px) {
   background: $bg;
   border: 1px solid $border;
-  backdrop-filter: blur($blur);
-  -webkit-backdrop-filter: blur($blur);
+
+  // Glassmorphism only in dark mode
+  :global(body.dark) & {
+    backdrop-filter: blur($blur);
+    -webkit-backdrop-filter: blur($blur);
+  }
 }
 
 @mixin glassmorphism-hover($bg: $color-bg-glass-hover, $border: rgba(255, 255, 255, 0.4)) {

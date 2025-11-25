@@ -16,3 +16,9 @@ export { ProfileHeader } from './header';
 export { ProfileSection } from './profile';
 export { SecuritySection } from './security';
 export { NotificationsSection } from './notifications';
+
+// Social Links
+export * from './social-links';
+
+// Modal
+export * from './ConfigModal';

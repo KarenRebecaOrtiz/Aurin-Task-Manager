@@ -1,18 +1,14 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { CrystalInput } from "@/components/ui/inputs/crystal-input"
 import { CrystalSearchableDropdown } from "@/components/ui/inputs/crystal-searchable-dropdown"
 import { CrystalCalendarDropdown } from "@/components/ui/inputs/crystal-calendar-dropdown"
-import { Separator } from "@/components/ui/separator"
-import { FormField } from "../shared"
 import { type User } from "../shared"
 import { ChipSelector } from "./ChipSelector"
 import { motion } from "framer-motion"
 import { addDays } from "date-fns"
 import { FormSection } from "./FormSection"
-import { FormFooter } from "./FormFooter"
 
 const PRIORITY_OPTIONS = [
   { value: "Baja", label: "Baja" },
@@ -68,22 +64,16 @@ interface TaskFormProps {
   clients: Client[]
   users: User[]
   onSubmit?: (data: TaskFormData) => void
-  isLoading?: boolean
   onCreateClient?: () => void
   initialData?: TaskFormData | null
-  onCancel?: () => void
-  submitText?: string
 }
 
 export function TaskForm({
   clients,
   users,
   onSubmit,
-  isLoading = false,
   onCreateClient,
   initialData = null,
-  onCancel,
-  submitText = "Crear Tarea"
 }: TaskFormProps) {
   const [formData, setFormData] = useState<TaskFormData>(
     initialData || {
@@ -324,13 +314,7 @@ export function TaskForm({
         </FormSection>
       </motion.div>
 
-      {onCancel && (
-        <FormFooter
-          onCancel={onCancel}
-          isLoading={isLoading}
-          submitText={submitText}
-        />
-      )}
+
     </form>
   )
 }

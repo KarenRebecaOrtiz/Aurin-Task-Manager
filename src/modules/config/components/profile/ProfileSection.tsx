@@ -2,17 +2,18 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
 import {
   CrystalInput,
-  CrystalTextarea,
-  CrystalSelect,
   CrystalSearchableDropdown,
-  CrystalPhoneSelect,
+  CrystalCalendarDropdown,
+  CrystalDropdown,
 } from '@/components/ui';
 import { useProfileForm } from '../../hooks';
+import { useProfileFormStore } from '../../stores';
+import { PhoneInput } from '../ui';
 import { UNIQUE_TECHNOLOGIES } from '../../constants';
 import { formatPhoneNumber } from '../../utils';
+import { SocialLinksManager } from '../social-links';
 import styles from './ProfileSection.module.scss';
 
 interface ProfileSectionProps {
@@ -28,7 +29,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
   onSuccess,
   onError,
 }) => {
-  const { user: currentUser } = useUser();
   const {
     formData,
     errors,
@@ -38,30 +38,58 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
     handlePhoneChange,
   } = useProfileForm({ userId, onSuccess, onError });
 
-  if (!formData) return null;
+  const { updateFormData } = useProfileFormStore();
 
-  const handleGenericInputChange = (name: string) => (value: string) => {
+  const handleGenericInputChange = React.useCallback((name: string) => (value: string) => {
     const event = { target: { name, value } } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(event);
-  };
+  }, [handleInputChange]);
 
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, field: string) => {
+  const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
     }
-  };
+  }, []);
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length >= 2) {
-      value = value.slice(0, 2) + '/' + value.slice(2);
-    }
-    if (value.length >= 5) {
-      value = value.slice(0, 5) + '/' + value.slice(5, 9);
-    }
-    e.target.value = value;
-    handleInputChange(e);
-  };
+  const handlePhoneInputChange = React.useCallback((value: string) => {
+    handlePhoneChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+  }, [handlePhoneChange]);
+
+  const handleDateChange = React.useCallback((date: Date | undefined) => {
+    const event = { target: { name: 'birthDate', value: date } } as any;
+    handleInputChange(event);
+  }, [handleInputChange]);
+
+  const handleGenderChange = React.useCallback((selectedIds: string[]) => {
+    const event = { target: { name: 'gender', value: selectedIds[0] || '' } } as React.ChangeEvent<HTMLSelectElement>;
+    handleInputChange(event);
+  }, [handleInputChange]);
+
+  const handleSocialLinksChange = React.useCallback((links: Array<{ networkId: string; username: string }>) => {
+    const socialLinksMap: Record<string, string> = {};
+    links.forEach(link => {
+      socialLinksMap[link.networkId] = link.username;
+    });
+    updateFormData(socialLinksMap);
+  }, [updateFormData]);
+
+  if (!formData) return null;
+
+  const initialSocialLinks = [
+    formData.github ? { networkId: 'github', username: formData.github } : null,
+    formData.linkedin ? { networkId: 'linkedin', username: formData.linkedin } : null,
+    formData.twitter ? { networkId: 'twitter', username: formData.twitter } : null,
+    formData.instagram ? { networkId: 'instagram', username: formData.instagram } : null,
+    formData.facebook ? { networkId: 'facebook', username: formData.facebook } : null,
+    formData.tiktok ? { networkId: 'tiktok', username: formData.tiktok } : null,
+  ].filter((link): link is { networkId: string; username: string } => link !== null);
+
+  const genderOptions = [
+    { id: 'Masculino', name: 'Masculino' },
+    { id: 'Femenino', name: 'Femenino' },
+    { id: 'Otro', name: 'Otro' },
+    { id: 'Prefiero no decirlo', name: 'Prefiero no decirlo' },
+  ];
 
   return (
     <>
@@ -77,7 +105,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               Completa tu información personal básica para que otros puedan conocerte mejor.
             </div>
           </div>
-          <div className={styles.fieldGroup}>
+          <div className={styles.fieldGroupRow}>
             <CrystalInput
               label="Nombre Completo"
               name="fullName"
@@ -85,7 +113,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               onChange={handleGenericInputChange('fullName')}
               placeholder="Escribe tu nombre completo"
               disabled={!isOwnProfile}
-              onKeyDown={(e) => handleInputKeyDown(e, 'fullName')}
+              onKeyDown={handleInputKeyDown}
               error={errors.fullName}
             />
             <CrystalInput
@@ -95,68 +123,30 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               onChange={handleGenericInputChange('role')}
               placeholder="¿Cuál es tu cargo actual?"
               disabled={!isOwnProfile}
-              onKeyDown={(e) => handleInputKeyDown(e, 'role')}
+              onKeyDown={handleInputKeyDown}
               error={errors.role}
             />
           </div>
-          <div className={styles.fieldGroup}>
-            <CrystalTextarea
-              value={formData.description || ''}
-              onChange={(e) => {
-                handleInputChange({
-                  target: { name: 'description', value: e.target.value, type: 'text' }
-                } as React.ChangeEvent<HTMLInputElement>);
-              }}
-              placeholder="Breve descripción personal"
-              disabled={!isOwnProfile}
-              maxLength={180}
-              showCharacterCount
-              label="Acerca de ti"
-              error={errors.description}
-            />
-          </div>
           <div className={styles.fieldGroupRow}>
-            <CrystalInput
-              label="Correo Electrónico"
-              name="email"
-              value={currentUser?.primaryEmailAddress?.emailAddress || ''}
-              onChange={() => {}}
-              placeholder="correo@ejemplo.com"
-              disabled
-            />
-            <CrystalInput
+            <CrystalCalendarDropdown
               label="Fecha de Nacimiento"
-              name="birthDate"
-              value={formData.birthDate || ''}
-              onChange={(value) => handleDateChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
+              value={formData.birthDate}
+              onChange={handleDateChange}
               placeholder="DD/MM/AAAA"
               disabled={!isOwnProfile}
-              maxLength={10}
-              onKeyDown={(e) => handleInputKeyDown(e, 'birthDate')}
               error={errors.birthDate}
+            />
+            <CrystalDropdown
+              label="Género"
+              items={genderOptions}
+              selectedItems={formData.gender ? [formData.gender] : []}
+              onSelectionChange={handleGenderChange}
+              placeholder="Selecciona una opción"
+              disabled={!isOwnProfile}
+              multiple={false}
             />
           </div>
           <div className={styles.fieldGroupRow}>
-            <div className={styles.frame239182}>
-              <div className={styles.label}>Teléfono de Contacto</div>
-              <div className={styles.phoneInputContainer}>
-                <CrystalPhoneSelect
-                  value={formData.phoneLada || '+52'}
-                  onChange={handlePhoneLadaChange}
-                  disabled={!isOwnProfile}
-                />
-                <CrystalInput
-                  name="phone"
-                  value={formatPhoneNumber(formData.phone || '')}
-                  onChange={(value) => handlePhoneChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
-                  placeholder="XXX-XXX-XX-XX"
-                  disabled={!isOwnProfile}
-                  maxLength={15}
-                  onKeyDown={(e) => handleInputKeyDown(e, 'phone')}
-                  error={errors.phone}
-                />
-              </div>
-            </div>
             <CrystalInput
               label="Ciudad de Residencia"
               name="city"
@@ -164,23 +154,8 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               onChange={handleGenericInputChange('city')}
               placeholder="Ciudad, País"
               disabled={!isOwnProfile}
-              onKeyDown={(e) => handleInputKeyDown(e, 'city')}
+              onKeyDown={handleInputKeyDown}
             />
-          </div>
-          <div className={styles.fieldGroupRow}>
-            <CrystalSelect
-              label="Género"
-              name="gender"
-              value={formData.gender || ''}
-              onChange={handleInputChange}
-              disabled={!isOwnProfile}
-            >
-              <option value="">Selecciona una opción</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Femenino">Femenino</option>
-              <option value="Otro">Otro</option>
-              <option value="Prefiero no decirlo">Prefiero no decirlo</option>
-            </CrystalSelect>
             <CrystalInput
               label="Portafolio en Línea"
               name="portfolio"
@@ -189,6 +164,31 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               placeholder="miportafolio.com"
               disabled={!isOwnProfile}
               error={errors.portfolio}
+            />
+          </div>
+          <div className={styles.fieldGroupRow}>
+            <PhoneInput
+              label="Teléfono de Contacto"
+              ladaValue={formData.phoneLada || '+52'}
+              phoneValue={formatPhoneNumber(formData.phone || '')}
+              onLadaChange={handlePhoneLadaChange}
+              onPhoneChange={handlePhoneInputChange}
+              disabled={!isOwnProfile}
+              error={errors.phone}
+              placeholder="XXX-XXX-XX-XX"
+              maxLength={15}
+              onKeyDown={handleInputKeyDown}
+            />
+            <CrystalInput
+              label="Acerca de ti"
+              name="description"
+              value={formData.description || ''}
+              onChange={handleGenericInputChange('description')}
+              placeholder="Breve descripción personal"
+              disabled={!isOwnProfile}
+              maxLength={180}
+              onKeyDown={handleInputKeyDown}
+              error={errors.description}
             />
           </div>
         </div>
@@ -227,69 +227,17 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
       </section>
 
       {/* Redes Sociales */}
-      <section className={styles.section}>
-        <div className={styles.sectionContent}>
-          <h2 className={styles.sectionTitle}>
-            <Image src="/share-2.svg" alt="Redes Sociales" width={20} height={20} className={styles.sectionIcon} />
-            Redes Sociales
-          </h2>
-          <div className={styles.fieldGroup}>
-            <div className={styles.stackDescription}>
-              Agrega tus perfiles de redes sociales para que otros puedan conectarse contigo.
-            </div>
-          </div>
-          <div className={styles.socialLinksGrid}>
-            <CrystalInput
-              label="GitHub"
-              name="github"
-              value={formData.github || ''}
-              onChange={handleGenericInputChange('github')}
-              placeholder="usuario"
-              disabled={!isOwnProfile}
-            />
-            <CrystalInput
-              label="LinkedIn"
-              name="linkedin"
-              value={formData.linkedin || ''}
-              onChange={handleGenericInputChange('linkedin')}
-              placeholder="usuario"
-              disabled={!isOwnProfile}
-            />
-            <CrystalInput
-              label="Twitter/X"
-              name="twitter"
-              value={formData.twitter || ''}
-              onChange={handleGenericInputChange('twitter')}
-              placeholder="@usuario"
-              disabled={!isOwnProfile}
-            />
-            <CrystalInput
-              label="Instagram"
-              name="instagram"
-              value={formData.instagram || ''}
-              onChange={handleGenericInputChange('instagram')}
-              placeholder="@usuario"
-              disabled={!isOwnProfile}
-            />
-            <CrystalInput
-              label="Facebook"
-              name="facebook"
-              value={formData.facebook || ''}
-              onChange={handleGenericInputChange('facebook')}
-              placeholder="usuario"
-              disabled={!isOwnProfile}
-            />
-            <CrystalInput
-              label="TikTok"
-              name="tiktok"
-              value={formData.tiktok || ''}
-              onChange={handleGenericInputChange('tiktok')}
-              placeholder="@usuario"
+      {isOwnProfile && (
+        <section className={styles.section}>
+          <div className={styles.sectionContent}>
+            <SocialLinksManager
+              initialLinks={initialSocialLinks}
+              onChange={handleSocialLinksChange}
               disabled={!isOwnProfile}
             />
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   );
 };

@@ -1,0 +1,39 @@
+@use '@/app/styles/variables' as *;
+
+.phoneInputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  width: 100%;
+}
+
+.label {
+  font-size: 14px; // text-sm - Form Field Labels estándar
+  font-weight: 600; // font-semibold
+  color: #1f2937; // text-gray-800
+  margin-bottom: 8px; // mb-2
+  letter-spacing: 0.01em; // tracking-wide
+
+  :global(.dark) & {
+    color: #e5e7eb; // text-gray-200
+  }
+}
+
+.phoneInputContainer {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  align-items: flex-start;
+  width: 100%;
+
+  > div:first-child {
+    flex: 0 0 auto;
+    width: 110px;
+  }
+
+  > div:last-child {
+    flex: 1;
+    min-width: 0;
+  }
+}

@@ -32,6 +32,9 @@ export type { CrystalSelectProps } from './inputs/crystal-select';
 export { CrystalSearchableDropdown } from './inputs/crystal-searchable-dropdown';
 export type { CrystalSearchableDropdownProps, CrystalDropdownItem } from './inputs/crystal-searchable-dropdown';
 
+export { CrystalDropdown } from './inputs/crystal-dropdown';
+export type { CrystalDropdownProps, CrystalDropdownItem as CrystalDropdownItemType } from './inputs/crystal-dropdown';
+
 export { CrystalPhoneSelect } from './inputs/crystal-phone-select';
 export type { CrystalPhoneSelectProps } from './inputs/crystal-phone-select';
 
@@ -40,3 +43,6 @@ export type { CrystalCalendarDropdownProps } from './inputs/crystal-calendar-dro
 
 export { CrystalRadioSelector } from './inputs/crystal-radio-selector';
 export type { CrystalRadioSelectorProps, RadioOption } from './inputs/crystal-radio-selector';
+
+// Accessibility Components
+export { VisuallyHidden } from './visually-hidden';

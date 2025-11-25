@@ -112,7 +112,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
           {/* Name and Email */}
           <div className={styles.userInfo}>
-            <motion.div 
+            <motion.div
               className={styles.mainName}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -122,7 +122,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 delay: 0.2
               }}
             >
-      
+              {currentUser.username || 'Usuario'}
             </motion.div>
             <div className={styles.userEmail}>
               {currentUser.primaryEmailAddress?.emailAddress}

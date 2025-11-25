@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useUser } from "@clerk/nextjs"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
 import { FormHeader } from "./FormHeader"
-import { CrystalButton } from "@/modules/shared/components/atoms"
+import { Button } from "@/components/ui/buttons";
 import { Small } from "@/components/ui/Typography"
 import { CrystalInput } from "@/components/ui/inputs/crystal-input"
 import { FormSection } from "./FormSection"
@@ -261,26 +261,23 @@ export function ClientDialog({
                 </div>
               </div>
               <div className="flex justify-end gap-4 px-6 pb-6 border-gray-200">
-                <CrystalButton
+                <Button
                   type="button"
-                  variant="secondary"
-                  size="medium"
+                  intent="outline"
                   onClick={handleCancel}
                   disabled={isSubmitting}
                 >
-                  <Small>Cancelar</Small>
-                </CrystalButton>
-                <CrystalButton
+                  Cancelar
+                </Button>
+                <Button
                   type="button"
-                  variant="primary"
-                  size="medium"
-                  loading={isSubmitting}
+                  intent="primary"
+                  isLoading={isSubmitting}
                   disabled={isSubmitting}
                   onClick={handleSubmit}
-                  icon="/circle-plus.svg"
                 >
-                  <Small>{isSubmitting ? "Creando..." : "Crear Cliente"}</Small>
-                </CrystalButton>
+                  {isSubmitting ? "Creando..." : "Crear Cliente"}
+                </Button>
               </div>
             </motion.div>
           )}

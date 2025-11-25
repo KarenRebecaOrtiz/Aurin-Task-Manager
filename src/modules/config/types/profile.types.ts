@@ -91,12 +91,6 @@ export interface ConfigForm extends Omit<Config, 'id'> {
   coverPhotoFile?: File | null;
   /** Código de país para teléfono */
   phoneLada?: string;
-  /** Contraseña actual (para cambio de contraseña) */
-  currentPassword?: string;
-  /** Nueva contraseña */
-  newPassword?: string;
-  /** Confirmación de nueva contraseña */
-  confirmPassword?: string;
   /** GitHub (campo individual para formulario) */
   github?: string;
   /** LinkedIn (campo individual para formulario) */
@@ -109,6 +103,7 @@ export interface ConfigForm extends Omit<Config, 'id'> {
   facebook?: string;
   /** TikTok (campo individual para formulario) */
   tiktok?: string;
+  birthDate?: any;
 }
 
 /**
