@@ -9,21 +9,17 @@ import { Client } from '@/types';
 import {
   backdropVariants,
   panelVariants,
-  transitions,
 } from '@/modules/dialog';
 import {
   Dialog,
-  DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
+import { DialogHeader } from '@/modules/shared/components/molecules';
 import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Label } from '@/components/ui/label';
 import { SwitchToggle } from '@/components/ui/switch-toggle';
-import { Info, Briefcase, Calendar, User, Mail, Phone, MapPin, Building2, Tag, FileText } from 'lucide-react';
+import { Briefcase, Calendar, User, Mail, Phone, MapPin, Building2, Tag, FileText } from 'lucide-react';
 import styles from './AccountDetailsCard.module.scss';
 import { invalidateClientsCache } from '@/lib/cache-utils';
 
@@ -276,14 +272,12 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
               exit="exit"
             >
               <DialogContent className={styles.accountDialog}>
-                <DialogHeader>
-                  <DialogTitle className={styles.dialogTitle}>
-                    <Info className={styles.titleIcon} />
-                    {isCreateMode ? 'Crear Nueva Cuenta' : isViewMode ? 'Detalles de la Cuenta' : 'Editar Cuenta'}
-                  </DialogTitle>
-                </DialogHeader>
+                <DialogHeader
+                  title={isCreateMode ? 'Crear Nueva Cuenta' : isViewMode ? 'Detalles de la Cuenta' : 'Editar Cuenta'}
+                  description="Gestiona la información de tu cuenta"
+                />
 
-                <div className={styles.dialogBody}>
+                <div className={`${styles.dialogBody} overflow-y-auto flex flex-col`}>
                   <div className={styles.contentGrid}>
                     {/* Avatar and Basic Info */}
                     <div className={styles.avatarSection}>

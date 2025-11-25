@@ -1,0 +1,39 @@
+@use '@/app/styles/variables' as *;
+
+// TODO: Estilos para sección de stack
+// TODO: Container de tags con overflow hidden
+// TODO: Botón toggle con estilos custom
+// TODO: Tema dark mode
+
+/* Stack de Tecnologías */
+.stackSection {
+  margin: 16px 0;
+}
+
+.stackTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.toggleTechsButton {
+  background-color: #d5df63;
+  color: black;
+  border: none;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}

@@ -9,12 +9,19 @@ import styles from './AddedLinkItem.module.scss';
 
 interface AddedLinkItemProps {
   link: SocialLink;
-  onEdit: (id: string) => void;
-  onRemove: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onRemove?: (id: string) => void;
   disabled?: boolean;
+  showActions?: boolean;
 }
 
-export function AddedLinkItem({ link, onEdit, onRemove, disabled }: AddedLinkItemProps) {
+export function AddedLinkItem({
+  link,
+  onEdit,
+  onRemove,
+  disabled,
+  showActions = true,
+}: AddedLinkItemProps) {
   const config = NETWORK_CONFIG[link.networkId];
   if (!config) return null;
 
@@ -52,24 +59,28 @@ export function AddedLinkItem({ link, onEdit, onRemove, disabled }: AddedLinkIte
         >
           <ExternalLink size={14} />
         </a>
-        <button
-          type="button"
-          onClick={() => onEdit(link.id)}
-          className={styles.actionButton}
-          aria-label="Edit link"
-          disabled={disabled}
-        >
-          <Pencil size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onRemove(link.id)}
-          className={`${styles.actionButton} ${styles.deleteButton}`}
-          aria-label="Remove link"
-          disabled={disabled}
-        >
-          <Trash2 size={14} />
-        </button>
+        {showActions && onEdit && onRemove && (
+          <>
+            <button
+              type="button"
+              onClick={() => onEdit(link.id)}
+              className={styles.actionButton}
+              aria-label="Edit link"
+              disabled={disabled}
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onRemove(link.id)}
+              className={`${styles.actionButton} ${styles.deleteButton}`}
+              aria-label="Remove link"
+              disabled={disabled}
+            >
+              <Trash2 size={14} />
+            </button>
+          </>
+        )}
       </div>
     </motion.div>
   );

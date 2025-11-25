@@ -1,0 +1,53 @@
+@use '@/app/styles/variables' as *;
+
+// TODO: Estilos para sección de información de contacto
+// TODO: Container con glassmorphism
+// TODO: Items en layout flex column
+// TODO: Labels y values con estilos diferenciados
+// TODO: Tema dark mode
+
+/* Información de Contacto */
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 16px 0px;
+  border-radius: 12px;
+  background: white;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid $color-border-subtle;
+
+  :global(body.dark) & {
+    background: rgb(26 26 26);
+    border-color: rgb(26 26 26);
+  }
+}
+
+.contactItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.contactLabel {
+  font-weight: 600;
+  color: $color-text-secondary;
+  min-width: 120px;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}
+
+.contactValue {
+  color: $color-text-primary;
+  font-weight: 500;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}

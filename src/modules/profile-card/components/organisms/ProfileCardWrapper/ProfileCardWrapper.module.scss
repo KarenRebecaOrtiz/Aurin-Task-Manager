@@ -1,0 +1,49 @@
+@use '@/app/styles/variables' as *;
+
+// TODO: Estilos para wrapper del modal
+// TODO: Overlay con backdrop blur y glassmorphism
+// TODO: Card container con max-width
+// TODO: Estados loading y error
+// TODO: Tema dark mode
+// TODO: Z-index alto para modal
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 16px;
+
+  :global(body.dark) & {
+    background: rgba(0, 0, 0, 0.4);
+  }
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 684px;
+  margin: 0 auto;
+}
+
+// Estados de carga y error
+.loadingContainer,
+.errorContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: $color-text-secondary;
+
+  :global(body.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}

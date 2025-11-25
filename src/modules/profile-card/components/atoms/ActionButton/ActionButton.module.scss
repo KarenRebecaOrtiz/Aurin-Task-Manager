@@ -1,0 +1,44 @@
+@use '@/app/styles/variables' as *;
+
+// TODO: Estilos base para botón de acción reutilizable
+// TODO: Debe soportar tanto variant='config' como variant='message'
+// TODO: Incluir estados hover, active, focus
+// TODO: Tema dark mode
+
+.actionButton {
+  /* Estilos base compartidos */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
+  padding: 12px;
+  border-radius: 12px;
+  font-family: "Urbanist", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  :global(body.dark) & {
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}

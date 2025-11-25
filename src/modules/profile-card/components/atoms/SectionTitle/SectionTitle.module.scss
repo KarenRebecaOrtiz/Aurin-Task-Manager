@@ -1,0 +1,18 @@
+@use '@/app/styles/variables' as *;
+
+// TODO: Estilos para título de sección
+// TODO: Font size, weight, color
+// TODO: Tema dark mode
+// TODO: Spacing (margin-bottom)
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin-bottom: 12px;
+  text-align: center;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}

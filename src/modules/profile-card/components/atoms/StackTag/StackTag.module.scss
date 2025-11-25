@@ -1,0 +1,25 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// TODO: Estilos para tag individual de tecnología
+// TODO: Aplicar efecto glassmorphism
+// TODO: Box shadow con inset para efecto 3D
+// TODO: Tema dark mode
+
+.stackTag {
+  @include flex-center;
+  gap: $spacing-sm;
+  padding: 0.375rem 0.75rem;
+  border-radius: $radius-lg;
+  @include typography($text-sm, $font-weight-medium, $color-text-primary);
+  @include glassmorphism($color-bg-glass);
+  border: 1px solid $color-border-subtle;
+  box-shadow: inset -1px -1px 2px rgba(255, 255, 255, 0.9), inset 1px 1px 3px rgba(0, 0, 0, 0.05);
+
+  :global(.dark) & {
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e5e5e5;
+    box-shadow: none;
+  }
+}

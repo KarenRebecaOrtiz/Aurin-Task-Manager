@@ -431,6 +431,20 @@ export function invalidateTasksCache(): void {
 }
 
 /**
+ * Refresh task cache by fetching fresh data from Firebase.
+ * This ensures the cache exists and is up-to-date.
+ */
+export async function refreshTasksCache(): Promise<void> {
+  try {
+    const freshTasks = await fetchTasksFromFirebase();
+    useDataStore.getState().setTasks(freshTasks);
+  } catch (error) {
+    console.error('[taskService] Error refreshing tasks cache:', error);
+    throw error;
+  }
+}
+
+/**
  * Get pending optimistic updates (useful for debugging).
  */
 export function getPendingOptimisticUpdates(): OptimisticUpdate[] {

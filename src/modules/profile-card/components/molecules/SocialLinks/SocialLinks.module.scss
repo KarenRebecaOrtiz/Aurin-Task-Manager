@@ -1,0 +1,13 @@
+@use '@/app/styles/variables' as *;
+
+// TODO: Estilos para sección de enlaces sociales
+// TODO: Layout flex column para lista de links
+// TODO: Gap entre items
+
+.socialLinks {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 32px;
+}

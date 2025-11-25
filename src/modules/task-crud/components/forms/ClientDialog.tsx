@@ -1,13 +1,13 @@
 "use client"
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui"
 import { useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUser } from "@clerk/nextjs"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
-import { FormHeader } from "./FormHeader"
+import { DialogHeader } from "@/modules/shared/components/molecules"
 import { Button } from "@/components/ui/buttons";
-import { Small } from "@/components/ui/Typography"
 import { CrystalInput } from "@/components/ui/inputs/crystal-input"
 import { FormSection } from "./FormSection"
 import styles from "./TaskDialog.module.scss"
@@ -165,7 +165,9 @@ export function ClientDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}>
-        <DialogTitle className="sr-only">Crear Nueva Cuenta</DialogTitle>
+        <VisuallyHidden>
+          <DialogTitle>Crear Nueva Cuenta</DialogTitle>
+        </VisuallyHidden>
         <AnimatePresence mode="wait">
           {isOpen && (
             <motion.div
@@ -175,7 +177,7 @@ export function ClientDialog({
               exit="exit"
               className="w-full flex flex-col flex-1"
             >
-              <FormHeader
+              <DialogHeader
                 title="Crear Nueva Cuenta"
                 description="Completa el formulario para crear una nueva cuenta en el sistema."
               />

@@ -1,0 +1,95 @@
+@use '@/app/styles/variables' as *;
+
+// TODO: Estilos para header del profile card
+// TODO: Cover photo section
+// TODO: Profile photo overlay con position absoluta
+// TODO: Header section con nombre, badge y botones
+// TODO: Responsive design para móvil
+// TODO: Tema dark mode
+
+.coverPhotoSection {
+  position: relative;
+  width: 100%;
+  height: 128px;
+  overflow: hidden;
+}
+
+.coverPhoto {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: $color-bg-light;
+}
+
+.profilePhotoOverlay {
+  position: relative;
+  margin-top: -40px;
+  margin-left: 20px;
+  z-index: 10;
+
+  @media (max-width: 640px) {
+    margin-left: 0;
+    align-self: flex-start;
+    margin-left: 32px;
+  }
+}
+
+.headerSection {
+  display: flex;
+  align-items: start;
+  flex-direction: row;
+  gap: 20px;
+  width: 100%;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: start;
+    gap: 16px;
+  }
+}
+
+.nameAndBadgeContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+  flex: 1;
+  gap: 12px;
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: bold;
+  color: $color-text-primary;
+  margin: 0;
+
+  :global(body.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.badgeContainer {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0;
+
+  .badge {
+    transform: scale(0.8);
+
+    @media (min-width: 640px) {
+      transform: scale(0.9);
+    }
+  }
+
+  @media (max-width: 640px) {
+    justify-content: center;
+  }
+}

@@ -1,6 +1,7 @@
 "use client"
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui"
 import { TaskForm, type TaskFormData } from "./TaskForm"
 import { ClientDialog } from "./ClientDialog"
 import { useState, useCallback, useEffect } from "react"
@@ -13,7 +14,7 @@ import { emailNotificationService } from "@/services/emailNotificationService"
 import { validateTaskDates } from "../../utils/validation"
 import { FormFooter } from "./FormFooter"
 import styles from "./TaskDialog.module.scss"
-import { FormHeader } from "./FormHeader"
+import { DialogHeader } from "@/modules/shared/components/molecules"
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -265,7 +266,9 @@ export function TaskDialog({
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}>
-          <DialogTitle className="sr-only">Cargando tarea</DialogTitle>
+          <VisuallyHidden>
+            <DialogTitle>Cargando tarea</DialogTitle>
+          </VisuallyHidden>
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -281,9 +284,9 @@ export function TaskDialog({
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}>
-          <DialogTitle className="sr-only">
-            {isEditMode ? "Editar Tarea" : "Crear Tarea"}
-          </DialogTitle>
+          <VisuallyHidden>
+            <DialogTitle>{isEditMode ? "Editar Tarea" : "Crear Tarea"}</DialogTitle>
+          </VisuallyHidden>
           <AnimatePresence mode="wait">
             {isOpen && (
               <motion.div
@@ -293,13 +296,13 @@ export function TaskDialog({
                 exit="exit"
                 className="w-full flex flex-col flex-1 "
               >
-                <FormHeader
-                  title={isEditMode ? "Editar Tarea" : "Crear Tarea"}
-                  description={isEditMode
-                    ? "Modifica la información de la tarea existente."
-                    : "Completa el formulario para crear una nueva tarea en el sistema."}
-                />
-                <div className="flex-1  px-6 pb-6">
+                <div className="flex-1 px-6 pb-6 overflow-y-auto flex flex-col">
+                  <DialogHeader
+                    title={isEditMode ? "Editar Tarea" : "Crear Tarea"}
+                    description={isEditMode
+                      ? "Modifica la información de la tarea existente."
+                      : "Completa el formulario para crear una nueva tarea en el sistema."}
+                  />
                   <TaskForm
                     clients={clients}
                     users={users}

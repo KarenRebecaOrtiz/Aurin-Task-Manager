@@ -1,6 +1,7 @@
 import { db } from './firebase';
 import { collection, getDocs, query, deleteDoc, doc, where, updateDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { emailNotificationService } from '@/services/emailNotificationService';
+import { refreshTasksCache } from '@/services/taskService';
 
 // Helper function for conditional logging (only in development)
 const debugLog = (message: string, ...args: unknown[]) => {
@@ -361,6 +362,9 @@ export async function deleteTask(taskId: string, userId: string, isAdmin: boolea
     // Eliminar tarea
     await deleteDoc(doc(db, 'tasks', taskId));
     debugLog('[taskUtils] Task deleted successfully:', taskId);
+
+    // Refrescar caché de taskService con datos actualizados
+    await refreshTasksCache();
   } catch (error) {
     throw new Error(`Failed to delete task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
   }
@@ -407,6 +411,9 @@ export async function archiveTask(taskId: string, userId: string, isAdmin: boole
     }
 
     debugLog('[taskUtils] Task archived successfully:', taskId);
+
+    // Refrescar caché de taskService con datos actualizados
+    await refreshTasksCache();
   } catch (error) {
     throw new Error(`Failed to archive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
   }
@@ -452,6 +459,9 @@ export async function unarchiveTask(taskId: string, userId: string, isAdmin: boo
     }
 
     debugLog('[taskUtils] Task unarchived successfully:', taskId);
+
+    // Refrescar caché de taskService con datos actualizados
+    await refreshTasksCache();
   } catch (error) {
     throw new Error(`Failed to unarchive task: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
   }

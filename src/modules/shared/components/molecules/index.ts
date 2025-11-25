@@ -1,3 +1,7 @@
+// Dialog Header
+export { DialogHeader } from './DialogHeader';
+export type { DialogHeaderProps } from './DialogHeader';
+
 // Dropdown
 export { Dropdown } from './Dropdown';
 export type { DropdownProps, DropdownItem } from './Dropdown';

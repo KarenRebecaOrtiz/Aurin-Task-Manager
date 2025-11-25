@@ -6,6 +6,7 @@ import { useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUser } from "@clerk/nextjs"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
+import { DialogHeader } from "@/modules/shared/components/molecules"
 import { useProfileForm } from "../../hooks"
 import { useConfigPageStore } from "../../stores"
 import { ConfigForm } from "./ConfigForm"
@@ -69,13 +70,17 @@ export function ConfigDialog({
               exit="exit"
               className="w-full flex flex-col h-full"
             >
+              <DialogHeader
+                title="Editar Perfil"
+                description="Actualiza tu información pública y detalles de cuenta."
+              />
               <ProfileHeader
                 userId={userId}
                 isOwnProfile={user.id === userId}
                 onSuccess={showSuccess}
                 onError={showError}
               />
-              <div className={`${styles.scrollableContent} flex-1 min-h-0`}>
+              <div className={`${styles.scrollableContent} flex-1 min-h-0 overflow-y-auto`}>
                 <ConfigForm
                   userId={userId}
                   onSuccess={showSuccess}
