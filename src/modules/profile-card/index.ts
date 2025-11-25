@@ -5,7 +5,6 @@
 
 // Components
 export { default as ProfileCard } from './components/ProfileCard';
-export { default as StreakCounter } from './components/StreakCounter/StreakCounter';
 
 // Hooks
 export { useProfile } from './hooks/useProfile';

@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import Badge from '@/components/Badge';
-import StreakCounter from './StreakCounter/StreakCounter';
 import { Small, Muted } from '@/components/ui/Typography';
 
 import { useProfile } from '../hooks/useProfile';
@@ -269,8 +268,6 @@ const ProfileCard = ({ isOpen, userId, onClose, onChangeContainer }: ProfileCard
                           <h2 className={styles.name}>{profile.fullName || 'Sin nombre'}</h2>
                           
                           <div className={styles.actionButtons}>
-                            <StreakCounter className={styles.streakCounter} userId={userId} />
-                            
                             {userId === currentUser?.id && (
                               <button
                                 className={styles.configButton}
