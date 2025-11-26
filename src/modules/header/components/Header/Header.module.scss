@@ -9,7 +9,7 @@
     height: 100%;
     @include flex-between;
     align-items: flex-start;
-    padding: 24px 2em 50px 2em;
+    padding: 50px 2em 24px 2em;
     z-index: 31000;
   
     @include responsive(sm) {

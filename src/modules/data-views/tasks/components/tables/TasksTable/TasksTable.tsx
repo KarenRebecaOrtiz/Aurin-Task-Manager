@@ -10,6 +10,7 @@ import styles from './TasksTable.module.scss';
 
 // Components
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
+import { NotesWrapper } from '@/modules/data-views/components/ui/NotesWrapper';
 import { TableSkeletonLoader } from '@/modules/data-views/components/shared';
 
 // Hooks
@@ -339,6 +340,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   return (
     <div className={styles.container}>
+      <NotesWrapper />
       <TasksHeader
         searchQuery={tableState.searchQuery}
         setSearchQuery={tableState.setSearchQuery}
