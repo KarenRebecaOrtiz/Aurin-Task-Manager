@@ -98,7 +98,12 @@ const Table = memo(
       return column.width;
     };
 
-    const handleCellClick = useCallback((item: T, column: Column<T>) => {
+    const handleCellClick = useCallback((item: T, column: Column<T>, event: React.MouseEvent) => {
+      // Prevent row click if event was stopped (e.g., from avatar click)
+      if (event.defaultPrevented) {
+        return;
+      }
+      
       if (column.key === 'action') {
         return;
       }
@@ -110,7 +115,7 @@ const Table = memo(
 
     // Memoized callback for each cell to avoid arrow function warnings
     const createCellClickHandler = useCallback((item: T, column: Column<T>) => {
-      return () => handleCellClick(item, column);
+      return (event: React.MouseEvent) => handleCellClick(item, column, event);
     }, [handleCellClick]);
 
     const handleFirstPage = useCallback(() => setCurrentPage(1), []);

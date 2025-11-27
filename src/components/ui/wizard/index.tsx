@@ -208,6 +208,13 @@ const WizardActions: React.FC<WizardActionsProps> = ({ currentStep = 0, totalSte
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
 
+  const handleComplete = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (onComplete) {
+      onComplete();
+    }
+  };
+
   return (
     <div className={styles.wizardButtons}>
       {!isFirstStep && (
@@ -218,7 +225,7 @@ const WizardActions: React.FC<WizardActionsProps> = ({ currentStep = 0, totalSte
       )}
       <div style={{ flex: 1 }} />
       {isLastStep ? (
-        <button type="button" className={styles.wizardButton} onClick={onComplete}>
+        <button type="button" className={styles.wizardButton} onClick={handleComplete}>
           <Image src="/check-check.svg" alt="Completar" width={16} height={16} />
           Completar
         </button>

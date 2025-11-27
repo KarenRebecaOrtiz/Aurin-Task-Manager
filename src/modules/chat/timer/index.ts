@@ -30,6 +30,7 @@ export {
   useRunningTimers,
   useHasAnyPendingWrites,
   useSyncHealth,
+  useOrphanedTimerCleanup,
 } from './hooks';
 
 export type {

@@ -1,30 +1,35 @@
 "use client"
 
 import { X } from "lucide-react"
+import { ReactNode } from "react"
 
 export interface DialogHeaderProps {
   title: string
   description: string
   showCloseButton?: boolean
   className?: string
+  children?: ReactNode
 }
 
 /**
  * Componente reutilizable para el header de dialogs
  * Incluye título, descripción y botón de cerrar
- * 
+ *
  * @example
  * <DialogHeader
  *   title="Crear Tarea"
  *   description="Completa el formulario para crear una nueva tarea"
  *   showCloseButton={true}
- * />
+ * >
+ *   <Button>Action</Button>
+ * </DialogHeader>
  */
 export function DialogHeader({
   title,
   description,
   showCloseButton = true,
   className = "",
+  children,
 }: DialogHeaderProps) {
   return (
     <div className={`relative px-6 pt-6 pb-4 ${className}`}>
@@ -37,16 +42,19 @@ export function DialogHeader({
             {description}
           </p>
         </div>
-        {showCloseButton && (
-          <button
-            type="button"
-            className="rounded-md p-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
-            aria-label="Cerrar"
-          >
-            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            <span className="sr-only">Cerrar</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {children}
+          {showCloseButton && (
+            <button
+              type="button"
+              className="rounded-md p-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Cerrar"
+            >
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              <span className="sr-only">Cerrar</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

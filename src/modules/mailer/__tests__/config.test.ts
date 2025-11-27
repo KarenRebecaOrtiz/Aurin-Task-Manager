@@ -8,9 +8,9 @@ describe('Mailer Config', () => {
   describe('mailConfig', () => {
     it('should load email configuration from environment variables', () => {
       expect(mailConfig.service).toBe('gmail');
-      expect(mailConfig.auth.user).toBe('test@example.com');
-      expect(mailConfig.auth.pass).toBe('test-password');
-      expect(mailConfig.from).toBe('"Test Mailer" <no-reply@test.com>');
+      expect(mailConfig.auth.user).toBe('sodioanalytics@gmail.com');
+      expect(mailConfig.auth.pass).toBe('sxfuovryzccbbcui');
+      expect(mailConfig.from).toBe('"Aurin Task Manager" <no-reply@aurin.com>');
     });
 
     it('should have default values when env vars are missing', () => {

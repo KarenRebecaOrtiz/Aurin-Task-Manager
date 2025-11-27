@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTasksTableActionsStore } from '../../stores/tasksTableActionsStore';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
+import { useOrphanedTimerCleanup } from '@/modules/chat/timer';
 import TasksTable from './TasksTable';
 
 export default function TasksTableIsolated() {
-  
+  const { user } = useUser();
+
   // ✅ SOLUCIÓN: Usar directamente useDataStore para actualización inmediata
   const {
     tasks,
@@ -18,6 +21,10 @@ export default function TasksTableIsolated() {
     clients: state.clients,
     users: state.users,
   })));
+
+  // 🧹 CLEANUP: Automatically clean up timers for deleted tasks
+  const taskIds = tasks.map(task => task.id);
+  useOrphanedTimerCleanup(taskIds, user?.id || null);
 
   // Configure action handlers for TasksTable
   useEffect(() => {

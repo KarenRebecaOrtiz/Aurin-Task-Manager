@@ -3,14 +3,13 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { VisuallyHidden } from "@/components/ui"
 import { TaskForm, type TaskFormData } from "./TaskForm"
-import { ClientDialog } from "./ClientDialog"
+import { ClientDialog } from "@/modules/client-crud"
 import { useState, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTaskFormData } from "../../hooks/data/useTaskData"
 import { useUser } from "@clerk/nextjs"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
-import { updateTaskActivity } from "@/lib/taskUtils"
-import { emailNotificationService } from "@/services/emailNotificationService"
+import { taskService } from "../../services/taskService"
 import { validateTaskDates } from "../../utils/validation"
 import { FormFooter } from "./FormFooter"
 import styles from "./TaskDialog.module.scss"
@@ -113,120 +112,80 @@ export function TaskDialog({
   }, [isOpen])
 
   const handleSubmit = useCallback(async (formData: TaskFormData) => {
+    console.log('[TaskDialog] handleSubmit called with formData:', formData)
+
     if (!user) {
+      console.error('[TaskDialog] No user found')
       showError('Sesión expirada', 'Por favor, inicia sesión nuevamente.')
       return
     }
 
     // Validate dates
     if (!validateTaskDates(formData.startDate, formData.endDate)) {
+      console.error('[TaskDialog] Date validation failed')
       showError('Fechas inválidas', 'La fecha de inicio debe ser anterior a la fecha de finalización.')
       return
     }
 
+    console.log('[TaskDialog] Starting task submission...')
     setIsSubmitting(true)
 
     try {
-      const { doc, collection, setDoc, updateDoc, Timestamp } = await import('firebase/firestore')
-      const { db } = await import('@/lib/firebase')
-
       if (isEditMode && taskId) {
-        // UPDATE MODE
-        const taskDocRef = doc(db, 'tasks', taskId)
+        // UPDATE MODE - Use API
+        console.log('[TaskDialog] Updating task via API...')
 
-        const taskData = {
+        // Flatten the form data for API (API expects flat structure)
+        const apiFormData = {
           clientId: formData.clientId,
           project: formData.project,
           name: formData.name,
           description: formData.description,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
+          startDate: formData.startDate?.toISOString() || null,
+          endDate: formData.endDate?.toISOString() || null,
+          status: formData.status,
+          priority: formData.priority,
           LeadedBy: formData.LeadedBy,
           AssignedTo: formData.AssignedTo || [],
-          priority: formData.priority,
-          status: formData.status,
-          updatedAt: Timestamp.fromDate(new Date()),
-          updatedBy: user.id,
+          objectives: '',
         }
 
-        await updateDoc(taskDocRef, taskData)
-        await updateTaskActivity(taskId, 'edit')
+        console.log('[TaskDialog] API form data prepared for update:', apiFormData);
+        const response = await taskService.updateTask(taskId, apiFormData)
 
-        // Determine new members to notify
-        const newLeaders = formData.LeadedBy.filter((id: string) => !originalLeadedBy.includes(id))
-        const newMembers = (formData.AssignedTo || []).filter((id: string) => !originalAssignedTo.includes(id))
-
-        const newRecipients = new Set<string>([...newLeaders, ...newMembers])
-        newRecipients.delete(user.id)
-
-        // Send notifications only to new members
-        if (newRecipients.size > 0) {
-          try {
-            await emailNotificationService.createEmailNotificationsForRecipients(
-              {
-                userId: user.id,
-                message: `${user.firstName || 'Usuario'} te asignó la tarea ${formData.name}`,
-                type: 'task_assignment_changed',
-                taskId,
-              },
-              Array.from(newRecipients)
-            )
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.warn('[TaskDialog] Error sending notifications:', error)
-          }
+        if (!response.success) {
+          throw new Error(response.error || 'Error al actualizar la tarea')
         }
 
+        console.log('[TaskDialog] Task updated successfully')
         showSuccess(`La tarea "${formData.name}" se ha actualizado exitosamente.`)
       } else {
-        // CREATE MODE
-        const taskDocRef = doc(collection(db, 'tasks'))
-        const newTaskId = taskDocRef.id
+        // CREATE MODE - Use API
+        console.log('[TaskDialog] Creating task via API...')
 
-        const taskData = {
+        // Flatten the form data for API (API expects flat structure)
+        const apiFormData = {
           clientId: formData.clientId,
           project: formData.project,
           name: formData.name,
           description: formData.description,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
+          startDate: formData.startDate?.toISOString() || null,
+          endDate: formData.endDate?.toISOString() || null,
+          status: formData.status,
+          priority: formData.priority,
+          objectives: '',
           LeadedBy: formData.LeadedBy,
           AssignedTo: formData.AssignedTo || [],
-          priority: formData.priority,
-          status: formData.status,
-          objectives: '',
-          CreatedBy: user.id,
-          createdAt: Timestamp.fromDate(new Date()),
-          id: newTaskId,
         }
 
-        await setDoc(taskDocRef, taskData)
-        await updateTaskActivity(newTaskId, 'edit')
+        console.log('[TaskDialog] API form data prepared:', apiFormData);
+        const response = await taskService.createTask(apiFormData, user.id)
 
-        // Send notifications
-        const recipients = new Set<string>([
-          ...formData.LeadedBy,
-          ...(formData.AssignedTo || []),
-        ])
-        recipients.delete(user.id)
-
-        if (recipients.size > 0) {
-          try {
-            await emailNotificationService.createEmailNotificationsForRecipients(
-              {
-                userId: user.id,
-                message: `${user.firstName || 'Usuario'} te asignó la tarea ${formData.name}`,
-                type: 'task_created',
-                taskId: newTaskId,
-              },
-              Array.from(recipients)
-            )
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.warn('[TaskDialog] Error sending notifications:', error)
-          }
+        if (!response.success) {
+          throw new Error(response.error || 'Error al crear la tarea')
         }
 
+        console.log('[TaskDialog] Task created successfully')
         showSuccess(`La tarea "${formData.name}" se ha creado exitosamente.`)
       }
 
@@ -239,15 +198,14 @@ export function TaskDialog({
       }, 1500)
     } catch (error: any) {
       const errorMessage = error?.message || 'Error desconocido'
-      // eslint-disable-next-line no-console
-      console.error('[TaskDialog] Error:', errorMessage)
+      console.error('[TaskDialog] Error:', errorMessage, error)
 
       const action = isEditMode ? 'actualizar' : 'crear'
       showError(`No se pudo ${action} la tarea`, errorMessage)
     } finally {
       setIsSubmitting(false)
     }
-  }, [user, isEditMode, taskId, originalLeadedBy, originalAssignedTo, onTaskCreated, onOpenChange, showSuccess, showError])
+  }, [user, isEditMode, taskId, onTaskCreated, onOpenChange, showSuccess, showError])
 
   const handleCancel = useCallback(() => {
     onOpenChange(false)
@@ -309,11 +267,13 @@ export function TaskDialog({
                     onSubmit={handleSubmit}
                     onCreateClient={handleCreateClient}
                     initialData={initialData}
-                  />
-                  <FormFooter
-                    onCancel={handleCancel}
-                    isLoading={isSubmitting}
-                    submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
+                    footer={
+                      <FormFooter
+                        onCancel={handleCancel}
+                        isLoading={isSubmitting}
+                        submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
+                      />
+                    }
                   />
                 </div>
               </motion.div>
@@ -326,6 +286,7 @@ export function TaskDialog({
         isOpen={isClientDialogOpen}
         onOpenChange={setIsClientDialogOpen}
         onClientCreated={handleClientCreated}
+        mode="create"
       />
     </>
   )

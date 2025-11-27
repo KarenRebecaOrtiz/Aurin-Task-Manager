@@ -5,7 +5,6 @@ export { default as EditTask } from './EditTask';
 // New Form Components
 export { TaskForm, type TaskFormData } from './forms/TaskForm';
 export { TaskDialog } from './forms/TaskDialog';
-export { ClientDialog } from './forms/ClientDialog';
 
 // Shared Components (Atomic & Molecular)
 export { FormField } from './shared/atoms/FormField';

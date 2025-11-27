@@ -5,6 +5,8 @@ m# Dependencies
 
 # Project-specific config files
 src/config/Aurin Plattform Uploader.json
+src/config/aurin-platform-uploader.json
+src/config/*.json
 src/lib/firebase.ts
 src/lib/firebaseConfig.ts
 

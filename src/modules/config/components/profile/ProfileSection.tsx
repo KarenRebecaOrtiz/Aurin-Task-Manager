@@ -12,7 +12,6 @@ import {
 import { User, Hammer, Link } from '@/components/animate-ui/icons';
 import { Mars, Venus, VenusAndMars, CircleDot } from 'lucide-react';
 import { useProfileForm } from '../../hooks';
-import { useProfileFormStore } from '../../stores';
 import { PhoneInput } from '../ui';
 import { UNIQUE_TECHNOLOGIES } from '../../constants';
 import { formatPhoneNumber } from '../../utils';
@@ -39,17 +38,27 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
     handleStackChange,
     handlePhoneLadaChange,
     handlePhoneChange,
+    handleSocialLinksChange,
   } = useProfileForm({ userId, onSuccess, onError });
-
-  const { updateFormData } = useProfileFormStore();
 
   const handleGenericInputChange = React.useCallback((name: string) => (value: string) => {
     const event = { target: { name, value } } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(event);
   }, [handleInputChange]);
 
+  const handleTextareaChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const event = { target: { name: 'description', value: e.target.value } } as React.ChangeEvent<HTMLInputElement>;
+    handleInputChange(event);
+  }, [handleInputChange]);
+
   const handleInputKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleTextareaKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
     }
   }, []);
@@ -68,14 +77,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
     handleInputChange(event);
   }, [handleInputChange]);
 
-  const handleSocialLinksChange = React.useCallback((links: Array<{ networkId: string; username: string }>) => {
-    const socialLinksMap: Record<string, string> = {};
-    links.forEach(link => {
-      socialLinksMap[link.networkId] = link.username;
-    });
-    updateFormData(socialLinksMap);
-  }, [updateFormData]);
-
   if (!formData) return null;
 
   const initialSocialLinks = [
@@ -85,6 +86,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
     formData.instagram ? { networkId: 'instagram', username: formData.instagram } : null,
     formData.facebook ? { networkId: 'facebook', username: formData.facebook } : null,
     formData.tiktok ? { networkId: 'tiktok', username: formData.tiktok } : null,
+    formData.whatsapp ? { networkId: 'whatsapp', username: formData.whatsapp } : null,
   ].filter((link): link is { networkId: string; username: string } => link !== null);
 
   const genderOptions = [
@@ -139,11 +141,11 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
               label="Acerca de ti"
               name="description"
               value={formData.description || ''}
-              onChange={handleGenericInputChange('description')}
+              onChange={handleTextareaChange}
               placeholder="Breve descripción personal"
               disabled={!isOwnProfile}
               maxLength={180}
-              onKeyDown={handleInputKeyDown}
+              onKeyDown={handleTextareaKeyDown}
               error={errors.description}
               showCharacterCount={true}
             />

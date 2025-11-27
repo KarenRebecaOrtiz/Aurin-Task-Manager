@@ -3,6 +3,7 @@
 import * as React from 'react';
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
 import { cn } from '@/lib/utils';
+import { Client } from '@/types';
 
 interface ClientAvatarProps {
   src?: string;
@@ -11,11 +12,8 @@ interface ClientAvatarProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   onClick?: () => void;
-  client?: {
-    id?: string;
-    name: string;
-    imageUrl?: string;
-  };
+  client?: Client;
+  onClientUpdate?: () => void;
 }
 
 const sizeMap = {
@@ -71,8 +69,10 @@ export const ClientAvatar: React.FC<ClientAvatarProps> = ({
   className = '',
   onClick,
   client,
+  onClientUpdate,
 }) => {
   const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (onClick) {
       onClick();

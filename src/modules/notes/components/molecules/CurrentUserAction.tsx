@@ -41,7 +41,7 @@ export function CurrentUserAction({
   }, [onDeleteNote]);
 
   return (
-    <div className={cn('flex flex-col items-center gap-1', 'min-w-[80px]', className)}>
+    <div className={cn('flex flex-col items-center gap-2', 'min-w-[100px]', className)}>
       {hasNote && currentUserNote && (
         <div className="relative">
           <NoteBubble content={currentUserNote.content} />
@@ -68,7 +68,7 @@ export function CurrentUserAction({
         aria-label={hasNote ? 'Nota activa' : 'Agregar nota'}
         type="button"
       >
-        <AvatarRing src={avatarUrl} alt={username} hasGradient={hasNote} size="md" />
+        <AvatarRing src={avatarUrl} alt={username} hasGradient={hasNote} size="lg" />
 
         {/* Plus badge when no note exists */}
         {!hasNote && (
@@ -79,8 +79,8 @@ export function CurrentUserAction({
       </button>
 
       {/* Username label */}
-      <span className="max-w-[70px] truncate text-sm text-white font-medium">
-        {hasNote ? 'Tu nota' : 'Agregar nota'}
+      <span className="max-w-[90px] truncate text-base text-white font-medium">
+        {hasNote ? 'Tú' : 'Agregar nota'}
       </span>
     </div>
   );

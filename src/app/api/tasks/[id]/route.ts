@@ -10,13 +10,12 @@
  */
 
 import { NextRequest } from 'next/server';
-import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiNoContent, apiBadRequest, apiNotFound, apiForbidden, handleApiError } from '@/lib/api/response';
 import { updateTaskSchema, patchTaskSchema, Task } from '@/lib/validations/task.schema';
 import { mailer } from '@/modules/mailer';
-import { updateTaskActivity } from '@/lib/taskUtils.client';
 import { clerkClient } from '@clerk/nextjs/server';
 
 /**
@@ -37,9 +36,10 @@ async function isAdmin(userId: string): Promise<boolean> {
  * Helper to get task by ID
  */
 async function getTaskById(taskId: string) {
-  const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+  const adminDb = getAdminDb();
+  const taskDoc = await adminDb.collection('tasks').doc(taskId).get();
 
-  if (!taskDoc.exists()) {
+  if (!taskDoc.exists) {
     return null;
   }
 
@@ -111,9 +111,10 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
     console.log('[API] PUT /api/tasks/[id] - Updating task:', taskId, 'by user:', userId);
 
     // Get existing task
-    const existingTaskDoc = await getDoc(doc(db, 'tasks', taskId));
+    const adminDb = getAdminDb();
+    const existingTaskDoc = await adminDb.collection('tasks').doc(taskId).get();
 
-    if (!existingTaskDoc.exists()) {
+    if (!existingTaskDoc.exists) {
       return apiNotFound('Task');
     }
 
@@ -155,10 +156,10 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
     };
 
     // Save updated task
-    await setDoc(doc(db, 'tasks', taskId), updatedTask);
+    await adminDb.collection('tasks').doc(taskId).set(updatedTask);
 
-    // Update task activity
-    await updateTaskActivity(taskId, 'edit');
+    // Update task activity - skipped (TODO: migrate to Admin SDK)
+    // await updateTaskActivity(taskId, 'edit');
 
     // Detect changes and send targeted notifications (using new mailer module)
     const recipients = [
@@ -251,9 +252,10 @@ export const DELETE = withAuth(async (userId, request: NextRequest, context: { p
     console.log('[API] DELETE /api/tasks/[id] - Deleting task:', taskId, 'by user:', userId);
 
     // Get existing task
-    const existingTaskDoc = await getDoc(doc(db, 'tasks', taskId));
+    const adminDb = getAdminDb();
+    const existingTaskDoc = await adminDb.collection('tasks').doc(taskId).get();
 
-    if (!existingTaskDoc.exists()) {
+    if (!existingTaskDoc.exists) {
       return apiNotFound('Task');
     }
 
@@ -265,8 +267,48 @@ export const DELETE = withAuth(async (userId, request: NextRequest, context: { p
       return apiForbidden('Only the task creator or admin can delete this task');
     }
 
+    // Send email notifications BEFORE deleting (so we can access task data)
+    const recipients = [
+      ...(existingTask.LeadedBy || []),
+      ...(existingTask.AssignedTo || [])
+    ];
+
+    if (recipients.length > 0) {
+      try {
+        const result = await mailer.notifyTaskDeleted({
+          recipientIds: recipients,
+          taskId,
+          actorId: userId,
+        });
+
+        console.log('[API] DELETE - Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+      } catch (notificationError) {
+        console.warn('[API] DELETE - Failed to send notifications:', notificationError);
+        // Don't fail the request if notifications fail
+      }
+    }
+
+    // CASCADE DELETE: Delete all timers for this task (subcollection cleanup)
+    // This prevents orphaned timers when a task is deleted
+    try {
+      const timersSnapshot = await adminDb
+        .collection('tasks')
+        .doc(taskId)
+        .collection('timers')
+        .get();
+
+      if (!timersSnapshot.empty) {
+        const deletePromises = timersSnapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(deletePromises);
+        console.log('[API] DELETE - Deleted', timersSnapshot.size, 'timer(s) for task:', taskId);
+      }
+    } catch (timerError) {
+      console.warn('[API] DELETE - Failed to delete timers:', timerError);
+      // Don't fail the request if timer cleanup fails
+    }
+
     // Delete task
-    await deleteDoc(doc(db, 'tasks', taskId));
+    await adminDb.collection('tasks').doc(taskId).delete();
 
     console.log('[API] Task deleted successfully:', taskId);
     return apiNoContent();
@@ -292,9 +334,10 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
     console.log('[API] PATCH /api/tasks/[id] - Partially updating task:', taskId, 'by user:', userId);
 
     // Get existing task
-    const existingTaskDoc = await getDoc(doc(db, 'tasks', taskId));
+    const adminDb = getAdminDb();
+    const existingTaskDoc = await adminDb.collection('tasks').doc(taskId).get();
 
-    if (!existingTaskDoc.exists()) {
+    if (!existingTaskDoc.exists) {
       return apiNotFound('Task');
     }
 
@@ -328,10 +371,70 @@ export const PATCH = withAuth(async (userId, request: NextRequest, context: { pa
     };
 
     // Save updated task
-    await setDoc(doc(db, 'tasks', taskId), updatedTask);
+    await adminDb.collection('tasks').doc(taskId).set(updatedTask);
 
-    // Update task activity
-    await updateTaskActivity(taskId, 'edit');
+    // Update task activity - skipped (TODO: migrate to Admin SDK)
+    // await updateTaskActivity(taskId, 'edit');
+
+    // Send email notifications to assigned team members (using new mailer module)
+    const recipients = [
+      ...(updatedTask.LeadedBy || []),
+      ...(updatedTask.AssignedTo || [])
+    ];
+
+    if (recipients.length > 0) {
+      try {
+        // Determine notification type based on changes
+        let result;
+
+        if (patchData.status !== undefined && patchData.status !== existingTask.status) {
+          // Status changed
+          result = await mailer.notifyTaskStatusChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+            oldStatus: existingTask.status,
+            newStatus: patchData.status,
+          });
+        } else if (patchData.priority !== undefined && patchData.priority !== existingTask.priority) {
+          // Priority changed
+          result = await mailer.notifyTaskPriorityChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+            oldPriority: existingTask.priority,
+            newPriority: patchData.priority,
+          });
+        } else if (patchData.startDate !== existingTask.startDate || patchData.endDate !== existingTask.endDate) {
+          // Dates changed
+          result = await mailer.notifyTaskDatesChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+          });
+        } else if (JSON.stringify(patchData.AssignedTo) !== JSON.stringify(existingTask.AssignedTo) ||
+                   JSON.stringify(patchData.LeadedBy) !== JSON.stringify(existingTask.LeadedBy)) {
+          // Assignment changed
+          result = await mailer.notifyTaskAssignmentChanged({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+          });
+        } else {
+          // General update
+          result = await mailer.notifyTaskUpdated({
+            recipientIds: recipients,
+            taskId,
+            actorId: userId,
+          });
+        }
+
+        console.log('[API] PATCH - Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
+      } catch (notificationError) {
+        console.warn('[API] PATCH - Failed to send notifications:', notificationError);
+        // Don't fail the request if notifications fail
+      }
+    }
 
     console.log('[API] Task partially updated:', taskId);
 

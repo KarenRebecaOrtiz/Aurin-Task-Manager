@@ -34,14 +34,17 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
 
   switch (data.updateType) {
     case 'status':
-      introMessage = `actualizó el estado de la tarea <strong>"${data.taskName}"</strong>`;
+      introMessage = `ha cambiado el status de la tarea <strong>"${data.taskName}"</strong> a ${getStatusBadge(data.newValue || '')}`;
       if (data.oldValue && data.newValue) {
         changeDetails = `
           <div class="info-box">
+            <p style="margin-bottom: 8px;">
+              <strong>📊 Cambio de Estado:</strong>
+            </p>
             <p>
-              <strong>Estado anterior:</strong> ${getStatusBadge(data.oldValue)}
-              <span style="margin: 0 12px;">→</span>
-              <strong>Nuevo estado:</strong> ${getStatusBadge(data.newValue)}
+              ${getStatusBadge(data.oldValue)}
+              <span style="margin: 0 12px; font-size: 18px;">→</span>
+              ${getStatusBadge(data.newValue)}
             </p>
           </div>
         `;
@@ -49,14 +52,17 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       break;
 
     case 'priority':
-      introMessage = `cambió la prioridad de la tarea <strong>"${data.taskName}"</strong>`;
+      introMessage = `ha cambiado la prioridad de la tarea <strong>"${data.taskName}"</strong> a ${getPriorityBadge(data.newValue || '')}`;
       if (data.oldValue && data.newValue) {
         changeDetails = `
           <div class="info-box">
+            <p style="margin-bottom: 8px;">
+              <strong>⚡ Cambio de Prioridad:</strong>
+            </p>
             <p>
-              <strong>Prioridad anterior:</strong> ${getPriorityBadge(data.oldValue)}
-              <span style="margin: 0 12px;">→</span>
-              <strong>Nueva prioridad:</strong> ${getPriorityBadge(data.newValue)}
+              ${getPriorityBadge(data.oldValue)}
+              <span style="margin: 0 12px; font-size: 18px;">→</span>
+              ${getPriorityBadge(data.newValue)}
             </p>
           </div>
         `;
@@ -64,31 +70,37 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       break;
 
     case 'dates':
-      introMessage = `actualizó las fechas de la tarea <strong>"${data.taskName}"</strong>`;
+      introMessage = `ha cambiado las fechas de la tarea <strong>"${data.taskName}"</strong>`;
       changeDetails = `
         <div class="info-box">
+          <p style="margin-bottom: 8px;">
+            <strong>📅 Fechas Actualizadas:</strong>
+          </p>
           ${
             data.startDate
-              ? `<p><strong>Nueva fecha de inicio:</strong> ${data.startDate}</p>`
+              ? `<p><strong>Fecha de inicio:</strong> ${data.startDate}</p>`
               : ''
           }
-          ${data.endDate ? `<p><strong>Nueva fecha de vencimiento:</strong> ${data.endDate}</p>` : ''}
+          ${data.endDate ? `<p><strong>Fecha de vencimiento:</strong> ${data.endDate}</p>` : ''}
         </div>
       `;
       break;
 
     case 'assignment':
-      introMessage = `modificó la asignación de la tarea <strong>"${data.taskName}"</strong>`;
+      introMessage = `ha modificado los miembros asignados a la tarea <strong>"${data.taskName}"</strong>`;
       changeDetails = `
         <div class="info-box">
+          <p style="margin-bottom: 8px;">
+            <strong>👥 Equipo Actualizado:</strong>
+          </p>
           ${
             data.leadersList
-              ? `<p><strong>Líderes actualizados:</strong> ${data.leadersList}</p>`
+              ? `<p><strong>Líderes:</strong> ${data.leadersList}</p>`
               : ''
           }
           ${
             data.assignedList
-              ? `<p><strong>Colaboradores actualizados:</strong> ${data.assignedList}</p>`
+              ? `<p><strong>Colaboradores:</strong> ${data.assignedList}</p>`
               : ''
           }
         </div>
@@ -96,7 +108,7 @@ export const getTaskUpdatedTemplate = (data: TaskUpdatedTemplateData): string =>
       break;
 
     default:
-      introMessage = `realizó cambios en la tarea <strong>"${data.taskName}"</strong>`;
+      introMessage = `ha realizado cambios en la tarea <strong>"${data.taskName}"</strong>`;
       changeDetails = '';
   }
 

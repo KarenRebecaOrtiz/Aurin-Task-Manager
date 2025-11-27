@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { archiveTask, unarchiveTask } from '@/lib/taskUtils';
+import { archiveTask, unarchiveTask } from '@/services/taskService';
 import { useDataStore } from '@/stores/dataStore';
 
 // Tipos
@@ -178,7 +178,7 @@ export const useTaskArchiving = (props: UseTaskArchivingProps = {}): UseTaskArch
       setupUndoTimeout();
 
       // 5. Operación en Firestore
-      await archiveTask(task.id, userId, isAdmin, task);
+      await archiveTask(task.id, userId);
 
       // 6. Éxito
       onSuccess?.(task, 'archive');
@@ -237,7 +237,7 @@ export const useTaskArchiving = (props: UseTaskArchivingProps = {}): UseTaskArch
       setupUndoTimeout();
 
       // 5. Operación en Firestore
-      await unarchiveTask(task.id, userId, isAdmin, task);
+      await unarchiveTask(task.id);
 
       // 6. Éxito
       onSuccess?.(task, 'unarchive');
@@ -285,22 +285,15 @@ export const useTaskArchiving = (props: UseTaskArchivingProps = {}): UseTaskArch
       // Actualización optimista para la acción opuesta
       performOptimisticUpdate(actionToUndo.task, oppositeAction);
 
-      // Llamar a la función correcta de taskUtils
+      // Llamar a la función correcta de taskService
       if (actionToUndo.action === 'archive') {
         // Si la acción original fue archivar, ahora desarchivamos
-        await unarchiveTask(
-          actionToUndo.task.id,
-          actionToUndo.task.CreatedBy || '',
-          true, // Asumimos admin para undo
-          actionToUndo.task
-        );
+        await unarchiveTask(actionToUndo.task.id);
       } else {
         // Si la acción original fue desarchivar, ahora archivamos
         await archiveTask(
           actionToUndo.task.id,
-          actionToUndo.task.CreatedBy || '',
-          true, // Asumimos admin para undo
-          actionToUndo.task
+          actionToUndo.task.CreatedBy || ''
         );
       }
 

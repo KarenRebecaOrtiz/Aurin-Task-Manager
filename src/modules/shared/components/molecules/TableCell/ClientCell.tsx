@@ -1,23 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ClientAvatar } from '@/modules/shared/components/atoms/Avatar/ClientAvatar';
 import { Client } from '@/types';
 import styles from './TableCell.module.scss';
-
-// Lazy load the modal to avoid bundle size issues
-const AccountDetailsCard = dynamic(
-  () => import('@/modules/data-views/clients/components/modals/AccountDetailsCard'),
-  { ssr: false }
-);
+import { ClientDialog } from '@/modules/client-crud';
 
 export interface ClientCellProps {
   client?: Client;
   showName?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  onClientUpdate?: (client: Client) => Promise<void>;
+  onClientUpdate?: () => void;
 }
 
 export const ClientCell: React.FC<ClientCellProps> = ({
@@ -29,15 +24,23 @@ export const ClientCell: React.FC<ClientCellProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleAvatarClick = () => {
+  const handleAvatarClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (client) {
       setIsModalOpen(true);
     }
-  };
+  }, [client]);
 
-  const handleModalClose = () => {
+  const handleModalClose = useCallback(() => {
     setIsModalOpen(false);
-  };
+  }, []);
+
+  const handleClientUpdated = useCallback(() => {
+    if (onClientUpdate) {
+      onClientUpdate();
+    }
+  }, [onClientUpdate]);
 
   if (!client) {
     return <span className={styles.noClient}>Sin cuenta</span>;
@@ -63,14 +66,15 @@ export const ClientCell: React.FC<ClientCellProps> = ({
         {showName && <span className={styles.clientName}>{client.name}</span>}
       </div>
 
-      {isModalOpen && (
-        <AccountDetailsCard
+      {isModalOpen && typeof document !== 'undefined' && createPortal(
+        <ClientDialog
           isOpen={isModalOpen}
-          onClose={handleModalClose}
-          client={clientWithDefaults}
+          onOpenChange={handleModalClose}
+          clientId={client.id}
           mode="view"
-          onSave={onClientUpdate}
-        />
+          onClientUpdated={handleClientUpdated}
+        />,
+        document.body
       )}
     </>
   );

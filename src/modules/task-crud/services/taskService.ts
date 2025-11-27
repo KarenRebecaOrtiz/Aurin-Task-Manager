@@ -38,27 +38,39 @@ class TaskService {
   /**
    * Create a new task
    */
-  async createTask(formData: FormValues, userId: string): Promise<ApiResponse<Task>> {
+  async createTask(formData: FormValues | any, userId: string): Promise<ApiResponse<Task>> {
     try {
+      // Support both nested and flat structure
+      const taskData = formData.clientInfo
+        ? {
+            ...formData.clientInfo,
+            ...formData.basicInfo,
+            ...formData.teamInfo,
+            CreatedBy: userId,
+          }
+        : {
+            ...formData,
+            CreatedBy: userId,
+          };
+
+      console.log('[TaskService] Creating task with data:', taskData);
+
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData.clientInfo,
-          ...formData.basicInfo,
-          ...formData.teamInfo,
-          CreatedBy: userId,
-        }),
+        body: JSON.stringify(taskData),
       });
 
       const data: ApiResponse<Task> = await response.json();
 
       if (!response.ok) {
+        console.error('[TaskService] API returned error:', data);
         throw new Error(data.error || 'Error al crear la tarea');
       }
 
+      console.log('[TaskService] Task created successfully:', data);
       return data;
     } catch (error) {
       console.error('[TaskService] Error creating task:', error);
@@ -132,26 +144,35 @@ class TaskService {
   /**
    * Update task completely (PUT)
    */
-  async updateTask(taskId: string, formData: FormValues): Promise<ApiResponse<Task>> {
+  async updateTask(taskId: string, formData: FormValues | any): Promise<ApiResponse<Task>> {
     try {
+      // Support both nested and flat structure
+      const taskData = formData.clientInfo
+        ? {
+            ...formData.clientInfo,
+            ...formData.basicInfo,
+            ...formData.teamInfo,
+          }
+        : formData;
+
+      console.log('[TaskService] Updating task with data:', taskData);
+
       const response = await fetch(`${this.baseUrl}/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData.clientInfo,
-          ...formData.basicInfo,
-          ...formData.teamInfo,
-        }),
+        body: JSON.stringify(taskData),
       });
 
       const data: ApiResponse<Task> = await response.json();
 
       if (!response.ok) {
+        console.error('[TaskService] API returned error:', data);
         throw new Error(data.error || 'Error al actualizar la tarea');
       }
 
+      console.log('[TaskService] Task updated successfully:', data);
       return data;
     } catch (error) {
       console.error('[TaskService] Error updating task:', error);

@@ -1,4 +1,13 @@
-import { Github, Linkedin, Twitter, Instagram, Facebook, Globe, Music2 } from 'lucide-react';
+import {
+  Github,
+  Linkedin,
+  Twitter,
+  Instagram,
+  Facebook,
+  Globe,
+  Music2,
+  MessageCircle,
+} from 'lucide-react';
 import type { NetworkConfig } from './types';
 
 export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
@@ -49,6 +58,14 @@ export const NETWORK_CONFIG: Record<string, NetworkConfig> = {
     icon: Music2,
     placeholder: 'username',
     regex: /^(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@?(.+?)(?:\/.*)?$/i,
+  },
+  whatsapp: {
+    id: 'whatsapp',
+    label: 'WhatsApp',
+    prefix: 'wa.me/',
+    icon: MessageCircle,
+    placeholder: '5491112345678',
+    regex: /^(?:https?:\/\/)?wa\.me\/(.+?)(?:\/.*)?$/i,
   },
   website: {
     id: 'website',

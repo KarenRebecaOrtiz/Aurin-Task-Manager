@@ -8,13 +8,12 @@
  */
 
 import { NextRequest } from 'next/server';
-import { collection, doc, setDoc, getDocs, query, where, orderBy, limit as firestoreLimit, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/api/auth';
 import { apiSuccess, apiCreated, apiBadRequest, handleApiError } from '@/lib/api/response';
 import { createTaskSchema, taskQuerySchema } from '@/lib/validations/task.schema';
 import { mailer } from '@/modules/mailer';
-import { updateTaskActivity } from '@/lib/taskUtils.client';
 
 /**
  * POST /api/tasks
@@ -44,10 +43,12 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
 
     // Parse and validate request body
     const body = await request.json();
+    console.log('[API] Request body:', JSON.stringify(body, null, 2));
+
     const validationResult = createTaskSchema.safeParse(body);
 
     if (!validationResult.success) {
-      console.error('[API] Validation failed:', validationResult.error.errors);
+      console.error('[API] Validation failed:', JSON.stringify(validationResult.error.errors, null, 2));
       return apiBadRequest('Invalid task data', validationResult.error.errors);
     }
 
@@ -59,24 +60,30 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
     }
 
     // Create task document with generated ID
-    const taskDocRef = doc(collection(db, 'tasks'));
+    const adminDb = getAdminDb();
+    const taskDocRef = adminDb.collection('tasks').doc();
     const taskId = taskDocRef.id;
 
     const taskToSave = {
       ...taskData,
       id: taskId,
       CreatedBy: userId,
-      createdAt: Timestamp.fromDate(new Date()),
+      createdAt: FieldValue.serverTimestamp(),
       // Convert dates to Firestore Timestamps
       startDate: taskData.startDate ? Timestamp.fromDate(taskData.startDate) : null,
       endDate: taskData.endDate ? Timestamp.fromDate(taskData.endDate) : null,
     };
 
     // Save to Firestore
-    await setDoc(taskDocRef, taskToSave);
+    console.log('[API] Saving task to Firestore with Admin SDK');
+    await taskDocRef.set(taskToSave);
+    console.log('[API] Task saved successfully');
 
     // Update task activity
-    await updateTaskActivity(taskId, 'edit');
+    // TODO: Migrate updateTaskActivity to use Admin SDK
+    // console.log('[API] Updating task activity...');
+    // await updateTaskActivity(taskId, 'edit');
+    // console.log('[API] Task activity updated');
 
     // Send email notifications to assigned team members (using new mailer module)
     const recipients = [
@@ -86,6 +93,7 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
 
     if (recipients.length > 0) {
       try {
+        console.log('[API] Sending email notifications to:', recipients);
         const result = await mailer.notifyTaskCreated({
           recipientIds: recipients,
           taskId,
@@ -94,7 +102,7 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
 
         console.log('[API] Email notifications sent:', result.sent, 'successful,', result.failed, 'failed');
       } catch (notificationError) {
-        console.warn('[API] Failed to send notifications:', notificationError);
+        console.error('[API] Failed to send notifications:', notificationError);
         // Don't fail the request if notifications fail
       }
     }
@@ -111,6 +119,11 @@ export const POST = withAuth(async (userId, request: NextRequest) => {
       `/api/tasks/${taskId}`
     );
   } catch (error: unknown) {
+    console.error('[API] Error in POST /api/tasks:', error);
+    if (error instanceof Error) {
+      console.error('[API] Error message:', error.message);
+      console.error('[API] Error stack:', error.stack);
+    }
     return handleApiError(error, 'POST /api/tasks');
   }
 });
@@ -155,35 +168,31 @@ export const GET = withAuth(async (userId, request: NextRequest) => {
 
     const { clientId, status, priority, userId: filterUserId, limit, offset } = validationResult.data;
 
-    // Build Firestore query
-    let tasksQuery = query(
-      collection(db, 'tasks'),
-      orderBy('createdAt', 'desc'),
-      firestoreLimit(limit + offset)
-    );
+    // Build Firestore Admin query
+    const adminDb = getAdminDb();
+    let tasksQuery = adminDb.collection('tasks')
+      .orderBy('createdAt', 'desc')
+      .limit(limit + offset);
 
     // Apply filters if provided
     if (clientId) {
-      tasksQuery = query(tasksQuery, where('clientId', '==', clientId));
+      tasksQuery = tasksQuery.where('clientId', '==', clientId);
     }
     if (status) {
-      tasksQuery = query(tasksQuery, where('status', '==', status));
+      tasksQuery = tasksQuery.where('status', '==', status);
     }
     if (priority) {
-      tasksQuery = query(tasksQuery, where('priority', '==', priority));
+      tasksQuery = tasksQuery.where('priority', '==', priority);
     }
     if (filterUserId) {
       // Filter tasks where user is either leader or collaborator
-      tasksQuery = query(
-        tasksQuery,
-        where('LeadedBy', 'array-contains', filterUserId)
-      );
+      tasksQuery = tasksQuery.where('LeadedBy', 'array-contains', filterUserId);
     }
 
     // Execute query
-    const snapshot = await getDocs(tasksQuery);
+    const snapshot = await tasksQuery.get();
 
-    // Convert to array and apply offset (Firestore doesn't support offset directly)
+    // Convert to array and apply offset
     const tasks = snapshot.docs
       .slice(offset)
       .map(doc => {

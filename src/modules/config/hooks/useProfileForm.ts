@@ -112,6 +112,7 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
             instagram: data.socialLinks?.instagram || '',
             facebook: data.socialLinks?.facebook || '',
             tiktok: data.socialLinks?.tiktok || '',
+            whatsapp: data.socialLinks?.whatsapp || '',
           });
         } else {
           // Usuario nuevo, datos por defecto
@@ -213,6 +214,18 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
     clearError('phone');
     useConfigPageStore.getState().markTabAsChanged(activeTab);
   }, [updateFormData, clearError, activeTab]);
+
+  /**
+   * Maneja el cambio de los links de redes sociales
+   */
+  const handleSocialLinksChange = useCallback((links: Array<{ networkId: string; username: string }>) => {
+    const socialLinksMap: Record<string, string> = {};
+    links.forEach(link => {
+      socialLinksMap[link.networkId] = link.username;
+    });
+    updateFormData(socialLinksMap);
+    useConfigPageStore.getState().markTabAsChanged(activeTab);
+  }, [updateFormData, activeTab]);
 
   /**
    * Valida el formulario
@@ -329,6 +342,7 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
           instagram: formData.instagram || '',
           facebook: formData.facebook || '',
           tiktok: formData.tiktok || '',
+          whatsapp: formData.whatsapp || '',
         },
       };
 
@@ -394,6 +408,7 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
     handleStackChange,
     handlePhoneLadaChange,
     handlePhoneChange,
+    handleSocialLinksChange,
     handleSubmit,
     handleDiscard,
     validateForm,

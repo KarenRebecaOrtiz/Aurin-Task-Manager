@@ -13,6 +13,7 @@ export interface SocialLinks {
   instagram?: string;
   facebook?: string;
   tiktok?: string;
+  whatsapp?: string;
 }
 
 /**
@@ -103,6 +104,8 @@ export interface ConfigForm extends Omit<Config, 'id'> {
   facebook?: string;
   /** TikTok (campo individual para formulario) */
   tiktok?: string;
+  /** WhatsApp (campo individual para formulario) */
+  whatsapp?: string;
   birthDate?: any;
   /** Contraseña actual (para cambio de contraseña) */
   currentPassword?: string;

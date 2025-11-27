@@ -11,6 +11,7 @@ import styles from './NotesWrapper.module.scss';
  * 
  * Ubicación: Encima de todas las tablas (TasksTable, TasksKanban, ArchiveTable)
  */
+
 export function NotesWrapper() {
   return (
     <div className={styles.wrapper}>

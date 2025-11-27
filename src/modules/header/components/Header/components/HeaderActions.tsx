@@ -6,9 +6,7 @@ import AvailabilityToggle from '../../../components/ui/AvailabilityToggle';
 import { AvatarDropdown } from '../../ui/AvatarDropdown';
 import styles from '../Header.module.scss';
 
-export const HeaderActions: React.FC<HeaderActionsProps> = ({
-  onChangeContainer,
-}) => {
+export const HeaderActions: React.FC<HeaderActionsProps> = () => {
   return (
     <div className={styles.headerContainer}>
       <div className={styles.superiorHeader}>
@@ -23,7 +21,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
         </div>
 
         <div className={styles.AvatarDesktop}>
-          <AvatarDropdown onChangeContainer={onChangeContainer} />
+          <AvatarDropdown />
         </div>
       </div>
     </div>

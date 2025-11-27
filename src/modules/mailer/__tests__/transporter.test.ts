@@ -55,7 +55,7 @@ describe('Mailer Transporter', () => {
       expect(result.success).toBe(true);
       expect(result.messageId).toBe(mockMessageId);
       expect(mockTransporter.sendMail).toHaveBeenCalledWith({
-        from: '"Test Mailer" <no-reply@test.com>',
+        from: '"Aurin Task Manager" <no-reply@aurin.com>',
         to: 'recipient@example.com',
         subject: 'Test Subject',
         html: '<p>Test email</p>',
@@ -111,7 +111,7 @@ describe('Mailer Transporter', () => {
 
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: '"Test Mailer" <no-reply@test.com>',
+          from: '"Aurin Task Manager" <no-reply@aurin.com>',
         })
       );
     });

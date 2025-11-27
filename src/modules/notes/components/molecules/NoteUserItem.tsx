@@ -12,7 +12,7 @@ interface NoteUserItemProps {
 
 export function NoteUserItem({ note, className }: NoteUserItemProps) {
   return (
-    <div className={cn('flex flex-col items-center gap-1', 'min-w-[80px]', className)}>
+    <div className={cn('flex flex-col items-center gap-2', 'min-w-[100px]', className)}>
       {/* Note bubble */}
       {note.content && <NoteBubble content={note.content} />}
 
@@ -21,11 +21,11 @@ export function NoteUserItem({ note, className }: NoteUserItemProps) {
         src={note.user.avatarUrl}
         alt={note.user.username}
         hasGradient={!!note.content}
-        size="md"
+        size="lg"
       />
 
       {/* Username */}
-      <span className="max-w-[70px] truncate text-sm text-white font-medium">
+      <span className="max-w-[90px] truncate text-base text-white font-medium">
         {note.user.username}
       </span>
     </div>

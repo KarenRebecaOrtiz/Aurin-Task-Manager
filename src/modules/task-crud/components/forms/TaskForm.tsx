@@ -9,6 +9,7 @@ import { ChipSelector } from "./ChipSelector"
 import { motion } from "framer-motion"
 import { addDays } from "date-fns"
 import { FormSection } from "./FormSection"
+import Image from "next/image"
 
 const PRIORITY_OPTIONS = [
   { value: "Baja", label: "Baja" },
@@ -66,6 +67,8 @@ interface TaskFormProps {
   onSubmit?: (data: TaskFormData) => void
   onCreateClient?: () => void
   initialData?: TaskFormData | null
+  footer?: React.ReactNode
+  isViewMode?: boolean
 }
 
 export function TaskForm({
@@ -74,6 +77,8 @@ export function TaskForm({
   onSubmit,
   onCreateClient,
   initialData = null,
+  footer,
+  isViewMode = false,
 }: TaskFormProps) {
   const [formData, setFormData] = useState<TaskFormData>(
     initialData || {
@@ -90,7 +95,6 @@ export function TaskForm({
     }
   )
 
-  // Update form data when initialData changes
   useEffect(() => {
     if (initialData) {
       setFormData(initialData)
@@ -99,7 +103,9 @@ export function TaskForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit?.(formData)
+    if (!isViewMode) {
+      onSubmit?.(formData)
+    }
   }
 
   const handleClientChange = useCallback((value: string) => {
@@ -126,7 +132,6 @@ export function TaskForm({
     setFormData(prev => ({ ...prev, endDate: date }))
   }, [])
 
-
   const handlePriorityChange = useCallback((value: string) => {
     setFormData(prev => ({ ...prev, priority: value }))
   }, [])
@@ -146,6 +151,8 @@ export function TaskForm({
   const selectedClient = clients.find(c => c.id === formData.clientId)
   const projectOptions = selectedClient?.projects || []
 
+  const getTeamMember = (userId: string) => users.find(u => u.id === userId)
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <motion.div
@@ -154,8 +161,36 @@ export function TaskForm({
         initial="hidden"
         animate="visible"
       >
+        {isViewMode && (
+          <FormSection>
+            <motion.div variants={fadeInUp} className="md:col-span-2 flex items-center gap-4">
+              <div className="flex -space-x-4 rtl:space-x-reverse">
+                {formData.LeadedBy.map(userId => getTeamMember(userId)).filter(Boolean).map(user => (
+                  <Image
+                    key={user!.id}
+                    className="w-10 h-10 border-2 border-white rounded-full dark:border-gray-800"
+                    src={user!.imageUrl || '/public/aurin.jpg'}
+                    alt={user!.fullName}
+                    width={40}
+                    height={40}
+                  />
+                ))}
+                {formData.AssignedTo.map(userId => getTeamMember(userId)).filter(Boolean).map(user => (
+                  <Image
+                    key={user!.id}
+                    className="w-10 h-10 border-2 border-white rounded-full dark:border-gray-800"
+                    src={user!.imageUrl || '/public/aurin.jpg'}
+                    alt={user!.fullName}
+                    width={40}
+                    height={40}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          </FormSection>
+        )}
+
         <FormSection>
-          {/* Nombre de la tarea - Full width */}
           <motion.div variants={fadeInUp} className="md:col-span-2">
             <CrystalInput
               label="Nombre de la tarea *"
@@ -166,10 +201,10 @@ export function TaskForm({
               placeholder="Ej. Rediseño de Landing Page Q3"
               value={formData.name}
               onChange={handleNameChange}
+              disabled={isViewMode}
             />
           </motion.div>
 
-          {/* Descripción y Objetivos - Full width */}
           <motion.div variants={fadeInUp} className="md:col-span-2">
             <CrystalInput
               label="Descripción y Objetivos *"
@@ -180,12 +215,12 @@ export function TaskForm({
               placeholder="Describe los objetivos y alcance de la tarea"
               value={formData.description}
               onChange={handleDescriptionChange}
+              disabled={isViewMode}
             />
           </motion.div>
         </FormSection>
 
         <FormSection>
-          {/* Cuenta Asignada */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalSearchableDropdown
               label="Cuenta Asignada *"
@@ -203,10 +238,10 @@ export function TaskForm({
               fieldType="client"
               onCreateNew={onCreateClient}
               createNewLabel="Crear nueva cuenta"
+              disabled={isViewMode}
             />
           </motion.div>
 
-          {/* Carpeta/Proyecto */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalSearchableDropdown
               label="Carpeta/Proyecto *"
@@ -220,12 +255,11 @@ export function TaskForm({
               placeholder="Selecciona una carpeta"
               searchPlaceholder="Buscar carpeta..."
               emptyMessage="No hay carpetas disponibles"
-              disabled={!formData.clientId || projectOptions.length === 0}
+              disabled={isViewMode || !formData.clientId || projectOptions.length === 0}
               fieldType="project"
             />
           </motion.div>
 
-          {/* Líder(es) de proyecto */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalSearchableDropdown
               label="Líder(es) *"
@@ -242,10 +276,10 @@ export function TaskForm({
               emptyMessage="No hay usuarios disponibles"
               multiple={true}
               fieldType="user"
+              disabled={isViewMode}
             />
           </motion.div>
 
-          {/* Colaboradores */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalSearchableDropdown
               label="Colaboradores"
@@ -262,22 +296,22 @@ export function TaskForm({
               emptyMessage="No hay usuarios disponibles"
               multiple={true}
               fieldType="user"
+              disabled={isViewMode}
             />
           </motion.div>
         </FormSection>
 
         <FormSection>
-          {/* Fecha de Inicio */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalCalendarDropdown
               label="Fecha de Inicio *"
               value={formData.startDate}
               onChange={handleStartDateChange}
               placeholder="Selecciona fecha de inicio"
+              disabled={isViewMode}
             />
           </motion.div>
 
-          {/* Fecha de Fin */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <CrystalCalendarDropdown
               label="Fecha de Fin"
@@ -285,12 +319,12 @@ export function TaskForm({
               onChange={handleEndDateChange}
               placeholder="Selecciona fecha de fin"
               minDate={formData.startDate}
+              disabled={isViewMode}
             />
           </motion.div>
         </FormSection>
 
         <FormSection>
-          {/* Prioridad */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <ChipSelector
               label="Prioridad *"
@@ -298,10 +332,10 @@ export function TaskForm({
               value={formData.priority}
               onChange={handlePriorityChange}
               required
+              disabled={isViewMode}
             />
           </motion.div>
 
-          {/* Estado Inicial */}
           <motion.div className="flex-1" variants={fadeInUp}>
             <ChipSelector
               label="Estado Inicial *"
@@ -309,12 +343,13 @@ export function TaskForm({
               value={formData.status}
               onChange={handleStatusChange}
               required
+              disabled={isViewMode}
             />
           </motion.div>
         </FormSection>
       </motion.div>
 
-
+      {footer}
     </form>
   )
 }

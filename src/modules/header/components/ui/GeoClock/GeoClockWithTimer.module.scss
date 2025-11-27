@@ -83,3 +83,74 @@
   }
 }
 
+/* ——— Deleted Task State ——— */
+.deletedTaskContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+
+  &.light {
+    background: rgba(254, 226, 226, 0.8);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  &.dark {
+    background: rgba(127, 29, 29, 0.4);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+}
+
+.deletedTaskHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inconsolata', monospace;
+
+  .light & {
+    color: #991b1b;
+  }
+
+  .dark & {
+    color: #fca5a5;
+  }
+}
+
+.deletedTaskActions {
+  display: flex;
+  gap: 4px;
+}
+
+.cleanupButton {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: 'Inconsolata', monospace;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.light {
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+  }
+
+  &.dark {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+  }
+}
+

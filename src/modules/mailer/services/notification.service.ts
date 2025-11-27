@@ -10,8 +10,7 @@
  * - Dependency Inversion: Depends on abstractions (sendEmailInternal), not implementation
  */
 
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
 import { appConfig, isMailConfigured } from '../config';
 import { sendEmailInternal } from '../transporter';
 import {
@@ -66,12 +65,13 @@ interface UserBasicInfo {
 // --- Helper Functions ---
 
 /**
- * Fetch basic user information from Firestore
+ * Fetch basic user information from Firestore using Admin SDK
  */
 async function getUserInfo(userId: string): Promise<UserBasicInfo | null> {
   try {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (userDoc.exists()) {
+    const adminDb = getAdminDb();
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    if (userDoc.exists) {
       return userDoc.data() as UserBasicInfo;
     }
     return null;
@@ -82,12 +82,13 @@ async function getUserInfo(userId: string): Promise<UserBasicInfo | null> {
 }
 
 /**
- * Fetch task information from Firestore
+ * Fetch task information from Firestore using Admin SDK
  */
 async function getTaskInfo(taskId: string): Promise<any | null> {
   try {
-    const taskDoc = await getDoc(doc(db, 'tasks', taskId));
-    if (taskDoc.exists()) {
+    const adminDb = getAdminDb();
+    const taskDoc = await adminDb.collection('tasks').doc(taskId).get();
+    if (taskDoc.exists) {
       return taskDoc.data();
     }
     return null;

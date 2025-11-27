@@ -17,13 +17,21 @@ jest.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
+// Mock firebase/firestore
+const mockDoc = jest.fn((db: any, collection: string, id: string) => ({
+  path: `${collection}/${id}`,
+}));
+
+const mockGetDoc = jest.fn();
+
 jest.mock('firebase/firestore', () => ({
-  getDoc: jest.fn(),
-  doc: jest.fn(),
+  getDoc: mockGetDoc,
+  doc: mockDoc,
 }));
 
 describe('NotificationService', () => {
   let NotificationService: typeof import('../services/notification.service').NotificationService;
+  let sendEmailInternal: jest.Mock;
 
   const mockUser: User = {
     id: 'user-1',
@@ -55,9 +63,10 @@ describe('NotificationService', () => {
     jest.clearAllMocks();
     // Re-import NotificationService here to ensure it gets the mocked transporter
     NotificationService = require('../services/notification.service').NotificationService;
+    sendEmailInternal = mockSendEmailInternal;
 
-    // console.log('isMailConfigured in test:', isMailConfigured()); // Log the value
-    (getDoc as jest.Mock).mockImplementation((docRef) => {
+    // Mock getDoc implementation
+    mockGetDoc.mockImplementation((docRef) => {
       if (docRef.path.startsWith('users/')) {
         return Promise.resolve({
           exists: () => true,

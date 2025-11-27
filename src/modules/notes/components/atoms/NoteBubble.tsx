@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import styles from './NoteBubble.module.scss';
 
 interface NoteBubbleProps {
   content: string;
@@ -17,15 +18,15 @@ export function NoteBubble({ content, className }: NoteBubbleProps) {
       className={cn('relative', className)}
     >
       {/* Main bubble */}
-      <div className="relative rounded-2xl bg-white px-4 py-3 shadow-md">
-        <p className="line-clamp-3 max-w-[140px] text-center text-sm leading-tight text-black font-medium">
+      <div className={cn('relative', styles.bubble)}>
+        <p className={styles.text}>
           {content}
         </p>
       </div>
 
       {/* Tail/arrow pointing down */}
-      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
-        <div className="h-0 w-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-white" />
+      <div className={styles.tail}>
+        <div className={styles.tailArrow} />
       </div>
     </motion.div>
   );

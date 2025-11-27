@@ -1,34 +1,46 @@
 // src/lib/firebase-admin.ts
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
+import { getFirestore } from 'firebase-admin/firestore';
 import type { ServiceAccount } from 'firebase-admin/app';
 
 let storage;
 let bucket;
+let adminDb: ReturnType<typeof getFirestore> | null = null;
 
 export async function initializeFirebase() {
   try {
     let app;
     if (!getApps().length) {
       // Configuración de credenciales
-      const serviceAccount: ServiceAccount = process.env.GCP_PRIVATE_KEY
-        ? {
-            projectId: process.env.GCP_PROJECT_ID!,
-            clientEmail: process.env.GCP_SERVICE_ACCOUNT_EMAIL!,
-            privateKey: process.env.GCP_PRIVATE_KEY!.replace(/\\n/g, '\n'), // Reemplaza \n para Vercel
-          }
-        : await import('../config/Aurin Plattform Uploader.json').then(
-            module => ({
-              projectId: module.default.project_id,
-              clientEmail: module.default.client_email,
-              privateKey: module.default.private_key,
-            })
-          ); // Importación dinámica para desarrollo local
+      let serviceAccount: ServiceAccount;
+
+      if (process.env.GCP_PRIVATE_KEY) {
+        // Producción - usar variables de entorno
+        serviceAccount = {
+          projectId: process.env.GCP_PROJECT_ID!,
+          clientEmail: process.env.GCP_SERVICE_ACCOUNT_EMAIL!,
+          privateKey: process.env.GCP_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+        };
+        console.log('[Firebase Admin] Using environment variables for credentials');
+      } else {
+        // Desarrollo - cargar archivo JSON
+        console.log('[Firebase Admin] Loading credentials from JSON file');
+        const credentialsModule = await import('../config/aurin-platform-uploader.json');
+        serviceAccount = {
+          projectId: credentialsModule.default.project_id,
+          clientEmail: credentialsModule.default.client_email,
+          privateKey: credentialsModule.default.private_key,
+        };
+      }
+
+      console.log('[Firebase Admin] Initializing with projectId:', serviceAccount.projectId);
 
       app = initializeApp({
         credential: cert(serviceAccount),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'aurin-plattform',
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'aurin-plattform.firebasestorage.app',
       }, 'aurin-platform-app');
+
       console.log('[Firebase Admin] Firebase app initialized successfully');
     } else {
       console.log('[Firebase Admin] Reusing existing Firebase app');
@@ -37,12 +49,24 @@ export async function initializeFirebase() {
 
     storage = getStorage(app);
     bucket = storage.bucket();
-    const [exists] = await bucket.exists();
-    if (!exists) {
-      throw new Error('Bucket does not exist or the service account lacks storage.buckets.get permission');
+
+    // Try to verify bucket, but don't fail initialization if it doesn't work
+    try {
+      const [exists] = await bucket.exists();
+      if (exists) {
+        console.log('[Firebase Admin] Bucket verified:', bucket.name);
+      } else {
+        console.warn('[Firebase Admin] Bucket does not exist, but continuing initialization');
+      }
+    } catch (bucketError) {
+      console.warn('[Firebase Admin] Could not verify bucket (permissions may be missing), but continuing initialization:', bucketError instanceof Error ? bucketError.message : bucketError);
     }
-    console.log('[Firebase Admin] Bucket verified:', bucket.name);
-    return { storage, bucket };
+
+    // Initialize Firestore Admin
+    adminDb = getFirestore(app);
+    console.log('[Firebase Admin] Firestore initialized successfully');
+
+    return { storage, bucket, adminDb };
   } catch (error) {
     const errorDetails = error instanceof Error ? {
       message: error.message,
@@ -63,4 +87,40 @@ initializeFirebase().catch((error) => {
   console.error('[Firebase Admin] Initialization failed on startup:', error);
 });
 
-export { storage, bucket };
+// Helper function to get admin db (lazy initialization)
+export function getAdminDb() {
+  if (!adminDb) {
+    // Try to get existing app
+    let app = getApps().find(app => app.name === 'aurin-platform-app') || getApps()[0];
+
+    // If no app exists, initialize synchronously with the JSON file
+    if (!app) {
+      console.log('[Firebase Admin] No app found, initializing synchronously...');
+
+      // Load credentials synchronously (Node.js only)
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const credentials = require('../config/aurin-platform-uploader.json');
+
+      const serviceAccount: ServiceAccount = {
+        projectId: credentials.project_id,
+        clientEmail: credentials.client_email,
+        privateKey: credentials.private_key,
+      };
+
+      console.log('[Firebase Admin] Initializing with projectId:', serviceAccount.projectId);
+
+      app = initializeApp({
+        credential: cert(serviceAccount),
+        storageBucket: 'aurin-plattform.firebasestorage.app',
+      }, 'aurin-platform-app');
+
+      console.log('[Firebase Admin] Firebase app initialized successfully (sync)');
+    }
+
+    adminDb = getFirestore(app);
+    console.log('[Firebase Admin] Firestore Admin DB initialized');
+  }
+  return adminDb;
+}
+
+export { storage, bucket, adminDb };

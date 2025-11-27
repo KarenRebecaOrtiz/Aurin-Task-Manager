@@ -45,7 +45,7 @@ const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) =>
 
     // Get task name from store
     const task = filteredTasks.find((t) => t.id === activeTimer.taskId);
-    setTaskName(task?.name || activeTimer.taskId);
+    setTaskName(task?.name || null);
     setActiveTaskId(activeTimer.taskId);
     setIsRunning(timer.status === 'running');
 
@@ -88,12 +88,39 @@ const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) =>
     }
   }, [handleTimerClick]);
 
+  // Handle cleanup of deleted task timer
+  const handleCleanupTimer = useCallback(() => {
+    if (activeTaskId) {
+      const clearTimer = useTimerStateStore.getState().clearTimer;
+      clearTimer(activeTaskId);
+    }
+  }, [activeTaskId]);
+
   if (!activeTimer) {
     return null;
   }
 
+  // Task was deleted - show warning and cleanup option
+  if (!taskName && activeTaskId) {
+    return (
+      <div className={`${styles.deletedTaskContainer} ${isDarkMode ? styles.dark : styles.light}`}>
+        <div className={styles.deletedTaskHeader}>
+          <span>⚠️ Tarea eliminada</span>
+        </div>
+        <div className={styles.deletedTaskActions}>
+          <button
+            className={`${styles.cleanupButton} ${isDarkMode ? styles.dark : styles.light}`}
+            onClick={handleCleanupTimer}
+          >
+            Limpiar timer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div 
+    <div
       className={`${styles.geoClockWithTimer} ${isDarkMode ? styles.dark : styles.light}`}
       onClick={handleTimerClick}
       role="button"
@@ -103,8 +130,8 @@ const GeoClockWithTimer: React.FC<GeoClockWithTimerProps> = ({ onTaskClick }) =>
       <div className={styles.taskName} title={taskName || 'Sin nombre'}>
         {taskName || 'Sin nombre'}
       </div>
-      <TimerCounter 
-        seconds={timerSeconds} 
+      <TimerCounter
+        seconds={timerSeconds}
         isRunning={isRunning}
         isDarkMode={isDarkMode}
       />

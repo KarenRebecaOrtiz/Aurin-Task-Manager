@@ -2,20 +2,15 @@
  * ClientCell Component
  * Displays client information with avatar/image
  * Used in TasksTable and ArchiveTable
- * Clicking on the avatar opens the AccountDetailsCard modal
+ * Clicking on the avatar opens the ClientDialog modal
  */
 
 import React, { useState, useCallback } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
+import { createPortal } from 'react-dom';
 import { Client } from '@/types';
+import { ClientDialog } from '@/modules/client-crud';
 import styles from './ClientCell.module.scss';
-
-// Lazy load the modal to avoid bundle size issues
-const AccountDetailsCard = dynamic(
-  () => import('@/modules/data-views/clients/components/modals/AccountDetailsCard'),
-  { ssr: false }
-);
 
 interface ClientCellProps {
   client: Client | null | undefined;
@@ -26,7 +21,7 @@ interface ClientCellProps {
 /**
  * ClientCell Component
  * Renders client avatar or fallback text
- * Opens AccountDetailsCard modal on click
+ * Opens ClientDialog modal on click
  */
 const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpdate }) => {
   const [imageError, setImageError] = useState(false);
@@ -37,7 +32,16 @@ const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpda
   }, []);
 
   const handleAvatarClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation(); // Prevent event bubbling
+    if (client) {
+      setIsModalOpen(true);
+    }
+  }, [client]);
+
+  const handleImageClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (client) {
       setIsModalOpen(true);
     }
@@ -46,18 +50,22 @@ const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpda
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      const mouseEvent = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-      }) as unknown as React.MouseEvent;
-      handleAvatarClick(mouseEvent);
+      e.stopPropagation();
+      if (client) {
+        setIsModalOpen(true);
+      }
     }
-  }, [handleAvatarClick]);
+  }, [client]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
   }, []);
+
+  const handleClientUpdated = useCallback(async () => {
+    if (onClientUpdate && client) {
+      await onClientUpdate(client);
+    }
+  }, [client, onClientUpdate]);
 
   if (!client) {
     return <span className={styles.noClient}>Sin cuenta</span>;
@@ -67,7 +75,7 @@ const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpda
     <>
       <div
         className={`${styles.clientWrapper} ${className || ''}`}
-        onClick={handleAvatarClick}
+        onClick={handleImageClick}
         role="button"
         tabIndex={0}
         onKeyDown={handleKeyDown}
@@ -86,14 +94,15 @@ const ClientCell: React.FC<ClientCellProps> = ({ client, className, onClientUpda
         />
       </div>
 
-      {isModalOpen && (
-        <AccountDetailsCard
+      {isModalOpen && typeof document !== 'undefined' && createPortal(
+        <ClientDialog
           isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          client={client}
+          onOpenChange={handleCloseModal}
+          clientId={client.id}
           mode="view"
-          onSave={onClientUpdate}
-        />
+          onClientUpdated={handleClientUpdated}
+        />,
+        document.body
       )}
     </>
   );

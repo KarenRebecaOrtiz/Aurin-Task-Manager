@@ -7,12 +7,11 @@ import styles from '../Header.module.scss';
 export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   userName,
   subtitle,
-  onChangeContainer,
 }) => {
   return (
     <div className={styles.lefContainer} style={{ justifyContent: 'start' }}>
       <div className={styles.AvatarMobile}>
-        <AvatarDropdown onChangeContainer={onChangeContainer} />
+        <AvatarDropdown />
       </div>
       <div className={styles.frame14}>
         <H2 className={styles.welcome}>
