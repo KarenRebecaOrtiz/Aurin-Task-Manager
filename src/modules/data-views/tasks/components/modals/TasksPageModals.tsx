@@ -5,7 +5,7 @@ import { doc, deleteDoc, addDoc, updateDoc, collection } from 'firebase/firestor
 import { db } from '@/lib/firebase';
 import { useUser } from '@clerk/nextjs';
 import { useDataStore } from '@/stores/dataStore';
-import { useDialog } from '@/modules/dialog';
+import { useDialog } from '@/modules/dialogs';
 import { useSonnerToast } from '@/modules/sonner';
 import { AccountDetailsCard } from '@/modules/data-views/clients/components/modals';
 import { TaskDialog } from '@/modules/task-crud/components/forms/TaskDialog';

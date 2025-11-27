@@ -58,7 +58,7 @@
   z-index: calc($chat-sidebar-z-index - 1);
   backdrop-filter: blur(4px);
   opacity: 0;
-  animation: fadeIn 0.3s ease-out forwards;
+  animation: fadeIn 0.15s ease-out forwards;
 }
 
 @keyframes fadeIn {

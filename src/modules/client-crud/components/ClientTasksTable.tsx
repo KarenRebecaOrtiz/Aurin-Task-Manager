@@ -1,6 +1,7 @@
 /**
  * Client Tasks Table Component
  * Displays tasks related to a specific client
+ * Reuses components from data-views module
  */
 
 'use client';
@@ -8,6 +9,7 @@
 import { motion } from 'framer-motion';
 import { useClientTasks } from '../hooks/data/useClientTasks';
 import { Task } from '@/types';
+import { StatusCell, PriorityCell } from '@/modules/data-views/components/shared/cells';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -116,10 +118,10 @@ export function ClientTasksTable({ clientId, isAdmin }: ClientTasksTableProps) {
                       <span className="text-sm text-gray-700">{task.project}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={task.status} />
+                      <StatusCell status={task.status} />
                     </td>
                     <td className="px-4 py-3">
-                      <PriorityBadge priority={task.priority} />
+                      <PriorityCell priority={task.priority} />
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-600">
@@ -137,46 +139,7 @@ export function ClientTasksTable({ clientId, isAdmin }: ClientTasksTableProps) {
   );
 }
 
-// Helper components
-function StatusBadge({ status }: { status: string }) {
-  const statusColors: Record<string, string> = {
-    'Por Iniciar': 'bg-gray-100 text-gray-700',
-    'En Progreso': 'bg-blue-100 text-blue-700',
-    'En Revisión': 'bg-yellow-100 text-yellow-700',
-    'Completada': 'bg-green-100 text-green-700',
-    'Bloqueada': 'bg-red-100 text-red-700',
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-        statusColors[status] || 'bg-gray-100 text-gray-700'
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: string }) {
-  const priorityColors: Record<string, string> = {
-    'Baja': 'bg-gray-100 text-gray-600',
-    'Media': 'bg-yellow-100 text-yellow-700',
-    'Alta': 'bg-orange-100 text-orange-700',
-    'Crítica': 'bg-red-100 text-red-700',
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-        priorityColors[priority] || 'bg-gray-100 text-gray-600'
-      }`}
-    >
-      {priority}
-    </span>
-  );
-}
-
+// Helper function for date formatting
 function formatDate(dateString: string | null): string {
   if (!dateString) return '-';
 

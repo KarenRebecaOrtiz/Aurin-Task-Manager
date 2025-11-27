@@ -3,6 +3,10 @@
   align-items: center;
   gap: 0;
   position: relative;
+
+  @media (max-width: 600px) {
+    display: none;
+  }
 }
 
 .switchContainer {
@@ -14,6 +18,10 @@
   padding: 5px;
   position: relative;
   overflow: hidden;
+
+  @media (max-width: 600px) {
+    display: none;
+  }
 
   /* Cristal deslizante - indicador animado */
   &::before {

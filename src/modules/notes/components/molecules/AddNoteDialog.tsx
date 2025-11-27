@@ -7,8 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  DialogFooterPrimitive as DialogFooter,
+} from '@/modules/dialogs';
 import { Button } from '@/components/ui/button';
 import { CrystalInput } from '@/components/ui/inputs/crystal-input';
 import { NOTE_MAX_LENGTH } from '../../lib/constants';

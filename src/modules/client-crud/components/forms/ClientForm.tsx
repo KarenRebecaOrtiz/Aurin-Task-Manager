@@ -8,10 +8,12 @@
 import { motion } from 'framer-motion';
 import { CrystalInput, CrystalTextarea, CrystalDropdown } from '@/components/ui/inputs';
 import { FormSection } from '@/modules/task-crud/components/forms/FormSection';
+import { SwitchToggle } from '@/components/ui/switch-toggle';
 import { PLACEHOLDERS, INDUSTRIES } from '../../config';
 import { ClientFormData } from '../../types/form';
 import { ClientTasksTable } from '../ClientTasksTable';
 import Image from 'next/image';
+import { Calendar } from 'lucide-react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -19,15 +21,13 @@ const fadeInUp = {
 };
 
 interface ClientFormProps {
-  currentStep: number;
   formData: ClientFormData;
   errors: Partial<Record<keyof ClientFormData, string>>;
   imagePreview: string;
   isReadOnly: boolean;
   isSubmitting: boolean;
   isAdmin: boolean;
-  clientId?: string; // For showing tasks table
-  footer?: React.ReactNode; // Add this line
+  clientId?: string;
   onFieldChange: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void;
   onImageClick: () => void;
   onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -37,7 +37,6 @@ interface ClientFormProps {
 }
 
 export function ClientForm({
-  currentStep,
   formData,
   errors,
   imagePreview,
@@ -45,7 +44,6 @@ export function ClientForm({
   isSubmitting,
   isAdmin,
   clientId,
-  footer, // Add this line
   onFieldChange,
   onImageClick,
   onImageChange,
@@ -54,10 +52,9 @@ export function ClientForm({
   onRemoveProject,
 }: ClientFormProps) {
   return (
-    <div className="flex flex-col gap-4">
-      {/* Step 1: Basic Information */}
-      {(isReadOnly || currentStep === 0) && (
-        <FormSection>
+    <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
+      {/* Basic Information */}
+      <FormSection>
           {/* Image Upload */}
           <motion.div variants={fadeInUp} className="md:col-span-2 flex justify-center">
             <div
@@ -120,12 +117,41 @@ export function ClientForm({
               disabled={isReadOnly || isSubmitting}
             />
           </motion.div>
-        </FormSection>
-      )}
 
-      {/* Step 2: Contact Information */}
-      {(isReadOnly || currentStep === 1) && (
-        <FormSection>
+          {/* Active Status */}
+          <motion.div variants={fadeInUp} className="md:col-span-2">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex flex-col">
+                <label className="text-xs font-semibold text-gray-700">Estado del Cliente</label>
+                <span className="text-xs text-gray-500 mt-0.5">
+                  {isReadOnly ? (
+                    formData.isActive ? 'Cliente activo en el sistema' : 'Cliente inactivo'
+                  ) : (
+                    'Activa o desactiva este cliente'
+                  )}
+                </span>
+              </div>
+              {isReadOnly ? (
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  formData.isActive
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {formData.isActive ? 'Activo' : 'Inactivo'}
+                </span>
+              ) : (
+                <SwitchToggle
+                  checked={formData.isActive ?? true}
+                  onCheckedChange={(checked) => onFieldChange('isActive', checked)}
+                  disabled={isSubmitting}
+                />
+              )}
+            </div>
+          </motion.div>
+        </FormSection>
+
+      {/* Contact Information */}
+      <FormSection>
           <motion.div variants={fadeInUp} className="md:col-span-2">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Información de Contacto</h3>
           </motion.div>
@@ -197,11 +223,9 @@ export function ClientForm({
             />
           </motion.div>
         </FormSection>
-      )}
 
-      {/* Step 3: Projects */}
-      {(isReadOnly || currentStep === 2) && (
-        <FormSection>
+      {/* Projects */}
+      <FormSection>
           <motion.div variants={fadeInUp} className="md:col-span-2">
             <label className="text-xs font-semibold text-gray-700 mb-2 block">Proyectos</label>
             <div className="flex flex-col gap-2">
@@ -239,6 +263,45 @@ export function ClientForm({
             </div>
           </motion.div>
         </FormSection>
+
+      {/* Metadata - Only visible in view mode */}
+      {isReadOnly && clientId && (formData.createdAt || formData.lastModified) && (
+        <FormSection>
+          <motion.div variants={fadeInUp} className="md:col-span-2">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Información del Registro
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {formData.createdAt && (
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-500">Creado</span>
+                    <span className="text-sm text-gray-700 font-medium">
+                      {new Date(formData.createdAt).toLocaleDateString('es-MX', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                )}
+                {formData.lastModified && (
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-500">Última modificación</span>
+                    <span className="text-sm text-gray-700 font-medium">
+                      {new Date(formData.lastModified).toLocaleDateString('es-MX', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </FormSection>
       )}
 
       {/* Tasks Table - Only visible in view mode */}
@@ -247,9 +310,6 @@ export function ClientForm({
           <ClientTasksTable clientId={clientId} isAdmin={isAdmin} />
         </FormSection>
       )}
-
-      {/* Render Footer */}
-      {footer}
-    </div>
+    </form>
   );
 }

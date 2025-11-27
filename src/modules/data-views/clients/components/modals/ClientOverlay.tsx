@@ -8,7 +8,7 @@ import {
   backdropVariants,
   panelVariants,
   transitions,
-} from '@/modules/dialog';
+} from '@/modules/dialogs';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './ClientOverlay.module.scss';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';

@@ -1,24 +1,14 @@
 "use client"
 
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { VisuallyHidden } from "@/components/ui"
 import { useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { useUser } from "@clerk/nextjs"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
-import { DialogHeader } from "@/modules/shared/components/molecules"
+import { CrudDialog } from "@/modules/dialogs"
 import { useProfileForm } from "../../hooks"
 import { useConfigPageStore } from "../../stores"
 import { ConfigForm } from "./ConfigForm"
 import { ProfileHeader } from "../header"
 import { SaveActions } from "../ui"
-import styles from "./ConfigDialog.module.scss"
-
-const modalVariants = {
-  hidden: { opacity: 0, scale: 0.95, y: 20 },
-  visible: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.95, y: 20 }
-}
 
 interface ConfigDialogProps {
   isOpen: boolean
@@ -56,49 +46,46 @@ export function ConfigDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}>
-        <VisuallyHidden>
-          <DialogTitle>Configuración de Perfil</DialogTitle>
-        </VisuallyHidden>
-        <AnimatePresence mode="wait">
-          {isOpen && (
-            <motion.div
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full flex flex-col h-full"
-            >
-              <DialogHeader
-                title="Editar Perfil"
-                description="Actualiza tu información pública y detalles de cuenta."
-              />
-              <ProfileHeader
-                userId={userId}
-                isOwnProfile={user.id === userId}
-                onSuccess={showSuccess}
-                onError={showError}
-              />
-              <div className={`${styles.scrollableContent} flex-1 min-h-0 overflow-y-auto`}>
-                <ConfigForm
-                  userId={userId}
-                  onSuccess={showSuccess}
-                  onError={showError}
-                />
-              </div>
-              <div className={styles.stickyFooter}>
-                <SaveActions
-                  hasChanges={hasUnsavedChanges}
-                  isSaving={isSaving}
-                  onSave={handleSubmit}
-                  onDiscard={handleDiscard}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </DialogContent>
-    </Dialog>
+    <CrudDialog
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      mode="edit"
+      title="Editar Perfil"
+      description="Actualiza tu información pública y detalles de cuenta."
+      size="xl"
+      // Use custom header and footer from existing components
+      header={
+        <div className="space-y-0">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              Editar Perfil
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Actualiza tu información pública y detalles de cuenta.
+            </p>
+          </div>
+          <ProfileHeader
+            userId={userId}
+            isOwnProfile={user.id === userId}
+            onSuccess={showSuccess}
+            onError={showError}
+          />
+        </div>
+      }
+      footer={
+        <SaveActions
+          hasChanges={hasUnsavedChanges}
+          isSaving={isSaving}
+          onSave={handleSubmit}
+          onDiscard={handleDiscard}
+        />
+      }
+    >
+      <ConfigForm
+        userId={userId}
+        onSuccess={showSuccess}
+        onError={showError}
+      />
+    </CrudDialog>
   )
 }

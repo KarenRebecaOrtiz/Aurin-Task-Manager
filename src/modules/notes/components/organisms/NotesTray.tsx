@@ -5,7 +5,7 @@ import { useNotes } from '../../hooks/useNotes';
 import { CurrentUserAction } from '../molecules/CurrentUserAction';
 import { NoteUserItem } from '../molecules/NoteUserItem';
 import { cn } from '@/lib/utils';
-import { useDialog } from '@/modules/dialog';
+import { useDialog } from '@/modules/dialogs';
 import { AddNoteDialog } from '../molecules/AddNoteDialog';
 
 interface NotesTrayProps {

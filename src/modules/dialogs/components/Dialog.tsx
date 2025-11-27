@@ -1,14 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import {
-  Dialog as HeadlessDialog,
-  DialogPanel,
-  DialogTitle,
-  DialogBackdrop,
-  Description,
-  CloseButton,
-} from '@headlessui/react';
+import { useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { DialogBaseProps, DialogSize, DialogVariant } from '../types/dialog.types';
@@ -60,33 +53,48 @@ export function Dialog({
     };
   }, [open]);
 
-  const handleClose = () => {
-    if (closeOnEscape || closeOnOverlayClick) {
+  // Handle ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && closeOnEscape) {
+        onClose();
+      }
+    };
+
+    if (open) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, closeOnEscape, onClose]);
+
+  const handleBackdropClick = useCallback(() => {
+    if (closeOnOverlayClick) {
       onClose();
     }
-  };
+  }, [closeOnOverlayClick, onClose]);
 
-  return (
+  const handlePanelClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  if (typeof window === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
-        <HeadlessDialog
-          static
-          open={open}
-          onClose={handleClose}
-          className={styles.dialogRoot}
-        >
+        <div className={styles.dialogRoot} role="dialog" aria-modal="true">
           <motion.div
             initial="hidden"
             animate="visible"
             exit="exit"
             variants={backdropVariants}
             transition={transitions.fast}
-          >
-            <DialogBackdrop
-              className={styles.backdrop}
-              onClick={closeOnOverlayClick ? onClose : undefined}
-            />
-          </motion.div>
+            className={styles.backdrop}
+            onClick={handleBackdropClick}
+          />
 
           <div className={styles.container}>
             <motion.div
@@ -95,36 +103,34 @@ export function Dialog({
               exit="exit"
               variants={panelVariants}
               transition={transitions.normal}
+              className={`${styles.panel} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+              onClick={handlePanelClick}
             >
-              <DialogPanel
-                className={`${styles.panel} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
-              >
-                {showCloseButton && (
-                  <CloseButton
-                    className={styles.closeButton}
-                    onClick={onClose}
-                  >
-                    <X size={18} />
-                    <span className="sr-only">Cerrar</span>
-                  </CloseButton>
-                )}
+              {showCloseButton && (
+                <button
+                  type="button"
+                  className={styles.closeButton}
+                  onClick={onClose}
+                  aria-label="Cerrar"
+                >
+                  <X size={18} />
+                </button>
+              )}
 
-                {title && (
-                  <DialogTitle className={styles.title}>{title}</DialogTitle>
-                )}
+              {title && (
+                <h2 className={styles.title}>{title}</h2>
+              )}
 
-                {description && (
-                  <Description className={styles.description}>
-                    {description}
-                  </Description>
-                )}
+              {description && (
+                <p className={styles.description}>{description}</p>
+              )}
 
-                {children && <div className={styles.content}>{children}</div>}
-              </DialogPanel>
+              {children && <div className={styles.content}>{children}</div>}
             </motion.div>
           </div>
-        </HeadlessDialog>
+        </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

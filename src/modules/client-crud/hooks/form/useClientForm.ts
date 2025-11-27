@@ -23,6 +23,11 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     notes: initialData?.notes || '',
     imageUrl: initialData?.imageUrl || '/empty-image.png',
     projects: initialData?.projects || [''],
+    isActive: initialData?.isActive ?? true,
+    createdAt: initialData?.createdAt,
+    createdBy: initialData?.createdBy,
+    lastModified: initialData?.lastModified,
+    lastModifiedBy: initialData?.lastModifiedBy,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ClientFormData, string>>>({});
@@ -106,6 +111,7 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
       notes: '',
       imageUrl: '/empty-image.png',
       projects: [''],
+      isActive: true,
     });
     setErrors({});
   }, []);

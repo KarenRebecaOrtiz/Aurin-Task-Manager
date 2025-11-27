@@ -67,7 +67,6 @@ interface TaskFormProps {
   onSubmit?: (data: TaskFormData) => void
   onCreateClient?: () => void
   initialData?: TaskFormData | null
-  footer?: React.ReactNode
   isViewMode?: boolean
 }
 
@@ -77,7 +76,6 @@ export function TaskForm({
   onSubmit,
   onCreateClient,
   initialData = null,
-  footer,
   isViewMode = false,
 }: TaskFormProps) {
   const [formData, setFormData] = useState<TaskFormData>(
@@ -348,8 +346,6 @@ export function TaskForm({
           </motion.div>
         </FormSection>
       </motion.div>
-
-      {footer}
     </form>
   )
 }

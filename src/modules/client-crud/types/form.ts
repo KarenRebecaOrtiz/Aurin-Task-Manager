@@ -15,6 +15,11 @@ export interface ClientFormData {
   notes?: string;
   imageUrl?: string;
   projects?: string[];
+  isActive?: boolean;
+  createdAt?: string;
+  createdBy?: string;
+  lastModified?: string;
+  lastModifiedBy?: string;
 }
 
 export interface ClientDialogProps {

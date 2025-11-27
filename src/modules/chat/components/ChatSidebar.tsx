@@ -110,20 +110,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay - Debe estar detrás del sidebar */}
       {isOpen && (
         <div
           className={styles.overlay}
           onClick={handleClose}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.3)',
-            zIndex: 100000,
-          }}
         />
       )}
 

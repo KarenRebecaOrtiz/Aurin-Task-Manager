@@ -1,0 +1,54 @@
+/**
+ * Custom Scrollbar Mixin
+ * Provides consistent scrollbar styling across all dialogs
+ * Supports dark mode with automatic color adjustments
+ */
+
+@mixin custom-scrollbar(
+  $thumb-color: rgba(0, 0, 0, 0.2),
+  $track-color: rgba(0, 0, 0, 0.05),
+  $width: 8px
+) {
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    width: $width;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $track-color;
+    border-radius: calc($width / 2);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $thumb-color;
+    border-radius: calc($width / 2);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  // Dark mode overrides
+  :global(.dark) & {
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+    }
+  }
+
+  // Firefox scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: $thumb-color $track-color;
+
+  :global(.dark) & {
+    scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.03);
+  }
+}

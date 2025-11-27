@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/modules/dialogs"
 import { VisuallyHidden } from "@/components/ui"
 import { TaskForm, type TaskFormData } from "./TaskForm"
 import { ClientDialog } from "@/modules/client-crud"
@@ -12,8 +12,8 @@ import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
 import { taskService } from "../../services/taskService"
 import { validateTaskDates } from "../../utils/validation"
 import { FormFooter } from "./FormFooter"
-import styles from "./TaskDialog.module.scss"
-import { DialogHeader } from "@/modules/shared/components/molecules"
+import { DialogHeaderMolecule as DialogHeader } from "@/modules/dialogs"
+import styles from "@/modules/dialogs/styles/unified.module.scss"
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -25,7 +25,7 @@ interface TaskDialogProps {
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
   onTaskCreated: () => void
-  taskId?: string  // Optional: if provided, dialog is in edit mode
+  taskId?: string  
 }
 
 export function TaskDialog({
@@ -132,7 +132,6 @@ export function TaskDialog({
 
     try {
       if (isEditMode && taskId) {
-        // UPDATE MODE - Use API
         console.log('[TaskDialog] Updating task via API...')
 
         // Flatten the form data for API (API expects flat structure)
@@ -252,28 +251,30 @@ export function TaskDialog({
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="w-full flex flex-col flex-1 "
+                className="w-full flex flex-col h-full"
               >
-                <div className="flex-1 px-6 pb-6 overflow-y-auto flex flex-col">
-                  <DialogHeader
-                    title={isEditMode ? "Editar Tarea" : "Crear Tarea"}
-                    description={isEditMode
-                      ? "Modifica la información de la tarea existente."
-                      : "Completa el formulario para crear una nueva tarea en el sistema."}
-                  />
+                <DialogHeader
+                  title={isEditMode ? "Editar Tarea" : "Crear Tarea"}
+                  description={isEditMode
+                    ? "Modifica la información de la tarea existente."
+                    : "Completa el formulario para crear una nueva tarea en el sistema."}
+                />
+
+                <div className={`${styles.scrollableContent} flex-1 min-h-0 overflow-y-auto`}>
                   <TaskForm
                     clients={clients}
                     users={users}
                     onSubmit={handleSubmit}
                     onCreateClient={handleCreateClient}
                     initialData={initialData}
-                    footer={
-                      <FormFooter
-                        onCancel={handleCancel}
-                        isLoading={isSubmitting}
-                        submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
-                      />
-                    }
+                  />
+                </div>
+
+                <div className={styles.stickyFooter}>
+                  <FormFooter
+                    onCancel={handleCancel}
+                    isLoading={isSubmitting}
+                    submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
                   />
                 </div>
               </motion.div>

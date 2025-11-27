@@ -1,0 +1,22 @@
+@use '@/app/styles/variables' as *;
+
+.dialogFooter {
+  flex-shrink: 0;
+  padding: 1.25rem 1.5rem;
+  background: white;
+
+  :global(.dark) & {
+    background: #1a1a1a;
+  }
+
+  &.sticky {
+    border-top: 1px solid $color-border-subtle;
+    z-index: 10;
+    box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08);
+
+    :global(.dark) & {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.3);
+    }
+  }
+}

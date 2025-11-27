@@ -17,7 +17,7 @@ export function FormFooter({ onCancel, isLoading, submitText = "Crear Tarea" }: 
   }
 
   return (
-    <div className="flex justify-end gap-4 px-6 pb-6 border-gray-200">
+    <div className="flex justify-end gap-4">
       <Button
         type="button"
         intent="outline"

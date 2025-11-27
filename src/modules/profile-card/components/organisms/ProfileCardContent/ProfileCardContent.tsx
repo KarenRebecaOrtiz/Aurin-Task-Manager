@@ -13,7 +13,7 @@ import { StackSection } from '../../molecules/StackSection/StackSection';
 import { SocialLinks } from '../../molecules/SocialLinks/SocialLinks';
 import type { UserProfile } from '../../../types';
 import type { SocialLink } from '@/modules/config/components/social-links/types';
-import { contentVariants, itemVariants } from '@/modules/dialog';
+import { contentVariants, itemVariants } from '@/modules/dialogs';
 import styles from './ProfileCardContent.module.scss';
 
 interface ProfileCardContentProps {

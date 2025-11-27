@@ -9,12 +9,10 @@ import { Client } from '@/types';
 import {
   backdropVariants,
   panelVariants,
-} from '@/modules/dialog';
-import {
   Dialog,
   DialogContent,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  DialogFooterPrimitive as DialogFooter,
+} from '@/modules/dialogs';
 import { DialogHeader } from '@/modules/shared/components/molecules';
 import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Label } from '@/components/ui/label';

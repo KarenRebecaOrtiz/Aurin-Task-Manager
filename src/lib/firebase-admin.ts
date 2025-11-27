@@ -93,25 +93,26 @@ export function getAdminDb() {
     // Try to get existing app
     let app = getApps().find(app => app.name === 'aurin-platform-app') || getApps()[0];
 
-    // If no app exists, initialize synchronously with the JSON file
+    // If no app exists, initialize synchronously with environment variables
     if (!app) {
       console.log('[Firebase Admin] No app found, initializing synchronously...');
 
-      // Load credentials synchronously (Node.js only)
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const credentials = require('../config/aurin-platform-uploader.json');
+      // Use environment variables for credentials
+      if (!process.env.GCP_PRIVATE_KEY || !process.env.GCP_PROJECT_ID || !process.env.GCP_SERVICE_ACCOUNT_EMAIL) {
+        throw new Error('[Firebase Admin] Missing required environment variables: GCP_PRIVATE_KEY, GCP_PROJECT_ID, GCP_SERVICE_ACCOUNT_EMAIL');
+      }
 
       const serviceAccount: ServiceAccount = {
-        projectId: credentials.project_id,
-        clientEmail: credentials.client_email,
-        privateKey: credentials.private_key,
+        projectId: process.env.GCP_PROJECT_ID,
+        clientEmail: process.env.GCP_SERVICE_ACCOUNT_EMAIL,
+        privateKey: process.env.GCP_PRIVATE_KEY.replace(/\\n/g, '\n'),
       };
 
       console.log('[Firebase Admin] Initializing with projectId:', serviceAccount.projectId);
 
       app = initializeApp({
         credential: cert(serviceAccount),
-        storageBucket: 'aurin-plattform.firebasestorage.app',
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'aurin-plattform.firebasestorage.app',
       }, 'aurin-platform-app');
 
       console.log('[Firebase Admin] Firebase app initialized successfully (sync)');

@@ -391,16 +391,16 @@
   background: #f1f5f9;
   border: none;
   border-radius: 100px;
-  height: 32px;
-  width: 32px;
+  height: 28px;
+  width: 28px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow:
-    -4px -4px 8px #ffffff,
-    4px 4px 12px rgba(209, 217, 230, 0.8);
+    -3px -3px 6px #ffffff,
+    3px 3px 8px rgba(209, 217, 230, 0.8);
   transition:
     background-color 0.3s ease,
     box-shadow 0.3s ease,
@@ -506,14 +506,14 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  height: 40px;
-  width: 40px;
+  height: 32px;
+  width: 32px;
   border-radius: 100px;
   border: none;
   background: #f1f5f9;
   box-shadow:
-    -4px -4px 8px #ffffff,
-    4px 4px 12px rgba(209, 217, 230, 0.8);
+    -3px -3px 6px #ffffff,
+    3px 3px 8px rgba(209, 217, 230, 0.8);
   transition:
     transform 0.2s ease-in-out,
     box-shadow 0.3s ease,
@@ -525,8 +525,8 @@
 .playStopButton:hover,
 .sendButton:hover {
   box-shadow:
-    inset -2px -2px 4px rgba(255, 255, 255, 0.5),
-    inset 2px 2px 6px rgba(0, 0, 0, 0.1);
+    inset -2px -2px 3px rgba(255, 255, 255, 0.5),
+    inset 2px 2px 4px rgba(0, 0, 0, 0.1);
   background: #e4e8ee;
   transform: translateY(-1px);
 }
@@ -562,13 +562,13 @@
 .playStopButton {
   background: linear-gradient(135deg, #e6f3ff, #dbeafe) !important;
   box-shadow:
-    -6px -6px 12px #ffffff,
-    6px 6px 12px rgba(59, 130, 246, 0.2) !important;
+    -4px -4px 8px #ffffff,
+    4px 4px 8px rgba(59, 130, 246, 0.2) !important;
   border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 50%;
-  height: 40px;
-  width: 40px;
-  padding: 6px;
+  height: 32px;
+  width: 32px;
+  padding: 4px;
   cursor: pointer;
   transition:
     background-color 0.3s ease-in-out,
@@ -577,19 +577,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 10px;
+  margin-right: 8px;
 
   &:hover:not(:disabled) {
     box-shadow:
-      -8px -8px 16px #ffffff,
-      8px 8px 16px rgba(59, 130, 246, 0.3) !important;
+      -5px -5px 10px #ffffff,
+      5px 5px 10px rgba(59, 130, 246, 0.3) !important;
     transform: translateY(-2px);
   }
 
   &:active:not(:disabled) {
     box-shadow:
-      inset -3px -3px 6px rgba(255, 255, 255, 0.8),
-      inset 3px 3px 6px rgba(59, 130, 246, 0.2) !important;
+      inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+      inset 2px 2px 4px rgba(59, 130, 246, 0.2) !important;
     transform: translateY(0);
   }
 }
@@ -619,19 +619,19 @@
 .imageButton2 {
   background: #f1f5f9;
   border: none;
-  border-radius: 20px;
-  height: 40px;
-  width: 40px;
+  border-radius: 16px;
+  height: 32px;
+  width: 32px;
   font-family: $font-family-primary;
-  padding: 6px;
+  padding: 4px;
   cursor: pointer;
   transition:
     background-color 0.3s ease-in-out,
     box-shadow 0.3s ease,
     transform 0.2s ease;
   box-shadow:
-    -4px -4px 8px #ffffff,
-    4px 4px 12px rgba(0, 0, 0, 0.050);
+    -3px -3px 6px #ffffff,
+    3px 3px 8px rgba(0, 0, 0, 0.050);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -639,9 +639,9 @@
   &:hover {
     background-color: #e2e8f0;
     box-shadow:
-      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
-      inset 2px 2px 6px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+      inset -2px -2px 3px rgba(255, 255, 255, 0.5),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
   }
 }
 

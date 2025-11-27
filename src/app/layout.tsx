@@ -3,7 +3,7 @@ import Script from "next/script";
 import { Urbanist } from "next/font/google";
 import "./globals.scss";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { DialogProvider } from "@/modules/dialog";
+import { DialogProvider } from "@/modules/dialogs";
 import { SonnerToaster } from "@/modules/sonner";
 
 const urbanist = Urbanist({

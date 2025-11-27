@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StackTag } from '../../atoms/StackTag/StackTag';
 import { SectionTitle } from '../../atoms/SectionTitle/SectionTitle';
-import { itemVariants } from '@/modules/dialog';
+import { itemVariants } from '@/modules/dialogs';
 import styles from './StackSection.module.scss';
 
 interface StackSectionProps {

@@ -1,0 +1,9 @@
+@use '../../styles/mixins/scrollbar' as *;
+
+.scrollableContent {
+  @include custom-scrollbar();
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+}

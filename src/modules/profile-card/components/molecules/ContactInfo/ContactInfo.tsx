@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ContactInfoItem } from './ContactInfoItem';
-import { itemVariants } from '@/modules/dialog';
+import { itemVariants } from '@/modules/dialogs';
 import styles from './ContactInfo.module.scss';
 
 interface ContactInfoProps {

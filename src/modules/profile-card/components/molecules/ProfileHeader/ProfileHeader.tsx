@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import Badge from '@/components/Badge';
 import { ActionButton } from '../../atoms/ActionButton/ActionButton';
-import { itemVariants, transitions } from '@/modules/dialog';
+import { itemVariants, transitions } from '@/modules/dialogs';
 import type { UserProfile } from '../../../types';
 import styles from './ProfileHeader.module.scss';
 

@@ -6,13 +6,13 @@
 
 'use client';
 
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/modules/dialogs';
 import { VisuallyHidden } from '@/components/ui';
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
-import { DialogHeader } from '@/modules/shared/components/molecules';
+import { DialogHeaderMolecule as DialogHeader } from '@/modules/dialogs';
 import { clientService } from '../services/clientService';
 import { useClientForm } from '../hooks/form/useClientForm';
 import { useImageUpload } from '../hooks/ui/useImageUpload';
@@ -20,7 +20,7 @@ import { ClientForm } from './forms/ClientForm';
 import { ClientDialogActions } from './forms/ClientDialogActions';
 import { ClientDialogProps } from '../types/form';
 import { UI_CONSTANTS, TOAST_MESSAGES } from '../config';
-import styles from '@/modules/task-crud/components/forms/TaskDialog.module.scss';
+import styles from '@/modules/dialogs/styles/unified.module.scss';
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
@@ -102,14 +102,15 @@ export function ClientDialog({
         }
 
         setIsLoadingClient(false);
-      } catch (error: any) {
-        showError('Error al cargar el cliente', error?.message || 'Error desconocido');
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        showError('Error al cargar el cliente', errorMessage);
         setIsLoadingClient(false);
       }
     };
 
     loadClientData();
-  }, [isOpen, clientId, mode, showError, updateField, setPreview]);
+  }, [isOpen, clientId, mode, showError, updateField, setPreview, formData]);
 
   // Reset on close
   useEffect(() => {
@@ -120,45 +121,40 @@ export function ClientDialog({
     }
   }, [isOpen, initialMode, resetForm, resetImage]);
 
-  // Debug handlers
+  // Event handlers
   const handleDialogClick = useCallback((e: React.MouseEvent) => {
-    console.log('[ClientDialog] Click event:', {
-      target: (e.target as HTMLElement).tagName,
-      className: (e.target as HTMLElement).className,
-      eventType: e.type,
-      bubbles: e.bubbles,
-      cancelable: e.cancelable,
-    });
+    e.stopPropagation();
   }, []);
 
   const handleDialogPointerDown = useCallback((e: React.PointerEvent) => {
-    console.log('[ClientDialog] PointerDown event:', {
-      target: (e.target as HTMLElement).tagName,
-      className: (e.target as HTMLElement).className,
-      pointerId: e.pointerId,
-    });
+    e.stopPropagation();
   }, []);
 
   const handleDialogKeyDown = useCallback((e: React.KeyboardEvent) => {
-    console.log('[ClientDialog] KeyDown event:', {
-      key: e.key,
-      code: e.code,
-      target: (e.target as HTMLElement).tagName,
-    });
+    e.stopPropagation();
   }, []);
 
-  const handlePointerDownOutside = useCallback((e: React.PointerEvent) => {
-    console.log('[ClientDialog] PointerDownOutside:', {
-      target: (e.target as HTMLElement).tagName,
-    });
-    e.preventDefault();
+  const handlePointerDownOutside = useCallback((event: CustomEvent<{ originalEvent: PointerEvent }>) => {
+    event.preventDefault();
   }, []);
 
-  const handleInteractOutside = useCallback((e: Event) => {
-    console.log('[ClientDialog] InteractOutside:', {
-      target: (e.target as HTMLElement).tagName,
-    });
-    e.preventDefault();
+  const handleInteractOutside = useCallback((event: CustomEvent<{ originalEvent: Event }>) => {
+    event.preventDefault();
+  }, []);
+
+  // Image click handler
+  const handleImageClick = useCallback(() => {
+    document.getElementById('client-image-input')?.click();
+  }, []);
+
+  // Dialog close handler  
+  const handleDialogClose = useCallback(() => {
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  // Empty handler
+  const handleNext = useCallback(() => {
+    // No action needed
   }, []);
 
   // Submit handler
@@ -218,10 +214,11 @@ export function ClientDialog({
       resetImage();
       onOpenChange(false);
       window.location.reload();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       showError(
         mode === 'create' ? 'No se pudo crear el cliente' : 'No se pudo actualizar el cliente',
-        error?.message || 'Error desconocido'
+        errorMessage
       );
     } finally {
       setIsSubmitting(false);
@@ -262,7 +259,7 @@ export function ClientDialog({
   if (isLoadingClient) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}>
+        <DialogContent className={`${styles.dialogContent} ${styles.sizeXl} flex flex-col h-[90vh] p-0 gap-0 overflow-hidden`}>
           <VisuallyHidden>
             <DialogTitle>Cargando cliente</DialogTitle>
           </VisuallyHidden>
@@ -280,7 +277,7 @@ export function ClientDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}
+        className={`${styles.dialogContent} ${styles.sizeXl} flex flex-col h-[90vh] p-0 gap-0 overflow-hidden`}
         onClick={handleDialogClick}
         onPointerDown={handleDialogPointerDown}
         onKeyDown={handleDialogKeyDown}
@@ -313,7 +310,7 @@ export function ClientDialog({
                   isAdmin={isAdmin}
                   clientId={clientId}
                   onFieldChange={updateField}
-                  onImageClick={() => document.getElementById('client-image-input')?.click()}
+                  onImageClick={handleImageClick}
                   onImageChange={handleImageChange}
                   onProjectChange={updateProject}
                   onAddProject={addProject}
@@ -324,13 +321,13 @@ export function ClientDialog({
                       currentStep={0}
                       totalSteps={1}
                       isSubmitting={isSubmitting}
-                      onBack={() => {}}
-                      onNext={() => {}}
+                      onBack={handleNext}
+                      onNext={handleNext}
                       onCancel={handleCancel}
                       onSubmit={handleSubmit}
                       onEdit={handleEdit}
                       onCancelEdit={handleCancelEdit}
-                      onClose={() => onOpenChange(false)}
+                      onClose={handleDialogClose}
                     />
                   }
                 />

@@ -12,11 +12,15 @@ import { Small, Muted } from '@/components/ui/Typography';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
 import { ConfigDialog } from '@/modules/config';
 import { Cog, LogOut } from '@/components/animate-ui/icons';
+import { Sun } from '@/components/animate-ui/icons/sun';
+import { Moon } from '@/components/animate-ui/icons/moon';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const AvatarDropdown = () => {
   const { user } = useUser();
   const { signOut } = useClerk();
   const { firestoreUser } = useFirestoreUser(); // Hook centralizado
+  const { isDarkMode, toggleTheme } = useTheme();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -64,6 +68,11 @@ const AvatarDropdown = () => {
   const handleToggleDropdown = useCallback(() => {
     setIsDropdownOpen((prev) => !prev);
   }, []);
+
+  const handleToggleTheme = useCallback(() => {
+    toggleTheme();
+    setIsDropdownOpen(false);
+  }, [toggleTheme]);
 
   // Get status color based on current status
   const getStatusColor = useCallback((status: string) => {
@@ -135,17 +144,31 @@ const AvatarDropdown = () => {
                   {...dropdownAnimations.item(0)}
                   role="menuitem"
                 >
-                  <Cog size={16} animateOnHover loop className={styles.dropdownIcon} style={{ color: 'white' }} />
+                  <Cog size={16} animateOnHover loop className={styles.dropdownIcon} />
                   Configuración
+                </motion.button>
+
+                <motion.button
+                  onClick={handleToggleTheme}
+                  className={styles.dropdownItem}
+                  {...dropdownAnimations.item(1)}
+                  role="menuitem"
+                >
+                  {isDarkMode ? (
+                    <Sun size={16} animateOnHover loop className={styles.dropdownIcon} />
+                  ) : (
+                    <Moon size={16} animateOnHover loop className={styles.dropdownIcon} />
+                  )}
+                  {isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
                 </motion.button>
 
                 <motion.button
                   onClick={handleLogout}
                   className={styles.dropdownItem}
-                  {...dropdownAnimations.item(1)}
+                  {...dropdownAnimations.item(2)}
                   role="menuitem"
                 >
-                  <LogOut size={16} animateOnHover loop className={styles.dropdownIcon} style={{ color: 'white' }} />
+                  <LogOut size={16} animateOnHover loop className={styles.dropdownIcon} />
                   Cerrar Sesión
                 </motion.button>
               </div>

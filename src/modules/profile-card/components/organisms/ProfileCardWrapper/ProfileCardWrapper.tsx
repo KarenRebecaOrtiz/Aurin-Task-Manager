@@ -14,7 +14,7 @@ import {
   backdropVariants,
   panelVariants,
   transitions,
-} from '@/modules/dialog';
+} from '@/modules/dialogs';
 import styles from './ProfileCardWrapper.module.scss';
 
 interface ProfileCardWrapperProps {
