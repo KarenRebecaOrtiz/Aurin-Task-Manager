@@ -1,4 +1,4 @@
-// Components - Primitives (replaces @/components/ui/dialog)
+// Components - Primitives (base dialog components)
 export {
   Dialog,
   DialogRoot,
@@ -7,19 +7,37 @@ export {
   DialogClose,
   DialogTrigger,
   DialogContent,
-  DialogHeader,
+  DialogHeader as DialogHeaderPrimitive,
   DialogBody,
-  DialogFooter as DialogFooterPrimitive,
   DialogTitle,
   DialogDescription,
 } from './components/DialogPrimitives';
 
-// Components - Base (full dialog with animations)
-export { Dialog as AnimatedDialog } from './components/Dialog';
+export type {
+  DialogSize as DialogPrimitiveSize,
+  DialogRootProps,
+  DialogTriggerProps,
+  DialogCloseProps,
+  DialogPortalProps,
+  DialogOverlayProps,
+  DialogContentProps,
+  DialogHeaderProps as DialogHeaderPrimitiveProps,
+  DialogBodyProps,
+  DialogTitleProps,
+  DialogDescriptionProps,
+} from './components/DialogPrimitives';
+
+// Components - Base (higher level)
+export { Dialog as DialogBase } from './components/Dialog';
 export { DialogProvider } from './components/DialogProvider';
+
+// Components - Variants
 export { ConfirmDialog } from './components/variants/ConfirmDialog';
 export { AlertDialog } from './components/variants/AlertDialog';
 export { FormDialog } from './components/variants/FormDialog';
+export { TaskDialog } from './components/variants/TaskDialog';
+export { ClientDialog } from './components/variants/ClientDialog';
+export { AddNoteDialog } from './components/variants/AddNoteDialog';
 
 // Components - Atoms
 export {
@@ -33,7 +51,7 @@ export {
   ScrollableContent,
   DialogFooter,
   DialogActions,
-  DialogHeader as DialogHeaderMolecule,
+  DialogHeader,
 } from './components/molecules';
 
 // Components - Organisms
@@ -85,18 +103,3 @@ export type {
   DialogFooterProps,
   DialogActionsProps,
 } from './components/molecules';
-
-// Types from primitives
-export type {
-  DialogRootProps,
-  DialogTriggerProps,
-  DialogCloseProps,
-  DialogPortalProps,
-  DialogOverlayProps,
-  DialogContentProps,
-  DialogHeaderProps,
-  DialogBodyProps,
-  DialogFooterProps as DialogFooterPrimitiveProps,
-  DialogTitleProps,
-  DialogDescriptionProps,
-} from './components/DialogPrimitives';

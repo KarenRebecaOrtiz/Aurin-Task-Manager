@@ -38,10 +38,14 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
   ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  }, [errors]);
+    setErrors(prev => {
+      if (prev[field]) {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
+  }, []);
 
   const updateProjects = useCallback((projects: string[]) => {
     setFormData(prev => ({ ...prev, projects }));

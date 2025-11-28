@@ -41,5 +41,6 @@ export { Calendar } from './components/ui/Calendar';
 export { DatePicker, DateRangePicker } from '@/modules/task-crud/components/DatePicker';
 
 // Main Components
-export { default as CreateTask } from './components/CreateTask';
-export { default as EditTask } from './components/EditTask';
+// TaskDialog is now centralized in @/modules/dialogs
+export { TaskDialog } from '@/modules/dialogs';
+export { TaskForm, type TaskFormData } from './components/forms/TaskForm';

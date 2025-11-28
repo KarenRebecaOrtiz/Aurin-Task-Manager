@@ -11,7 +11,7 @@ import {
   panelVariants,
   Dialog,
   DialogContent,
-  DialogFooterPrimitive as DialogFooter,
+  DialogFooter,
 } from '@/modules/dialogs';
 import { DialogHeader } from '@/modules/shared/components/molecules';
 import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';

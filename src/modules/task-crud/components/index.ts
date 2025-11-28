@@ -1,10 +1,7 @@
-// CRUD Components for Task Operations
-export { default as CreateTask } from './CreateTask';
-export { default as EditTask } from './EditTask';
-
 // New Form Components
 export { TaskForm, type TaskFormData } from './forms/TaskForm';
-export { TaskDialog } from './forms/TaskDialog';
+// TaskDialog is now in @/modules/dialogs
+export { TaskDialog } from '@/modules/dialogs';
 
 // Shared Components (Atomic & Molecular)
 export { FormField } from './shared/atoms/FormField';

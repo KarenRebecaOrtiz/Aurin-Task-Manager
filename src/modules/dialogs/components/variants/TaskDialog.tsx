@@ -1,25 +1,15 @@
 "use client"
 
-import { Dialog, DialogContent, DialogTitle } from "@/modules/dialogs"
-import { VisuallyHidden } from "@/components/ui"
-import { TaskForm, type TaskFormData } from "./TaskForm"
-import { ClientDialog } from "@/modules/client-crud"
 import { useState, useCallback, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useTaskFormData } from "../../hooks/data/useTaskData"
 import { useUser } from "@clerk/nextjs"
+import { CrudDialog } from "../organisms/CrudDialog"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
-import { taskService } from "../../services/taskService"
-import { validateTaskDates } from "../../utils/validation"
-import { FormFooter } from "./FormFooter"
-import { DialogHeaderMolecule as DialogHeader } from "@/modules/dialogs"
-import styles from "@/modules/dialogs/styles/unified.module.scss"
-
-const modalVariants = {
-  hidden: { opacity: 0, scale: 0.95, y: 20 },
-  visible: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.95, y: 20 }
-}
+import { TaskForm, type TaskFormData } from "@/modules/task-crud/components/forms/TaskForm"
+import { useTaskFormData } from "@/modules/task-crud/hooks/data/useTaskData"
+import { taskService } from "@/modules/task-crud/services/taskService"
+import { validateTaskDates } from "@/modules/task-crud/utils/validation"
+import { FormFooter } from "@/modules/task-crud/components/forms/FormFooter"
+import { ClientDialog } from "./ClientDialog"
 
 interface TaskDialogProps {
   isOpen: boolean
@@ -92,8 +82,9 @@ export function TaskDialog({
         setOriginalLeadedBy(taskData.LeadedBy || [])
 
         setIsLoadingTask(false)
-      } catch (error: any) {
-        showError('Error al cargar la tarea', error?.message || 'Error desconocido')
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+        showError('Error al cargar la tarea', errorMessage)
         setIsLoadingTask(false)
       }
     }
@@ -195,8 +186,8 @@ export function TaskDialog({
       setTimeout(() => {
         window.location.reload()
       }, 1500)
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Error desconocido'
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       console.error('[TaskDialog] Error:', errorMessage, error)
 
       const action = isEditMode ? 'actualizar' : 'crear'
@@ -218,70 +209,41 @@ export function TaskDialog({
     // Refresh will happen automatically in ClientDialog
   }, [])
 
-  // Show loading state when loading task data
-  if (isLoadingTask) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}>
-          <VisuallyHidden>
-            <DialogTitle>Cargando tarea</DialogTitle>
-          </VisuallyHidden>
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="text-sm text-gray-500">Cargando información de la tarea...</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
+  // Footer personalizado con FormFooter
+  const customFooter = (
+    <FormFooter
+      onCancel={handleCancel}
+      isLoading={isSubmitting}
+      submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
+    />
+  )
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className={`${styles.dialogContent} flex flex-col w-full h-[90vh] p-0 gap-0 !border-none overflow-hidden rounded-lg shadow-xl`}>
-          <VisuallyHidden>
-            <DialogTitle>{isEditMode ? "Editar Tarea" : "Crear Tarea"}</DialogTitle>
-          </VisuallyHidden>
-          <AnimatePresence mode="wait">
-            {isOpen && (
-              <motion.div
-                variants={modalVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="w-full flex flex-col h-full"
-              >
-                <DialogHeader
-                  title={isEditMode ? "Editar Tarea" : "Crear Tarea"}
-                  description={isEditMode
-                    ? "Modifica la información de la tarea existente."
-                    : "Completa el formulario para crear una nueva tarea en el sistema."}
-                />
-
-                <div className={`${styles.scrollableContent} flex-1 min-h-0 overflow-y-auto`}>
-                  <TaskForm
-                    clients={clients}
-                    users={users}
-                    onSubmit={handleSubmit}
-                    onCreateClient={handleCreateClient}
-                    initialData={initialData}
-                  />
-                </div>
-
-                <div className={styles.stickyFooter}>
-                  <FormFooter
-                    onCancel={handleCancel}
-                    isLoading={isSubmitting}
-                    submitText={isEditMode ? "Actualizar" : "Crear Tarea"}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DialogContent>
-      </Dialog>
+      <CrudDialog
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        mode={isEditMode ? 'edit' : 'create'}
+        title={isEditMode ? "Editar Tarea" : "Crear Tarea"}
+        description={isEditMode
+          ? "Modifica la información de la tarea existente."
+          : "Completa el formulario para crear una nueva tarea en el sistema."}
+        isLoading={isLoadingTask}
+        isSubmitting={isSubmitting}
+        loadingMessage="Cargando información de la tarea..."
+        onCancel={handleCancel}
+        footer={customFooter}
+        size="xl"
+        closeOnOverlayClick={false}
+      >
+        <TaskForm
+          clients={clients}
+          users={users}
+          onSubmit={handleSubmit}
+          onCreateClient={handleCreateClient}
+          initialData={initialData}
+        />
+      </CrudDialog>
 
       <ClientDialog
         isOpen={isClientDialogOpen}

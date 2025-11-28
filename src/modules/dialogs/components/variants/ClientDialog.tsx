@@ -1,32 +1,22 @@
 /**
  * Client Dialog Component
  * Main orchestrator for creating/viewing/editing clients
- * Modular structure following task-crud pattern
+ * Uses CrudDialog as base component
  */
 
 'use client';
 
-import { Dialog, DialogContent, DialogTitle } from '@/modules/dialogs';
-import { VisuallyHidden } from '@/components/ui';
 import { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
+import { CrudDialog } from '../organisms/CrudDialog';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
-import { DialogHeaderMolecule as DialogHeader } from '@/modules/dialogs';
-import { clientService } from '../services/clientService';
-import { useClientForm } from '../hooks/form/useClientForm';
-import { useImageUpload } from '../hooks/ui/useImageUpload';
-import { ClientForm } from './forms/ClientForm';
-import { ClientDialogActions } from './forms/ClientDialogActions';
-import { ClientDialogProps } from '../types/form';
-import { UI_CONSTANTS, TOAST_MESSAGES } from '../config';
-import styles from '@/modules/dialogs/styles/unified.module.scss';
-
-const modalVariants = {
-  hidden: { opacity: 0, scale: 0.95, y: 20 },
-  visible: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.95, y: 20 },
-};
+import { clientService } from '@/modules/client-crud/services/clientService';
+import { useClientForm } from '@/modules/client-crud/hooks/form/useClientForm';
+import { useImageUpload } from '@/modules/client-crud/hooks/ui/useImageUpload';
+import { ClientForm } from '@/modules/client-crud/components/forms/ClientForm';
+import { ClientDialogActions } from '@/modules/client-crud/components/forms/ClientDialogActions';
+import { ClientDialogProps } from '@/modules/client-crud/types/form';
+import { UI_CONSTANTS, TOAST_MESSAGES } from '@/modules/client-crud/config';
 
 export function ClientDialog({
   isOpen,
@@ -36,9 +26,6 @@ export function ClientDialog({
   clientId,
   mode: initialMode = 'create',
 }: ClientDialogProps) {
-  // eslint-disable-next-line no-console
-  console.log('[ClientDialog] Rendering - isOpen:', isOpen, 'mode:', initialMode, 'clientId:', clientId);
-  
   const { user } = useUser();
   const { success: showSuccess, error: showError } = useSonnerToast();
 
@@ -49,6 +36,7 @@ export function ClientDialog({
   const [mode, setMode] = useState<'create' | 'view' | 'edit'>(initialMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingClient, setIsLoadingClient] = useState(false);
+  const [clientDataLoaded, setClientDataLoaded] = useState(false);
 
   // Form hook
   const {
@@ -73,14 +61,19 @@ export function ClientDialog({
     onError: showError,
   });
 
-  // Load client data when in view/edit mode
+  // Load client data when in view/edit mode - ONLY ONCE when dialog opens
   useEffect(() => {
-    if (!isOpen || !clientId || mode === 'create') return;
+    // Skip if not open, no clientId, create mode, or already loaded
+    if (!isOpen || !clientId || mode === 'create' || clientDataLoaded) return;
+
+    let isMounted = true;
 
     const loadClientData = async () => {
       try {
         setIsLoadingClient(true);
         const response = await clientService.getClient(clientId);
+
+        if (!isMounted) return;
 
         if (!response.success || !response.data) {
           showError('Cliente no encontrado', 'No se pudo cargar la información del cliente.');
@@ -90,10 +83,17 @@ export function ClientDialog({
 
         const client = response.data;
 
+        // Valid form fields - static list to avoid using formData as dependency
+        const validFields = [
+          'name', 'email', 'phone', 'address', 'industry', 
+          'website', 'taxId', 'notes', 'imageUrl', 'projects', 
+          'isActive', 'createdAt', 'createdBy', 'lastModified', 'lastModifiedBy'
+        ];
+
         // Update form with client data
         Object.entries(client).forEach(([key, value]) => {
-          if (key in formData) {
-            updateField(key as keyof typeof formData, value);
+          if (validFields.includes(key)) {
+            updateField(key as keyof typeof formData, value as never);
           }
         });
 
@@ -101,8 +101,10 @@ export function ClientDialog({
           setPreview(client.imageUrl);
         }
 
+        setClientDataLoaded(true);
         setIsLoadingClient(false);
       } catch (error: unknown) {
+        if (!isMounted) return;
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
         showError('Error al cargar el cliente', errorMessage);
         setIsLoadingClient(false);
@@ -110,7 +112,12 @@ export function ClientDialog({
     };
 
     loadClientData();
-  }, [isOpen, clientId, mode, showError, updateField, setPreview, formData]);
+
+    return () => {
+      isMounted = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, clientId, mode, clientDataLoaded]);
 
   // Reset on close
   useEffect(() => {
@@ -118,29 +125,9 @@ export function ClientDialog({
       resetForm();
       resetImage();
       setMode(initialMode);
+      setClientDataLoaded(false); // Reset loaded flag when dialog closes
     }
   }, [isOpen, initialMode, resetForm, resetImage]);
-
-  // Event handlers
-  const handleDialogClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-  }, []);
-
-  const handleDialogPointerDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-  }, []);
-
-  const handleDialogKeyDown = useCallback((e: React.KeyboardEvent) => {
-    e.stopPropagation();
-  }, []);
-
-  const handlePointerDownOutside = useCallback((event: CustomEvent<{ originalEvent: PointerEvent }>) => {
-    event.preventDefault();
-  }, []);
-
-  const handleInteractOutside = useCallback((event: CustomEvent<{ originalEvent: Event }>) => {
-    event.preventDefault();
-  }, []);
 
   // Image click handler
   const handleImageClick = useCallback(() => {
@@ -151,11 +138,6 @@ export function ClientDialog({
   const handleDialogClose = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
-
-  // Empty handler
-  const handleNext = useCallback(() => {
-    // No action needed
-  }, []);
 
   // Submit handler
   const handleSubmit = useCallback(async () => {
@@ -213,7 +195,7 @@ export function ClientDialog({
       resetForm();
       resetImage();
       onOpenChange(false);
-      window.location.reload();
+      // Removed window.location.reload() - callbacks should handle state refresh
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       showError(
@@ -237,7 +219,6 @@ export function ClientDialog({
 
   const handleCancelEdit = useCallback(() => {
     setMode('view');
-    // Reload client data would go here
   }, []);
 
   // Dialog title/description
@@ -255,87 +236,48 @@ export function ClientDialog({
 
   const isReadOnly = mode === 'view';
 
-  // Loading state
-  if (isLoadingClient) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className={`${styles.dialogContent} ${styles.sizeXl} flex flex-col h-[90vh] p-0 gap-0 overflow-hidden`}>
-          <VisuallyHidden>
-            <DialogTitle>Cargando cliente</DialogTitle>
-          </VisuallyHidden>
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="text-sm text-gray-500">Cargando información del cliente...</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  // Custom footer with ClientDialogActions
+  const customFooter = (
+    <ClientDialogActions
+      mode={mode}
+      isSubmitting={isSubmitting}
+      onCancel={handleCancel}
+      onSubmit={handleSubmit}
+      onEdit={handleEdit}
+      onCancelEdit={handleCancelEdit}
+      onClose={handleDialogClose}
+    />
+  );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className={`${styles.dialogContent} ${styles.sizeXl} flex flex-col h-[90vh] p-0 gap-0 overflow-hidden`}
-        onClick={handleDialogClick}
-        onPointerDown={handleDialogPointerDown}
-        onKeyDown={handleDialogKeyDown}
-        onPointerDownOutside={handlePointerDownOutside}
-        onInteractOutside={handleInteractOutside}
-      >
-        <VisuallyHidden>
-          <DialogTitle>{getTitle()}</DialogTitle>
-        </VisuallyHidden>
-
-        <AnimatePresence mode="wait">
-          {isOpen && (
-            <motion.div
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full flex flex-col flex-1"
-            >
-              <div className="flex-1 px-6 pb-6 overflow-y-auto flex flex-col">
-                <DialogHeader title={getTitle()} description={getDescription()} />
-
-                <ClientForm
-                  currentStep={0}
-                  formData={formData}
-                  errors={errors}
-                  imagePreview={imagePreview}
-                  isReadOnly={isReadOnly}
-                  isSubmitting={isSubmitting}
-                  isAdmin={isAdmin}
-                  clientId={clientId}
-                  onFieldChange={updateField}
-                  onImageClick={handleImageClick}
-                  onImageChange={handleImageChange}
-                  onProjectChange={updateProject}
-                  onAddProject={addProject}
-                  onRemoveProject={removeProject}
-                  footer={
-                    <ClientDialogActions
-                      mode={mode}
-                      currentStep={0}
-                      totalSteps={1}
-                      isSubmitting={isSubmitting}
-                      onBack={handleNext}
-                      onNext={handleNext}
-                      onCancel={handleCancel}
-                      onSubmit={handleSubmit}
-                      onEdit={handleEdit}
-                      onCancelEdit={handleCancelEdit}
-                      onClose={handleDialogClose}
-                    />
-                  }
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </DialogContent>
-    </Dialog>
+    <CrudDialog
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      mode={mode}
+      title={getTitle()}
+      description={getDescription()}
+      isLoading={isLoadingClient}
+      isSubmitting={isSubmitting}
+      loadingMessage="Cargando información del cliente..."
+      footer={customFooter}
+      size="xl"
+      closeOnOverlayClick={false}
+    >
+      <ClientForm
+        formData={formData}
+        errors={errors}
+        imagePreview={imagePreview}
+        isReadOnly={isReadOnly}
+        isSubmitting={isSubmitting}
+        isAdmin={isAdmin}
+        clientId={clientId}
+        onFieldChange={updateField}
+        onImageClick={handleImageClick}
+        onImageChange={handleImageChange}
+        onProjectChange={updateProject}
+        onAddProject={addProject}
+        onRemoveProject={removeProject}
+      />
+    </CrudDialog>
   );
 }

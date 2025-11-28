@@ -1,6 +1,10 @@
 'use client';
 
-import { Dialog, DialogContent, DialogTitle } from '../DialogPrimitives';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogTitle 
+} from '../DialogPrimitives';
 import { VisuallyHidden } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DialogHeader } from '../molecules';
@@ -71,10 +75,8 @@ export function CrudDialog({
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent
           className={cn(styles.dialogContent, className)}
-          size={size}
-          closeOnOverlayClick={closeOnOverlayClick}
-          closeOnEscape={closeOnEscape}
-          showCloseButton={false}
+          onPointerDownOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
+          onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
         >
           <VisuallyHidden>
             <DialogTitle>{title || 'Cargando'}</DialogTitle>
@@ -92,10 +94,8 @@ export function CrudDialog({
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent
           className={cn(styles.dialogContent, className)}
-          size={size}
-          closeOnOverlayClick={closeOnOverlayClick}
-          closeOnEscape={closeOnEscape}
-          showCloseButton={showCloseButton}
+          onPointerDownOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
+          onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
         >
           <VisuallyHidden>
             <DialogTitle>Error</DialogTitle>
@@ -115,10 +115,9 @@ export function CrudDialog({
           size && styles[`size${size.charAt(0).toUpperCase()}${size.slice(1)}`],
           className
         )}
-        size={size}
         showCloseButton={showCloseButton}
-        closeOnOverlayClick={closeOnOverlayClick}
-        closeOnEscape={closeOnEscape}
+        onPointerDownOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
+        onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
       >
         <VisuallyHidden>
           <DialogTitle>{title || 'Dialog'}</DialogTitle>
