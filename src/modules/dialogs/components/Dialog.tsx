@@ -85,7 +85,13 @@ export function Dialog({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className={styles.dialogRoot} role="dialog" aria-modal="true">
+        <div 
+          className={styles.dialogRoot} 
+          role="dialog" 
+          aria-modal="true"
+          onClick={handleBackdropClick}
+        >
+          {/* Backdrop visual */}
           <motion.div
             initial="hidden"
             animate="visible"
@@ -93,41 +99,39 @@ export function Dialog({
             variants={backdropVariants}
             transition={transitions.fast}
             className={styles.backdrop}
-            onClick={handleBackdropClick}
           />
 
-          <div className={styles.container}>
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={panelVariants}
-              transition={transitions.normal}
-              className={`${styles.panel} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
-              onClick={handlePanelClick}
-            >
-              {showCloseButton && (
-                <button
-                  type="button"
-                  className={styles.closeButton}
-                  onClick={onClose}
-                  aria-label="Cerrar"
-                >
-                  <X size={18} />
-                </button>
-              )}
+          {/* Panel centrado - stopPropagation evita cerrar al hacer click dentro */}
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={panelVariants}
+            transition={transitions.normal}
+            className={`${styles.panel} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+            onClick={handlePanelClick}
+          >
+            {showCloseButton && (
+              <button
+                type="button"
+                className={styles.closeButton}
+                onClick={onClose}
+                aria-label="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            )}
 
-              {title && (
-                <h2 className={styles.title}>{title}</h2>
-              )}
+            {title && (
+              <h2 className={styles.title}>{title}</h2>
+            )}
 
-              {description && (
-                <p className={styles.description}>{description}</p>
-              )}
+            {description && (
+              <p className={styles.description}>{description}</p>
+            )}
 
-              {children && <div className={styles.content}>{children}</div>}
-            </motion.div>
-          </div>
+            {children && <div className={styles.content}>{children}</div>}
+          </motion.div>
         </div>
       )}
     </AnimatePresence>,

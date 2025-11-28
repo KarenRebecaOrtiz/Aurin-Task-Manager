@@ -1,47 +1,84 @@
 @import '@/app/styles/variables';
 
+// ============================================================================
+// UNIFIED CENTERING SYSTEM
+// ============================================================================
+// Todos los dialogs usan este sistema para garantizar centrado perfecto
+// NO usar position fixed + transform en otros lugares
+
 .dialogRoot {
+  // Container principal que cubre todo el viewport
   position: fixed;
   inset: 0;
   z-index: 9999;
-  overflow: hidden;
+  
+  // Flexbox para centrar el contenido
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  // Padding para evitar que el dialog toque los bordes
+  padding: 1rem;
+  
+  // Permitir scroll si el contenido es muy alto
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 // Backdrop 
 .backdrop {
+  // Capa de fondo separada, siempre detrás del panel
   position: fixed;
   inset: 0;
-  background: rgba(250, 250, 250, 0.4);
-  backdrop-filter: blur(2px);
+  z-index: -1;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  
+  // Light mode adjustment
+  @media (prefers-color-scheme: light) {
+    background: rgba(0, 0, 0, 0.3);
+  }
 }
 
-// Centered container
+// Centered container - wrapper adicional para el panel
 .container {
-  position: fixed;
-  inset: 0;
+  // NO usar position fixed aquí - hereda el centrado del dialogRoot
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  pointer-events: none;
+  width: 100%;
+  max-width: 100%;
+  min-height: min-content;
+  
+  // Asegurar que el container puede crecer pero el contenido está centrado
+  margin: auto;
 }
 
 // Panel (actual dialog box) - white/black only
 .panel {
+  // NO position fixed, NO transform - el centrado viene del padre
   position: relative;
+  width: 100%;
+  
+  // Styling
   background: white;
   border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  max-height: 90vh;
-  overflow: hidden;
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  // Layout interno
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 2rem);
+  overflow: hidden;
   padding: 1.5rem;
-  pointer-events: auto;
 
   @media (prefers-color-scheme: dark) {
     background: #0a0a0a;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -316,7 +353,9 @@
 
 // Variant colors for title (panel level)
 .variantDefault {
-  // Default styling, no changes
+  // Default styling - mantener estilos base del panel
+  // Esta clase existe para consistencia con otras variantes
+  background: inherit;
 }
 
 .panel.variantDanger {

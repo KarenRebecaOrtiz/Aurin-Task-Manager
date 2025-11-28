@@ -311,24 +311,29 @@ export const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
       <DialogPortal>
         <AnimatePresence>
           {open && (
-            <div className={styles.dialogRoot} role="dialog" aria-modal="true">
-              <DialogOverlay onClick={handleBackdropClick} />
+            <div 
+              className={styles.dialogRoot} 
+              role="dialog" 
+              aria-modal="true"
+              onClick={handleBackdropClick}
+            >
+              {/* Backdrop visual - solo para el efecto de blur/overlay */}
+              <DialogOverlay />
 
-              <div className={styles.container}>
-                <motion.div
-                  ref={ref}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  variants={panelVariants}
-                  transition={transitions.normal}
-                  className={`${styles.panel} ${sizeClasses[size]} ${className}`}
-                  onClick={handlePanelClick}
-                >
-                  {showCloseButton && <DialogClose />}
-                  {children}
-                </motion.div>
-              </div>
+              {/* Panel centrado - el onClick stopPropagation evita cerrar al hacer click dentro */}
+              <motion.div
+                ref={ref}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={panelVariants}
+                transition={transitions.normal}
+                className={`${styles.panel} ${sizeClasses[size]} ${className}`}
+                onClick={handlePanelClick}
+              >
+                {showCloseButton && <DialogClose />}
+                {children}
+              </motion.div>
             </div>
           )}
         </AnimatePresence>
