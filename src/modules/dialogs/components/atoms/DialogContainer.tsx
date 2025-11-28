@@ -2,7 +2,7 @@
 
 import { ReactNode, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import styles from '../../styles/unified.module.scss';
+import styles from '../../styles/Dialog.module.scss';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 

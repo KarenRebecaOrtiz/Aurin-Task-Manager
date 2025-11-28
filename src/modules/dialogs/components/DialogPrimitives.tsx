@@ -350,7 +350,7 @@ DialogContent.displayName = 'DialogContent';
 export const DialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(
   ({ children, className = '' }, ref) => {
     return (
-      <div ref={ref} className={`${styles.header} ${className}`}>
+      <div ref={ref} className={`${styles.dialogHeader} ${className}`}>
         {children}
       </div>
     );
@@ -360,12 +360,12 @@ export const DialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(
 DialogHeader.displayName = 'DialogHeader';
 
 /**
- * DialogBody - Cuerpo/contenido del dialog
+ * DialogBody - Cuerpo/contenido del dialog (área scrolleable)
  */
 export const DialogBody = forwardRef<HTMLDivElement, DialogBodyProps>(
   ({ children, className = '' }, ref) => {
     return (
-      <div ref={ref} className={`${styles.content} ${className}`}>
+      <div ref={ref} className={`${styles.dialogBody} ${className}`}>
         {children}
       </div>
     );
@@ -375,12 +375,12 @@ export const DialogBody = forwardRef<HTMLDivElement, DialogBodyProps>(
 DialogBody.displayName = 'DialogBody';
 
 /**
- * DialogFooter - Pie del dialog (acciones)
+ * DialogFooter - Pie del dialog (acciones, sticky al bottom)
  */
 export const DialogFooter = forwardRef<HTMLDivElement, DialogFooterProps>(
   ({ children, className = '' }, ref) => {
     return (
-      <div ref={ref} className={`${styles.actions} ${className}`}>
+      <div ref={ref} className={`${styles.dialogFooter} ${className}`}>
         {children}
       </div>
     );

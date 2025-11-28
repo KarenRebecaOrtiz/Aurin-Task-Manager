@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import styles from './ScrollableContent.module.scss';
+import styles from '../../styles/Dialog.module.scss';
 
 export interface ScrollableContentProps {
   children: ReactNode;

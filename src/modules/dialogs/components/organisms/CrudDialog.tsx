@@ -13,7 +13,7 @@ import { ScrollableContent, DialogFooter, DialogActions } from '../molecules';
 import { panelVariants } from '../../config/animations';
 import { CrudDialogProps } from '../../types/crud-dialog.types';
 import { cn } from '@/lib/utils';
-import styles from '../../styles/unified.module.scss';
+import styles from '../../styles/Dialog.module.scss';
 
 export function CrudDialog({
   isOpen,

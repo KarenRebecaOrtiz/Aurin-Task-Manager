@@ -1,88 +1,65 @@
 @import '@/app/styles/variables';
 
 // ============================================================================
-// UNIFIED CENTERING SYSTEM
+// UNIFIED DIALOG STYLES - Archivo único para todos los estilos de dialogs
+// Dark mode usa clase .dark del HTML (no prefers-color-scheme)
 // ============================================================================
-// Todos los dialogs usan este sistema para garantizar centrado perfecto
-// NO usar position fixed + transform en otros lugares
+
+// ============================================================================
+// ROOT & OVERLAY
+// ============================================================================
 
 .dialogRoot {
-  // Container principal que cubre todo el viewport
   position: fixed;
   inset: 0;
   z-index: 9999;
-  
-  // Flexbox para centrar el contenido
   display: flex;
   align-items: center;
   justify-content: center;
-  
-  // Padding para evitar que el dialog toque los bordes
   padding: 1rem;
-  
-  // Permitir scroll si el contenido es muy alto
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
-// Backdrop 
-.backdrop {
-  // Capa de fondo separada, siempre detrás del panel
+.backdrop,
+.dialogOverlay {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
-  
-  // Light mode adjustment
-  @media (prefers-color-scheme: light) {
-    background: rgba(0, 0, 0, 0.3);
-  }
+  animation: overlayShow 150ms ease-out;
 }
 
-// Centered container - wrapper adicional para el panel
-.container {
-  // NO usar position fixed aquí - hereda el centrado del dialogRoot
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 100%;
-  min-height: min-content;
-  
-  // Asegurar que el container puede crecer pero el contenido está centrado
-  margin: auto;
-}
+// ============================================================================
+// PANEL / DIALOG CONTENT (el modal box)
+// ============================================================================
 
-// Panel (actual dialog box) - white/black only
-.panel {
-  // NO position fixed, NO transform - el centrado viene del padre
+.panel,
+.dialogContent {
   position: relative;
   width: 100%;
-  
-  // Styling
-  background: white;
-  border-radius: 16px;
-  box-shadow: 
-    0 0 0 1px rgba(0, 0, 0, 0.05),
-    0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  
-  // Layout interno
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 2rem);
   overflow: hidden;
-  padding: 1.5rem;
-
-  @media (prefers-color-scheme: dark) {
-    background: #0a0a0a;
-    box-shadow: 
-      0 0 0 1px rgba(255, 255, 255, 0.1),
-      0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  }
+  background: white;
+  color: #18181b;
+  border-radius: 16px;
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  outline: none;
 }
 
-// Sizes
+// Panel con padding interno (usado por Dialog.tsx)
+.panel {
+  padding: 1.5rem;
+}
+
+// ============================================================================
+// SIZES
+// ============================================================================
+
 .sizeSm {
   width: 100%;
   max-width: 380px;
@@ -109,8 +86,102 @@
   height: 90vh;
 }
 
-// Close button
-.closeButton {
+// ============================================================================
+// INNER CONTAINER (usado por CrudDialog y otros)
+// ============================================================================
+
+.dialogInner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+// ============================================================================
+// HEADER
+// ============================================================================
+
+.dialogHeader {
+  flex-shrink: 0;
+  padding: 1.5rem 1.5rem 0 1.5rem;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #18181b;
+  margin: 0 0 0.5rem 0;
+  padding-right: 2rem;
+  letter-spacing: -0.025em;
+}
+
+.description {
+  font-size: 0.9375rem;
+  color: #52525b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+// ============================================================================
+// BODY / CONTENT (área scrolleable)
+// ============================================================================
+
+.content,
+.dialogBody,
+.scrollableContent {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.5rem;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+}
+
+// ============================================================================
+// FOOTER (sticky al bottom)
+// ============================================================================
+
+.dialogFooter {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-top: 1px solid #e4e4e7;
+  
+  &.sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08);
+  }
+}
+
+// ============================================================================
+// CLOSE BUTTON
+// ============================================================================
+
+.closeButton,
+.dialogClose {
   position: absolute;
   top: 1rem;
   right: 1rem;
@@ -129,86 +200,13 @@
   &:hover {
     background: #f4f4f5;
     color: #18181b;
-
-    @media (prefers-color-scheme: dark) {
-      background: #27272a;
-      color: #fafafa;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    color: #a1a1aa;
   }
 }
 
-// Title
-.title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #18181b;
-  margin: 0 0 0.5rem 0;
-  padding-right: 2rem;
-  letter-spacing: -0.025em;
+// ============================================================================
+// BUTTONS
+// ============================================================================
 
-  @media (prefers-color-scheme: dark) {
-    color: #fafafa;
-  }
-}
-
-// Description
-.description {
-  font-size: 0.9375rem;
-  color: #52525b;
-  line-height: 1.6;
-  margin: 0 0 1.25rem 0;
-
-  @media (prefers-color-scheme: dark) {
-    color: #a1a1aa;
-  }
-}
-
-// Content area
-.content {
-  flex: 1;
-  overflow-y: auto;
-}
-
-// Confirm dialog specific
-.confirmContent {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-// Alert dialog specific
-.alertContent {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-// Form dialog specific
-.formContent {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.formBody {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-// Actions (buttons container)
-.actions {
-  display: flex;
-  gap: 0.625rem;
-  justify-content: flex-end;
-  margin-top: 0.25rem;
-}
-
-// Buttons - simplified and smooth
 .cancelButton {
   padding: 0.625rem 1rem;
   border-radius: 8px;
@@ -233,17 +231,6 @@
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    background: #18181b;
-    border-color: #3f3f46;
-    color: #d4d4d8;
-
-    &:hover:not(:disabled) {
-      background: #27272a;
-      border-color: #52525b;
-    }
   }
 }
 
@@ -271,8 +258,181 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
 
-  @media (prefers-color-scheme: dark) {
+// ============================================================================
+// VARIANT COLORS
+// ============================================================================
+
+.variantDanger {
+  background: #dc2626;
+  &:hover:not(:disabled) { background: #b91c1c; }
+}
+
+.variantWarning {
+  background: #d97706;
+  &:hover:not(:disabled) { background: #b45309; }
+}
+
+.variantSuccess {
+  background: #16a34a;
+  &:hover:not(:disabled) { background: #15803d; }
+}
+
+.variantInfo {
+  background: #2563eb;
+  &:hover:not(:disabled) { background: #1d4ed8; }
+}
+
+.variantDefault {
+  background: inherit;
+}
+
+.panel.variantDanger .title { color: #dc2626; }
+.panel.variantWarning .title { color: #d97706; }
+.panel.variantSuccess .title { color: #16a34a; }
+.panel.variantInfo .title { color: #2563eb; }
+
+// ============================================================================
+// CONTENT VARIANTS
+// ============================================================================
+
+.confirmContent,
+.alertContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.625rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
+
+@keyframes overlayShow {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes contentShow {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+// ============================================================================
+// RESPONSIVE
+// ============================================================================
+
+@media (max-width: 768px) {
+  .dialogRoot {
+    padding: 0.5rem;
+  }
+  
+  .panel,
+  .dialogContent {
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100vh - 1rem);
+    border-radius: 12px;
+  }
+  
+  .dialogHeader {
+    padding: 1rem 1rem 0 1rem;
+  }
+  
+  .content,
+  .dialogBody,
+  .scrollableContent {
+    padding: 0.75rem 1rem;
+  }
+  
+  .dialogFooter {
+    padding: 0.75rem 1rem;
+  }
+}
+
+// ============================================================================
+// DARK MODE - Usando clase .dark del HTML
+// ============================================================================
+
+:global(.dark) {
+  .panel,
+  .dialogContent {
+    background: #18181b;
+    color: #fafafa;
+    box-shadow: 
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+  
+  .title {
+    color: #fafafa;
+  }
+  
+  .description {
+    color: #a1a1aa;
+  }
+  
+  .content,
+  .dialogBody,
+  .scrollableContent {
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  }
+  
+  .dialogFooter {
+    background: #18181b;
+    border-top-color: rgba(255, 255, 255, 0.1);
+    
+    &.sticky {
+      box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.3);
+    }
+  }
+  
+  .closeButton,
+  .dialogClose {
+    color: #a1a1aa;
+    
+    &:hover {
+      background: #27272a;
+      color: #fafafa;
+    }
+  }
+  
+  .cancelButton {
+    background: #27272a;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+
+    &:hover:not(:disabled) {
+      background: #3f3f46;
+      border-color: #52525b;
+    }
+  }
+  
+  .confirmButton {
     background: #fafafa;
     color: #18181b;
 
@@ -280,104 +440,11 @@
       background: #e4e4e7;
     }
   }
-}
-
-// Variant colors for confirm button
-.variantDanger {
-  background: #dc2626;
-
-  &:hover:not(:disabled) {
-    background: #b91c1c;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    background: #dc2626;
+  
+  .variantDanger,
+  .variantWarning,
+  .variantSuccess,
+  .variantInfo {
     color: white;
-
-    &:hover:not(:disabled) {
-      background: #b91c1c;
-    }
-  }
-}
-
-.variantWarning {
-  background: #d97706;
-
-  &:hover:not(:disabled) {
-    background: #b45309;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    background: #d97706;
-    color: white;
-
-    &:hover:not(:disabled) {
-      background: #b45309;
-    }
-  }
-}
-
-.variantSuccess {
-  background: #16a34a;
-
-  &:hover:not(:disabled) {
-    background: #15803d;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    background: #16a34a;
-    color: white;
-
-    &:hover:not(:disabled) {
-      background: #15803d;
-    }
-  }
-}
-
-.variantInfo {
-  background: #2563eb;
-
-  &:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    background: #2563eb;
-    color: white;
-
-    &:hover:not(:disabled) {
-      background: #1d4ed8;
-    }
-  }
-}
-
-// Variant colors for title (panel level)
-.variantDefault {
-  // Default styling - mantener estilos base del panel
-  // Esta clase existe para consistencia con otras variantes
-  background: inherit;
-}
-
-.panel.variantDanger {
-  .title {
-    color: #dc2626;
-  }
-}
-
-.panel.variantWarning {
-  .title {
-    color: #d97706;
-  }
-}
-
-.panel.variantSuccess {
-  .title {
-    color: #16a34a;
-  }
-}
-
-.panel.variantInfo {
-  .title {
-    color: #2563eb;
   }
 }
