@@ -24,12 +24,6 @@
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 
-  /* ——— Sombras neumorfistas ——— */
-  box-shadow:
-    -2px -2px 4px rgba(255, 255, 255, 0.8),
-    2px 2px 4px rgba(0, 0, 0, 0.05),
-    inset -1px -1px 2px rgba(255, 255, 255, 0.4),
-    inset 1px 1px 2px rgba(209, 217, 230, 0.2);
 
   /* ——— Transiciones ——— */
   transition:
@@ -44,11 +38,6 @@
     transform: translateY(-1px) scale(1.05);
     background: rgba(241, 245, 249, 0.85);
     border-color: rgba(255, 255, 255, 0.4);
-    box-shadow:
-      -4px -4px 8px rgba(255, 255, 255, 0.9),
-      4px 4px 8px rgba(0, 0, 0, 0.08),
-      inset -2px -2px 4px rgba(255, 255, 255, 0.5),
-      inset 2px 2px 4px rgba(209, 217, 230, 0.3);
   }
 
   /* ——— Active: Presionado ——— */
@@ -56,22 +45,12 @@
     transform: scale(0.95);
     background: rgba(241, 245, 249, 0.6);
     border-color: rgba(255, 255, 255, 0.15);
-    box-shadow:
-      inset -1px -1px 3px rgba(255, 255, 255, 0.4),
-      inset 1px 1px 3px rgba(209, 217, 230, 0.2),
-      -1px -1px 3px rgba(255, 255, 255, 0.8),
-      1px 1px 3px rgba(0, 0, 0, 0.04);
   }
 
   /* ——— Modo oscuro ——— */
   :global(.dark) & {
     background: rgba(39, 39, 42, 0.7);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      -2px -2px 4px rgba(255, 255, 255, 0.03),
-      2px 2px 4px rgba(0, 0, 0, 0.4),
-      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
-      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
   
     img[src*=".svg"] {
       filter: invert(1) grayscale(1) brightness(1.5);
@@ -80,21 +59,11 @@
     &:hover {
       background: rgba(39, 39, 42, 0.85);
       border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:
-        -4px -4px 8px rgba(255, 255, 255, 0.04),
-        4px 4px 8px rgba(0, 0, 0, 0.5),
-        inset -2px -2px 4px rgba(255, 255, 255, 0.03),
-        inset 2px 2px 4px rgba(0, 0, 0, 0.4);
     }
 
     &:active {
       background: rgba(39, 39, 42, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      box-shadow:
-        inset -1px -1px 3px rgba(0, 0, 0, 0.35),
-        inset 1px 1px 3px rgba(255, 255, 255, 0.02),
-        -1px -1px 3px rgba(255, 255, 255, 0.03),
-        1px 1px 3px rgba(0, 0, 0, 0.4);
     }
     }
   }
@@ -342,3 +311,148 @@
     }
     }
   }
+
+// ==============================================================
+//  MOBILE DRAWER STYLES
+// ==============================================================
+
+.drawerContent {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg $spacing-xl;
+  border-bottom: 1px solid rgba(209, 217, 230, 0.3);
+
+  :global(body.dark) & {
+    border-bottom-color: #3f3f46;
+  }
+}
+
+.drawerTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin: 0;
+  text-align: center;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md 0;
+}
+
+.drawerItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  min-height: 56px;
+  padding: $spacing-md $spacing-xl;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+
+  &:hover {
+    background: rgba(241, 245, 249, 0.7);
+  }
+
+  &:active {
+    background: rgba(209, 217, 230, 0.5);
+    transform: scale(0.99);
+  }
+
+  :global(body.dark) & {
+    &:hover {
+      background: #3f3f46;
+    }
+
+    &:active {
+      background: #52525b;
+    }
+  }
+}
+
+.drawerIcon {
+  width: 24px;
+  height: 24px;
+  color: $color-text-primary;
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.drawerText {
+  font-size: 1rem;
+  font-weight: 500;
+  color: $color-text-primary;
+  flex: 1;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.drawerSeparator {
+  width: calc(100% - 3rem);
+  height: 1px;
+  background: rgba(209, 217, 230, 0.5);
+  margin: $spacing-sm $spacing-xl;
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.drawerDeleteItem {
+  color: #ef4444;
+
+  .drawerIcon {
+    color: #ef4444;
+  }
+
+  .drawerText {
+    color: #ef4444;
+  }
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  &:active {
+    background: rgba(239, 68, 68, 0.2);
+  }
+
+  :global(body.dark) & {
+    color: #f87171;
+
+    .drawerIcon {
+      color: #f87171;
+    }
+
+    .drawerText {
+      color: #f87171;
+    }
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    &:active {
+      background: rgba(239, 68, 68, 0.3);
+    }
+  }
+}

@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
-import { ChevronDown, Clock } from "lucide-react";
+import { ChevronDown, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserAvatar } from "@/modules/shared/components/atoms/Avatar/UserAvatar";
 import { ClientAvatar } from "@/modules/shared/components/atoms/Avatar/ClientAvatar";
 import { TODO_ANIMATIONS } from "@/modules/header/components/ui/ToDoDynamic/constants/animation.constants";
+import { StatusDropdown } from "../molecules/StatusDropdown";
+import { TimeBreakdown } from "../molecules/TimeBreakdown";
 import styles from "../../styles/ChatHeader.module.scss";
 import type { Task, Message } from "../../types";
 
@@ -26,7 +28,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const formatDateRange = (start: string | null, end: string | null) => {
-    if (!start || !end) return "Sin fechas establecidas";
+    if (!start || !end) return null;
     const startDate = new Date(start).toLocaleDateString("es-ES", {
       month: "short",
       day: "numeric",
@@ -36,26 +38,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       day: "numeric",
     });
     return `${startDate} - ${endDate}`;
-  };
-
-  const getStatusClass = (status: string) => {
-    const statusMap: Record<string, string> = {
-      pending: styles.pending,
-      "in-progress": styles.inProgress,
-      completed: styles.completed,
-      "on-hold": styles.onHold,
-    };
-    return statusMap[status] || styles.pending;
-  };
-
-  const formatStatus = (status: string) => {
-    const statusTranslations: Record<string, string> = {
-      "pending": "Pendiente",
-      "in-progress": "En Progreso",
-      "completed": "Completado",
-      "on-hold": "En Espera",
-    };
-    return statusTranslations[status] || status;
   };
 
   // Obtener usuarios del equipo
@@ -99,6 +81,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           size="lg"
           className="mr-3 flex-shrink-0"
           client={{
+            id: task.clientId,
             name: clientName,
             imageUrl: clientImageUrl
           }}
@@ -139,7 +122,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
             >
-              {/* Status Card */}
+              {/* Status Card - Now with Dropdown */}
               <motion.div 
                 className={styles.detailCard}
                 initial={{ opacity: 0, x: -20 }}
@@ -147,14 +130,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 transition={{ delay: 0.15, duration: 0.3 }}
               >
                 <div className={styles.detailLabel}>Estado</div>
-                <button
-                  className={`${styles.statusBadge} ${getStatusClass(task.status)}`}
-                >
-                  {formatStatus(task.status)}
-                </button>
+                <StatusDropdown
+                  taskId={task.id}
+                  currentStatus={task.status}
+                />
               </motion.div>
 
-              {/* Team Card */}
+              {/* Team Card - Improved Avatar Group */}
               <motion.div 
                 className={styles.detailCard}
                 initial={{ opacity: 0, x: -20 }}
@@ -162,48 +144,40 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 transition={{ delay: 0.2, duration: 0.3 }}
               >
                 <div className={styles.detailLabel}>Equipo</div>
-                <button className={styles.teamButton}>
+                <div className={styles.teamContainer}>
                   <div className={styles.avatarGroup}>
-                    {teamMembers.slice(0, 6).map((member, index) => (
+                    {teamMembers.slice(0, 5).map((member, index) => (
                       <motion.div
                         key={member.id}
+                        className={styles.avatarWrapper}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.25 + (index * 0.05), duration: 0.3 }}
+                        transition={{ delay: 0.25 + (index * 0.04), duration: 0.25 }}
                       >
                         <UserAvatar
                           userId={member.id}
                           imageUrl={member.imageUrl}
                           userName={member.fullName}
                           size="xs"
+                          className={styles.miniAvatar}
                         />
                       </motion.div>
                     ))}
-                    {teamMembers.length > 6 && (
+                    {teamMembers.length > 5 && (
                       <motion.div
+                        className={styles.avatarOverflow}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.25 + (6 * 0.05), duration: 0.3 }}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: "50%",
-                          background: "#e5e7eb",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 10,
-                          fontWeight: 600,
-                        }}
+                        transition={{ delay: 0.25 + (5 * 0.04), duration: 0.25 }}
                       >
-                        +{teamMembers.length - 6}
+                        +{teamMembers.length - 5}
                       </motion.div>
                     )}
                   </div>
-                </button>
+                </div>
               </motion.div>
 
-              {/* Dates Card */}
+              {/* Dates Card - Now with White Pill */}
               <motion.div 
                 className={styles.detailCard}
                 initial={{ opacity: 0, x: -20 }}
@@ -211,12 +185,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 transition={{ delay: 0.25, duration: 0.3 }}
               >
                 <div className={styles.detailLabel}>Fechas</div>
-                <div className={styles.detailValue}>
-                  {formatDateRange(task.startDate, task.endDate)}
+                <div className={styles.datePill}>
+                  <Calendar size={14} className={styles.dateIcon} />
+                  {formatDateRange(task.startDate, task.endDate) || (
+                    <span className={styles.noDate}>Sin fechas</span>
+                  )}
                 </div>
               </motion.div>
 
-              {/* Time Registered Card */}
+              {/* Time Registered Card - Now with Breakdown Dropdown */}
               <motion.div 
                 className={styles.detailCard}
                 initial={{ opacity: 0, x: -20 }}
@@ -224,10 +201,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 transition={{ delay: 0.3, duration: 0.3 }}
               >
                 <div className={styles.detailLabel}>Tiempo Registrado</div>
-                <div className={`${styles.detailValue} ${styles.timeLogged}`}>
-                  <Clock size={16} />
-                  <span>{totalHours} {totalHours !== 1 ? 'horas' : 'hora'}</span>
-                </div>
+                <TimeBreakdown
+                  totalHours={totalHours}
+                  memberHours={task.memberHours}
+                  teamMembers={teamMembers}
+                />
               </motion.div>
             </motion.div>
           </motion.div>

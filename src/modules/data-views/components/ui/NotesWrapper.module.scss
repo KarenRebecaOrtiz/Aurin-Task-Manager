@@ -10,10 +10,7 @@
     border-bottom-color: var(--color-border-dark);
   }
   
-  // Ocultar en viewports menores a 600px
-  @media (max-width: 599px) {
-    display: none;
-  }
+
 }
 
 .notesTray {

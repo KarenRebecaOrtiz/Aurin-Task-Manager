@@ -7,6 +7,7 @@ import { twMerge } from 'tailwind-merge';
 import { List } from '@/components/animate-ui/icons/list';
 import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
+import { MobileViewSwitcher } from './MobileViewSwitcher';
 import styles from './ViewSwitcher.module.scss';
 
 const ViewSwitcherContext = createContext<{
@@ -137,33 +138,42 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewC
   const activeView = getCurrentView();
 
   return (
-    <ViewSwitcherContext.Provider value={contextValue}>
-      <div className={styles.viewSwitcher}>
-        <div ref={containerRef} className={styles.switchContainer}>
-          <Control
-            buttonRef={tableButtonRef}
-            defaultChecked={activeView === 'table'}
-            icon={<List animateOnHover />}
-            value="table"
-            label="Tabla"
-          />
-          <Control
-            buttonRef={kanbanButtonRef}
-            defaultChecked={activeView === 'kanban'}
-            icon={<LayoutDashboard animateOnHover />}
-            value="kanban"
-            label="Kanban"
-          />
-          <Control
-            buttonRef={archiveButtonRef}
-            defaultChecked={activeView === 'archive'}
-            icon={<Unplug animateOnHover />}
-            value="archive"
-            label="Archivo Muerto"
-          />
+    <>
+      {/* Desktop View Switcher - Hidden on mobile */}
+      <ViewSwitcherContext.Provider value={contextValue}>
+        <div className={styles.viewSwitcher}>
+          <div ref={containerRef} className={styles.switchContainer}>
+            <Control
+              buttonRef={tableButtonRef}
+              defaultChecked={activeView === 'table'}
+              icon={<List animateOnHover />}
+              value="table"
+              label="Tabla"
+            />
+            <Control
+              buttonRef={kanbanButtonRef}
+              defaultChecked={activeView === 'kanban'}
+              icon={<LayoutDashboard animateOnHover />}
+              value="kanban"
+              label="Kanban"
+            />
+            <Control
+              buttonRef={archiveButtonRef}
+              defaultChecked={activeView === 'archive'}
+              icon={<Unplug animateOnHover />}
+              value="archive"
+              label="Archivo Muerto"
+            />
+          </div>
         </div>
-      </div>
-    </ViewSwitcherContext.Provider>
+      </ViewSwitcherContext.Provider>
+
+      {/* Mobile View Switcher - Only shown on mobile */}
+      <MobileViewSwitcher
+        currentView={currentView}
+        onViewChange={onViewChange}
+      />
+    </>
   );
 };
 

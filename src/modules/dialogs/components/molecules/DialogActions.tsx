@@ -40,8 +40,8 @@ export function DialogActions({
         <Button
           type="button"
           onClick={onCancel}
-          intent="ghost"
-          size="md"
+          intent="secondary"
+          size="lg"
           disabled={cancelDisabled || isLoading}
         >
           {cancelText}
@@ -52,7 +52,7 @@ export function DialogActions({
           type={typeof onSubmit === 'function' ? "button" : "submit"}
           onClick={typeof onSubmit === 'function' ? onSubmit : undefined}
           intent={submitVariant}
-          size="md"
+          size="lg"
           isLoading={isLoading}
           disabled={submitDisabled}
           loadingText="Procesando..."
@@ -64,7 +64,7 @@ export function DialogActions({
         <Button
           type="submit"
           intent={submitVariant}
-          size="md"
+          size="lg"
           isLoading={isLoading}
           disabled={submitDisabled}
           loadingText="Procesando..."

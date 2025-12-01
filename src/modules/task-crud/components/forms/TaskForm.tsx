@@ -200,6 +200,7 @@ export function TaskForm({
               value={formData.name}
               onChange={handleNameChange}
               disabled={isViewMode}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -214,6 +215,7 @@ export function TaskForm({
               value={formData.description}
               onChange={handleDescriptionChange}
               disabled={isViewMode}
+              variant="no-icon"
             />
           </motion.div>
         </FormSection>
@@ -237,6 +239,7 @@ export function TaskForm({
               onCreateNew={onCreateClient}
               createNewLabel="Crear nueva cuenta"
               disabled={isViewMode}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -255,6 +258,7 @@ export function TaskForm({
               emptyMessage="No hay carpetas disponibles"
               disabled={isViewMode || !formData.clientId || projectOptions.length === 0}
               fieldType="project"
+              variant="no-icon"
             />
           </motion.div>
 
@@ -275,6 +279,7 @@ export function TaskForm({
               multiple={true}
               fieldType="user"
               disabled={isViewMode}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -295,6 +300,7 @@ export function TaskForm({
               multiple={true}
               fieldType="user"
               disabled={isViewMode}
+              variant="no-icon"
             />
           </motion.div>
         </FormSection>
@@ -307,6 +313,7 @@ export function TaskForm({
               onChange={handleStartDateChange}
               placeholder="Selecciona fecha de inicio"
               disabled={isViewMode}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -318,6 +325,7 @@ export function TaskForm({
               placeholder="Selecciona fecha de fin"
               minDate={formData.startDate}
               disabled={isViewMode}
+              variant="no-icon"
             />
           </motion.div>
         </FormSection>

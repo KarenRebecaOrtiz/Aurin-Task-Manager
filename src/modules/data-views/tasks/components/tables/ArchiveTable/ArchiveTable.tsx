@@ -350,14 +350,16 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       {
         key: 'clientId',
         label: 'Cuenta',
-        width: isMobile ? '0%' : '10%',
-        mobileVisible: false,
+        width: isMobile ? '30%' : '10%',
+        mobileVisible: true,
+        mobileWidth: '30%',
       },
       {
         key: 'name',
         label: 'Tarea',
-        width: isMobile ? '70%' : '25%', 
+        width: isMobile ? '40%' : '25%', 
         mobileVisible: true,
+        mobileWidth: '40%',
       },
       {
         key: 'assignedTo',
@@ -375,7 +377,8 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         key: 'action',
         label: 'Acciones',
         width: isMobile ? '30%' : '20%',
-        mobileVisible: isMobile, // Mostrar acciones en mobile
+        mobileVisible: true,
+        mobileWidth: '30%',
       },
     ];
 

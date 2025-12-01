@@ -1,0 +1,158 @@
+// Mobile View Switcher - Pill flotante en bottom
+.mobileNav {
+  display: none; // Hidden by default, shown only in mobile viewport
+
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    width: calc(100% - 32px);
+    max-width: 420px;
+  }
+}
+
+.navContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 4px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 24px;
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Dark mode
+  :global(body.dark) & {
+    background: rgba(39, 39, 42, 0.85);
+    border-color: rgba(63, 63, 70, 0.8);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.navButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  min-width: 64px;
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #6b7280;
+  fill: #6b7280;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+
+  // Tap highlight
+  -webkit-tap-highlight-color: transparent;
+
+  // Hover effect
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: #1f2937;
+    fill: #1f2937;
+
+    :global(body.dark) & {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+      fill: rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  // Active press effect
+  &:active {
+    transform: scale(0.95);
+  }
+
+  // Dark mode
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+    fill: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.navButtonActive {
+  background: rgba(0, 0, 0, 0.06);
+  color: #09090b;
+  fill: #09090b;
+  font-weight: 600;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #d0df00;
+    border-radius: 2px;
+  }
+
+  // Dark mode
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.95);
+    fill: rgba(255, 255, 255, 0.95);
+
+    &::before {
+      background: #d0df00;
+    }
+  }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.08);
+
+    :global(body.dark) & {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  letter-spacing: 0.01em;
+}
+
+// Safe area inset for devices with bottom notches (iPhone X, etc.)
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobileNav {
+    @media (max-width: 768px) {
+      bottom: calc(20px + env(safe-area-inset-bottom));
+    }
+  }
+}

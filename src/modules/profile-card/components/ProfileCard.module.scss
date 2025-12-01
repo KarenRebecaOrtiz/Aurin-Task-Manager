@@ -122,10 +122,6 @@
   }
 }
 
-.contentSection {
-  padding: 0 32px 32px 32px;
-  width: 100%;
-}
 
 .headerSection {
   display: flex;
@@ -291,8 +287,8 @@
   border: 1px solid $color-border-subtle;
 
   :global(body.dark) & {
-    background: rgb(26 26 26);
-    border-color: rgb(26 26 26);
+    background: #18181b;
+    border-color: #18181b;
   }
 }
 

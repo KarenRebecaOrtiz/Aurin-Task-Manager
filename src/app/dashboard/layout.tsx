@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from '@/modules/header';
 import { Footer } from '@/modules/footer';
 import { OptimizedMarquee } from '@/modules/advices';
-import { ChatSidebar } from '@/modules/chat';
+import { ResponsiveChatSidebar } from '@/modules/chat';
 import { ProfileCard } from '@/modules/profile-card';
 import PlatformCompatibility from '@/shared/components/system/PlatformCompatibility';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -119,7 +119,7 @@ const IndependentChatSidebarRenderer = () => {
   }
 
   return (
-    <ChatSidebar
+    <ResponsiveChatSidebar
       key="chat-sidebar"
       isOpen={true}
       onClose={closeChatSidebar}

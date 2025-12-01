@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import styles from './AvatarRing.module.scss';
 
 interface AvatarRingProps {
   src: string;
@@ -18,39 +19,26 @@ export function AvatarRing({
   size = 'md',
   className,
 }: AvatarRingProps) {
-  const sizeClasses = {
-    sm: 'h-11 w-11',
-    md: 'h-16 w-16',
-    lg: 'h-20 w-20',
-  };
-
-  const ringClasses = {
-    sm: 'p-1',
-    md: 'p-1.5',
-    lg: 'p-2',
-  };
-
   return (
     <div
       className={cn(
-        'relative flex items-center justify-center rounded-full',
-        ringClasses[size],
-        hasGradient && 'bg-[#d7df75]',
-        !hasGradient && 'bg-transparent',
+        styles.container,
+        styles[size],
+        hasGradient ? styles.hasGradient : styles.noGradient,
         className
       )}
     >
-      <div className={cn('relative rounded-full bg-background', sizeClasses[size])}>
+      <div className={cn(styles.avatarWrapper, styles[size])}>
         {src ? (
           <Image
             src={src}
             alt={alt}
             fill
-            className="rounded-full object-cover"
+            className={styles.image}
             sizes={size === 'sm' ? '32px' : size === 'md' ? '48px' : '64px'}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+          <div className={styles.fallback}>
             {alt.charAt(0).toUpperCase()}
           </div>
         )}

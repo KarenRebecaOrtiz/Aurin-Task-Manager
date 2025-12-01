@@ -1,0 +1,60 @@
+// DialogHeader.module.scss
+// Estilos para el header de diálogos
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; // gap-2
+  padding: 1.25rem 0 1.25rem 0 ;
+  
+
+  
+  // Alineación
+  &.alignLeft {
+    text-align: left;
+    
+    // En mobile (drawers), centrar siempre
+    @media (max-width: 767px) {
+      text-align: center;
+    }
+  }
+  
+  &.alignCenter {
+    text-align: center;
+  }
+}
+
+.title {
+  font-size: 1.8rem; // text-lg
+  line-height: 1; // leading-none
+  font-weight: 600; // font-semibold
+  color: var(--foreground, hsl(var(--foreground)));
+}
+
+.description {
+  font-size: 1rem; // text-sm
+  color: var(--muted-foreground, hsl(var(--muted-foreground)));
+  line-height: 1.5;
+  
+  // En mobile (drawers), ocultar descripción
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+// Dark mode
+:global(.dark) {
+  .header {
+    &.bordered {
+      border-bottom-color: var(--border-dark, hsl(var(--border)));
+    }
+  }
+
+  .title {
+    color: var(--foreground-dark, hsl(var(--foreground)));
+  }
+
+  .description {
+    color: var(--muted-foreground-dark, hsl(var(--muted-foreground)));
+  }
+}

@@ -15,7 +15,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       </div>
       <div className={styles.frame14}>
         <H2 className={styles.welcome}>
-          Te damos la bienvenida de nuevo,{' '}
+          <span className={styles.welcomeText}>Te damos la bienvenida de nuevo,{' '}</span>
           <span className={styles.userNameShimmer} suppressHydrationWarning>
             {userName}
           </span>

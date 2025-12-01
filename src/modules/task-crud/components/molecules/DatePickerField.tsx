@@ -3,7 +3,7 @@
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarIcon } from 'lucide-react'
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/buttons"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -24,7 +24,7 @@ export function DatePickerField({ date, onDateChange, placeholder = "Selecciona 
     <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          intent="secondary"
           className={cn(
             "w-full justify-start text-left font-normal",
             !date && "text-muted-foreground",

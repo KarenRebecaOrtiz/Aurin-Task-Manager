@@ -8,8 +8,8 @@
 
 import { motion } from 'framer-motion';
 import { useClientTasks } from '../hooks/data/useClientTasks';
-import { Task } from '@/types';
 import { StatusCell, PriorityCell } from '@/modules/data-views/components/shared/cells';
+import styles from './ClientTasksTable.module.scss';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -26,10 +26,10 @@ export function ClientTasksTable({ clientId, isAdmin }: ClientTasksTableProps) {
 
   if (isLoading) {
     return (
-      <motion.div variants={fadeInUp} className="md:col-span-2">
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-sm text-gray-500">Cargando tareas...</span>
+      <motion.div variants={fadeInUp} className={styles.container}>
+        <div className={styles.loadingState}>
+          <div className={styles.spinner} />
+          <span className={styles.loadingText}>Cargando tareas...</span>
         </div>
       </motion.div>
     );
@@ -37,29 +37,29 @@ export function ClientTasksTable({ clientId, isAdmin }: ClientTasksTableProps) {
 
   if (error) {
     return (
-      <motion.div variants={fadeInUp} className="md:col-span-2">
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
+      <motion.div variants={fadeInUp} className={styles.container}>
+        <div className={styles.errorState}>
+          <p className={styles.errorText}>{error}</p>
         </div>
       </motion.div>
     );
   }
 
   return (
-    <motion.div variants={fadeInUp} className="md:col-span-2">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">
+    <motion.div variants={fadeInUp} className={styles.container}>
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle}>
           Tareas Relacionadas
         </h3>
-        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+        <span className={styles.taskCount}>
           {totalTasks} {totalTasks === 1 ? 'tarea' : 'tareas'}
         </span>
       </div>
 
       {tasks.length === 0 ? (
-        <div className="p-8 bg-gray-50 border border-gray-200 rounded-lg text-center">
+        <div className={styles.emptyState}>
           <svg
-            className="mx-auto h-12 w-12 text-gray-400 mb-3"
+            className={styles.emptyIcon}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -71,62 +71,46 @@ export function ClientTasksTable({ clientId, isAdmin }: ClientTasksTableProps) {
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
             />
           </svg>
-          <p className="text-sm text-gray-600 font-medium">No hay tareas</p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className={styles.emptyTitle}>No hay tareas</p>
+          <p className={styles.emptySubtitle}>
             {isAdmin
               ? 'Este cliente no tiene tareas asignadas'
               : 'No tienes tareas asignadas para este cliente'}
           </p>
         </div>
       ) : (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0 z-10">
+        <div className={styles.tableWrapper}>
+          <div className={styles.tableScroll}>
+            <table className={styles.table}>
+              <thead className={styles.thead}>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Tarea
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Proyecto
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Prioridad
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Fecha Límite
-                  </th>
+                  <th className={styles.th}>Tarea</th>
+                  <th className={styles.th}>Proyecto</th>
+                  <th className={styles.th}>Estado</th>
+                  <th className={styles.th}>Prioridad</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className={styles.tbody}>
                 {tasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-900">{task.name}</span>
+                  <tr key={task.id} className={styles.row}>
+                    <td className={styles.td}>
+                      <div className={styles.taskInfo}>
+                        <span className={styles.taskName}>{task.name}</span>
                         {task.description && (
-                          <span className="text-xs text-gray-500 truncate max-w-xs">
+                          <span className={styles.taskDescription}>
                             {task.description}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-gray-700">{task.project}</span>
+                    <td className={styles.td}>
+                      <span className={styles.projectName}>{task.project}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={styles.td}>
                       <StatusCell status={task.status} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={styles.td}>
                       <PriorityCell priority={task.priority} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-gray-600">
-                        {task.endDate ? formatDate(task.endDate) : '-'}
-                      </span>
                     </td>
                   </tr>
                 ))}
@@ -137,20 +121,4 @@ export function ClientTasksTable({ clientId, isAdmin }: ClientTasksTableProps) {
       )}
     </motion.div>
   );
-}
-
-// Helper function for date formatting
-function formatDate(dateString: string | null): string {
-  if (!dateString) return '-';
-
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return '-';
-  }
 }

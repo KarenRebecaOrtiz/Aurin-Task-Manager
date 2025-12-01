@@ -1,0 +1,179 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// 🔮 SETTINGS DRAWER - MOBILE SETTINGS MENU
+// ==============================================================
+
+.drawerContent {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: $spacing-lg $spacing-xl;
+  border-bottom: 1px solid rgba(209, 217, 230, 0.3);
+
+  :global(body.dark) & {
+    border-bottom-color: #3f3f46;
+  }
+}
+
+.drawerTitle {
+  @include typography($text-lg, $font-weight-semibold, $color-text-primary);
+  margin: 0;
+  text-align: center;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.closeButton {
+  @include flex-center;
+  position: absolute;
+  right: $spacing-xl;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-full;
+  border: none;
+  background: rgba(241, 245, 249, 0.7);
+  color: $color-text-primary;
+  cursor: pointer;
+  transition: $transition-base;
+
+  &:hover {
+    background: $zinc-200;
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  :global(body.dark) & {
+    background: #3f3f46;
+    color: rgba(255, 255, 255, 0.9);
+
+    &:hover {
+      background: #52525b;
+    }
+  }
+}
+
+// ==============================================================
+// 🔮 DRAWER BODY
+// ==============================================================
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-md 0;
+}
+
+.menuSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+// ==============================================================
+// 🔮 MENU ITEMS
+// ==============================================================
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  min-height: 56px;
+  padding: $spacing-md $spacing-xl;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: $transition-base;
+  text-align: left;
+
+  &:hover {
+    background: $zinc-100;
+  }
+
+  &:active {
+    background: $zinc-200;
+    transform: scale(0.99);
+  }
+
+  :global(body.dark) & {
+    &:hover {
+      background: #3f3f46;
+    }
+
+    &:active {
+      background: #52525b;
+    }
+  }
+}
+
+.logoutItem {
+  color: $color-error;
+
+  .menuIcon {
+    color: $color-error;
+  }
+
+  .menuText {
+    color: $color-error;
+  }
+
+  :global(body.dark) & {
+    color: #f87171;
+
+    .menuIcon {
+      color: #f87171;
+    }
+
+    .menuText {
+      color: #f87171;
+    }
+  }
+}
+
+.menuIcon {
+  width: 24px;
+  height: 24px;
+  color: $color-text-primary;
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.menuText {
+  @include typography($text-base, $font-weight-medium, $color-text-primary);
+  flex: 1;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+// ==============================================================
+// 🔮 SEPARATOR
+// ==============================================================
+
+.separator {
+  width: calc(100% - #{$spacing-xl * 2});
+  height: 1px;
+  background: rgba(209, 217, 230, 0.5);
+  margin: $spacing-sm $spacing-xl;
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}

@@ -1,0 +1,22 @@
+// NoteUserItem Styles
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem; // gap-2
+  min-width: 100px;
+}
+
+.username {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem; // text-base
+  font-weight: 500; // font-medium
+  color: #ffffff; // text-white (for dark backgrounds like the tray)
+
+  :global(.dark) & {
+    color: #fafafa; // zinc-50
+  }
+}

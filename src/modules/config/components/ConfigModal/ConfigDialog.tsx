@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
-import { CrudDialog } from "@/modules/dialogs"
+import { CrudDialog, DialogHeader } from "@/modules/dialogs"
 import { useProfileForm } from "../../hooks"
 import { useConfigPageStore } from "../../stores"
 import { ConfigForm } from "./ConfigForm"
@@ -53,24 +53,20 @@ export function ConfigDialog({
       title="Editar Perfil"
       description="Actualiza tu información pública y detalles de cuenta."
       size="xl"
-      // Use custom header and footer from existing components
+      // Use DialogHeader standard + ProfileHeader
       header={
-        <div className="space-y-0">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Editar Perfil
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Actualiza tu información pública y detalles de cuenta.
-            </p>
-          </div>
+        <>
+          <DialogHeader
+            title="Editar Perfil"
+            description="Actualiza tu información pública y detalles de cuenta."
+          />
           <ProfileHeader
             userId={userId}
             isOwnProfile={user.id === userId}
             onSuccess={showSuccess}
             onError={showError}
           />
-        </div>
+        </>
       }
       footer={
         <SaveActions

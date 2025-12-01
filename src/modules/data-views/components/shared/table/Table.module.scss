@@ -7,7 +7,7 @@
 .tableContainer {
   width: 100%;
   display: block;
-  border-radius: 50px;
+  border-radius: 25px;
   flex-direction: column;
   gap: $spacing-lg;
 }
@@ -43,6 +43,7 @@
   @include flex-column-center;
   padding: $spacing-4xl 0px;
   gap: $spacing-2xl;
+  min-height: calc(56px + (60px * 10)); // Same height as table with 10 rows
 }
 
 /* TABLA */
@@ -50,10 +51,12 @@
   background: $color-bg-light;
   border-radius: $radius-2xl;
   padding: $spacing-lg;
+  min-height: calc(56px + (60px * 10)); // Header (56px) + 10 rows (60px each)
+  display: flex;
+  flex-direction: column;
   
   :global(body.dark) & {
     background: $color-bg-dark;
-    box-shadow: none;
   }
 }
 
@@ -107,16 +110,12 @@
   z-index: 0;
   cursor: pointer;
   margin: 10px 10px 0px 0px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: $transition-base;
 
   /* Hover mejorado */
   &:hover {
     transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.12);
     box-shadow: none;
   }
   
@@ -135,16 +134,14 @@
     }
   }
   
-  /* 📱 Aumentar padding en mobile */
   @media (max-width: 768px) {
-    padding: $spacing-lg 0; // Más padding superior e inferior en mobile
-    margin: 15px 10px 0px 0px; // Aumentar margen superior
+    padding: $spacing-lg 0; 
+    margin: 15px 10px 0px 0px;
   }
   
-  /* 📱 Aumentar aún más padding en pantallas muy pequeñas */
   @media (max-width: 480px) {
-    padding: $spacing-xl 0; // Padding extra en pantallas muy pequeñas
-    margin: 20px 10px 0px 0px; // Margen superior extra
+    padding: $spacing-xl 0; 
+    margin: 20px 10px 0px 0px; 
   }
 }
 
@@ -171,7 +168,6 @@
     }
   }
   
-  /* Quitar padding en mobile */
   @media (max-width: 768px) {
     padding: 0;
   }
@@ -226,14 +222,12 @@
   @include hide-on-mobile;
 }
 
-/* Mobile-specific styles for ClientsTable */
 @media (max-width: 768px) {
   .header {
     .headerCell {
       padding: $spacing-sm $spacing-md;
       font-size: 12px;
       
-      /* Ensure proper alignment for mobile */
       &:first-child {
         text-align: left;
       }
@@ -266,6 +260,11 @@
   gap: $spacing-sm;
   padding: $spacing-lg $spacing-sm;
   justify-content: flex-end;
+  
+  @media (max-width: 768px) {
+    justify-content: center;
+    gap: $spacing-xs;
+  }
 }
 
 .paginationButton {

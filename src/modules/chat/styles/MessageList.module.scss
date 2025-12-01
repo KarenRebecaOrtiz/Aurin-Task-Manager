@@ -67,6 +67,17 @@
     :global(.dark) & {
       background: rgba(255, 255, 255, 0.1);
     }
+
+    @media (max-width: 767px) {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #ffffff;
+
+      :global(.dark) & {
+        background: #18181b;
+      }
+    }
   }
 
   &::before {

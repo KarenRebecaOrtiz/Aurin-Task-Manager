@@ -1,0 +1,108 @@
+// CurrentUserAction Styles
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem; // gap-2
+  min-width: 100px;
+}
+
+.bubbleWrapper {
+  position: relative;
+}
+
+.deleteButton {
+  position: absolute;
+  right: -0.375rem; // -right-1.5
+  top: -0.375rem; // -top-1.5
+  display: flex;
+  height: 1.25rem; // h-5
+  width: 1.25rem; // w-5
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px; // rounded-full
+  background-color: hsl(0 84.2% 60.2%); // destructive
+  color: #fafafa; // destructive-foreground
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); // shadow-sm
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease-in-out;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  :global(.dark) & {
+    background-color: hsl(0 62.8% 30.6%); // dark destructive
+    color: #fafafa;
+  }
+}
+
+.deleteIcon {
+  height: 0.75rem; // h-3
+  width: 0.75rem; // w-3
+  stroke-width: 3;
+}
+
+.avatarButton {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+
+  &.clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease-in-out;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.plusBadge {
+  position: absolute;
+  right: -0.125rem; // -right-0.5
+  top: -0.125rem; // -top-0.5
+  display: flex;
+  height: 1.25rem; // h-5
+  width: 1.25rem; // w-5
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px; // rounded-full
+  background-color: #d3df48;
+  color: #000000;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); // shadow-sm
+}
+
+.plusIcon {
+  height: 0.875rem; // h-3.5
+  width: 0.875rem; // w-3.5
+  stroke-width: 3;
+}
+
+.username {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem; // text-base
+  font-weight: 500; // font-medium
+  color: #ffffff; // text-white (for dark backgrounds like the tray)
+
+  :global(.dark) & {
+    color: #fafafa; // zinc-50
+  }
+}

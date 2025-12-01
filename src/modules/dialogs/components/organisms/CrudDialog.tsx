@@ -1,9 +1,12 @@
 'use client';
 
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogTitle 
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogTitle,
+  ResponsiveDialogHeader,
+  ResponsiveDialogBody,
+  ResponsiveDialogFooter
 } from '../DialogPrimitives';
 import { VisuallyHidden } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,6 +17,7 @@ import { panelVariants } from '../../config/animations';
 import { CrudDialogProps } from '../../types/crud-dialog.types';
 import { cn } from '@/lib/utils';
 import styles from '../../styles/Dialog.module.scss';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 export function CrudDialog({
   isOpen,
@@ -72,18 +76,18 @@ export function CrudDialog({
   // Render loading state
   if (isLoading) {
     return (
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent
+      <ResponsiveDialog open={isOpen} onOpenChange={onOpenChange}>
+        <ResponsiveDialogContent
           className={cn(styles.dialogContent, className)}
           onPointerDownOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
           onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
         >
           <VisuallyHidden>
-            <DialogTitle>{title || 'Cargando'}</DialogTitle>
+            <ResponsiveDialogTitle>{title || 'Cargando'}</ResponsiveDialogTitle>
           </VisuallyHidden>
           {loadingState || <DialogLoadingState message={loadingMessage} />}
-        </DialogContent>
-      </Dialog>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     );
   }
 
@@ -91,28 +95,31 @@ export function CrudDialog({
   if (error) {
     const errorMessage = typeof error === 'string' ? error : error.message;
     return (
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent
+      <ResponsiveDialog open={isOpen} onOpenChange={onOpenChange}>
+        <ResponsiveDialogContent
           className={cn(styles.dialogContent, className)}
           onPointerDownOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
           onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
         >
           <VisuallyHidden>
-            <DialogTitle>Error</DialogTitle>
+            <ResponsiveDialogTitle>Error</ResponsiveDialogTitle>
           </VisuallyHidden>
           {errorState || <DialogErrorState message={errorMessage} onRetry={handleClose} retryText="Cerrar" />}
-        </DialogContent>
-      </Dialog>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     );
   }
 
+  // Check if mobile for conditional rendering
+  const isMobile = useMediaQuery('(max-width: 767px)');
+
   // Render main dialog
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent
+    <ResponsiveDialog open={isOpen} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent
         className={cn(
-          styles.dialogContent,
-          size && styles[`size${size.charAt(0).toUpperCase()}${size.slice(1)}`],
+          !isMobile && styles.dialogContent,
+          !isMobile && size && styles[`size${size.charAt(0).toUpperCase()}${size.slice(1)}`],
           className
         )}
         showCloseButton={showCloseButton}
@@ -120,63 +127,113 @@ export function CrudDialog({
         onInteractOutside={(e) => !closeOnOverlayClick && e.preventDefault()}
       >
         <VisuallyHidden>
-          <DialogTitle>{title || 'Dialog'}</DialogTitle>
+          <ResponsiveDialogTitle>{title || 'Dialog'}</ResponsiveDialogTitle>
         </VisuallyHidden>
 
-        <AnimatePresence mode="wait">
-          {isOpen && (
-            <motion.div
-              variants={panelVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className={styles.dialogInner}
-            >
-              {/* Header */}
-              {header || (title && (
+        {isMobile ? (
+          // Mobile: Use Drawer structure without motion.div
+          <>
+            {/* Header */}
+            {header || (title && (
+              <ResponsiveDialogHeader>
                 <DialogHeader
                   title={title}
                   description={description}
                 />
-              ))}
+              </ResponsiveDialogHeader>
+            ))}
 
-              {/* Scrollable Content */}
+            {/* Body */}
+            <ResponsiveDialogBody>
               <ScrollableContent className={styles.content}>
                 {children}
               </ScrollableContent>
+            </ResponsiveDialogBody>
 
-              {/* Footer */}
-              {(footer || actions || onSubmit || onCancel || (isReadOnly && onEdit)) && (
-                <DialogFooter>
-                  {footer || actions || (
-                    <>
-                      {!isReadOnly && (
-                        <DialogActions
-                          onCancel={handleCancel}
-                          onSubmit={onSubmit}
-                          cancelText={cancelText}
-                          submitText={finalSubmitText}
-                          isLoading={isSubmitting}
-                          submitVariant={submitVariant}
-                        />
-                      )}
+            {/* Footer */}
+            {(footer || actions || onSubmit || onCancel || (isReadOnly && onEdit)) && (
+              <ResponsiveDialogFooter>
+                {footer || actions || (
+                  <>
+                    {!isReadOnly && (
+                      <DialogActions
+                        onCancel={handleCancel}
+                        onSubmit={onSubmit}
+                        cancelText={cancelText}
+                        submitText={finalSubmitText}
+                        isLoading={isSubmitting}
+                        submitVariant={submitVariant}
+                      />
+                    )}
 
-                      {/* View mode: show edit button if provided */}
-                      {isReadOnly && onEdit && (
-                        <DialogActions
-                          onSubmit={onEdit}
-                          submitText={editText}
-                          submitVariant="primary"
-                        />
-                      )}
-                    </>
-                  )}
-                </DialogFooter>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </DialogContent>
-    </Dialog>
+                    {isReadOnly && onEdit && (
+                      <DialogActions
+                        onSubmit={onEdit}
+                        submitText={editText}
+                        submitVariant="primary"
+                      />
+                    )}
+                  </>
+                )}
+              </ResponsiveDialogFooter>
+            )}
+          </>
+        ) : (
+          // Desktop: Use Dialog structure with motion.div
+          <AnimatePresence mode="wait">
+            {isOpen && (
+              <motion.div
+                variants={panelVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className={styles.dialogInner}
+              >
+                {/* Header */}
+                {header || (title && (
+                  <DialogHeader
+                    title={title}
+                    description={description}
+                  />
+                ))}
+
+                {/* Scrollable Content */}
+                <ScrollableContent className={styles.content}>
+                  {children}
+                </ScrollableContent>
+
+                {/* Footer */}
+                {(footer || actions || onSubmit || onCancel || (isReadOnly && onEdit)) && (
+                  <DialogFooter>
+                    {footer || actions || (
+                      <>
+                        {!isReadOnly && (
+                          <DialogActions
+                            onCancel={handleCancel}
+                            onSubmit={onSubmit}
+                            cancelText={cancelText}
+                            submitText={finalSubmitText}
+                            isLoading={isSubmitting}
+                            submitVariant={submitVariant}
+                          />
+                        )}
+
+                        {isReadOnly && onEdit && (
+                          <DialogActions
+                            onSubmit={onEdit}
+                            submitText={editText}
+                            submitVariant="primary"
+                          />
+                        )}
+                      </>
+                    )}
+                  </DialogFooter>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

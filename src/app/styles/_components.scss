@@ -1157,17 +1157,7 @@
   width: 100%;
 }
 
-.profileCardContent {
-  padding: $profile-card-padding;
 
-  @media (min-width: 768px) {
-    padding: $profile-card-padding-md;
-  }
-
-  @media (min-width: 1024px) {
-    padding: $profile-card-padding-lg;
-  }
-}
 
 .profileCardSection {
   margin-bottom: 30px;

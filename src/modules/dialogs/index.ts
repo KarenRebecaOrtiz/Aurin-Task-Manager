@@ -11,6 +11,15 @@ export {
   DialogBody,
   DialogTitle,
   DialogDescription,
+  // Responsive Dialog Primitives
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogBody,
+  ResponsiveDialogFooter,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogClose,
 } from './components/DialogPrimitives';
 
 export type {
@@ -25,6 +34,9 @@ export type {
   DialogBodyProps,
   DialogTitleProps,
   DialogDescriptionProps,
+  // Responsive Dialog Types
+  ResponsiveDialogProps,
+  ResponsiveDialogContentProps,
 } from './components/DialogPrimitives';
 
 // Components - Base (higher level)
@@ -59,6 +71,7 @@ export { CrudDialog } from './components/organisms';
 
 // Hooks
 export { useDialog } from './hooks/useDialog';
+export { useMediaQuery } from './hooks/useMediaQuery';
 
 // Store
 export { useDialogStore, useDialogs, useDialogActions } from './stores/dialogStore';

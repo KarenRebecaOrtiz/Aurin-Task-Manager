@@ -1,0 +1,186 @@
+/**
+ * Unified Dialog Styles
+ * 
+ * Sistema centralizado de estilos para todos los dialogs
+ * CSS Modules compatible - usando variables CSS locales
+ * 
+ * IMPORTANTE: El centrado se maneja en Dialog.module.scss
+ * Estos estilos son complementarios para variantes específicas
+ */
+
+/* ===== MAIN CONTAINER ===== */
+.dialogContent {
+  // NO usar position fixed aquí - el centrado viene del padre (dialogRoot)
+  // Solo estilos de apariencia
+  
+  /* Layout */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - 2rem);
+  
+  /* Visual */
+  background: white;
+  border-radius: 12px;
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  // overflow: hidden - el contenido interno (.dialogBody) maneja el scroll
+  overflow: hidden;
+  
+  /* Focus */
+  outline: none;
+  
+  /* Dark mode */
+  :global(.dark) & {
+    background: #18181b;
+    color: #fafafa;
+    box-shadow: 
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* ===== SCROLLABLE VARIANT ===== */
+.dialogContent.scrollable {
+  /* Para dialogs con mucho contenido */
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+/* ===== SCROLLABLE BODY ===== */
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Importante para que flex + overflow funcione */
+  
+  /* Todo el contenido scrolleable */
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+:global(.dark) .dialogBody {
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ===== OVERLAY/BACKDROP ===== */
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== RESPONSIVE SIZES ===== */
+.dialogContent.sizeSm {
+  max-width: 400px;
+}
+
+.dialogContent.sizeMd {
+  max-width: 500px;
+}
+
+.dialogContent.sizeLg {
+  max-width: 700px;
+}
+
+.dialogContent.sizeXl {
+  max-width: 900px;
+}
+
+.dialogContent.sizeFull {
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+}
+
+/* ===== DARK MODE ===== */
+:global(.dark) .dialogContent {
+  background: #1a1a1a;
+  color: #e5e5e5;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== CLOSE BUTTON (SI SE NECESITA) ===== */
+.dialogClose {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  
+  /* Reset button styles */
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  
+  /* Visual */
+  border-radius: 6px;
+  padding: 0.5rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  
+  /* Focus/Hover */
+  &:hover {
+    opacity: 1;
+  }
+  
+  &:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes overlayShow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes contentShow {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .dialogContent {
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100vh - 1rem);
+  }
+}

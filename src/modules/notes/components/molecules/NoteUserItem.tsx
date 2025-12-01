@@ -4,6 +4,7 @@ import type { Note } from '../../types';
 import { NoteBubble } from '../atoms/NoteBubble';
 import { AvatarRing } from '../atoms/AvatarRing';
 import { cn } from '@/lib/utils';
+import styles from './NoteUserItem.module.scss';
 
 interface NoteUserItemProps {
   note: Note;
@@ -12,7 +13,7 @@ interface NoteUserItemProps {
 
 export function NoteUserItem({ note, className }: NoteUserItemProps) {
   return (
-    <div className={cn('flex flex-col items-center gap-2', 'min-w-[100px]', className)}>
+    <div className={cn(styles.container, className)}>
       {/* Note bubble */}
       {note.content && <NoteBubble content={note.content} />}
 
@@ -25,7 +26,7 @@ export function NoteUserItem({ note, className }: NoteUserItemProps) {
       />
 
       {/* Username */}
-      <span className="max-w-[90px] truncate text-base text-white font-medium">
+      <span className={styles.username}>
         {note.user.username}
       </span>
     </div>

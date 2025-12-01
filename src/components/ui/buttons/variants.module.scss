@@ -1,0 +1,287 @@
+/**
+ * Button Variants - SCSS Modules
+ * Estilo: Clean Tactile / Neutro
+ * Sistema neumórfico con sombras inset para profundidad 3D
+ * Compatible con Dark Mode Global
+ */
+
+@import "@/app/styles/variables";
+
+// ============================================
+// BASE BUTTON STYLES
+// ============================================
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  white-space: nowrap;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+
+  transition: all 200ms ease-in-out;
+
+  // Focus state
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(161, 161, 170, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.1);
+  }
+
+  // Disabled state
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+    filter: grayscale(1);
+  }
+
+  // Active state
+  &:active {
+    transform: scale(0.98);
+  }
+
+  // SVG icons
+  svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+}
+
+// ============================================
+// INTENT VARIANTS
+// ============================================
+
+// Default (Dark)
+.intentDefault {
+  background-color: rgb(23 23 23);
+  color: white;
+  border: 1px solid transparent;
+  box-shadow:
+    0px 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0px -2px 0px rgba(0, 0, 0, 0.3);
+
+  &:hover:not(:disabled) {
+    background-color: rgb(38 38 38);
+  }
+
+  &:active:not(:disabled) {
+    background-color: rgb(10 10 10);
+    box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+}
+
+// Primary (Brand Green)
+.intentPrimary {
+  background-color: $brand-primary;
+  color: rgb(0, 0, 0);
+  border: 1px solid transparent;
+  box-shadow:
+    0px 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0px -2px 0px rgba(0, 0, 0, 0.1);
+
+  &:hover:not(:disabled) {
+    background-color: $brand-primary-hover;
+  }
+
+  &:active:not(:disabled) {
+    background-color: $brand-primary-active;
+    box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  // Dark mode
+  :global(body.dark) & {
+    background-color: $brand-primary;
+    color: rgb(0, 0, 0);
+
+    &:hover:not(:disabled) {
+      background-color: $brand-primary-dark-hover;
+    }
+
+    &:active:not(:disabled) {
+      background-color: $brand-primary-active;
+    }
+  }
+}
+
+// Secondary (Transparent with border)
+.intentSecondary {
+  background-color: transparent;
+  color: rgb(23 23 23);
+  border: 1px solid rgb(212 212 212);
+  box-shadow: none;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: rgb(163 163 163);
+  }
+
+  &:active:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  // Dark mode
+  :global(body.dark) & {
+    background-color: transparent;
+    color: rgb(212 212 212);
+    border-color: rgb(82 82 82);
+
+    &:hover:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: rgb(115 115 115);
+    }
+
+    &:active:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+// Danger (Red)
+.intentDanger {
+  background-color: rgb(220 38 38);
+  color: white;
+  box-shadow:
+    0px 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0px -2px 0px rgba(0, 0, 0, 0.2);
+
+  &:hover:not(:disabled) {
+    background-color: rgb(185 28 28);
+  }
+
+  &:active:not(:disabled) {
+    background-color: rgb(153 27 27);
+    box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Ghost (Transparent)
+.intentGhost {
+  background-color: transparent;
+  color: rgb(82 82 82);
+  box-shadow: none;
+
+  &:hover:not(:disabled) {
+    background-color: rgb(245 245 245);
+    color: rgb(23 23 23);
+  }
+
+  &:active:not(:disabled) {
+    background-color: rgb(229 229 229);
+  }
+}
+
+// Outline
+.intentOutline {
+  background-color: transparent;
+  color: rgb(23 23 23);
+  border: 2px solid rgb(229 229 229);
+  box-shadow: none;
+
+  &:hover:not(:disabled) {
+    background-color: rgb(250 250 250);
+    border-color: rgb(212 212 212);
+  }
+
+  &:active:not(:disabled) {
+    background-color: rgb(245 245 245);
+  }
+}
+
+// ============================================
+// SIZE VARIANTS
+// ============================================
+
+// Small
+.sizeSm {
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+
+// Medium (Default)
+.sizeMd {
+  height: 2.5rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// Large
+.sizeLg {
+  height: 3rem;
+  padding: 0 1.5rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+// Icon Only - Default
+.sizeIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// Icon Only - Small
+.sizeIconSm {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+
+// Icon Only - Large
+.sizeIconLg {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+// ============================================
+// MODIFIER VARIANTS
+// ============================================
+
+// Full Width
+.fullWidth {
+  width: 100%;
+  display: flex;
+}
+
+// Loading State
+.isLoading {
+  cursor: wait;
+  opacity: 0.7;
+}

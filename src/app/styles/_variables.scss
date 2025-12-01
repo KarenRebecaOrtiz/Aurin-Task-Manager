@@ -1,5 +1,7 @@
 @use "sass:color";
 
+$profile-card-padding: 1.5rem;
+
 // Typography
 $font-family-primary: var(--font-urbanist), 'Urbanist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 $font-family-table: $font-family-primary !default; // Variable para tablas específicas
@@ -65,6 +67,12 @@ $zinc-950: #09090B;
 $black: #000000;
 
 // Additional color variables
+// Brand colors
+$brand-primary: #d0df00;
+$brand-primary-hover: #afbb01;
+$brand-primary-active: #cacf8b;
+$brand-primary-dark-hover: #c5d700;
+
 $primary: #3B82F6;
 $blue-500: #3B82F6;
 $red-500: #EF4444;

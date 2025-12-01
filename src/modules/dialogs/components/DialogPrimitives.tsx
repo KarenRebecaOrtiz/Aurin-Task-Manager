@@ -35,6 +35,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { backdropVariants, panelVariants, transitions } from '../config/animations';
 import styles from '../styles/Dialog.module.scss';
+import { useMediaQuery } from '../hooks/useMediaQuery';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerFooter,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerClose,
+} from '@/components/ui/drawer';
 
 // ============================================================================
 // Types
@@ -458,3 +468,293 @@ Dialog.Body = DialogBody;
 Dialog.Footer = DialogFooter;
 Dialog.Title = DialogTitle;
 Dialog.Description = DialogDescription;
+
+// ============================================================================
+// ResponsiveDialog - Automatically switches between Dialog and Drawer
+// ============================================================================
+
+export interface ResponsiveDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+  mobileBreakpoint?: number;
+}
+
+export interface ResponsiveDialogContentProps {
+  children: ReactNode;
+  size?: DialogSize;
+  className?: string;
+  showCloseButton?: boolean;
+  closeOnOverlayClick?: boolean;
+  closeOnEscape?: boolean;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  onPointerDownOutside?: (event: { preventDefault: () => void }) => void;
+  onInteractOutside?: (event: { preventDefault: () => void }) => void;
+}
+
+// Context to share mobile state between ResponsiveDialog components
+const ResponsiveDialogContext = createContext<{ isMobile: boolean } | null>(null);
+
+function useResponsiveDialogContext() {
+  const context = useContext(ResponsiveDialogContext);
+  if (!context) {
+    throw new Error('ResponsiveDialog components must be used within ResponsiveDialog');
+  }
+  return context;
+}
+
+/**
+ * ResponsiveDialog - Automatically switches between Dialog and Drawer based on viewport
+ *
+ * @example
+ * ```tsx
+ * <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
+ *   <ResponsiveDialogContent>
+ *     <ResponsiveDialogHeader>
+ *       <ResponsiveDialogTitle>Title</ResponsiveDialogTitle>
+ *       <ResponsiveDialogDescription>Description</ResponsiveDialogDescription>
+ *     </ResponsiveDialogHeader>
+ *     <ResponsiveDialogBody>Content</ResponsiveDialogBody>
+ *     <ResponsiveDialogFooter>Actions</ResponsiveDialogFooter>
+ *   </ResponsiveDialogContent>
+ * </ResponsiveDialog>
+ * ```
+ */
+export function ResponsiveDialog({
+  open,
+  onOpenChange,
+  children,
+  mobileBreakpoint = 768
+}: ResponsiveDialogProps) {
+  const isMobile = useMediaQuery(`(max-width: ${mobileBreakpoint - 1}px)`);
+
+  const contextValue = useMemo(() => ({ isMobile }), [isMobile]);
+
+  if (isMobile) {
+    return (
+      <ResponsiveDialogContext.Provider value={contextValue}>
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          {children}
+        </Drawer>
+      </ResponsiveDialogContext.Provider>
+    );
+  }
+
+  return (
+    <ResponsiveDialogContext.Provider value={contextValue}>
+      <DialogRoot open={open} onOpenChange={onOpenChange}>
+        {children}
+      </DialogRoot>
+    </ResponsiveDialogContext.Provider>
+  );
+}
+
+/**
+ * ResponsiveDialogContent - Content that adapts to Dialog or Drawer
+ */
+export const ResponsiveDialogContent = forwardRef<HTMLDivElement, ResponsiveDialogContentProps>(
+  (
+    {
+      children,
+      size = 'md',
+      className = '',
+      showCloseButton = true,
+      closeOnOverlayClick = true,
+      closeOnEscape = true,
+      onEscapeKeyDown,
+      onPointerDownOutside,
+      onInteractOutside,
+    },
+    ref
+  ) => {
+    const { isMobile } = useResponsiveDialogContext();
+
+    if (isMobile) {
+      return (
+        <DrawerContent ref={ref} className={className}>
+          {children}
+        </DrawerContent>
+      );
+    }
+
+    return (
+      <DialogContent
+        ref={ref}
+        size={size}
+        className={className}
+        showCloseButton={showCloseButton}
+        closeOnOverlayClick={closeOnOverlayClick}
+        closeOnEscape={closeOnEscape}
+        onEscapeKeyDown={onEscapeKeyDown}
+        onPointerDownOutside={onPointerDownOutside}
+        onInteractOutside={onInteractOutside}
+      >
+        {children}
+      </DialogContent>
+    );
+  }
+);
+
+ResponsiveDialogContent.displayName = 'ResponsiveDialogContent';
+
+/**
+ * ResponsiveDialogHeader - Header that adapts to Dialog or Drawer
+ */
+export const ResponsiveDialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(
+  ({ children, className = '' }, ref) => {
+    const { isMobile } = useResponsiveDialogContext();
+
+    if (isMobile) {
+      return (
+        <DrawerHeader className={className}>
+          {children}
+        </DrawerHeader>
+      );
+    }
+
+    return (
+      <DialogHeader ref={ref} className={className}>
+        {children}
+      </DialogHeader>
+    );
+  }
+);
+
+ResponsiveDialogHeader.displayName = 'ResponsiveDialogHeader';
+
+/**
+ * ResponsiveDialogBody - Body that adapts to Dialog or Drawer
+ */
+export const ResponsiveDialogBody = forwardRef<HTMLDivElement, DialogBodyProps>(
+  ({ children, className = '' }, ref) => {
+    const { isMobile } = useResponsiveDialogContext();
+
+    if (isMobile) {
+      // In mobile, add scroll styles directly
+      return (
+        <div
+          ref={ref}
+          className={className}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+          }}
+        >
+          {children}
+        </div>
+      );
+    }
+
+    // Desktop uses DialogBody with SCSS styles
+    return (
+      <DialogBody ref={ref} className={className}>
+        {children}
+      </DialogBody>
+    );
+  }
+);
+
+ResponsiveDialogBody.displayName = 'ResponsiveDialogBody';
+
+/**
+ * ResponsiveDialogFooter - Footer that adapts to Dialog or Drawer
+ */
+export const ResponsiveDialogFooter = forwardRef<HTMLDivElement, DialogFooterProps>(
+  ({ children, className = '' }, ref) => {
+    const { isMobile } = useResponsiveDialogContext();
+
+    if (isMobile) {
+      return (
+        <DrawerFooter className={className}>
+          {children}
+        </DrawerFooter>
+      );
+    }
+
+    return (
+      <DialogFooter ref={ref} className={className}>
+        {children}
+      </DialogFooter>
+    );
+  }
+);
+
+ResponsiveDialogFooter.displayName = 'ResponsiveDialogFooter';
+
+/**
+ * ResponsiveDialogTitle - Title that adapts to Dialog or Drawer
+ */
+export const ResponsiveDialogTitle = forwardRef<HTMLHeadingElement, DialogTitleProps>(
+  ({ children, className = '' }, ref) => {
+    const { isMobile } = useResponsiveDialogContext();
+
+    if (isMobile) {
+      return (
+        <DrawerTitle ref={ref} className={className}>
+          {children}
+        </DrawerTitle>
+      );
+    }
+
+    return (
+      <DialogTitle ref={ref} className={className}>
+        {children}
+      </DialogTitle>
+    );
+  }
+);
+
+ResponsiveDialogTitle.displayName = 'ResponsiveDialogTitle';
+
+/**
+ * ResponsiveDialogDescription - Description that adapts to Dialog or Drawer
+ */
+export const ResponsiveDialogDescription = forwardRef<HTMLParagraphElement, DialogDescriptionProps>(
+  ({ children, className = '' }, ref) => {
+    const { isMobile } = useResponsiveDialogContext();
+
+    if (isMobile) {
+      return (
+        <DrawerDescription ref={ref} className={className}>
+          {children}
+        </DrawerDescription>
+      );
+    }
+
+    return (
+      <DialogDescription ref={ref} className={className}>
+        {children}
+      </DialogDescription>
+    );
+  }
+);
+
+ResponsiveDialogDescription.displayName = 'ResponsiveDialogDescription';
+
+/**
+ * ResponsiveDialogClose - Close button that adapts to Dialog or Drawer
+ */
+export const ResponsiveDialogClose = forwardRef<HTMLButtonElement, DialogCloseProps>(
+  ({ children, asChild, className }, ref) => {
+    const { isMobile } = useResponsiveDialogContext();
+
+    if (isMobile) {
+      return (
+        <DrawerClose ref={ref} asChild={asChild} className={className}>
+          {children}
+        </DrawerClose>
+      );
+    }
+
+    return (
+      <DialogClose ref={ref} asChild={asChild} className={className}>
+        {children}
+      </DialogClose>
+    );
+  }
+);
+
+ResponsiveDialogClose.displayName = 'ResponsiveDialogClose';

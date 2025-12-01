@@ -1,0 +1,280 @@
+// ClientTasksTable.module.scss
+// Estilos para la tabla de tareas del cliente
+// Reutiliza estilos base de data-views/table
+
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// Contenedor principal
+.container {
+  grid-column: span 2;
+  
+  @media (max-width: 768px) {
+    grid-column: span 1;
+  }
+}
+
+// Header de la sección
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $text-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  
+  :global(.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}
+
+.taskCount {
+  font-size: $text-xs;
+  color: $zinc-500;
+  background: $zinc-100;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-full;
+  
+  :global(.dark) & {
+    background: $zinc-800;
+    color: $zinc-400;
+  }
+}
+
+// Estados de carga y error
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-2xl 0;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-bottom-color: $blue-500;
+  animation: spin 1s linear infinite;
+  
+  :global(.dark) & {
+    border-bottom-color: $sky-500;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  margin-left: $spacing-md;
+  font-size: $text-sm;
+  color: $zinc-500;
+  
+  :global(.dark) & {
+    color: $zinc-400;
+  }
+}
+
+.errorState {
+  padding: $spacing-lg;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: $radius-lg;
+  
+  :global(.dark) & {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+}
+
+.errorText {
+  font-size: $text-sm;
+  color: $red-500;
+  
+  :global(.dark) & {
+    color: $rose-500;
+  }
+}
+
+// Estado vacío
+.emptyState {
+  padding: $spacing-2xl;
+  background: $zinc-50;
+  border: 1px solid $color-border-light;
+  border-radius: $radius-lg;
+  text-align: center;
+  
+  :global(.dark) & {
+    background: $zinc-900;
+    border-color: $color-border-dark;
+  }
+}
+
+.emptyIcon {
+  margin: 0 auto $spacing-md;
+  width: 3rem;
+  height: 3rem;
+  color: $zinc-400;
+  
+  :global(.dark) & {
+    color: $zinc-500;
+  }
+}
+
+.emptyTitle {
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+  
+  :global(.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}
+
+.emptySubtitle {
+  font-size: $text-xs;
+  color: $zinc-500;
+  margin-top: $spacing-xs;
+  
+  :global(.dark) & {
+    color: $zinc-400;
+  }
+}
+
+// Tabla wrapper
+.tableWrapper {
+  border: 1px solid $color-border-light;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  
+  :global(.dark) & {
+    border-color: $color-border-dark;
+  }
+}
+
+.tableScroll {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+// Tabla
+.table {
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+// Thead
+.thead {
+  background: $zinc-50;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
+  :global(.dark) & {
+    background: $zinc-800;
+  }
+}
+
+// Header cells
+.th {
+  padding: $spacing-md $spacing-lg;
+  text-align: left;
+  font-size: $text-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid $color-border-light;
+  
+  :global(.dark) & {
+    color: $color-text-dark-secondary;
+    border-bottom-color: $color-border-dark;
+  }
+}
+
+// Tbody
+.tbody {
+  background: $white;
+  
+  :global(.dark) & {
+    background: $zinc-900;
+  }
+}
+
+// Rows
+.row {
+  transition: background-color 0.15s ease;
+  
+  &:hover {
+    background: $zinc-50;
+  }
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid $color-border-light;
+  }
+  
+  :global(.dark) & {
+    &:hover {
+      background: $zinc-800;
+    }
+    
+    &:not(:last-child) {
+      border-bottom-color: $color-border-dark;
+    }
+  }
+}
+
+// Cells
+.td {
+  padding: $spacing-md $spacing-lg;
+  vertical-align: middle;
+}
+
+// Task info cell
+.taskInfo {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.taskName {
+  font-size: $text-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  
+  :global(.dark) & {
+    color: $color-text-dark-primary;
+  }
+}
+
+.taskDescription {
+  font-size: $text-xs;
+  color: $zinc-500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 250px;
+  
+  :global(.dark) & {
+    color: $zinc-400;
+  }
+}
+
+// Project cell
+.projectName {
+  font-size: $text-sm;
+  color: $color-text-secondary;
+  
+  :global(.dark) & {
+    color: $color-text-dark-secondary;
+  }
+}

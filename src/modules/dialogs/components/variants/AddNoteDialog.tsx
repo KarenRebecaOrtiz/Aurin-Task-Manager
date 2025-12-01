@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { CrudDialog } from '../organisms/CrudDialog';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/buttons';
 import { CrystalInput } from '@/components/ui/inputs/crystal-input';
 import { NOTE_MAX_LENGTH } from '@/modules/notes/lib/constants';
 import type { CreateNotePayload } from '@/modules/notes/types';
@@ -57,13 +57,16 @@ export function AddNoteDialog({ isOpen, onOpenChange, onNoteAdded }: AddNoteDial
   const customFooter = (
     <div className="flex justify-end gap-2">
       <Button
-        variant="outline"
+        intent="secondary"
+        size="lg"
         onClick={handleCancel}
         disabled={isSubmitting}
       >
         Cancelar
       </Button>
       <Button
+        intent="primary"
+        size="lg"
         onClick={handleSubmit}
         disabled={!noteContent.trim() || isSubmitting}
       >

@@ -4,7 +4,7 @@ import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/buttons";
 import { Calendar } from "@/modules/task-crud/components/ui/Calendar";
 import {
   Popover,
@@ -47,7 +47,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          intent="secondary"
           className={cn(
             "w-full justify-start text-left font-normal",
             !value?.from && "text-muted-foreground",

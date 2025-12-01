@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "../../ui/Badge"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/buttons"
 import {
   Popover,
   PopoverContent,
@@ -65,7 +65,7 @@ export function MultiUserSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          intent="secondary"
           role="combobox"
           aria-expanded={open}
           className={cn("w-full justify-start h-auto min-h-10", className)}

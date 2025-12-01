@@ -11,6 +11,7 @@
 
 // Organisms
 export { default as ChatSidebar } from './components/ChatSidebar';
+export { ResponsiveChatSidebar } from './components/ResponsiveChatSidebar';
 export { default as ChatSidebarVirtualized } from './components/ChatSidebarVirtualized';
 export { ChatHeader } from './components/organisms/ChatHeader';
 export { MessageList } from './components/organisms/MessageList';

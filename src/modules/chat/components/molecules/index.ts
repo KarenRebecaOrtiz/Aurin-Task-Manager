@@ -24,3 +24,7 @@ export { ReplyPreview } from './ReplyPreview';
 export { ActionDropdown } from './ActionDropdown';
 export { ImagePreviewOverlay } from './ImagePreviewOverlay';
 export { MessageItem } from './MessageItem';
+
+// ChatHeader molecules
+export { StatusDropdown } from './StatusDropdown';
+export { TimeBreakdown } from './TimeBreakdown';

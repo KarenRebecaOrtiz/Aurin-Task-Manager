@@ -68,7 +68,7 @@ export function DialogErrorState({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
           >
-            <Button onClick={onRetry} intent="primary" size="md">
+            <Button onClick={onRetry} intent="primary" size="lg">
               {retryText}
             </Button>
           </motion.div>

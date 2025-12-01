@@ -13,10 +13,6 @@
   gap: $spacing-lg;
   min-height: calc(100vh - 200px);
   border-radius: 50px;
-
-  :global(body.dark) & {
-    background: $color-bg-dark;
-  }
 }
 
 // ==============================================================

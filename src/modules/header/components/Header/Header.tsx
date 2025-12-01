@@ -4,7 +4,7 @@ import { useUser } from '@clerk/nextjs';
 import { useRef } from 'react';
 import { HeaderProps } from '../../types';
 import { useSubtitleContent, useHeaderNavigation, useFirestoreUser } from '../../hooks';
-import { WelcomeSection, HeaderActions } from './components';
+import { WelcomeSection, HeaderActions, MobilePillHeader } from './components';
 import styles from './Header.module.scss';
 
 const Header: React.FC<HeaderProps> = ({
@@ -34,6 +34,10 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
+      {/* Mobile Pill Header - solo visible en < 768px */}
+      <MobilePillHeader />
+
+      {/* Desktop/Tablet Content - oculto en < 768px */}
       <div className={styles.welcomeContainer}>
         <WelcomeSection
           userName={userName}

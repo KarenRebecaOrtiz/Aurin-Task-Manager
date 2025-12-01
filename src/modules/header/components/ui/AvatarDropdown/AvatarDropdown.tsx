@@ -15,6 +15,8 @@ import { Cog, LogOut } from '@/components/animate-ui/icons';
 import { Sun } from '@/components/animate-ui/icons/sun';
 import { Moon } from '@/components/animate-ui/icons/moon';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
+import { SettingsDrawer } from './SettingsDrawer';
 
 const AvatarDropdown = () => {
   const { user } = useUser();
@@ -24,9 +26,11 @@ const AvatarDropdown = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const { currentStatus: onlineStatus } = useAvailabilityStatus();
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -66,7 +70,15 @@ const AvatarDropdown = () => {
   }, []);
 
   const handleToggleDropdown = useCallback(() => {
-    setIsDropdownOpen((prev) => !prev);
+    if (isMobile) {
+      setIsSettingsDrawerOpen(true);
+    } else {
+      setIsDropdownOpen((prev) => !prev);
+    }
+  }, [isMobile]);
+
+  const handleCloseSettingsDrawer = useCallback(() => {
+    setIsSettingsDrawerOpen(false);
   }, []);
 
   const handleToggleTheme = useCallback(() => {
@@ -194,6 +206,13 @@ const AvatarDropdown = () => {
           userId={user.id}
         />
       )}
+
+      {/* Settings Drawer for Mobile */}
+      <SettingsDrawer
+        isOpen={isSettingsDrawerOpen}
+        onClose={handleCloseSettingsDrawer}
+        userId={user?.id}
+      />
     </>
   );
 };

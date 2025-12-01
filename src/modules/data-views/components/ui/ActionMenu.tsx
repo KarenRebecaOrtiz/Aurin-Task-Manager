@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { memo } from 'react';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
@@ -9,6 +9,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useActionMenuStore } from '@/stores/actionMenuStore';
 import { useShallow } from 'zustand/react/shallow';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import { Pencil, Archive, Trash2 } from 'lucide-react';
 
 interface Task {
   id: string;
@@ -56,6 +64,8 @@ const ActionMenu = memo<ActionMenuProps>(({
   const tooltipText = 'Solo el creador o un administrador pueden editar este elemento';
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Selectors optimizados con shallow
   const { 
@@ -82,7 +92,7 @@ const ActionMenu = memo<ActionMenuProps>(({
 
   // Memoizar handlers
   const handleDropdownPosition = useCallback(() => {
-    if (isOpen && buttonRef.current) {
+    if (isOpen && buttonRef.current && !isMobile) {
       const rect = buttonRef.current.getBoundingClientRect();
       const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
       const scrollY = window.pageYOffset || document.documentElement.scrollTop;
@@ -95,11 +105,37 @@ const ActionMenu = memo<ActionMenuProps>(({
         left: dropdownLeft + scrollX,
       });
     }
-  }, [isOpen, task.id, setDropdownPosition]);
+  }, [isOpen, task.id, setDropdownPosition, isMobile]);
 
   const handleOpen = useCallback(() => {
-    setOpenMenuId(isOpen ? null : task.id);
-  }, [isOpen, task.id, setOpenMenuId]);
+    if (isMobile) {
+      setIsDrawerOpen(true);
+    } else {
+      setOpenMenuId(isOpen ? null : task.id);
+    }
+  }, [isOpen, task.id, setOpenMenuId, isMobile]);
+
+  const handleDrawerOpenChange = useCallback((open: boolean) => {
+    if (!open) setIsDrawerOpen(false);
+  }, []);
+
+  // Drawer action handlers
+  const handleDrawerEdit = useCallback(() => {
+    onEdit();
+    setIsDrawerOpen(false);
+  }, [onEdit]);
+
+  const handleDrawerArchive = useCallback(() => {
+    if (onArchive) {
+      onArchive();
+      setIsDrawerOpen(false);
+    }
+  }, [onArchive]);
+
+  const handleDrawerDelete = useCallback(() => {
+    onDelete();
+    setIsDrawerOpen(false);
+  }, [onDelete]);
 
   // Efectos optimizados
   useEffect(() => {
@@ -110,6 +146,7 @@ const ActionMenu = memo<ActionMenuProps>(({
     const handleClickOutside = (e: MouseEvent) => {
       if (
         isOpen &&
+        !isMobile &&
         buttonRef.current &&
         !buttonRef.current.contains(e.target as Node) &&
         actionMenuRef.current &&
@@ -121,7 +158,7 @@ const ActionMenu = memo<ActionMenuProps>(({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, setOpenMenuId, actionMenuRef]);
+  }, [isOpen, setOpenMenuId, actionMenuRef, isMobile]);
 
   return (
     <div className={styles.actionContainer}>
@@ -157,7 +194,9 @@ const ActionMenu = memo<ActionMenuProps>(({
               </span>
             )}
           </button>
-          {isOpen && canEditOrDelete && createPortal(
+
+          {/* Desktop: Dropdown */}
+          {!isMobile && isOpen && canEditOrDelete && createPortal(
             <AnimatePresence>
               <motion.div 
               ref={actionMenuRef} 
@@ -241,6 +280,47 @@ const ActionMenu = memo<ActionMenuProps>(({
             </AnimatePresence>,
             document.body
           )}
+
+          {/* Mobile: Drawer */}
+          <Drawer open={isDrawerOpen} onOpenChange={handleDrawerOpenChange}>
+            <DrawerContent className={styles.drawerContent}>
+              <DrawerHeader className={styles.drawerHeader}>
+                <DrawerTitle className={styles.drawerTitle}>Acciones de Tarea</DrawerTitle>
+              </DrawerHeader>
+
+              <div className={styles.drawerBody}>
+                <button
+                  className={styles.drawerItem}
+                  onClick={handleDrawerEdit}
+                >
+                  <Pencil size={20} className={styles.drawerIcon} />
+                  <span className={styles.drawerText}>Editar Tarea</span>
+                </button>
+
+                {onArchive && (
+                  <button
+                    className={styles.drawerItem}
+                    onClick={handleDrawerArchive}
+                  >
+                    <Archive size={20} className={styles.drawerIcon} />
+                    <span className={styles.drawerText}>
+                      {task.archived ? "Desarchivar Tarea" : "Archivar Tarea"}
+                    </span>
+                  </button>
+                )}
+
+                <div className={styles.drawerSeparator} />
+
+                <button
+                  className={`${styles.drawerItem} ${styles.drawerDeleteItem}`}
+                  onClick={handleDrawerDelete}
+                >
+                  <Trash2 size={20} className={styles.drawerIcon} />
+                  <span className={styles.drawerText}>Eliminar Tarea</span>
+                </button>
+              </div>
+            </DrawerContent>
+          </Drawer>
         </>
       )}
     </div>

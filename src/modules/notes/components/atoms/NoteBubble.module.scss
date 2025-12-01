@@ -7,8 +7,17 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease-in-out;
 
+  :global(.dark) & {
+    background-color: #27272a; // zinc-800
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  }
+
   &:hover {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+
+    :global(.dark) & {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+    }
   }
 }
 
@@ -25,6 +34,10 @@
   color: #000000;
   font-weight: 500; // font-medium
   word-break: break-word;
+
+  :global(.dark) & {
+    color: #fafafa; // zinc-50
+  }
 }
 
 .tail {
@@ -39,5 +52,9 @@
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
     border-top: 6px solid #ffffff;
+
+    :global(.dark) & {
+      border-top-color: #27272a; // zinc-800
+    }
   }
 }

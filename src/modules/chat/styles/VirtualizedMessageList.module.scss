@@ -18,9 +18,16 @@
   position: relative;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 
   // Virtuoso aplica sus propios estilos de scroll
   // No aplicamos custom-scrollbar aquí porque virtuoso maneja el scroll
+  
+  // Asegurar que tome todo el espacio disponible en drawer mobile
+  @media (max-width: 767px) {
+    flex: 1 1 auto;
+    min-height: 200px;
+  }
 }
 
 // ============================================================================
@@ -69,11 +76,18 @@
   margin: 20px 16px;
   backdrop-filter: blur(1px);
   padding: 8px 0;
-  background:#f6f6f6;
+  background: #f6f6f6;
 
   :global(.dark) & {
-    background:#121212;
+    background: #121212;
+  }
 
+  @media (max-width: 767px) {
+    background: #ffffff;
+
+    :global(.dark) & {
+      background: #18181b;
+    }
   }
 
   &::before,
@@ -82,9 +96,22 @@
     flex: 1;
     height: 1px;
     background: rgba(0, 0, 0, 0.1);
+  }
 
-    :global(.dark) & {
-      background: rgba(255, 255, 255, 0.1);
+  :global(.dark) &::before,
+  :global(.dark) &::after {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  @media (max-width: 767px) {
+    &::before,
+    &::after {
+      background: #ffffff;
+    }
+
+    :global(.dark) &::before,
+    :global(.dark) &::after {
+      background: #18181b;
     }
   }
 

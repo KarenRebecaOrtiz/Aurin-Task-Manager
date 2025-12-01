@@ -1,11 +1,21 @@
-# Sistema de Componentes de Botón
+# Sistema de Botones Neumórficos
 
-Este directorio contiene el sistema de botones modular y reutilizable para la aplicación.
+Este directorio contiene el sistema de botones modular con efectos neumórficos 3D para la aplicación.
+
+## Características
+
+- **Efecto Neumórfico**: Sombras inset que crean profundidad 3D
+- **Animaciones Spring**: Transiciones suaves con Framer Motion
+- **6 Intenciones**: default, primary, secondary, danger, ghost, outline
+- **6 Tamaños**: sm, md, lg, icon, icon-sm, icon-lg
+- **Estados**: loading, disabled, fullWidth
 
 ## Archivos
 
--   `index.tsx`: El componente principal `Button`. Contiene la lógica funcional, manejo de props, y la estructura del componente.
--   `variants.ts`: La definición de estilos usando `class-variance-authority`. Define todas las variantes visuales (intents), tamaños y estados del botón.
+- `index.tsx`: Componente principal `Button` con soporte para Framer Motion
+- `variants.ts`: Definición de variantes con `class-variance-authority`
+- `ButtonDemo.tsx`: Demostración de todas las variantes
+- `GoBackButton.tsx`: Botón especializado para navegación
 
 ---
 
@@ -13,39 +23,36 @@ Este directorio contiene el sistema de botones modular y reutilizable para la ap
 
 ### 1. Importación
 
-Para usar el botón en cualquier parte de la aplicación, impórtalo de la siguiente manera:
-
 ```tsx
 import { Button } from '@/components/ui/buttons';
 ```
 
 ### 2. Uso Básico
 
-Por defecto, el botón se renderiza con `intent="primary"` y `size="md"`.
+Por defecto, el botón se renderiza con `intent="default"` y `size="md"`.
 
 ```tsx
-<Button>Botón Primario</Button>
+<Button>Botón Default</Button>
 ```
 
 ### 3. Variantes de Intención (`intent`)
 
-Usa la prop `intent` para cambiar el estilo visual del botón.
-
 ```tsx
-<Button intent="primary">Primary</Button>
-<Button intent="secondary">Secondary</Button>
-<Button intent="ghost">Ghost</Button>
-<Button intent="danger">Danger</Button>
+<Button intent="default">Default (Oscuro)</Button>
+<Button intent="primary">Primary (Azul)</Button>
+<Button intent="secondary">Secondary (Blanco)</Button>
+<Button intent="danger">Danger (Rojo)</Button>
+<Button intent="ghost">Ghost (Transparente)</Button>
+<Button intent="outline">Outline (Borde)</Button>
 ```
 
 ### 4. Variantes de Tamaño (`size`)
-
-Usa la prop `size` para cambiar las dimensiones del botón.
 
 ```tsx
 <Button size="sm">Small</Button>
 <Button size="md">Medium (Default)</Button>
 <Button size="lg">Large</Button>
+<Button size="icon">Icon Only</Button>
 ```
 
 ### 5. Botones con Iconos

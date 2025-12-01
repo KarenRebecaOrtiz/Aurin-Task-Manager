@@ -268,13 +268,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, [isAdmin, user?.id, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
   const baseColumns = [
-    { key: 'clientId', label: 'Cuenta', width: '20%', mobileVisible: false, sortable: true },
-    { key: 'name', label: 'Tarea', width: '60%', mobileVisible: true, sortable: true },
-    { key: 'notificationDot', label: '', width: '20%', mobileVisible: true, sortable: true, notificationCount: true },
+    { key: 'clientId', label: 'Cuenta', width: '20%', mobileVisible: true, mobileWidth: '30%', sortable: true },
+    { key: 'name', label: 'Tarea', width: '60%', mobileVisible: true, mobileWidth: '40%', sortable: true },
+    { key: 'notificationDot', label: '', width: '20%', mobileVisible: false, sortable: true, notificationCount: true },
     { key: 'assignedTo', label: 'Asignados', width: '20%', mobileVisible: false, sortable: true },
     { key: 'status', label: 'Estado', width: '30%', mobileVisible: false, sortable: true },
     { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false, sortable: true },
-    { key: 'action', label: 'Acciones', width: '10%', mobileVisible: false, sortable: false },
+    { key: 'action', label: 'Acciones', width: '10%', mobileVisible: true, mobileWidth: '30%', sortable: false },
   ];
 
   const columns = baseColumns.map((col) => {

@@ -8,12 +8,12 @@
 import { motion } from 'framer-motion';
 import { CrystalInput, CrystalTextarea, CrystalDropdown } from '@/components/ui/inputs';
 import { FormSection } from '@/modules/task-crud/components/forms/FormSection';
-import { SwitchToggle } from '@/components/ui/switch-toggle';
 import { PLACEHOLDERS, INDUSTRIES } from '../../config';
 import { ClientFormData } from '../../types/form';
 import { ClientTasksTable } from '../ClientTasksTable';
 import Image from 'next/image';
 import { Calendar } from 'lucide-react';
+import styles from './ClientMetadata.module.scss';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -89,6 +89,7 @@ export function ClientForm({
               onChange={(value) => onFieldChange('name', value)}
               disabled={isReadOnly || isSubmitting}
               error={errors.name}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -96,11 +97,10 @@ export function ClientForm({
           <motion.div variants={fadeInUp} className="md:col-span-1">
             <CrystalDropdown
               label="Industria"
-              id="industry"
               placeholder={PLACEHOLDERS.INDUSTRY}
-              items={INDUSTRIES.map(ind => ({ value: ind, label: ind }))}
-              value={formData.industry || ''}
-              onChange={(value) => onFieldChange('industry', value)}
+              items={INDUSTRIES.map(ind => ({ id: ind, name: ind }))}
+              selectedItems={formData.industry ? [formData.industry] : []}
+              onSelectionChange={(selected) => onFieldChange('industry', selected[0] || '')}
               disabled={isReadOnly || isSubmitting}
             />
           </motion.div>
@@ -115,45 +115,15 @@ export function ClientForm({
               value={formData.taxId || ''}
               onChange={(value) => onFieldChange('taxId', value)}
               disabled={isReadOnly || isSubmitting}
+              variant="no-icon"
             />
-          </motion.div>
-
-          {/* Active Status */}
-          <motion.div variants={fadeInUp} className="md:col-span-2">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex flex-col">
-                <label className="text-xs font-semibold text-gray-700">Estado del Cliente</label>
-                <span className="text-xs text-gray-500 mt-0.5">
-                  {isReadOnly ? (
-                    formData.isActive ? 'Cliente activo en el sistema' : 'Cliente inactivo'
-                  ) : (
-                    'Activa o desactiva este cliente'
-                  )}
-                </span>
-              </div>
-              {isReadOnly ? (
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  formData.isActive
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {formData.isActive ? 'Activo' : 'Inactivo'}
-                </span>
-              ) : (
-                <SwitchToggle
-                  checked={formData.isActive ?? true}
-                  onCheckedChange={(checked) => onFieldChange('isActive', checked)}
-                  disabled={isSubmitting}
-                />
-              )}
-            </div>
           </motion.div>
         </FormSection>
 
       {/* Contact Information */}
       <FormSection>
           <motion.div variants={fadeInUp} className="md:col-span-2">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Información de Contacto</h3>
+            <h3 className={styles.sectionTitle}>Información de Contacto</h3>
           </motion.div>
 
           {/* Email */}
@@ -167,6 +137,7 @@ export function ClientForm({
               onChange={(value) => onFieldChange('email', value)}
               disabled={isReadOnly || isSubmitting}
               error={errors.email}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -180,6 +151,7 @@ export function ClientForm({
               value={formData.phone || ''}
               onChange={(value) => onFieldChange('phone', value)}
               disabled={isReadOnly || isSubmitting}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -194,6 +166,7 @@ export function ClientForm({
               onChange={(value) => onFieldChange('website', value)}
               disabled={isReadOnly || isSubmitting}
               error={errors.website}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -207,6 +180,7 @@ export function ClientForm({
               value={formData.address || ''}
               onChange={(value) => onFieldChange('address', value)}
               disabled={isReadOnly || isSubmitting}
+              variant="no-icon"
             />
           </motion.div>
 
@@ -217,7 +191,7 @@ export function ClientForm({
               id="notes"
               placeholder={PLACEHOLDERS.NOTES}
               value={formData.notes || ''}
-              onChange={(value) => onFieldChange('notes', value)}
+              onChange={(e) => onFieldChange('notes', e.target.value)}
               disabled={isReadOnly || isSubmitting}
               rows={3}
             />
@@ -227,7 +201,7 @@ export function ClientForm({
       {/* Projects */}
       <FormSection>
           <motion.div variants={fadeInUp} className="md:col-span-2">
-            <label className="text-xs font-semibold text-gray-700 mb-2 block">Proyectos</label>
+            <h3 className={styles.sectionTitle}>Proyectos</h3>
             <div className="flex flex-col gap-2">
               {(formData.projects || ['']).map((project, index) => (
                 <div key={index} className="flex gap-2 items-center">
@@ -237,6 +211,7 @@ export function ClientForm({
                     value={project}
                     onChange={(value) => onProjectChange(index, value)}
                     disabled={isReadOnly || isSubmitting}
+                    variant="no-icon"
                   />
                   {!isReadOnly && (formData.projects || []).length > 1 && (
                     <button
@@ -267,17 +242,17 @@ export function ClientForm({
       {/* Metadata - Only visible in view mode */}
       {isReadOnly && clientId && (formData.createdAt || formData.lastModified) && (
         <FormSection>
-          <motion.div variants={fadeInUp} className="md:col-span-2">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h3 className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Información del Registro
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <motion.div variants={fadeInUp} className={styles.metadataContainer}>
+            <div className={styles.metadataCard}>
+              <div className={styles.metadataHeader}>
+                <Calendar className={styles.metadataIcon} />
+                <h3 className={styles.metadataTitle}>Información del Registro</h3>
+              </div>
+              <div className={styles.metadataGrid}>
                 {formData.createdAt && (
-                  <div className="flex flex-col">
-                    <span className="text-xs text-gray-500">Creado</span>
-                    <span className="text-sm text-gray-700 font-medium">
+                  <div className={styles.metadataItem}>
+                    <span className={styles.metadataLabel}>Creado</span>
+                    <span className={styles.metadataValue}>
                       {new Date(formData.createdAt).toLocaleDateString('es-MX', {
                         year: 'numeric',
                         month: 'long',
@@ -287,9 +262,9 @@ export function ClientForm({
                   </div>
                 )}
                 {formData.lastModified && (
-                  <div className="flex flex-col">
-                    <span className="text-xs text-gray-500">Última modificación</span>
-                    <span className="text-sm text-gray-700 font-medium">
+                  <div className={styles.metadataItem}>
+                    <span className={styles.metadataLabel}>Última modificación</span>
+                    <span className={styles.metadataValue}>
                       {new Date(formData.lastModified).toLocaleDateString('es-MX', {
                         year: 'numeric',
                         month: 'long',

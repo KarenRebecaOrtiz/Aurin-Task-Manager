@@ -1,9 +1,9 @@
 'use client';
 
-import { CrystalButton } from '@/modules/shared/components/atoms';
+import { Button } from '@/components/ui/buttons';
+import { CirclePlus } from 'lucide-react';
 import { TaskSearchBar, type SearchCategory, type PriorityLevel, type StatusLevel } from '@/modules/data-views/components/shared/search';
 import { ViewSwitcher } from './ViewSwitcher';
-import { Small } from '@/components/ui/Typography';
 import styles from './TasksHeader.module.scss';
 
 interface TasksHeaderProps {
@@ -62,14 +62,14 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
         {/* Right Actions */}
         <div className={styles.rightActions}>
           <div className={styles.buttonWithTooltip}>
-            <CrystalButton
-              variant="secondary"
-              size="medium"
-              icon="/circle-plus.svg"
+            <Button
+              intent="primary"
+              size="lg"
+              leftIcon={CirclePlus}
               onClick={onNewTaskOpen}
             >
-              <Small>Crear Tarea</Small>
-            </CrystalButton>
+              Crear Tarea
+            </Button>
             <span className={styles.tooltip}>Crear Nueva Tarea</span>
           </div>
         </div>

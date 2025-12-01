@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import styles from './DialogHeader.module.scss';
 
 export interface DialogHeaderProps {
   /**
@@ -46,28 +46,25 @@ export function DialogHeader({
   bordered = true,
   align = 'left',
 }: DialogHeaderProps) {
-  const alignClasses = {
-    left: 'text-left',
-    center: 'text-center sm:text-left',
-  };
+  const alignClass = align === 'center' ? styles.alignCenter : styles.alignLeft;
+
+  const headerClasses = [
+    styles.header,
+    bordered && styles.bordered,
+    alignClass,
+    className,
+  ].filter(Boolean).join(' ');
 
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-2 px-6 py-4 pt-5',
-        bordered && 'border-b',
-        alignClasses[align],
-        className
-      )}
-    >
+    <div className={headerClasses}>
       {title && (
-        <h2 className="text-lg leading-none font-semibold">
+        <h2 className={styles.title}>
           {title}
         </h2>
       )}
       
       {description && (
-        <p className="text-sm text-muted-foreground">
+        <p className={styles.description}>
           {description}
         </p>
       )}

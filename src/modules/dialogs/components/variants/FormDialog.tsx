@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Dialog } from '../Dialog';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogBody,
+  ResponsiveDialogFooter
+} from '../DialogPrimitives';
 import { DialogConfig } from '../../types/dialog.types';
 import styles from '../../styles/Dialog.module.scss';
 
@@ -55,37 +63,44 @@ export function FormDialog({ config, onClose }: FormDialogProps) {
   }, [onCancel, onClose]);
 
   return (
-    <Dialog
-      open={true}
-      onClose={handleCancel}
-      title={title}
-      description={description}
-      size={size}
-      closeOnOverlayClick={closeOnOverlayClick}
-      closeOnEscape={closeOnEscape}
-      showCloseButton={showCloseButton}
-    >
-      <form onSubmit={handleSubmit} className={styles.formContent}>
-        <div className={styles.formBody}>{formContent}</div>
+    <ResponsiveDialog open={true} onOpenChange={(open) => !open && handleCancel()}>
+      <ResponsiveDialogContent
+        size={size}
+        closeOnOverlayClick={closeOnOverlayClick}
+        closeOnEscape={closeOnEscape}
+        showCloseButton={showCloseButton}
+      >
+        <ResponsiveDialogHeader>
+          {title && <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>}
+          {description && <ResponsiveDialogDescription>{description}</ResponsiveDialogDescription>}
+        </ResponsiveDialogHeader>
 
-        <div className={styles.actions}>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className={styles.cancelButton}
-            disabled={isLoading}
-          >
-            {cancelText}
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={styles.confirmButton}
-          >
-            {isLoading ? 'Procesando...' : submitText}
-          </button>
-        </div>
-      </form>
-    </Dialog>
+        <form onSubmit={handleSubmit} className={styles.formContent}>
+          <ResponsiveDialogBody>
+            <div className={styles.formBody}>{formContent}</div>
+          </ResponsiveDialogBody>
+
+          <ResponsiveDialogFooter>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className={styles.cancelButton}
+                disabled={isLoading}
+              >
+                {cancelText}
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={styles.confirmButton}
+              >
+                {isLoading ? 'Procesando...' : submitText}
+              </button>
+            </div>
+          </ResponsiveDialogFooter>
+        </form>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

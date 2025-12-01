@@ -42,7 +42,8 @@ export const useTaskColumns = ({
         key: 'clientId',
         label: 'Cuenta',
         width: '20%',
-        mobileVisible: false,
+        mobileVisible: true,
+        mobileWidth: '30%',
         sortable: true,
       },
       {
@@ -50,7 +51,7 @@ export const useTaskColumns = ({
         label: 'Tarea',
         width: '60%',
         mobileVisible: true,
-        mobileWidth: '50%',
+        mobileWidth: '40%',
         sortable: true,
       },
       {
@@ -79,7 +80,7 @@ export const useTaskColumns = ({
         label: 'Acciones',
         width: '10%',
         mobileVisible: true,
-        mobileWidth: '50%',
+        mobileWidth: '30%',
         sortable: false,
       },
     ];

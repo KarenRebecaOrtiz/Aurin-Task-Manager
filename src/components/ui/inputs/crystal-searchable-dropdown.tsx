@@ -32,6 +32,7 @@ export interface CrystalSearchableDropdownProps {
   fieldType?: 'client' | 'project' | 'user';
   onCreateNew?: () => void;
   createNewLabel?: string;
+  variant?: 'with-icon' | 'no-icon';
 }
 
 const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearchableDropdownProps>(
@@ -52,6 +53,7 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
       fieldType,
       onCreateNew,
       createNewLabel = "Crear nuevo",
+      variant = 'with-icon',
     },
     ref
   ) => {
@@ -158,6 +160,7 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
     };
 
     const getIcon = () => {
+      if (variant === 'no-icon') return null;
       if (fieldType === 'client') return <Building2 size={16} className={styles.icon} />;
       if (fieldType === 'project') return <Folder size={16} className={styles.icon} />;
       if (fieldType === 'user') return <Users size={16} className={styles.icon} />;
