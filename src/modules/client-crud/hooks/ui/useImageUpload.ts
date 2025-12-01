@@ -22,7 +22,7 @@ export function useImageUpload({ onError, initialPreview }: UseImageUploadProps 
 
     if (!file) return;
 
-    if (!UI_CONSTANTS.VALID_IMAGE_TYPES.includes(file.type)) {
+    if (!(UI_CONSTANTS.VALID_IMAGE_TYPES as readonly string[]).includes(file.type)) {
       if (onError) {
         onError(
           TOAST_MESSAGES.INVALID_IMAGE.title,

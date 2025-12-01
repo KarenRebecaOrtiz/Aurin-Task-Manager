@@ -24,9 +24,7 @@ export const ClientCell: React.FC<ClientCellProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleAvatarClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleAvatarClick = useCallback(() => {
     if (client) {
       setIsModalOpen(true);
     }

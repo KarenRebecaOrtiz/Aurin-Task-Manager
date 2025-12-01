@@ -1,5 +1,5 @@
 // src/lib/firebase-admin.ts
-import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { ServiceAccount } from 'firebase-admin/app';
@@ -12,27 +12,17 @@ export async function initializeFirebase() {
   try {
     let app;
     if (!getApps().length) {
-      // Configuración de credenciales
-      let serviceAccount: ServiceAccount;
-
-      if (process.env.GCP_PRIVATE_KEY) {
-        // Producción - usar variables de entorno
-        serviceAccount = {
-          projectId: process.env.GCP_PROJECT_ID!,
-          clientEmail: process.env.GCP_SERVICE_ACCOUNT_EMAIL!,
-          privateKey: process.env.GCP_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-        };
-        console.log('[Firebase Admin] Using environment variables for credentials');
-      } else {
-        // Desarrollo - cargar archivo JSON
-        console.log('[Firebase Admin] Loading credentials from JSON file');
-        const credentialsModule = await import('../config/aurin-platform-uploader.json');
-        serviceAccount = {
-          projectId: credentialsModule.default.project_id,
-          clientEmail: credentialsModule.default.client_email,
-          privateKey: credentialsModule.default.private_key,
-        };
+      if (!process.env.GCP_PRIVATE_KEY || !process.env.GCP_PROJECT_ID || !process.env.GCP_SERVICE_ACCOUNT_EMAIL) {
+        throw new Error('[Firebase Admin] Missing required environment variables: GCP_PRIVATE_KEY, GCP_PROJECT_ID, GCP_SERVICE_ACCOUNT_EMAIL');
       }
+
+      // Usar variables de entorno para credenciales
+      const serviceAccount: ServiceAccount = {
+        projectId: process.env.GCP_PROJECT_ID,
+        clientEmail: process.env.GCP_SERVICE_ACCOUNT_EMAIL,
+        privateKey: process.env.GCP_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      };
+      console.log('[Firebase Admin] Using environment variables for credentials');
 
       console.log('[Firebase Admin] Initializing with projectId:', serviceAccount.projectId);
 

@@ -160,7 +160,6 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
  * @param id - Client ID from URL
  * @returns 204 No Content on success
  */
-// @ts-expect-error - withAuth type inference issue
 export const DELETE = withAuth(async (userId, request: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id: clientId } = await context.params;

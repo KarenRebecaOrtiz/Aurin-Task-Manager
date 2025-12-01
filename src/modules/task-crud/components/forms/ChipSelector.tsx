@@ -15,6 +15,7 @@ interface ChipSelectorProps {
   value: string
   onChange: (value: string) => void
   required?: boolean
+  disabled?: boolean
 }
 
 // Map option values to their specific color variants
@@ -40,11 +41,14 @@ export function ChipSelector({
   options,
   value,
   onChange,
-  required = false
+  required = false,
+  disabled = false
 }: ChipSelectorProps) {
   const handleChipClick = useCallback((optionValue: string) => {
-    onChange(optionValue)
-  }, [onChange])
+    if (!disabled) {
+      onChange(optionValue)
+    }
+  }, [onChange, disabled])
 
   return (
     <div className={styles.container}>
@@ -62,9 +66,10 @@ export function ChipSelector({
               key={option.value}
               type="button"
               onClick={handleClick}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              className={`${styles.chip} ${styles[variant]} ${isSelected ? styles.selected : ''}`}
+              disabled={disabled}
+              whileHover={disabled ? {} : { scale: 1.08 }}
+              whileTap={disabled ? {} : { scale: 0.92 }}
+              className={`${styles.chip} ${styles[variant]} ${isSelected ? styles.selected : ''} ${disabled ? styles.disabled : ''}`}
             >
               {option.label}
             </motion.button>

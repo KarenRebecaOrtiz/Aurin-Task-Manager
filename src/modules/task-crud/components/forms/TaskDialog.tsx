@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/modules/dialogs"
 import { VisuallyHidden } from "@/components/ui"
 import { TaskForm, type TaskFormData } from "./TaskForm"
 import { ClientDialog } from "@/modules/client-crud"

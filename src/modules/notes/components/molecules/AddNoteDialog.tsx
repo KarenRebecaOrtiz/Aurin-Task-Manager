@@ -4,11 +4,11 @@ import { useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
+  DialogHeaderPrimitive as DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/modules/dialogs';
 import { Button } from '@/components/ui/buttons';
 import { CrystalInput } from '@/components/ui/inputs/crystal-input';
 import { NOTE_MAX_LENGTH } from '../../lib/constants';
