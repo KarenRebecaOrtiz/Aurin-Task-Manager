@@ -84,6 +84,19 @@ export const TODO_ANIMATIONS = {
     transition: { duration: 0.3 },
   },
 
+  // Close animation (subtle exit animation)
+  closeAnimation: {
+    desktop: {
+      opacity: 0,
+      scale: 0.98,
+      y: -5,
+    },
+    mobile: {
+      y: '100%',
+      opacity: 0,
+    },
+  },
+
   // Transitions
   transitions: {
     desktop: {

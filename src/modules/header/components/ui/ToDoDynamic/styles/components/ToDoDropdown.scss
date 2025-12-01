@@ -14,10 +14,14 @@
   @include mixins.dropdown-base;
   @include mixins.dropdown-light;
   @include mixins.custom-scrollbar-light;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
 
   :global(body.dark) & {
-    @include mixins.dropdown-dark;
-    @include mixins.custom-scrollbar-dark;
+     background: rgba(16, 15, 15, 0.7215686275);
+     border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
   }
 
   // Mobile drag bar
@@ -40,6 +44,13 @@
 
   &.mobile {
     @media (max-width: vars.$mobile-breakpoint) {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      bottom: 0;
+      border-radius: 0;
+      z-index: 1000;
       background: rgba(241, 245, 249, 0.98);
       
       :global(body.dark) & {
@@ -71,8 +82,8 @@
     z-index: vars.$z-mobile-header;
     
     :global(body.dark) & {
-      background: rgba(25, 25, 25, 0.95) !important;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    background: rgba(16, 15, 15, 0.7215686275);
+     border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     }
   }
 }

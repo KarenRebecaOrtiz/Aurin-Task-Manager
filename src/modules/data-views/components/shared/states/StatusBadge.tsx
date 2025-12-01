@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import styles from './StatusBadge.module.scss';
 import { 
   BookOpen, 
   CheckCircle2, 
@@ -10,9 +11,6 @@ import {
   Eye, 
   CheckCheck, 
   XCircle,
-  Signal,
-  SignalHigh,
-  SignalMedium,
 } from 'lucide-react';
 
 export type StatusType = 'backlog' | 'todo' | 'in-progress' | 'in-review' | 'done' | 'archived';
@@ -22,61 +20,60 @@ interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   showIcon?: boolean;
 }
 
-const statusConfig: Record<StatusType, { label: string; icon: React.ReactNode; className: string }> = {
+const statusConfig: Record<StatusType, { label: string; icon: React.ReactNode; styleClass: string }> = {
   backlog: {
     label: 'Backlog',
     icon: <BookOpen size={10} />,
-    className: 'bg-slate-100 text-slate-700',
+    styleClass: styles.backlog,
   },
   todo: {
     label: 'Por Iniciar',
     icon: <CheckCircle2 size={10} />,
-    className: 'bg-blue-100 text-blue-700',
+    styleClass: styles.todo,
   },
   'in-progress': {
     label: 'En Proceso',
     icon: <Clock size={10} />,
-    className: 'bg-amber-100 text-amber-700',
+    styleClass: styles.inProgress,
   },
   'in-review': {
     label: 'Por Finalizar',
     icon: <Eye size={10} />,
-    className: 'bg-purple-100 text-purple-700',
+    styleClass: styles.inReview,
   },
   done: {
     label: 'Finalizado',
     icon: <CheckCheck size={10} />,
-    className: 'bg-emerald-100 text-emerald-700',
+    styleClass: styles.done,
   },
   archived: {
     label: 'Cancelado',
     icon: <XCircle size={10} />,
-    className: 'bg-red-100 text-red-700',
+    styleClass: styles.archived,
   },
 };
 
 export const StatusBadge = React.forwardRef<HTMLSpanElement, StatusBadgeProps>(
   ({ status, showIcon = true, className }, ref) => {
     const config = statusConfig[status];
-    const baseClasses = 'inline-flex items-center gap-2 px-5 py-3 rounded-md text-sm font-medium border border-transparent transition-colors';
 
     return (
       <motion.span
         ref={ref}
-        className={cn(baseClasses, config.className, className)}
+        className={cn(styles.badge, config.styleClass, className)}
         whileHover={{ scale: 1.05 }}
         transition={{ duration: 0.2 }}
       >
         {showIcon && (
           <motion.span 
-            className="flex items-center justify-center flex-shrink-0"
+            className={styles.icon}
             whileHover={{ rotate: 12, scale: 1.15 }}
             transition={{ duration: 0.2 }}
           >
             {config.icon}
           </motion.span>
         )}
-        <span className="leading-none">{config.label}</span>
+        <span className={styles.label}>{config.label}</span>
       </motion.span>
     );
   }

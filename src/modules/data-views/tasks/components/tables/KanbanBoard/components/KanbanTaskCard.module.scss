@@ -54,7 +54,7 @@
   }
 
   :global(body.dark) & {
-    background: $color-bg-glass-dark;
+    background: rgb(22 22 22 / 80%);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: none !important;
 

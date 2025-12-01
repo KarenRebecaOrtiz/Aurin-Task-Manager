@@ -14,8 +14,9 @@
   border: 1px solid $color-border-subtle;
 
   :global(body.dark) & {
-    background: #18181b;
-    border-color:#18181b;
+    background: rgba(16, 15, 15, 0.7215686275);
+    border: none !important;
+
   }
 }
 

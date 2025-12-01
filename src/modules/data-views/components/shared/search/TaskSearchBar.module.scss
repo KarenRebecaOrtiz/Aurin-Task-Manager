@@ -5,9 +5,7 @@
   position: relative;
   display: block;
   width: 100%;
-
- 
-
+  
 }
 
 .searchInput {
@@ -17,7 +15,6 @@
   padding: $spacing-sm $spacing-lg;
   border-radius: $radius-lg;
   border: 1px solid $color-border-subtle;
-  @include glassmorphism($color-bg-glass);
   @include neomorphic-shadow(light);
   @include typography(14px, $font-weight-medium, $color-text-primary);
   cursor: text;
@@ -41,8 +38,8 @@
   }
 
   :global(body.dark) & {
-    background: #27272a;
-    border: 1px solid #3f3f46;
+    background: $color-bg-dark;
+    border: 1px solid rgba(255, 255, 255, 0.0509803922);
     box-shadow: none;
     color: rgba(255, 255, 255, 0.532);
 
@@ -102,8 +99,8 @@
   @include crystallized-scrollbar;
 
   :global(body.dark) & {
-    background: #27272a;
-    border: 1px solid #3f3f46;
+    background: $color-bg-dark;
+    border: 1px solid rgba(255, 255, 255, 0.0509803922);
     box-shadow: none !important;
   }
 

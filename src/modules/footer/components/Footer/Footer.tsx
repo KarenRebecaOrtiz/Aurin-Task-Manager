@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFeedbackForm } from '../../hooks';
-import { FooterInfo, FeedbackForm, LogoSection } from './components';
+import { FooterInfo, FeedbackForm, LogoSection, QuickLinks } from './components';
 import styles from './Footer.module.scss';
 
 const Footer: React.FC = () => {
@@ -9,6 +9,7 @@ const Footer: React.FC = () => {
   return (
     <footer className={styles.footer} style={{ zIndex: 1000 }}>
       <LogoSection />
+      <QuickLinks />
       <div className={styles.footerContent}>
         <FooterInfo />
         <FeedbackForm

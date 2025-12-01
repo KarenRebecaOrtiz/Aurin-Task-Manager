@@ -156,6 +156,7 @@
   
   :global(.dark) & {
     border-color: $color-border-dark;
+    background-color: $color-bg-dark;
   }
 }
 
@@ -196,8 +197,15 @@
   border-bottom: 1px solid $color-border-light;
   
   :global(.dark) & {
-    color: $color-text-dark-secondary;
-    border-bottom-color: $color-border-dark;
+    color: $color-bg-dark
+  }
+  
+  // Ocultar columnas de Estado (3) y Prioridad (4) en viewports menores a 569px
+  @media (max-width: 568px) {
+    &:nth-child(3),
+    &:nth-child(4) {
+      display: none;
+    }
   }
 }
 
@@ -237,6 +245,14 @@
 .td {
   padding: $spacing-md $spacing-lg;
   vertical-align: middle;
+  
+  // Ocultar columnas de Estado (3) y Prioridad (4) en viewports menores a 569px
+  @media (max-width: 568px) {
+    &:nth-child(3),
+    &:nth-child(4) {
+      display: none;
+    }
+  }
 }
 
 // Task info cell

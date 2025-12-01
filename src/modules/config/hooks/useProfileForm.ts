@@ -1,16 +1,29 @@
 /**
  * @module config/hooks/useProfileForm
  * @description Hook para manejar la lógica del formulario de perfil
+ * Optimizado con sistema de cache modular y dependencias estables
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useProfileFormStore } from '../stores';
 import { useConfigPageStore } from '../stores';
 import { Config } from '../types';
-import { validateConfigForm, hasFormErrors } from '../utils';
+import {
+  validateConfigForm,
+  hasFormErrors,
+  configCache,
+  shouldBypassCache,
+  uploadProfileImage,
+  uploadCoverImage,
+  deleteImageFromGCS,
+  extractFilePathFromUrl,
+  isClerkImage,
+  isDefaultImage,
+} from '../utils';
+import { useDebouncedCallback } from '../utils/useDebouncedCallback';
 
 /**
  * Opciones para el hook useProfileForm
@@ -25,147 +38,248 @@ interface UseProfileFormOptions {
 }
 
 /**
+ * Transforma datos de Config a ConfigForm
+ */
+function transformConfigToFormData(data: Config, userId: string, currentUser: any): any {
+  return {
+    userId,
+    notificationsEnabled: data.notificationsEnabled || false,
+    darkMode: data.darkMode || false,
+    emailAlerts: data.emailAlerts || false,
+    taskReminders: data.taskReminders || false,
+    highContrast: data.highContrast || false,
+    grayscale: data.grayscale || false,
+    soundEnabled: data.soundEnabled || false,
+    fullName: data.fullName || currentUser.fullName || '',
+    role: data.role || '',
+    description: data.description || '',
+    birthDate: data.birthDate || '',
+    phone: data.phone?.startsWith('+') ? data.phone.split(' ').slice(1).join('') : data.phone || '',
+    phoneLada: data.phone?.startsWith('+') ? data.phone.split(' ')[0] : '+52',
+    city: data.city || '',
+    gender: data.gender || '',
+    portfolio: data.portfolio?.replace(/^https?:\/\//, '') || '',
+    stack: data.stack || [],
+    profilePhoto: data.profilePhoto || currentUser.imageUrl || '',
+    coverPhoto: data.coverPhoto || '/empty-cover.png',
+    profilePhotoFile: null,
+    coverPhotoFile: null,
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    status: data.status || 'Disponible',
+    emailPreferences: data.emailPreferences || {
+      messages: true,
+      creation: true,
+      edition: true,
+      timers: true
+    },
+    github: data.socialLinks?.github || '',
+    linkedin: data.socialLinks?.linkedin || '',
+    twitter: data.socialLinks?.twitter || '',
+    instagram: data.socialLinks?.instagram || '',
+    facebook: data.socialLinks?.facebook || '',
+    tiktok: data.socialLinks?.tiktok || '',
+    whatsapp: data.socialLinks?.whatsapp || '',
+  };
+}
+
+/**
+ * Obtiene datos por defecto para usuario nuevo
+ */
+function getDefaultFormData(userId: string, currentUser: any): any {
+  return {
+    userId,
+    notificationsEnabled: false,
+    darkMode: false,
+    emailAlerts: false,
+    taskReminders: false,
+    highContrast: false,
+    grayscale: false,
+    soundEnabled: false,
+    fullName: currentUser.fullName || '',
+    role: '',
+    description: '',
+    birthDate: '',
+    phone: '',
+    phoneLada: '+52',
+    city: '',
+    gender: '',
+    portfolio: '',
+    stack: [],
+    profilePhoto: currentUser.imageUrl || '',
+    coverPhoto: '/empty-cover.png',
+    profilePhotoFile: null,
+    coverPhotoFile: null,
+    status: 'Disponible',
+    emailPreferences: { messages: true, creation: true, edition: true, timers: true },
+    github: '',
+    linkedin: '',
+    twitter: '',
+    instagram: '',
+    facebook: '',
+    tiktok: '',
+    whatsapp: '',
+  };
+}
+
+/**
  * Hook para manejar el formulario de perfil
  */
 export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOptions) => {
   const { user: currentUser, isLoaded } = useUser();
   const { activeTab } = useConfigPageStore();
-  const { 
-    formData, 
-    errors, 
+  const {
+    formData,
+    errors,
     isSaving,
-    setFormData, 
-    updateFormData, 
+    isLoading,
+    currentUserId,
+    setFormData,
+    updateFormData,
     setErrors,
     clearError,
-    setIsSaving 
+    setIsSaving,
+    setIsLoading,
+    setCurrentUserId,
   } = useProfileFormStore();
 
-  /**
-   * Intenta cargar draft desde localStorage
-   */
+  // Refs estables para callbacks
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  // Actualizar refs cuando cambian las props
   useEffect(() => {
-    if (!userId) return;
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  }, [onSuccess, onError]);
+
+  /**
+   * Verifica si existe un draft en localStorage (optimizado con flag)
+   */
+  const hasDraft = useCallback((userId: string): boolean => {
+    if (typeof window === 'undefined') return false;
 
     try {
-      const localStorageKey = `configFormData_${userId}`;
-      const savedDraft = localStorage.getItem(localStorageKey);
+      const flagKey = `configFormDraft_${userId}_exists`;
+      return localStorage.getItem(flagKey) === 'true';
+    } catch {
+      return false;
+    }
+  }, []);
+
+  /**
+   * Carga draft desde localStorage solo si existe (optimizado)
+   */
+  const loadDraftFromLocalStorage = useCallback((userId: string) => {
+    if (!hasDraft(userId)) return null;
+
+    try {
+      const dataKey = `configFormData_${userId}`;
+      const savedDraft = localStorage.getItem(dataKey);
 
       if (savedDraft) {
-        const parsedDraft = JSON.parse(savedDraft);
         console.log('[useProfileForm] Loaded draft from localStorage');
-        setFormData(parsedDraft);
+        return JSON.parse(savedDraft);
       }
     } catch (err) {
       console.warn('[useProfileForm] Failed to load draft from localStorage:', err);
     }
-  }, [userId, setFormData]);
+    return null;
+  }, [hasDraft]);
 
   /**
-   * Carga los datos del usuario desde Firestore
+   * Carga los datos del usuario desde cache o Firestore (optimizado)
+   * Solo hace fetch si no hay datos en cache o el userId cambió
    */
   useEffect(() => {
     if (!isLoaded || !userId || !currentUser) return;
 
-    const userDocRef = doc(db, 'users', userId);
-    const unsubscribe = onSnapshot(
-      userDocRef,
-      (docSnap) => {
+    // Si el userId no ha cambiado y ya tenemos datos, no recargar
+    if (currentUserId === userId && formData?.userId === userId) {
+      console.log('[useProfileForm] Datos ya cargados para userId:', userId);
+      return;
+    }
+
+    const loadUserData = async () => {
+      try {
+        setIsLoading(true);
+        setCurrentUserId(userId);
+
+        // 1. Intentar cargar desde draft de localStorage primero
+        const draftData = loadDraftFromLocalStorage(userId);
+        if (draftData && draftData.userId === userId) {
+          console.log('[useProfileForm] Usando draft de localStorage');
+          setFormData(draftData);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2. Intentar cargar desde cache (si no está bypass activado)
+        if (!shouldBypassCache()) {
+          const cachedData = configCache.get(userId);
+          if (cachedData) {
+            console.log('[useProfileForm] Usando datos del cache');
+            setFormData(transformConfigToFormData(cachedData.config, userId, currentUser));
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // 3. Fetch desde Firestore si no hay cache
+        console.log('[useProfileForm] Fetching desde Firestore para userId:', userId);
+        const userDocRef = doc(db, 'users', userId);
+        const docSnap = await getDoc(userDocRef);
+
         if (docSnap.exists()) {
           const data = docSnap.data() as Config & { id: string };
-          setFormData({
-            userId,
-            notificationsEnabled: data.notificationsEnabled || false,
-            darkMode: data.darkMode || false,
-            emailAlerts: data.emailAlerts || false,
-            taskReminders: data.taskReminders || false,
-            highContrast: data.highContrast || false,
-            grayscale: data.grayscale || false,
-            soundEnabled: data.soundEnabled || false,
-            fullName: data.fullName || currentUser.fullName || '',
-            role: data.role || '',
-            description: data.description || '',
-            birthDate: data.birthDate || '',
-            phone: data.phone?.startsWith('+') ? data.phone.split(' ').slice(1).join('') : data.phone || '',
-            phoneLada: data.phone?.startsWith('+') ? data.phone.split(' ')[0] : '+52',
-            city: data.city || '',
-            gender: data.gender || '',
-            portfolio: data.portfolio?.replace(/^https?:\/\//, '') || '',
-            stack: data.stack || [],
-            profilePhoto: data.profilePhoto || currentUser.imageUrl || '',
-            coverPhoto: data.coverPhoto || '/empty-cover.png',
-            profilePhotoFile: null,
-            coverPhotoFile: null,
-            currentPassword: '',
-            newPassword: '',
-            confirmPassword: '',
-            status: data.status || 'Disponible',
-            emailPreferences: data.emailPreferences || {
-              messages: true,
-              creation: true,
-              edition: true,
-              timers: true
-            },
-            github: data.socialLinks?.github || '',
-            linkedin: data.socialLinks?.linkedin || '',
-            twitter: data.socialLinks?.twitter || '',
-            instagram: data.socialLinks?.instagram || '',
-            facebook: data.socialLinks?.facebook || '',
-            tiktok: data.socialLinks?.tiktok || '',
-            whatsapp: data.socialLinks?.whatsapp || '',
-          });
+
+          // Guardar en cache para futuros usos
+          configCache.set(userId, data as Config);
+
+          const formDataToSet = transformConfigToFormData(data, userId, currentUser);
+          setFormData(formDataToSet);
         } else {
           // Usuario nuevo, datos por defecto
-          setFormData({
-            userId,
-            notificationsEnabled: false,
-            darkMode: false,
-            emailAlerts: false,
-            taskReminders: false,
-            highContrast: false,
-            grayscale: false,
-            soundEnabled: false,
-            fullName: currentUser.fullName || '',
-            role: '',
-            description: '',
-            birthDate: '',
-            phone: '',
-            phoneLada: '+52',
-            city: '',
-            gender: '',
-            portfolio: '',
-            stack: [],
-            profilePhoto: currentUser.imageUrl || '',
-            coverPhoto: '/empty-cover.png',
-            profilePhotoFile: null,
-            coverPhotoFile: null,
-            status: 'Disponible',
-            emailPreferences: { messages: true, creation: true, edition: true, timers: true },
-          });
+          const defaultFormData = getDefaultFormData(userId, currentUser);
+          setFormData(defaultFormData);
         }
-      },
-      (error) => {
+      } catch (error) {
         console.error('[useProfileForm] Error loading user data:', error);
-        if (onError) onError('Error al cargar los datos del usuario');
+        if (onErrorRef.current) {
+          onErrorRef.current('Error al cargar los datos del usuario');
+        }
+      } finally {
+        setIsLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [userId, isLoaded, currentUser, setFormData, onError]);
+    loadUserData();
+  }, [userId, isLoaded, currentUser, currentUserId, formData?.userId, loadDraftFromLocalStorage, setFormData, setIsLoading, setCurrentUserId]);
 
   /**
-   * Guarda automáticamente en localStorage cuando cambia formData
+   * Guarda automáticamente en localStorage cuando cambia formData (con debounce y flag)
    */
-  useEffect(() => {
+  const saveToLocalStorage = useDebouncedCallback(() => {
     if (!formData || !userId) return;
 
     try {
-      const localStorageKey = `configFormData_${userId}`;
-      localStorage.setItem(localStorageKey, JSON.stringify(formData));
+      const dataKey = `configFormData_${userId}`;
+      const flagKey = `configFormDraft_${userId}_exists`;
+
+      localStorage.setItem(dataKey, JSON.stringify(formData));
+      localStorage.setItem(flagKey, 'true'); // Flag para optimización
+
+      console.log('[useProfileForm] Saved draft to localStorage');
     } catch (err) {
       console.warn('[useProfileForm] Failed to save draft to localStorage:', err);
     }
-  }, [formData, userId]);
+  }, 500);
+
+  useEffect(() => {
+    if (!formData || !userId || isLoading) return;
+    saveToLocalStorage();
+  }, [formData, userId, isLoading, saveToLocalStorage]);
 
   /**
    * Maneja el cambio de un campo del formulario
@@ -241,27 +355,20 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
 
   /**
    * Guarda los datos del formulario (incluyendo subida de imágenes)
+   * Optimizado: imports estáticos + invalidación de cache
    */
   const handleSubmit = useCallback(async () => {
     if (!formData || !userId || !currentUser) return;
 
     if (!validateForm()) {
-      if (onError) onError('Por favor corrige los errores en el formulario');
+      if (onErrorRef.current) {
+        onErrorRef.current('Por favor corrige los errores en el formulario');
+      }
       return;
     }
 
     try {
       setIsSaving(true);
-
-      // Importar dinámicamente las funciones de upload
-      const {
-        uploadProfileImage,
-        uploadCoverImage,
-        deleteImageFromGCS,
-        extractFilePathFromUrl,
-        isClerkImage,
-        isDefaultImage
-      } = await import('../utils/imageProcessing');
 
       let profilePhotoUrl = formData.profilePhoto;
       let coverPhotoUrl = formData.coverPhoto;
@@ -348,6 +455,10 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
 
       await updateDoc(userDocRef, dataToSave);
 
+      // Invalidar cache para que se recargue con datos frescos
+      configCache.invalidate(userId);
+      console.log('[useProfileForm] Cache invalidated after save');
+
       // Limpiar archivos temporales del estado
       updateFormData({
         profilePhotoFile: null,
@@ -356,33 +467,44 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         coverPhoto: coverPhotoUrl,
       });
 
-      // Limpiar localStorage si existe
+      // Limpiar localStorage y flag
       try {
-        const localStorageKey = `configFormData_${userId}`;
-        localStorage.removeItem(localStorageKey);
+        const dataKey = `configFormData_${userId}`;
+        const flagKey = `configFormDraft_${userId}_exists`;
+        localStorage.removeItem(dataKey);
+        localStorage.removeItem(flagKey);
+        console.log('[useProfileForm] localStorage cleared');
       } catch (err) {
         console.warn('[useProfileForm] Failed to clear localStorage:', err);
       }
 
       useConfigPageStore.getState().clearTabChanges(activeTab);
 
-      if (onSuccess) onSuccess('Configuración guardada exitosamente');
+      if (onSuccessRef.current) {
+        onSuccessRef.current('Configuración guardada exitosamente');
+      }
     } catch (error) {
       console.error('[useProfileForm] Error saving data:', error);
-      if (onError) onError('Error al guardar la configuración', error instanceof Error ? error.message : 'Error desconocido');
+      if (onErrorRef.current) {
+        onErrorRef.current('Error al guardar la configuración', error instanceof Error ? error.message : 'Error desconocido');
+      }
     } finally {
       setIsSaving(false);
     }
-  }, [formData, userId, currentUser, validateForm, setIsSaving, updateFormData, activeTab, onSuccess, onError]);
+  }, [formData, userId, currentUser, validateForm, setIsSaving, updateFormData, activeTab]);
 
   /**
    * Descarta los cambios y restaura los datos originales
+   * Optimizado: limpia localStorage con flag
    */
   const handleDiscard = useCallback(() => {
-    // Limpiar localStorage
+    // Limpiar localStorage y flag
     try {
-      const localStorageKey = `configFormData_${userId}`;
-      localStorage.removeItem(localStorageKey);
+      const dataKey = `configFormData_${userId}`;
+      const flagKey = `configFormDraft_${userId}_exists`;
+      localStorage.removeItem(dataKey);
+      localStorage.removeItem(flagKey);
+      console.log('[useProfileForm] Draft discarded');
     } catch (err) {
       console.warn('[useProfileForm] Failed to clear localStorage:', err);
     }
@@ -396,14 +518,15 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
       coverPhotoFile: null,
     });
 
-    // Forzar recarga de datos desde Firestore
-    // El efecto principal del hook se encargará de recargar los datos
-  }, [userId, activeTab, updateFormData]);
+    // Invalidar datos actuales para forzar recarga desde cache o Firestore
+    setCurrentUserId(null);
+  }, [userId, activeTab, updateFormData, setCurrentUserId]);
 
   return {
     formData,
     errors,
     isSaving,
+    isLoading,
     handleInputChange,
     handleStackChange,
     handlePhoneLadaChange,

@@ -57,12 +57,12 @@
   }
 
   :global(body.dark) & {
-    background: #27272a;
-    border-color: #3f3f46;
+    background: rgba(16, 15, 15, 0.7215686275);
+    border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     box-shadow: none;
 
     &:hover {
-      background: #27272a;
+      background: #27272a4d;
       border-color: #52525b;
       box-shadow: none;
     }
@@ -178,8 +178,8 @@
   animation: dropdownAppear 0.2s ease-out;
 
   :global(body.dark) & {
-    background: #27272a;
-    border-color: #3f3f46;
+     background: rgba(16, 15, 15, 0.7215686275);
+    border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     box-shadow: none;
   }
 }
@@ -204,8 +204,8 @@
   background: rgba(255, 255, 255, 0.1);
 
   :global(body.dark) & {
-    border-bottom-color: #3f3f46;
-    background: #27272a;
+     background: rgba(16, 15, 15, 0.7215686275);
+     border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
   }
 }
 

@@ -1,0 +1,56 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 100px;
+  padding-left: 0.8rem;
+  padding-right: 0.8rem;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+  font-size: 0.775rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.label {
+  line-height: 1;
+}
+
+// Status variants
+.backlog {
+  background-color: rgb(226, 232, 240);
+  color: rgb(71, 85, 105);
+}
+
+.todo {
+  background-color: rgb(219, 234, 254);
+  color: rgb(30, 58, 138);
+}
+
+.inProgress {
+  background-color: rgb(254, 243, 199);
+  color: rgb(120, 53, 15);
+}
+
+.inReview {
+  background-color: rgb(243, 232, 255);
+  color: rgb(88, 28, 135);
+}
+
+.done {
+  background-color: rgb(209, 250, 229);
+  color: rgb(5, 46, 22);
+}
+
+.archived {
+  background-color: rgb(254, 226, 226);
+  color: rgb(127, 29, 29);
+}

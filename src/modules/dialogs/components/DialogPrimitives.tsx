@@ -390,7 +390,7 @@ DialogBody.displayName = 'DialogBody';
 export const DialogFooter = forwardRef<HTMLDivElement, DialogFooterProps>(
   ({ children, className = '' }, ref) => {
     return (
-      <div ref={ref} className={`${styles.dialogFooter} ${className}`}>
+      <div ref={ref} className={`${styles.dialogFooter} ${styles.sticky} ${className}`}>
         {children}
       </div>
     );

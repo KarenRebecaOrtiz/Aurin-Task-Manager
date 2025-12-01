@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -11,8 +11,10 @@ import {
   ResponsiveDialogBody,
   ResponsiveDialogFooter
 } from '../DialogPrimitives';
+import { DialogFooter, DialogActions } from '../molecules';
 import { DialogConfig } from '../../types/dialog.types';
-import { buttonVariants, transitions } from '../../config/animations';
+import { panelVariants } from '../../config/animations';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import styles from '../../styles/Dialog.module.scss';
 
 interface ConfirmDialogProps {
@@ -65,6 +67,16 @@ export function ConfirmDialog({ config, onClose }: ConfirmDialogProps) {
     }
   };
 
+  // Check if mobile for conditional rendering
+  const isMobile = useMediaQuery('(max-width: 767px)');
+
+  // Map variant to submitVariant for DialogActions
+  const getSubmitVariant = (): 'primary' | 'danger' | 'secondary' => {
+    if (variant === 'danger') return 'danger';
+    if (variant === 'warning') return 'secondary';
+    return 'primary';
+  };
+
   return (
     <ResponsiveDialog open={true} onOpenChange={(open) => !open && handleCancel()}>
       <ResponsiveDialogContent
@@ -73,48 +85,65 @@ export function ConfirmDialog({ config, onClose }: ConfirmDialogProps) {
         closeOnEscape={closeOnEscape}
         showCloseButton={showCloseButton}
       >
-        <ResponsiveDialogHeader>
-          {title && <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>}
-          {description && <ResponsiveDialogDescription>{description}</ResponsiveDialogDescription>}
-        </ResponsiveDialogHeader>
+        {isMobile ? (
+          // Mobile: Use Drawer structure
+          <>
+            <ResponsiveDialogHeader>
+              {title && <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>}
+              {description && <ResponsiveDialogDescription>{description}</ResponsiveDialogDescription>}
+            </ResponsiveDialogHeader>
 
-        <ResponsiveDialogBody>
-          <div className={styles.confirmContent} onKeyDown={handleKeyDown}>
-            {/* Content area can be empty for confirm dialogs */}
-          </div>
-        </ResponsiveDialogBody>
+            <ResponsiveDialogBody>
+              <div className={styles.confirmContent} onKeyDown={handleKeyDown}>
+                {/* Content area can be empty for confirm dialogs */}
+              </div>
+            </ResponsiveDialogBody>
 
-        <ResponsiveDialogFooter>
-          <div className={styles.actions}>
-            <motion.button
-              type="button"
-              onClick={handleCancel}
-              className={styles.cancelButton}
-              disabled={isLoading}
-              variants={buttonVariants}
-              initial="idle"
-              whileHover="hover"
-              whileTap="tap"
-              transition={transitions.fast}
+            <ResponsiveDialogFooter>
+              <DialogActions
+                onCancel={handleCancel}
+                onSubmit={handleConfirm}
+                cancelText={cancelText}
+                submitText={confirmText}
+                isLoading={isLoading}
+                submitVariant={getSubmitVariant()}
+              />
+            </ResponsiveDialogFooter>
+          </>
+        ) : (
+          // Desktop: Use Dialog structure with DialogFooter from molecules
+          <AnimatePresence mode="wait">
+            <motion.div
+              variants={panelVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className={styles.dialogInner}
             >
-              {cancelText}
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={handleConfirm}
-              disabled={isLoading}
-              className={`${styles.confirmButton} ${styles[`variant${variant?.charAt(0).toUpperCase()}${variant?.slice(1)}`] || ''}`}
-              variants={buttonVariants}
-              initial="idle"
-              whileHover="hover"
-              whileTap="tap"
-              transition={transitions.fast}
-              autoFocus
-            >
-              {isLoading ? 'Procesando...' : confirmText}
-            </motion.button>
-          </div>
-        </ResponsiveDialogFooter>
+              <ResponsiveDialogHeader>
+                {title && <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>}
+                {description && <ResponsiveDialogDescription>{description}</ResponsiveDialogDescription>}
+              </ResponsiveDialogHeader>
+
+              <ResponsiveDialogBody>
+                <div className={styles.confirmContent} onKeyDown={handleKeyDown}>
+                  {/* Content area can be empty for confirm dialogs */}
+                </div>
+              </ResponsiveDialogBody>
+
+              <DialogFooter>
+                <DialogActions
+                  onCancel={handleCancel}
+                  onSubmit={handleConfirm}
+                  cancelText={cancelText}
+                  submitText={confirmText}
+                  isLoading={isLoading}
+                  submitVariant={getSubmitVariant()}
+                />
+              </DialogFooter>
+            </motion.div>
+          </AnimatePresence>
+        )}
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );

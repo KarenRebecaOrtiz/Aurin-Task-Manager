@@ -21,6 +21,7 @@ export { SquarePlus } from './square-plus';
 export { Timer } from './timer';
 export { Unplug } from './unplug';
 export { User } from './user';
+export { UserRound } from './user-round';
 export { X } from './x';
 
 // Re-export icon utilities and types

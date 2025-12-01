@@ -4,7 +4,7 @@ import React, { useCallback } from 'react';
 import { motion, Variants, Easing } from 'framer-motion';
 import { useClerk } from '@clerk/nextjs';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Cog, LogOut } from '@/components/animate-ui/icons';
+import { UserRound, LogOut } from '@/components/animate-ui/icons';
 import { Sun } from '@/components/animate-ui/icons/sun';
 import { Moon } from '@/components/animate-ui/icons/moon';
 import { ConfigDialog } from '@/modules/config';
@@ -13,9 +13,7 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-  DrawerClose,
 } from '@/components/ui/drawer';
-import { X } from 'lucide-react';
 import styles from './SettingsDrawer.module.scss';
 
 interface SettingsDrawerProps {
@@ -69,12 +67,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       <Drawer open={isOpen} onOpenChange={handleOpenChange}>
         <DrawerContent className={styles.drawerContent}>
           <DrawerHeader className={styles.drawerHeader}>
-            <DrawerTitle className={styles.drawerTitle}>Configuración</DrawerTitle>
-            <DrawerClose asChild>
-              <button className={styles.closeButton} aria-label="Cerrar">
-                <X size={20} />
-              </button>
-            </DrawerClose>
+            <DrawerTitle className={styles.drawerTitle}>Editar Perfil</DrawerTitle>
           </DrawerHeader>
 
           <div className={styles.drawerBody}>
@@ -87,8 +80,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 animate="visible"
                 variants={itemVariants}
               >
-                <Cog size={20} animateOnHover loop className={styles.menuIcon} />
-                <span className={styles.menuText}>Configuración</span>
+                <UserRound size={20} animateOnHover loop className={styles.menuIcon} />
+                <span className={styles.menuText}>Editar Perfil</span>
               </motion.button>
 
               <motion.button

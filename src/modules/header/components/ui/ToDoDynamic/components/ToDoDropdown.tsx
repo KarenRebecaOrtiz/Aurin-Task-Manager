@@ -43,6 +43,7 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
   // Mobile detection and drag handling
   const [isMobile, setIsMobile] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isClosing, setIsClosing] = useState(false);
   const dragStartY = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +96,29 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
       document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen, onClose]);
+
+  // Handle scroll to close dropdown with animation
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isOpen && !isClosing) {
+        // Start close animation
+        setIsClosing(true);
+        // Wait for animation to complete before closing
+        setTimeout(() => {
+          onClose();
+          setIsClosing(false);
+        }, 200);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('scroll', handleScroll, true);
+    }
+
+    return () => {
+      document.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isOpen, isClosing, onClose]);
 
   // Mobile drag handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -189,7 +213,11 @@ export const ToDoDropdown: React.FC<ToDoDropdownProps> = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      {...(isMobile ? TODO_ANIMATIONS.dropdown.visible.mobile : TODO_ANIMATIONS.dropdown.visible.desktop)}
+      animate={isClosing ? 
+        (isMobile ? TODO_ANIMATIONS.closeAnimation.mobile : TODO_ANIMATIONS.closeAnimation.desktop)
+        : (isMobile ? TODO_ANIMATIONS.dropdown.visible.mobile : TODO_ANIMATIONS.dropdown.visible.desktop)
+      }
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
     >
       {/* Header */}
       <motion.div className={styles.header} {...TODO_ANIMATIONS.header}>

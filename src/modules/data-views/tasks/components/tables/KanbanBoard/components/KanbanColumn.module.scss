@@ -37,9 +37,10 @@
   }
 
   :global(body.dark) & {
-    background: $color-bg-glass-dark;
+    background: $color-bg-dark;
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: none !important;
+    border : 1px solid rgba(255, 255, 255, 0.0509803922);
 
     &::-webkit-scrollbar-thumb {
       background: rgba(75, 85, 99, 0.7);

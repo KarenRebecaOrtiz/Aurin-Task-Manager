@@ -26,13 +26,13 @@
 
 .metadataCard {
   background: $zinc-50;
-  border: 1px solid $color-border-light;
+  border: 1px solid rgba(255, 255, 255, 0.0509803922);
   border-radius: $radius-lg;
   padding: $spacing-lg;
   
   :global(.dark) & {
-    background: $zinc-900;
-    border-color: $color-border-dark;
+    background: $color-bg-dark;
+    border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
   }
 }
 

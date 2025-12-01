@@ -13,8 +13,7 @@
   overflow: hidden;
 
   :global(body.dark) & {
-    background: #18181b;
-    box-shadow: none !important;
+     background: rgba(16, 15, 15, 0.7215686275);
   }
 }
 

@@ -9,6 +9,13 @@
     -webkit-backdrop-filter: blur(8px);
     z-index: 1;
     padding-top: 50px;
+
+      @media (max-width: 767px) {
+      .footer{
+        padding-bottom: 100px;
+      }
+    }
+  
   
     .logoContainer {
       display: flex;
@@ -17,12 +24,61 @@
       margin-bottom: 0.5rem;
       
       img {
+        opacity: 1 !important;
         transition: all 0.3s ease;
-        
-        &:hover {
-          opacity: 1 !important;
-          transform: scale(1.05);
+      }
+    }
+
+    .quickLinksContainer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .quickLinkButton {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(71, 85, 105, 0.15);
+      border: 1px solid rgba(71, 85, 105, 0.2);
+      transition: all 0.3s ease;
+      cursor: pointer;
+
+      img {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        filter: brightness(0) saturate(100%) invert(30%) sepia(10%) saturate(500%) hue-rotate(180deg);
+        transition: all 0.3s ease;
+      }
+
+      .pngIcon {
+        filter: grayscale(100%) brightness(0.4);
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+        background: rgba(71, 85, 105, 0.25);
+        border-color: rgba(71, 85, 105, 0.35);
+        box-shadow: -2px -2px 4px rgba(255, 255, 255, 0.95), 2px 2px 4px rgba(0, 0, 0, 0.12);
+
+        img {
+          filter: brightness(0) saturate(100%) invert(20%) sepia(15%) saturate(600%) hue-rotate(180deg);
         }
+
+        .pngIcon {
+          filter: grayscale(100%) brightness(0.3);
+        }
+      }
+
+      &:active {
+        transform: translateY(0);
+        box-shadow: inset -1px -1px 2px rgba(255, 255, 255, 0.4), inset 1px 1px 2px rgba(209, 217, 230, 0.2);
       }
     }
     
@@ -142,7 +198,39 @@
       border-color:none;
       box-shadow: none;
       border-top: none;
-  
+
+      .quickLinkButton {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.12);
+
+        img {
+          filter: brightness(0) saturate(100%) invert(100%);
+        }
+
+        .pngIcon {
+          filter: grayscale(100%) brightness(100%);
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.25);
+          box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.6), 2px 2px 4px rgba(255, 255, 255, 0.03);
+
+          img {
+            filter: brightness(0) saturate(100%) invert(100%);
+          }
+
+          .pngIcon {
+            filter: grayscale(100%) brightness(100%);
+          }
+        }
+
+        &:active {
+          background: rgba(255, 255, 255, 0.05);
+          box-shadow: inset -1px -1px 2px rgba(0, 0, 0, 0.35), inset 1px 1px 2px rgba(255, 255, 255, 0.02);
+        }
+      }
+
       .info {
         p {
           color: #e2e8f0;

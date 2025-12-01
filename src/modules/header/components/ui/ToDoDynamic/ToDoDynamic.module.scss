@@ -57,9 +57,9 @@
     filter: invert(0%) brightness(100%);
   }
 
-  :global(body.dark) & {
-    background: #27272a;
-    border-color: #3f3f46;
+:global(body.dark) & {
+    background: rgba(16, 15, 15, 0.7215686275);
+    border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     box-shadow: none;
 
     &:hover {

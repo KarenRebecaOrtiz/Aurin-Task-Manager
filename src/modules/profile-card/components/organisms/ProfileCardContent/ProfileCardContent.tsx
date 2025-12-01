@@ -20,7 +20,7 @@ interface ProfileCardContentProps {
   profile: UserProfile;
   userId: string;
   currentUserId?: string;
-  onConfigClick: () => void;
+  onConfigClick?: () => void;
   onMessageClick: () => void;
   socialLinks: SocialLink[];
 }

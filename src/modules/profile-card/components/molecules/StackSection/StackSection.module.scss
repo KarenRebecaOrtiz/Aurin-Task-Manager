@@ -21,7 +21,6 @@
   background: #ffffff;
   border: 1px solid #e5e7eb;
   cursor: pointer;
-  transition: $transition-base;
   white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
@@ -29,13 +28,11 @@
   &:hover {
     background: #f3f4f6;
     border-color: #d1d5db;
-    transform: translateY(-1px) scale(1.02);
   }
 
   &:active {
     background: #e5e7eb;
     border-color: #9ca3af;
-    transform: scale(0.98);
   }
 
   :global(.dark) & {

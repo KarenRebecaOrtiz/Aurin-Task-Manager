@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
@@ -15,15 +15,15 @@ interface ProfileHeaderProps {
   onError?: (message: string, error?: string) => void;
 }
 
-export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
+export const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
   isOwnProfile,
   onSuccess,
   onError,
 }) => {
   const { user: currentUser } = useUser();
   const { formData } = useProfileFormStore();
-  const { 
-    handleProfilePhotoChange, 
+  const {
+    handleProfilePhotoChange,
     handleCoverPhotoChange,
     profilePhotoInputRef,
     coverPhotoInputRef
@@ -122,7 +122,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 delay: 0.2
               }}
             >
-              {currentUser.username || 'Usuario'}
+              {formData.fullName || currentUser.firstName || currentUser.username || 'Usuario'}
             </motion.div>
             <div className={styles.userEmail}>
               {currentUser.primaryEmailAddress?.emailAddress}
@@ -132,4 +132,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       </div>
     </>
   );
-};
+});
+
+ProfileHeader.displayName = 'ProfileHeader';

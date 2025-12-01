@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, memo } from 'react';
 import Image from 'next/image';
 import {
   CrystalInput,
@@ -12,7 +12,8 @@ import {
 import { User, Hammer, Link } from '@/components/animate-ui/icons';
 import { Mars, Venus, VenusAndMars, CircleDot } from 'lucide-react';
 import { useProfileForm } from '../../hooks';
-import { PhoneInput } from '../ui';
+import { useConfigPageStore } from '../../stores';
+import { PhoneInput, SaveActions } from '../ui';
 import { UNIQUE_TECHNOLOGIES } from '../../constants';
 import { formatPhoneNumber } from '../../utils';
 import { SocialLinksManager } from '../social-links';
@@ -23,23 +24,39 @@ interface ProfileSectionProps {
   isOwnProfile: boolean;
   onSuccess?: (message: string) => void;
   onError?: (message: string, error?: string) => void;
+  /** Si es true, no renderiza el SaveActions (para cuando se usa DialogFooter externo) */
+  hideActions?: boolean;
 }
 
-export const ProfileSection: React.FC<ProfileSectionProps> = ({
+export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
   userId,
   isOwnProfile,
   onSuccess,
   onError,
+  hideActions = false,
 }) => {
+  const { hasUnsavedChanges } = useConfigPageStore();
   const {
     formData,
     errors,
+    isSaving,
     handleInputChange,
     handleStackChange,
     handlePhoneLadaChange,
     handlePhoneChange,
     handleSocialLinksChange,
+    handleSubmit,
+    handleDiscard,
   } = useProfileForm({ userId, onSuccess, onError });
+
+  // Memoizar transformación del array de tecnologías (optimización crítica: ~800 items)
+  const technologyItems = useMemo(
+    () => UNIQUE_TECHNOLOGIES.map(tech => ({
+      id: tech,
+      name: tech
+    })),
+    []
+  );
 
   const handleGenericInputChange = React.useCallback((name: string) => (value: string) => {
     const event = { target: { name, value } } as React.ChangeEvent<HTMLInputElement>;
@@ -216,10 +233,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
           <div className={styles.fieldGroup}>
             <CrystalSearchableDropdown
               label=""
-              items={UNIQUE_TECHNOLOGIES.map(tech => ({
-                id: tech,
-                name: tech
-              }))}
+              items={technologyItems}
               selectedItems={formData.stack || []}
               onSelectionChange={handleStackChange}
               placeholder="Selecciona herramientas..."
@@ -245,6 +259,18 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
           </div>
         </section>
       )}
+
+      {/* Save Actions - Solo para usuarios propios y cuando no se ocultan las acciones */}
+      {isOwnProfile && !hideActions && (
+        <SaveActions
+          hasChanges={hasUnsavedChanges}
+          isSaving={isSaving}
+          onSave={handleSubmit}
+          onDiscard={handleDiscard}
+        />
+      )}
     </>
   );
-};
+});
+
+ProfileSection.displayName = 'ProfileSection';

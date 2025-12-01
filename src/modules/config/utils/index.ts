@@ -76,3 +76,15 @@ export {
   debounce,
   throttle,
 } from './formHelpers';
+
+// Cache
+export {
+  configCache,
+  getConfigCache,
+  shouldBypassCache,
+} from './configCache';
+
+export type {
+  ConfigCacheMetadata,
+  CachedConfigData,
+} from './configCache';

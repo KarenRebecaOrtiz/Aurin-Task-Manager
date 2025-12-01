@@ -1,0 +1,21 @@
+@use '../../app/styles/_mixins.scss' as *;
+
+.bgContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #ffffff;
+  transition: background-color 0.3s ease;
+
+  // CSS variable for pattern color that changes with theme
+  --pattern-fill: rgba(5, 5, 5, 0.01);
+
+  :global(body.dark) & {
+    background-color: #070707;
+    --pattern-fill: rgba(255, 255, 255, 0.01);
+  }
+}

@@ -11,7 +11,7 @@ import { ProfileCard } from '@/modules/profile-card';
 import { Small, Muted } from '@/components/ui/Typography';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
 import { ConfigDialog } from '@/modules/config';
-import { Cog, LogOut } from '@/components/animate-ui/icons';
+import { UserRound, LogOut } from '@/components/animate-ui/icons';
 import { Sun } from '@/components/animate-ui/icons/sun';
 import { Moon } from '@/components/animate-ui/icons/moon';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -27,6 +27,7 @@ const AvatarDropdown = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const { currentStatus: onlineStatus } = useAvailabilityStatus();
@@ -48,6 +49,29 @@ const AvatarDropdown = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isDropdownOpen]);
+
+  // Close dropdown on scroll with animation
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isDropdownOpen && !isClosing) {
+        // Start close animation
+        setIsClosing(true);
+        // Wait for animation to complete before closing
+        setTimeout(() => {
+          setIsDropdownOpen(false);
+          setIsClosing(false);
+        }, 200);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('scroll', handleScroll, true);
+    }
+
+    return () => {
+      document.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isDropdownOpen, isClosing]);
 
   // Menu item handlers
   const handleConfig = useCallback(() => {
@@ -139,7 +163,10 @@ const AvatarDropdown = () => {
           {isDropdownOpen && (
             <motion.div
               className={styles.dropdown}
-              {...dropdownAnimations.menu}
+              initial={dropdownAnimations.menu.initial}
+              animate={isClosing ? { opacity: 0, y: -12, scale: 0.95 } : dropdownAnimations.menu.animate}
+              exit={dropdownAnimations.menu.exit}
+              transition={{ duration: isClosing ? 0.15 : dropdownAnimations.menu.transition.duration, ease: 'easeInOut' }}
               role="menu"
             >
               <div className={styles.dropdownHeader}>
@@ -156,7 +183,7 @@ const AvatarDropdown = () => {
                   {...dropdownAnimations.item(0)}
                   role="menuitem"
                 >
-                  <Cog size={16} animateOnHover loop className={styles.dropdownIcon} />
+                  <UserRound size={16} animateOnHover loop className={styles.dropdownIcon} />
                   Configuración
                 </motion.button>
 

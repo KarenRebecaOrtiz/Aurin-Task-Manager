@@ -1,6 +1,6 @@
 /**
  * @module config/stores/profileFormStore
- * @description Store para el estado del formulario de perfil
+ * @description Store para el estado del formulario de perfil con soporte de caching
  */
 
 import { create } from 'zustand';
@@ -16,6 +16,12 @@ interface ProfileFormState {
   errors: FormErrors;
   /** Si está guardando */
   isSaving: boolean;
+  /** Si está cargando datos */
+  isLoading: boolean;
+  /** Timestamp de la última carga de datos */
+  lastFetchTime: number | null;
+  /** ID del usuario actual */
+  currentUserId: string | null;
 }
 
 /**
@@ -34,6 +40,12 @@ interface ProfileFormActions {
   clearAllErrors: () => void;
   /** Establece el estado de guardado */
   setIsSaving: (isSaving: boolean) => void;
+  /** Establece el estado de carga */
+  setIsLoading: (isLoading: boolean) => void;
+  /** Actualiza el timestamp de la última carga */
+  setLastFetchTime: (time: number | null) => void;
+  /** Establece el userId actual */
+  setCurrentUserId: (userId: string | null) => void;
   /** Resetea el store a su estado inicial */
   reset: () => void;
 }
@@ -45,6 +57,9 @@ const initialState: ProfileFormState = {
   formData: null,
   errors: {},
   isSaving: false,
+  isLoading: false,
+  lastFetchTime: null,
+  currentUserId: null,
 };
 
 /**
@@ -72,6 +87,12 @@ export const useProfileFormStore = create<ProfileFormState & ProfileFormActions>
   clearAllErrors: () => set({ errors: {} }),
 
   setIsSaving: (isSaving) => set({ isSaving }),
+
+  setIsLoading: (isLoading) => set({ isLoading }),
+
+  setLastFetchTime: (time) => set({ lastFetchTime: time }),
+
+  setCurrentUserId: (userId) => set({ currentUserId: userId }),
 
   reset: () => set(initialState),
 }));

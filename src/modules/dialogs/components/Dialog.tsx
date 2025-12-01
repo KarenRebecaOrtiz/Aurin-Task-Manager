@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -10,6 +10,7 @@ import {
   panelVariants,
   transitions,
 } from '../config/animations';
+import { useAdaptiveHeight } from '../hooks/useAdaptiveHeight';
 import styles from '../styles/Dialog.module.scss';
 
 const sizeClasses: Record<DialogSize, string> = {
@@ -40,7 +41,23 @@ export function Dialog({
   closeOnOverlayClick = true,
   closeOnEscape = true,
   className = '',
-}: DialogBaseProps) {
+  adaptiveHeight = false,
+  heightThreshold = 0.3,
+}: DialogBaseProps & {
+  /** Habilita altura adaptativa: si el contenido > 30% viewport, ocupa todo el alto */
+  adaptiveHeight?: boolean;
+  /** Umbral del viewport (0-1). Default: 0.3 (30%) */
+  heightThreshold?: number;
+}) {
+  // Ref para el contenido del panel
+  const panelRef = useRef<HTMLDivElement>(null);
+  
+  // Hook para altura adaptativa
+  const { heightClass } = useAdaptiveHeight(panelRef, {
+    threshold: heightThreshold,
+    enabled: adaptiveHeight && open,
+  });
+
   // Block body scroll when dialog is open
   useEffect(() => {
     if (open) {
@@ -103,12 +120,13 @@ export function Dialog({
 
           {/* Panel centrado - stopPropagation evita cerrar al hacer click dentro */}
           <motion.div
+            ref={panelRef}
             initial="hidden"
             animate="visible"
             exit="exit"
             variants={panelVariants}
             transition={transitions.normal}
-            className={`${styles.panel} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+            className={`${styles.panel} ${sizeClasses[size]} ${variantClasses[variant]} ${adaptiveHeight ? styles[heightClass] : ''} ${className}`}
             onClick={handlePanelClick}
           >
             {showCloseButton && (

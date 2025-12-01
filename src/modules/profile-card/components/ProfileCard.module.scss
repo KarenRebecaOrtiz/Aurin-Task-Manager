@@ -86,8 +86,8 @@
   overflow: hidden;
 
   :global(body.dark) & {
-    background: rgb(26 26 26);
-    border-color:rgb(26 26 26);
+    background:#0c0c0c;
+    border-color:#0c0c0c;
     box-shadow: none!important;
   }
 }
@@ -129,6 +129,7 @@
   align-items: start;
   justify-content: start;
   width: 100%;
+  padding-bottom: 30px;
   
   @media (max-width: 640px) {
     align-items: start;

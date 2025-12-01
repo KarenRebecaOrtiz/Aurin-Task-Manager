@@ -1,8 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { StackTag } from '../../atoms/StackTag/StackTag';
 import { SectionTitle } from '../../atoms/SectionTitle/SectionTitle';
-import { itemVariants } from '@/modules/dialogs';
 import styles from './StackSection.module.scss';
 
 interface StackSectionProps {
@@ -28,42 +26,30 @@ export const StackSection: React.FC<StackSectionProps> = ({ stack }) => {
   }
 
   return (
-    <motion.div className={styles.stackSection} variants={itemVariants}>
+    <div className={styles.stackSection}>
       <SectionTitle>Stack de Herramientas</SectionTitle>
 
-      {/* Container de tags con animación suave */}
-      <motion.div className={styles.stackTags} layout>
-        <AnimatePresence mode="popLayout">
-          {visibleTechs.map((tech) => (
-            <motion.div
-              key={tech}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <StackTag tech={tech} />
-            </motion.div>
-          ))}
+      {/* Container de tags sin animación */}
+      <div className={styles.stackTags}>
+        {visibleTechs.map((tech) => (
+          <div key={tech}>
+            <StackTag tech={tech} />
+          </div>
+        ))}
 
-          {/* Botón "Ver más/Ver menos" - Solo si hay más elementos */}
-          {hasMoreTechs && (
-            <motion.button
-              key="view-more-button"
-              type="button"
-              className={styles.viewMoreButton}
-              onClick={handleToggleTechs}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              aria-label={showAllTechs ? 'Ver menos tecnologías' : 'Ver más tecnologías'}
-            >
-              {showAllTechs ? 'Ver menos' : `+${stack.length - maxVisibleTechs}`}
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </motion.div>
+        {/* Botón "Ver más/Ver menos" - Solo si hay más elementos */}
+        {hasMoreTechs && (
+          <button
+            key="view-more-button"
+            type="button"
+            className={styles.viewMoreButton}
+            onClick={handleToggleTechs}
+            aria-label={showAllTechs ? 'Ver menos tecnologías' : 'Ver más tecnologías'}
+          >
+            {showAllTechs ? 'Ver menos' : `+${stack.length - maxVisibleTechs}`}
+          </button>
+        )}
+      </div>
+    </div>
   );
 };

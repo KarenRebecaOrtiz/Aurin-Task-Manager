@@ -12,7 +12,7 @@ interface ProfileHeaderProps {
   profile: UserProfile;
   userId: string;
   currentUserId?: string;
-  onConfigClick: () => void;
+  onConfigClick?: () => void;
   onMessageClick: () => void;
 }
 
@@ -65,17 +65,17 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <h2 className={styles.name}>{profile.fullName || 'Sin nombre'}</h2>
 
           <div className={styles.actionButtons}>
-            {/* TODO: Botón config solo para usuario actual */}
-            {isOwnProfile && (
+            {/* Botón de configuración solo para perfil propio */}
+            {isOwnProfile && onConfigClick && (
               <ActionButton
                 variant="config"
                 onClick={onConfigClick}
-                ariaLabel="Configurar perfil"
-                title="Configurar perfil"
+                ariaLabel="Abrir configuración de perfil"
+                title="Configuración"
               />
             )}
 
-            {/* TODO: Botón mensaje solo para otros usuarios */}
+            {/* Botón mensaje solo para otros usuarios */}
             {!isOwnProfile && (
               <ActionButton
                 variant="message"

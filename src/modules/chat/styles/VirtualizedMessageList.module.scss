@@ -69,7 +69,7 @@
 .dateSeparator {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,14 +79,14 @@
   background: #f6f6f6;
 
   :global(.dark) & {
-    background: #121212;
+    background:  #151414;
   }
 
   @media (max-width: 767px) {
     background: #ffffff;
 
     :global(.dark) & {
-      background: #18181b;
+      background:  $chat-bg-dark;
     }
   }
 

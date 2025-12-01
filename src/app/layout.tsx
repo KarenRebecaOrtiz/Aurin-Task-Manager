@@ -5,6 +5,8 @@ import "./globals.scss";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { DialogProvider } from "@/modules/dialogs";
 import { SonnerToaster } from "@/modules/sonner";
+import { InteractiveBackground } from "@/components/ui/InteractiveBackground";
+import { LightRaysWrapper } from "@/components/ui/LightRaysWrapper";
 
 const urbanist = Urbanist({
   subsets: ["latin"],
@@ -75,6 +77,18 @@ export default function RootLayout({
             />
           </head>
           <body className={`${urbanist.className} ${urbanist.variable}`}>
+            <InteractiveBackground />
+            <LightRaysWrapper
+              raysOrigin="top-center"
+              raysColor="#ffffff1b"
+              raysSpeed={0.3}
+              lightSpread={1}
+              rayLength={1.5}
+              saturation={0.6}
+              followMouse={false}
+              mouseInfluence={0}
+              introAnimation={true}
+            />
             <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
               <defs>
                 <filter id="grayscale">

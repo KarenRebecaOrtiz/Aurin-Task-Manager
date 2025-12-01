@@ -22,20 +22,7 @@ export const Badge = ({ role, link }: BadgeProps) => {
       {...wrapperProps}
     >
       <div className={styles.badgeContainer}>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 15" className={styles.badgeSvg}>
-          <rect width="60" height="15" rx="5" fill="#d3df48" />
-          <text 
-            fontFamily="Helvetica-Bold, Helvetica" 
-            fontSize="6" 
-            fontWeight="bold" 
-            fill="#333" 
-            x="30" 
-            y="10" 
-            textAnchor="middle"
-          >
-            {role}
-          </text>
-        </svg>
+        <span className={styles.badgeText}>{role}</span>
       </div>
     </Wrapper>
   );

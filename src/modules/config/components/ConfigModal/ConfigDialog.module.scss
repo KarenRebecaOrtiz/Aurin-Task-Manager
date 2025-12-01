@@ -1,0 +1,13 @@
+/**
+ * ConfigDialog Styles
+ * Estilos para el diálogo de configuración
+ */
+
+// Desktop loader - oculto en móviles
+.desktopLoader {
+  display: block;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}

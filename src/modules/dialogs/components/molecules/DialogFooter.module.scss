@@ -1,0 +1,49 @@
+.dialogFooter {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  background: white;
+  border-top: 1px solid #e4e4e7;
+
+  :global(.dark) & {
+    background: #0c0c0c;
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &.sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08);
+
+    :global(.dark) & {
+      box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+// ============================================================================
+// RESPONSIVE - Mobile
+// ============================================================================
+
+@media (max-width: 768px) {
+  .dialogFooter {
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px;
+    gap: 0.5rem;
+
+    &.sticky {
+      padding: 20px;
+    }
+
+    > button {
+      width: 100%;
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+    }
+  }
+}

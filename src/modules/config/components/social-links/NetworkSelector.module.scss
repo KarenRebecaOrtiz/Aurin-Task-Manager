@@ -101,8 +101,8 @@
   overflow: hidden;
 
   :global(body.dark) & {
-    background: #1f2937; // bg-gray-800
-    border-color: #374151; // border-gray-700
+    background: #1c1c1d; // bg-gray-800
+    border-color: #1c1c1d; // border-gray-700
     box-shadow: none !important;
   }
 }
@@ -140,11 +140,11 @@
     color: #f3f4f6; // text-gray-100
 
     &:hover {
-      background: #374151; // bg-gray-700
+      background: #393941; // bg-gray-700
     }
 
     &.selected {
-      background: #374151; // bg-gray-700
+      background: #393941; // bg-gray-700
     }
   }
 }
