@@ -59,6 +59,7 @@ class ClientService {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -87,6 +88,7 @@ class ClientService {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
 
       const data: ApiResponse<Client> = await response.json();
@@ -123,6 +125,7 @@ class ClientService {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
 
       const data: ApiResponse<ClientListResponse> = await response.json();
@@ -150,6 +153,7 @@ class ClientService {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -178,6 +182,7 @@ class ClientService {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
 
       // 204 No Content won't have a body

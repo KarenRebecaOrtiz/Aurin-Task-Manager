@@ -75,7 +75,8 @@ export function ClientDialog({
 
   // Load client data when in view/edit mode
   useEffect(() => {
-    if (!isOpen || !clientId || mode === 'create') return;
+    // Wait for user to be loaded before making authenticated requests
+    if (!isOpen || !clientId || mode === 'create' || !user) return;
 
     const loadClientData = async () => {
       try {
@@ -110,7 +111,7 @@ export function ClientDialog({
     };
 
     loadClientData();
-  }, [isOpen, clientId, mode, showError, updateField, setPreview, formData]);
+  }, [isOpen, clientId, mode, user, showError, updateField, setPreview, formData]);
 
   // Reset on close
   useEffect(() => {
