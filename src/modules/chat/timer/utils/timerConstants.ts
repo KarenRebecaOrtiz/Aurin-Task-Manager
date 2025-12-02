@@ -64,18 +64,42 @@ export const TIMER_COLLECTION_NAME = 'timers';
  */
 export const TASKS_COLLECTION_NAME = 'tasks';
 
+/**
+ * Firestore subcollection name for time logs
+ */
+export const TIME_LOGS_COLLECTION_NAME = 'time_logs';
+
 // ============================================================================
 // DEFAULT VALUES
 // ============================================================================
 
 /**
  * Default values for time entry form
+ * Note: date is set to null here and should be initialized fresh in getDefaultTimerValues()
  */
 export const DEFAULT_TIMER_VALUES: TimeEntryFormData = {
-  time: '00:00',
-  date: new Date(),
+  date: new Date(), // Placeholder, use getDefaultTimerValues() for fresh date
+  entryMode: 'duration',
+  durationHours: 1,
+  durationMinutes: 0,
+  startTime: '09:00:00',
+  endTime: '10:00:00',
   comment: '',
 };
+
+/**
+ * Get fresh default values for time entry form
+ * Always returns a new Date object for the current day at midnight
+ * This ensures the date validation passes without user interaction
+ */
+export function getDefaultTimerValues(): TimeEntryFormData {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to midnight to ensure it passes "no future date" validation
+  return {
+    ...DEFAULT_TIMER_VALUES,
+    date: today,
+  };
+}
 
 /**
  * Default device ID prefix
@@ -258,10 +282,26 @@ export const FIRESTORE_FIELDS = {
   CREATED_AT: 'createdAt',
   UPDATED_AT: 'updatedAt',
 
-  // Task fields
+  // Task fields (legacy - kept for backward compatibility)
   TOTAL_HOURS: 'totalHours',
   MEMBER_HOURS: 'memberHours',
   LAST_UPDATED: 'lastUpdated',
+
+  // TimeTracking fields (new structured approach)
+  TIME_TRACKING: 'timeTracking',
+  TIME_TRACKING_TOTAL_HOURS: 'timeTracking.totalHours',
+  TIME_TRACKING_TOTAL_MINUTES: 'timeTracking.totalMinutes',
+  TIME_TRACKING_LAST_LOG_DATE: 'timeTracking.lastLogDate',
+  TIME_TRACKING_MEMBER_HOURS: 'timeTracking.memberHours',
+
+  // TimeLog fields (for time_logs subcollection)
+  USER_NAME: 'userName',
+  START_TIME: 'startTime',
+  END_TIME: 'endTime',
+  DURATION_MINUTES: 'durationMinutes',
+  DESCRIPTION: 'description',
+  DATE_STRING: 'dateString',
+  SOURCE: 'source',
 } as const;
 
 // ============================================================================
@@ -350,6 +390,7 @@ export const TIMER_CONSTANTS = {
 
   // Defaults
   DEFAULT_TIMER_VALUES,
+  getDefaultTimerValues,
   DEVICE_ID_PREFIX,
   DEFAULT_PAGE_SIZE,
 

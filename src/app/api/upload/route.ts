@@ -8,12 +8,14 @@ const MAX_SIZES = {
   profile: 5 * 1024 * 1024,
   cover: 10 * 1024 * 1024,
   message: 10 * 1024 * 1024,
+  chatbot: 10 * 1024 * 1024, // 10MB para archivos del chatbot
 };
 
 const VALID_EXTENSIONS = {
   profile: ['jpg', 'jpeg', 'png', 'gif'],
   cover: ['jpg', 'jpeg', 'png', 'gif'],
   message: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'],
+  chatbot: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'txt'], // Archivos permitidos para chatbot
 };
 
 function getStoragePath(type: string, userId: string, conversationId?: string) {
@@ -25,6 +27,9 @@ function getStoragePath(type: string, userId: string, conversationId?: string) {
     case 'message':
       if (!conversationId) throw new Error('conversationId is required for message uploads');
       return `messages/${conversationId}/${Date.now()}_${Date.now()}`;
+    case 'chatbot':
+      // Archivos del chatbot se guardan en carpeta dedicada
+      return `chatbot/${userId}/${Date.now()}`;
     default:
       throw new Error('Invalid upload type');
   }

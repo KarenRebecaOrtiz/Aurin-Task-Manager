@@ -28,6 +28,7 @@ const MotionNumberFlow = motion.create(NumberFlow);
  * @param isOptimistic - Whether showing optimistic update (pending confirmation)
  * @param syncStatus - Current sync status ('idle', 'syncing', 'error')
  * @param onClick - Optional click handler to make counter interactive
+ * @param pill - Whether to use pill/compact mode (32px height, matches button sizes)
  */
 export function TimerCounter({
   hours,
@@ -37,14 +38,15 @@ export function TimerCounter({
   isOptimistic = false,
   syncStatus = 'idle',
   onClick,
-  disabled = false
+  disabled = false,
+  pill = false
 }: TimerCounterProps) {
   // Check if timer is at 0
   const isTimerEmpty = hours === 0 && minutes === 0 && seconds === 0;
 
   return (
     <div
-      className={`${styles.timerCounter} ${className} ${onClick ? styles.clickable : ''} ${disabled ? styles.disabledState : ''}`}
+      className={`${styles.timerCounter} ${className} ${onClick ? styles.clickable : ''} ${disabled ? styles.disabledState : ''} ${pill ? styles.pill : ''}`}
       onClick={() => onClick?.()}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}

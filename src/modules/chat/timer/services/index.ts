@@ -92,6 +92,31 @@ export {
 } from './timerFirebase';
 
 // ============================================================================
+// TIME LOG FIREBASE
+// ============================================================================
+
+export {
+  // CRUD operations
+  createTimeLog,
+  getTimeLogs,
+  getUserTimeLogs,
+  getTimeLog,
+  updateTimeLog,
+  deleteTimeLog,
+
+  // Listeners
+  listenToTimeLogs,
+  listenToTimeTracking,
+
+  // Migration helpers
+  migrateLegacyTimeLogs,
+  recalculateTimeTracking,
+
+  // Service object
+  TimeLogFirebaseService,
+} from './timeLogFirebase';
+
+// ============================================================================
 // RE-EXPORT TYPES
 // ============================================================================
 
@@ -99,6 +124,10 @@ export type {
   TimerDocument,
   TimerInterval,
   FirestoreTimerInterval,
+  TimeLog,
+  TimeTracking,
+  CreateTimeLogInput,
+  TimeLogSource,
   RetryOptions,
   CacheEntry,
 } from '../types/timer.types';

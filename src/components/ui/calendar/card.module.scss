@@ -1,0 +1,56 @@
+/**
+ * Card Component - SCSS Module Styles
+ *
+ * Estilos para el componente Card sin dependencias de Tailwind
+ */
+
+.card {
+  border-radius: 8px;
+  background-color: #0c0c0c;
+  color: var(--color-card-foreground, #111827);
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px;
+}
+
+.cardTitle {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--color-card-foreground, #111827);
+}
+
+.cardDescription {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.cardContent {
+  padding: 24px;
+  padding-top: 0;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  padding-top: 0;
+  flex-direction: column;
+  gap: 24px;
+  border-top: 1px solid var(--color-card-border, #e5e7eb);
+}
+
+// Dark theme support
+:global(.dark) {
+  .card {
+    --color-card-border: #374151;
+    --color-card-bg: #1f2937;
+    --color-card-foreground: #f9fafb;
+    --color-text-muted: #9ca3af;
+  }
+}

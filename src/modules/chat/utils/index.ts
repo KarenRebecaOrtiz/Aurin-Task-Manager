@@ -4,8 +4,6 @@
  * Funciones helper y utilidades para el módulo de chat.
  */
 
-export * from './deviceUtils';
-
 import type { Message, MessageGroup } from '../types';
 
 /**

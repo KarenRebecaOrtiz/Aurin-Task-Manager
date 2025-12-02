@@ -143,12 +143,12 @@
   }
   
   @media (max-width: 768px) {
-    padding: $spacing-lg 0; 
+    padding: 8px 0; 
     background: #fffafa;
     margin: 15px 10px 0px 0px;
 
     :global(body.dark) & {
-      background: #19191b;
+      background: #0e0e0f;
     }
   }
   

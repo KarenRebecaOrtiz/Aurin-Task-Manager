@@ -295,7 +295,7 @@ const [error, setError] = useState<Error | null>(null);
     <AnimatePresence mode="wait">
       {isOpen && (
         <motion.div variants={modalVariants} initial="hidden" animate="visible" exit="exit">
-          <DialogHeader title="..." description="..." bordered />
+          <DialogHeader title="..." description="..." />
           <div className={`${styles.scrollableContent} flex-1 min-h-0 overflow-y-auto`}>
             <MyForm />
           </div>

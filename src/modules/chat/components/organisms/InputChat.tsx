@@ -19,13 +19,9 @@ import Underline from '@tiptap/extension-underline';
 import { useEditorPersistence } from '@/modules/chat/hooks/use-form-persistence';
 import { saveErrorMessage, removeErrorMessage, PersistedMessage } from '@/lib/messagePersistence';
 import { toast } from '@/components/ui/use-toast';
-import { TimerPanel, TimerDisplay } from '../../timer';
 import { Paperclip, X } from '@/components/animate-ui/icons';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import SearchableDropdown, { type DropdownItem } from '@/modules/config/components/ui/SearchableDropdown';
-import { useTimerActions } from '../../timer/hooks/useTimerActions';
-import { useRouter } from 'next/navigation';
-import { Timer, MessageCircle } from '@/components/animate-ui/icons';
 import styles from './InputChat.module.scss';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -127,8 +123,6 @@ export const InputChat: React.FC<InputChatProps> = ({
   const [isMentionOpen, setIsMentionOpen] = useState(false);
   const [mentionInput, setMentionInput] = useState("");
   const [mentionOptions, setMentionOptions] = useState<DropdownItem[]>([]);
-  const [isTimerPanelOpen, setIsTimerPanelOpen] = useState(false);
-  const [userAttemptedToStartTimer, setUserAttemptedToStartTimer] = useState(false);
 
   // Local state for sending if not controlled
   const [localSending, setLocalSending] = useState(false);
@@ -139,14 +133,6 @@ export const InputChat: React.FC<InputChatProps> = ({
   const inputWrapperRef = useRef<HTMLFormElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const conversationId = `chat-sidebar-${taskId}`;
-  const router = useRouter();
-
-  // ========== TIMER STATE ==========
-  const { runningTimerTaskId } = useTimerActions(taskId, userId, {
-    onConfirmStopOtherTimer: async () => false,
-  });
-  const hasOtherTimerRunning = runningTimerTaskId && runningTimerTaskId !== taskId;
-  const shouldShowTimerWarning = hasOtherTimerRunning && userAttemptedToStartTimer;
 
   // ========== IMAGE UPLOAD HOOK ==========
   const {
@@ -714,29 +700,9 @@ export const InputChat: React.FC<InputChatProps> = ({
     removeErrorMessage(conversationId);
   }, [onCancelReply, clearPersistedData, conversationId]);
 
-  const handleCloseTimerPanel = useCallback(() => {
-    setIsTimerPanelOpen(false);
-  }, []);
-
   const handleMouseDownPreventDefault = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
-
-  const handleGoToRunningTask = useCallback(() => {
-    if (runningTimerTaskId) {
-      router.push(`/dashboard/tasks?taskId=${runningTimerTaskId}`);
-    }
-  }, [runningTimerTaskId, router]);
-
-  const handleTimerCounterClick = useCallback(() => {
-    // If there's another timer running, mark attempt (will show banner)
-    if (hasOtherTimerRunning) {
-      setUserAttemptedToStartTimer(true);
-      return;
-    }
-    // Otherwise, open the timer panel normally
-    setIsTimerPanelOpen(true);
-  }, [hasOtherTimerRunning]);
 
   // ========== MENTION HANDLERS ==========
   const handleMentionSelectionChange = useCallback(
@@ -780,32 +746,9 @@ export const InputChat: React.FC<InputChatProps> = ({
             transition={{ duration: 0.3, ease: 'easeOut' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <MessageCircle animateOnHover size={20} />
               <span>Mensaje guardado restaurado</span>
               <button type="button" onClick={handleClearPersistedData}>
                 Borrar
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Timer warning banner - Only shown after user attempts to start timer */}
-      <AnimatePresence>
-        {shouldShowTimerWarning && (
-          <motion.div
-            className={styles.timerWarning}
-            key="timer-warning"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Timer animateOnHover size={20} />
-              <span>Completa el timer en otra tarea primero</span>
-              <button type="button" onClick={handleGoToRunningTask}>
-                Ir
               </button>
             </div>
           </motion.div>
@@ -881,35 +824,19 @@ export const InputChat: React.FC<InputChatProps> = ({
         </div>
       )}
 
-      {/* Timer Panel - Modular Version */}
-      {isTimerPanelOpen && (
-        <TimerPanel
-          isOpen={isTimerPanelOpen}
-          taskId={taskId}
-          userId={userId}
-          userName={userName}
-          onClose={handleCloseTimerPanel}
-          onSuccess={() => {
-            handleCloseTimerPanel();
-            toast({ title: "Tiempo agregado exitosamente" });
-          }}
-        />
-      )}
-
       {/* Main form */}
-      {!isTimerPanelOpen && (
-        <form
-          className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
-          ref={inputWrapperRef}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onSubmit={handleSend}
-        >
-          {/* Formatting toolbar */}
-          <AnimatePresence>
-            {editor && !editor.isEmpty && (
-              <motion.div
+      <form
+        className={`${styles.inputContainer} ${isDragging ? styles.dragging : ''}`}
+        ref={inputWrapperRef}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onSubmit={handleSend}
+      >
+        {/* Formatting toolbar */}
+        <AnimatePresence>
+          {editor && !editor.isEmpty && (
+            <motion.div
                 className={styles.toolbar}
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1062,12 +989,6 @@ export const InputChat: React.FC<InputChatProps> = ({
 
           {/* Actions bar */}
           <div className={styles.actions}>
-            <TimerDisplay
-              taskId={taskId}
-              userId={userId}
-              showControls={true}
-              onTogglePanel={handleTimerCounterClick}
-            />
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <button
                 type="button"
@@ -1090,7 +1011,6 @@ export const InputChat: React.FC<InputChatProps> = ({
             </div>
           </div>
         </form>
-      )}
 
       {/* Hidden file input */}
       <input

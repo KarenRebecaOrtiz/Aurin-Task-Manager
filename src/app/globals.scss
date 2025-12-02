@@ -3,6 +3,40 @@
 
 @import "tailwindcss";
 
+// ============================================
+// RESPONSIVE TYPOGRAPHY - CSS Custom Properties
+// ============================================
+// These values are consumed by SCSS variables in _variables.scss
+// Desktop font sizes (default)
+:root {
+  --text-xs: 0.75rem;    // 12px
+  --text-sm: 1rem;       // 16px
+  --text-base: 1rem;     // 16px
+  --text-lg: 1.125rem;   // 18px
+  --text-xl: 1.25rem;    // 20px
+  --text-2xl: 1.5rem;    // 24px
+  --text-3xl: 1.875rem;  // 30px
+  --text-4xl: 2.25rem;   // 36px
+  --text-5xl: 3rem;      // 48px
+  --text-6xl: 3.75rem;   // 60px
+}
+
+// Mobile font sizes (20% smaller for viewports < 768px)
+@media (max-width: 767px) {
+  :root {
+    --text-xs: 0.6rem;     // 9.6px
+    --text-sm: 0.9rem;     // 12.8px
+    --text-base: 0.8rem;   // 12.8px
+    --text-lg: 0.9rem;     // 14.4px
+    --text-xl: 1rem;       // 16px
+    --text-2xl: 1.2rem;    // 19.2px
+    --text-3xl: 1.5rem;    // 24px
+    --text-4xl: 1.8rem;    // 28.8px
+    --text-5xl: 2.4rem;    // 38.4px
+    --text-6xl: 3rem;      // 48px
+  }
+}
+
 /* Shimmer Button Animations */
 @keyframes shimmer-slide {
   0% {

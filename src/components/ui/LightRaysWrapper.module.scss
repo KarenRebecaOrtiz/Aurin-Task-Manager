@@ -19,5 +19,9 @@
   :global(body.dark) & {
     opacity: 0.18;
     visibility: visible;
+
+    @include responsive(sm) {
+      opacity: 0;
+    }
   }
 }

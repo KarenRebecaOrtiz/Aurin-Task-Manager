@@ -1,0 +1,93 @@
+/**
+ * Manual Time Entry Modal - Component Styles
+ *
+ * Modal overlay and content styles for the manual time entry dialog.
+ */
+
+@use '../../../styles/variables' as *;
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.modal {
+  background: #ffffff;
+  width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  :global(.dark) & {
+    background: #0c0c0c
+   
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  :global(.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: $chat-text-primary-light;
+  margin: 0;
+
+  :global(.dark) & {
+    color: $chat-text-primary-dark;
+  }
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  color: $chat-text-secondary-light;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: $chat-text-primary-light;
+  }
+
+  :global(.dark) & {
+    background: rgba(255, 255, 255, 0.06);
+    color: $chat-text-secondary-dark;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $chat-text-primary-dark;
+    }
+  }
+}
+
+.content {
+  padding: 24px;
+  overflow-y: auto;
+}

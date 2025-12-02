@@ -50,6 +50,7 @@ export { FormDialog } from './components/variants/FormDialog';
 export { TaskDialog } from './components/variants/TaskDialog';
 export { ClientDialog } from './components/variants/ClientDialog';
 export { AddNoteDialog } from './components/variants/AddNoteDialog';
+export { ManualTimeDialog } from './components/variants/ManualTimeDialog';
 
 // Components - Atoms
 export {

@@ -8,10 +8,9 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { TimeEntryFormProps } from '../../types/timer.types';
 import { useTimeEntry } from '../../hooks/useTimeEntry';
-import { TimeInput } from '../atoms/TimeInput';
 import { DateSelector } from './DateSelector';
 import styles from './TimeEntryForm.module.scss';
 
@@ -19,9 +18,9 @@ import styles from './TimeEntryForm.module.scss';
  * TimeEntryForm Component
  *
  * Complete form for manually entering time worked on a task
- * - Time input (hours + minutes)
+ * - Start time input
+ * - End time input
  * - Date selector
- * - Optional comment
  * - Validation and submission
  *
  * @param taskId - ID of the task
@@ -44,26 +43,22 @@ export function TimeEntryForm({
     errors
   } = useTimeEntry(taskId, userId, userName, onSuccess);
 
-  const { register, watch, setValue } = form;
-  const timeValue = watch('time') || '00:00';
+  const { watch, setValue } = form;
   const dateValue = watch('date') || new Date();
+  const startTimeValue = watch('startTime') || '09:00:00';
+  const endTimeValue = watch('endTime') || '10:00:00';
 
-  // Parse time string to hours/minutes
-  const [hours, minutes] = timeValue.split(':').map(Number);
+  const handleStartTimeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue('startTime', e.target.value, { shouldValidate: true });
+  }, [setValue]);
 
-  const handleHoursChange = (val: number) => {
-    const newTime = `${String(val).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
-    setValue('time', newTime, { shouldValidate: true });
-  };
+  const handleEndTimeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue('endTime', e.target.value, { shouldValidate: true });
+  }, [setValue]);
 
-  const handleMinutesChange = (val: number) => {
-    const newTime = `${String(hours || 0).padStart(2, '0')}:${String(val).padStart(2, '0')}`;
-    setValue('time', newTime, { shouldValidate: true });
-  };
-
-  const handleDateChange = (date: Date) => {
+  const handleDateChange = useCallback((date: Date) => {
     setValue('date', date, { shouldValidate: true });
-  };
+  }, [setValue]);
 
   return (
     <form onSubmit={submitTimeEntry} className={styles.timeEntryForm}>
@@ -71,28 +66,45 @@ export function TimeEntryForm({
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>Tiempo Invertido</h3>
         <p className={styles.sectionDesc}>
-          Ingresa el tiempo que dedicaste a esta tarea
+          Ingresa el rango de tiempo que dedicaste a esta tarea
         </p>
 
         <div className={styles.timeInputs}>
-          <TimeInput
-            value={hours || 0}
-            min={0}
-            max={23}
-            label="HORAS"
-            type="hours"
-            onChange={handleHoursChange}
-            error={errors.time}
-          />
-          <span className={styles.separator}>:</span>
-          <TimeInput
-            value={minutes || 0}
-            min={0}
-            max={59}
-            label="MINUTOS"
-            type="minutes"
-            onChange={handleMinutesChange}
-          />
+          <div className={styles.timeFieldGroup}>
+            <label htmlFor="start-time" className={styles.label}>
+              Hora de Inicio
+            </label>
+            <input
+              id="start-time"
+              type="time"
+              step="1"
+              value={startTimeValue}
+              onChange={handleStartTimeChange}
+              className={styles.timeInput}
+              disabled={isSubmitting}
+            />
+            {errors.startTime && (
+              <span className={styles.errorText}>{errors.startTime}</span>
+            )}
+          </div>
+          <span className={styles.separator}>—</span>
+          <div className={styles.timeFieldGroup}>
+            <label htmlFor="end-time" className={styles.label}>
+              Hora de Fin
+            </label>
+            <input
+              id="end-time"
+              type="time"
+              step="1"
+              value={endTimeValue}
+              onChange={handleEndTimeChange}
+              className={styles.timeInput}
+              disabled={isSubmitting}
+            />
+            {errors.endTime && (
+              <span className={styles.errorText}>{errors.endTime}</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -106,21 +118,6 @@ export function TimeEntryForm({
           value={dateValue}
           onChange={handleDateChange}
           error={errors.date}
-        />
-      </div>
-
-      {/* Comment Section (Optional) */}
-      <div className={styles.section}>
-        <label htmlFor="comment" className={styles.label}>
-          Comentario (opcional)
-        </label>
-        <textarea
-          {...register('comment')}
-          id="comment"
-          className={styles.textarea}
-          placeholder="Añade detalles sobre el trabajo realizado..."
-          rows={3}
-          disabled={isSubmitting}
         />
       </div>
 

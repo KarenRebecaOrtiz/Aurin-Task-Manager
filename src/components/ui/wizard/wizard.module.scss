@@ -108,24 +108,22 @@
   }
 
   /* Modo oscuro */
-  :global(.dark) & {
+  :global(body.dark) & {
     background: rgba(30, 30, 30, 0.7); /* Semi-transparent #1E1E1E */
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:none;
+    box-shadow: none;
 
     &:hover {
       transform: translateY(-1px) scale(1.05);
       background: rgba(30, 30, 30, 0.85);
       border-color: rgba(255, 255, 255, 0.2);
-      box-shadow:none;
-
+      box-shadow: none;
     }
 
     &:active {
       background: rgba(30, 30, 30, 0.6);
       border-color: rgba(255, 255, 255, 0.05);
-      box-shadow:none;
-
+      box-shadow: none;
     }
   }
 
@@ -142,41 +140,26 @@
 }
 
 .wizardProgressDot.active {
-  background: #cfde48; /* Assuming $primary is a blue like #3B82F6 */
+  background: #cfde48; 
   border-color: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(8px);
-  box-shadow:
-    -2px -2px 4px rgba(255, 255, 255, 0.9),
-    2px 2px 4px rgba(0, 0, 0, 0.1),
-    inset -2px -2px 4px rgba(255, 255, 255, 0.5),
-    inset 2px 2px 4px rgba(59, 130, 246, 0.3); /* Match primary color */
-
-  :global(.dark) & {
-    background:cfde48;
+  
+  :global(body.dark) & {
+    background: #cfde48;
     border-color: rgba(255, 255, 255, 0.15);
-    box-shadow:none;
+    box-shadow: none;
   }
 }
 
 .wizardProgressDot.completed {
-  background:#c1c1c1;
+  background: #c1c1c1;
   border-color: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(8px);
   opacity: 0.8;
-  box-shadow:
-    -2px -2px 4px rgba(255, 255, 255, 0.8),
-    2px 2px 4px rgba(0, 0, 0, 0.08),
-    inset -2px -2px 4px rgba(255, 255, 255, 0.4),
-    inset 2px 2px 4px rgba(59, 130, 246, 0.25);
-
-  :global(.dark) & {
-    background: rgba(59, 130, 246, 0.6);
+  
+  :global(body.dark) & {
+    background: #cfde48;
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-      2px 2px 4px rgba(0, 0, 0, 0.45),
-      -2px -2px 4px rgba(255, 255, 255, 0.04),
-      inset -2px -2px 4px rgba(0, 0, 0, 0.35),
-      inset 2px 2px 4px rgba(59, 130, 246, 0.15);
   }
 }
 

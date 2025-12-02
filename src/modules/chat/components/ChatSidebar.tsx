@@ -13,6 +13,8 @@ import { MessageItem } from "./molecules/MessageItem";
 import { useEncryption } from "@/hooks/useEncryption"; // ✅ USAR HOOK ORIGINAL
 import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages"; // ✅ NUEVO HOOK con virtuoso
 import { useMessageActions } from "@/hooks/useMessageActions"; // ✅ USAR HOOK ORIGINAL
+import { ManualTimeDialog } from "@/modules/dialogs";
+import { toast } from "@/components/ui/use-toast";
 import type { ChatSidebarProps } from "../types";
 
 /**
@@ -53,6 +55,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
 
   // Estados locales
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
+  const [isManualTimeModalOpen, setIsManualTimeModalOpen] = useState(false);
+
+  // Manual time entry handlers
+  const handleOpenManualTimeEntry = useCallback(() => {
+    setIsManualTimeModalOpen(true);
+  }, []);
 
   // ✅ Hooks ORIGINALES que ya funcionan
   const { encryptMessage, decryptMessage } = useEncryption(task?.id || '');
@@ -128,9 +136,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
           <ChatHeader
             task={task}
             clientName={clientName}
-            clientImageUrl={clientData?.imageUrl}
             users={users}
             messages={messages}
+            userId={user?.id || ''}
+            userName={user?.fullName || 'Usuario'}
+            onOpenManualTimeEntry={handleOpenManualTimeEntry}
           />
         </div>
 
@@ -232,6 +242,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
           />
         </div>
       )}
+
+      {/* Manual Time Entry Dialog */}
+      <ManualTimeDialog
+        open={isManualTimeModalOpen}
+        onOpenChange={setIsManualTimeModalOpen}
+        taskId={task.id}
+        taskName={task.name}
+        taskDescription={task.description}
+        userId={user?.id || ''}
+        userName={user?.fullName || 'Usuario'}
+      />
     </>
   );
 });

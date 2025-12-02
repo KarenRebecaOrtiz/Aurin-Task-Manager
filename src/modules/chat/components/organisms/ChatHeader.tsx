@@ -8,6 +8,7 @@ import { ClientAvatar } from "@/modules/shared/components/atoms/Avatar/ClientAva
 import { TODO_ANIMATIONS } from "@/modules/header/components/ui/ToDoDynamic/constants/animation.constants";
 import { StatusDropdown } from "../molecules/StatusDropdown";
 import { TimeBreakdown } from "../molecules/TimeBreakdown";
+import { TimerDropdown } from "../../timer/components/molecules/TimerDropdown";
 import styles from "../../styles/ChatHeader.module.scss";
 import type { Task, Message } from "../../types";
 
@@ -17,13 +18,18 @@ interface ChatHeaderProps {
   clientImageUrl?: string;
   users?: { id: string; fullName: string; imageUrl: string }[];
   messages?: Message[];
+  userId: string;
+  userName: string;
+  onOpenManualTimeEntry?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   task,
   clientName,
-  clientImageUrl,
   users = [],
+  userId,
+  userName,
+  onOpenManualTimeEntry,
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
@@ -49,11 +55,27 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     return users.filter(user => memberIds.includes(user.id));
   }, [task.LeadedBy, task.AssignedTo, users]);
 
-  // Leer horas totales desde el campo de la tarea (fuente de verdad)
+  // Leer horas totales desde el nuevo campo timeTracking (con fallback a campo legacy)
   // NO desde mensajes, porque con paginación los mensajes antiguos no están cargados
   const totalHours = useMemo(() => {
+    // Prefer new timeTracking structure
+    if (task.timeTracking) {
+      const { totalHours: hours, totalMinutes: minutes } = task.timeTracking;
+      return Math.round(hours + (minutes || 0) / 60);
+    }
+    // Fallback to legacy field
     return Math.round(task.totalHours || 0);
-  }, [task.totalHours]);
+  }, [task.timeTracking, task.totalHours]);
+
+  // Get member hours with fallback
+  const memberHours = useMemo(() => {
+    // Prefer new timeTracking.memberHours
+    if (task.timeTracking?.memberHours) {
+      return task.timeTracking.memberHours;
+    }
+    // Fallback to legacy field
+    return task.memberHours || {};
+  }, [task.timeTracking, task.memberHours]);
 
   const toggleDetails = useCallback(() => {
     setIsDetailsOpen(prev => !prev);
@@ -70,22 +92,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             {task.project}
           </div>
         </div>
+        
+        {/* Timer Dropdown - Right side */}
+        <TimerDropdown
+          taskId={task.id}
+          userId={userId}
+          userName={userName}
+          onOpenManualEntry={onOpenManualTimeEntry}
+        />
       </div>
 
       {/* Task Info */}
       <div className={styles.taskInfo}>
-        <ClientAvatar
-          src={clientImageUrl}
-          alt={clientName}
-          fallback={clientName.substring(0, 2).toUpperCase()}
-          size="lg"
-          className="mr-3 flex-shrink-0"
-          client={{
-            id: task.clientId,
-            name: clientName,
-            imageUrl: clientImageUrl
-          }}
-        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 className={styles.taskTitle}>{task.name}</h1>
           <p className={styles.taskDescription}>{task.description}</p>
@@ -203,7 +221,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 <div className={styles.detailLabel}>Tiempo Registrado</div>
                 <TimeBreakdown
                   totalHours={totalHours}
-                  memberHours={task.memberHours}
+                  memberHours={memberHours}
                   teamMembers={teamMembers}
                 />
               </motion.div>

@@ -11,8 +11,8 @@
 
 // Organisms
 export { default as ChatSidebar } from './components/ChatSidebar';
-export { ResponsiveChatSidebar } from './components/ResponsiveChatSidebar';
 export { default as ChatSidebarVirtualized } from './components/ChatSidebarVirtualized';
+export { ResponsiveChatSidebar } from './components/ResponsiveChatSidebar';
 export { ChatHeader } from './components/organisms/ChatHeader';
 export { MessageList } from './components/organisms/MessageList';
 export { VirtualizedMessageList } from './components/organisms/VirtualizedMessageList';
@@ -45,12 +45,6 @@ export { useVirtuosoMessages } from './hooks/useVirtuosoMessages';
 
 export { useChatStore } from './stores/chatStore';
 export type { ChatStore } from './types';
-
-// ============================================================================
-// UTILS
-// ============================================================================
-
-export * from './utils';
 
 // ============================================================================
 // TYPES

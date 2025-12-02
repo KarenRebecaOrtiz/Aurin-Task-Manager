@@ -10,11 +10,11 @@
 import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { addTimeToTaskTransaction } from '../services/timerFirebase';
+import { createTimeLog } from '../services/timeLogFirebase';
 import { firebaseService } from '../../services/firebaseService';
-import { parseTimeInput } from '../utils/timerFormatters';
 import { timerFormSchema } from '../utils/timerValidation';
-import { DEFAULT_TIMER_VALUES } from '../utils/timerConstants';
+import { getDefaultTimerValues } from '../utils/timerConstants';
+import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import type { UseTimeEntryReturn, TimeEntryFormData } from '../types/timer.types';
 
 /**
@@ -69,17 +69,21 @@ export function useTimeEntry(
   onSuccess?: () => void
 ): UseTimeEntryReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Toast notifications
+  const { success: showSuccess, error: showError } = useSonnerToast();
 
   // Set up react-hook-form with Zod validation
+  // Use getDefaultTimerValues() to ensure fresh date on each form mount
   const form = useForm<TimeEntryFormData>({
     resolver: zodResolver(timerFormSchema),
-    defaultValues: DEFAULT_TIMER_VALUES,
+    defaultValues: getDefaultTimerValues(),
     mode: 'onChange',
   });
 
   /**
    * Submit time entry
-   * Validates, calculates seconds, and saves to Firebase
+   * Supports both 'duration' mode (hours + minutes) and 'range' mode (start/end time)
    */
   const submitTimeEntry = useCallback(
     async (data: TimeEntryFormData) => {
@@ -88,60 +92,135 @@ export function useTimeEntry(
       try {
         setIsSubmitting(true);
 
-        // Parse time input
-        const { hours, minutes } = parseTimeInput(data.time);
+        let totalMinutes: number;
+        let startDate: Date;
+        let endDate: Date;
+        let timeDescription: string;
 
-        // Calculate total seconds
-        const totalSeconds = hours * 3600 + minutes * 60;
+        // Calculate based on entry mode
+        if (data.entryMode === 'duration') {
+          // Duration mode: use durationHours and durationMinutes
+          totalMinutes = (data.durationHours ?? 0) * 60 + (data.durationMinutes ?? 0);
 
-        if (totalSeconds === 0) {
-          throw new Error('El tiempo debe ser mayor a cero');
+          if (totalMinutes <= 0) {
+            throw new Error('La duración debe ser mayor a 0 minutos');
+          }
+
+          // For duration mode, we don't have exact start/end times
+          // Use current time as reference
+          startDate = new Date(data.date);
+          endDate = new Date(data.date);
+          endDate.setMinutes(endDate.getMinutes() + totalMinutes);
+
+          // Format description for duration mode
+          const hours = data.durationHours ?? 0;
+          const mins = data.durationMinutes ?? 0;
+          if (hours > 0 && mins > 0) {
+            timeDescription = `${hours}h ${mins}m`;
+          } else if (hours > 0) {
+            timeDescription = `${hours}h`;
+          } else {
+            timeDescription = `${mins}m`;
+          }
+        } else {
+          // Range mode: use startTime and endTime
+          const [startH, startM, startS] = data.startTime.split(':').map(Number);
+          const [endH, endM, endS] = data.endTime.split(':').map(Number);
+
+          // Calculate total minutes from start/end time
+          const startTotalMinutes = startH * 60 + startM + (startS || 0) / 60;
+          const endTotalMinutes = endH * 60 + endM + (endS || 0) / 60;
+          totalMinutes = Math.round(endTotalMinutes - startTotalMinutes);
+
+          if (totalMinutes <= 0) {
+            throw new Error('La hora de fin debe ser mayor que la hora de inicio');
+          }
+
+          // Create start and end Date objects for the time log
+          startDate = new Date(data.date);
+          startDate.setHours(startH, startM, startS || 0);
+          endDate = new Date(data.date);
+          endDate.setHours(endH, endM, endS || 0);
+
+          // Format time range for description
+          timeDescription = `${data.startTime.slice(0, 5)} - ${data.endTime.slice(0, 5)}`;
         }
 
-        // 1. Add time to task.totalHours using transaction (fuente de verdad)
-        await addTimeToTaskTransaction(taskId, userId, totalSeconds);
+        // Calculate hours and minutes for display
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
 
-        // 2. Create visual message in chat (solo para historial)
+        // Format date string for grouping (YYYY-MM-DD)
+        const dateString = data.date.toISOString().split('T')[0];
+
+        // Format display date for chat message
+        const displayDate = data.date.toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+
+        // Build description including comment if provided
+        const fullDescription = data.comment?.trim()
+          ? `${timeDescription} - ${data.comment.trim()}`
+          : timeDescription;
+
+        // 1. Create time log entry in time_logs subcollection
+        //    This also updates task.timeTracking AND legacy totalHours/memberHours
+        await createTimeLog(taskId, {
+          userId,
+          userName,
+          durationMinutes: totalMinutes,
+          description: fullDescription,
+          dateString,
+          startTime: startDate,
+          endTime: endDate,
+          source: 'manual',
+        });
+
+        // 2. Create visual message in chat (solo para historial visual)
         await firebaseService.sendTimeLogMessage(
           taskId,
           userId,
           userName,
-          hours + minutes / 60, // Convertir a horas decimales
-          data.date.toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          }),
-          data.comment || undefined
+          hours + minutes / 60, // Convertir a horas decimales para display
+          displayDate,
+          fullDescription
         );
 
-        // Reset form
-        form.reset(DEFAULT_TIMER_VALUES);
+        // Reset form with fresh default values
+        form.reset(getDefaultTimerValues());
+
+        // Show success toast
+        showSuccess('Tiempo registrado correctamente');
 
         // Call success callback
         if (onSuccess) {
           onSuccess();
         }
       } catch (error) {
+        const errorMessage = (error as Error).message || 'Error al guardar el tiempo';
+        
+        // Show error toast
+        showError(errorMessage);
+        
         // Set form error
         form.setError('root', {
           type: 'manual',
-          message: (error as Error).message || 'Error al guardar el tiempo',
+          message: errorMessage,
         });
-
-        throw error;
       } finally {
         setIsSubmitting(false);
       }
     },
-    [taskId, userId, userName, isSubmitting, onSuccess, form]
+    [taskId, userId, userName, isSubmitting, onSuccess, form, showSuccess, showError]
   );
 
   /**
    * Reset form to default values
    */
   const resetForm = useCallback(() => {
-    form.reset(DEFAULT_TIMER_VALUES);
+    form.reset(getDefaultTimerValues());
   }, [form]);
 
   /**

@@ -122,9 +122,19 @@ export interface Task {
   hasUnreadUpdates?: boolean;
   lastViewedBy?: { [userId: string]: string };
 
-  // Time tracking
-  totalHours?: number; // Suma total de tiempo registrado
-  memberHours?: { [userId: string]: number }; // Tiempo por miembro
+  // Time tracking - New structured approach
+  timeTracking?: {
+    totalHours: number;
+    totalMinutes: number;
+    lastLogDate: string | null;
+    memberHours?: { [userId: string]: number };
+  };
+
+  // Legacy time tracking fields (kept for backward compatibility)
+  /** @deprecated Use timeTracking.totalHours instead */
+  totalHours?: number;
+  /** @deprecated Use timeTracking.memberHours instead */
+  memberHours?: { [userId: string]: number };
 }
 
 // ============================================================================

@@ -46,6 +46,40 @@
     display: none;
   }
 }
+
+// ============================================================================
+// TIMER BUTTON (Green circular button)
+// ============================================================================
+
+.timerButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background-color: #d0df00;
+  color: #000000;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(208, 223, 0, 0.4);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .backButton {
   @include neumorphic-button;
   flex-shrink: 0;

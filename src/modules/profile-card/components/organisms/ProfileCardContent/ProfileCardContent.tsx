@@ -1,3 +1,4 @@
+
 // TODO: Contenido completo del profile card
 // TODO: Props: profile, userId, currentUserId, onConfigClick, onMessageClick, socialLinks
 // TODO: Componer ProfileHeader, bio (Muted), ContactInfo, StackSection, divider, SocialLinks

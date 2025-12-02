@@ -12,17 +12,18 @@ $font-weight-semibold: 600;
 $font-weight-bold: 700;
 $font-weight-extrabold: 800;
 
-// Font Sizes
-$text-xs: 0.75rem;    // 12px
-$text-sm: 1rem;   
-$text-base: 1rem;     // 16px
-$text-lg: 1.125rem;   // 18px
-$text-xl: 1.25rem;    // 20px
-$text-2xl: 1.5rem;    // 24px
-$text-3xl: 1.875rem;  // 30px
-$text-4xl: 2.25rem;   // 36px
-$text-5xl: 3rem;      // 48px
-$text-6xl: 3.75rem;   // 60px
+// Font Sizes - CSS Custom Properties for responsive typography
+// Desktop values (default)
+$text-xs: var(--text-xs);      // 12px → 9.6px on mobile
+$text-sm: var(--text-sm);      // 16px → 12.8px on mobile
+$text-base: var(--text-base);  // 16px → 12.8px on mobile
+$text-lg: var(--text-lg);      // 18px → 14.4px on mobile
+$text-xl: var(--text-xl);      // 20px → 16px on mobile
+$text-2xl: var(--text-2xl);    // 24px → 19.2px on mobile
+$text-3xl: var(--text-3xl);    // 30px → 24px on mobile
+$text-4xl: var(--text-4xl);    // 36px → 28.8px on mobile
+$text-5xl: var(--text-5xl);    // 48px → 38.4px on mobile
+$text-6xl: var(--text-6xl);    // 60px → 48px on mobile
 
 // Line Heights
 $leading-none: 1;
@@ -114,7 +115,7 @@ $color-border-focus: #3b82f6;
 $color-text-dark-primary: #D1D1D1;
 $color-text-dark-secondary: #A1A1AA;
 $color-text-dark-muted: #9ca3af;
-$color-bg-dark: #100f0fb8;
+$color-bg-dark: rgb(15 15 15);
 $color-bg-dark-secondary: #2D2D2D;
 $color-bg-dark-tertiary: #374151;
 $color-bg-glass-dark: rgba(39, 39, 42, 0.8);

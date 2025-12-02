@@ -31,6 +31,7 @@ import styles from './TimerDisplay.module.scss';
  * @param onTogglePanel - Callback to open full timer panel
  * @param compact - Whether to use compact display mode
  * @param mini - Whether to use mini/discrete display mode (65% scale)
+ * @param pill - Whether to use pill/compact mode (32px height, matches button sizes)
  */
 export function TimerDisplay({
   taskId,
@@ -38,7 +39,8 @@ export function TimerDisplay({
   showControls = true,
   onTogglePanel,
   compact = false,
-  mini = false
+  mini = false,
+  pill = false
 }: TimerDisplayProps) {
   // Timer state
   const { timerSeconds } = useTimerState(taskId);
@@ -70,7 +72,7 @@ export function TimerDisplay({
   const hasOtherTimerRunning = runningTimerTaskId && runningTimerTaskId !== taskId;
 
   return (
-    <div className={`${styles.timerDisplay} ${compact ? styles.compact : ''} ${mini ? styles.mini : ''}`} data-running-timer-id={hasOtherTimerRunning ? runningTimerTaskId : undefined}>
+    <div className={`${styles.timerDisplay} ${compact ? styles.compact : ''} ${mini ? styles.mini : ''} ${pill ? styles.pill : ''}`} data-running-timer-id={hasOtherTimerRunning ? runningTimerTaskId : undefined}>
       {/* Warning Badge if timer running elsewhere - HIDDEN in InputChat (moved to persistedData) */}
       {hasOtherTimerRunning && (
         <div className={styles.warningBadge} title={`Timer activo en tarea: ${runningTimerTaskId}`}>
@@ -89,6 +91,7 @@ export function TimerDisplay({
         className={styles.counter}
         onClick={onTogglePanel}
         disabled={hasOtherTimerRunning}
+        pill={pill}
       />
     </div>
   );

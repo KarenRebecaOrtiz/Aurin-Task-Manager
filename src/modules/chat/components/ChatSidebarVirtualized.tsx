@@ -13,6 +13,8 @@ import { MessageItem } from "./molecules/MessageItem";
 import { useEncryption } from "@/hooks/useEncryption";
 import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages";
 import { useMessageActions } from "@/hooks/useMessageActions";
+import { ManualTimeDialog } from "@/modules/dialogs";
+import { toast } from "@/components/ui/use-toast";
 import type { ChatSidebarProps } from "../types";
 
 /**
@@ -51,6 +53,12 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
   const [replyingTo, setReplyingTo] = useState<any | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
+  const [isManualTimeModalOpen, setIsManualTimeModalOpen] = useState(false);
+
+  // Manual time entry handlers
+  const handleOpenManualTimeEntry = useCallback(() => {
+    setIsManualTimeModalOpen(true);
+  }, []);
 
   // ✅ Hook de encriptación
   const { encryptMessage, decryptMessage } = useEncryption(task?.id || '');
@@ -168,9 +176,11 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
           <ChatHeader
             task={task}
             clientName={clientName}
-            clientImageUrl={clientImageUrl}
             users={users}
             messages={messages}
+            userId={user?.id || ''}
+            userName={user?.fullName || 'Usuario'}
+            onOpenManualTimeEntry={handleOpenManualTimeEntry}
           />
         </div>
 
@@ -268,6 +278,17 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
           />
         </div>
       )}
+
+      {/* Manual Time Entry Dialog */}
+      <ManualTimeDialog
+        open={isManualTimeModalOpen}
+        onOpenChange={setIsManualTimeModalOpen}
+        taskId={task.id}
+        taskName={task.name}
+        taskDescription={task.description}
+        userId={user?.id || ''}
+        userName={user?.fullName || 'Usuario'}
+      />
     </>
   );
 });

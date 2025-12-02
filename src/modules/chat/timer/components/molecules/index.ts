@@ -7,6 +7,7 @@
 export { DateSelector } from './DateSelector';
 export { TimeEntryForm } from './TimeEntryForm';
 export { TimerDisplay } from './TimerDisplay';
+export { TimerDropdown } from './TimerDropdown';
 export { TimerIntervalsList } from './TimerIntervalsList';
 
 // Export default exports as well

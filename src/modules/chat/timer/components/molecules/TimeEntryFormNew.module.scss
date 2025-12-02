@@ -1,0 +1,349 @@
+/**
+ * TimeEntryFormNew - SCSS Module Styles
+ *
+ * Estilos para el formulario de entrada de tiempo manual
+ * con Wizard de 2 pasos, WheelPicker y selector de modo
+ */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+// Step Container
+.stepContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 20px;
+}
+
+.stepHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-light, #f3f4f6);
+}
+
+.stepIcon {
+  color: var(--color-primary, #d0df00);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.stepTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stepTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #111827);
+  margin: 0;
+}
+
+.stepDescription {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b7280);
+  margin: 0;
+}
+
+// Calendar Container
+.calendarContainer {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.calendar {
+  background: transparent;
+  padding: 0;
+}
+
+// Selected Date Display
+.selectedDateDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background-color: #0c0c0c;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.selectedDateLabel {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.selectedDateValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #111827);
+  text-transform: capitalize;
+}
+
+// Mode Selector
+.modeSelector {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.modeButton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-input-border, #e5e7eb);
+  background-color: transparent;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary, #d0df00);
+    background-color: rgba(208, 223, 0, 0.05);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    opacity: 0.7;
+  }
+}
+
+.modeActive {
+  border-color: var(--color-primary, #d0df00);
+  background-color: rgba(208, 223, 0, 0.1);
+  color: var(--color-text-primary, #111827);
+
+  svg {
+    opacity: 1;
+    color: var(--color-primary, #d0df00);
+  }
+}
+
+.modeRecommended {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-primary, #d0df00);
+  background-color: rgba(208, 223, 0, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+// Duration Display
+.durationDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: var(--color-bg-accent, #f9fafb);
+  border-radius: 8px;
+}
+
+.durationLabel {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.durationValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #111827);
+  font-variant-numeric: tabular-nums;
+}
+
+// Time Section
+.timeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #111827);
+}
+
+.optional {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+// Wheel Picker Styles
+.wheelPickerWrapper {
+  width: 100% !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--color-bg-accent, #f9fafb);
+  border-color: var(--color-input-border, #e5e7eb);
+}
+
+.wheelSeparator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.wheelLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wheelColon {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-primary, #111827);
+}
+
+// Range Container
+.rangeContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// Comment Section
+.commentSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-input-border, #d1d5db);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text-primary, #111827);
+  background-color: var(--color-input-bg, #ffffff);
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: var(--color-text-muted, #9ca3af);
+    opacity: 0.7;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-ring, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Error Messages
+.error {
+  font-size: 12px;
+  color: var(--color-destructive, #ef4444);
+  margin-top: -4px;
+}
+
+.rootError {
+  font-size: 14px;
+  color: var(--color-destructive, #ef4444);
+  padding: 12px;
+  border-radius: 8px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--color-destructive, #ef4444);
+  margin-top: 8px;
+}
+
+// Dark theme support
+:global(.dark) {
+  .stepHeader {
+    --color-border-light: #374151;
+  }
+
+  .stepTitle {
+    --color-text-primary: #f9fafb;
+  }
+
+  .stepDescription {
+    --color-text-muted: #9ca3af;
+  }
+
+  .selectedDateDisplay {
+    --color-bg-accent: #1f2937;
+  }
+
+  .selectedDateValue {
+    --color-text-primary: #f9fafb;
+  }
+
+  .label {
+    --color-text-primary: #f9fafb;
+  }
+
+  .modeButton {
+    --color-input-border: #374151;
+    --color-text-muted: #9ca3af;
+
+    &:hover:not(:disabled) {
+      background-color: rgba(208, 223, 0, 0.1);
+    }
+  }
+
+  .modeActive {
+    --color-text-primary: #f9fafb;
+    background-color: rgba(208, 223, 0, 0.15);
+  }
+
+  .durationDisplay {
+    --color-bg-accent: #0c0c0c;
+    --color-text-primary: #f9fafb;
+  }
+
+  .wheelPickerWrapper {
+    --color-bg-accent: #0c0c0c;
+    --color-input-border: #0c0c0c;
+  }
+
+  .wheelColon {
+    --color-text-primary: #f9fafb;
+  }
+
+  .textarea {
+    --color-input-border: #151515;
+    --color-input-bg: #0c0c0c;
+    --color-text-primary: #f9fafb;
+    --color-text-muted: #9ca3af;
+  }
+}

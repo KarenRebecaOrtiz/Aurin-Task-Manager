@@ -14,6 +14,8 @@ import { ChatHeader } from "./organisms/ChatHeader";
 import { VirtualizedMessageList } from "./organisms/VirtualizedMessageList";
 import { InputChat } from "./organisms/InputChat";
 import { MessageItem } from "./molecules/MessageItem";
+import { ManualTimeDialog } from "@/modules/dialogs";
+import { toast } from "@/components/ui/use-toast";
 import type { ChatSidebarProps } from "../types";
 import { useUser } from "@clerk/nextjs";
 import { useSidebarStateStore } from "@/stores/sidebarStateStore";
@@ -89,6 +91,12 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
 
   // Estados locales
   const [imagePreviewSrc, setImagePreviewSrc] = useStateReact<string | null>(null);
+  const [isManualTimeModalOpen, setIsManualTimeModalOpen] = useStateReact(false);
+
+  // Manual time entry handlers
+  const handleOpenManualTimeEntry = useCallback(() => {
+    setIsManualTimeModalOpen(true);
+  }, []);
 
   // Hooks
   const { encryptMessage, decryptMessage } = useEncryption(task?.id || '');
@@ -152,7 +160,10 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
             <ChatHeader
               task={task}
               clientName={clientName || clientData?.name || 'Cliente'}
-              clientImageUrl={clientData?.imageUrl}
+              users={[]}
+              userId={user?.id || ''}
+              userName={user?.fullName || 'Usuario'}
+              onOpenManualTimeEntry={handleOpenManualTimeEntry}
             />
           </DrawerHeader>
 
@@ -261,6 +272,17 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
           />
         </div>
       )}
+
+      {/* Manual Time Entry Dialog */}
+      <ManualTimeDialog
+        open={isManualTimeModalOpen}
+        onOpenChange={setIsManualTimeModalOpen}
+        taskId={task.id}
+        taskName={task.name}
+        taskDescription={task.description}
+        userId={user?.id || ''}
+        userName={user?.fullName || 'Usuario'}
+      />
     </>
   );
 });

@@ -12,7 +12,9 @@
 // ============================================================================
 
 export { TimerPanel } from './components/organisms/TimerPanel';
+export { ManualTimeEntryModal } from './components/organisms/ManualTimeEntryModal';
 export { TimerDisplay } from './components/molecules/TimerDisplay';
+export { TimerDropdown } from './components/molecules/TimerDropdown';
 export { TimeEntryForm } from './components/molecules/TimeEntryForm';
 
 // ============================================================================

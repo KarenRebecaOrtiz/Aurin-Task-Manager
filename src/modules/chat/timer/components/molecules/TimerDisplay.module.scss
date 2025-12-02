@@ -23,6 +23,12 @@
     transform-origin: left center;
     width: fit-content;
   }
+
+  &.pill {
+    padding: 0;
+    gap: 0;
+    background: transparent;
+  }
 }
 
 .warningBadge {

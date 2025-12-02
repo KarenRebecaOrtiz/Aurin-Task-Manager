@@ -17,7 +17,6 @@ import {
   query,
   where,
   onSnapshot,
-  writeBatch,
   runTransaction,
   Timestamp,
   serverTimestamp,
@@ -346,7 +345,8 @@ export async function stopTimerInFirestore(
 
 /**
  * Update task aggregate hours (totalHours and memberHours)
- * Uses batch write for atomicity
+ * Also updates new timeTracking field for compatibility
+ * Uses transaction for accurate read-modify-write
  *
  * @param taskId - Task ID
  * @param userId - User ID
@@ -362,22 +362,57 @@ export async function updateTaskAggregates(
   userId: string,
   seconds: number
 ): Promise<void> {
-  const batch = writeBatch(db);
   const taskRef = doc(db, TASKS_COLLECTION_NAME, taskId);
 
-  const hoursToAdd = seconds / 3600;
+  await runTransaction(db, async (transaction) => {
+    const taskDoc = await transaction.get(taskRef);
+    
+    if (!taskDoc.exists()) {
+      throw new Error('Task does not exist');
+    }
 
-  batch.update(taskRef, {
-    [FIRESTORE_FIELDS.TOTAL_HOURS]: increment(hoursToAdd),
-    [`${FIRESTORE_FIELDS.MEMBER_HOURS}.${userId}`]: increment(hoursToAdd),
-    [FIRESTORE_FIELDS.LAST_UPDATED]: serverTimestamp(),
+    const taskData = taskDoc.data();
+    const minutesToAdd = Math.round(seconds / 60);
+    const hoursToAdd = seconds / 3600;
+
+    // Get current timeTracking or initialize from legacy fields
+    const currentTimeTracking = taskData.timeTracking || {
+      totalHours: taskData.totalHours || 0,
+      totalMinutes: 0,
+      lastLogDate: null,
+      memberHours: taskData.memberHours || {},
+    };
+
+    // Calculate new totals
+    const currentTotalMinutes = 
+      Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
+    const newTotalMinutes = currentTotalMinutes + minutesToAdd;
+    const newTotalHours = Math.floor(newTotalMinutes / 60);
+    const newRemainingMinutes = newTotalMinutes % 60;
+
+    // Update member hours
+    const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
+    const newMemberHours = currentMemberHours + hoursToAdd;
+
+    const updatedMemberHours = {
+      ...currentTimeTracking.memberHours,
+      [userId]: newMemberHours,
+    };
+
+    transaction.update(taskRef, {
+      // New timeTracking structure
+      [FIRESTORE_FIELDS.TIME_TRACKING]: {
+        totalHours: newTotalHours,
+        totalMinutes: newRemainingMinutes,
+        lastLogDate: serverTimestamp(),
+        memberHours: updatedMemberHours,
+      },
+      // Legacy fields for backward compatibility
+      [FIRESTORE_FIELDS.TOTAL_HOURS]: newTotalHours + (newRemainingMinutes / 60),
+      [FIRESTORE_FIELDS.MEMBER_HOURS]: updatedMemberHours,
+      [FIRESTORE_FIELDS.LAST_UPDATED]: serverTimestamp(),
+    });
   });
-
-  await batch.commit();
-
-  console.log(
-    `[TimerFirebase] Updated task aggregates: ${taskId}, added ${hoursToAdd.toFixed(2)}h`
-  );
 }
 
 /**
@@ -398,44 +433,80 @@ export async function batchStopTimer(
   userId: string,
   interval: TimerInterval
 ): Promise<void> {
-  const batch = writeBatch(db);
-
   const timerRef = doc(db, TASKS_COLLECTION_NAME, taskId, TIMER_COLLECTION_NAME, userId);
   const taskRef = doc(db, TASKS_COLLECTION_NAME, taskId);
 
-  // Get current timer data
-  const timerSnap = await getDoc(timerRef);
-  if (!timerSnap.exists()) {
-    throw new Error(ERROR_MESSAGES.TIMER_NOT_FOUND);
-  }
+  await runTransaction(db, async (transaction) => {
+    // Get current timer and task data
+    const [timerSnap, taskDoc] = await Promise.all([
+      transaction.get(timerRef),
+      transaction.get(taskRef),
+    ]);
 
-  const currentData = timerSnap.data() as Omit<TimerDocument, 'id'>;
-  const firestoreInterval = convertIntervalToFirestore(interval);
-  const finalSeconds = currentData.totalSeconds + interval.duration;
-  const hoursToAdd = finalSeconds / 3600;
+    if (!timerSnap.exists()) {
+      throw new Error(ERROR_MESSAGES.TIMER_NOT_FOUND);
+    }
 
-  // Update timer
-  batch.update(timerRef, {
-    [FIRESTORE_FIELDS.STATUS]: TimerStatus.STOPPED,
-    [FIRESTORE_FIELDS.INTERVALS]: arrayUnion(firestoreInterval),
-    [FIRESTORE_FIELDS.TOTAL_SECONDS]: finalSeconds,
-    [FIRESTORE_FIELDS.LAST_SYNC]: serverTimestamp(),
-    [FIRESTORE_FIELDS.UPDATED_AT]: serverTimestamp(),
-    [FIRESTORE_FIELDS.DEVICE_ID]: generateDeviceId(),
+    if (!taskDoc.exists()) {
+      throw new Error('Task does not exist');
+    }
+
+    const currentData = timerSnap.data() as Omit<TimerDocument, 'id'>;
+    const taskData = taskDoc.data();
+    const firestoreInterval = convertIntervalToFirestore(interval);
+    const finalSeconds = currentData.totalSeconds + interval.duration;
+    const minutesToAdd = Math.round(finalSeconds / 60);
+    const hoursToAdd = finalSeconds / 3600;
+
+    // Get current timeTracking or initialize from legacy fields
+    const currentTimeTracking = taskData.timeTracking || {
+      totalHours: taskData.totalHours || 0,
+      totalMinutes: 0,
+      lastLogDate: null,
+      memberHours: taskData.memberHours || {},
+    };
+
+    // Calculate new totals
+    const currentTotalMinutes = 
+      Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
+    const newTotalMinutes = currentTotalMinutes + minutesToAdd;
+    const newTotalHours = Math.floor(newTotalMinutes / 60);
+    const newRemainingMinutes = newTotalMinutes % 60;
+
+    // Update member hours
+    const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
+    const newMemberHours = currentMemberHours + hoursToAdd;
+
+    const updatedMemberHours = {
+      ...currentTimeTracking.memberHours,
+      [userId]: newMemberHours,
+    };
+
+    // Update timer
+    transaction.update(timerRef, {
+      [FIRESTORE_FIELDS.STATUS]: TimerStatus.STOPPED,
+      [FIRESTORE_FIELDS.INTERVALS]: arrayUnion(firestoreInterval),
+      [FIRESTORE_FIELDS.TOTAL_SECONDS]: finalSeconds,
+      [FIRESTORE_FIELDS.LAST_SYNC]: serverTimestamp(),
+      [FIRESTORE_FIELDS.UPDATED_AT]: serverTimestamp(),
+      [FIRESTORE_FIELDS.DEVICE_ID]: generateDeviceId(),
+    });
+
+    // Update task with both timeTracking and legacy fields
+    transaction.update(taskRef, {
+      // New timeTracking structure
+      [FIRESTORE_FIELDS.TIME_TRACKING]: {
+        totalHours: newTotalHours,
+        totalMinutes: newRemainingMinutes,
+        lastLogDate: serverTimestamp(),
+        memberHours: updatedMemberHours,
+      },
+      // Legacy fields for backward compatibility
+      [FIRESTORE_FIELDS.TOTAL_HOURS]: newTotalHours + (newRemainingMinutes / 60),
+      [FIRESTORE_FIELDS.MEMBER_HOURS]: updatedMemberHours,
+      [FIRESTORE_FIELDS.LAST_UPDATED]: serverTimestamp(),
+    });
   });
-
-  // Update task aggregates
-  batch.update(taskRef, {
-    [FIRESTORE_FIELDS.TOTAL_HOURS]: increment(hoursToAdd),
-    [`${FIRESTORE_FIELDS.MEMBER_HOURS}.${userId}`]: increment(hoursToAdd),
-    [FIRESTORE_FIELDS.LAST_UPDATED]: serverTimestamp(),
-  });
-
-  await batch.commit();
-
-  console.log(
-    `[TimerFirebase] Batch stopped timer: tasks/${taskId}/timers/${userId}, added ${hoursToAdd.toFixed(2)}h to task ${taskId}`
-  );
 }
 
 // ============================================================================
@@ -444,6 +515,7 @@ export async function batchStopTimer(
 
 /**
  * Add time to a task using a transaction
+ * Also updates new timeTracking field for compatibility
  * Ensures atomic read-modify-write for concurrent access safety
  *
  * @param taskId - Task ID
@@ -470,21 +542,47 @@ export async function addTimeToTaskTransaction(
     }
 
     const taskData = taskDoc.data();
-    const currentTotal = taskData[FIRESTORE_FIELDS.TOTAL_HOURS] || 0;
-    const currentUserHours =
-      taskData[FIRESTORE_FIELDS.MEMBER_HOURS]?.[userId] || 0;
+    const minutesToAdd = Math.round(seconds / 60);
     const hoursToAdd = seconds / 3600;
 
+    // Get current timeTracking or initialize from legacy fields
+    const currentTimeTracking = taskData.timeTracking || {
+      totalHours: taskData.totalHours || 0,
+      totalMinutes: 0,
+      lastLogDate: null,
+      memberHours: taskData.memberHours || {},
+    };
+
+    // Calculate new totals
+    const currentTotalMinutes = 
+      Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
+    const newTotalMinutes = currentTotalMinutes + minutesToAdd;
+    const newTotalHours = Math.floor(newTotalMinutes / 60);
+    const newRemainingMinutes = newTotalMinutes % 60;
+
+    // Update member hours
+    const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
+    const newMemberHours = currentMemberHours + hoursToAdd;
+
+    const updatedMemberHours = {
+      ...currentTimeTracking.memberHours,
+      [userId]: newMemberHours,
+    };
+
     transaction.update(taskRef, {
-      [FIRESTORE_FIELDS.TOTAL_HOURS]: currentTotal + hoursToAdd,
-      [`${FIRESTORE_FIELDS.MEMBER_HOURS}.${userId}`]: currentUserHours + hoursToAdd,
+      // New timeTracking structure
+      [FIRESTORE_FIELDS.TIME_TRACKING]: {
+        totalHours: newTotalHours,
+        totalMinutes: newRemainingMinutes,
+        lastLogDate: serverTimestamp(),
+        memberHours: updatedMemberHours,
+      },
+      // Legacy fields for backward compatibility
+      [FIRESTORE_FIELDS.TOTAL_HOURS]: newTotalHours + (newRemainingMinutes / 60),
+      [FIRESTORE_FIELDS.MEMBER_HOURS]: updatedMemberHours,
       [FIRESTORE_FIELDS.LAST_UPDATED]: serverTimestamp(),
     });
   });
-
-  console.log(
-    `[TimerFirebase] Added ${(seconds / 3600).toFixed(2)}h to task ${taskId} via transaction`
-  );
 }
 
 // ============================================================================

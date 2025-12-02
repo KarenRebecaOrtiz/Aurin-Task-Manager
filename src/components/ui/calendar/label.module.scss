@@ -1,0 +1,24 @@
+/**
+ * Label Component - SCSS Module Styles
+ *
+ * Estilos para el componente Label sin dependencias de Tailwind
+ */
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-text-primary, #111827);
+
+  &:has(+ :disabled) {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+// Dark theme support
+:global(.dark) {
+  .label {
+    --color-text-primary: #f9fafb;
+  }
+}

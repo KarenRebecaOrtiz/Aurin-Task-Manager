@@ -99,6 +99,20 @@ service cloud.firestore {
                     (isAdmin() || request.auth.uid == userId);
       }
 
+      // Time logs en tareas (entradas de tiempo manual y de timer)
+      match /time_logs/{logId} {
+        // ✅ PERMITIR LECTURA: Todos los usuarios autenticados involucrados en la tarea
+        allow read: if request.auth != null;
+        
+        // ✅ PERMITIR CREACIÓN: Usuarios autenticados pueden crear sus propios logs
+        allow create: if request.auth != null && 
+                     request.resource.data.userId == request.auth.uid;
+        
+        // ✅ PERMITIR ACTUALIZACIÓN/ELIMINACIÓN: Admins o el creador del log
+        allow update, delete: if request.auth != null && 
+                             (isAdmin() || resource.data.userId == request.auth.uid);
+      }
+
       // Typing indicators en tareas
       match /typing/{userId} {
         // ✅ PERMITIR LECTURA: Todos los usuarios autenticados pueden leer typing

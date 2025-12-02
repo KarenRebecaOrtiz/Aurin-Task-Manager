@@ -19,12 +19,15 @@ import { useEffect, useState } from 'react';
 import TasksPageModals from '@/modules/data-views/tasks/components/modals/TasksPageModals';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import tasksStyles from './tasks/styles/TasksPage.module.scss';
+import { ChatbotWidget } from '@/modules/n8n-chatbot';
+import { useAuth as useAuthContext } from '@/contexts/AuthContext';
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
+  const { isAdmin } = useAuthContext(); // Get admin status from context
   const [mounted, setMounted] = useState(false);
 
   // 🚀 LOAD DATA ONCE HERE - all pages use the global store
@@ -105,6 +108,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <IndependentChatSidebarRenderer />
       <ProfileCardRenderer />
       <PlatformCompatibility />
+
+      {/* AI Chatbot - Only visible for admins */}
+      {isAdmin && <ChatbotWidget />}
     </div>
   );
 }

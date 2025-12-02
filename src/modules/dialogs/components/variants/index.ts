@@ -7,3 +7,4 @@ export { FormDialog } from './FormDialog';
 export { TaskDialog } from './TaskDialog';
 export { ClientDialog } from './ClientDialog';
 export { AddNoteDialog } from './AddNoteDialog';
+export { ManualTimeDialog } from './ManualTimeDialog';

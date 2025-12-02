@@ -14,10 +14,6 @@
   @include mixins.dropdown-base;
   @include mixins.dropdown-light;
   @include mixins.custom-scrollbar-light;
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 1000;
 
   :global(body.dark) & {
      background: rgba(16, 15, 15, 0.7215686275);
@@ -44,13 +40,6 @@
 
   &.mobile {
     @media (max-width: vars.$mobile-breakpoint) {
-      position: fixed;
-      top: 0;
-      right: 0;
-      left: 0;
-      bottom: 0;
-      border-radius: 0;
-      z-index: 1000;
       background: rgba(241, 245, 249, 0.98);
       
       :global(body.dark) & {

@@ -49,13 +49,69 @@ export const commentInputSchema = z
   .optional();
 
 /**
+ * Schema for time of day input validation (HH:MM:SS format)
+ */
+export const timeOfDayInputSchema = z
+  .string({ required_error: ERROR_MESSAGES.TIME_REQUIRED })
+  .min(1, { message: ERROR_MESSAGES.TIME_REQUIRED })
+  .regex(/^([01]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/, {
+    message: 'Formato de hora inválido (HH:MM:SS)',
+  });
+
+/**
+ * Entry mode for time registration
+ */
+export const entryModeSchema = z.enum(['duration', 'range']);
+
+/**
+ * Schema for duration hours (0-23)
+ */
+export const durationHoursSchema = z
+  .number()
+  .min(0, { message: 'Las horas deben ser mayor o igual a 0' })
+  .max(23, { message: 'Las horas no pueden ser mayores a 23' });
+
+/**
+ * Schema for duration minutes (0-59)
+ */
+export const durationMinutesSchema = z
+  .number()
+  .min(0, { message: 'Los minutos deben ser mayor o igual a 0' })
+  .max(59, { message: 'Los minutos no pueden ser mayores a 59' });
+
+/**
  * Combined schema for timer form validation
+ * Supports both duration mode and time range mode
  */
 export const timerFormSchema = z.object({
-  time: timeInputSchema,
   date: dateInputSchema,
+  entryMode: entryModeSchema,
+  // Duration mode fields
+  durationHours: durationHoursSchema,
+  durationMinutes: durationMinutesSchema,
+  // Range mode fields
+  startTime: timeOfDayInputSchema,
+  endTime: timeOfDayInputSchema,
+  // Comment field
   comment: commentInputSchema,
-});
+}).refine(
+  (data) => {
+    // If duration mode, check that duration is greater than 0
+    if (data.entryMode === 'duration') {
+      return data.durationHours > 0 || data.durationMinutes > 0;
+    }
+    // If range mode, check that end time is after start time
+    const [startH, startM, startS] = data.startTime.split(':').map(Number);
+    const [endH, endM, endS] = data.endTime.split(':').map(Number);
+    const startTotal = startH * 3600 + startM * 60 + startS;
+    const endTotal = endH * 3600 + endM * 60 + endS;
+    return endTotal > startTotal;
+  },
+  {
+    message: 'El tiempo debe ser mayor a cero',
+    path: ['durationMinutes'],
+  }
+);
 
 /**
  * Type inference from timer form schema
