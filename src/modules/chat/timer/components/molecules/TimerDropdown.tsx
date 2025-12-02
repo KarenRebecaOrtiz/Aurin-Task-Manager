@@ -5,6 +5,8 @@
  * When idle: shows "Start Timer" and "Add Manual Time"
  * When running: shows elapsed time, "Pause", "Finish & Send", "Discard"
  *
+ * On mobile (< 768px): renders as a drawer instead of dropdown
+ *
  * @module timer/components/molecules/TimerDropdown
  */
 
@@ -20,6 +22,14 @@ import { TimerStatus } from '../../types/timer.types';
 import { formatSecondsToHHMMSS } from '../../utils/timerFormatters';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { firebaseService } from '../../../services/firebaseService';
+import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogBody,
+  ResponsiveDialogTitle,
+} from '@/modules/dialogs';
 import styles from './TimerDropdown.module.scss';
 
 interface TimerDropdownOption {
@@ -45,6 +55,7 @@ interface TimerDropdownProps {
  * - Shows clock icon when idle (no time displayed)
  * - Shows running time in HH:MM:SS format when timer is active
  * - Displays appropriate actions based on timer state
+ * - Uses drawer on mobile (< 768px) instead of dropdown
  */
 export function TimerDropdown({
   taskId,
@@ -55,6 +66,9 @@ export function TimerDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [isSendingLog, setIsSendingLog] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  
+  // Check if mobile viewport
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   // Toast notifications
   const { success: showSuccess, error: showError, info: showInfo } = useSonnerToast();
@@ -70,8 +84,10 @@ export function TimerDropdown({
     isProcessing,
   } = useTimerActions(taskId, userId);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside (only for desktop)
   useEffect(() => {
+    if (isMobile) return; // Skip for mobile since drawer handles its own closing
+    
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -79,9 +95,9 @@ export function TimerDropdown({
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isMobile]);
 
-  // Toggle dropdown
+  // Toggle dropdown/drawer
   const handleToggle = useCallback(() => {
     if (!isProcessing && !isSendingLog) {
       setIsOpen(prev => !prev);
@@ -274,6 +290,30 @@ export function TimerDropdown({
   const options = getOptions();
   const isDisabled = isProcessing || isSendingLog;
 
+  // Get title based on timer state
+  const getDrawerTitle = () => {
+    if (status === TimerStatus.RUNNING) return 'Timer en curso';
+    if (status === TimerStatus.PAUSED && timerSeconds > 0) return 'Timer pausado';
+    return 'Registrar tiempo';
+  };
+
+  // Render option item (shared between dropdown and drawer)
+  const renderOption = (option: TimerDropdownOption, index: number, isDrawer = false) => (
+    <motion.button
+      key={option.id}
+      className={`${styles.option} ${option.variant === 'danger' ? styles.danger : ''}`}
+      onClick={option.action}
+      disabled={isDisabled}
+      {...(isDrawer ? {} : dropdownAnimations.item(index))}
+    >
+      <div className={styles.optionIcon}>{option.icon}</div>
+      <div className={styles.optionContent}>
+        <span className={styles.optionLabel}>{option.label}</span>
+        <span className={styles.optionDescription}>{option.description}</span>
+      </div>
+    </motion.button>
+  );
+
   return (
     <div className={styles.container} ref={wrapperRef}>
       {/* Trigger Button */}
@@ -296,32 +336,46 @@ export function TimerDropdown({
         )}
       </motion.button>
 
-      {/* Dropdown Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className={styles.menu}
-            role="listbox"
-            {...dropdownAnimations.menu}
-          >
-            {options.map((option, index) => (
-              <motion.button
-                key={option.id}
-                className={`${styles.option} ${option.variant === 'danger' ? styles.danger : ''}`}
-                onClick={option.action}
-                disabled={isDisabled}
-                {...dropdownAnimations.item(index)}
-              >
-                <div className={styles.optionIcon}>{option.icon}</div>
-                <div className={styles.optionContent}>
-                  <span className={styles.optionLabel}>{option.label}</span>
-                  <span className={styles.optionDescription}>{option.description}</span>
+      {/* Mobile: Drawer */}
+      {isMobile ? (
+        <ResponsiveDialog open={isOpen} onOpenChange={setIsOpen}>
+          <ResponsiveDialogContent className={styles.drawerContent}>
+            <ResponsiveDialogHeader className={styles.drawerHeader}>
+              <div className={styles.drawerHeaderContent}>
+                {/* Timer icon/time display */}
+                <div className={`${styles.drawerTimerBadge} ${isTimerActive ? styles.active : ''} ${isRunning ? styles.running : ''}`}>
+                  {isTimerActive ? (
+                    <span className={styles.drawerTimeDisplay}>{formattedTime}</span>
+                  ) : (
+                    <Clock size={24} strokeWidth={2.5} />
+                  )}
                 </div>
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <ResponsiveDialogTitle className={styles.drawerTitle}>
+                  {getDrawerTitle()}
+                </ResponsiveDialogTitle>
+              </div>
+            </ResponsiveDialogHeader>
+            <ResponsiveDialogBody className={styles.drawerBody}>
+              <div className={styles.drawerOptions}>
+                {options.map((option, index) => renderOption(option, index, true))}
+              </div>
+            </ResponsiveDialogBody>
+          </ResponsiveDialogContent>
+        </ResponsiveDialog>
+      ) : (
+        /* Desktop: Dropdown Menu */
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              className={styles.menu}
+              role="listbox"
+              {...dropdownAnimations.menu}
+            >
+              {options.map((option, index) => renderOption(option, index))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }

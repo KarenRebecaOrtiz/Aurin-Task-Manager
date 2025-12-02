@@ -1,5 +1,6 @@
 export { default as ChatbotWidget } from './components/ChatbotWidget'
 export { MarkdownRenderer } from './components/MarkdownRenderer'
+export { useChatbotControl } from './hooks/useChatbotControl'
 export * from './types'
 export * from './constants'
 export * from './utils'

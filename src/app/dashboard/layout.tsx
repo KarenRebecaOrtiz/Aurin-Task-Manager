@@ -50,6 +50,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
+  // 🚀 PREFETCH: Preload all main view routes for instant navigation
+  useEffect(() => {
+    if (mounted) {
+      router.prefetch('/dashboard/tasks');
+      router.prefetch('/dashboard/kanban');
+      router.prefetch('/dashboard/archive');
+      router.prefetch('/dashboard/settings');
+    }
+  }, [mounted, router]);
+
   // Client-side redirect if not authenticated
   useEffect(() => {
     if (mounted && isLoaded && !userId) {
@@ -110,7 +120,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <PlatformCompatibility />
 
       {/* AI Chatbot - Only visible for admins */}
-      {isAdmin && <ChatbotWidget />}
+      {isAdmin && <ChatbotWidget controlled={typeof window !== 'undefined' && window.innerWidth < 768} />}
     </div>
   );
 }

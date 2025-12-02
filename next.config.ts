@@ -29,6 +29,11 @@ const nextConfig: NextConfig = {
         hostname: 'cdn.prod.website-files.com',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev',
+        pathname: '**',
+      },
     ],
   },
   // Webpack configuration to handle server-only packages

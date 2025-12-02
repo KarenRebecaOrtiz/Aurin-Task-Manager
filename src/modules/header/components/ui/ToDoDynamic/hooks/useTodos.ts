@@ -20,6 +20,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Todo, TodoState } from '../types';
 import { TODO_VALIDATION } from '../constants';
 
@@ -28,6 +29,7 @@ import { TODO_VALIDATION } from '../constants';
  */
 export const useTodos = () => {
   const { user } = useUser();
+  const { isSynced } = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [completedTodos, setCompletedTodos] = useState<Todo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,9 +44,11 @@ export const useTodos = () => {
 
   /**
    * Load todos from Firestore
+   * Waits for Firebase Auth to be synced before making queries
    */
   useEffect(() => {
-    if (!user?.id) {
+    // Wait for both user and Firebase Auth sync
+    if (!user?.id || !isSynced) {
       setTodos([]);
       setCompletedTodos([]);
       return;
@@ -153,7 +157,7 @@ export const useTodos = () => {
       setError('Error configurando los listeners de todos');
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, isSynced]);
 
   /**
    * Add new todo

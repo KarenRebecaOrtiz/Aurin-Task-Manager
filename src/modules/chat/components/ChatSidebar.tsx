@@ -208,6 +208,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
               setEditingMessageId(null);
               setEditingText('');
             }}
+            onOpenManualEntry={handleOpenManualTimeEntry}
           />
         </div>
 

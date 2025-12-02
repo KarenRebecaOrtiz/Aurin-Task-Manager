@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import { MessageCircle, ChevronDown, Send, Paperclip, X, FileText, ImageIcon, Download, Bot } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { nanoid } from 'nanoid'
@@ -16,12 +17,30 @@ import {
   isOnline as checkOnline
 } from '../utils'
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { useChatbotControl } from '../hooks/useChatbotControl'
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogBody,
+  ResponsiveDialogTitle,
+  ResponsiveDialogClose,
+} from '@/modules/dialogs'
 import styles from '../styles/chatbot.module.scss'
 
-export default function ChatbotWidget({ lang = 'es', translations }: ChatbotWidgetProps) {
+export default function ChatbotWidget({ lang = 'es', translations, controlled = false }: ChatbotWidgetProps & { controlled?: boolean }) {
   const t = translations || DEFAULT_TRANSLATIONS
+  const { isOpen: isOpenControlled, closeChat } = useChatbotControl()
 
   const [isExpanded, setIsExpanded] = useState(false)
+  const isOpen = controlled ? isOpenControlled : isExpanded
+  const handleToggle = (open: boolean) => {
+    if (controlled) {
+      if (!open) closeChat()
+    } else {
+      setIsExpanded(open)
+    }
+  }
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -316,10 +335,13 @@ export default function ChatbotWidget({ lang = 'es', translations }: ChatbotWidg
     }
   }
 
-  if (!isExpanded) {
+  //Don't show floating button if controlled (mobile will use navigation button)
+  if (!isOpen && controlled) return null
+
+  if (!isOpen) {
     return (
       <motion.button
-        onClick={() => setIsExpanded(true)}
+        onClick={() => handleToggle(true)}
         className={styles.chatbotFloatingBtn}
         aria-label={t.openChat}
         whileHover={{ scale: 1.05 }}
@@ -343,6 +365,172 @@ export default function ChatbotWidget({ lang = 'es', translations }: ChatbotWidg
     )
   }
 
+  // If controlled, use ResponsiveDialog (auto-switches to Drawer on mobile)
+  if (controlled) {
+    return (
+      <ResponsiveDialog open={isOpen} onOpenChange={handleToggle}>
+        <ResponsiveDialogContent className={styles.chatbotResponsiveDialog}>
+          <ResponsiveDialogHeader>
+            <div className={styles.chatbotHeaderInfo}>
+              <div className={styles.chatbotAvatar}>
+                <Image src="https://pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev/android-chrome-192x192.png" alt="Bot Avatar" fill style={{ objectFit: 'cover' }} />
+              </div>
+              <ResponsiveDialogTitle className={styles.chatbotTitle}>{t.title}</ResponsiveDialogTitle>
+            </div>
+            <ResponsiveDialogClose />
+          </ResponsiveDialogHeader>
+
+          <ResponsiveDialogBody className={styles.chatbotResponsiveBody}>
+            {/* Messages */}
+            <div className={`${styles.chatbotMessages} ${styles.chatbotScrollbar}`}>
+              <AnimatePresence>
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    className={`${styles.chatbotMessage} ${message.sender === "user" ? styles.chatbotMessageUser : styles.chatbotMessageBot}`}
+                    initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.8 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  >
+                    {message.sender === "bot" && (
+                      <motion.div
+                        className={styles.chatbotBotAvatar}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
+                      >
+                        <Image src="https://pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev/android-chrome-192x192.png" alt="Bot Avatar" fill style={{ objectFit: 'cover' }} />
+                      </motion.div>
+                    )}
+                    <div className={`${styles.chatbotMessageContent} ${message.sender === "user" ? styles.chatbotMessageContentUser : styles.chatbotMessageContentBot}`}>
+                      <motion.div
+                        className={`${styles.chatbotBubble} ${message.sender === "user" ? styles.chatbotBubbleUser : styles.chatbotBubbleBot}`}
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.05 }}
+                      >
+                        {message.sender === 'bot' ? (
+                          <MarkdownRenderer content={message.text} />
+                        ) : (
+                          message.text
+                        )}
+                        {message.file && (
+                          <motion.div
+                            className={styles.chatbotFileAttachment}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.1 }}
+                          >
+                            {message.file.type.startsWith("image/") ? (
+                              <motion.img
+                                src={message.file.url || "/placeholder.svg"}
+                                alt={message.file.name}
+                                whileHover={{ opacity: 0.9 }}
+                                style={{ borderRadius: '8px', maxWidth: '100%', cursor: 'pointer' }}
+                              />
+                            ) : (
+                              <div className={styles.chatbotFileAttachmentInfo}>
+                                <FileText size={32} color="#d0df00" />
+                                <div className={styles.chatbotFileAttachmentDetails}>
+                                  <p className={styles.chatbotFileAttachmentName}>{message.file.name}</p>
+                                  <p className={styles.chatbotFileAttachmentSize}>{message.file.size}</p>
+                                </div>
+                                <motion.button
+                                  className={styles.chatbotDownloadBtn}
+                                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  <Download size={16} />
+                                </motion.button>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </motion.div>
+                      <span className={`${styles.chatbotTimestamp} ${message.sender === "user" ? styles.chatbotTimestampUser : ''}`}>
+                        {formatMessageTime(message.timestamp)}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {isTyping && (
+                <motion.div
+                  className={`${styles.chatbotMessage} ${styles.chatbotMessageBot}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <div className={styles.chatbotBotAvatar}>
+                    <Image src="https://pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev/android-chrome-192x192.png" alt="Bot Avatar" fill style={{ objectFit: 'cover' }} />
+                  </div>
+                  <div className={`${styles.chatbotBubble} ${styles.chatbotBubbleBot}`}>
+                    <div className={styles.chatbotTyping}>
+                      <motion.div className={styles.chatbotTypingDot} animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                      <motion.div className={styles.chatbotTypingDot} animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
+                      <motion.div className={styles.chatbotTypingDot} animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className={`${styles.chatbotInputArea} ${isDragging ? styles.chatbotInputAreaDragging : ''}`}>
+              {selectedFile && (
+                <div className={styles.chatbotFilePreview}>
+                  {selectedFile.type.startsWith("image/") ? <ImageIcon size={32} color="#d0df00" /> : <FileText size={32} color="#d0df00" />}
+                  <div className={styles.chatbotFilePreviewInfo}>
+                    <p className={styles.chatbotFilePreviewName}>{selectedFile.name}</p>
+                    <p className={styles.chatbotFilePreviewSize}>{formatFileSize(selectedFile.size)}</p>
+                  </div>
+                  <button onClick={() => setSelectedFile(null)} className={styles.chatbotRemoveFileBtn}>
+                    <X size={20} color="#ef4444" />
+                  </button>
+                </div>
+              )}
+
+              <div className={styles.chatbotInputContainer}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                  accept="image/*,.pdf,.txt"
+                />
+                <button onClick={() => fileInputRef.current?.click()} className={styles.chatbotAttachBtn}>
+                  <Paperclip size={20} color="#6b7280" />
+                </button>
+
+                <textarea
+                  ref={textareaRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder={t.placeholder}
+                  className={styles.chatbotTextarea}
+                  rows={1}
+                />
+
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim() && !selectedFile}
+                  className={`${styles.chatbotSendBtn} ${(!inputValue.trim() && !selectedFile) ? styles.chatbotSendBtnDisabled : ''}`}
+                >
+                  <Send size={20} color="black" />
+                </button>
+              </div>
+            </div>
+          </ResponsiveDialogBody>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+    )
+  }
+
+  // Desktop floating chat (non-controlled mode)
   return (
     <motion.div
       ref={chatContainerRef}
@@ -365,7 +553,7 @@ export default function ChatbotWidget({ lang = 'es', translations }: ChatbotWidg
               whileHover={{ scale: 1.1, rotate: 5 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
-              <Bot size={32} color="black" strokeWidth={2} />
+              <Image src="https://pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev/android-chrome-192x192.png" alt="Bot Avatar" fill style={{ objectFit: 'cover' }} />
             </motion.div>
           </div>
           <div>
@@ -484,7 +672,7 @@ export default function ChatbotWidget({ lang = 'es', translations }: ChatbotWidg
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             >
               <div className={styles.chatbotBotAvatar}>
-                <Bot size={20} color="black" strokeWidth={2} />
+                <Image src="https://pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev/android-chrome-192x192.png" alt="Bot Avatar" fill style={{ objectFit: 'cover' }} />
               </div>
               <div className={`${styles.chatbotBubble} ${styles.chatbotBubbleBot}`}>
                 <div className={styles.chatbotTyping}>

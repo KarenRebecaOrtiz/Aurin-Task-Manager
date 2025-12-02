@@ -229,3 +229,92 @@
     color: $chat-text-secondary-dark;
   }
 }
+
+// ============================================================================
+// DRAWER STYLES (Mobile < 768px)
+// ============================================================================
+
+.drawerContent {
+  // Override drawer defaults for timer-specific styling
+  padding: 0 !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px);
+
+  :global(.dark) & {
+    background: rgba(25, 25, 30, 0.98) !important;
+  }
+}
+
+.drawerHeader {
+  padding: 20px 20px 16px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  :global(.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.drawerHeaderContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawerTimerBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 28px;
+  background-color: #d0df00;
+  color: #000000;
+  font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+
+  // When showing just icon (idle state)
+  &:not(.active) {
+    padding: 0;
+    width: 56px;
+  }
+
+  // Running state - pulse animation
+  &.running {
+    animation: timerPulse 2s ease-in-out infinite;
+  }
+
+  svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.drawerTimeDisplay {
+  white-space: nowrap;
+}
+
+.drawerTitle {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: $chat-text-primary-light !important;
+  text-align: center;
+  margin: 0 !important;
+
+  :global(.dark) & {
+    color: $chat-text-primary-dark !important;
+  }
+}
+
+.drawerBody {
+  padding: 8px 12px 24px !important;
+}
+
+.drawerOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

@@ -15,6 +15,13 @@ const ViewSwitcherContext = createContext<{
   setValue: React.Dispatch<React.SetStateAction<string | null>>;
 } | null>(null);
 
+// Route mapping for prefetch
+const VIEW_ROUTES = {
+  table: '/dashboard/tasks',
+  kanban: '/dashboard/kanban',
+  archive: '/dashboard/archive',
+} as const;
+
 interface ViewSwitcherProps {
   currentView?: 'table' | 'kanban' | 'archive';
   onViewChange?: (view: 'table' | 'kanban' | 'archive') => void;
@@ -73,6 +80,14 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewC
   const archiveButtonRef = useRef<HTMLButtonElement>(null);
   const previousValueRef = useRef<string | null>(value);
 
+  // 🚀 PREFETCH: Preload all view routes on mount for instant navigation
+  useEffect(() => {
+    // Prefetch all routes immediately for instant switching
+    router.prefetch(VIEW_ROUTES.table);
+    router.prefetch(VIEW_ROUTES.kanban);
+    router.prefetch(VIEW_ROUTES.archive);
+  }, [router]);
+
   // Sync value with pathname changes
   useEffect(() => {
     const newView = getCurrentView();
@@ -80,6 +95,7 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewC
       setValue(newView);
       previousValueRef.current = newView;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   // Handle navigation when value changes
@@ -92,17 +108,10 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewC
     if (onViewChange) {
       onViewChange(value as 'table' | 'kanban' | 'archive');
     } else {
-      // Navigate to appropriate route
-      switch (value) {
-        case 'table':
-          router.push('/dashboard/tasks');
-          break;
-        case 'kanban':
-          router.push('/dashboard/kanban');
-          break;
-        case 'archive':
-          router.push('/dashboard/archive');
-          break;
+      // Navigate to appropriate route using prefetched routes
+      const route = VIEW_ROUTES[value as keyof typeof VIEW_ROUTES];
+      if (route) {
+        router.push(route);
       }
     }
   }, [value, onViewChange, router]);

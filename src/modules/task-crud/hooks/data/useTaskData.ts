@@ -6,17 +6,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Client } from '../../types/domain';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 
 // Hook for fetching clients
 export const useClients = () => {
+  const { isSynced } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Wait for Firebase Auth to be synced before making queries
+    if (!isSynced) {
+      return;
+    }
+
     setIsLoading(true);
     const clientsCollection = collection(db, 'clients');
 
@@ -42,7 +49,7 @@ export const useClients = () => {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [isSynced]);
 
   return { clients, isLoading, error };
 };

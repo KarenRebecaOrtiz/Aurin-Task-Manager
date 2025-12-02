@@ -69,6 +69,11 @@ $chatbot-z-low: 9988;
   &:active {
     transform: scale(0.95);
   }
+
+  // Hide on mobile (< 768px)
+  @media (max-width: 767px) {
+    display: none;
+  }
 }
 
 /* Badge de notificación */
@@ -205,6 +210,8 @@ $chatbot-z-low: 9988;
   margin-right: 8px;
   flex-shrink: 0;
   overflow: hidden;
+  border: rgb(57, 57, 57) 2px solid;
+  position: relative;
 }
 
 .chatbotMessageContent {
@@ -606,5 +613,40 @@ $chatbot-z-low: 9988;
       margin: 0.5em 0;
       opacity: 0.9;
     }
+  }
+}
+
+
+// ResponsiveDialog styles (for controlled mode)
+.chatbotResponsiveDialog {
+  max-width: 600px !important;
+
+  @media (max-width: 767px) {
+    max-width: 100% !important;
+  }
+}
+
+.chatbotResponsiveBody {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  max-height: calc(90vh - 120px);
+  padding: 0 !important;
+  gap: 0 !important;
+  
+  .chatbotMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    margin-bottom: 0;
+  }
+
+  .chatbotInputArea {
+    flex-shrink: 0;
+    border-top: 1px solid $chatbot-border;
+    padding: 16px;
+    margin: 0;
+    position: relative;
   }
 }

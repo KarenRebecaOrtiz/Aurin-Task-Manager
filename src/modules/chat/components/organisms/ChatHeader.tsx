@@ -93,13 +93,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </div>
         </div>
         
-        {/* Timer Dropdown - Right side */}
-        <TimerDropdown
-          taskId={task.id}
-          userId={userId}
-          userName={userName}
-          onOpenManualEntry={onOpenManualTimeEntry}
-        />
+        {/* Timer Dropdown - Right side (hidden on mobile, shown in InputChat instead) */}
+        <div className={styles.timerWrapper}>
+          <TimerDropdown
+            taskId={task.id}
+            userId={userId}
+            userName={userName}
+            onOpenManualEntry={onOpenManualTimeEntry}
+          />
+        </div>
       </div>
 
       {/* Task Info */}

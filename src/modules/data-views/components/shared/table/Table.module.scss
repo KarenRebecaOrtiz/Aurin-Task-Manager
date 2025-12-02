@@ -237,32 +237,54 @@
 
 @media (max-width: 768px) {
   .header {
+    display: flex;
+    width: 100%;
+    
     .headerCell {
       padding: $spacing-sm $spacing-md;
       font-size: 12px;
+      flex-shrink: 0;
       
       &:first-child {
         text-align: left;
+        justify-content: flex-start;
       }
       
       &:last-child {
         text-align: right;
+        justify-content: flex-end;
+        margin-left: auto;
       }
     }
   }
   
   .row {
+    display: flex;
+    width: 100%;
+    
     .cell {
       padding: $spacing-sm $spacing-md;
+      flex-shrink: 0;
       
       /* Ensure proper alignment for mobile */
       &:first-child {
         text-align: left;
+        justify-content: flex-start;
       }
       
       &:last-child {
         text-align: right;
+        justify-content: flex-end;
+        margin-left: auto;
       }
+    }
+    
+    /* Action cell specific styling */
+    .actionCell {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-left: auto;
     }
   }
 }

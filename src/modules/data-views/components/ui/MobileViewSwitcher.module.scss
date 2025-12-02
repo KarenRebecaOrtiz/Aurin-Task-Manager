@@ -148,6 +148,55 @@
   letter-spacing: 0.01em;
 }
 
+// Create Task Button - Verde (Circular)
+.createTaskButton {
+  background: #d0df00 !important;
+  color: rgb(29, 29, 29) !important;
+  fill: rgb(29, 29, 29) !important;
+  min-width: 48px !important;
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  flex-direction: row !important;
+  box-shadow:
+    0px 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0px -2px 0px rgba(0, 0, 0, 0.15) !important;
+
+  &:hover {
+    background: rgba(208, 223, 0, 0.85) !important;
+    transform: translateY(-2px) scale(1.05) !important;
+  }
+
+  &:active {
+    transform: scale(0.95) !important;
+  }
+
+  .navIcon {
+    width: 24px !important;
+    height: 24px !important;
+
+    svg {
+      width: 24px !important;
+      height: 24px !important;
+      color: rgb(29, 29, 29) !important;
+      stroke: rgb(29, 29, 29) !important;
+    }
+  }
+
+  .navLabel {
+    display: none !important;
+  }
+
+  :global(body.dark) & {
+    background: #d0df00 !important;
+
+    &:hover {
+      background: rgba(208, 223, 0, 0.85) !important;
+    }
+  }
+}
+
 // Safe area inset for devices with bottom notches (iPhone X, etc.)
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .mobileNav {

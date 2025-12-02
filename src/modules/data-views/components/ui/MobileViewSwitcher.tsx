@@ -3,15 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { CirclePlus, Bot } from 'lucide-react';
 import { List } from '@/components/animate-ui/icons/list';
 import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
-import { Cog } from '@/components/animate-ui/icons';
-import { SettingsDrawer } from '@/modules/header/components/ui/AvatarDropdown';
+import { useTasksPageStore } from '@/stores/tasksPageStore';
+import { useChatbotControl } from '@/modules/n8n-chatbot';
 import styles from './MobileViewSwitcher.module.scss';
+
+// Route mapping for prefetch
+const VIEW_ROUTES = {
+  table: '/dashboard/tasks',
+  kanban: '/dashboard/kanban',
+  archive: '/dashboard/archive',
+} as const;
 
 interface MobileViewSwitcherProps {
   currentView?: 'table' | 'kanban' | 'archive';
@@ -23,14 +30,16 @@ interface MobileControlProps {
   label: string;
   isActive: boolean;
   onClick: () => void;
+  className?: string;
 }
 
-const MobileControl: React.FC<MobileControlProps> = ({ icon, label, isActive, onClick }) => {
+const MobileControl: React.FC<MobileControlProps> = ({ icon, label, isActive, onClick, className }) => {
   return (
     <button
       className={twMerge(clsx(
         styles.navButton,
-        isActive && styles.navButtonActive
+        isActive && styles.navButtonActive,
+        className
       ))}
       onClick={onClick}
       aria-label={label}
@@ -45,8 +54,8 @@ const MobileControl: React.FC<MobileControlProps> = ({ icon, label, isActive, on
 export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentView, onViewChange }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useUser();
-  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
+  const openCreateTask = useTasksPageStore((state) => state.openCreateTask);
+  const { openChat } = useChatbotControl();
   const [mounted, setMounted] = useState(false);
 
   // Mount portal
@@ -54,6 +63,13 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // 🚀 PREFETCH: Preload all view routes on mount for instant navigation
+  useEffect(() => {
+    router.prefetch(VIEW_ROUTES.table);
+    router.prefetch(VIEW_ROUTES.kanban);
+    router.prefetch(VIEW_ROUTES.archive);
+  }, [router]);
 
   // Determine current view from pathname if not provided
   const getCurrentView = (): 'table' | 'kanban' | 'archive' => {
@@ -80,27 +96,12 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
     if (onViewChange) {
       onViewChange(view);
     } else {
-      // Navigate to appropriate route
-      switch (view) {
-        case 'table':
-          router.push('/dashboard/tasks');
-          break;
-        case 'kanban':
-          router.push('/dashboard/kanban');
-          break;
-        case 'archive':
-          router.push('/dashboard/archive');
-          break;
+      // Navigate using prefetched routes
+      const route = VIEW_ROUTES[view];
+      if (route) {
+        router.push(route);
       }
     }
-  };
-
-  const handleSettingsClick = () => {
-    setIsSettingsDrawerOpen(true);
-  };
-
-  const handleCloseSettingsDrawer = () => {
-    setIsSettingsDrawerOpen(false);
   };
 
   // Don't render on server or if not mounted
@@ -131,20 +132,20 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
             onClick={() => handleViewChange('archive')}
           />
           <MobileControl
-            icon={<Cog animateOnHover />}
-            label="Configuración"
+            icon={<Bot />}
+            label="AI Chat"
             isActive={false}
-            onClick={handleSettingsClick}
+            onClick={openChat}
+          />
+          <MobileControl
+            icon={<CirclePlus />}
+            label=""
+            isActive={false}
+            onClick={openCreateTask}
+            className={styles.createTaskButton}
           />
         </div>
       </nav>
-
-      {/* Settings Drawer */}
-      <SettingsDrawer
-        isOpen={isSettingsDrawerOpen}
-        onClose={handleCloseSettingsDrawer}
-        userId={user?.id}
-      />
     </>
   );
 

@@ -1,20 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
-import { CirclePlus } from 'lucide-react';
+import { Cog } from '@/components/animate-ui/icons';
 import { useFirestoreUser } from '../../../hooks';
-import { useTasksPageStore } from '@/stores/tasksPageStore';
+import { SettingsDrawer } from '@/modules/header/components/ui/AvatarDropdown';
 import styles from '../Header.module.scss';
 
 export const MobilePillHeader: React.FC = () => {
   const { user, isLoaded } = useUser();
   const { firestoreUser } = useFirestoreUser();
-  const openCreateTask = useTasksPageStore((state) => state.openCreateTask);
+  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
 
   const userName = firestoreUser?.fullName || (isLoaded && user ? user.firstName || 'Usuario' : 'Usuario');
   const userImage = user?.imageUrl || '/default-avatar.png';
+
+  const handleSettingsClick = () => {
+    setIsSettingsDrawerOpen(true);
+  };
+
+  const handleCloseSettingsDrawer = () => {
+    setIsSettingsDrawerOpen(false);
+  };
 
   return (
     <div className={styles.mobilePillContainer}>
@@ -32,15 +40,22 @@ export const MobilePillHeader: React.FC = () => {
         <span className={styles.mobilePillName}>{userName}</span>
       </div>
 
-      {/* Botón crear tarea - redondo */}
+      {/* Botón configuración - redondo */}
       <button
         className={styles.mobileCreateTaskButton}
-        onClick={openCreateTask}
-        aria-label="Crear Nueva Tarea"
-        title="Crear Nueva Tarea"
+        onClick={handleSettingsClick}
+        aria-label="Configuración"
+        title="Configuración"
       >
-        <CirclePlus className={styles.mobileCreateTaskIcon} />
+        <Cog className={styles.mobileCreateTaskIcon} animateOnHover />
       </button>
+
+      {/* Settings Drawer */}
+      <SettingsDrawer
+        isOpen={isSettingsDrawerOpen}
+        onClose={handleCloseSettingsDrawer}
+        userId={user?.id}
+      />
     </div>
   );
 };

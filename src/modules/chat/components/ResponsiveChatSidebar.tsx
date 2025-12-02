@@ -238,6 +238,7 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
                 setEditingMessageId(null);
                 setEditingText('');
               }}
+              onOpenManualEntry={handleOpenManualTimeEntry}
             />
           </div>
         </DrawerContent>

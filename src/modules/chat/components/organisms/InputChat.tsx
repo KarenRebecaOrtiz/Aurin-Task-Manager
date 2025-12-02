@@ -22,6 +22,8 @@ import { toast } from '@/components/ui/use-toast';
 import { Paperclip, X } from '@/components/animate-ui/icons';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import SearchableDropdown, { type DropdownItem } from '@/modules/config/components/ui/SearchableDropdown';
+import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
+import { TimerDropdown } from '../../timer/components/molecules/TimerDropdown';
 import styles from './InputChat.module.scss';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -75,6 +77,9 @@ export interface InputChatProps {
 
   // Users for mentions
   users?: { id: string; fullName: string }[];
+
+  // Timer (for mobile - shown in InputChat instead of header)
+  onOpenManualEntry?: () => void;
 }
 
 /**
@@ -115,7 +120,11 @@ export const InputChat: React.FC<InputChatProps> = ({
   isSending: isSendingProp = false,
   setIsSending: setIsSendingProp,
   users = [],
+  onOpenManualEntry,
 }) => {
+  // ========== RESPONSIVE ==========
+  const isMobile = useMediaQuery('(max-width: 767px)');
+
   // ========== STATE ==========
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -989,7 +998,16 @@ export const InputChat: React.FC<InputChatProps> = ({
 
           {/* Actions bar */}
           <div className={styles.actions}>
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center' }}>
+              {/* Timer Dropdown - Only visible on mobile (< 768px) */}
+              {isMobile && (
+                <TimerDropdown
+                  taskId={taskId}
+                  userId={userId}
+                  userName={userName}
+                  onOpenManualEntry={onOpenManualEntry}
+                />
+              )}
               <button
                 type="button"
                 className={`${styles.imageButton2} ${styles.tooltip}`}

@@ -72,27 +72,28 @@ export function formatSecondsToHours(seconds: number, decimals: number = 2): str
  * Format decimal hours to human-readable format (e.g., "1h 30m")
  *
  * @param decimalHours - Hours as decimal number
- * @returns Formatted string with hours and minutes
+ * @returns Formatted string with hours and minutes (always shows minutes)
  *
  * @example
  * formatDecimalHoursToReadable(1.5); // "1h 30m"
- * formatDecimalHoursToReadable(0.5); // "30m"
+ * formatDecimalHoursToReadable(0.5); // "0h 30m"
  * formatDecimalHoursToReadable(2.75); // "2h 45m"
+ * formatDecimalHoursToReadable(1.0); // "1h 0m"
  */
 export function formatDecimalHoursToReadable(decimalHours: number): string {
   const hours = Math.floor(decimalHours);
   const minutes = Math.round((decimalHours - hours) * 60);
-  
+
   const parts: string[] = [];
-  
+
   if (hours > 0) {
     parts.push(`${hours}h`);
   }
-  if (minutes > 0) {
-    parts.push(`${minutes}m`);
-  }
-  
-  return parts.length > 0 ? parts.join(' ') : '0m';
+
+  // Siempre mostrar minutos
+  parts.push(`${minutes}m`);
+
+  return parts.join(' ');
 }
 
 /**

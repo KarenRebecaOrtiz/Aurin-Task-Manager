@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, Timestamp, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import { Small } from '@/components/ui/Typography';
@@ -17,6 +18,7 @@ const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
   textColor = "",
   hoverColor = "#000000",
 }) => {
+  const { isSynced } = useAuth();
   const [advices, setAdvices] = useState<Advice[]>([]);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -24,8 +26,10 @@ const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
   const [rotation, setRotation] = useState(0);
   const maxRotation = 8;
 
-  // Firebase data fetching
+  // Firebase data fetching - waits for Firebase Auth to be synced
   useEffect(() => {
+    if (!isSynced) return;
+
     const q = query(collection(db, 'advices'), where('expiry', '>', Timestamp.now()));
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const now = Timestamp.now();
@@ -63,7 +67,7 @@ const OptimizedMarquee: React.FC<OptimizedMarqueeProps> = ({
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isSynced]);
 
   // Mouse tracking for tooltip
   useEffect(() => {

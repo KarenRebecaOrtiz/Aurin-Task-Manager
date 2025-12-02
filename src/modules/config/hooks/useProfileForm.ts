@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProfileFormStore } from '../stores';
 import { useConfigPageStore } from '../stores';
 import { Config } from '../types';
@@ -128,6 +129,7 @@ function getDefaultFormData(userId: string, currentUser: any): any {
  */
 export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOptions) => {
   const { user: currentUser, isLoaded } = useUser();
+  const { isSynced } = useAuth();
   const { activeTab } = useConfigPageStore();
   const {
     formData,
@@ -191,9 +193,11 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
   /**
    * Carga los datos del usuario desde cache o Firestore (optimizado)
    * Solo hace fetch si no hay datos en cache o el userId cambió
+   * Waits for Firebase Auth to be synced before making queries
    */
   useEffect(() => {
-    if (!isLoaded || !userId || !currentUser) return;
+    // Wait for Clerk to load and Firebase Auth to sync
+    if (!isLoaded || !userId || !currentUser || !isSynced) return;
 
     // Si el userId no ha cambiado y ya tenemos datos, no recargar
     if (currentUserId === userId && formData?.userId === userId) {
@@ -255,7 +259,7 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
     };
 
     loadUserData();
-  }, [userId, isLoaded, currentUser, currentUserId, formData?.userId, loadDraftFromLocalStorage, setFormData, setIsLoading, setCurrentUserId]);
+  }, [userId, isLoaded, currentUser, currentUserId, formData?.userId, loadDraftFromLocalStorage, setFormData, setIsLoading, setCurrentUserId, isSynced]);
 
   /**
    * Guarda automáticamente en localStorage cuando cambia formData (con debounce y flag)

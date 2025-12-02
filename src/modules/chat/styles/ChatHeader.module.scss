@@ -48,6 +48,18 @@
 }
 
 // ============================================================================
+// TIMER WRAPPER (Hide on mobile - timer shown in InputChat instead)
+// ============================================================================
+
+.timerWrapper {
+  display: block;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+// ============================================================================
 // TIMER BUTTON (Green circular button)
 // ============================================================================
 
@@ -125,17 +137,12 @@
   gap: 20px;
   flex-direction: row;
 
-  // Mobile drawer: center content and hide client avatar
+  // Mobile drawer: center content
   @media (max-width: 767px) {
     flex-direction: column;
     align-items: center;
     text-align: center;
     gap: 12px;
-
-    // Hide client avatar in drawer
-    > div:first-child {
-      display: none;
-    }
   }
 }
 
