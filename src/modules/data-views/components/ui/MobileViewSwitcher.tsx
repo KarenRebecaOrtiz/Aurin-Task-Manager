@@ -96,10 +96,12 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
     if (onViewChange) {
       onViewChange(view);
     } else {
-      // Navigate using prefetched routes
+      // 🚀 PERFORMANCE: Use window.history.pushState for instant navigation without remount
       const route = VIEW_ROUTES[view];
       if (route) {
-        router.push(route);
+        window.history.pushState(null, '', route);
+        // Trigger popstate event for DataViewsContainer to detect change
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
     }
   };

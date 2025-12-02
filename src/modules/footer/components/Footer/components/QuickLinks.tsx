@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from '../Footer.module.scss';
 
 interface QuickLink {
@@ -7,6 +8,7 @@ interface QuickLink {
   icon: string;
   alt: string;
   isPng?: boolean;
+  adminOnly?: boolean;
 }
 
 const quickLinks: QuickLink[] = [
@@ -14,6 +16,7 @@ const quickLinks: QuickLink[] = [
     href: 'https://aurin-payload-cms.vercel.app/admin',
     icon: 'https://pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev/PayloadIconWhite.svg',
     alt: 'Payload CMS',
+    adminOnly: true,
   },
   {
     href: 'https://app.sesametime.com/employee/portal',
@@ -29,9 +32,13 @@ const quickLinks: QuickLink[] = [
 ];
 
 export const QuickLinks: React.FC = () => {
+  const { isAdmin } = useAuth();
+
+  const visibleLinks = quickLinks.filter((link) => !link.adminOnly || isAdmin);
+
   return (
     <div className={styles.quickLinksContainer}>
-      {quickLinks.map((link) => (
+      {visibleLinks.map((link) => (
         <a
           key={link.href}
           href={link.href}

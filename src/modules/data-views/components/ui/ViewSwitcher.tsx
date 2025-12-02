@@ -98,23 +98,24 @@ export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewC
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Handle navigation when value changes
+  // Handle navigation when value changes - OPTIMIZED: Use pushState for instant switching
   useEffect(() => {
     if (!value || value === previousValueRef.current) return;
 
     previousValueRef.current = value;
 
-    // Use router.push for navigation
     if (onViewChange) {
       onViewChange(value as 'table' | 'kanban' | 'archive');
     } else {
-      // Navigate to appropriate route using prefetched routes
+      // 🚀 PERFORMANCE: Use window.history.pushState for instant navigation without remount
       const route = VIEW_ROUTES[value as keyof typeof VIEW_ROUTES];
       if (route) {
-        router.push(route);
+        window.history.pushState(null, '', route);
+        // Trigger popstate event for DataViewsContainer to detect change
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
     }
-  }, [value, onViewChange, router]);
+  }, [value, onViewChange]);
 
   // Actualizar posición del indicador cuando cambia el valor
   useEffect(() => {

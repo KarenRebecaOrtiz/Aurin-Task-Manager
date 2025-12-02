@@ -10,6 +10,9 @@
     border-bottom-color: var(--color-border-dark);
   }
   
+  @media (max-width: 767px) {
+    display: none;
+  }
 
 }
 

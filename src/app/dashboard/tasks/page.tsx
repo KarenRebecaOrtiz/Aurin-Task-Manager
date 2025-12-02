@@ -1,8 +1,13 @@
 'use client';
 
-import TasksTableIsolated from '@/modules/data-views/tasks/components/tables/TasksTableIsolated';
+import DataViewsContainer from '@/modules/data-views/components/DataViewsContainer';
 
+/**
+ * TasksPage - Main entry point for all data views
+ *
+ * Uses DataViewsContainer for instant view switching without remounting.
+ * Handles /tasks, /kanban, and /archive routes in a single page for performance.
+ */
 export default function TasksPage() {
-  // Data is loaded in layout - just render the table
-  return <TasksTableIsolated />;
+  return <DataViewsContainer />;
 }

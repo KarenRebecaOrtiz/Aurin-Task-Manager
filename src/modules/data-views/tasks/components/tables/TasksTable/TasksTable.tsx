@@ -268,8 +268,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, [isAdmin, user?.id, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
   const baseColumns = [
-    { key: 'clientId', label: 'Cuenta', width: '30%', mobileVisible: true, mobileWidth: '40%', sortable: true },
-    { key: 'name', label: 'Tarea', width: '50%', mobileVisible: true, mobileWidth: '45%', sortable: true },
+    { key: 'clientId', label: 'Cuenta', width: '30%', mobileVisible: true, mobileWidth: '25%', sortable: true },
+    { key: 'name', label: 'Tarea', width: '50%', mobileVisible: true, mobileWidth: '60%', sortable: true },
     { key: 'notificationDot', label: '', width: '20%', mobileVisible: false, sortable: true, notificationCount: true },
     { key: 'assignedTo', label: 'Asignados', width: '20%', mobileVisible: false, sortable: true },
     { key: 'status', label: 'Estado', width: '30%', mobileVisible: false, sortable: true },
