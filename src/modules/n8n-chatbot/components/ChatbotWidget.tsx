@@ -229,8 +229,8 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
     setIsTyping(true)
 
     try {
-      // Call n8n webhook
-      const response = await fetch('/api/n8n-chatbot', {
+      // Call AI chat endpoint (OpenAI with function calling)
+      const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

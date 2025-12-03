@@ -115,3 +115,6 @@ export function getAdminDb() {
 }
 
 export { storage, bucket, adminDb };
+
+// Export db as alias for adminDb for convenience
+export const db = getAdminDb();

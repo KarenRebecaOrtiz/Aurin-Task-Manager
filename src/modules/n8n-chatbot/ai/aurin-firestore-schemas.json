@@ -1,0 +1,691 @@
+{
+  "firebase_project": {
+    "projectId": "aurin-plattform",
+    "projectNumber": "125219589195",
+    "displayName": "Aurin-Plattform",
+    "database": "(default)"
+  },
+  "collections": {
+    "tasks": {
+      "path": "tasks/{taskId}",
+      "description": "Colección principal de tareas del proyecto",
+      "fields": {
+        "CreatedBy": {
+          "type": "string",
+          "description": "ID del usuario que creó la tarea",
+          "required": true
+        },
+        "AssignedTo": {
+          "type": "array",
+          "description": "Array de IDs de usuarios asignados a la tarea",
+          "items": "string (userId)",
+          "required": false
+        },
+        "LeadedBy": {
+          "type": "array",
+          "description": "Array de IDs de usuarios que lideran la tarea",
+          "items": "string (userId)",
+          "required": false
+        },
+        "name": {
+          "type": "string",
+          "description": "Nombre de la tarea",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Descripción detallada de la tarea",
+          "required": false
+        },
+        "status": {
+          "type": "string",
+          "description": "Estado actual de la tarea. ACTIVAS: 'en proceso', 'por finalizar'. INACTIVAS: 'por iniciar', 'backlog', 'finalizado', 'cancelado'",
+          "enum": ["por iniciar", "en proceso", "backlog", "por finalizar", "finalizado", "cancelado"],
+          "required": true,
+          "activeStates": ["en proceso", "por finalizar"],
+          "inactiveStates": ["por iniciar", "backlog", "finalizado", "cancelado"]
+        },
+        "priority": {
+          "type": "string",
+          "description": "Prioridad de la tarea",
+          "enum": ["Alta", "Media", "Baja"],
+          "required": false
+        },
+        "clientId": {
+          "type": "string",
+          "description": "ID del cliente relacionado",
+          "required": false
+        },
+        "project": {
+          "type": "string",
+          "description": "Nombre del proyecto",
+          "required": false
+        },
+        "startDate": {
+          "type": "timestamp",
+          "description": "Fecha de inicio de la tarea",
+          "required": false
+        },
+        "endDate": {
+          "type": "timestamp",
+          "description": "Fecha de finalización de la tarea",
+          "required": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación del documento",
+          "required": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Fecha de última actualización",
+          "required": true
+        },
+        "lastViewedBy": {
+          "type": "map",
+          "description": "Mapa de userId: timestamp de última visualización",
+          "example": {
+            "userId1": "timestamp",
+            "userId2": "timestamp"
+          },
+          "required": false
+        },
+        "unreadCountByUser": {
+          "type": "map",
+          "description": "Mapa de userId: número de mensajes no leídos",
+          "example": {
+            "userId1": 5,
+            "userId2": 0
+          },
+          "required": false
+        },
+        "hasUnreadUpdates": {
+          "type": "boolean",
+          "description": "Indica si hay actualizaciones sin leer",
+          "required": false
+        }
+      },
+      "subcollections": {
+        "messages": {
+          "path": "tasks/{taskId}/messages/{messageId}",
+          "description": "Mensajes en el contexto de una tarea",
+          "fields": {
+            "senderId": {
+              "type": "string",
+              "description": "ID del usuario que envió el mensaje o 'gemini' para mensajes de IA",
+              "required": true
+            },
+            "content": {
+              "type": "string",
+              "description": "Contenido del mensaje",
+              "required": true
+            },
+            "timestamp": {
+              "type": "timestamp",
+              "description": "Fecha y hora del mensaje",
+              "required": true
+            },
+            "type": {
+              "type": "string",
+              "description": "Tipo de mensaje",
+              "enum": ["text", "system", "file", "image"],
+              "required": false
+            },
+            "read": {
+              "type": "boolean",
+              "description": "Indica si el mensaje ha sido leído",
+              "required": false
+            }
+          }
+        },
+        "timers": {
+          "path": "tasks/{taskId}/timers/{userId}",
+          "description": "Timers activos por usuario en una tarea",
+          "fields": {
+            "userId": {
+              "type": "string",
+              "description": "ID del usuario (mismo que el documentId)",
+              "required": true
+            },
+            "startTime": {
+              "type": "timestamp",
+              "description": "Hora de inicio del timer",
+              "required": true
+            },
+            "isRunning": {
+              "type": "boolean",
+              "description": "Indica si el timer está activo",
+              "required": true
+            },
+            "elapsedTime": {
+              "type": "number",
+              "description": "Tiempo acumulado en segundos",
+              "required": false
+            }
+          }
+        },
+        "time_logs": {
+          "path": "tasks/{taskId}/time_logs/{logId}",
+          "description": "Registros de tiempo trabajado en una tarea",
+          "fields": {
+            "userId": {
+              "type": "string",
+              "description": "ID del usuario que registró el tiempo",
+              "required": true
+            },
+            "startTime": {
+              "type": "timestamp",
+              "description": "Hora de inicio del trabajo",
+              "required": true
+            },
+            "endTime": {
+              "type": "timestamp",
+              "description": "Hora de finalización del trabajo",
+              "required": false
+            },
+            "duration": {
+              "type": "number",
+              "description": "Duración en segundos",
+              "required": true
+            },
+            "description": {
+              "type": "string",
+              "description": "Descripción del trabajo realizado",
+              "required": false
+            },
+            "type": {
+              "type": "string",
+              "description": "Tipo de registro",
+              "enum": ["manual", "timer", "automatic"],
+              "required": false
+            },
+            "createdAt": {
+              "type": "timestamp",
+              "description": "Fecha de creación del registro",
+              "required": true
+            }
+          }
+        },
+        "typing": {
+          "path": "tasks/{taskId}/typing/{userId}",
+          "description": "Indicadores de escritura en tiempo real",
+          "fields": {
+            "userId": {
+              "type": "string",
+              "description": "ID del usuario que está escribiendo",
+              "required": true
+            },
+            "isTyping": {
+              "type": "boolean",
+              "description": "Indica si está escribiendo",
+              "required": true
+            },
+            "timestamp": {
+              "type": "timestamp",
+              "description": "Última actualización",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    "users": {
+      "path": "users/{userId}",
+      "description": "Colección de usuarios del sistema",
+      "fields": {
+        "email": {
+          "type": "string",
+          "description": "Email del usuario",
+          "required": true
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Nombre para mostrar",
+          "required": true
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "URL de la foto de perfil",
+          "required": false
+        },
+        "access": {
+          "type": "string",
+          "description": "Nivel de acceso del usuario",
+          "enum": ["admin", "user"],
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "description": "Estado del usuario",
+          "enum": ["online", "offline", "away", "busy"],
+          "required": false
+        },
+        "lastSeen": {
+          "type": "timestamp",
+          "description": "Última vez que el usuario estuvo activo",
+          "required": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación del usuario",
+          "required": true
+        },
+        "preferences": {
+          "type": "map",
+          "description": "Preferencias del usuario",
+          "required": false
+        }
+      }
+    },
+    "clients": {
+      "path": "clients/{clientId}",
+      "description": "Colección de clientes",
+      "fields": {
+        "name": {
+          "type": "string",
+          "description": "Nombre del cliente",
+          "required": true
+        },
+        "email": {
+          "type": "string",
+          "description": "Email de contacto",
+          "required": false
+        },
+        "phone": {
+          "type": "string",
+          "description": "Teléfono de contacto",
+          "required": false
+        },
+        "company": {
+          "type": "string",
+          "description": "Nombre de la empresa",
+          "required": false
+        },
+        "address": {
+          "type": "string",
+          "description": "Dirección",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "description": "Notas adicionales",
+          "required": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación",
+          "required": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Fecha de última actualización",
+          "required": true
+        }
+      }
+    },
+    "notifications": {
+      "path": "notifications/{notificationId}",
+      "description": "Notificaciones del sistema",
+      "fields": {
+        "userId": {
+          "type": "string",
+          "description": "ID del usuario que genera la notificación",
+          "required": true
+        },
+        "recipientId": {
+          "type": "string",
+          "description": "ID del usuario destinatario",
+          "required": true
+        },
+        "message": {
+          "type": "string",
+          "description": "Mensaje de la notificación",
+          "required": true
+        },
+        "type": {
+          "type": "string",
+          "description": "Tipo de notificación",
+          "enum": ["task", "message", "system", "mention"],
+          "required": false
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Indica si fue leída",
+          "required": true,
+          "default": false
+        },
+        "timestamp": {
+          "type": "timestamp",
+          "description": "Fecha y hora de la notificación",
+          "required": true
+        },
+        "relatedTaskId": {
+          "type": "string",
+          "description": "ID de tarea relacionada (si aplica)",
+          "required": false
+        }
+      }
+    },
+    "notes": {
+      "path": "notes/{noteId}",
+      "description": "Notas rápidas de usuarios",
+      "fields": {
+        "userId": {
+          "type": "string",
+          "description": "ID del usuario propietario",
+          "required": true
+        },
+        "content": {
+          "type": "string",
+          "description": "Contenido de la nota (máx 120 caracteres)",
+          "required": true,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación",
+          "required": true
+        },
+        "expiresAt": {
+          "type": "timestamp",
+          "description": "Fecha de expiración (filtrado en cliente)",
+          "required": false
+        }
+      }
+    },
+    "todos": {
+      "path": "todos/{todoId}",
+      "description": "Lista de tareas pendientes personales",
+      "fields": {
+        "userId": {
+          "type": "string",
+          "description": "ID del usuario propietario",
+          "required": true
+        },
+        "title": {
+          "type": "string",
+          "description": "Título del todo",
+          "required": true
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Indica si está completado",
+          "required": true,
+          "default": false
+        },
+        "priority": {
+          "type": "string",
+          "description": "Prioridad",
+          "enum": ["high", "medium", "low"],
+          "required": false
+        },
+        "dueDate": {
+          "type": "timestamp",
+          "description": "Fecha de vencimiento",
+          "required": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación",
+          "required": true
+        }
+      }
+    },
+    "advices": {
+      "path": "advices/{adviceId}",
+      "description": "Consejos y recomendaciones",
+      "fields": {
+        "creatorId": {
+          "type": "string",
+          "description": "ID del usuario creador",
+          "required": true
+        },
+        "content": {
+          "type": "string",
+          "description": "Contenido del consejo",
+          "required": true
+        },
+        "category": {
+          "type": "string",
+          "description": "Categoría del consejo",
+          "required": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación",
+          "required": true
+        }
+      }
+    },
+    "conversations": {
+      "path": "conversations/{conversationId}",
+      "description": "Conversaciones privadas entre usuarios",
+      "fields": {
+        "participants": {
+          "type": "array",
+          "description": "Array de IDs de usuarios participantes (máx 2)",
+          "items": "string (userId)",
+          "required": true,
+          "size": 2
+        },
+        "lastMessage": {
+          "type": "string",
+          "description": "Último mensaje enviado",
+          "required": false
+        },
+        "lastMessageTime": {
+          "type": "timestamp",
+          "description": "Timestamp del último mensaje",
+          "required": false
+        },
+        "unreadCount": {
+          "type": "map",
+          "description": "Contador de no leídos por usuario",
+          "example": {
+            "userId1": 3,
+            "userId2": 0
+          },
+          "required": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación de la conversación",
+          "required": true
+        }
+      },
+      "subcollections": {
+        "messages": {
+          "path": "conversations/{conversationId}/messages/{messageId}",
+          "description": "Mensajes de la conversación",
+          "fields": {
+            "senderId": {
+              "type": "string",
+              "description": "ID del remitente",
+              "required": true
+            },
+            "content": {
+              "type": "string",
+              "description": "Contenido del mensaje",
+              "required": true
+            },
+            "timestamp": {
+              "type": "timestamp",
+              "description": "Fecha y hora del mensaje",
+              "required": true
+            },
+            "read": {
+              "type": "boolean",
+              "description": "Indica si fue leído",
+              "required": false
+            },
+            "type": {
+              "type": "string",
+              "description": "Tipo de mensaje",
+              "enum": ["text", "image", "file"],
+              "required": false
+            }
+          }
+        },
+        "typing": {
+          "path": "conversations/{conversationId}/typing/{userId}",
+          "description": "Indicadores de escritura",
+          "fields": {
+            "userId": {
+              "type": "string",
+              "description": "ID del usuario escribiendo",
+              "required": true
+            },
+            "isTyping": {
+              "type": "boolean",
+              "description": "Estado de escritura",
+              "required": true
+            },
+            "timestamp": {
+              "type": "timestamp",
+              "description": "Última actualización",
+              "required": true
+            }
+          }
+        }
+      }
+    },
+    "ai_conversations": {
+      "path": "ai_conversations/{conversationId}",
+      "description": "Conversaciones con IA (Gemini)",
+      "fields": {
+        "userId": {
+          "type": "string",
+          "description": "ID del usuario",
+          "required": true
+        },
+        "taskId": {
+          "type": "string",
+          "description": "ID de la tarea relacionada",
+          "required": false
+        },
+        "title": {
+          "type": "string",
+          "description": "Título de la conversación",
+          "required": false
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Fecha de creación",
+          "required": true
+        },
+        "lastMessageTime": {
+          "type": "timestamp",
+          "description": "Timestamp del último mensaje",
+          "required": false
+        }
+      },
+      "subcollections": {
+        "messages": {
+          "path": "ai_conversations/{conversationId}/messages/{messageId}",
+          "description": "Mensajes de la conversación con IA",
+          "fields": {
+            "role": {
+              "type": "string",
+              "description": "Rol del mensaje",
+              "enum": ["user", "assistant", "system"],
+              "required": true
+            },
+            "content": {
+              "type": "string",
+              "description": "Contenido del mensaje",
+              "required": true
+            },
+            "timestamp": {
+              "type": "timestamp",
+              "description": "Fecha y hora del mensaje",
+              "required": true
+            },
+            "model": {
+              "type": "string",
+              "description": "Modelo de IA usado",
+              "required": false
+            }
+          }
+        }
+      }
+    },
+    "summaries": {
+      "path": "summaries/{summaryId}",
+      "description": "Resúmenes generados por Gemini (formato: taskId_interval)",
+      "documentIdFormat": "{taskId}_{interval}",
+      "example": "task123_1week",
+      "fields": {
+        "taskId": {
+          "type": "string",
+          "description": "ID de la tarea relacionada",
+          "required": true
+        },
+        "interval": {
+          "type": "string",
+          "description": "Intervalo del resumen",
+          "enum": ["1day", "1week", "1month"],
+          "required": true
+        },
+        "summary": {
+          "type": "string",
+          "description": "Contenido del resumen generado",
+          "required": true
+        },
+        "generatedAt": {
+          "type": "timestamp",
+          "description": "Fecha de generación",
+          "required": true
+        },
+        "generatedBy": {
+          "type": "string",
+          "description": "Usuario o sistema que generó el resumen",
+          "required": false
+        },
+        "metrics": {
+          "type": "map",
+          "description": "Métricas asociadas al resumen",
+          "required": false
+        }
+      }
+    },
+    "emailLimits": {
+      "path": "emailLimits/{userId}",
+      "description": "Control de límites de envío de emails por usuario",
+      "fields": {
+        "userId": {
+          "type": "string",
+          "description": "ID del usuario (mismo que documentId)",
+          "required": true
+        },
+        "emailsSent": {
+          "type": "number",
+          "description": "Cantidad de emails enviados",
+          "required": true,
+          "default": 0
+        },
+        "dailyLimit": {
+          "type": "number",
+          "description": "Límite diario de emails",
+          "required": true
+        },
+        "lastResetDate": {
+          "type": "timestamp",
+          "description": "Última fecha de reseteo del contador",
+          "required": true
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Última actualización",
+          "required": true
+        }
+      }
+    }
+  },
+  "security_notes": {
+    "authentication": "Todos los usuarios deben estar autenticados (request.auth != null)",
+    "admin_access": "Los administradores tienen acceso completo a todas las colecciones",
+    "task_access": "Los usuarios solo pueden acceder a tareas donde están involucrados (AssignedTo, LeadedBy, CreatedBy)",
+    "notes_limit": "Las notas tienen un límite de 120 caracteres",
+    "conversations_limit": "Las conversaciones solo permiten 2 participantes"
+  }
+}
