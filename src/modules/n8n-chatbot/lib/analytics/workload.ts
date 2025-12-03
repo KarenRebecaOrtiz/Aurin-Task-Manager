@@ -4,6 +4,11 @@
 
 import { db } from '@/lib/firebase-admin'
 
+interface UserData {
+  name?: string
+  email?: string
+}
+
 export interface UserWorkload {
   userId: string
   name: string
@@ -30,10 +35,14 @@ export async function getTeamWorkload(options: {
   try {
     // Get all users
     const usersSnapshot = await db.collection('users').get()
-    const users = usersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
+    const users = usersSnapshot.docs.map(doc => {
+      const data = doc.data() as UserData
+      return {
+        id: doc.id,
+        name: data.name,
+        email: data.email
+      }
+    })
 
     // Get workload for each user
     const workload = await Promise.all(
@@ -74,7 +83,6 @@ export async function getTeamWorkload(options: {
       totalActiveTasks
     }
   } catch (error) {
-    console.error('Error getting team workload:', error)
     throw new Error(`Error al obtener carga de trabajo: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }

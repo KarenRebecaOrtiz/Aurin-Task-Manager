@@ -3,7 +3,7 @@
  */
 
 import { db } from '@/lib/firebase-admin'
-import type { TaskSearchFilters, TaskSearchResult } from './types'
+import type { TaskData, TaskSearchFilters, TaskSearchResult } from './types'
 
 export async function searchTasks(
   userId: string,
@@ -11,7 +11,7 @@ export async function searchTasks(
 ): Promise<TaskSearchResult> {
   try {
     // Start with base query - get all tasks created by the user
-    let query: FirebaseFirestore.Query = db.collection('tasks')
+    const query: FirebaseFirestore.Query = db.collection('tasks')
       .where('CreatedBy', '==', userId)
 
     // Execute query (we'll filter and sort in memory to avoid index requirements)
@@ -90,7 +90,6 @@ export async function searchTasks(
       totalFound: tasks.length
     }
   } catch (error) {
-    console.error('Error searching tasks:', error)
     throw new Error(`Error al buscar tareas: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }

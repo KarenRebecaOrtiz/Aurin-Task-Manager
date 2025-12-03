@@ -3,7 +3,6 @@
  * Routes tool calls to appropriate functions
  */
 
-import type { ChatCompletionMessageToolCall } from 'openai/resources/chat/completions'
 import {
   searchTasks,
   createTask,
@@ -18,12 +17,24 @@ import {
 import { getUsersInfo } from '../lib/users/get-users'
 
 /**
+ * Standard function tool call type
+ */
+interface FunctionToolCall {
+  id: string
+  type: 'function'
+  function: {
+    name: string
+    arguments: string
+  }
+}
+
+/**
  * Execute a tool call and return the result
  */
 export async function executeTool(
-  toolCall: ChatCompletionMessageToolCall,
+  toolCall: FunctionToolCall,
   userId: string
-): Promise<any> {
+): Promise<unknown> {
   const { name: toolName, arguments: argsString } = toolCall.function
   const args = JSON.parse(argsString)
 
@@ -67,7 +78,6 @@ export async function executeTool(
         throw new Error(`Unknown tool: ${toolName}`)
     }
   } catch (error) {
-    console.error(`Error executing tool ${toolName}:`, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -81,8 +91,8 @@ export async function executeTool(
  */
 async function callN8nWebhook(
   type: 'vision' | 'notion',
-  payload: Record<string, any>
-): Promise<any> {
+  payload: Record<string, unknown>
+): Promise<unknown> {
   const webhookUrls = {
     vision: process.env.N8N_VISION_WEBHOOK_URL,
     notion: process.env.N8N_NOTION_WEBHOOK_URL
@@ -94,23 +104,18 @@ async function callN8nWebhook(
     throw new Error(`n8n webhook URL not configured for ${type}`)
   }
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`n8n webhook failed: ${errorText}`)
-    }
-
-    return await response.json()
-  } catch (error) {
-    console.error(`Error calling n8n ${type} webhook:`, error)
-    throw error
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`n8n webhook failed: ${errorText}`)
   }
+
+  return await response.json()
 }

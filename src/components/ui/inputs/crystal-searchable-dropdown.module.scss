@@ -558,3 +558,66 @@
     }
   }
 }
+
+// ============================================================================
+// Mobile Drawer Styles
+// ============================================================================
+
+.drawerItemsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  overflow-y: auto;
+  @include crystallized-scrollbar;
+}
+
+.drawerItem {
+  @include flex-center;
+  gap: $spacing-sm;
+  padding: $spacing-lg;
+  @include typography(14px, $font-weight-medium, $color-text-primary);
+  cursor: pointer;
+  border-radius: $radius-lg;
+  border: 1px solid $color-border-subtle;
+  background: rgba(255, 255, 255, 0.6);
+  transition: $transition-base;
+
+  &:hover {
+    background: rgba(241, 245, 249, 0.8);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(241, 245, 249, 0.9);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+    font-weight: $font-weight-semibold;
+  }
+
+  :global(.dark) & {
+    background: #2a2a2a;
+    color: #e5e5e5;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    &:active {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.selected {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+    }
+  }
+}

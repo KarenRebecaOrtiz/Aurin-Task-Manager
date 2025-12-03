@@ -31,7 +31,7 @@ export interface ChatResponse {
   content: string
   toolCalls?: Array<{
     toolName: string
-    result: any
+    result: unknown
   }>
   conversationHistory: ChatCompletionMessageParam[]
 }
@@ -72,13 +72,11 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
   ]
 
   // Tool call tracking
-  const toolCallsExecuted: Array<{ toolName: string; result: any }> = []
+  const toolCallsExecuted: Array<{ toolName: string; result: unknown }> = []
   let iterations = 0
 
   while (iterations < maxIterations) {
     iterations++
-
-    console.log(`[OpenAI] Iteration ${iterations}, calling with ${messages.length} messages`)
 
     // Call OpenAI
     const response = await openai.chat.completions.create({
@@ -91,13 +89,6 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     })
 
     const assistantMessage = response.choices[0].message
-
-    console.log(`[OpenAI] Response:`, {
-      hasContent: !!assistantMessage.content,
-      hasToolCalls: !!assistantMessage.tool_calls,
-      toolCallCount: assistantMessage.tool_calls?.length || 0,
-      toolNames: assistantMessage.tool_calls?.map(tc => tc.function.name) || []
-    })
 
     // Add assistant message to history
     messages.push(assistantMessage)
@@ -113,6 +104,9 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
 
     // Execute tool calls
     for (const toolCall of assistantMessage.tool_calls) {
+      // Skip tool calls that don't have a function property
+      if (!('function' in toolCall)) continue
+      
       const result = await executeTool(toolCall, userId)
 
       // Track tool execution
@@ -134,10 +128,18 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
 
   // If we hit max iterations, return last message
   const lastMessage = messages[messages.length - 1]
+  const fallbackMessage = 'Lo siento, alcancé el límite de iteraciones.'
+  let responseContent = fallbackMessage
+  
+  if (lastMessage.role === 'assistant' && 'content' in lastMessage) {
+    const content = lastMessage.content
+    if (typeof content === 'string') {
+      responseContent = content || fallbackMessage
+    }
+  }
+  
   return {
-    content: lastMessage.role === 'assistant' && 'content' in lastMessage
-      ? lastMessage.content || 'Lo siento, alcancé el límite de iteraciones.'
-      : 'Lo siento, alcancé el límite de iteraciones.',
+    content: responseContent,
     toolCalls: toolCallsExecuted,
     conversationHistory: messages.slice(1) // Remove system message
   }

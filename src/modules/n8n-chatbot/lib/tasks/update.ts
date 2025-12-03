@@ -5,10 +5,17 @@
 import { db } from '@/lib/firebase-admin'
 import type { TaskUpdateResult } from './types'
 
+interface TaskUpdateData {
+  updatedAt: string
+  CreatedBy?: string
+  createdAt?: string
+  [key: string]: unknown
+}
+
 export async function updateTask(
   userId: string,
   taskId: string,
-  updates: Record<string, any>
+  updates: Record<string, unknown>
 ): Promise<TaskUpdateResult> {
   try {
     // Validate taskId
@@ -32,7 +39,7 @@ export async function updateTask(
     }
 
     // Prepare updates with timestamp
-    const updateData = {
+    const updateData: TaskUpdateData = {
       ...updates,
       updatedAt: new Date().toISOString()
     }
@@ -50,7 +57,6 @@ export async function updateTask(
       taskId
     }
   } catch (error) {
-    console.error('Error updating task:', error)
     throw new Error(`Error al actualizar tarea: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }

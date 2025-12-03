@@ -5,6 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Building2, Folder, Users, Plus } from "lucide-react";
 import { dropdownAnimations } from "@/modules/shared/components/molecules/Dropdown/animations";
+import { useMediaQuery } from "@/modules/dialogs/hooks/useMediaQuery";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import styles from "./crystal-searchable-dropdown.module.scss";
 
 export interface CrystalDropdownItem {
@@ -63,6 +70,9 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
     const wrapperRef = React.useRef<HTMLDivElement>(null);
     const searchInputRef = React.useRef<HTMLInputElement>(null);
     const generatedId = React.useId();
+    
+    // Detectar si estamos en móvil (< 768px)
+    const isMobile = useMediaQuery("(max-width: 767px)");
 
     const selectedItemsData = items.filter((item) => selectedItems.includes(item.id));
     const hasSelection = selectedItems.length > 0;
@@ -167,6 +177,185 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
       return <Building2 size={16} className={styles.icon} />;
     };
 
+    // Obtener el label para el drawer basado en el fieldType
+    const getDrawerTitle = () => {
+      if (label) return label;
+      if (fieldType === 'client') return 'Seleccionar cliente';
+      if (fieldType === 'project') return 'Seleccionar proyecto';
+      if (fieldType === 'user') return 'Seleccionar usuario';
+      return 'Seleccionar';
+    };
+
+    // Items filtrados para móvil (sin búsqueda, todos los items no deshabilitados)
+    const mobileItems = items.filter((item) => !item.disabled);
+
+    // Renderizar un item (compartido entre desktop y mobile)
+    const renderItem = (item: CrystalDropdownItem, idx: number, isForMobile: boolean = false) => {
+      const isSelected = selectedItems.includes(item.id);
+      const itemContent = (
+        <div className={styles.itemContent}>
+          {item.imageUrl && (
+            <Image
+              src={item.imageUrl}
+              alt={item.name}
+              width={32}
+              height={32}
+              className={styles.itemImage}
+              onError={(e) => {
+                e.currentTarget.src = "/empty-image.png";
+              }}
+            />
+          )}
+          {item.svgIcon && (
+            <div
+              className={styles.itemSvg}
+              dangerouslySetInnerHTML={{ __html: item.svgIcon }}
+            />
+          )}
+          <div className={styles.itemText}>
+            <span className={styles.itemName}>{item.name}</span>
+            {item.subtitle && (
+              <span className={styles.itemSubtitle}>{item.subtitle}</span>
+            )}
+          </div>
+        </div>
+      );
+
+      if (isForMobile) {
+        return (
+          <div
+            key={item.id}
+            onClick={() => handleItemClick(item.id)}
+            className={`${styles.drawerItem} ${isSelected ? styles.selected : ''}`}
+            role="option"
+            aria-selected={isSelected}
+          >
+            {itemContent}
+          </div>
+        );
+      }
+
+      return (
+        <motion.div
+          key={item.id}
+          {...dropdownAnimations.item(idx)}
+          onClick={() => handleItemClick(item.id)}
+          className={`${styles.item} ${isSelected ? styles.selected : ''}`}
+          role="option"
+          aria-selected={isSelected}
+        >
+          {itemContent}
+        </motion.div>
+      );
+    };
+
+    // Renderizar el botón trigger (compartido)
+    const renderTrigger = () => (
+      <button
+        id={generatedId}
+        type="button"
+        className={`${styles.trigger} ${error ? styles.error : ''}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <div className={styles.triggerContent}>
+          {getIcon()}
+          {hasSelection && !multiple && selectedItemsData[0]?.imageUrl && (
+            <Image
+              src={selectedItemsData[0].imageUrl}
+              alt={selectedItemsData[0].name}
+              width={24}
+              height={24}
+              className="rounded-full"
+              onError={(e) => {
+                e.currentTarget.src = "/empty-image.png";
+              }}
+            />
+          )}
+          {hasSelection && !multiple && selectedItemsData[0]?.svgIcon && (
+            <div
+              className="w-6 h-6"
+              dangerouslySetInnerHTML={{ __html: selectedItemsData[0].svgIcon }}
+            />
+          )}
+          <span className={`${styles.triggerText} ${!hasSelection ? styles.placeholder : ''}`}>
+            {getDisplayText()}
+          </span>
+        </div>
+        <Image
+          src="/chevron-down.svg"
+          alt="arrow"
+          width={16}
+          height={16}
+          className={`${styles.chevron} ${isOpen ? styles.open : ''}`}
+        />
+      </button>
+    );
+
+    // Renderizar tags seleccionados (compartido)
+    const renderSelectedTags = () => {
+      if (!hasSelection || !multiple) return null;
+
+      return (
+        <div className={styles.selectedTags}>
+          <AnimatePresence mode="popLayout">
+            {visibleTags.map((item) => (
+              <motion.div
+                key={item.id}
+                className={styles.tag}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {item.imageUrl && (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    width={16}
+                    height={16}
+                    className={styles.tagImage}
+                    onError={(e) => {
+                      e.currentTarget.src = "/empty-image.png";
+                    }}
+                  />
+                )}
+                {item.svgIcon && (
+                  <div className={styles.tagSvg} dangerouslySetInnerHTML={{ __html: item.svgIcon }} />
+                )}
+                <span className={styles.tagText}>{item.name}</span>
+                <button
+                  type="button"
+                  className={styles.tagRemove}
+                  onClick={(e) => handleRemoveItem(item.id, e)}
+                  aria-label={`Remove ${item.name}`}
+                >
+                  ×
+                </button>
+              </motion.div>
+            ))}
+            {hasMoreTags && (
+              <motion.button
+                key="view-more-button"
+                type="button"
+                className={styles.viewMoreButton}
+                onClick={() => setShowAllTags(!showAllTags)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                aria-label={showAllTags ? "Ver menos" : "Ver más"}
+              >
+                {showAllTags ? "Ver menos" : `+${selectedItemsData.length - maxVisibleTags}`}
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    };
+
     return (
       <div className={`${styles.container} ${className}`} ref={ref}>
         {label && (
@@ -176,162 +365,84 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
         )}
 
         <div className={styles.dropdownWrapper} ref={wrapperRef}>
-          <button
-            id={generatedId}
-            type="button"
-            className={`${styles.trigger} ${error ? styles.error : ''}`}
-            onClick={() => !disabled && setIsOpen(!isOpen)}
-            disabled={disabled}
-            aria-haspopup="listbox"
-            aria-expanded={isOpen}
-          >
-            <div className={styles.triggerContent}>
-              {getIcon()}
-              {hasSelection && !multiple && selectedItemsData[0]?.imageUrl && (
-                <Image
-                  src={selectedItemsData[0].imageUrl}
-                  alt={selectedItemsData[0].name}
-                  width={24}
-                  height={24}
-                  className="rounded-full"
-                  onError={(e) => {
-                    e.currentTarget.src = "/empty-image.png";
-                  }}
-                />
-              )}
-              {hasSelection && !multiple && selectedItemsData[0]?.svgIcon && (
-                <div
-                  className="w-6 h-6"
-                  dangerouslySetInnerHTML={{ __html: selectedItemsData[0].svgIcon }}
-                />
-              )}
-              <span className={`${styles.triggerText} ${!hasSelection ? styles.placeholder : ''}`}>
-                {getDisplayText()}
-              </span>
-            </div>
-            <Image
-              src="/chevron-down.svg"
-              alt="arrow"
-              width={16}
-              height={16}
-              className={`${styles.chevron} ${isOpen ? styles.open : ''}`}
-            />
-          </button>
+          {renderTrigger()}
+          {renderSelectedTags()}
 
-          {hasSelection && multiple && (
-            <div className={styles.selectedTags}>
-              <AnimatePresence mode="popLayout">
-                {visibleTags.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    className={styles.tag}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    {item.imageUrl && (
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        width={16}
-                        height={16}
-                        className={styles.tagImage}
-                        onError={(e) => {
-                          e.currentTarget.src = "/empty-image.png";
+          {/* Desktop: Dropdown con animaciones y búsqueda */}
+          {!isMobile && (
+            <AnimatePresence>
+              {isOpen && (
+                <motion.div {...dropdownAnimations.menu} className={styles.menu} role="listbox">
+                  <div className={styles.searchContainer}>
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder={searchPlaceholder}
+                      className={styles.searchInput}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={handleSearchKeyDown}
+                    />
+                  </div>
+
+                  <div className={styles.itemsContainer}>
+                    {filteredItems.length > 0 ? (
+                      filteredItems.map((item, idx) => renderItem(item, idx, false))
+                    ) : (
+                      <div className={styles.emptyState}>
+                        <span>{emptyMessage}</span>
+                      </div>
+                    )}
+
+                    {/* Create New Button - Only for client fieldType */}
+                    {onCreateNew && fieldType === 'client' && (
+                      <motion.div
+                        {...dropdownAnimations.item(filteredItems.length)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCreateNew();
+                          setIsOpen(false);
+                          setSearchTerm("");
                         }}
-                      />
+                        className={styles.createNewButton}
+                        role="button"
+                      >
+                        <div className={styles.itemContent}>
+                          <div className={styles.createNewIcon}>
+                            <Plus size={20} />
+                          </div>
+                          <div className={styles.itemText}>
+                            <span className={styles.createNewText}>
+                              {searchTerm && filteredItems.length === 0
+                                ? `${createNewLabel} "${searchTerm}"`
+                                : createNewLabel}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
-                    {item.svgIcon && (
-                      <div className={styles.tagSvg} dangerouslySetInnerHTML={{ __html: item.svgIcon }} />
-                    )}
-                    <span className={styles.tagText}>{item.name}</span>
-                    <button
-                      type="button"
-                      className={styles.tagRemove}
-                      onClick={(e) => handleRemoveItem(item.id, e)}
-                      aria-label={`Remove ${item.name}`}
-                    >
-                      ×
-                    </button>
-                  </motion.div>
-                ))}
-                {hasMoreTags && (
-                  <motion.button
-                    key="view-more-button"
-                    type="button"
-                    className={styles.viewMoreButton}
-                    onClick={() => setShowAllTags(!showAllTags)}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    aria-label={showAllTags ? "Ver menos" : "Ver más"}
-                  >
-                    {showAllTags ? "Ver menos" : `+${selectedItemsData.length - maxVisibleTags}`}
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
+                  </div>
+
+                  {maxItems && selectedItems.length >= maxItems && (
+                    <div className={styles.maxItemsWarning}>
+                      Máximo {maxItems} elementos permitidos
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
 
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div {...dropdownAnimations.menu} className={styles.menu} role="listbox">
-                <div className={styles.searchContainer}>
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder={searchPlaceholder}
-                    className={styles.searchInput}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                  />
-                </div>
-
-                <div className={styles.itemsContainer}>
-                  {filteredItems.length > 0 ? (
-                    filteredItems.map((item, idx) => {
-                      const isSelected = selectedItems.includes(item.id);
-                      return (
-                        <motion.div
-                          key={item.id}
-                          {...dropdownAnimations.item(idx)}
-                          onClick={() => handleItemClick(item.id)}
-                          className={`${styles.item} ${isSelected ? styles.selected : ''}`}
-                          role="option"
-                          aria-selected={isSelected}
-                        >
-                          <div className={styles.itemContent}>
-                            {item.imageUrl && (
-                              <Image
-                                src={item.imageUrl}
-                                alt={item.name}
-                                width={32}
-                                height={32}
-                                className={styles.itemImage}
-                                onError={(e) => {
-                                  e.currentTarget.src = "/empty-image.png";
-                                }}
-                              />
-                            )}
-                            {item.svgIcon && (
-                              <div
-                                className={styles.itemSvg}
-                                dangerouslySetInnerHTML={{ __html: item.svgIcon }}
-                              />
-                            )}
-                            <div className={styles.itemText}>
-                              <span className={styles.itemName}>{item.name}</span>
-                              {item.subtitle && (
-                                <span className={styles.itemSubtitle}>{item.subtitle}</span>
-                              )}
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })
+          {/* Mobile: Drawer sin búsqueda */}
+          {isMobile && (
+            <Drawer open={isOpen} onOpenChange={setIsOpen}>
+              <DrawerContent>
+                <DrawerHeader>
+                  <DrawerTitle>{getDrawerTitle()}</DrawerTitle>
+                </DrawerHeader>
+                <div className={styles.drawerItemsContainer}>
+                  {mobileItems.length > 0 ? (
+                    mobileItems.map((item, idx) => renderItem(item, idx, true))
                   ) : (
                     <div className={styles.emptyState}>
                       <span>{emptyMessage}</span>
@@ -340,13 +451,11 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
 
                   {/* Create New Button - Only for client fieldType */}
                   {onCreateNew && fieldType === 'client' && (
-                    <motion.div
-                      {...dropdownAnimations.item(filteredItems.length)}
+                    <div
                       onClick={(e) => {
                         e.stopPropagation();
                         onCreateNew();
                         setIsOpen(false);
-                        setSearchTerm("");
                       }}
                       className={styles.createNewButton}
                       role="button"
@@ -357,13 +466,11 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
                         </div>
                         <div className={styles.itemText}>
                           <span className={styles.createNewText}>
-                            {searchTerm && filteredItems.length === 0
-                              ? `${createNewLabel} "${searchTerm}"`
-                              : createNewLabel}
+                            {createNewLabel}
                           </span>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
                 </div>
 
@@ -372,9 +479,9 @@ const CrystalSearchableDropdown = React.forwardRef<HTMLDivElement, CrystalSearch
                     Máximo {maxItems} elementos permitidos
                   </div>
                 )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </DrawerContent>
+            </Drawer>
+          )}
         </div>
 
         {error && (
