@@ -56,13 +56,23 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const hasInitialized = useRef(false)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior })
   }
 
   useEffect(() => {
     scrollToBottom()
   }, [messages, isTyping])
+
+  // Auto-scroll to bottom when chat is opened
+  useEffect(() => {
+    if (isOpen) {
+      // Use setTimeout to ensure DOM is rendered before scrolling
+      setTimeout(() => {
+        scrollToBottom("instant")
+      }, 100)
+    }
+  }, [isOpen])
 
   // Initialize session only once on mount
   useEffect(() => {

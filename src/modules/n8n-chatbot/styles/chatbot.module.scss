@@ -1,18 +1,32 @@
 /* Chatbot SCSS Module - Variables CSS para el chatbot */
 
 $chatbot-primary: #d0df00;
-$chatbot-bg-dark: #0f0f0f;
-$chatbot-bg-light: #1a1a1a;
-$chatbot-bg-secondary: #212121;
-$chatbot-bg-tertiary: #2a2a2a;
-$chatbot-border: #2a2a2a;
-$chatbot-text-primary: #e5e5e5;
-$chatbot-text-secondary: #6b7280;
-$chatbot-text-muted: #9ca3af;
+$chatbot-primary-hover: #b8c400;
+
+// Light mode colors (default)
+$chatbot-bg-main-light: #ffffff;
+$chatbot-bg-secondary-light: #f3f4f6;
+$chatbot-bg-tertiary-light: #e5e7eb;
+$chatbot-border-light: #e5e7eb;
+$chatbot-text-primary-light: #1f2937;
+$chatbot-text-secondary-light: #6b7280;
+$chatbot-text-muted-light: #9ca3af;
+
+// Dark mode colors
+$chatbot-bg-main-dark: #0f0f0f;
+$chatbot-bg-secondary-dark: #212121;
+$chatbot-bg-tertiary-dark: #2a2a2a;
+$chatbot-border-dark: #2a2a2a;
+$chatbot-text-primary-dark: #e5e5e5;
+$chatbot-text-secondary-dark: #9ca3af;
+$chatbot-text-muted-dark: #6b7280;
+
 $chatbot-success: #22c55e;
 $chatbot-error: #ef4444;
-$chatbot-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-$chatbot-shadow-light: 0 10px 25px rgba(0, 0, 0, 0.3);
+$chatbot-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+$chatbot-shadow-dark: 0 10px 40px rgba(0, 0, 0, 0.5);
+$chatbot-shadow-light: 0 10px 25px rgba(0, 0, 0, 0.1);
+$chatbot-shadow-light-dark: 0 10px 25px rgba(0, 0, 0, 0.3);
 $chatbot-radius: 20px;
 $chatbot-radius-sm: 8px;
 $chatbot-radius-full: 50%;
@@ -61,9 +75,17 @@ $chatbot-z-low: 9988;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: chatbot-pulse 2s ease-in-out infinite;
 
+  :global(.dark) & {
+    box-shadow: $chatbot-shadow-light-dark;
+  }
+
   &:hover {
     transform: scale(1.05);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    
+    :global(.dark) & {
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    }
   }
 
   &:active {
@@ -102,10 +124,15 @@ $chatbot-z-low: 9988;
   height: 650px;
   border-radius: $chatbot-radius;
   box-shadow: $chatbot-shadow;
-  background-color: $chatbot-bg-dark;
+  background-color: $chatbot-bg-main-light;
   z-index: $chatbot-z-medium;
   display: flex;
   flex-direction: column;
+
+  :global(.dark) & {
+    background-color: $chatbot-bg-main-dark;
+    box-shadow: $chatbot-shadow-dark;
+  }
 
   &Mobile {
     width: 100vw;
@@ -210,8 +237,12 @@ $chatbot-z-low: 9988;
   margin-right: 8px;
   flex-shrink: 0;
   overflow: hidden;
-  border: rgb(57, 57, 57) 2px solid;
+  border: $chatbot-border-light 2px solid;
   position: relative;
+
+  :global(.dark) & {
+    border-color: rgb(57, 57, 57);
+  }
 }
 
 .chatbotMessageContent {
@@ -241,16 +272,25 @@ $chatbot-z-low: 9988;
   }
 
   &Bot {
-    background-color: $chatbot-bg-secondary;
-    color: $chatbot-text-primary;
+    background-color: $chatbot-bg-secondary-light;
+    color: $chatbot-text-primary-light;
     border-radius: 18px 18px 18px 4px;
+
+    :global(.dark) & {
+      background-color: $chatbot-bg-secondary-dark;
+      color: $chatbot-text-primary-dark;
+    }
   }
 }
 
 .chatbotTimestamp {
   font-size: 12px;
-  color: $chatbot-text-primary;
+  color: $chatbot-text-secondary-light;
   margin-top: 4px;
+
+  :global(.dark) & {
+    color: $chatbot-text-primary-dark;
+  }
 
   &User {
     text-align: right;
@@ -267,9 +307,13 @@ $chatbot-z-low: 9988;
 .chatbotTypingDot {
   width: 8px;
   height: 8px;
-  background-color: $chatbot-text-primary;
+  background-color: $chatbot-text-secondary-light;
   border-radius: $chatbot-radius-full;
   animation: chatbot-bounce 1.4s ease-in-out infinite both;
+
+  :global(.dark) & {
+    background-color: $chatbot-text-primary-dark;
+  }
 
   &:nth-child(1) { animation-delay: -0.32s; }
   &:nth-child(2) { animation-delay: -0.16s; }
@@ -278,10 +322,14 @@ $chatbot-z-low: 9988;
 
 /* Área de input */
 .chatbotInputArea {
-  border-top: 1px solid $chatbot-bg-tertiary;
+  border-top: 1px solid $chatbot-border-light;
   padding: 16px;
   border-radius: 0 0 $chatbot-radius $chatbot-radius;
   position: relative;
+
+  :global(.dark) & {
+    border-top-color: $chatbot-bg-tertiary-dark;
+  }
 
   &Mobile {
     border-radius: 0;
@@ -299,9 +347,13 @@ $chatbot-z-low: 9988;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(255, 255, 255, 0.9);
   border-radius: 0 0 $chatbot-radius $chatbot-radius;
   z-index: 10;
+
+  :global(.dark) & {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
 }
 
 .chatbotDragContent {
@@ -309,28 +361,40 @@ $chatbot-z-low: 9988;
 }
 
 .chatbotDragText {
-  color: white;
+  color: $chatbot-text-primary-light;
   font-weight: 500;
   margin: 8px 0 4px;
+
+  :global(.dark) & {
+    color: white;
+  }
 }
 
 .chatbotDragSubtext {
-  color: $chatbot-text-muted;
+  color: $chatbot-text-muted-light;
   font-size: 14px;
   margin: 0;
+
+  :global(.dark) & {
+    color: $chatbot-text-muted-dark;
+  }
 }
 
 /* Preview de archivo */
 .chatbotFilePreview {
   margin-bottom: 12px;
   padding: 8px;
-  background-color: $chatbot-bg-secondary;
+  background-color: $chatbot-bg-secondary-light;
   border-radius: $chatbot-radius-sm;
   display: flex;
   align-items: center;
   gap: 12px;
   max-width: 100%;
   overflow: hidden;
+
+  :global(.dark) & {
+    background-color: $chatbot-bg-secondary-dark;
+  }
 }
 
 .chatbotFilePreviewInfo {
@@ -342,18 +406,26 @@ $chatbot-z-low: 9988;
 }
 
 .chatbotFilePreviewName {
-  color: white;
+  color: $chatbot-text-primary-light;
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   margin: 0 0 2px;
+
+  :global(.dark) & {
+    color: white;
+  }
 }
 
 .chatbotFilePreviewSize {
-  color: $chatbot-text-secondary;
+  color: $chatbot-text-secondary-light;
   font-size: 12px;
   margin: 0;
+
+  :global(.dark) & {
+    color: $chatbot-text-secondary-dark;
+  }
 }
 
 .chatbotRemoveFileBtn {
@@ -380,12 +452,12 @@ $chatbot-z-low: 9988;
 .chatbotTextarea {
   flex: 1;
   max-height: 120px;
-  background-color: $chatbot-bg-light;
-  border: 1px solid $chatbot-border;
+  background-color: $chatbot-bg-secondary-light;
+  border: 1px solid $chatbot-border-light;
   border-radius: 22px;
   padding: 12px 16px 12px 52px;
   font-size: 14px;
-  color: white;
+  color: $chatbot-text-primary-light;
   resize: none;
   outline: none;
   transition: border-color 0.2s;
@@ -393,12 +465,22 @@ $chatbot-z-low: 9988;
   line-height: 1.4;
   margin-right: 8px;
 
+  :global(.dark) & {
+    background-color: #1a1a1a;
+    border-color: $chatbot-border-dark;
+    color: white;
+  }
+
   &:focus {
     border-color: $chatbot-primary;
   }
 
   &::placeholder {
-    color: $chatbot-text-muted;
+    color: $chatbot-text-muted-light;
+
+    :global(.dark) & {
+      color: $chatbot-text-muted-dark;
+    }
   }
 }
 
@@ -455,14 +537,22 @@ $chatbot-z-low: 9988;
 /* Scrollbar personalizado */
 .chatbotScrollbar {
   scrollbar-width: thin;
-  scrollbar-color: $chatbot-primary $chatbot-bg-secondary;
+  scrollbar-color: $chatbot-primary $chatbot-bg-secondary-light;
+
+  :global(.dark) & {
+    scrollbar-color: $chatbot-primary $chatbot-bg-secondary-dark;
+  }
 
   &::-webkit-scrollbar {
     width: 6px;
   }
 
   &::-webkit-scrollbar-track {
-    background: $chatbot-bg-secondary;
+    background: $chatbot-bg-secondary-light;
+
+    :global(.dark) & {
+      background: $chatbot-bg-secondary-dark;
+    }
   }
 
   &::-webkit-scrollbar-thumb {
@@ -470,7 +560,7 @@ $chatbot-z-low: 9988;
     border-radius: 3px;
 
     &:hover {
-      background-color: #b8c400;
+      background-color: $chatbot-primary-hover;
     }
   }
 }
@@ -479,9 +569,14 @@ $chatbot-z-low: 9988;
 .chatbotFileAttachment {
   margin-top: 8px;
   padding: 12px;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.05);
   border-radius: $chatbot-radius-sm;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  :global(.dark) & {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 
   img {
     border-radius: $chatbot-radius-sm;
@@ -551,7 +646,11 @@ $chatbot-z-low: 9988;
 
     strong {
       font-weight: 700;
-      color: white;
+      color: $chatbot-text-primary-light;
+
+      :global(.dark) & {
+        color: white;
+      }
     }
 
     em {
@@ -577,19 +676,27 @@ $chatbot-z-low: 9988;
     }
 
     code {
-      background-color: rgba(0, 0, 0, 0.3);
+      background-color: rgba(0, 0, 0, 0.1);
       padding: 2px 6px;
       border-radius: 4px;
       font-family: 'Courier New', monospace;
       font-size: 0.9em;
+
+      :global(.dark) & {
+        background-color: rgba(0, 0, 0, 0.3);
+      }
     }
 
     pre {
-      background-color: rgba(0, 0, 0, 0.3);
+      background-color: rgba(0, 0, 0, 0.1);
       padding: 12px;
       border-radius: 8px;
       overflow-x: auto;
       margin: 0.5em 0;
+
+      :global(.dark) & {
+        background-color: rgba(0, 0, 0, 0.3);
+      }
 
       code {
         background-color: transparent;
@@ -599,8 +706,12 @@ $chatbot-z-low: 9988;
 
     h1, h2, h3 {
       margin: 0.75em 0 0.5em;
-      color: white;
+      color: $chatbot-text-primary-light;
       font-weight: 600;
+
+      :global(.dark) & {
+        color: white;
+      }
     }
 
     h1 { font-size: 1.5em; }
@@ -624,6 +735,11 @@ $chatbot-z-low: 9988;
   @media (max-width: 767px) {
     max-width: 100% !important;
   }
+
+  // Override drawer ::after pseudo-element that creates extra space
+  &::after {
+    display: none !important;
+  }
 }
 
 .chatbotResponsiveBody {
@@ -634,19 +750,32 @@ $chatbot-z-low: 9988;
   max-height: calc(90vh - 120px);
   padding: 0 !important;
   gap: 0 !important;
+  overflow: hidden;
+  
+  @media (max-width: 767px) {
+    max-height: calc(100vh - 80px);
+    min-height: calc(100vh - 80px);
+  }
   
   .chatbotMessages {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
     padding: 16px;
     margin-bottom: 0;
+    min-height: 0; // Important for flex overflow
   }
 
   .chatbotInputArea {
-    flex-shrink: 0;
-    border-top: 1px solid $chatbot-border;
+    flex: 0 0 auto;
+    border-top: 1px solid $chatbot-border-light;
     padding: 16px;
     margin: 0;
     position: relative;
+    background-color: $chatbot-bg-main-light;
+
+    :global(.dark) & {
+      border-top-color: $chatbot-border-dark;
+      background-color: $chatbot-bg-main-dark;
+    }
   }
 }

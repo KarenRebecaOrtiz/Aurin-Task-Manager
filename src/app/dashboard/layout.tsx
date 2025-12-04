@@ -29,6 +29,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
   const { isAdmin } = useAuthContext(); // Get admin status from context
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // 🚀 LOAD DATA ONCE HERE - all pages use the global store
   useSharedTasksState(user?.id);
@@ -48,6 +49,17 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // Set mounted after hydration
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Detect mobile viewport for chatbot controlled mode
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // 🚀 PREFETCH: Preload all main view routes for instant navigation
@@ -120,7 +132,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <PlatformCompatibility />
 
       {/* AI Chatbot - Only visible for admins */}
-      {isAdmin && <ChatbotWidget controlled={typeof window !== 'undefined' && window.innerWidth < 768} />}
+      {isAdmin && <ChatbotWidget controlled={isMobile} />}
     </div>
   );
 }
