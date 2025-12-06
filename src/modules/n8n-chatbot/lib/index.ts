@@ -5,3 +5,4 @@
 
 export * from './tasks'
 export * from './analytics'
+export * from './users/get-users'

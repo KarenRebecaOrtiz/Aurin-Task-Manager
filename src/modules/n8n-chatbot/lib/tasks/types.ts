@@ -3,10 +3,20 @@
  * Based on aurin-firestore-schemas.json
  */
 
+/**
+ * Task status values
+ * Active statuses (count for workload): 'En Proceso', 'Por Finalizar'
+ * Inactive statuses: 'Por Iniciar', 'Backlog', 'Finalizado', 'Cancelado'
+ */
+export type TaskStatus = 'Por Iniciar' | 'En Proceso' | 'Backlog' | 'Por Finalizar' | 'Finalizado' | 'Cancelado'
+
+export const ACTIVE_TASK_STATUSES: TaskStatus[] = ['En Proceso', 'Por Finalizar']
+export const INACTIVE_TASK_STATUSES: TaskStatus[] = ['Por Iniciar', 'Backlog', 'Finalizado', 'Cancelado']
+
 export interface TaskData {
   name: string
   description?: string
-  status: 'todo' | 'in_progress' | 'done' | 'archived'
+  status: TaskStatus
   priority?: 'Alta' | 'Media' | 'Baja'
   clientId?: string
   project?: string
@@ -23,8 +33,10 @@ export interface TaskData {
 }
 
 export interface TaskSearchFilters {
-  status?: 'todo' | 'in_progress' | 'done' | 'archived'
+  name?: string // Search by task name (partial, case-insensitive)
+  status?: TaskStatus
   priority?: 'Alta' | 'Media' | 'Baja'
+  onlyActive?: boolean // Filter only active tasks (En Proceso, Por Finalizar)
   clientId?: string
   assignedToUserId?: string // To search if a user is in AssignedTo array
   leadedByUserId?: string // To search if a user is in LeadedBy array

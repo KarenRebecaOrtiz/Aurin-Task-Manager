@@ -25,6 +25,8 @@ import { Send } from '@/components/animate-ui/icons/send';
 import { Timer } from '@/components/animate-ui/icons/timer';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { firebaseService } from '../../../services/firebaseService';
+import { createTimeLog } from '../../services/timeLogFirebase';
+import { useDataStore } from '@/stores/dataStore';
 import styles from './TimerPanel.module.scss';
 
 /**
@@ -116,20 +118,71 @@ export function TimerPanel({
     try {
       setIsSendingLog(true);
 
-      // Convert seconds to hours
-      const hours = timerSeconds / 3600;
+      // Convert seconds to hours and minutes
+      const hoursDecimal = timerSeconds / 3600;
+      const durationMinutes = Math.round(timerSeconds / 60);
+      
+      // Format date string
+      const dateString = new Date().toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
 
-      // Send timelog message to chat
+      // Create time log (updates task.timeTracking in Firebase)
+      await createTimeLog(taskId, {
+        userId,
+        userName,
+        durationMinutes,
+        description: undefined,
+        dateString,
+        source: 'timer',
+      });
+
+      // Update local store immediately for UI reactivity
+      const { updateTask, tasks } = useDataStore.getState();
+      const currentTask = tasks.find(t => t.id === taskId);
+      if (currentTask) {
+        const currentTimeTracking = currentTask.timeTracking || {
+          totalHours: currentTask.totalHours || 0,
+          totalMinutes: 0,
+          lastLogDate: null,
+          memberHours: currentTask.memberHours || {},
+        };
+        
+        // Calculate new totals
+        const currentTotalMinutes = Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
+        const newTotalMinutes = currentTotalMinutes + durationMinutes;
+        const newTotalHours = Math.floor(newTotalMinutes / 60);
+        const newRemainingMinutes = newTotalMinutes % 60;
+        
+        // Update member hours
+        const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
+        const newMemberHours = currentMemberHours + hoursDecimal;
+        const updatedMemberHours = {
+          ...currentTimeTracking.memberHours,
+          [userId]: newMemberHours,
+        };
+
+        updateTask(taskId, {
+          timeTracking: {
+            totalHours: newTotalHours,
+            totalMinutes: newRemainingMinutes,
+            lastLogDate: new Date().toISOString(),
+            memberHours: updatedMemberHours,
+          },
+          totalHours: newTotalHours + (newRemainingMinutes / 60),
+          memberHours: updatedMemberHours,
+        });
+      }
+
+      // Send timelog message to chat (visual message)
       await firebaseService.sendTimeLogMessage(
         taskId,
         userId,
         userName,
-        hours,
-        new Date().toLocaleDateString('es-ES', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        }),
+        hoursDecimal,
+        dateString,
         undefined // No comment
       );
 
@@ -139,6 +192,7 @@ export function TimerPanel({
       showSuccess('Timelog enviado correctamente');
       if (onSuccess) onSuccess();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('[TimerPanel] Error sending timelog:', error);
       showError('Error al enviar el timelog');
     } finally {

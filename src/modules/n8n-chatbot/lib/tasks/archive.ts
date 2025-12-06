@@ -1,5 +1,6 @@
 /**
  * Task archive functionality
+ * Only admins can archive tasks
  */
 
 import { db } from '@/lib/firebase-admin'
@@ -7,7 +8,8 @@ import type { TaskArchiveResult } from './types'
 
 export async function archiveTask(
   userId: string,
-  taskId: string
+  taskId: string,
+  isAdmin: boolean = false
 ): Promise<TaskArchiveResult> {
   try {
     // Validate taskId
@@ -15,7 +17,12 @@ export async function archiveTask(
       throw new Error('taskId es requerido')
     }
 
-    // Get task to verify ownership
+    // Only admins can archive tasks
+    if (!isAdmin) {
+      throw new Error('Solo los administradores pueden archivar tareas. Si deseas cancelar la tarea, puedes cambiar su estado a "Cancelado".')
+    }
+
+    // Get task to verify it exists
     const taskRef = db.collection('tasks').doc(taskId)
     const taskDoc = await taskRef.get()
 
@@ -23,16 +30,9 @@ export async function archiveTask(
       throw new Error('Tarea no encontrada')
     }
 
-    const taskData = taskDoc.data()
-
-    // Verify user owns the task
-    if (taskData?.CreatedBy !== userId) {
-      throw new Error('No tienes permiso para archivar esta tarea')
-    }
-
-    // Archive task (change status to 'archived')
+    // Archive task (change status to 'Cancelado')
     await taskRef.update({
-      status: 'archived',
+      status: 'Cancelado',
       updatedAt: new Date().toISOString()
     })
 

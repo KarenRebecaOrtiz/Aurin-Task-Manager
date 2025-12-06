@@ -239,6 +239,13 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
     setIsTyping(true)
 
     try {
+      // Build conversation history for AI context
+      // Convert messages to OpenAI format (excluding the current message)
+      const conversationHistory = updatedMessages.slice(1, -1).map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text + (msg.file ? `\n[Archivo adjunto: ${msg.file.url}]` : '')
+      }))
+
       // Call AI chat endpoint (OpenAI with function calling)
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
@@ -249,6 +256,7 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
           message: messageText,
           sessionId: sessionId,
           fileUrl: fileUrl,
+          conversationHistory: conversationHistory
         })
       })
 
@@ -270,7 +278,14 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
       }
 
       const data = await response.json()
-      const botResponseText = data.output || data.response || t.errorProcess
+      let botResponseText = data.output || data.response || t.errorProcess
+
+      // Check if we need to refresh the page (after task creation, etc.)
+      const shouldRefresh = botResponseText.includes('[REFRESH_PAGE]')
+      if (shouldRefresh) {
+        // Remove the refresh tag from the displayed message
+        botResponseText = botResponseText.replace('[REFRESH_PAGE]', '').trim()
+      }
 
       // Bot response
       const botMessage: Message = {
@@ -283,6 +298,13 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
       const updatedMessagesWithBot = [...updatedMessages, botMessage]
       setMessages(updatedMessagesWithBot)
       updateSessionActivity(sessionId, updatedMessagesWithBot)
+
+      // Refresh page after a short delay to let user read the message
+      if (shouldRefresh) {
+        setTimeout(() => {
+          window.location.reload()
+        }, 2500) // 2.5 seconds delay
+      }
     } catch (error) {
       console.error('Error:', error)
       setIsTyping(false)

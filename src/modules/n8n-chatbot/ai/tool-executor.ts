@@ -10,11 +10,15 @@ import {
   archiveTask
 } from '../lib/tasks'
 import {
+  searchClients,
+  createClient
+} from '../lib/clients'
+import {
   getTeamWorkload,
   getProjectHours,
   getUserTasks
 } from '../lib/analytics'
-import { getUsersInfo } from '../lib/users/get-users'
+import { getUsersInfo, searchUsers } from '../lib/users/get-users'
 
 /**
  * Standard function tool call type
@@ -33,13 +37,21 @@ interface FunctionToolCall {
  */
 export async function executeTool(
   toolCall: FunctionToolCall,
-  userId: string
+  userId: string,
+  isAdmin: boolean = false
 ): Promise<unknown> {
   const { name: toolName, arguments: argsString } = toolCall.function
   const args = JSON.parse(argsString)
 
   try {
     switch (toolName) {
+      // Client management (search/create before tasks)
+      case 'search_clients':
+        return await searchClients(args.query, args.limit)
+
+      case 'create_client':
+        return await createClient(args)
+
       // Task management
       case 'search_tasks':
         return await searchTasks(userId, args)
@@ -48,10 +60,10 @@ export async function executeTool(
         return await createTask(userId, args)
 
       case 'update_task':
-        return await updateTask(userId, args.taskId, args)
+        return await updateTask(userId, args.taskId, args, isAdmin)
 
       case 'archive_task':
-        return await archiveTask(userId, args.taskId)
+        return await archiveTask(userId, args.taskId, isAdmin)
 
       // Analytics
       case 'get_team_workload':
@@ -64,6 +76,9 @@ export async function executeTool(
         return await getUserTasks(args.userId, args)
 
       // User information
+      case 'search_users':
+        return await searchUsers(args)
+
       case 'get_users_info':
         return await getUsersInfo(args.userIds)
 

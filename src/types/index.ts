@@ -50,6 +50,16 @@ export interface Task {
   archived?: boolean;
   archivedAt?: string;
   archivedBy?: string;
+  // Time tracking - New structured approach
+  timeTracking?: {
+    totalHours: number;
+    totalMinutes: number;
+    lastLogDate: string | null;
+    memberHours?: { [userId: string]: number };
+  };
+  // Legacy time tracking fields (kept for backward compatibility)
+  totalHours?: number;
+  memberHours?: { [userId: string]: number };
 }
 
 export interface Message {

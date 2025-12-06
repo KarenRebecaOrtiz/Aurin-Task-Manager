@@ -15,6 +15,7 @@ import { firebaseService } from '../../services/firebaseService';
 import { timerFormSchema } from '../utils/timerValidation';
 import { getDefaultTimerValues } from '../utils/timerConstants';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
+import { useDataStore } from '@/stores/dataStore';
 import type { UseTimeEntryReturn, TimeEntryFormData } from '../types/timer.types';
 
 /**
@@ -178,7 +179,46 @@ export function useTimeEntry(
           source: 'manual',
         });
 
-        // 2. Create visual message in chat (solo para historial visual)
+        // 2. Update local dataStore so ChatHeader shows updated time immediately
+        const { updateTask, tasks } = useDataStore.getState();
+        const currentTask = tasks.find(t => t.id === taskId);
+        if (currentTask) {
+          const currentTimeTracking = currentTask.timeTracking || {
+            totalHours: currentTask.totalHours || 0,
+            totalMinutes: 0,
+            lastLogDate: null,
+            memberHours: currentTask.memberHours || {},
+          };
+          
+          // Calculate new totals
+          const currentTotalMinutes = Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
+          const newTotalMinutes = currentTotalMinutes + totalMinutes;
+          const newTotalHours = Math.floor(newTotalMinutes / 60);
+          const newRemainingMinutes = newTotalMinutes % 60;
+          
+          // Update member hours
+          const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
+          const newMemberHours = currentMemberHours + (totalMinutes / 60);
+          
+          updateTask(taskId, {
+            timeTracking: {
+              totalHours: newTotalHours,
+              totalMinutes: newRemainingMinutes,
+              lastLogDate: new Date().toISOString(),
+              memberHours: {
+                ...currentTimeTracking.memberHours,
+                [userId]: newMemberHours,
+              },
+            },
+            totalHours: newTotalHours + (newRemainingMinutes / 60),
+            memberHours: {
+              ...currentTimeTracking.memberHours,
+              [userId]: newMemberHours,
+            },
+          });
+        }
+
+        // 3. Create visual message in chat (solo para historial visual)
         await firebaseService.sendTimeLogMessage(
           taskId,
           userId,

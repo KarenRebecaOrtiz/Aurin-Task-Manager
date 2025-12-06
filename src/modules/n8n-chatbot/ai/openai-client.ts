@@ -22,6 +22,7 @@ export interface ChatOptions {
   message: string
   conversationHistory?: ChatCompletionMessageParam[]
   userName?: string
+  isAdmin?: boolean
   timezone?: string
   tools?: ChatCompletionTool[]
   maxIterations?: number
@@ -46,6 +47,7 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     message,
     conversationHistory = [],
     userName,
+    isAdmin = false,
     timezone,
     tools = allTools,
     maxIterations = 5
@@ -55,6 +57,7 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
   const systemPromptContext: SystemPromptContext = {
     userId,
     userName,
+    isAdmin,
     timezone
   }
 
@@ -107,7 +110,7 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
       // Skip tool calls that don't have a function property
       if (!('function' in toolCall)) continue
       
-      const result = await executeTool(toolCall, userId)
+      const result = await executeTool(toolCall, userId, isAdmin)
 
       // Track tool execution
       toolCallsExecuted.push({

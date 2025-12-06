@@ -4,6 +4,43 @@
 
 import type { ChatCompletionTool } from 'openai/resources/chat/completions'
 
+export const searchUsersTool: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'search_users',
+    description: `Busca usuarios por nombre, email o rol.
+
+    FLUJO PARA ASIGNAR USUARIOS A TAREAS:
+    1. Usuario dice "asigna a Juan a la tarea"
+    2. Usa search_users con query "Juan" para encontrar el usuario
+    3. Obtén el "id" del usuario de los resultados
+    4. Usa update_task con AssignedTo: [userId]
+
+    Retorna: Array de usuarios con id, name, email, role
+    
+    IMPORTANTE: El "id" retornado es el que debes usar en AssignedTo o LeadedBy.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Nombre o email parcial para buscar (ej: "Juan", "karen@")'
+        },
+        role: {
+          type: 'string',
+          enum: ['admin', 'user', 'viewer'],
+          description: 'Filtrar por rol específico'
+        },
+        limit: {
+          type: 'number',
+          description: 'Número máximo de resultados (default: 10)'
+        }
+      },
+      additionalProperties: false
+    }
+  }
+}
+
 export const getUsersInfoTool: ChatCompletionTool = {
   type: 'function',
   function: {

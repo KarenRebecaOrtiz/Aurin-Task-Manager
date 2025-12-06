@@ -182,6 +182,16 @@ async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]
         archived: data.archived || false,
         archivedAt: safeTimestampToISOOrNull(data.archivedAt),
         archivedBy: data.archivedBy || '',
+        // Time tracking fields
+        timeTracking: data.timeTracking ? {
+          totalHours: data.timeTracking.totalHours || 0,
+          totalMinutes: data.timeTracking.totalMinutes || 0,
+          lastLogDate: safeTimestampToISOOrNull(data.timeTracking.lastLogDate),
+          memberHours: data.timeTracking.memberHours || {},
+        } : undefined,
+        // Legacy time tracking fields
+        totalHours: data.totalHours || 0,
+        memberHours: data.memberHours || {},
       };
     });
 

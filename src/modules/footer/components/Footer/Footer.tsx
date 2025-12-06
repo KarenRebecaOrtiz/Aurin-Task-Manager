@@ -9,7 +9,6 @@ const Footer: React.FC = () => {
   return (
     <footer className={styles.footer} style={{ zIndex: 1000 }}>
       <LogoSection />
-      <QuickLinks />
       <div className={styles.footerContent}>
         <FooterInfo />
         <FeedbackForm

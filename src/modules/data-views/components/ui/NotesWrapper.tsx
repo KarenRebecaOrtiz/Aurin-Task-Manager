@@ -1,7 +1,7 @@
 'use client';
 
-import { NotesTray } from '@/modules/notes';
-import styles from './NotesWrapper.module.scss';
+// import { NotesTray } from '@/modules/notes';
+// import styles from './NotesWrapper.module.scss';
 
 /**
  * NotesWrapper
@@ -10,14 +10,19 @@ import styles from './NotesWrapper.module.scss';
  * Se posiciona encima de TasksHeader con full width.
  * 
  * Ubicación: Encima de todas las tablas (TasksTable, TasksKanban, ArchiveTable)
+ * 
+ * ⚠️ TEMPORALMENTE DESHABILITADO - Buscando nueva ubicación para las notas
  */
 
 export function NotesWrapper() {
-  return (
-    <div className={styles.wrapper}>
-      <NotesTray className={styles.notesTray} />
-    </div>
-  );
+  // Temporalmente deshabilitado mientras encontramos un lugar para las notas
+  return null;
+  
+  // return (
+  //   <div className={styles.wrapper}>
+  //     <NotesTray className={styles.notesTray} />
+  //   </div>
+  // );
 }
 
 export default NotesWrapper;

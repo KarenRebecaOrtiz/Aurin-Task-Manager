@@ -70,7 +70,7 @@ export default function TasksTableIsolated() {
           role: user.role,
         }, conversationId);
       },
-      openChatSidebar: (task: { id: string; clientId: string; project: string; name: string; description: string; status: string; priority: string; startDate: string | null; endDate: string | null; LeadedBy: string[]; AssignedTo: string[]; createdAt: string; CreatedBy?: string; lastActivity?: string; hasUnreadUpdates?: boolean; lastViewedBy?: { [userId: string]: string }; archived?: boolean; archivedAt?: string; archivedBy?: string }, clientName: string) => {
+      openChatSidebar: (task: { id: string; clientId: string; project: string; name: string; description: string; status: string; priority: string; startDate: string | null; endDate: string | null; LeadedBy: string[]; AssignedTo: string[]; createdAt: string; CreatedBy?: string; lastActivity?: string; hasUnreadUpdates?: boolean; lastViewedBy?: { [userId: string]: string }; archived?: boolean; archivedAt?: string; archivedBy?: string; timeTracking?: { totalHours: number; totalMinutes: number; lastLogDate: string | null; memberHours?: { [userId: string]: number } }; totalHours?: number; memberHours?: { [userId: string]: number } }, clientName: string) => {
         const { openChatSidebar } = useSidebarStateStore.getState();
         openChatSidebar(task, clientName);
       },

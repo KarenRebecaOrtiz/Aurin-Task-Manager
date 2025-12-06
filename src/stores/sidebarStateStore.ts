@@ -31,6 +31,16 @@ senderId: string | null;
       LeadedBy: string[];
       AssignedTo: string[];
       CreatedBy?: string;
+      // Time tracking - New structured approach
+      timeTracking?: {
+        totalHours: number;
+        totalMinutes: number;
+        lastLogDate: string | null;
+        memberHours?: { [userId: string]: number };
+      };
+      // Legacy time tracking fields (kept for backward compatibility)
+      totalHours?: number;
+      memberHours?: { [userId: string]: number };
     } | null;
     clientName: string | null;
   };

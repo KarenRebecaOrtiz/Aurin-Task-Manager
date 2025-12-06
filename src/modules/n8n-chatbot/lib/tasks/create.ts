@@ -1,25 +1,44 @@
 /**
  * Task creation functionality
+ * Optimized for chatbot use with smart defaults
  */
 
 import { db } from '@/lib/firebase-admin'
 import type { TaskData, TaskCreateResult } from './types'
+
+// Default project for chatbot-created tasks
+const CHATBOT_DEFAULT_PROJECT = 'chatbotTasks'
 
 export async function createTask(
   userId: string,
   taskData: Omit<TaskData, 'CreatedBy' | 'createdAt'>
 ): Promise<TaskCreateResult> {
   try {
-    // Validate required fields
-    if (!taskData.name || !taskData.project || !taskData.clientId) {
-      throw new Error('Faltan campos requeridos: name, project, clientId')
+    // For chatbot: only name and clientId are truly required
+    // project defaults to 'chatbotTasks'
+    if (!taskData.name) {
+      throw new Error('El nombre de la tarea es requerido')
     }
 
-    // Prepare task document
+    if (!taskData.clientId) {
+      throw new Error('El cliente es requerido. Usa search_clients para encontrarlo o create_client para crear uno nuevo.')
+    }
+
+    // Smart defaults for chatbot-created tasks
+    const project = taskData.project || CHATBOT_DEFAULT_PROJECT
+
+    // Prepare task document with smart defaults
     const newTask: TaskData = {
       ...taskData,
-      status: taskData.status || 'todo',
+      project,
+      // Default status: "En Proceso" (active from the start)
+      status: taskData.status || 'En Proceso',
+      // Default priority: "Media"
       priority: taskData.priority || 'Media',
+      // Leader defaults to creator if not specified
+      LeadedBy: taskData.LeadedBy?.length ? taskData.LeadedBy : [userId],
+      // AssignedTo can be empty
+      AssignedTo: taskData.AssignedTo || [],
       CreatedBy: userId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -30,7 +49,7 @@ export async function createTask(
 
     return {
       success: true,
-      message: 'Tarea creada correctamente',
+      message: `Tarea "${newTask.name}" creada correctamente en proyecto "${project}"`,
       taskId: docRef.id,
       taskName: newTask.name
     }

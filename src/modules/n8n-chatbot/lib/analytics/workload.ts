@@ -1,11 +1,15 @@
 /**
  * Team workload analytics
+ * Active task statuses: 'En Proceso', 'Por Finalizar'
  */
 
 import { db } from '@/lib/firebase-admin'
 
+// Active task statuses that count towards workload
+const ACTIVE_STATUSES = ['En Proceso', 'Por Finalizar']
+
 interface UserData {
-  name?: string
+  displayName?: string
   email?: string
 }
 
@@ -30,7 +34,7 @@ export interface TeamWorkloadResult {
 
 export async function getTeamWorkload(options: {
   teamId?: string
-  includeArchived?: boolean
+  includeAllStatuses?: boolean
 } = {}): Promise<TeamWorkloadResult> {
   try {
     // Get all users
@@ -39,7 +43,7 @@ export async function getTeamWorkload(options: {
       const data = doc.data() as UserData
       return {
         id: doc.id,
-        name: data.name,
+        name: data.displayName,
         email: data.email
       }
     })
@@ -47,23 +51,24 @@ export async function getTeamWorkload(options: {
     // Get workload for each user
     const workload = await Promise.all(
       users.map(async (user) => {
-        // Build query for user's assigned tasks
-        let tasksQuery = db.collection('tasks')
-          .where('AssignedTo', '==', user.id)
-
-        // Filter by status if not including archived
-        if (!options.includeArchived) {
-          tasksQuery = tasksQuery.where('status', 'in', ['todo', 'in_progress'])
-        }
+        // Query tasks where user is assigned (using array-contains)
+        const tasksQuery = db.collection('tasks')
+          .where('AssignedTo', 'array-contains', user.id)
 
         const tasksSnapshot = await tasksQuery.get()
 
-        const tasks = tasksSnapshot.docs.map(doc => ({
+        // Filter in memory for active statuses
+        let tasks = tasksSnapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name || '',
           priority: doc.data().priority || 'Media',
-          status: doc.data().status || 'todo'
+          status: doc.data().status || 'Por Iniciar'
         }))
+
+        // Only count active tasks unless includeAllStatuses is true
+        if (!options.includeAllStatuses) {
+          tasks = tasks.filter(task => ACTIVE_STATUSES.includes(task.status))
+        }
 
         return {
           userId: user.id,

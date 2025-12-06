@@ -373,13 +373,42 @@
 // 🔮 SEPARATOR
 // =================================================================
 .separator {
-  width: 100%;
+  width: calc(100% - $spacing-xl * 2);
+  margin: $spacing-xs auto;
   height: 1px;
   background: rgba(209, 217, 230, 0.5);
-  margin: $spacing-xs 0;
 
   :global(body.dark) & {
     background: rgba(255,255,255,0.08);
+  }
+}
+
+// ==============================================================
+// 🔮 LOGOUT ITEM (Danger Zone)
+// =================================================================
+.logoutItem {
+  color: $color-error !important;
+
+  .dropdownIcon {
+    color: $color-error !important;
+  }
+
+  &:hover {
+    background: rgba($color-error, 0.1) !important;
+    color: $color-error !important;
+  }
+
+  :global(body.dark) & {
+    color: #ef4444 !important;
+
+    .dropdownIcon {
+      color: #ef4444 !important;
+    }
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.15) !important;
+      color: #ef4444 !important;
+    }
   }
 }
 

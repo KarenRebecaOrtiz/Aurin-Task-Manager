@@ -82,6 +82,22 @@
 }
 
 // ==============================================================
+// 🔮 SECTION LABEL
+// ==============================================================
+
+.sectionLabel {
+  padding: $spacing-sm $spacing-xl $spacing-xs $spacing-xl;
+  @include typography(11px, $font-weight-semibold, $color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+
+  :global(body.dark) & {
+    color: $color-text-dark-muted;
+  }
+}
+
+// ==============================================================
 // 🔮 MENU ITEMS
 // ==============================================================
 

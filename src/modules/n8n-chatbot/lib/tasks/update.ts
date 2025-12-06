@@ -15,7 +15,8 @@ interface TaskUpdateData {
 export async function updateTask(
   userId: string,
   taskId: string,
-  updates: Record<string, unknown>
+  updates: Record<string, unknown>,
+  isAdmin: boolean = false
 ): Promise<TaskUpdateResult> {
   try {
     // Validate taskId
@@ -23,7 +24,7 @@ export async function updateTask(
       throw new Error('taskId es requerido')
     }
 
-    // Get task to verify ownership
+    // Get task to verify permissions
     const taskRef = db.collection('tasks').doc(taskId)
     const taskDoc = await taskRef.get()
 
@@ -33,8 +34,16 @@ export async function updateTask(
 
     const taskData = taskDoc.data()
 
-    // Verify user owns the task or is assigned to it
-    if (taskData?.CreatedBy !== userId && taskData?.AssignedTo !== userId) {
+    // Verify user has permission to update:
+    // - Is admin
+    // - Is the creator
+    // - Is in AssignedTo array
+    // - Is in LeadedBy array
+    const isCreator = taskData?.CreatedBy === userId
+    const isAssigned = Array.isArray(taskData?.AssignedTo) && taskData.AssignedTo.includes(userId)
+    const isLeader = Array.isArray(taskData?.LeadedBy) && taskData.LeadedBy.includes(userId)
+
+    if (!isAdmin && !isCreator && !isAssigned && !isLeader) {
       throw new Error('No tienes permiso para modificar esta tarea')
     }
 

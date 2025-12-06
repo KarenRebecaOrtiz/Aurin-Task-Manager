@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
-import { chat } from '@/modules/n8n-chatbot/ai'
+import { enhancedChat } from '@/modules/n8n-chatbot/ai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 
 export const runtime = 'nodejs'
@@ -16,10 +16,10 @@ interface ChatRequest {
 /**
  * API Route: /api/ai-chat
  *
- * New OpenAI-based chatbot endpoint
- * - Uses OpenAI SDK directly with function calling
+ * Enhanced chatbot endpoint with structured processes
+ * - Uses structured processes for common flows (saves tokens)
+ * - Falls back to OpenAI function calling for complex queries
  * - Manages tasks, analytics, and queries locally
- * - Delegates complex operations (Vision, Notion) to n8n
  */
 export async function POST(request: NextRequest) {
   try {
@@ -33,12 +33,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user info for personalization
+    // Get user info for personalization and admin status
     let userName = 'Usuario'
+    let isAdmin = false
     try {
       const clerk = await clerkClient()
       const user = await clerk.users.getUser(userId)
       userName = user.firstName || user.username || 'Usuario'
+      isAdmin = user.publicMetadata?.access === 'admin'
     } catch (error) {
       console.warn('Could not fetch user info:', error)
     }
@@ -59,12 +61,14 @@ export async function POST(request: NextRequest) {
       ? `${message}\n\n[Archivo adjunto: ${fileUrl}]`
       : message
 
-    // Call OpenAI chat with function calling
-    const response = await chat({
+    // Call enhanced chat (uses processes first, then LLM)
+    const response = await enhancedChat({
       userId,
+      sessionId,
       message: enrichedMessage,
       conversationHistory,
       userName,
+      isAdmin,
       timezone: 'America/Mexico_City'
     })
 
@@ -73,6 +77,8 @@ export async function POST(request: NextRequest) {
       sessionId,
       timestamp: new Date().toISOString(),
       conversationHistory: response.conversationHistory,
+      handledBy: response.handledBy, // 'process' or 'llm'
+      processId: response.processId, // Which process handled it (if any)
       toolCalls: response.toolCalls // For debugging
     })
 

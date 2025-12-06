@@ -27,6 +27,7 @@ import type {
   ConfirmStopOtherTimerCallback,
 } from '../types/timer.types';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../utils/timerConstants';
+import { useDataStore } from '@/stores/dataStore';
 
 /**
  * Options for useTimerActions hook
@@ -151,6 +152,45 @@ export function useTimerActions(
       if (finalSeconds > 0) {
         // Stop the other timer
         await batchStopTimer(otherTaskId, userId, finalInterval);
+
+        // Update local dataStore for the other task
+        const { updateTask, tasks } = useDataStore.getState();
+        const currentTask = tasks.find(t => t.id === otherTaskId);
+        if (currentTask) {
+          const currentTimeTracking = currentTask.timeTracking || {
+            totalHours: currentTask.totalHours || 0,
+            totalMinutes: 0,
+            lastLogDate: null,
+            memberHours: currentTask.memberHours || {},
+          };
+          
+          const minutesToAdd = Math.round(finalSeconds / 60);
+          const currentTotalMinutes = Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
+          const newTotalMinutes = currentTotalMinutes + minutesToAdd;
+          const newTotalHours = Math.floor(newTotalMinutes / 60);
+          const newRemainingMinutes = newTotalMinutes % 60;
+          
+          const hoursToAdd = finalSeconds / 3600;
+          const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
+          const newMemberHours = currentMemberHours + hoursToAdd;
+          
+          updateTask(otherTaskId, {
+            timeTracking: {
+              totalHours: newTotalHours,
+              totalMinutes: newRemainingMinutes,
+              lastLogDate: new Date().toISOString(),
+              memberHours: {
+                ...currentTimeTracking.memberHours,
+                [userId]: newMemberHours,
+              },
+            },
+            totalHours: newTotalHours + (newRemainingMinutes / 60),
+            memberHours: {
+              ...currentTimeTracking.memberHours,
+              [userId]: newMemberHours,
+            },
+          });
+        }
       }
 
       // Clear from local state
@@ -402,6 +442,47 @@ export function useTimerActions(
           },
         }
       );
+
+      // Update local dataStore so ChatHeader shows updated time immediately
+      const { updateTask, tasks } = useDataStore.getState();
+      const currentTask = tasks.find(t => t.id === taskId);
+      if (currentTask) {
+        const currentTimeTracking = currentTask.timeTracking || {
+          totalHours: currentTask.totalHours || 0,
+          totalMinutes: 0,
+          lastLogDate: null,
+          memberHours: currentTask.memberHours || {},
+        };
+        
+        // Calculate new totals (finalSeconds from timer)
+        const minutesToAdd = Math.round(finalSeconds / 60);
+        const currentTotalMinutes = Math.round(currentTimeTracking.totalHours * 60) + (currentTimeTracking.totalMinutes || 0);
+        const newTotalMinutes = currentTotalMinutes + minutesToAdd;
+        const newTotalHours = Math.floor(newTotalMinutes / 60);
+        const newRemainingMinutes = newTotalMinutes % 60;
+        
+        // Update member hours
+        const hoursToAdd = finalSeconds / 3600;
+        const currentMemberHours = currentTimeTracking.memberHours?.[userId] || 0;
+        const newMemberHours = currentMemberHours + hoursToAdd;
+        
+        updateTask(taskId, {
+          timeTracking: {
+            totalHours: newTotalHours,
+            totalMinutes: newRemainingMinutes,
+            lastLogDate: new Date().toISOString(),
+            memberHours: {
+              ...currentTimeTracking.memberHours,
+              [userId]: newMemberHours,
+            },
+          },
+          totalHours: newTotalHours + (newRemainingMinutes / 60),
+          memberHours: {
+            ...currentTimeTracking.memberHours,
+            [userId]: newMemberHours,
+          },
+        });
+      }
 
       // Clear local state after successful stop
       clearTimer(taskId);

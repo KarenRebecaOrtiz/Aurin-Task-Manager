@@ -72,10 +72,17 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
 }) => {
   const { user } = useUser();
 
-  // Obtener tarea actual del store global
+  // Obtener taskId del store global
   const chatSidebar = useSidebarStateStore(useShallow(state => state.chatSidebar));
-  const task = chatSidebar.task;
+  const taskId = chatSidebar.taskId;
   const clientName = chatSidebar.clientName;
+
+  // Obtener la tarea actualizada desde dataStore (para tener timeTracking actualizado)
+  const tasks = useDataStore(useShallow(state => state.tasks));
+  const task = useMemo(() => {
+    if (!taskId) return chatSidebar.task; // Fallback to sidebar task if no taskId
+    return tasks.find(t => t.id === taskId) || chatSidebar.task;
+  }, [taskId, tasks, chatSidebar.task]);
 
   // Obtener información del cliente desde dataStore
   const clients = useDataStore(useShallow(state => state.clients));
