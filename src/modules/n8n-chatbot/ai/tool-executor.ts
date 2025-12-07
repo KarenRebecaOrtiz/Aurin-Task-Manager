@@ -11,7 +11,9 @@ import {
 } from '../lib/tasks'
 import {
   searchClients,
-  createClient
+  createClient,
+  getClient,
+  updateClient
 } from '../lib/clients'
 import {
   getTeamWorkload,
@@ -51,6 +53,12 @@ export async function executeTool(
 
       case 'create_client':
         return await createClient(args)
+
+      case 'get_client':
+        return await getClient(args.clientId)
+
+      case 'update_client':
+        return await updateClient(args.clientId, args)
 
       // Task management
       case 'search_tasks':

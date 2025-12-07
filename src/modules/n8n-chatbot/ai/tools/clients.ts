@@ -74,4 +74,76 @@ export const createClientTool: ChatCompletionTool = {
   }
 }
 
-export const clientTools = [searchClientsTool, createClientTool]
+export const getClientTool: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'get_client',
+    description: `Obtiene la información completa de un cliente específico por su ID.
+
+    USAR CUANDO:
+    - Necesitas ver todos los detalles de un cliente específico
+    - Ya tienes el ID del cliente (de search_clients o de una tarea)
+    - Quieres verificar información antes de actualizar
+
+    RETORNA: Información completa del cliente (nombre, empresa, email, notas, fechas)`,
+    parameters: {
+      type: 'object',
+      properties: {
+        clientId: {
+          type: 'string',
+          description: 'ID del cliente a obtener (requerido)'
+        }
+      },
+      required: ['clientId'],
+      additionalProperties: false
+    }
+  }
+}
+
+export const updateClientTool: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'update_client',
+    description: `Actualiza la información de un cliente existente.
+
+    IMPORTANTE:
+    - Solo actualiza los campos que proporciones
+    - Los campos no proporcionados se mantienen sin cambios
+    - Usa get_client primero si necesitas ver los valores actuales
+
+    CAMPOS ACTUALIZABLES:
+    - name: Nombre del cliente
+    - company: Nombre de la empresa
+    - email: Email de contacto
+    - notes: Notas adicionales`,
+    parameters: {
+      type: 'object',
+      properties: {
+        clientId: {
+          type: 'string',
+          description: 'ID del cliente a actualizar (requerido)'
+        },
+        name: {
+          type: 'string',
+          description: 'Nuevo nombre del cliente (opcional)'
+        },
+        company: {
+          type: 'string',
+          description: 'Nueva empresa (opcional)'
+        },
+        email: {
+          type: 'string',
+          description: 'Nuevo email (opcional)'
+        },
+        notes: {
+          type: 'string',
+          description: 'Nuevas notas (opcional)'
+        }
+      },
+      required: ['clientId'],
+      additionalProperties: false
+    }
+  }
+}
+
+export const clientTools = [searchClientsTool, createClientTool, getClientTool, updateClientTool]

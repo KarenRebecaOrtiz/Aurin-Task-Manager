@@ -7,6 +7,11 @@ export interface SystemPromptContext {
   userName?: string
   isAdmin?: boolean
   timezone?: string
+  modes?: {
+    webSearch?: boolean
+    audioMode?: boolean
+    canvasMode?: boolean
+  }
 }
 
 export const getSystemPrompt = (context: SystemPromptContext): string => {
@@ -17,6 +22,9 @@ export const getSystemPrompt = (context: SystemPromptContext): string => {
 - Usuario Nombre: ${context.userName || 'Usuario'}
 - Es Administrador: ${context.isAdmin ? 'Sí' : 'No'}
 - Zona Horaria: ${context.timezone || 'America/Mexico_City'}
+
+=== MODOS ACTIVOS ===
+${getModeInstructions(context.modes)}
 
 === REGLA CRÍTICA #0 - NUNCA MIENTAS ===
 PROHIBIDO decir que hiciste algo si NO lo hiciste realmente.
@@ -242,6 +250,42 @@ DIFERENCIA ENTRE AssignedTo y LeadedBy:
 - Siempre informa al usuario si encuentras a alguien en un rol diferente al esperado
 
 REGLA DE ORO: BUSCA antes de preguntar. USA herramientas para encontrar datos. NO ADIVINES.`
+}
+
+/**
+ * Generate mode-specific instructions
+ */
+function getModeInstructions(modes?: { webSearch?: boolean; audioMode?: boolean; canvasMode?: boolean }): string {
+  if (!modes) return '- Ningún modo especial activado'
+
+  const activeInstructions: string[] = []
+
+  if (modes.webSearch) {
+    activeInstructions.push(`🌐 MODO WEB SEARCH ACTIVO:
+   - El usuario ha activado la búsqueda web para complementar respuestas
+   - Puedes hacer búsquedas en internet para proporcionar información actualizada
+   - Usa este modo para responder preguntas que requieran información reciente o externa
+   - Combina búsquedas web con las herramientas del sistema cuando sea apropiado`)
+  }
+
+  if (modes.audioMode) {
+    activeInstructions.push(`🎤 MODO AUDIO ACTIVO:
+   - El usuario está usando transcripción de voz
+   - El mensaje que recibiste ya está transcrito a texto
+   - Responde normalmente - no menciones que fue por audio a menos que sea relevante`)
+  }
+
+  if (modes.canvasMode) {
+    activeInstructions.push(`📋 MODO CREAR PLAN ACTIVO:
+   - El usuario quiere crear un plan o documento estructurado en Notion
+   - Cuando el usuario proporcione suficiente contexto, usa la herramienta create_notion_plan
+   - Estructura el contenido en formato Markdown antes de enviarlo a Notion
+   - Asegúrate de confirmar con el usuario antes de crear el documento`)
+  }
+
+  return activeInstructions.length > 0
+    ? activeInstructions.join('\n\n')
+    : '- Ningún modo especial activado'
 }
 
 export const TOOL_USAGE_GUIDELINES = `

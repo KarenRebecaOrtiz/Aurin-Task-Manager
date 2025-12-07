@@ -26,6 +26,11 @@ export interface ChatOptions {
   timezone?: string
   tools?: ChatCompletionTool[]
   maxIterations?: number
+  modes?: {
+    webSearch?: boolean
+    audioMode?: boolean
+    canvasMode?: boolean
+  }
 }
 
 export interface ChatResponse {
@@ -50,7 +55,8 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     isAdmin = false,
     timezone,
     tools = allTools,
-    maxIterations = 5
+    maxIterations = 5,
+    modes = {}
   } = options
 
   // Build system prompt
@@ -58,7 +64,8 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     userId,
     userName,
     isAdmin,
-    timezone
+    timezone,
+    modes
   }
 
   // Initialize messages

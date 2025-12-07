@@ -13,7 +13,6 @@ export {
   // Molecules
   CurrentUserAction,
   NoteUserItem,
-  NoteCard,
   DeleteNoteDialog,
   // Organisms
   NotesTray,
@@ -21,8 +20,6 @@ export {
 
 // Hooks
 export { useNotes } from './hooks';
-export { useUserNote } from './hooks';
-export { useDismissedNotes } from './hooks';
 
 // Types
 export type { Note, NoteUser, CreateNotePayload, CreateNoteResponse } from './types';

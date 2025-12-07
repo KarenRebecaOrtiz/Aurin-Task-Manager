@@ -3,7 +3,7 @@
  */
 
 /** Máximo de caracteres permitidos en una nota */
-export const NOTE_MAX_LENGTH = 20;
+export const NOTE_MAX_LENGTH = 120;
 
 /** Duración de una nota en horas */
 export const NOTE_EXPIRY_HOURS = 24;

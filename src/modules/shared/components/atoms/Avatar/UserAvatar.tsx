@@ -3,7 +3,6 @@
 import * as React from 'react';
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
 import { cn } from '@/lib/utils';
-import { useUserNote, NoteBubble } from '@/modules/notes';
 
 interface UserAvatarProps {
   userId: string;
@@ -13,8 +12,6 @@ interface UserAvatarProps {
   showStatus?: boolean;
   isOnline?: boolean;
   className?: string;
-  /** Whether to show the note bubble if user has an active note */
-  showNote?: boolean;
 }
 
 const sizeMap = {
@@ -75,7 +72,7 @@ AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 /**
  * UserAvatar Component
  *
- * Displays user avatar with optional online status indicator and note bubble
+ * Displays user avatar with optional online status indicator
  * Supports multiple sizes and automatic fallback to initials
  */
 export const UserAvatar: React.FC<UserAvatarProps> = ({
@@ -86,11 +83,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   showStatus = false,
   isOnline = false,
   className = '',
-  showNote = false,
 }) => {
-  // Fetch user's note if showNote is enabled
-  const { note } = useUserNote(showNote ? userId : undefined);
-
   // Generate fallback initials from userName
   const getInitials = (name: string): string => {
     const words = name.trim().split(' ');
@@ -104,14 +97,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   return (
     <div className={cn('relative inline-block', className)}>
-      {/* Note bubble above avatar */}
-      {showNote && note?.content && (
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-10">
-          <NoteBubble content={note.content} className="scale-75" />
-        </div>
-      )}
-      
-      <Avatar className={cn(sizeMap[size], 'border-2 border-white shadow-sm', note?.content && showNote && 'ring-2 ring-gradient-to-r from-purple-500 to-pink-500')}>
+      <Avatar className={cn(sizeMap[size], 'border-2 border-white shadow-sm')}>
         <AvatarImage
           src={imageUrl || '/default-avatar.png'}
           alt={userName}

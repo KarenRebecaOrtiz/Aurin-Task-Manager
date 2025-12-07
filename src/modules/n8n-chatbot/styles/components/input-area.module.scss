@@ -1,0 +1,403 @@
+// Input Area Component Styles
+
+.inputContainer {
+  padding: 12px;
+  background-color: #171717;
+}
+
+.inputWrapper {
+  border-radius: 24px;
+  border: 1px solid #444444;
+  background-color: #1F2023;
+  padding: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.24);
+  transition: all 0.3s ease;
+
+  &.isRecording {
+    border-color: rgba(239, 68, 68, 0.7);
+  }
+
+  &.isDragging {
+    border-color: rgba(208, 223, 0, 0.7);
+  }
+}
+
+.filePreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  padding-bottom: 4px;
+
+  .fileItem {
+    position: relative;
+
+    .imagePreview {
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+
+      img {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+      }
+
+      .removeImageBtn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 2px;
+        cursor: pointer;
+        border: none;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.9);
+        }
+      }
+    }
+
+    .fileInfo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background-color: #262626;
+
+      .fileName {
+        font-size: 14px;
+        color: #d4d4d4;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .removeFileBtn {
+        padding: 2px;
+        border-radius: 50%;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+
+        &:hover {
+          background-color: #404040;
+        }
+      }
+    }
+  }
+}
+
+.textareaContainer {
+  transition: all 0.3s ease;
+
+  &.hidden {
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+  }
+
+  textarea {
+    display: flex;
+    width: 100%;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    padding: 12px;
+    font-size: 16px;
+    color: #f3f4f6;
+    min-height: 44px;
+    max-height: 240px;
+    resize: none;
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+
+    &:focus-visible {
+      outline: none;
+      ring: 0;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    /* Scrollbar styles */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #444444;
+      border-radius: 3px;
+    }
+  }
+}
+
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  padding-top: 8px;
+}
+
+.leftActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.3s ease;
+
+  &.hidden {
+    opacity: 0;
+    visibility: hidden;
+    height: 0;
+  }
+}
+
+.attachBtn {
+  display: flex;
+  height: 32px;
+  width: 32px;
+  color: #9ca3af;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+
+  &:hover {
+    background-color: rgba(156, 163, 175, 0.3);
+    color: #d1d5db;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  input {
+    display: none;
+  }
+}
+
+.toggleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.toggleBtn {
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  height: 32px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+
+  &:hover {
+    color: #d1d5db;
+  }
+
+  &.active {
+    background: rgba(30, 174, 219, 0.15);
+    border-color: #1eaedb;
+    color: #1eaedb;
+
+    &.audio {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: #8b5cf6;
+      color: #8b5cf6;
+    }
+
+    &.canvas {
+      background: rgba(249, 115, 22, 0.15);
+      border-color: #f97316;
+      color: #f97316;
+    }
+  }
+
+  .iconContainer {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .label {
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+.divider {
+  position: relative;
+  height: 24px;
+  width: 1.5px;
+  margin: 0 4px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, transparent, rgba(155, 135, 245, 0.7), transparent);
+    border-radius: 9999px;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 40%, 140% 50%, 100% 60%, 100% 100%, 0% 100%, 0% 60%, -40% 50%, 0% 40%);
+  }
+}
+
+.frequencyBars {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+
+  .bar {
+    width: 2px;
+    background-color: #8b5cf6;
+    border-radius: 9999px;
+  }
+}
+
+.timer {
+  font-size: 12px;
+  color: rgba(139, 92, 246, 0.7);
+  width: 40px;
+  text-align: center;
+}
+
+.sendBtn {
+  height: 32px;
+  width: 32px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+
+  &.recording {
+    background: transparent;
+    color: #ef4444;
+
+    &:hover {
+      background-color: rgba(156, 163, 175, 0.3);
+      color: #f87171;
+    }
+  }
+
+  &.hasContent {
+    background-color: white;
+    color: #1F2023;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  &.empty {
+    background: transparent;
+    color: #9ca3af;
+
+    &:hover {
+      background-color: rgba(156, 163, 175, 0.3);
+      color: #d1d5db;
+    }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+// Recording UI Styles
+.recordingUI {
+  padding: 12px;
+  background: rgba(139, 92, 246, 0.05);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.recordingContent {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.recordingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recordingDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+}
+
+.recordingText {
+  font-size: 14px;
+  color: #d1d5db;
+  font-weight: 500;
+}
+
+.recordingTimer {
+  font-size: 16px;
+  font-weight: 600;
+  color: #8b5cf6;
+  font-family: 'Courier New', monospace;
+  min-width: 60px;
+  text-align: center;
+}
+
+.stopRecordingBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}

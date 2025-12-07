@@ -11,6 +11,9 @@ interface ChatRequest {
   sessionId: string
   conversationHistory?: ChatCompletionMessageParam[]
   fileUrl?: string
+  webSearch?: boolean
+  audioMode?: boolean
+  canvasMode?: boolean
 }
 
 /**
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request
     const body: ChatRequest = await request.json()
-    const { message, sessionId, conversationHistory = [], fileUrl } = body
+    const { message, sessionId, conversationHistory = [], fileUrl, webSearch = false, audioMode = false, canvasMode = false } = body
 
     if (!message) {
       return NextResponse.json(
@@ -86,7 +89,12 @@ export async function POST(request: NextRequest) {
       conversationHistory,
       userName,
       isAdmin,
-      timezone: 'America/Mexico_City'
+      timezone: 'America/Mexico_City',
+      modes: {
+        webSearch,
+        audioMode,
+        canvasMode
+      }
     })
 
     return NextResponse.json({

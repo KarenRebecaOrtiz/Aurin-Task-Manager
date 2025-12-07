@@ -31,7 +31,9 @@ import {
 
 import {
   searchClientsTool,
-  createClientTool
+  createClientTool,
+  getClientTool,
+  updateClientTool
 } from './clients'
 
 import {
@@ -47,6 +49,8 @@ export const allTools: ChatCompletionTool[] = [
   // Client management (search first before creating tasks)
   searchClientsTool,
   createClientTool,
+  getClientTool,
+  updateClientTool,
 
   // Task management
   searchTasksTool,
@@ -73,7 +77,7 @@ export const allTools: ChatCompletionTool[] = [
  * Tool groups for conditional loading
  */
 export const toolGroups = {
-  clients: [searchClientsTool, createClientTool],
+  clients: [searchClientsTool, createClientTool, getClientTool, updateClientTool],
   tasks: [searchTasksTool, createTaskTool, updateTaskTool, archiveTaskTool],
   analytics: [getTeamWorkloadTool, getProjectHoursTool, getUserTasksTool],
   users: [searchUsersTool, getUsersInfoTool],
