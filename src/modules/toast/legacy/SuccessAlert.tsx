@@ -40,7 +40,7 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
       await audioRef.current.play();
       setAudioError(null);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+  const _errorMessage = error instanceof Error ? error.message : String(error);
       isPlaying.current = false;
       setAudioError('Browser blocked audio autoplay. Click a button to try playing.');
       const tryPlayOnInteraction = () => {
@@ -69,7 +69,7 @@ const SuccessAlert: React.FC<SuccessAlertProps> = ({ message, onClose, onAction,
     hasRenderedToast.current = true;
 
     if (!audioRef.current) {
-      audioRef.current = new Audio('/Success.mp3');
+  audioRef.current = new Audio('/NotificationSound.mp3');
       audioRef.current.preload = 'auto';
       audioRef.current.onerror = () => {
         setAudioError('Failed to load audio file');

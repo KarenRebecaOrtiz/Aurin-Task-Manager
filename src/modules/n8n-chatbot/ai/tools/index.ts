@@ -36,7 +36,8 @@ import {
 
 import {
   analyzeDocumentTool,
-  createNotionPlanTool
+  createNotionPlanTool,
+  transcribeAudioTool
 } from './n8n-integrations'
 
 /**
@@ -64,7 +65,8 @@ export const allTools: ChatCompletionTool[] = [
 
   // n8n integrations
   analyzeDocumentTool,
-  createNotionPlanTool
+  createNotionPlanTool,
+  transcribeAudioTool
 ]
 
 /**
@@ -75,5 +77,5 @@ export const toolGroups = {
   tasks: [searchTasksTool, createTaskTool, updateTaskTool, archiveTaskTool],
   analytics: [getTeamWorkloadTool, getProjectHoursTool, getUserTasksTool],
   users: [searchUsersTool, getUsersInfoTool],
-  integrations: [analyzeDocumentTool, createNotionPlanTool]
+  integrations: [analyzeDocumentTool, createNotionPlanTool, transcribeAudioTool]
 }

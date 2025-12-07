@@ -3,14 +3,32 @@ import type { Message } from '../types'
 export const FILE_CONSTRAINTS = {
   maxSize: 10 * 1024 * 1024, // 10MB
   allowedTypes: [
+    // Images
     "image/jpeg",
     "image/png",
     "image/gif",
     "image/webp",
+    // Documents
     "application/pdf",
-    "text/plain"
+    "text/plain",
+    // Audio
+    "audio/mpeg",      // .mp3
+    "audio/mp4",       // .m4a
+    "audio/wav",       // .wav
+    "audio/webm",      // .webm
+    "audio/ogg",       // .ogg
+    "audio/x-m4a"      // .m4a alternative
   ]
 }
+
+export const AUDIO_TYPES = [
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/wav",
+  "audio/webm",
+  "audio/ogg",
+  "audio/x-m4a"
+]
 
 export const STORAGE_KEYS = {
   SESSION_ID: 'n8n_chatbot_session_id',

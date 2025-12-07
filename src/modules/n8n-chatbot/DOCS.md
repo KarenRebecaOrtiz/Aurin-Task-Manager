@@ -119,6 +119,7 @@ src/modules/n8n-chatbot/
 | `get_users_info` | Obtiene info de usuarios por IDs | Local (Firestore) |
 | `analyze_document` | Analiza PDF/imagen con Vision AI | `N8N_VISION_WEBHOOK_URL` |
 | `create_notion_plan` | Crea documento en Notion | `N8N_NOTION_WEBHOOK_URL` |
+| `transcribe_audio` | Transcribe audio a texto con Whisper | `N8N_AUDIO_WEBHOOK_URL` |
 
 ---
 
@@ -132,6 +133,14 @@ src/modules/n8n-chatbot/
 | **Company Website Chatbot Agent** | `WFX6r8v58WSuBw1P` | Activo | Chatbot del sitio web |
 | **Auto-Cancel Unconfirmed Appointments** | `XbktF6QM4jTfhmo0` | Activo | Cron job |
 
+### Webhook Bridges (Activos)
+
+| Workflow | ID | Path | Descripcion |
+|----------|-----|------|-------------|
+| **Webhook - Vision Analyzer Bridge** | `brDTPjtoGeUYW7wV` | `/webhook/vision-analyzer` | Bridge para analisis de documentos |
+| **Webhook - Notion Creator Bridge** | `xpmCTi28oyCfVQRD` | `/webhook/notion-creator` | Bridge para creacion en Notion |
+| **Webhook - Audio Transcriber Bridge** | `ceXoOGYC0vj8J8VZ` | `/webhook/audio-transcriber` | Bridge para transcripcion de audio |
+
 ### Tools (Sub-workflows)
 
 | Workflow | ID | Funcion |
@@ -139,6 +148,7 @@ src/modules/n8n-chatbot/
 | **Tool - Firestore Task Manager** | `QqLXjUQ611zrZMmY` | CRUD de tareas via Firestore |
 | **Tool - Timer and Time Logs Manager** | `3AzTlFqV0ug9RO2Q` | Gestion de timers y logs |
 | **Tool - Document Vision Analyzer** | `TpLUSbfJ7wtZsHeG` | Analisis de documentos con Vision |
+| **Tool - Audio Transcriber** | `CZvdrRZOhZSx9OGv` | Transcripcion de audio con Whisper |
 | **Tool - User Search** | `lzg7eynYCbx2Rx2T` | Busqueda de usuarios |
 | **Tool - Notion Plan Creator** | `jSyb1zbXjnjsYpDm` | Creacion de planes en Notion |
 
@@ -231,8 +241,9 @@ interface Task {
 OPENAI_API_KEY=sk-...
 
 # n8n Webhooks
-N8N_VISION_WEBHOOK_URL=https://n8n.example.com/webhook/vision
-N8N_NOTION_WEBHOOK_URL=https://n8n.example.com/webhook/notion
+N8N_VISION_WEBHOOK_URL=https://n8nsystems.info/webhook/vision-analyzer
+N8N_NOTION_WEBHOOK_URL=https://n8nsystems.info/webhook/notion-creator
+N8N_AUDIO_WEBHOOK_URL=https://n8nsystems.info/webhook/audio-transcriber
 
 # Firebase Admin (ya configurado en el proyecto)
 FIREBASE_PROJECT_ID=aurin-plattform

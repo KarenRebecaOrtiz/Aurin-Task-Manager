@@ -89,6 +89,9 @@ export async function executeTool(
       case 'create_notion_plan':
         return await callN8nWebhook('notion', { ...args, userId })
 
+      case 'transcribe_audio':
+        return await callN8nWebhook('audio', { ...args, userId })
+
       default:
         throw new Error(`Unknown tool: ${toolName}`)
     }
@@ -105,12 +108,13 @@ export async function executeTool(
  * Call n8n webhook for complex operations
  */
 async function callN8nWebhook(
-  type: 'vision' | 'notion',
+  type: 'vision' | 'notion' | 'audio',
   payload: Record<string, unknown>
 ): Promise<unknown> {
   const webhookUrls = {
     vision: process.env.N8N_VISION_WEBHOOK_URL,
-    notion: process.env.N8N_NOTION_WEBHOOK_URL
+    notion: process.env.N8N_NOTION_WEBHOOK_URL,
+    audio: process.env.N8N_AUDIO_WEBHOOK_URL
   }
 
   const url = webhookUrls[type]

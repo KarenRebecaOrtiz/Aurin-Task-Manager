@@ -19,7 +19,7 @@ const openai = new OpenAI({
 
 export interface ChatOptions {
   userId: string
-  message: string
+  message: string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>
   conversationHistory?: ChatCompletionMessageParam[]
   userName?: string
   isAdmin?: boolean
@@ -70,7 +70,7 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     ...conversationHistory,
     {
       role: 'user',
-      content: message
+      content: message // Can be string or vision content array
     }
   ]
 

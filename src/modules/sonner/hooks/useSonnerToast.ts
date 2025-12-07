@@ -27,7 +27,7 @@ export function useSonnerToast() {
       const { duration = 5000, onAction, actionLabel, playSound = true } = options || {};
 
       if (playSound) {
-        playAudio('/Success.mp3');
+  playAudio('/NotificationSound.mp3');
       }
 
       toast.success(message, {

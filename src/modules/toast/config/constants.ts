@@ -9,7 +9,7 @@ export const TOAST_DEFAULTS = {
 };
 
 export const TOAST_AUDIO_FILES = {
-  success: '/Success.mp3',
+  success: '/NotificationSound.mp3',
   error: '/Error.mp3',
   warning: '/Warning.mp3',
   info: '/Info.mp3',

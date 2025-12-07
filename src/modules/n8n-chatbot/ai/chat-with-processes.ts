@@ -125,6 +125,11 @@ export async function enhancedChat(options: EnhancedChatOptions): Promise<Enhanc
   // Usar sessionId proporcionado o generar uno
   const sessionId = providedSessionId || `session_${userId}_${Date.now()}`
 
+  // Extract text content for process handling (processes don't need vision)
+  const messageText = typeof message === 'string' 
+    ? message 
+    : message.find(item => item.type === 'text')?.text || ''
+
   // Si skipProcesses está activo, ir directo al LLM
   if (skipProcesses) {
     onLLMDelegated?.('skipProcesses flag enabled')
@@ -143,7 +148,7 @@ export async function enhancedChat(options: EnhancedChatOptions): Promise<Enhanc
   // Intentar manejar con procesos estructurados
   try {
     const processResult = await processMessage({
-      message,
+      message: messageText,
       userId,
       sessionId,
       isAdmin,
@@ -159,14 +164,14 @@ export async function enhancedChat(options: EnhancedChatOptions): Promise<Enhanc
         content: processResult.response,
         conversationHistory: [
           ...conversationHistory,
-          { role: 'user', content: message } as ChatCompletionMessageParam,
+          { role: 'user', content: messageText } as ChatCompletionMessageParam,
           { role: 'assistant', content: processResult.response } as ChatCompletionMessageParam
         ],
         handledBy: 'process',
         processId: processResult.processId,
         metrics: {
           tokensUsed: 0, // Procesos no usan tokens de LLM
-          estimatedTokensSaved: estimateTokensSaved(message),
+          estimatedTokensSaved: estimateTokensSaved(messageText),
           durationMs: Date.now() - startTime
         }
       }
@@ -183,7 +188,7 @@ export async function enhancedChat(options: EnhancedChatOptions): Promise<Enhanc
       content: 'No encontré un proceso que pueda manejar tu solicitud. Por favor, intenta ser más específico.',
       conversationHistory: [
         ...conversationHistory,
-        { role: 'user', content: message } as ChatCompletionMessageParam
+        { role: 'user', content: messageText } as ChatCompletionMessageParam
       ],
       handledBy: 'process',
       metrics: {

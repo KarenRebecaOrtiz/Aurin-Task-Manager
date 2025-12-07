@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
-import { MessageCircle, ChevronDown, Send, Paperclip, X, FileText, ImageIcon, Download, Bot } from "lucide-react"
+import { MessageCircle, ChevronDown, Send, Paperclip, X, FileText, ImageIcon, Download, Bot, Mic } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { nanoid } from 'nanoid'
 import type { Message, ChatbotWidgetProps } from '../types'
@@ -180,14 +180,15 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
     let fileUrl: string | undefined = undefined
     let fileMetadata: { name: string; size: string; type: string; url: string } | undefined = undefined
 
-    // Upload file to Google Cloud Storage if present
+    // Upload file to Vercel Blob Storage if present
     if (selectedFile) {
       try {
         const formData = new FormData()
         formData.append('file', selectedFile)
-        formData.append('type', 'chatbot') // Tipo especial para chatbot
+        formData.append('type', 'attachment') // Use 'attachment' for Vercel Blob
+        formData.append('conversationId', sessionId) // Required for attachments
 
-        const uploadResponse = await fetch('/api/upload', {
+        const uploadResponse = await fetch('/api/upload-blob', {
           method: 'POST',
           body: formData
         })
@@ -198,6 +199,7 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
         }
 
         const uploadData = await uploadResponse.json()
+        // Vercel Blob returns the URL directly in the response root or data object
         fileUrl = uploadData.data?.url || uploadData.url
 
         if (fileUrl) {
@@ -207,7 +209,7 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
             type: selectedFile.type,
             url: fileUrl
           }
-          console.log('✅ File uploaded to GCS:', fileUrl)
+          console.log('✅ File uploaded to Vercel Blob:', fileUrl)
         }
       } catch (uploadError) {
         console.error('File upload error:', uploadError)
@@ -463,7 +465,11 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
                               />
                             ) : (
                               <div className={styles.chatbotFileAttachmentInfo}>
-                                <FileText size={32} color="#d0df00" />
+                                {message.file.type.startsWith("audio/") ? (
+                                  <Mic size={32} color="#d0df00" />
+                                ) : (
+                                  <FileText size={32} color="#d0df00" />
+                                )}
                                 <div className={styles.chatbotFileAttachmentDetails}>
                                   <p className={styles.chatbotFileAttachmentName}>{message.file.name}</p>
                                   <p className={styles.chatbotFileAttachmentSize}>{message.file.size}</p>
@@ -514,7 +520,13 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
             <div className={`${styles.chatbotInputArea} ${isDragging ? styles.chatbotInputAreaDragging : ''}`}>
               {selectedFile && (
                 <div className={styles.chatbotFilePreview}>
-                  {selectedFile.type.startsWith("image/") ? <ImageIcon size={32} color="#d0df00" /> : <FileText size={32} color="#d0df00" />}
+                  {selectedFile.type.startsWith("image/") ? (
+                <ImageIcon size={32} color="#d0df00" />
+              ) : selectedFile.type.startsWith("audio/") ? (
+                <Mic size={32} color="#d0df00" />
+              ) : (
+                <FileText size={32} color="#d0df00" />
+              )}
                   <div className={styles.chatbotFilePreviewInfo}>
                     <p className={styles.chatbotFilePreviewName}>{selectedFile.name}</p>
                     <p className={styles.chatbotFilePreviewSize}>{formatFileSize(selectedFile.size)}</p>
@@ -531,7 +543,7 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
                   type="file"
                   style={{ display: 'none' }}
                   onChange={handleFileSelect}
-                  accept="image/*,.pdf,.txt"
+                  accept="image/*,.pdf,.txt,audio/*"
                 />
                 <button onClick={() => fileInputRef.current?.click()} className={styles.chatbotAttachBtn}>
                   <Paperclip size={20} color="#6b7280" />
@@ -669,7 +681,11 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
                         />
                       ) : (
                         <div className={styles.chatbotFileAttachmentInfo}>
-                          <FileText size={32} color="#d0df00" />
+                          {message.file.type.startsWith("audio/") ? (
+                            <Mic size={32} color="#d0df00" />
+                          ) : (
+                            <FileText size={32} color="#d0df00" />
+                          )}
                           <div className={styles.chatbotFileAttachmentDetails}>
                             <p className={styles.chatbotFileAttachmentName}>{message.file.name}</p>
                             <p className={styles.chatbotFileAttachmentSize}>{message.file.size}</p>
@@ -785,6 +801,8 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
               >
                 {selectedFile.type.startsWith("image/") ? (
                   <ImageIcon size={32} color="#d0df00" />
+                ) : selectedFile.type.startsWith("audio/") ? (
+                  <Mic size={32} color="#d0df00" />
                 ) : (
                   <FileText size={32} color="#d0df00" />
                 )}
@@ -812,7 +830,7 @@ export default function ChatbotWidget({ lang = 'es', translations, controlled = 
             type="file"
             style={{ display: 'none' }}
             onChange={handleFileSelect}
-            accept="image/*,.pdf,.txt"
+            accept="image/*,.pdf,.txt,audio/*"
           />
           <motion.button
             onClick={() => fileInputRef.current?.click()}

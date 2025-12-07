@@ -7,7 +7,7 @@ import { z } from 'zod';
 /**
  * Valid file upload types
  */
-export const uploadTypes = ['profile', 'cover', 'message'] as const;
+export const uploadTypes = ['profile', 'cover', 'message', 'avatar', 'thumbnail', 'attachment', 'cache'] as const;
 
 /**
  * Schema for file upload request validation
@@ -15,7 +15,7 @@ export const uploadTypes = ['profile', 'cover', 'message'] as const;
 export const uploadSchema = z.object({
   file: z.instanceof(File, { message: 'File is required' }),
   type: z.enum(uploadTypes, {
-    errorMap: () => ({ message: 'Type must be one of: profile, cover, message' }),
+    errorMap: () => ({ message: 'Type must be one of: profile, cover, message, avatar, thumbnail, attachment, cache' }),
   }),
   conversationId: z.string().optional(),
 });

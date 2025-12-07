@@ -56,16 +56,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // If fileUrl is provided, inject it into the message context
-    const enrichedMessage = fileUrl
-      ? `${message}\n\n[Archivo adjunto: ${fileUrl}]`
-      : message
+    // Check if fileUrl is an image for vision support
+    let messageContent: string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>
+    
+    if (fileUrl) {
+      // Detect if it's an image by URL extension or assume image for common formats
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']
+      const isImage = imageExtensions.some(ext => fileUrl.toLowerCase().includes(ext))
+      
+      if (isImage) {
+        // Format as vision message for GPT-4o
+        messageContent = [
+          { type: 'text', text: message },
+          { type: 'image_url', image_url: { url: fileUrl } }
+        ]
+      } else {
+        // Non-image file: append as text reference
+        messageContent = `${message}\n\n[Archivo adjunto: ${fileUrl}]`
+      }
+    } else {
+      messageContent = message
+    }
 
     // Call enhanced chat (uses processes first, then LLM)
     const response = await enhancedChat({
       userId,
       sessionId,
-      message: enrichedMessage,
+      message: messageContent,
       conversationHistory,
       userName,
       isAdmin,

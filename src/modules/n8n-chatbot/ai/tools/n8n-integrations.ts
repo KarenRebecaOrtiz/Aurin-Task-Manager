@@ -50,3 +50,22 @@ export const createNotionPlanTool: ChatCompletionTool = {
     }
   }
 }
+
+export const transcribeAudioTool: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'transcribe_audio',
+    description: 'Transcribe un archivo de audio (mp3, wav, m4a, webm, ogg) a texto usando OpenAI Whisper. Usa esta herramienta cuando el usuario adjunte un archivo de audio. Devuelve el texto transcrito que puedes usar para responder preguntas o crear tareas.',
+    parameters: {
+      type: 'object',
+      properties: {
+        audioUrl: {
+          type: 'string',
+          description: 'URL del archivo de audio a transcribir (requerido)'
+        }
+      },
+      required: ['audioUrl'],
+      additionalProperties: false
+    }
+  }
+}

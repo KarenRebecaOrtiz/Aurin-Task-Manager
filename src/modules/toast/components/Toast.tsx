@@ -23,7 +23,7 @@ export const Toast: React.FC<ToastProps> = ({ config, onClose }) => {
   const getAudioFile = useCallback(() => {
     switch (config.variant) {
       case 'success':
-        return '/Success.mp3';
+  return '/NotificationSound.mp3';
       case 'error':
         return '/Error.mp3';
       case 'warning':

@@ -303,6 +303,10 @@ ANALYTICS:
 INTEGRACIONES:
 11. analyze_document: Analizar PDF/imagen con Vision AI
 12. create_notion_plan: Crear documento en Notion
+13. transcribe_audio: Transcribir archivos de audio (mp3, wav, m4a, ogg, webm) a texto
+    - Úsala cuando el usuario adjunte un archivo de audio
+    - Devuelve el texto transcrito del audio
+    - Puedes usar la transcripción para crear tareas o responder preguntas
 
 ESTADOS VÁLIDOS DE TAREAS:
 - "Por Iniciar", "En Proceso", "Backlog", "Por Finalizar", "Finalizado", "Cancelado"
