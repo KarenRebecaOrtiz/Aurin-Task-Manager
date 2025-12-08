@@ -18,9 +18,13 @@ import {
 import {
   getTeamWorkload,
   getProjectHours,
-  getUserTasks
-} from '../lib/analytics'
+  getUserTasks,
+} from '../lib/analytics/index'
 import { getUsersInfo, searchUsers } from '../lib/users/get-users'
+import {
+  formatTavilyResponse,
+  type TavilyResponse,
+} from './formatters/tavily-formatter'
 
 /**
  * Standard function tool call type
@@ -40,7 +44,7 @@ interface FunctionToolCall {
 export async function executeTool(
   toolCall: FunctionToolCall,
   userId: string,
-  isAdmin: boolean = false
+  isAdmin: boolean = false,
 ): Promise<unknown> {
   const { name: toolName, arguments: argsString } = toolCall.function
   const args = JSON.parse(argsString)
@@ -100,6 +104,14 @@ export async function executeTool(
       case 'transcribe_audio':
         return await callN8nWebhook('audio', { ...args, userId })
 
+      case 'web_search': {
+        const rawResponse = await callN8nWebhook('web_search', {
+          ...args,
+          userId,
+        })
+        return formatTavilyResponse(rawResponse as TavilyResponse)
+      }
+
       default:
         throw new Error(`Unknown tool: ${toolName}`)
     }
@@ -107,7 +119,7 @@ export async function executeTool(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      toolName
+      toolName,
     }
   }
 }
@@ -116,13 +128,14 @@ export async function executeTool(
  * Call n8n webhook for complex operations
  */
 async function callN8nWebhook(
-  type: 'vision' | 'notion' | 'audio',
-  payload: Record<string, unknown>
+  type: 'vision' | 'notion' | 'audio' | 'web_search',
+  payload: Record<string, unknown>,
 ): Promise<unknown> {
   const webhookUrls = {
     vision: process.env.N8N_VISION_WEBHOOK_URL,
     notion: process.env.N8N_NOTION_WEBHOOK_URL,
-    audio: process.env.N8N_AUDIO_WEBHOOK_URL
+    audio: process.env.N8N_AUDIO_WEBHOOK_URL,
+    web_search: process.env.N8N_WEB_SEARCH_WEBHOOK_URL,
   }
 
   const url = webhookUrls[type]
