@@ -45,9 +45,39 @@ export async function executeTool(
   toolCall: FunctionToolCall,
   userId: string,
   isAdmin: boolean = false,
+  modes?: {
+    webSearch?: boolean
+    audioMode?: boolean
+    canvasMode?: boolean
+  }
 ): Promise<unknown> {
   const { name: toolName, arguments: argsString } = toolCall.function
   const args = JSON.parse(argsString)
+
+  // Validate tool execution based on active modes
+  if (toolName === 'web_search' && !modes?.webSearch) {
+    return {
+      success: false,
+      error: 'Web search no está habilitado. Activa el botón de búsqueda web para usar esta función.',
+      toolName,
+    }
+  }
+
+  if (toolName === 'transcribe_audio' && !modes?.audioMode) {
+    return {
+      success: false,
+      error: 'Modo audio no está habilitado. Activa el botón de audio para transcribir archivos.',
+      toolName,
+    }
+  }
+
+  if (toolName === 'create_notion_plan' && !modes?.canvasMode) {
+    return {
+      success: false,
+      error: 'Modo crear plan no está habilitado. Activa el botón de crear plan para usar esta función.',
+      toolName,
+    }
+  }
 
   try {
     switch (toolName) {

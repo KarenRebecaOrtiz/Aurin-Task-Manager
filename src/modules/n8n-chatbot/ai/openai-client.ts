@@ -59,6 +59,24 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     modes = {}
   } = options
 
+  // Filter tools based on active modes
+  const availableTools = tools.filter(tool => {
+    if (tool.type !== 'function') return true
+    
+    const toolName = tool.function.name
+    
+    // Only include web_search if webSearch mode is active
+    if (toolName === 'web_search' && !modes.webSearch) return false
+    
+    // Only include transcribe_audio if audioMode is active
+    if (toolName === 'transcribe_audio' && !modes.audioMode) return false
+    
+    // Only include create_notion_plan if canvasMode is active
+    if (toolName === 'create_notion_plan' && !modes.canvasMode) return false
+    
+    return true
+  })
+
   // Build system prompt
   const systemPromptContext: SystemPromptContext = {
     userId,
@@ -92,7 +110,7 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages,
-      tools,
+      tools: availableTools,
       tool_choice: 'auto',
       temperature: 0.3,
       max_tokens: 2048
@@ -117,7 +135,7 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
       // Skip tool calls that don't have a function property
       if (!('function' in toolCall)) continue
       
-      const result = await executeTool(toolCall, userId, isAdmin)
+      const result = await executeTool(toolCall, userId, isAdmin, modes)
 
       // Track tool execution
       toolCallsExecuted.push({

@@ -1,0 +1,135 @@
+/**
+ * CommentBubble Styles
+ * Similar a MessageItem pero adaptado para shared plans
+ */
+
+.comment {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  animation: slideIn 0.2s ease-out;
+
+  &.own {
+    flex-direction: row-reverse;
+
+    .content {
+      align-items: flex-end;
+    }
+
+    .bubble {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .timestamp {
+      text-align: right;
+    }
+  }
+
+  &.other {
+    .bubble {
+      background: var(--card);
+      color: var(--card-foreground);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+    }
+  }
+
+  &.optimistic {
+    opacity: 0.6;
+  }
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.initials {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 70%;
+  min-width: 200px;
+
+  @media (max-width: 768px) {
+    max-width: 85%;
+    min-width: 150px;
+  }
+}
+
+.authorName {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+}
+
+.badge {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.text {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sending {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

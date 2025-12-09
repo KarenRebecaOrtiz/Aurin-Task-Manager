@@ -1,0 +1,152 @@
+/**
+ * SharedPlanInput Styles
+ * 
+ * Copiado de input-area.module.scss del n8n-chatbot
+ * pero ULTRA SIMPLIFICADO (sin audio, sin toggles, sin file upload)
+ */
+
+.inputContainer {
+  padding: 12px;
+  background-color: transparent;
+}
+
+.inputWrapper {
+  border-radius: 24px;
+  border: 1px solid var(--border-color, #444444);
+  background-color: var(--input-bg, #1F2023);
+  padding: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.24);
+  transition: all 0.3s ease;
+
+  :global(body.dark) & {
+    background-color: #1F2023;
+    border-color: #444444;
+  }
+
+  :global(body:not(.dark)) & {
+    background-color: #ffffff;
+    border-color: #e5e7eb;
+  }
+}
+
+.textareaContainer {
+  transition: all 0.3s ease;
+
+  textarea {
+    display: flex;
+    width: 100%;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    padding: 12px;
+    font-size: 16px;
+    color: var(--text-primary);
+    min-height: 44px;
+    max-height: 240px;
+    resize: none;
+    font-family: 'Inter Tight', sans-serif;
+
+    :global(body.dark) & {
+      color: #f3f4f6;
+    }
+
+    :global(body:not(.dark)) & {
+      color: #1a1a1a;
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+
+    &:focus-visible {
+      outline: none;
+      ring: 0;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    /* Scrollbar styles */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #444444;
+      border-radius: 3px;
+    }
+  }
+}
+
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  padding-top: 8px;
+}
+
+.sendBtn {
+  height: 32px;
+  width: 32px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+
+  &.hasContent {
+    background-color: white;
+    color: #1F2023;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.8);
+    }
+
+    :global(body.dark) & {
+      background-color: white;
+      color: #1F2023;
+    }
+
+    :global(body:not(.dark)) & {
+      background-color: #000000;
+      color: #ffffff;
+    }
+  }
+
+  &.empty {
+    background: transparent;
+    color: #9ca3af;
+
+    &:hover {
+      background-color: rgba(156, 163, 175, 0.3);
+      color: #d1d5db;
+    }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .inputContainer {
+    padding: 8px;
+  }
+
+  .textareaContainer textarea {
+    font-size: 16px; // Prevent iOS zoom
+    padding: 10px;
+  }
+}

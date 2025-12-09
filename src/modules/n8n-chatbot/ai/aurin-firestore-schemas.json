@@ -431,32 +431,6 @@
         }
       }
     },
-    "advices": {
-      "path": "advices/{adviceId}",
-      "description": "Consejos y recomendaciones",
-      "fields": {
-        "creatorId": {
-          "type": "string",
-          "description": "ID del usuario creador",
-          "required": true
-        },
-        "content": {
-          "type": "string",
-          "description": "Contenido del consejo",
-          "required": true
-        },
-        "category": {
-          "type": "string",
-          "description": "Categoría del consejo",
-          "required": false
-        },
-        "createdAt": {
-          "type": "timestamp",
-          "description": "Fecha de creación",
-          "required": true
-        }
-      }
-    },
     "conversations": {
       "path": "conversations/{conversationId}",
       "description": "Conversaciones privadas entre usuarios",

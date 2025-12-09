@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { Header } from '@/modules/header';
-import { OptimizedMarquee } from '@/modules/advices';
 import { Footer } from '@/modules/footer';
 import ViewSwitcher from '@/modules/data-views/components/ui/ViewSwitcher'; // Import the ViewSwitcher
 import styles from './DashboardLayout.module.scss';
@@ -25,7 +24,6 @@ export default function DashboardClientLayout({ children }: { children: React.Re
 
   return (
     <div className={styles.container}>
-      <OptimizedMarquee />
       <Header
         selectedContainer={selectedContainer}
         isArchiveTableOpen={false}

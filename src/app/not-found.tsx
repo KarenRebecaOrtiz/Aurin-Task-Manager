@@ -5,7 +5,6 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
 import { Header } from '@/modules/header';
-import { OptimizedMarquee } from '@/modules/advices';
 import { AuthProvider } from '@/contexts/AuthContext';
 // Removed unused imports for production build
 import { useTasksPageStore } from '@/stores/tasksPageStore';
@@ -76,7 +75,6 @@ function NotFoundContent() {
   // Renderizar el contenido principal
   const mainContent = (
     <div className={styles.container}>
-      <OptimizedMarquee />
 
       <div ref={headerRef}>
         <Header

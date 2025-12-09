@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useCallback, useEffect } from 'react'
-import { ArrowUp, Paperclip, Mic, X, Square, StopCircle, Globe, FolderCog as FolderCode } from 'lucide-react'
+import { ArrowUp, Paperclip, Mic, X, Square, StopCircle, Globe } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ChatbotTranslations } from '../../types'
 import { useAudioRecorder } from '../../hooks/useAudioRecorder'
@@ -16,10 +16,8 @@ interface InputAreaProps {
   onClearFile: () => void
   webSearchEnabled: boolean
   audioModeEnabled: boolean
-  canvasModeEnabled: boolean
   onToggleWebSearch: () => void
   onToggleAudioMode: () => void
-  onToggleCanvasMode: () => void
   translations: ChatbotTranslations
   disabled?: boolean
   isLoading?: boolean
@@ -38,10 +36,8 @@ export function InputArea({
   onClearFile,
   webSearchEnabled,
   audioModeEnabled,
-  canvasModeEnabled,
   onToggleWebSearch,
   onToggleAudioMode,
-  onToggleCanvasMode,
   translations,
   disabled = false,
   isLoading = false,
@@ -103,13 +99,11 @@ export function InputArea({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleToggleChange = (toggleType: 'search' | 'audio' | 'canvas') => {
+  const handleToggleChange = (toggleType: 'search' | 'audio') => {
     if (toggleType === 'search') {
       onToggleWebSearch()
     } else if (toggleType === 'audio') {
       onToggleAudioMode()
-    } else if (toggleType === 'canvas') {
-      onToggleCanvasMode()
     }
   }
 
@@ -162,7 +156,6 @@ export function InputArea({
     if (isTranscribing) return 'Transcribiendo audio...'
     if (webSearchEnabled) return 'Buscar en la web...'
     if (audioModeEnabled && isRecording) return 'Grabando... (presiona de nuevo para detener)'
-    if (canvasModeEnabled) return 'Crear un plan...'
     return translations.placeholder
   }
 
@@ -398,42 +391,6 @@ export function InputArea({
                   )}
                 </AnimatePresence>
               </motion.button>
-
-              <CustomDivider />
-
-              {/* Canvas toggle */}
-              <button
-                type="button"
-                onClick={() => handleToggleChange('canvas')}
-                className={`${styles.toggleBtn} ${styles.canvas} ${canvasModeEnabled ? styles.active : ''}`}
-              >
-                <div className={styles.iconContainer}>
-                  <motion.div
-                    animate={{ rotate: canvasModeEnabled ? 360 : 0, scale: canvasModeEnabled ? 1.1 : 1 }}
-                    whileHover={{
-                      rotate: canvasModeEnabled ? 360 : 15,
-                      scale: 1.1,
-                      transition: { type: 'spring', stiffness: 300, damping: 10 },
-                    }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 25 }}
-                  >
-                    <FolderCode className="w-4 h-4" />
-                  </motion.div>
-                </div>
-                <AnimatePresence>
-                  {canvasModeEnabled && (
-                    <motion.span
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: 'auto', opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={styles.label}
-                    >
-                      Crear Plan
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </button>
             </div>
           </div>
 

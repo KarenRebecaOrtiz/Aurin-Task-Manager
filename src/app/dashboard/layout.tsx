@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from '@/modules/header';
 import { Footer } from '@/modules/footer';
-import { OptimizedMarquee } from '@/modules/advices';
 import { ResponsiveChatSidebar } from '@/modules/chat';
 import { ProfileCard } from '@/modules/profile-card';
 import PlatformCompatibility from '@/shared/components/system/PlatformCompatibility';
@@ -96,7 +95,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className={tasksStyles.container}>
       {/* Static components - never re-render */}
-      <OptimizedMarquee />
 
       <Header
         selectedContainer={activeContainer}

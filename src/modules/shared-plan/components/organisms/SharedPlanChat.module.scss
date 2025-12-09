@@ -1,0 +1,269 @@
+/**
+ * SharedPlanChat Styles - Full Width Chat
+ * Basado en la arquitectura del módulo de chat pero adaptado a full-width
+ */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+  background: var(--background);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* ==================== HEADER ==================== */
+
+.header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--foreground);
+}
+
+.subtitle {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0;
+  margin-top: 0.125rem;
+}
+
+/* ==================== MESSAGES ==================== */
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 3px;
+
+    &:hover {
+      background: var(--muted-foreground);
+    }
+  }
+}
+
+.messagesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Empty States */
+
+.loading,
+.error,
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--muted);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.error {
+  color: var(--destructive);
+}
+
+.errorDetail {
+  font-size: 0.875rem;
+  opacity: 0.7;
+}
+
+.empty {
+  color: var(--muted-foreground);
+}
+
+.emptyIcon {
+  opacity: 0.3;
+}
+
+.empty h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--foreground);
+}
+
+.empty p {
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+/* ==================== INPUT ==================== */
+
+.inputContainer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+
+.inputWrapper {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.input {
+  flex: 1;
+  min-height: 44px;
+  max-height: 120px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  resize: none;
+  font-family: inherit;
+  background: var(--background);
+  color: var(--foreground);
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary) / 10%;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &::placeholder {
+    color: var(--muted-foreground);
+  }
+}
+
+.sendButton {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.buttonSpinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin: 0.75rem 0 0;
+  text-align: center;
+
+  kbd {
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    background: var(--muted);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+}
+
+/* ==================== ANIMATIONS ==================== */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+  .header {
+    padding: 1rem;
+  }
+
+  .messages {
+    padding: 1rem;
+  }
+
+  .inputContainer {
+    padding: 1rem;
+  }
+
+  .input {
+    font-size: 16px; /* Evita zoom en iOS */
+  }
+}

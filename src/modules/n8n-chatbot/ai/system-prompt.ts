@@ -262,29 +262,47 @@ function getModeInstructions(modes?: { webSearch?: boolean; audioMode?: boolean;
 
   if (modes.webSearch) {
     activeInstructions.push(`🌐 MODO WEB SEARCH ACTIVO:
-   - El usuario ha activado la búsqueda web para complementar respuestas
-   - Puedes hacer búsquedas en internet para proporcionar información actualizada
-   - Usa este modo para responder preguntas que requieran información reciente o externa
-   - Combina búsquedas web con las herramientas del sistema cuando sea apropiado`)
+   - Tienes acceso a la herramienta web_search para buscar información en internet
+   - Úsala para complementar respuestas con información actualizada o externa
+   - Combina búsquedas web con las herramientas del sistema cuando sea apropiado
+   - Ejemplo: "busca información sobre..." o cuando necesites datos recientes`)
   }
 
   if (modes.audioMode) {
     activeInstructions.push(`🎤 MODO AUDIO ACTIVO:
-   - El usuario está usando transcripción de voz
-   - El mensaje que recibiste ya está transcrito a texto
-   - Responde normalmente - no menciones que fue por audio a menos que sea relevante`)
+   - Tienes acceso a la herramienta transcribe_audio
+   - El usuario puede adjuntar archivos de audio (mp3, wav, m4a, webm, ogg)
+   - Cuando detectes un archivo de audio adjunto, usa transcribe_audio para convertirlo a texto
+   - Luego puedes usar la transcripción para crear tareas o responder preguntas`)
   }
 
   if (modes.canvasMode) {
     activeInstructions.push(`📋 MODO CREAR PLAN ACTIVO:
-   - El usuario quiere crear un plan o documento estructurado en Notion
-   - Cuando el usuario proporcione suficiente contexto, usa la herramienta create_notion_plan
-   - Estructura el contenido en formato Markdown antes de enviarlo a Notion
-   - Asegúrate de confirmar con el usuario antes de crear el documento`)
+   - Tienes acceso a la herramienta create_notion_plan
+   - Úsala cuando el usuario quiera crear un plan, propuesta o documento estructurado
+   - Estructura el contenido en formato Markdown antes de enviarlo
+   - SIEMPRE confirma con el usuario antes de crear el documento en Notion`)
   }
 
-  return activeInstructions.length > 0
-    ? activeInstructions.join('\n\n')
+  // Add info about disabled modes
+  const disabledModes: string[] = []
+  
+  if (!modes.webSearch) {
+    disabledModes.push('🔒 Web Search desactivado - No puedes buscar en internet. Si el usuario necesita información externa, indícale que active el botón de búsqueda web.')
+  }
+  
+  if (!modes.audioMode) {
+    disabledModes.push('🔒 Audio Mode desactivado - No puedes transcribir archivos de audio. Si el usuario adjunta audio, indícale que active el botón de audio.')
+  }
+  
+  if (!modes.canvasMode) {
+    disabledModes.push('🔒 Canvas Mode desactivado - No puedes crear documentos en Notion. Si el usuario quiere crear un plan, indícale que active el botón de crear plan.')
+  }
+
+  const allInstructions = [...activeInstructions, ...disabledModes]
+
+  return allInstructions.length > 0
+    ? allInstructions.join('\n\n')
     : '- Ningún modo especial activado'
 }
 
