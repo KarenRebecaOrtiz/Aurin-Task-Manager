@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
+import styles from "./FuzzyText.module.scss"
 
 interface FuzzyTextProps {
   children: React.ReactNode
@@ -36,17 +37,17 @@ const FuzzyText = React.forwardRef<
   const textColorRef = useRef<string>("")
   
   useEffect(() => {
-    // Get the computed color from CSS variables
+    // Get the computed color from CSS variables with dark mode support
     const getComputedColor = () => {
       if (color) return color
       
-      // Create temporary element to compute the actual color value
-      const tempEl = document.createElement("div")
-      tempEl.style.color = "var(--foreground)"
-      document.body.appendChild(tempEl)
-      const computedColor = window.getComputedStyle(tempEl).color
-      document.body.removeChild(tempEl)
-      return computedColor
+      // Check if dark mode is active
+      const isDark = resolvedTheme === 'dark' || document.documentElement.classList.contains('dark')
+      
+      // Return the appropriate color based on theme
+      // Light mode: #0D0D0D (color-text-primary)
+      // Dark mode: #D1D1D1 (color-text-dark-primary)
+      return isDark ? '#D1D1D1' : '#0D0D0D'
     }
 
     let animationFrameId: number
@@ -243,7 +244,7 @@ const FuzzyText = React.forwardRef<
   return (
     <canvas 
       ref={canvasRef} 
-      className={className}
+      className={`${styles.fuzzyCanvas} ${className || ''}`}
     />
   )
 })

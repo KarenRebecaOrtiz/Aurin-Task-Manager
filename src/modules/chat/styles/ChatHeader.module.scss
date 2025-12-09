@@ -60,6 +60,48 @@
 }
 
 // ============================================================================
+// SHARE BUTTON (Ghost button for sharing)
+// ============================================================================
+
+.shareButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background-color: transparent;
+  color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.7);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ============================================================================
 // TIMER BUTTON (Green circular button)
 // ============================================================================
 
@@ -167,18 +209,37 @@
   font-size: 14px;
   color: $chat-text-secondary-light;
   line-height: 1.5;
+  transition: all 0.3s ease;
 
   :global(.dark) & {
     color: $chat-text-secondary-dark;
   }
 
+  // Estado colapsado: truncar con elipsis
+  &.collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Estado expandido: mostrar todo
+  &.expanded {
+    display: block;
+    overflow: visible;
+  }
+
   @media (max-width: 767px) {
     font-size: 13px;
     text-align: center;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    
+    // En mobile siempre truncar a 2 líneas cuando está colapsado
+    &.collapsed {
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
   }
 }
 

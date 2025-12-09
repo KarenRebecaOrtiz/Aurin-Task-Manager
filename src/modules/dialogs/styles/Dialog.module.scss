@@ -498,3 +498,1213 @@
 :global(body.dark) {
   @include darkModeStyles;
 }
+
+// ============================================================================
+// SHARE DIALOG SPECIFIC STYLES - MODERNIZED
+// ============================================================================
+
+.shareContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.shareOption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+}
+
+.shareOptionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.shareOptionIcon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  color: #71717a;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.shareOptionText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.shareLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #18181b;
+  line-height: 1.4;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.shareDescription {
+  font-size: 0.8125rem;
+  color: #71717a;
+  line-height: 1.4;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.divider {
+  height: 1px;
+  background-color: #e4e4e7;
+  margin: 0.5rem 0;
+
+  :global(.dark) & {
+    background-color: #3f3f46;
+  }
+}
+
+.switchContainer {
+  flex-shrink: 0;
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-color: #e4e4e7;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: #d4d4d8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #3f3f46;
+
+    &:hover:not(:disabled) {
+      background-color: #52525b;
+    }
+  }
+}
+
+.switchActive {
+  background-color: #3b82f6;
+
+  &:hover:not(:disabled) {
+    background-color: #2563eb;
+  }
+
+  :global(.dark) & {
+    background-color: #3b82f6;
+
+    &:hover:not(:disabled) {
+      background-color: #2563eb;
+    }
+  }
+}
+
+.switchThumb {
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background-color: white;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(0.125rem);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+
+  .switchActive & {
+    transform: translateX(1.375rem);
+  }
+}
+
+// Token Section
+.tokenSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tokenHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tokenTitle {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #71717a;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.tokenCount {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #71717a;
+  background-color: #f4f4f5;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+    background-color: #27272a;
+  }
+}
+
+.addTokenButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid #e4e4e7;
+  background-color: white;
+  border-radius: 0.5rem;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    border-color: #d4d4d8;
+    color: #18181b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      border-color: #52525b;
+      color: #fafafa;
+    }
+  }
+}
+
+// Share Link (single permanent link)
+.shareLink {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shareLinkLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #71717a;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.shareLinkInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.shareLinkInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.625rem 3rem 0.625rem 0.875rem;
+  background-color: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: #52525b;
+  transition: all 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background-color: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+
+    &:focus {
+      border-color: #3b82f6;
+      background-color: #0c0c0c;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+  }
+}
+
+.shareLinkCopyButton {
+  position: absolute;
+  right: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: calc(100% - 0.5rem);
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  border-radius: 0.5rem;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    color: #18181b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    color: #a1a1aa;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      color: #fafafa;
+    }
+  }
+}
+
+// Empty state
+.emptyTokens {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  border: 1px dashed #d4d4d8;
+  border-radius: 0.625rem;
+  background-color: #fafafa;
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+  }
+}
+
+.emptyTokensText {
+  font-size: 0.8125rem;
+  color: #71717a;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+// Token List
+.tokenList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tokenItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.625rem;
+  background-color: #fafafa;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #d4d4d8;
+    background-color: #f4f4f5;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+
+    &:hover {
+      border-color: #52525b;
+      background-color: #27272a;
+    }
+  }
+}
+
+.tokenItemContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.tokenItemLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #18181b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.tokenItemDetails {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tokenStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.tokenStatusPending {
+  background-color: #dbeafe;
+  color: #1e40af;
+
+  :global(.dark) & {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+  }
+}
+
+.tokenStatusRedeemed {
+  background-color: #dcfce7;
+  color: #166534;
+
+  :global(.dark) & {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #86efac;
+  }
+}
+
+.revokeTokenButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #e4e4e7;
+  background-color: white;
+  border-radius: 0.5rem;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+
+    &:hover:not(:disabled) {
+      background-color: rgba(220, 38, 38, 0.1);
+      border-color: rgba(220, 38, 38, 0.3);
+      color: #fca5a5;
+    }
+  }
+}
+
+// Legacy token card styles (keep for backwards compatibility but deprecated)
+.tokenCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.75rem;
+  background-color: #fafafa;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #d4d4d8;
+    background-color: #f4f4f5;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+
+    &:hover {
+      border-color: #52525b;
+      background-color: #27272a;
+    }
+  }
+}
+
+.tokenInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.tokenStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tokenBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.tokenBadgePending {
+  background-color: #dbeafe;
+  color: #1e40af;
+
+  :global(.dark) & {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+  }
+}
+
+.tokenBadgeRedeemed {
+  background-color: #dcfce7;
+  color: #166534;
+
+  :global(.dark) & {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #86efac;
+  }
+}
+
+.tokenGuest {
+  font-size: 0.8125rem;
+  color: #71717a;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.tokenUrl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tokenInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  background-color: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: #3f3f46;
+  transition: all 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  :global(.dark) & {
+    background-color: #0c0c0c;
+    border-color: #27272a;
+    color: #d4d4d8;
+
+    &:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+  }
+}
+
+.tokenActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.tokenButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #e4e4e7;
+  background-color: white;
+  border-radius: 0.5rem;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    border-color: #d4d4d8;
+    color: #18181b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      border-color: #52525b;
+      color: #fafafa;
+    }
+  }
+}
+
+.tokenButtonDanger {
+  &:hover:not(:disabled) {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+  }
+
+  :global(.dark) & {
+    &:hover:not(:disabled) {
+      background-color: rgba(220, 38, 38, 0.1);
+      border-color: rgba(220, 38, 38, 0.3);
+      color: #fca5a5;
+    }
+  }
+}
+
+.iconSuccess {
+  color: #22c55e;
+
+  :global(.dark) & {
+    color: #4ade80;
+  }
+}
+
+.iconSuccess {
+  color: #22c55e;
+
+  :global(.dark) & {
+    color: #4ade80;
+  }
+}
+
+// Generate Button
+.generateButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.generateButtonPrimary {
+  background-color: #3b82f6;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background-color: #2563eb;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  :global(.dark) & {
+    background-color: #3b82f6;
+
+    &:hover:not(:disabled) {
+      background-color: #2563eb;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+  }
+}
+
+.generateButtonSecondary {
+  background-color: transparent;
+  color: #18181b;
+  border: 1px dashed #d4d4d8;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    border-color: #a1a1aa;
+  }
+
+  :global(.dark) & {
+    color: #fafafa;
+    border-color: #52525b;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      border-color: #71717a;
+    }
+  }
+}
+
+// Info Message
+.infoMessage {
+  padding: 1rem;
+  background-color: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+    color: #1e40af;
+  }
+
+  :global(.dark) & {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.2);
+
+    p {
+      color: #93c5fd;
+    }
+  }
+}
+
+// Legacy styles (deprecated but kept for backwards compatibility)
+.shareInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shareInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.shareInput {
+  flex: 1;
+  width: 100%;
+  height: 2.5rem;
+  padding: 0.5rem 3rem 0.5rem 0.75rem;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  background-color: #fafafa;
+  font-size: 0.875rem;
+  color: #18181b;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #fafafa;
+
+    &:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+  }
+}
+
+.copyButton {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+
+  &:hover:not(:disabled) {
+    color: #18181b;
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+    z-index: 10;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  :global(.dark) & {
+    color: #a1a1aa;
+
+    &:hover:not(:disabled) {
+      color: #fafafa;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.iconAbsolute {
+  position: absolute;
+}
+
+.iconVisible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.iconHidden {
+  opacity: 0;
+  transform: scale(0);
+}
+
+.checkIcon {
+  color: #22c55e;
+
+  :global(.dark) & {
+    color: #4ade80;
+  }
+}
+
+.shareActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.shareButton {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.shareButtonIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.shareButtonPrimary {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+
+  &:hover:not(:disabled) {
+    background-color: #2563eb;
+    border-color: #2563eb;
+  }
+
+  &:active:not(:disabled) {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+  }
+
+  :global(.dark) & {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+
+    &:hover:not(:disabled) {
+      background-color: #2563eb;
+      border-color: #2563eb;
+    }
+  }
+}
+
+.shareButtonSecondary {
+  background-color: transparent;
+  color: #18181b;
+  border-color: #e4e4e7;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    border-color: #d4d4d8;
+  }
+
+  &:active:not(:disabled) {
+    background-color: #e4e4e7;
+  }
+
+  :global(.dark) & {
+    color: #fafafa;
+    border-color: #3f3f46;
+    background-color: transparent;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      border-color: #52525b;
+    }
+
+    &:active:not(:disabled) {
+      background-color: #3f3f46;
+    }
+  }
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.dialogDescription {
+  font-size: 0.875rem;
+  color: #71717a;
+  margin-top: 0.5rem;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+
+  :global(.dark) & {
+    background-color: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.3);
+    color: #fca5a5;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+// Share Dialog - Token Display
+.tokenItemToken {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #52525b;
+  background-color: #f4f4f5;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 0.25rem;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+    background-color: #27272a;
+  }
+}
+
+.tokenItemActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.copyTokenButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #e4e4e7;
+  background-color: white;
+  border-radius: 0.375rem;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    border-color: #d4d4d8;
+    color: #18181b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      border-color: #52525b;
+      color: #fafafa;
+    }
+  }
+}
+
+.iconSuccess {
+  color: #22c55e;
+
+  :global(.dark) & {
+    color: #86efac;
+  }
+}
+
+// Create Token Form
+.createTokenForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1rem;
+  background-color: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.625rem;
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+  }
+}
+
+.createTokenLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #18181b;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.createTokenInput {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background-color: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #18181b;
+  transition: all 0.15s ease;
+
+  &::placeholder {
+    color: #a1a1aa;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #27272a;
+    border-color: #3f3f46;
+    color: #fafafa;
+
+    &:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+  }
+}
+
+// Helper Texts
+.helperText {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #71717a;
+  margin: 0;
+
+  span {
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.helperTextError {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #dc2626;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #fca5a5;
+  }
+}
+

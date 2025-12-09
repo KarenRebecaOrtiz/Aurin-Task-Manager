@@ -1,124 +1,104 @@
 /**
- * InputChat Module - File Preview Molecule
- *
- * Preview for attached files/images before sending
+ * File Preview - Shared Component
+ * 
+ * Componente para preview de archivos e imágenes
+ * Reutiliza estilos del n8n-chatbot (mejorados)
+ * 
  * @module chat/components/molecules/FilePreview
  */
 
-'use client';
+'use client'
 
-import React from 'react';
-import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
+import styles from '@/modules/n8n-chatbot/styles/components/input-area.module.scss'
 
 export interface FilePreviewProps {
-  file: File | null;
-  previewUrl: string | null;
-  onRemove: () => void;
-  uploadProgress?: number;
-  isUploading?: boolean;
+  file: File | null
+  onRemove: () => void
+  isRecording?: boolean
 }
 
 /**
- * FilePreview - Shows preview of attached file
+ * FilePreview - Shows preview of attached file with n8n-chatbot styling
  *
  * Features:
- * - Image preview with thumbnail
+ * - Beautiful image preview with thumbnail (64x64)
  * - File info for non-images
- * - Upload progress bar
- * - Remove button
+ * - Remove button with hover effect
  * - Animated entry/exit
+ * - Auto-cleanup of preview URLs
  */
 export const FilePreview: React.FC<FilePreviewProps> = ({
   file,
-  previewUrl,
   onRemove,
-  uploadProgress = 0,
-  isUploading = false,
+  isRecording = false,
 }) => {
-  if (!file && !previewUrl) return null;
+  const [filePreview, setFilePreview] = useState<string | null>(null)
 
-  const isImage = file?.type.startsWith('image/') || previewUrl;
+  // File preview for images
+  useEffect(() => {
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => setFilePreview(e.target?.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setFilePreview(null)
+    }
+
+    // Cleanup
+    return () => {
+      if (filePreview && filePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(filePreview)
+      }
+    }
+  }, [file])
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ height: 0, opacity: 0, scale: 0.9 }}
-        animate={{ height: 'auto', opacity: 1, scale: 1 }}
-        exit={{ height: 0, opacity: 0, scale: 0.9 }}
-        transition={{ duration: 0.2 }}
-        className="relative m-3 p-3 flex items-center gap-3 bg-gray-100 rounded-lg border border-gray-200"
-      >
-        {/* Preview thumbnail or icon */}
-        {isImage && previewUrl ? (
-          <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md">
-            <Image
-              src={previewUrl}
-              alt="Preview"
-              fill
-              className="object-cover"
-              draggable={false}
-            />
-          </div>
-        ) : (
-          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-md bg-gray-200">
-            <Image
-              src="/file.svg"
-              alt="File"
-              width={24}
-              height={24}
-              draggable={false}
-            />
-          </div>
-        )}
-
-        {/* File info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">
-            {file?.name || 'Archivo adjunto'}
-          </p>
-          {file && (
-            <p className="text-xs text-gray-500">
-              {(file.size / 1024).toFixed(1)} KB
-            </p>
-          )}
-
-          {/* Upload progress */}
-          {isUploading && (
-            <div className="mt-2">
-              <motion.div
-                className="h-1 bg-blue-600 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${uploadProgress}%` }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-              />
-              <p className="text-xs text-gray-600 mt-1">
-                {uploadProgress < 100 ? `Subiendo... ${uploadProgress}%` : 'Procesando...'}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Remove button */}
-        <button
-          type="button"
-          onClick={onRemove}
-          className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
-          title="Eliminar archivo"
-          aria-label="Eliminar archivo"
+      {file && !isRecording && (
+        <motion.div
+          className={styles.filePreview}
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
         >
-          <Image
-            src="/x.svg"
-            alt="Eliminar"
-            width={14}
-            height={14}
-            draggable={false}
-            style={{ filter: 'invert(100%)' }}
-          />
-        </button>
-      </motion.div>
+          <div className={styles.fileItem}>
+            {file.type.startsWith('image/') && filePreview ? (
+              <div className={styles.imagePreview}>
+                <img src={filePreview} alt={file.name} />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemove()
+                  }}
+                  className={styles.removeImageBtn}
+                  type="button"
+                  aria-label="Eliminar imagen"
+                >
+                  <X className="h-3 w-3 text-white" />
+                </button>
+              </div>
+            ) : (
+              <div className={styles.fileInfo}>
+                <span className={styles.fileName}>{file.name}</span>
+                <button
+                  onClick={onRemove}
+                  className={styles.removeFileBtn}
+                  type="button"
+                  aria-label="Eliminar archivo"
+                >
+                  <X className="h-3 w-3 text-neutral-400" />
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
     </AnimatePresence>
-  );
-};
+  )
+}
 
-FilePreview.displayName = 'FilePreview';
+FilePreview.displayName = 'FilePreview'

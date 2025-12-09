@@ -33,6 +33,9 @@ export interface Message {
   timestamp: Timestamp | Date | null;
   read: boolean;
 
+  // Read tracking (multi-user)
+  readBy?: string[]; // Array de userIds que han leído el mensaje
+
   // Time tracking
   hours?: number;
   dateString?: string; // Fecha del time entry

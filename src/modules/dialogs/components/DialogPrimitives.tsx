@@ -99,6 +99,7 @@ export interface DialogContentProps {
 export interface DialogHeaderProps {
   children: ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export interface DialogBodyProps {
@@ -358,9 +359,9 @@ DialogContent.displayName = 'DialogContent';
  * DialogHeader - Cabecera del dialog
  */
 export const DialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(
-  ({ children, className = '' }, ref) => {
+  ({ children, className = '', style }, ref) => {
     return (
-      <div ref={ref} className={`${styles.dialogHeader} ${className}`}>
+      <div ref={ref} className={`${styles.dialogHeader} ${className}`} style={style}>
         {children}
       </div>
     );
@@ -601,19 +602,19 @@ ResponsiveDialogContent.displayName = 'ResponsiveDialogContent';
  * ResponsiveDialogHeader - Header that adapts to Dialog or Drawer
  */
 export const ResponsiveDialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(
-  ({ children, className = '' }, ref) => {
+  ({ children, className = '', style }, ref) => {
     const { isMobile } = useResponsiveDialogContext();
 
     if (isMobile) {
       return (
-        <DrawerHeader className={className}>
+        <DrawerHeader className={className} style={style}>
           {children}
         </DrawerHeader>
       );
     }
 
     return (
-      <DialogHeader ref={ref} className={className}>
+      <DialogHeader ref={ref} className={className} style={style}>
         {children}
       </DialogHeader>
     );

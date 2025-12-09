@@ -97,6 +97,19 @@ service cloud.firestore {
         allow write: if request.auth != null && 
                     (isAdmin() || request.auth.uid == userId);
       }
+
+      // Share tokens en tareas
+      match /shareTokens/{tokenId} {
+        // ✅ PERMITIR LECTURA Y CREACIÓN: Solo usuarios involucrados en la tarea
+        allow read, create: if request.auth != null && (isAdmin() || isInvolvedInTask(taskId));
+
+        // ✅ PERMITIR ACTUALIZACIÓN (REDIMIR): Cualquiera puede redimir un token,
+        // pero solo se pueden modificar campos específicos. La validación del token se hace en el backend.
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'guestName', 'avatar', 'redeemedAt']);
+
+        // ✅ PERMITIR ELIMINACIÓN: Solo usuarios involucrados en la tarea
+        allow delete: if request.auth != null && (isAdmin() || isInvolvedInTask(taskId));
+      }
     }
 
     // Clients collection

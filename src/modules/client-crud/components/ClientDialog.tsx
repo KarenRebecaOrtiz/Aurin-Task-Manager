@@ -6,13 +6,10 @@
 
 'use client';
 
-import { Dialog, DialogContent, DialogTitle } from '@/modules/dialogs';
-import { VisuallyHidden } from '@/components/ui';
 import { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
-import { DialogHeader } from '@/modules/dialogs/components/molecules';
+import { CrudDialog } from '@/modules/dialogs/components/organisms';
 import { clientService } from '../services/clientService';
 import { useClientForm } from '../hooks/form/useClientForm';
 import { useImageUpload } from '../hooks/ui/useImageUpload';
@@ -20,13 +17,6 @@ import { ClientForm } from './forms/ClientForm';
 import { ClientDialogActions } from './forms/ClientDialogActions';
 import { ClientDialogProps } from '../types/form';
 import { UI_CONSTANTS, TOAST_MESSAGES } from '../config';
-import styles from '@/modules/dialogs/styles/Dialog.module.scss';
-
-const modalVariants = {
-  hidden: { opacity: 0, scale: 0.95, y: 20 },
-  visible: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.95, y: 20 },
-};
 
 export function ClientDialog({
   isOpen,
@@ -74,44 +64,46 @@ export function ClientDialog({
   });
 
   // Load client data when in view/edit mode
-  useEffect(() => {
+  const loadClientData = useCallback(async () => {
     // Wait for user to be loaded before making authenticated requests
-    if (!isOpen || !clientId || mode === 'create' || !user) return;
+    if (!clientId || mode === 'create' || !user || isLoadingClient) return;
 
-    const loadClientData = async () => {
-      try {
-        setIsLoadingClient(true);
-        const response = await clientService.getClient(clientId);
+    try {
+      setIsLoadingClient(true);
+      const response = await clientService.getClient(clientId);
 
-        if (!response.success || !response.data) {
-          showError('Cliente no encontrado', 'No se pudo cargar la información del cliente.');
-          setIsLoadingClient(false);
-          return;
-        }
-
-        const client = response.data;
-
-        // Update form with client data
-        Object.entries(client).forEach(([key, value]) => {
-          if (key in formData) {
-            updateField(key as keyof typeof formData, value);
-          }
-        });
-
-        if (client.imageUrl) {
-          setPreview(client.imageUrl);
-        }
-
+      if (!response.success || !response.data) {
+        showError('No se pudo cargar la información del cliente.');
         setIsLoadingClient(false);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        showError('Error al cargar el cliente', errorMessage);
-        setIsLoadingClient(false);
+        return;
       }
-    };
 
-    loadClientData();
-  }, [isOpen, clientId, mode, user, showError, updateField, setPreview, formData]);
+      const client = response.data;
+
+      // Update form with client data
+      Object.entries(client).forEach(([key, value]) => {
+        if (key in formData) {
+          updateField(key as keyof typeof formData, value);
+        }
+      });
+
+      if (client.imageUrl) {
+        setPreview(client.imageUrl);
+      }
+
+      setIsLoadingClient(false);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      showError(errorMessage);
+      setIsLoadingClient(false);
+    }
+  }, [clientId, mode, user, isLoadingClient, showError, updateField, setPreview, formData]);
+
+  useEffect(() => {
+    if (isOpen && clientId && mode !== 'create') {
+      loadClientData();
+    }
+  }, [isOpen, clientId, mode, loadClientData]);
 
   // Reset on close
   useEffect(() => {
@@ -134,8 +126,10 @@ export function ClientDialog({
 
   // Submit handler
   const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
+    
     if (!user) {
-      showError(TOAST_MESSAGES.SESSION_EXPIRED.title, TOAST_MESSAGES.SESSION_EXPIRED.description);
+      showError(TOAST_MESSAGES.SESSION_EXPIRED.description);
       return;
     }
 
@@ -191,14 +185,11 @@ export function ClientDialog({
       window.location.reload();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showError(
-        mode === 'create' ? 'No se pudo crear el cliente' : 'No se pudo actualizar el cliente',
-        errorMessage
-      );
+      showError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, formData, imageFile, mode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm, resetImage]);
+  }, [isSubmitting, user, formData, imageFile, mode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm, resetImage]);
 
   const handleCancel = useCallback(() => {
     resetForm();
@@ -230,78 +221,48 @@ export function ClientDialog({
 
   const isReadOnly = mode === 'view';
 
-  // Loading state
-  if (isLoadingClient) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className={`${styles.dialogContent} ${styles.sizeXl} flex flex-col h-[90vh] p-0 gap-0 overflow-hidden`}>
-          <VisuallyHidden>
-            <DialogTitle>Cargando cliente</DialogTitle>
-          </VisuallyHidden>
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="text-sm text-gray-500">Cargando información del cliente...</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className={`${styles.dialogContent} ${styles.sizeXl} flex flex-col h-[90vh] p-0 gap-0 overflow-hidden`}
-        closeOnOverlayClick={false}
-        closeOnEscape={true}
-      >
-        <VisuallyHidden>
-          <DialogTitle>{getTitle()}</DialogTitle>
-        </VisuallyHidden>
-
-        <AnimatePresence mode="wait">
-          {isOpen && (
-            <motion.div
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full flex flex-col flex-1"
-            >
-              <div className="flex-1 px-6 pb-6 overflow-y-auto flex flex-col">
-                <DialogHeader title={getTitle()} description={getDescription()} />
-
-                <ClientForm
-                  formData={formData}
-                  errors={errors}
-                  imagePreview={imagePreview}
-                  isReadOnly={isReadOnly}
-                  isSubmitting={isSubmitting}
-                  isAdmin={isAdmin}
-                  clientId={clientId}
-                  onFieldChange={updateField}
-                  onImageClick={handleImageClick}
-                  onImageChange={handleImageChange}
-                  onProjectChange={updateProject}
-                  onAddProject={addProject}
-                  onRemoveProject={removeProject}
-                />
-                
-                <ClientDialogActions
-                  mode={mode}
-                  isSubmitting={isSubmitting}
-                  onCancel={handleCancel}
-                  onSubmit={handleSubmit}
-                  onEdit={handleEdit}
-                  onCancelEdit={handleCancelEdit}
-                  onClose={handleDialogClose}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </DialogContent>
-    </Dialog>
+    <CrudDialog
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      title={getTitle()}
+      description={getDescription()}
+      mode={mode === 'create' ? 'create' : 'view'}
+      size="xl"
+      isLoading={isLoadingClient}
+      loadingMessage="Cargando información del cliente..."
+      closeOnOverlayClick={false}
+      closeOnEscape={true}
+      showCloseButton={true}
+      footer={null}
+    >
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        <ClientForm
+          formData={formData}
+          errors={errors}
+          imagePreview={imagePreview}
+          isReadOnly={isReadOnly}
+          isSubmitting={isSubmitting}
+          isAdmin={isAdmin}
+          clientId={clientId}
+          onFieldChange={updateField}
+          onImageClick={handleImageClick}
+          onImageChange={handleImageChange}
+          onProjectChange={updateProject}
+          onAddProject={addProject}
+          onRemoveProject={removeProject}
+        />
+        
+        <ClientDialogActions
+          mode={mode}
+          isSubmitting={isSubmitting}
+          onCancel={handleCancel}
+          onSubmit={handleSubmit}
+          onEdit={handleEdit}
+          onCancelEdit={handleCancelEdit}
+          onClose={handleDialogClose}
+        />
+      </div>
+    </CrudDialog>
   );
 }

@@ -34,6 +34,14 @@ interface Task {
   // Legacy time tracking fields (kept for backward compatibility)
   totalHours?: number;
   memberHours?: { [userId: string]: number };
+  // Sharing & public access fields
+  shared?: boolean;
+  shareToken?: string;
+  shareExpiresAt?: string;
+  shareLastAccess?: string;
+  shareAccessCount?: number;
+  shareMaxAccess?: number;
+  commentsEnabled?: boolean;
 }
 
 interface Client {

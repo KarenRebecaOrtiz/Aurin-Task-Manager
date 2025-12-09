@@ -19,6 +19,10 @@ export type { DragOverlayProps } from './DragOverlay';
 export { InputActions } from './InputActions';
 export type { InputActionsProps } from './InputActions';
 
+// Advanced features (reutilizando n8n-chatbot)
+export { AudioRecordingUI } from './AudioRecordingUI';
+export { InputToggleButtons } from './InputToggleButtons';
+
 // Keep existing molecules
 export { ReplyPreview } from './ReplyPreview';
 export { ActionDropdown } from './ActionDropdown';

@@ -51,6 +51,7 @@ export { TaskDialog } from './components/variants/TaskDialog';
 export { ClientDialog } from './components/variants/ClientDialog';
 export { AddNoteDialog } from './components/variants/AddNoteDialog';
 export { ManualTimeDialog } from './components/variants/ManualTimeDialog';
+export { ShareDialog } from './components/variants/ShareDialog';
 
 // Components - Atoms
 export {

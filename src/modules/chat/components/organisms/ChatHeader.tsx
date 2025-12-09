@@ -4,11 +4,11 @@ import React, { useState, useMemo, useCallback } from "react";
 import { ChevronDown, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserAvatar } from "@/modules/shared/components/atoms/Avatar/UserAvatar";
-import { ClientAvatar } from "@/modules/shared/components/atoms/Avatar/ClientAvatar";
 import { TODO_ANIMATIONS } from "@/modules/header/components/ui/ToDoDynamic/constants/animation.constants";
 import { StatusDropdown } from "../molecules/StatusDropdown";
 import { TimeBreakdown } from "../molecules/TimeBreakdown";
 import { TimerDropdown } from "../../timer/components/molecules/TimerDropdown";
+import { ShareButton } from "../atoms/ShareButton";
 import styles from "../../styles/ChatHeader.module.scss";
 import type { Task, Message } from "../../types";
 
@@ -21,6 +21,7 @@ interface ChatHeaderProps {
   userId: string;
   userName: string;
   onOpenManualTimeEntry?: () => void;
+  isPublicView?: boolean; // Nueva prop para ocultar elementos privados
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -30,6 +31,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   userId,
   userName,
   onOpenManualTimeEntry,
+  isPublicView = false, // Por defecto es vista privada
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
@@ -49,8 +51,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   // Obtener usuarios del equipo
   const teamMembers = useMemo(() => {
     const memberIds = [
-      ...task.LeadedBy,
-      ...task.AssignedTo,
+      ...(task.LeadedBy || []),
+      ...(task.AssignedTo || []),
     ];
     return users.filter(user => memberIds.includes(user.id));
   }, [task.LeadedBy, task.AssignedTo, users]);
@@ -93,42 +95,56 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </div>
         </div>
         
-        {/* Timer Dropdown - Right side (hidden on mobile, shown in InputChat instead) */}
-        <div className={styles.timerWrapper}>
-          <TimerDropdown
-            taskId={task.id}
-            userId={userId}
-            userName={userName}
-            onOpenManualEntry={onOpenManualTimeEntry}
-          />
-        </div>
+        {/* Action Buttons - Share & Timer (hidden on mobile, timer shown in InputChat instead) */}
+        {!isPublicView && (
+          <div className={styles.timerWrapper}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShareButton
+                taskId={task.id}
+                taskName={task.name}
+                className={styles.shareButton}
+              />
+              <TimerDropdown
+                taskId={task.id}
+                userId={userId}
+                userName={userName}
+                onOpenManualEntry={onOpenManualTimeEntry}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Task Info */}
       <div className={styles.taskInfo}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 className={styles.taskTitle}>{task.name}</h1>
-          <p className={styles.taskDescription}>{task.description}</p>
+          <p className={`${styles.taskDescription} ${isDetailsOpen ? styles.expanded : styles.collapsed}`}>
+            {task.description}
+          </p>
         </div>
       </div>
 
-      {/* Show Details Toggle */}
-      <div className={styles.detailsToggle}>
-        <button
-          onClick={toggleDetails}
-          className={styles.toggleButton}
-        >
-          <span>Mostrar Detalles</span>
-          <ChevronDown
-            size={16}
-            className={`${styles.chevron} ${isDetailsOpen ? styles.open : ""}`}
-          />
-        </button>
-      </div>
+      {/* Show Details Toggle - Solo en vista privada */}
+      {!isPublicView && (
+        <div className={styles.detailsToggle}>
+          <button
+            onClick={toggleDetails}
+            className={styles.toggleButton}
+          >
+            <span>Mostrar Detalles</span>
+            <ChevronDown
+              size={16}
+              className={`${styles.chevron} ${isDetailsOpen ? styles.open : ""}`}
+            />
+          </button>
+        </div>
+      )}
 
-      {/* Collapsible Details */}
-      <AnimatePresence>
-        {isDetailsOpen && (
+      {/* Collapsible Details - Solo en vista privada */}
+      {!isPublicView && (
+        <AnimatePresence>
+          {isDetailsOpen && (
           <motion.div 
             className={styles.details}
             initial={TODO_ANIMATIONS.content.initial}
@@ -230,7 +246,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>
+      )}
     </div>
   );
 };

@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-interface UseAudioRecorderOptions {
+export interface UseAudioRecorderOptions {
   onTranscription: (text: string) => void
   onError?: (error: string) => void
 }
 
-interface UseAudioRecorderReturn {
+export interface UseAudioRecorderReturn {
   isRecording: boolean
   isProcessing: boolean
   startRecording: () => void

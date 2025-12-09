@@ -16,6 +16,16 @@ const isProtectedRoute = createRouteMatcher([
 const isPublicApi = createRouteMatcher([
   '/api/sendFeedback', // Public feedback endpoint
   '/api/request-delete', // Public deletion request endpoint
+  '/api/public/(.*)', // Public task sharing API
+]);
+
+/**
+ * Public routes that don't require authentication
+ * Used for public task sharing functionality
+ */
+const isPublicRoute = createRouteMatcher([
+  '/p/(.*)', // Public shared tasks (legacy token-based)
+  '/guest/(.*)', // Public guest task access with token auth
 ]);
 
 /**
@@ -27,6 +37,11 @@ const isPublicApi = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   // Allow Next.js not-found page
   if (req.nextUrl.pathname === '/_not-found') {
+    return NextResponse.next();
+  }
+
+  // Allow public routes to bypass authentication
+  if (isPublicRoute(req)) {
     return NextResponse.next();
   }
 

@@ -16,6 +16,7 @@ import { useMessageActions } from "@/hooks/useMessageActions";
 import { ManualTimeDialog } from "@/modules/dialogs";
 import { toast } from "@/components/ui/use-toast";
 import type { ChatSidebarProps } from "../types";
+import type { Message } from "../types";
 
 /**
  * ChatSidebarVirtualized - Versión optimizada con react-virtuoso
@@ -47,19 +48,9 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
     return tasks.find(t => t.id === taskId) || chatSidebar.task;
   }, [taskId, tasks, chatSidebar.task]);
 
-  // Obtener información del cliente desde dataStore
-  const clients = useDataStore(useShallow(state => state.clients));
-  const clientImageUrl = useMemo(() => {
-    if (!task?.clientId) return undefined;
-    const client = clients.find(c => c.id === task.clientId);
-    return client?.imageUrl || '/empty-image.png';
-  }, [task?.clientId, clients]);
-
   // Estados locales
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
-  const [replyingTo, setReplyingTo] = useState<any | null>(null);
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState<string>('');
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isManualTimeModalOpen, setIsManualTimeModalOpen] = useState(false);
 
   // Manual time entry handlers
@@ -97,7 +88,6 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
   // Los mensajes nuevos aparecerán cuando Firebase los devuelva via real-time listener
   const {
     sendMessage,
-    editMessage,
     deleteMessage,
     resendMessage,
   } = useMessageActions({
@@ -115,25 +105,15 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
 
   const handleClose = useCallback(() => {
     setReplyingTo(null);
-    setEditingMessageId(null);
     onClose();
   }, [onClose]);
 
   const handleSendMessage = useCallback(
-    async (messageData: any) => {
+    async (messageData: Partial<Message>) => {
       await sendMessage(messageData);
       // El real-time listener agregará el mensaje automáticamente
     },
     [sendMessage]
-  );
-
-  const handleEditMessage = useCallback(
-    async (messageId: string, newData: any) => {
-      await editMessage(messageId, newData);
-      setEditingMessageId(null);
-      setEditingText('');
-    },
-    [editMessage]
   );
 
   const handleDeleteMessage = useCallback(
@@ -144,6 +124,17 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
     },
     [deleteMessage]
   );
+
+  const handleCopyMessage = useCallback(async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    toast({ title: "Copiado al portapapeles" });
+  }, []);
+
+  const handleDownloadFile = useCallback((message: Message) => {
+    if (message.fileUrl) {
+      window.open(message.fileUrl, '_blank');
+    }
+  }, []);
 
   // ============================================================================
   // RENDER
@@ -201,34 +192,25 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
             hasMore={hasMore}
             onLoadMore={loadMoreMessages}
             onInitialLoad={initialLoad}
-            renderMessage={(message) => {
+            renderMessage={(message, prevMessage, nextMessage) => {
               const isOwn = message.senderId === user?.id;
 
               return (
                 <MessageItem
                   key={message.id}
                   message={message}
+                  prevMessage={prevMessage}
+                  nextMessage={nextMessage}
                   users={users}
                   isOwn={isOwn}
                   userId={user?.id || ''}
                   taskId={task?.id || ''}
-                  onImagePreview={(url) => setImagePreviewSrc(url)}
-                  onRetryMessage={(msg) => resendMessage(msg)}
-                  onCopy={async (text) => {
-                    await navigator.clipboard.writeText(text);
-                  }}
-                  onEdit={(msg) => {
-                    setEditingMessageId(msg.id);
-                    setEditingText(msg.text || '');
-                  }}
-                  onDelete={(msgId) => handleDeleteMessage(msgId)}
-                  onReply={(msg) => setReplyingTo(msg)}
-                  onDownload={(msg) => {
-                    // Handle download action
-                    if (msg.fileUrl) {
-                      window.open(msg.fileUrl, '_blank');
-                    }
-                  }}
+                  onImagePreview={setImagePreviewSrc}
+                  onRetryMessage={resendMessage}
+                  onCopy={handleCopyMessage}
+                  onDelete={handleDeleteMessage}
+                  onReply={setReplyingTo}
+                  onDownload={handleDownloadFile}
                 />
               );
             }}
@@ -243,15 +225,9 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
             userName={user?.fullName || 'Usuario'}
             userFirstName={user?.firstName || user?.fullName}
             onSendMessage={handleSendMessage}
-            onEditMessage={handleEditMessage}
-            replyingTo={replyingTo}
+            replyingTo={replyingTo as any}
             onCancelReply={() => setReplyingTo(null)}
-            editingMessageId={editingMessageId}
-            editingText={editingText}
-            onCancelEdit={() => {
-              setEditingMessageId(null);
-              setEditingText('');
-            }}
+            disabled={false}
           />
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useAuth as useClerkAuth, useUser } from '@clerk/nextjs';
 import { signInWithCustomToken } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
+import { usePageContext } from './PageContext';
 
 // Define the context shape
 interface AuthContextType {
@@ -24,6 +25,8 @@ interface AuthProviderProps {
 
 // AuthProvider component
 export function AuthProvider({ children }: AuthProviderProps) {
+  // ✅ Verificar si podemos usar auth
+  const pageContext = usePageContext();
   const { getToken, userId } = useClerkAuth();
   const { user } = useUser();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -32,8 +35,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [syncRetryCount, setSyncRetryCount] = useState<number>(0);
   const maxRetries = 3;
 
+  // ✅ Si estamos en página pública, no hacer nada
+  useEffect(() => {
+    if (!pageContext.canUseAuth) {
+      setIsAdmin(false);
+      setIsLoading(false);
+      setIsSynced(true);
+      return;
+    }
+  }, [pageContext.canUseAuth]);
+
   useEffect(() => {
     const checkAdminStatus = () => {
+      // ✅ Skip en páginas públicas
+      if (!pageContext.canUseAuth) return;
+      
       if (!user?.id) {
         setIsAdmin(false);
         setIsLoading(false);
@@ -61,10 +77,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     checkAdminStatus();
-  }, [user?.id, user?.publicMetadata?.access, user]);
+  }, [user?.id, user?.publicMetadata?.access, user, pageContext.canUseAuth]);
 
   // Sync Clerk user with Firebase
   useEffect(() => {
+    // ✅ Skip en páginas públicas
+    if (!pageContext.canUseAuth) return;
+    
     if (!userId || !user || isSynced || syncRetryCount > maxRetries) {
       return;
     }
@@ -113,8 +132,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setIsSynced(true);
         setSyncRetryCount(0);
-      } catch (error) {
-        console.error('Firebase sync error:', error);
+      } catch {
+        // Firebase sync error - silent in production
         if (syncRetryCount < maxRetries) {
           setSyncRetryCount((prev) => prev + 1);
         }
@@ -122,7 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     syncUserToFirebase();
-  }, [userId, user, isSynced, getToken, syncRetryCount, maxRetries]);
+  }, [userId, user, isSynced, getToken, syncRetryCount, maxRetries, pageContext.canUseAuth]);
 
   // Cleanup listeners cuando el usuario se desloguea
   useEffect(() => {

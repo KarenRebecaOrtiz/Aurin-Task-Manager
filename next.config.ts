@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['img.clerk.com', 'randomuser.me', 'cdn.prod.website-files.com'], // opcional, útil para compatibilidad con versiones anteriores
+    domains: ['img.clerk.com', 'randomuser.me', 'cdn.prod.website-files.com', 'ui-avatars.com'], // opcional, útil para compatibilidad con versiones anteriores
     remotePatterns: [
       {
         protocol: 'https',
@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'pub-d17bbbdbf8e348c5a57c8168ad69c92f.r2.dev',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
         pathname: '**',
       },
     ],

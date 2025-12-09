@@ -10,6 +10,7 @@ import { ResponsiveChatSidebar } from '@/modules/chat';
 import { ProfileCard } from '@/modules/profile-card';
 import PlatformCompatibility from '@/shared/components/system/PlatformCompatibility';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { PageProvider } from '@/contexts/PageContext';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -175,9 +176,11 @@ const ProfileCardRenderer = () => {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </AuthProvider>
+    <PageProvider isPublic={false}>
+      <AuthProvider>
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </AuthProvider>
+    </PageProvider>
   );
 }
 

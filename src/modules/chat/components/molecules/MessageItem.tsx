@@ -18,6 +18,7 @@ interface MessageItemProps {
   prevMessage?: Message | null; // Para grouping
   nextMessage?: Message | null; // Para grouping
   users: ChatUser[];
+  usersMap?: Map<string, ChatUser>; // ✅ Opcional: Map para búsqueda O(1)
   isOwn: boolean;
   userId: string;
   taskId: string; // Necesario para reactions
@@ -50,6 +51,7 @@ export const MessageItem = memo(
         prevMessage,
         nextMessage,
         users,
+        usersMap,
         isOwn,
         userId,
         taskId,
@@ -77,6 +79,18 @@ export const MessageItem = memo(
       const showAvatar = position === "single" || position === "last";
       const showName = position === "single" || position === "first";
       const showTimestamp = position === "single" || position === "last";
+
+      // ✅ Optimizar búsqueda de avatar con useMemo
+      const senderAvatar = React.useMemo(() => {
+        // Si hay usersMap (búsqueda O(1)), usarlo
+        if (usersMap) {
+          const user = usersMap.get(message.senderId);
+          return user?.imageUrl || "/default-avatar.png";
+        }
+        // Fallback: búsqueda O(n) en array
+        const user = users.find((u) => u.id === message.senderId);
+        return user?.imageUrl || "/default-avatar.png";
+      }, [usersMap, users, message.senderId]);
 
       const handleActionButtonClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -267,7 +281,7 @@ export const MessageItem = memo(
             {showAvatar ? (
               <div className={styles.avatar}>
                 <Image
-                  src={users.find((u) => u.id === message.senderId)?.imageUrl || "/default-avatar.png"}
+                  src={senderAvatar}
                   alt={message.senderName}
                   width={36}
                   height={36}

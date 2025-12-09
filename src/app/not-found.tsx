@@ -3,9 +3,11 @@
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
+import { House } from 'lucide-react';
 
 import { Header } from '@/modules/header';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { PageProvider } from '@/contexts/PageContext';
 // Removed unused imports for production build
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -13,6 +15,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Footer } from '@/modules/footer';
 import Loader from '@/modules/loader';
 import { FuzzyText } from '@/components/ui/FuzzyText';
+import { Button } from '@/components/ui/buttons';
 
 import styles from './not-found.module.scss';
 
@@ -23,7 +26,6 @@ function NotFoundContent() {
   
   // Refs para optimización
   const headerRef = useRef<HTMLDivElement>(null);
-  const selectorRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
   // Estados del store
@@ -66,6 +68,11 @@ function NotFoundContent() {
       setIsNavigating(false);
     }, 300);
   }, [router]);
+
+  const handleGoHome = useCallback(() => {
+    // Navegación directa sin loader
+    window.location.href = 'https://pm.aurincloud.com/dashboard/tasks';
+  }, []);
   
   const handleNotificationClick = useCallback((notification: { id: string }) => {
     console.log('[NotFound] Notification clicked:', notification.id);
@@ -75,37 +82,12 @@ function NotFoundContent() {
   // Renderizar el contenido principal
   const mainContent = (
     <div className={styles.container}>
-
       <div ref={headerRef}>
         <Header
           selectedContainer={selectedContainer}
           isArchiveTableOpen={isArchiveTableOpen}
           onChangeContainer={handleContainerChange}
         />
-      </div>
-      
-      
-      <div ref={selectorRef} className={styles.selector}>
-        <div className={styles.tabSelector}>
-          <button
-            className={`${styles.tabButton} ${selectedContainer === 'tareas' ? styles.active : ''}`}
-            onClick={() => handleContainerChange('tareas')}
-          >
-            Inicio
-          </button>
-          <button
-            className={`${styles.tabButton} ${selectedContainer === 'cuentas' ? styles.active : ''}`}
-            onClick={() => handleContainerChange('cuentas')}
-          >
-            Cuentas
-          </button>
-          <button
-            className={`${styles.tabButton} ${selectedContainer === 'miembros' ? styles.active : ''}`}
-            onClick={() => handleContainerChange('miembros')}
-          >
-            Miembros
-          </button>
-        </div>
       </div>
       
       <div ref={contentRef} className={styles.content}>
@@ -121,21 +103,23 @@ function NotFoundContent() {
             </div>
             
             <h1 className={styles.errorTitle}>
-              🔍 Estamos buscando… pero no hay nada aquí
+              Parece que esta página se esfumó o nunca existió.
             </h1>
-            
-            <p className={styles.errorMessage}>
-             Parece que esta página se esfumó o nunca existió.
-            </p>
             
             <p className={styles.errorSubtitle}>
               ¿Volvemos al inicio? ¡Prometemos no perdernos otra vez!
             </p>
             
-            <p className={styles.instructions}>
-               <strong>Instrucciones:</strong> Usa el selector de arriba para navegar a cualquier sección. 
-              El botón &ldquo;Inicio&rdquo; te llevará al dashboard principal.
-            </p>
+            <div className={styles.buttonContainer}>
+              <Button
+                intent="primary"
+                size="lg"
+                leftIcon={House}
+                onClick={handleGoHome}
+              >
+                Ir al Inicio
+              </Button>
+            </div>
           </div>
         </div>
       
@@ -166,8 +150,10 @@ function NotFoundContent() {
 
 export default function NotFound() {
   return (
-    <AuthProvider>
-      <NotFoundContent />
-    </AuthProvider>
+    <PageProvider isPublic={false}>
+      <AuthProvider>
+        <NotFoundContent />
+      </AuthProvider>
+    </PageProvider>
   );
 }

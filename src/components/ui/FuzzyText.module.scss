@@ -1,0 +1,29 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ==============================================================
+// FUZZY TEXT COMPONENT - DARK MODE SUPPORT
+// ==============================================================
+
+.fuzzyCanvas {
+  display: block;
+  margin: 0 auto;
+  
+  // Light mode default - usando el color exacto del texto primario
+  color: $color-text-primary;
+  
+  // Dark mode - invierte los colores
+  :global(.dark) & {
+    filter: invert(100%);
+  }
+}
+
+.fuzzyWrapper {
+  display: inline-block;
+  position: relative;
+  
+  // Ensure proper rendering in both modes
+  :global(.dark) & {
+    filter: brightness(1.2) contrast(1.1);
+  }
+}
