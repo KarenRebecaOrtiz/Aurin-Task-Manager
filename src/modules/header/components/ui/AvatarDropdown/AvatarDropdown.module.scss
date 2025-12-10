@@ -57,7 +57,7 @@
   }
 
   :global(body.dark) & {
-    background: rgba(16, 15, 15, 0.7215686275);
+    background: #171717;
     border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     box-shadow: none;
 
@@ -178,7 +178,7 @@
   animation: dropdownAppear 0.2s ease-out;
 
   :global(body.dark) & {
-     background: rgba(16, 15, 15, 0.7215686275);
+     background: #171717;
     border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     box-shadow: none;
   }
@@ -204,7 +204,7 @@
   background: rgba(255, 255, 255, 0.1);
 
   :global(body.dark) & {
-     background: rgba(16, 15, 15, 0.7215686275);
+     background: #171717;
      border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
   }
 }

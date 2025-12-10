@@ -16,7 +16,7 @@
   @include mixins.custom-scrollbar-light;
 
   :global(body.dark) & {
-     background: rgba(16, 15, 15, 0.7215686275);
+     background: #171717;
      border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
   }
 
@@ -71,7 +71,7 @@
     z-index: vars.$z-mobile-header;
     
     :global(body.dark) & {
-    background: rgba(16, 15, 15, 0.7215686275);
+    background: #171717;
      border-color: 1px solid rgba(255, 255, 255, 0.0509803922);
     }
   }
