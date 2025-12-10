@@ -51,12 +51,14 @@ export default function ChatbotWidget({
     isOnline,
     webSearchEnabled,
     audioModeEnabled,
+    documentModeEnabled,
     messagesEndRef,
     validateAndSetFile,
     clearFile,
     sendMessage,
     toggleWebSearch,
     toggleAudioMode,
+    toggleDocumentMode,
     scrollToBottom,
   } = useChat({
     translations: t,
@@ -178,8 +180,10 @@ export default function ChatbotWidget({
               onClearFile={clearFile}
               webSearchEnabled={webSearchEnabled}
               audioModeEnabled={audioModeEnabled}
+              documentModeEnabled={documentModeEnabled}
               onToggleWebSearch={toggleWebSearch}
               onToggleAudioMode={toggleAudioMode}
+              onToggleDocumentMode={toggleDocumentMode}
               translations={t}
               disabled={!isOnline}
               isLoading={isTyping}
@@ -223,8 +227,10 @@ export default function ChatbotWidget({
           onClearFile={clearFile}
           webSearchEnabled={webSearchEnabled}
           audioModeEnabled={audioModeEnabled}
+          documentModeEnabled={documentModeEnabled}
           onToggleWebSearch={toggleWebSearch}
           onToggleAudioMode={toggleAudioMode}
+          onToggleDocumentMode={toggleDocumentMode}
           translations={t}
           disabled={!isOnline}
           isLoading={isTyping}

@@ -8,7 +8,7 @@ interface UserAvatarProps {
   userId: string;
   imageUrl?: string;
   userName?: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showStatus?: boolean;
   isOnline?: boolean;
   className?: string;
@@ -20,6 +20,7 @@ const sizeMap = {
   md: 'h-10 w-10 text-sm',
   lg: 'h-12 w-12 text-base',
   xl: 'h-16 w-16 text-lg',
+  '2xl': 'h-24 w-24 text-2xl', // 40% larger than xl (96px)
 };
 
 const statusSizeMap = {
@@ -28,6 +29,7 @@ const statusSizeMap = {
   md: 'h-2.5 w-2.5',
   lg: 'h-3 w-3',
   xl: 'h-4 w-4',
+  '2xl': 'h-5 w-5',
 };
 
 const Avatar = React.forwardRef<
@@ -95,13 +97,18 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   const fallback = getInitials(userName);
 
+  // Only pass imageUrl to AvatarImage if it's not empty
+  const validImageUrl = imageUrl && imageUrl.trim() !== '' ? imageUrl : undefined;
+
   return (
     <div className={cn('relative inline-block', className)}>
       <Avatar className={cn(sizeMap[size], 'border-2 border-white shadow-sm')}>
-        <AvatarImage
-          src={imageUrl || '/default-avatar.png'}
-          alt={userName}
-        />
+        {validImageUrl && (
+          <AvatarImage
+            src={validImageUrl}
+            alt={userName}
+          />
+        )}
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
 

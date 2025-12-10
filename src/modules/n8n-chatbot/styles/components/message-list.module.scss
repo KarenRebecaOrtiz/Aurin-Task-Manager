@@ -7,6 +7,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  background-color: #171717;
+
+  :global(.light) & {
+    background-color: #f9fafb;
+  }
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -20,9 +25,17 @@
   &::-webkit-scrollbar-thumb {
     background: #404040;
     border-radius: 3px;
+
+    :global(.light) & {
+      background: #d1d5db;
+    }
   }
 
   &::-webkit-scrollbar-thumb:hover {
     background: #525252;
+
+    :global(.light) & {
+      background: #9ca3af;
+    }
   }
 }

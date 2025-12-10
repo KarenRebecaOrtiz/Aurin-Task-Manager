@@ -3,7 +3,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Image from 'next/image';
-import { useFirestoreUser } from '../../../hooks';
+import {
+  useUserDisplayName,
+  useUserProfilePhoto,
+  useUserEmail,
+} from '@/stores/userDataStore';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './AvatarDropdown.module.scss';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,9 +54,18 @@ const PayloadIcon = ({ className }: { className?: string }) => (
 const AvatarDropdown = () => {
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { firestoreUser } = useFirestoreUser();
   const { isAdmin } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const displayName = useUserDisplayName();
+  const profilePhoto = useUserProfilePhoto();
+  const email = useUserEmail();
+
+  // Fallback a Clerk image si no hay foto en Firestore
+  const finalProfilePhoto = profilePhoto === '/default-avatar.svg' && user?.imageUrl
+    ? user.imageUrl
+    : profilePhoto;
+
+  const isDefaultAvatar = finalProfilePhoto === '/default-avatar.svg';
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -160,8 +173,7 @@ const AvatarDropdown = () => {
     }
   }, []);
 
-  const profilePhoto = firestoreUser?.profilePhoto;
-  const displayName = firestoreUser?.fullName || user?.fullName || 'Usuario';
+
 
   return (
     <>
@@ -176,16 +188,18 @@ const AvatarDropdown = () => {
           title="Clic para menú, doble clic para ver perfil"
           {...dropdownAnimations.trigger}
         >
-          {profilePhoto ? (
+          {!isDefaultAvatar ? (
             <Image
-              src={profilePhoto}
+              src={finalProfilePhoto}
               alt="Profile"
               width={40}
               height={40}
               className={styles.avatarImage}
             />
           ) : (
-            <div className={styles.avatarPlaceholder}>U</div>
+            <div className={styles.avatarPlaceholder}>
+              {displayName.charAt(0).toUpperCase()}
+            </div>
           )}
           <div
             className={styles.statusDot}
@@ -206,7 +220,7 @@ const AvatarDropdown = () => {
               {/* 1. Cabecera (Identidad) */}
               <div className={styles.dropdownHeader}>
                 <Small className={styles.userName}>{displayName}</Small>
-                <Muted className={styles.userEmail}>{user?.emailAddresses[0]?.emailAddress}</Muted>
+                <Muted className={styles.userEmail}>{email}</Muted>
               </div>
 
               {/* 2. Zona de Administración (Solo visible para Admins) */}

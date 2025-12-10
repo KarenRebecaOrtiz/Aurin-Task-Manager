@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { useUserDataStore } from '@/stores/userDataStore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
@@ -16,8 +16,10 @@ const statusOptions = [
 ];
 
 const StatusDropdown = () => {
-  const { user } = useUser();
-  const [status, setStatus] = useState('Disponible');
+  // ✅ Leer estado directamente del store (ya sincronizado con Firestore via onSnapshot)
+  const status = useUserDataStore((state) => state.userData?.status || 'Disponible');
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
+
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,37 +35,27 @@ const StatusDropdown = () => {
     };
   }, []);
 
-  // Cargar el estado inicial desde Firestore
-  useEffect(() => {
-    if (!user?.id) return;
+  // ✅ Ya NO necesita useEffect para cargar el estado inicial
+  // El userDataStore ya lo tiene sincronizado automáticamente
 
-    const fetchStatus = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, 'users', user.id));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setStatus(userData.status || 'Disponible');
-        }
-      } catch {
-        // Error fetching status
-      }
-    };
-
-    fetchStatus();
-  }, [user?.id]);
-
-  // Actualizar el estado en Firestore
+  // ✅ Actualizar el estado con update optimista
   const handleStatusChange = useCallback(async (newStatus: string) => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     try {
-      await updateDoc(doc(db, 'users', user.id), { status: newStatus });
-      setStatus(newStatus);
+      // 1. Update optimista local (UI inmediata)
+      useUserDataStore.getState().updateLocalData({ status: newStatus });
+
+      // 2. Persistir en Firestore
+      await updateDoc(doc(db, 'users', userId), { status: newStatus });
+
+      // 3. El onSnapshot del store confirmará el cambio automáticamente
       setIsOpen(false);
-    } catch {
-      // Error updating status
+    } catch (error) {
+      // Si falla, el onSnapshot restaurará el valor correcto desde Firestore
+      console.error('[StatusDropdown] Error updating status:', error);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   // Animaciones GSAP
   useEffect(() => {

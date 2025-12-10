@@ -182,6 +182,12 @@ async function fetchTasksFromFirebase(requestStartTime?: number): Promise<Task[]
         archived: data.archived || false,
         archivedAt: safeTimestampToISOOrNull(data.archivedAt),
         archivedBy: data.archivedBy || '',
+        // Sharing fields
+        shared: data.shared || false,
+        shareToken: data.shareToken || undefined,
+        commentsEnabled: data.commentsEnabled !== undefined ? data.commentsEnabled : true,
+        sharedAt: safeTimestampToISOOrNull(data.sharedAt),
+        sharedBy: data.sharedBy || undefined,
         // Time tracking fields
         timeTracking: data.timeTracking ? {
           totalHours: data.timeTracking.totalHours || 0,

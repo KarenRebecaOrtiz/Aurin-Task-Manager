@@ -18,6 +18,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useEffect, useState } from 'react';
 import TasksPageModals from '@/modules/data-views/tasks/components/modals/TasksPageModals';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
+import { useUserDataSubscription } from '@/hooks/useUserDataSubscription';
 import tasksStyles from './tasks/styles/TasksPage.module.scss';
 import { ChatbotWidget } from '@/modules/n8n-chatbot';
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
@@ -30,6 +31,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuthContext(); // Get admin status from context
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // 🚀 Initialize user data subscription (Single Source of Truth)
+  useUserDataSubscription();
 
   // 🚀 LOAD DATA ONCE HERE - all pages use the global store
   useSharedTasksState(user?.id);
@@ -183,4 +187,3 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </PageProvider>
   );
 }
-

@@ -165,7 +165,6 @@
   gap: 0.75rem;
   padding-top: 1.25rem;
   background: white;
-  border-top: 1px solid #e4e4e7;
 
   &.sticky {
     position: sticky;
@@ -280,7 +279,7 @@
 }
 
 .variantInfo {
-  background: #2563eb;
+  background: #d0df00;
   &:hover:not(:disabled) { background: #1d4ed8; }
 }
 
@@ -291,7 +290,7 @@
 .panel.variantDanger .title { color: #dc2626; }
 .panel.variantWarning .title { color: #d97706; }
 .panel.variantSuccess .title { color: #16a34a; }
-.panel.variantInfo .title { color: #2563eb; }
+.panel.variantInfo .title { color: #d0df00; }
 
 // ============================================================================
 // CONTENT VARIANTS
@@ -439,7 +438,6 @@
   
   .dialogFooter {
     background: #0c0c0c;
-    border-top-color: rgba(255, 255, 255, 0.1);
 
     &.sticky {
       box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.3);
@@ -592,7 +590,7 @@
   padding: 0;
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: 2px;
   }
 
@@ -615,17 +613,17 @@
 }
 
 .switchActive {
-  background-color: #3b82f6;
+  background-color: #d0df00;
 
   &:hover:not(:disabled) {
-    background-color: #2563eb;
+    background-color: #d0df00;
   }
 
   :global(.dark) & {
-    background-color: #3b82f6;
+    background-color: #d0df00;
 
     &:hover:not(:disabled) {
-      background-color: #2563eb;
+      background-color: #d0df00;
     }
   }
 }
@@ -705,7 +703,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: 2px;
   }
 
@@ -764,7 +762,7 @@
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #d0df00;
     background-color: white;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
@@ -775,7 +773,7 @@
     color: #d4d4d8;
 
     &:focus {
-      border-color: #3b82f6;
+      border-color: #d0df00;
       background-color: #0c0c0c;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
@@ -804,7 +802,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: -2px;
   }
 
@@ -965,7 +963,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: 2px;
   }
 
@@ -1089,7 +1087,7 @@
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #d0df00;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -1099,7 +1097,7 @@
     color: #d4d4d8;
 
     &:focus {
-      border-color: #3b82f6;
+      border-color: #d0df00;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
   }
@@ -1134,7 +1132,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: 2px;
   }
 
@@ -1205,7 +1203,7 @@
   border: none;
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: 2px;
   }
 
@@ -1224,20 +1222,21 @@
 }
 
 .generateButtonPrimary {
-  background-color: #3b82f6;
-  color: white;
+  background-color: #a4b000;
+  color: rgb(0, 0, 0);
+  font-weight: bold;
 
   &:hover:not(:disabled) {
-    background-color: #2563eb;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    background-color: #d0df00;
+    box-shadow: 0 4px 12px rgba(6, 14, 27, 0.3);
   }
 
   :global(.dark) & {
-    background-color: #3b82f6;
+    background-color: #d0df00;
 
     &:hover:not(:disabled) {
-      background-color: #2563eb;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      background-color: #a4b000;
+      box-shadow: 0 4px 12px rgba(3, 8, 15, 0.4);
     }
   }
 }
@@ -1314,7 +1313,7 @@
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #d0df00;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -1324,7 +1323,7 @@
     color: #fafafa;
 
     &:focus {
-      border-color: #3b82f6;
+      border-color: #d0df00;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
   }
@@ -1344,7 +1343,6 @@
   color: #71717a;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-top-right-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
 
   &:hover:not(:disabled) {
@@ -1353,7 +1351,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: -2px;
     z-index: 10;
   }
@@ -1423,7 +1421,7 @@
   border: 1px solid transparent;
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: 2px;
   }
 
@@ -1440,13 +1438,13 @@
 }
 
 .shareButtonPrimary {
-  background-color: #3b82f6;
+  background-color: #d0df00;
   color: white;
-  border-color: #3b82f6;
+  border-color: #d0df00;
 
   &:hover:not(:disabled) {
-    background-color: #2563eb;
-    border-color: #2563eb;
+    background-color: #d0df00;
+    border-color: #d0df00;
   }
 
   &:active:not(:disabled) {
@@ -1455,12 +1453,12 @@
   }
 
   :global(.dark) & {
-    background-color: #3b82f6;
-    border-color: #3b82f6;
+    background-color: #d0df00;
+    border-color: #d0df00;
 
     &:hover:not(:disabled) {
-      background-color: #2563eb;
-      border-color: #2563eb;
+      background-color: #d0df00;
+      border-color: #d0df00;
     }
   }
 }
@@ -1585,7 +1583,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #d0df00;
     outline-offset: 2px;
   }
 
@@ -1657,7 +1655,7 @@
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #d0df00;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 
@@ -1672,7 +1670,7 @@
     color: #fafafa;
 
     &:focus {
-      border-color: #3b82f6;
+      border-color: #d0df00;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
   }

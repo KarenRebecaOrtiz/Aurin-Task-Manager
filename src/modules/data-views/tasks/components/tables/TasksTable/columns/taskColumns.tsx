@@ -128,7 +128,6 @@ export const useTaskColumns = ({
             <AvatarGroup
               assignedUserIds={task.AssignedTo}
               leadedByUserIds={task.LeadedBy}
-              users={users}
               currentUserId={userId}
             />
           ),

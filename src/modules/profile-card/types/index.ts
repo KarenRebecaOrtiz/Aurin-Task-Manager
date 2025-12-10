@@ -49,6 +49,7 @@ export interface ProfileActions {
   fetchProfile: (userId: string) => void;
   prefetchProfile: (userId: string) => void;
   unsubscribeProfile: (userId: string) => void;
+  invalidateProfile: (userId: string) => void;
   clearStore: () => void;
 }
 

@@ -395,28 +395,45 @@
   display: flex;
   gap: $spacing-lg;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: $spacing-lg;
   @include crystallized-scrollbar-horizontal;
   position: relative;
   z-index: 1;
+  -webkit-overflow-scrolling: touch; // Smooth scrolling en iOS
 
+  // Mobile: Mantener scroll horizontal con columnas optimizadas
   @include responsive(lg) {
-    display: flex;
-    flex-direction: column;
-    overflow-x: visible;
-    gap: $spacing-lg;
+    gap: $spacing-md;
+    padding-bottom: $spacing-md;
   }
 
   @include responsive(md) {
-    display: flex;
-    flex-direction: column;
-    overflow-x: visible;
-    gap: $spacing-lg;
+    gap: $spacing-md;
+    padding-bottom: $spacing-md;
+    scroll-snap-type: x proximity; // Snap scroll en tablet
+  }
+
+  @include responsive(sm) {
+    gap: $spacing-sm;
+    padding-bottom: $spacing-sm;
+    padding-left: 0;
+    scroll-snap-type: x mandatory; // Snap scroll fuerte en mobile
+    scroll-padding: 0 $spacing-sm;
+
+    // Ocultar scrollbar en mobile para UI más limpia
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 }
 
 .kanbanColumn {
   min-width: 300px;
+  flex-shrink: 0;
   background: rgba(241, 245, 249, 0.7);
   border-radius: $radius-xl;
   padding: $spacing-lg;
@@ -470,10 +487,40 @@
     }
   }
 
+  // Tablet: Columnas más estrechas con scroll horizontal
   @include responsive(lg) {
-    flex: none;
-    width: 100%;
-    max-width: 100%;
+    min-width: 280px;
+    max-width: 350px;
+    padding: $spacing-md;
+  }
+
+  // Mobile: Columnas optimizadas para scroll horizontal
+  @include responsive(md) {
+    min-width: 280px;
+    max-width: 85vw;
+    padding: $spacing-md;
+  }
+
+  // Mobile pequeño: Columnas casi de ancho completo
+  @include responsive(sm) {
+    min-width: 85vw;
+    max-width: 90vw;
+    padding: $spacing-md;
+    border-radius: $radius-lg;
+    scroll-snap-align: start; // Snap point para cada columna
+
+    &:first-child {
+      margin-left: $spacing-sm;
+    }
+
+    &:last-child {
+      margin-right: $spacing-sm;
+    }
+  }
+
+  // Tablet: Snap scroll suave
+  @include responsive(md) {
+    scroll-snap-align: start;
   }
 }
 
@@ -593,9 +640,24 @@
   max-height: calc(100vh - 300px);
   background-color: #f6f8facf;
   @include crystallized-scrollbar;
-  
+
   :global(body.dark) & {
     background-color: rgba(39, 39, 42, 0.3);
+  }
+
+  // Mobile: Ajustar altura máxima para mejor UX
+  @include responsive(lg) {
+    max-height: calc(100vh - 280px);
+  }
+
+  @include responsive(md) {
+    max-height: calc(100vh - 260px);
+  }
+
+  @include responsive(sm) {
+    max-height: calc(100vh - 240px);
+    padding: $spacing-sm;
+    gap: $spacing-sm;
   }
 }
 
@@ -740,16 +802,17 @@
 
 @include responsive(sm) {
   .container {
-    padding: $spacing-lg;
+    padding: $spacing-md 0;
     gap: $spacing-md;
   }
 
   .header {
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-md;
+    padding: 0 $spacing-sm;
   }
 
   .taskCard {
-    padding: $spacing-md;
+    padding: $spacing-sm $spacing-md;
   }
 
   .taskHeader {

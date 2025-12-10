@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { useStore } from 'zustand';
 import { Task, Client, User } from '@/types';
 import Table from '@/modules/data-views/components/shared/table/Table';
 import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
+import { SharedBadge } from '@/modules/shared/components/ui';
+import { useUserDataStore } from '@/stores/userDataStore';
 import styles from './TasksTable.module.scss';
 
 // Components
@@ -44,7 +45,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   externalClients,
   externalUsers,
 }) => {
-  const { user } = useUser();
+  // ✅ Obtener userId desde userDataStore (Single Source of Truth)
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
   const { isAdmin } = useAuth();
 
   // ==================== HOOKS CONSOLIDADOS ====================
@@ -52,7 +54,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     externalTasks,
     externalClients,
     externalUsers,
-    userId: user?.id,
+    userId,
     isAdmin,
   });
 
@@ -204,13 +206,26 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, []);
 
   const renderClientColumn = useCallback((client: Client | undefined) => <ClientCell client={client} />, []);
-  const renderTaskNameColumn = useCallback((task: Task) => (
-    <div className={styles.taskNameWrapper}><span className={styles.taskName}>{task.name}</span></div>
-  ), []);
+  const renderTaskNameColumn = useCallback((task: Task) => {
+    // Debug log (remove after testing)
+    if (task.name === 'Hola Karen') {
+      console.log('[TasksTable] Hola Karen task data:', {
+        name: task.name,
+        shared: task.shared,
+        hasSharedField: 'shared' in task
+      });
+    }
+    return (
+      <div className={styles.taskNameWrapper}>
+        <span className={styles.taskName}>{task.name}</span>
+        {task.shared && <SharedBadge />}
+      </div>
+    );
+  }, []);
   const renderNotificationDotColumn = useCallback(() => null, []);
   const renderAssignedToColumn = useCallback((task: Task) => (
-    <UserCell assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} users={tableState.effectiveUsers} currentUserId={user?.id} />
-  ), [tableState.effectiveUsers, user?.id]);
+    <UserCell assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} currentUserId={userId} />
+  ), [userId]);
   const renderStatusColumn = useCallback((task: Task) => <StatusCell status={task.status} />, []);
   const renderPriorityColumn = useCallback((task: Task) => <PriorityCell priority={task.priority} />, []);
 
@@ -226,16 +241,16 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
 
   const handleArchiveTask = useCallback(async (task: Task) => {
     try {
-      if (!user?.id) {
+      if (!userId) {
         console.error('User not authenticated');
         return;
       }
-      await archiveTask(task.id, user.id);
+      await archiveTask(task.id, userId);
       tableState.setActionMenuOpenId(null);
     } catch (error) {
       console.error('Error archiving task:', error);
     }
-  }, [archiveTask, tableState.setActionMenuOpenId, user?.id]);
+  }, [archiveTask, tableState.setActionMenuOpenId, userId]);
 
   const handleEditTaskForActionMenu = useCallback((taskId: string) => () => handleEditTask(taskId), [handleEditTask]);
   const handleDeleteTaskForActionMenu = useCallback((taskId: string) => () => handleDeleteTask(taskId), [handleDeleteTask]);
@@ -250,13 +265,13 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, []);
 
   const renderActionColumn = useCallback((task: Task) => {
-    const shouldShowActionMenu = isAdmin || task.CreatedBy === user?.id;
+    const shouldShowActionMenu = isAdmin || task.CreatedBy === userId;
     if (!shouldShowActionMenu) return null;
-    
+
     return (
       <ActionMenu
         task={task}
-        userId={user?.id}
+        userId={userId}
         onEdit={handleEditTaskForActionMenu(task.id)}
         onDelete={handleDeleteTaskForActionMenu(task.id)}
         onArchive={handleArchiveTaskForActionMenu(task)}
@@ -265,7 +280,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         actionButtonRef={handleActionButtonRef(task.id)}
       />
     );
-  }, [isAdmin, user?.id, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
+  }, [isAdmin, userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
   const baseColumns = [
     { key: 'clientId', label: 'Cuenta', width: '30%', mobileVisible: true, mobileWidth: '25%', sortable: true },

@@ -17,7 +17,7 @@ import { MessageItem } from "./molecules/MessageItem";
 import { ManualTimeDialog } from "@/modules/dialogs";
 import { toast } from "@/components/ui/use-toast";
 import type { ChatSidebarProps } from "../types";
-import { useUser } from "@clerk/nextjs";
+import { useUserDataStore } from "@/stores/userDataStore";
 import { useSidebarStateStore } from "@/stores/sidebarStateStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useShallow } from "zustand/react/shallow";
@@ -70,7 +70,13 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
   onClose,
   users = [],
 }) => {
-  const { user } = useUser();
+  // ✅ Obtener datos del usuario desde userDataStore (Single Source of Truth)
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
+  const userName = useUserDataStore((state) => state.userData?.fullName || 'Usuario');
+  const userFirstName = useUserDataStore((state) => {
+    const fullName = state.userData?.fullName || '';
+    return fullName.split(' ')[0] || fullName;
+  });
 
   // Obtener taskId del store global
   const chatSidebar = useSidebarStateStore(useShallow(state => state.chatSidebar));
@@ -168,8 +174,8 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
               task={task}
               clientName={clientName || clientData?.name || 'Cliente'}
               users={[]}
-              userId={user?.id || ''}
-              userName={user?.fullName || 'Usuario'}
+              userId={userId}
+              userName={userName}
               onOpenManualTimeEntry={handleOpenManualTimeEntry}
             />
           </DrawerHeader>
@@ -193,14 +199,14 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
               onLoadMore={loadMoreMessages}
               onInitialLoad={initialLoad}
               renderMessage={(message, prevMessage, nextMessage) => {
-                const isOwn = message.senderId === user?.id;
+                const isOwn = message.senderId === userId;
                 return (
                   <MessageItem
                     key={message.id}
                     message={message}
                     users={users}
                     isOwn={isOwn}
-                    userId={user?.id || ''}
+                    userId={userId}
                     taskId={task?.id || ''}
                     onImagePreview={(url) => setImagePreviewSrc(url)}
                     onRetryMessage={(msg) => resendMessage(msg)}
@@ -232,9 +238,9 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
           <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700">
             <InputChat
               taskId={task.id}
-              userId={user?.id || ''}
-              userName={user?.fullName || 'Usuario'}
-              userFirstName={user?.firstName || user?.fullName}
+              userId={userId}
+              userName={userName}
+              userFirstName={userFirstName}
               onSendMessage={sendMessage}
               onEditMessage={editMessage}
               replyingTo={replyingTo}
@@ -288,8 +294,8 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
         taskId={task.id}
         taskName={task.name}
         taskDescription={task.description}
-        userId={user?.id || ''}
-        userName={user?.fullName || 'Usuario'}
+        userId={userId}
+        userName={userName}
       />
     </>
   );

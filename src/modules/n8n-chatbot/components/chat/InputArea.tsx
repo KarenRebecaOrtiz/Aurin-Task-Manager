@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useCallback, useEffect } from 'react'
-import { ArrowUp, Paperclip, Mic, X, Square, StopCircle, Globe } from 'lucide-react'
+import { ArrowUp, Paperclip, Mic, X, Square, StopCircle, Globe, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ChatbotTranslations } from '../../types'
 import { useAudioRecorder } from '../../hooks/useAudioRecorder'
@@ -16,8 +16,10 @@ interface InputAreaProps {
   onClearFile: () => void
   webSearchEnabled: boolean
   audioModeEnabled: boolean
+  documentModeEnabled: boolean
   onToggleWebSearch: () => void
   onToggleAudioMode: () => void
+  onToggleDocumentMode: () => void
   translations: ChatbotTranslations
   disabled?: boolean
   isLoading?: boolean
@@ -36,8 +38,10 @@ export function InputArea({
   onClearFile,
   webSearchEnabled,
   audioModeEnabled,
+  documentModeEnabled,
   onToggleWebSearch,
   onToggleAudioMode,
+  onToggleDocumentMode,
   translations,
   disabled = false,
   isLoading = false,
@@ -99,11 +103,13 @@ export function InputArea({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleToggleChange = (toggleType: 'search' | 'audio') => {
+  const handleToggleChange = (toggleType: 'search' | 'audio' | 'document') => {
     if (toggleType === 'search') {
       onToggleWebSearch()
     } else if (toggleType === 'audio') {
       onToggleAudioMode()
+    } else if (toggleType === 'document') {
+      onToggleDocumentMode()
     }
   }
 
@@ -391,6 +397,49 @@ export function InputArea({
                   )}
                 </AnimatePresence>
               </motion.button>
+
+              <CustomDivider />
+
+              {/* Document Mode toggle */}
+              <button
+                type="button"
+                onClick={() => handleToggleChange('document')}
+                className={`${styles.toggleBtn} ${documentModeEnabled ? styles.active : ''}`}
+                title="Modo análisis de documentos"
+              >
+                <div className={styles.iconContainer}>
+                  <motion.div
+                    animate={{ 
+                      scale: documentModeEnabled ? 1.1 : 1,
+                      rotate: documentModeEnabled ? [0, 5, -5, 0] : 0 
+                    }}
+                    whileHover={{
+                      scale: 1.1,
+                      y: -2,
+                      transition: { type: 'spring', stiffness: 300, damping: 10 },
+                    }}
+                    transition={{ 
+                      scale: { type: 'spring', stiffness: 260, damping: 25 },
+                      rotate: { duration: 0.5, repeat: documentModeEnabled ? Infinity : 0, repeatDelay: 2 }
+                    }}
+                  >
+                    <FileText className="w-4 h-4" />
+                  </motion.div>
+                </div>
+                <AnimatePresence>
+                  {documentModeEnabled && (
+                    <motion.span
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 'auto', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className={styles.label}
+                    >
+                      Analizar
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
             </div>
           </div>
 

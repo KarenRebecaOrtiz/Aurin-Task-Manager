@@ -9,10 +9,10 @@
  * - Animaciones y UI helpers
  */
 
-import { useCallback, useMemo } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataStore } from '@/stores/dataStore';
+import { useUserDataStore } from '@/stores/userDataStore';
 import { useShallow } from 'zustand/react/shallow';
 import { animateClick as animateClickHelper, animateFilterIcon } from '@/modules/data-views/animations';
 
@@ -105,8 +105,10 @@ export interface UseTasksCommonReturn {
 }
 
 export const useTasksCommon = (): UseTasksCommonReturn => {
-  const { user } = useUser();
   const { isAdmin } = useAuth();
+
+  // ✅ Datos del usuario desde userDataStore (Single Source of Truth)
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
 
   // Datos centralizados del store
   const {
@@ -126,8 +128,6 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
       isLoadingUsers: state.isLoadingUsers,
     }))
   );
-
-  const userId = useMemo(() => user?.id || '', [user]);
 
   // 🔒 Función para obtener IDs de usuarios involucrados en una tarea
   const getInvolvedUserIds = useCallback((task: Task): string[] => {

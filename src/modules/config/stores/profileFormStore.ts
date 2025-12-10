@@ -48,6 +48,8 @@ interface ProfileFormActions {
   setCurrentUserId: (userId: string | null) => void;
   /** Resetea el store a su estado inicial */
   reset: () => void;
+  /** Fuerza la recarga de datos (invalida el estado actual) */
+  forceReload: () => void;
 }
 
 /**
@@ -95,4 +97,10 @@ export const useProfileFormStore = create<ProfileFormState & ProfileFormActions>
   setCurrentUserId: (userId) => set({ currentUserId: userId }),
 
   reset: () => set(initialState),
+
+  forceReload: () => set({ 
+    formData: null, 
+    currentUserId: null, 
+    lastFetchTime: null 
+  }),
 }));

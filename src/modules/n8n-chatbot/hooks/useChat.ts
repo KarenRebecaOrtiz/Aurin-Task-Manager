@@ -27,6 +27,7 @@ export function useChat(options: UseChatOptions = {}) {
   const [sessionId, setSessionId] = useState("")
   const [webSearchEnabled, setWebSearchEnabled] = useState(false)
   const [audioModeEnabled, setAudioModeEnabled] = useState(false)
+  const [documentModeEnabled, setDocumentModeEnabled] = useState(false)
 
   const hasInitialized = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -175,6 +176,7 @@ export function useChat(options: UseChatOptions = {}) {
           conversationHistory,
           webSearch: webSearchEnabled,
           audioMode: audioModeEnabled,
+          documentMode: documentModeEnabled,
           canvasMode: false,
         }),
       })
@@ -231,7 +233,7 @@ export function useChat(options: UseChatOptions = {}) {
       setMessages(messagesWithError)
       updateSessionActivity(sessionId, messagesWithError)
     }
-  }, [inputValue, selectedFile, isOnline, sessionId, messages, webSearchEnabled, audioModeEnabled, t, options])
+  }, [inputValue, selectedFile, isOnline, sessionId, messages, webSearchEnabled, audioModeEnabled, documentModeEnabled, t, options])
 
   const toggleWebSearch = useCallback(() => {
     setWebSearchEnabled((prev) => !prev)
@@ -239,6 +241,10 @@ export function useChat(options: UseChatOptions = {}) {
 
   const toggleAudioMode = useCallback(() => {
     setAudioModeEnabled((prev) => !prev)
+  }, [])
+
+  const toggleDocumentMode = useCallback(() => {
+    setDocumentModeEnabled((prev) => !prev)
   }, [])
 
   return {
@@ -250,12 +256,14 @@ export function useChat(options: UseChatOptions = {}) {
     isOnline,
     webSearchEnabled,
     audioModeEnabled,
+    documentModeEnabled,
     messagesEndRef,
     validateAndSetFile,
     clearFile,
     sendMessage,
     toggleWebSearch,
     toggleAudioMode,
+    toggleDocumentMode,
     scrollToBottom,
   }
 }

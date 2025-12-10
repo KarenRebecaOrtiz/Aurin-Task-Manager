@@ -25,6 +25,7 @@ import {
   formatTavilyResponse,
   type TavilyResponse,
 } from './formatters/tavily-formatter'
+import { extractPdfText } from '../lib/documents/analyze-document'
 
 /**
  * Standard function tool call type
@@ -48,6 +49,7 @@ export async function executeTool(
   modes?: {
     webSearch?: boolean
     audioMode?: boolean
+    documentMode?: boolean
     canvasMode?: boolean
   }
 ): Promise<unknown> {
@@ -67,6 +69,22 @@ export async function executeTool(
     return {
       success: false,
       error: 'Modo audio no está habilitado. Activa el botón de audio para transcribir archivos.',
+      toolName,
+    }
+  }
+
+  if (toolName === 'analyze_document' && !modes?.documentMode) {
+    return {
+      success: false,
+      error: 'Modo análisis de documentos no está habilitado. Activa el botón de análisis de documentos para usar esta función.',
+      toolName,
+    }
+  }
+
+  if (toolName === 'analyze_document' && !modes?.documentMode) {
+    return {
+      success: false,
+      error: 'Modo análisis de documentos no está habilitado. Activa el botón de análisis de documentos para usar esta función.',
       toolName,
     }
   }
@@ -124,10 +142,36 @@ export async function executeTool(
       case 'get_users_info':
         return await getUsersInfo(args.userIds)
 
-      // n8n integrations
-      case 'analyze_document':
-        return await callN8nWebhook('vision', { ...args, userId })
+      // Document analysis via n8n (handles PDFs and images)
+      case 'analyze_document': {
+        const fileUrl = args.fileUrl as string
+        const urlPath = fileUrl.split('?')[0].toLowerCase()
+        const isPDF = urlPath.endsWith('.pdf') || urlPath.includes('.pdf')
+        
+        let extractedText: string | undefined
+        
+        // Extract text from PDF locally (much cheaper than Vision API)
+        if (isPDF) {
+          try {
+            console.log('[analyze_document] Extracting PDF text locally...')
+            extractedText = await extractPdfText(fileUrl)
+            console.log(`[analyze_document] Extracted ${extractedText.length} chars from PDF`)
+          } catch (error) {
+            console.error('[analyze_document] Failed to extract PDF text:', error)
+            // Will fallback to Vision API in n8n if text extraction fails
+          }
+        }
+        
+        return await callN8nWebhook('vision', {
+          fileUrl,
+          extractedText, // Send extracted text if available
+          analysisGoal: args.analysisGoal,
+          fileType: isPDF ? 'pdf' : 'image',
+          userId
+        })
+      }
 
+      // n8n integrations
       case 'create_notion_plan':
         return await callN8nWebhook('notion', { ...args, userId })
 

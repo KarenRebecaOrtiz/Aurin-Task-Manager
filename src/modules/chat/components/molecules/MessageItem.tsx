@@ -3,6 +3,7 @@
 import React, { useState, forwardRef, memo, useRef, useCallback } from "react";
 import Image from "next/image";
 import sanitizeHtml from "sanitize-html";
+import { useDataStore } from "@/stores/dataStore";
 import styles from "../../styles/MessageItem.module.scss";
 import type { Message, ChatUser } from "../../types";
 import { markdownToHtml, formatMessageTime } from "../../utils";
@@ -17,7 +18,7 @@ interface MessageItemProps {
   message: Message;
   prevMessage?: Message | null; // Para grouping
   nextMessage?: Message | null; // Para grouping
-  users: ChatUser[];
+  users?: ChatUser[]; // ✅ Ahora opcional - fallback a dataStore
   usersMap?: Map<string, ChatUser>; // ✅ Opcional: Map para búsqueda O(1)
   isOwn: boolean;
   userId: string;
@@ -34,8 +35,13 @@ interface MessageItemProps {
 }
 
 /**
- * MessageItem - Componente de mensaje individual
- * 
+ * MessageItem - Componente de mensaje individual migrado a dataStore
+ *
+ * Cambios:
+ * - users ahora es opcional - usa dataStore como fallback
+ * - Busca avatares en dataStore si no se pasan users
+ * - Backward compatible con código existente
+ *
  * Muestra un mensaje con:
  * - Avatar del usuario
  * - Contenido (texto, imagen, archivo)
@@ -69,6 +75,10 @@ export const MessageItem = memo(
       const actionButtonRef = useRef<HTMLButtonElement>(null);
       const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
+      // ✅ Si no se pasan users, obtenerlos del dataStore
+      const storeUsers = useDataStore((state) => state.users);
+      const effectiveUsers = users || storeUsers;
+
       // Calcular posición en el grupo
       const position: MessagePosition = getMessagePosition(
         message,
@@ -80,17 +90,17 @@ export const MessageItem = memo(
       const showName = position === "single" || position === "first";
       const showTimestamp = position === "single" || position === "last";
 
-      // ✅ Optimizar búsqueda de avatar con useMemo
+      // ✅ Buscar avatar optimizado con fallback a dataStore
       const senderAvatar = React.useMemo(() => {
         // Si hay usersMap (búsqueda O(1)), usarlo
         if (usersMap) {
           const user = usersMap.get(message.senderId);
-          return user?.imageUrl || "/default-avatar.png";
+          return user?.imageUrl || "/default-avatar.svg";
         }
-        // Fallback: búsqueda O(n) en array
-        const user = users.find((u) => u.id === message.senderId);
-        return user?.imageUrl || "/default-avatar.png";
-      }, [usersMap, users, message.senderId]);
+        // Fallback: búsqueda O(n) en array efectivo (con dataStore como fallback)
+        const user = effectiveUsers.find((u) => u.id === message.senderId);
+        return user?.imageUrl || "/default-avatar.svg";
+      }, [usersMap, effectiveUsers, message.senderId]);
 
       const handleActionButtonClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();

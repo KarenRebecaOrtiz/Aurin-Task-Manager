@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { enhancedChat } from '@/modules/n8n-chatbot/ai'
+import { extractPdfText } from '@/modules/n8n-chatbot/lib/documents/analyze-document'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 
 export const runtime = 'nodejs'
@@ -13,6 +14,7 @@ interface ChatRequest {
   fileUrl?: string
   webSearch?: boolean
   audioMode?: boolean
+  documentMode?: boolean
   canvasMode?: boolean
 }
 
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request
     const body: ChatRequest = await request.json()
-    const { message, sessionId, conversationHistory = [], fileUrl, webSearch = false, audioMode = false, canvasMode = false } = body
+    const { message, sessionId, conversationHistory = [], fileUrl, webSearch = false, audioMode = false, documentMode = false, canvasMode = false } = body
 
     if (!message) {
       return NextResponse.json(
@@ -63,9 +65,11 @@ export async function POST(request: NextRequest) {
     let messageContent: string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>
     
     if (fileUrl) {
-      // Detect if it's an image by URL extension or assume image for common formats
+      // Detect file type by URL extension
+      const urlPath = fileUrl.split('?')[0].toLowerCase()
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']
-      const isImage = imageExtensions.some(ext => fileUrl.toLowerCase().includes(ext))
+      const isImage = imageExtensions.some(ext => urlPath.endsWith(ext))
+      const isPDF = urlPath.endsWith('.pdf')
       
       if (isImage) {
         // Format as vision message for GPT-4o
@@ -73,8 +77,26 @@ export async function POST(request: NextRequest) {
           { type: 'text', text: message },
           { type: 'image_url', image_url: { url: fileUrl } }
         ]
+      } else if (isPDF && documentMode) {
+        // Extract PDF text and include it in the message
+        try {
+          console.log('[ai-chat] Extracting PDF text for document analysis...')
+          const pdfText = await extractPdfText(fileUrl)
+          console.log(`[ai-chat] Extracted ${pdfText.length} chars from PDF`)
+          
+          // Truncate if too long (keep under ~25k tokens)
+          const maxChars = 30000
+          const truncatedText = pdfText.length > maxChars 
+            ? pdfText.substring(0, maxChars) + '\n\n[... documento truncado ...]'
+            : pdfText
+          
+          messageContent = `${message}\n\n--- CONTENIDO DEL DOCUMENTO PDF ---\n${truncatedText}\n--- FIN DEL DOCUMENTO ---`
+        } catch (error) {
+          console.error('[ai-chat] Failed to extract PDF text:', error)
+          messageContent = `${message}\n\n[Error: No se pudo leer el PDF. El archivo puede estar protegido o corrupto.]`
+        }
       } else {
-        // Non-image file: append as text reference
+        // Non-image, non-PDF file or documentMode disabled
         messageContent = `${message}\n\n[Archivo adjunto: ${fileUrl}]`
       }
     } else {
@@ -93,6 +115,7 @@ export async function POST(request: NextRequest) {
       modes: {
         webSearch,
         audioMode,
+        documentMode,
         canvasMode
       }
     })

@@ -4,6 +4,7 @@ import React, { useMemo, useCallback, useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDataStore } from '@/stores/dataStore';
 
 // Lazy load the ProfileCard to avoid bundle size issues
 const ProfileCard = dynamic(
@@ -21,17 +22,28 @@ export interface User {
 export interface AvatarGroupProps {
   assignedUserIds: string[];
   leadedByUserIds?: string[];
-  users: User[];
   currentUserId: string;
   maxAvatars?: number;
   size?: 'small' | 'medium' | 'large';
   showTooltip?: boolean;
 }
 
+/**
+ * AvatarGroup - Migrado para usar dataStore
+ *
+ * Cambios:
+ * - Ya NO recibe array de users como prop
+ * - Obtiene los datos directamente de dataStore (datos centralizados)
+ * - Mismo comportamiento y UI que antes
+ *
+ * Beneficios:
+ * - Datos centralizados desde useSharedTasksState
+ * - Componente más desacoplado
+ * - Menos props drilling
+ */
 export const AvatarGroup: React.FC<AvatarGroupProps> = ({
   assignedUserIds,
   leadedByUserIds = [],
-  users,
   currentUserId,
   maxAvatars = 5,
   size = 'medium',
@@ -40,6 +52,9 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
+
+  // ✅ Obtener users desde dataStore en lugar de prop
+  const users = useDataStore((state) => state.users);
 
   const handleAvatarImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     // Fallback to empty image on error

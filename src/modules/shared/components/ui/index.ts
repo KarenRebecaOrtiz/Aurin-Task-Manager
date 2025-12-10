@@ -1,2 +1,1 @@
-// Table component removed - no longer exists
-export {};
+export { SharedBadge } from './SharedBadge';

@@ -3,7 +3,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { FileText, Mic, Download } from 'lucide-react'
+import { FileText, Mic, Download, FileImage, FileArchive, File } from 'lucide-react'
 import type { Message } from '../../types'
 import { MarkdownRenderer } from '../MarkdownRenderer'
 import { formatMessageTime } from '../../utils'
@@ -13,6 +13,25 @@ import styles from '../../styles/components/message-bubble.module.scss'
 interface MessageBubbleProps {
   message: Message
   avatarUrl?: string
+}
+
+/**
+ * Get the appropriate icon for a file type
+ */
+function getFileIcon(fileType: string) {
+  if (fileType.startsWith('audio/')) {
+    return Mic
+  }
+  if (fileType.startsWith('image/')) {
+    return FileImage
+  }
+  if (fileType.includes('pdf')) {
+    return FileText
+  }
+  if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('tar') || fileType.includes('gz')) {
+    return FileArchive
+  }
+  return File
 }
 
 export function MessageBubble({ message, avatarUrl }: MessageBubbleProps) {
@@ -65,22 +84,25 @@ export function MessageBubble({ message, avatarUrl }: MessageBubbleProps) {
                 />
               ) : (
                 <div className={styles.fileInfo}>
-                  {message.file.type.startsWith('audio/') ? (
-                    <Mic size={32} color="#d0df00" />
-                  ) : (
-                    <FileText size={32} color="#d0df00" />
-                  )}
+                  <div className={styles.fileIcon}>
+                    {React.createElement(getFileIcon(message.file.type), { size: 24 })}
+                  </div>
                   <div className={styles.fileDetails}>
                     <p className={styles.fileName}>{message.file.name}</p>
                     <p className={styles.fileSize}>{message.file.size}</p>
                   </div>
-                  <motion.button
+                  <motion.a
+                    href={message.file.url}
+                    download={message.file.name}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={styles.downloadBtn}
-                    whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                    whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Download size={16} />
-                  </motion.button>
+                    <Download size={18} />
+                  </motion.a>
                 </div>
               )}
             </motion.div>

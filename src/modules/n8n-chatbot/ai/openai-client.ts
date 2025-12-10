@@ -29,6 +29,7 @@ export interface ChatOptions {
   modes?: {
     webSearch?: boolean
     audioMode?: boolean
+    documentMode?: boolean
     canvasMode?: boolean
   }
 }
@@ -70,6 +71,9 @@ export async function chat(options: ChatOptions): Promise<ChatResponse> {
     
     // Only include transcribe_audio if audioMode is active
     if (toolName === 'transcribe_audio' && !modes.audioMode) return false
+    
+    // Only include analyze_document if documentMode is active
+    if (toolName === 'analyze_document' && !modes.documentMode) return false
     
     // Only include create_notion_plan if canvasMode is active
     if (toolName === 'create_notion_plan' && !modes.canvasMode) return false

@@ -1,24 +1,24 @@
 /**
- * UserCell Component
- * Displays assigned users and leaders using AvatarGroup
- * Used in TasksTable and ArchiveTable
+ * UserCell Component - Migrado para usar usersDataStore
+ *
+ * Cambios:
+ * - Ya NO recibe array de users como prop
+ * - AvatarGroup obtiene los datos directamente de usersDataStore
+ * - Solo necesita los IDs de usuarios y el currentUserId
+ *
+ * Beneficios:
+ * - Componente más simple y desacoplado
+ * - Cache compartido entre múltiples UserCells
+ * - Actualizaciones en tiempo real automáticas
  */
 
 import React from 'react';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar/AvatarGroup';
 import styles from './UserCell.module.scss';
 
-interface User {
-  id: string;
-  imageUrl: string;
-  fullName: string;
-  role: string;
-}
-
 interface UserCellProps {
   assignedUserIds: string[];
   leadedByUserIds?: string[];
-  users: User[];
   currentUserId: string;
   className?: string;
 }
@@ -30,7 +30,6 @@ interface UserCellProps {
 const UserCell: React.FC<UserCellProps> = ({
   assignedUserIds,
   leadedByUserIds = [],
-  users,
   currentUserId,
   className,
 }) => {
@@ -39,7 +38,6 @@ const UserCell: React.FC<UserCellProps> = ({
       <AvatarGroup
         assignedUserIds={assignedUserIds}
         leadedByUserIds={leadedByUserIds}
-        users={users}
         currentUserId={currentUserId}
       />
     </div>

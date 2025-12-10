@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUserDataStore } from "@/stores/userDataStore";
 import styles from "../styles/ChatSidebar.module.scss";
 import { ChatHeader } from "./organisms";
 import { VirtualizedMessageList } from "./organisms/VirtualizedMessageList";
@@ -33,7 +33,11 @@ export const PublicChatView: React.FC<PublicChatViewProps> = ({
   initialTokenStatus,
   initialGuestSession,
 }) => {
-  const { user, isLoaded: isUserLoaded } = useUser();
+  // ✅ Obtener datos del usuario desde userDataStore
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
+  const userName = useUserDataStore((state) => state.userData?.fullName || '');
+  const isLoading = useUserDataStore((state) => state.isLoading);
+
   const [isMounted, setIsMounted] = useState(false);
   const [guestSession, setGuestSession] = useState<GuestSession | null>(initialGuestSession || null);
   const [isGuestAuthOpen, setIsGuestAuthOpen] = useState(false);
@@ -41,14 +45,15 @@ export const PublicChatView: React.FC<PublicChatViewProps> = ({
 
   useEffect(() => {
     setIsMounted(true);
-    if (isUserLoaded && !user) {
+    // ✅ Verificar si no hay usuario autenticado
+    if (!isLoading && !userId) {
       if (initialTokenStatus === 'pending' && !guestSession) {
         setIsGuestAuthOpen(true);
       } else if (initialTokenStatus === 'redeemed' && !guestSession) {
         setAuthError('Este enlace de invitación ya ha sido utilizado.');
       }
     }
-  }, [isUserLoaded, user, initialTokenStatus, guestSession]);
+  }, [isLoading, userId, initialTokenStatus, guestSession]);
 
   const handleGuestAuthSuccess = (session: GuestSession) => {
     setGuestSession(session);
@@ -121,7 +126,7 @@ export const PublicChatView: React.FC<PublicChatViewProps> = ({
     );
   }
 
-  if (!isMounted || (isUserLoaded && !user && !guestSession)) {
+  if (!isMounted || (!isLoading && !userId && !guestSession)) {
     return (
       <GuestAuthDialog
         isOpen={isGuestAuthOpen}
@@ -141,8 +146,8 @@ export const PublicChatView: React.FC<PublicChatViewProps> = ({
             clientName={task.project || ''}
             users={users}
             messages={messages}
-            userId={user?.id || 'guest'}
-            userName={user?.fullName || guestSession?.guestName || 'Invitado'}
+            userId={userId || 'guest'}
+            userName={userName || guestSession?.guestName || 'Invitado'}
             onOpenManualTimeEntry={() => {}}
             isPublicView={true}
           />
@@ -158,7 +163,7 @@ export const PublicChatView: React.FC<PublicChatViewProps> = ({
             onLoadMore={loadMoreMessages}
             onInitialLoad={initialLoad}
             renderMessage={(message) => {
-              const isOwn = message.senderId === (user?.id || 'guest');
+              const isOwn = message.senderId === (userId || 'guest');
               return (
                 <MessageItem
                   key={message.id}
@@ -166,7 +171,7 @@ export const PublicChatView: React.FC<PublicChatViewProps> = ({
                   users={users}
                   usersMap={usersMap}
                   isOwn={isOwn}
-                  userId={user?.id || 'guest'}
+                  userId={userId || 'guest'}
                   taskId={task.id}
                   onImagePreview={(url) => setImagePreviewSrc(url)}
                   onRetryMessage={(msg) => resendMessage(msg)}
@@ -189,16 +194,28 @@ export const PublicChatView: React.FC<PublicChatViewProps> = ({
         </div>
 
         <div className={styles.inputArea}>
-          <InputChat
-            taskId={task.id}
-            userId={user?.id || 'guest'}
-            userName={user?.fullName || guestSession?.guestName || 'Invitado'}
-            userFirstName={user?.firstName || guestSession?.guestName}
-            onSendMessage={sendMessage}
-            replyingTo={replyingTo}
-            onCancelReply={() => setReplyingTo(null)}
-            disabled={!isMounted || (user || guestSession ? false : (!task.commentsEnabled || !task.isActive))}
-          />
+          {/* ✅ Control de interacción: usuarios autenticados siempre pueden escribir, invitados solo si commentsEnabled */}
+          {(userId || (guestSession && task.commentsEnabled)) ? (
+            <InputChat
+              taskId={task.id}
+              userId={userId || 'guest'}
+              userName={userName || guestSession?.guestName || 'Invitado'}
+              userFirstName={userName.split(' ')[0] || guestSession?.guestName}
+              onSendMessage={sendMessage}
+              replyingTo={replyingTo}
+              onCancelReply={() => setReplyingTo(null)}
+              disabled={false}
+            />
+          ) : (
+            // ✅ Mostrar mensaje read-only SOLO para invitados cuando commentsEnabled está desactivado
+            <div className={styles.readOnlyMessage}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span>Esta tarea está en modo solo lectura. No puedes enviar mensajes.</span>
+            </div>
+          )}
         </div>
       </div>
 

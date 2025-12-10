@@ -10,6 +10,7 @@ export interface SystemPromptContext {
   modes?: {
     webSearch?: boolean
     audioMode?: boolean
+    documentMode?: boolean
     canvasMode?: boolean
   }
 }
@@ -255,7 +256,7 @@ REGLA DE ORO: BUSCA antes de preguntar. USA herramientas para encontrar datos. N
 /**
  * Generate mode-specific instructions
  */
-function getModeInstructions(modes?: { webSearch?: boolean; audioMode?: boolean; canvasMode?: boolean }): string {
+function getModeInstructions(modes?: { webSearch?: boolean; audioMode?: boolean; documentMode?: boolean; canvasMode?: boolean }): string {
   if (!modes) return '- Ningún modo especial activado'
 
   const activeInstructions: string[] = []
@@ -276,6 +277,17 @@ function getModeInstructions(modes?: { webSearch?: boolean; audioMode?: boolean;
    - Luego puedes usar la transcripción para crear tareas o responder preguntas`)
   }
 
+  if (modes.documentMode) {
+    activeInstructions.push(`📄 MODO ANÁLISIS DE DOCUMENTOS ACTIVO:
+   - Tienes acceso a la herramienta analyze_document para analizar PDFs e imágenes usando Vision AI
+   - Cuando el usuario adjunte un archivo (PDF, imagen, etc.), usa analyze_document automáticamente
+   - Esta herramienta usa n8n + GPT-4 Turbo con Vision API para análisis visual de documentos
+   - Puede analizar tanto PDFs como imágenes (jpg, png, etc.)
+   - IMPORTANTE: analyze_document SOLO analiza - NO crea tareas automáticamente
+   - Después del análisis, presenta los resultados al usuario y espera confirmación antes de crear tareas
+   - Ejemplo de uso: analyze_document({ fileUrl: "url-del-archivo", analysisGoal: "extraer tareas de la propuesta" })`)
+  }
+
   if (modes.canvasMode) {
     activeInstructions.push(`📋 MODO CREAR PLAN ACTIVO:
    - Tienes acceso a la herramienta create_notion_plan
@@ -293,6 +305,10 @@ function getModeInstructions(modes?: { webSearch?: boolean; audioMode?: boolean;
   
   if (!modes.audioMode) {
     disabledModes.push('🔒 Audio Mode desactivado - No puedes transcribir archivos de audio. Si el usuario adjunta audio, indícale que active el botón de audio.')
+  }
+
+  if (!modes.documentMode) {
+    disabledModes.push('🔒 Document Mode desactivado - No puedes analizar documentos (PDFs, imágenes). Si el usuario adjunta un documento, indícale que active el botón de análisis de documentos.')
   }
   
   if (!modes.canvasMode) {

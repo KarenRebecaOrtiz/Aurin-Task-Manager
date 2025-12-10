@@ -105,31 +105,12 @@ export function ChatDialog({ task, token }: ChatDialogProps) {
   const handleSendMessage = async () => {
     if (!messageInput.trim() || isSending) return;
 
-    // Si hay usuario autenticado, enviar como usuario registrado
+    // Si hay usuario autenticado, usar su nombre
     if (user && isUserLoaded) {
-      try {
-        // Enviar mensaje usando el servicio normal de mensajes autenticados
-        const { firebaseService } = await import('@/modules/chat/services/firebaseService');
-
-        const userName = user.fullName || user.firstName || 'Usuario';
-        const userId = user.id; // Usar el userId de Clerk
-
-        await firebaseService.sendMessage(task.id, {
-          senderId: userId,
-          senderName: userName,
-          encrypted: null, // Mensajes públicos no encriptados
-          imageUrl: null,
-          fileUrl: null,
-          fileName: null,
-          fileType: null,
-          filePath: null,
-          clientId: `public-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-          replyTo: null,
-        });
-
+      const userName = user.fullName || user.firstName || 'Usuario';
+      const success = await sendMessage(userName, messageInput);
+      if (success) {
         setMessageInput('');
-      } catch (error) {
-        console.error('[ChatDialog] Error sending authenticated message:', error);
       }
     } else {
       // Si es invitado, verificar que tenga nombre configurado
@@ -297,7 +278,6 @@ export function ChatDialog({ task, token }: ChatDialogProps) {
             )}
           </div>
         </div>
-   
       </header>
 
       {/* Body */}
@@ -353,68 +333,39 @@ export function ChatDialog({ task, token }: ChatDialogProps) {
             </div>
           ) : (
             <div className={styles.messagesList}>
-              {filteredMessages.map((message) => {
-                // Buscar info del participante para obtener su avatar
-                const participant = participants.find(p => p.id === message.senderId);
-                const isGuest = message.senderId === 'guest';
-
-                return (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      styles.message,
-                      isGuest && styles.guestMessage
+              {filteredMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    styles.message,
+                    message.senderId === 'guest' && styles.guestMessage
+                  )}
+                >
+                  <div className={styles.messageHeader}>
+                    <span className={styles.senderName}>{message.senderName}</span>
+                    {message.senderId === 'guest' && (
+                      <span className={styles.guestBadge}>Invitado</span>
                     )}
-                  >
-                    <div className={styles.messageWithAvatar}>
-                      {/* Avatar */}
-                      <div className={styles.messageAvatarWrapper}>
-                        {participant ? (
-                          <Image
-                            src={participant.avatar}
-                            alt={participant.name}
-                            width={40}
-                            height={40}
-                            className={styles.messageAvatar}
-                          />
-                        ) : (
-                          <div className={styles.messageAvatarPlaceholder}>
-                            {message.senderName.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Message Content */}
-                      <div className={styles.messageContent}>
-                        <div className={styles.messageHeader}>
-                          <span className={styles.senderName}>{message.senderName}</span>
-                          {isGuest && (
-                            <span className={styles.guestBadge}>Invitado</span>
-                          )}
-                        </div>
-                        <p className={styles.messageText}>{message.text}</p>
-                        <div className={styles.messageFooter}>
-                          <div className={styles.messageInfo}>
-                            {renderReadStatus(message)}
-                            <span className={styles.timestamp}>
-                              {formatTimestamp(message.timestamp)}
-                            </span>
-                          </div>
-                          {renderReactions(message)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Hover Reaction Chip */}
-                    <div className={styles.reactionChipWrapper}>
-                      <ReactionChip
-                        onSelect={(emoji) => toggleReaction(message.id, emoji, user?.id || 'guest')}
-                        emojis={['👍', '❤️', '😂', '🎉']}
-                      />
-                    </div>
                   </div>
-                );
-              })}
+                  <p className={styles.messageText}>{message.text}</p>
+                  <div className={styles.messageFooter}>
+                    <div className={styles.messageInfo}>
+                      {renderReadStatus(message)}
+                      <span className={styles.timestamp}>
+                        {formatTimestamp(message.timestamp)}
+                      </span>
+                    </div>
+                    {renderReactions(message)}
+                  </div>
+                  {/* Hover Reaction Chip */}
+                  <div className={styles.reactionChipWrapper}>
+                    <ReactionChip
+                      onSelect={(emoji) => toggleReaction(message.id, emoji, 'guest')}
+                      emojis={['👍', '❤️', '😂', '🎉']}
+                    />
+                  </div>
+                </div>
+              ))}
               <div ref={messagesEndRef} />
             </div>
           )}

@@ -3,6 +3,11 @@
 .inputContainer {
   padding: 12px;
   background-color: #171717;
+
+  :global(.light) & {
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
+  }
 }
 
 .inputWrapper {
@@ -13,12 +18,22 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.24);
   transition: all 0.3s ease;
 
+  :global(.light) & {
+    border-color: #d1d5db;
+    background-color: #f9fafb;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+
   &.isRecording {
     border-color: rgba(239, 68, 68, 0.7);
   }
 
   &.isDragging {
     border-color: rgba(208, 223, 0, 0.7);
+
+    :global(.light) & {
+      border-color: rgba(140, 160, 0, 0.7);
+    }
   }
 }
 
@@ -54,6 +69,7 @@
         padding: 2px;
         cursor: pointer;
         border: none;
+        color: white;
 
         &:hover {
           background-color: rgba(0, 0, 0, 0.9);
@@ -69,6 +85,11 @@
       border-radius: 12px;
       background-color: #262626;
 
+      :global(.light) & {
+        background-color: #f3f4f6;
+        border: 1px solid #e5e7eb;
+      }
+
       .fileName {
         font-size: 14px;
         color: #d4d4d4;
@@ -76,6 +97,10 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+
+        :global(.light) & {
+          color: #374151;
+        }
       }
 
       .removeFileBtn {
@@ -84,9 +109,18 @@
         background: transparent;
         border: none;
         cursor: pointer;
+        color: #9ca3af;
 
         &:hover {
           background-color: #404040;
+
+          :global(.light) & {
+            background-color: #e5e7eb;
+          }
+        }
+
+        :global(.light) & {
+          color: #6b7280;
         }
       }
     }
@@ -115,8 +149,16 @@
     max-height: 240px;
     resize: none;
 
+    :global(.light) & {
+      color: #111827;
+    }
+
     &::placeholder {
       color: #9ca3af;
+
+      :global(.light) & {
+        color: #9ca3af;
+      }
     }
 
     &:focus-visible {
@@ -141,6 +183,10 @@
     &::-webkit-scrollbar-thumb {
       background: #444444;
       border-radius: 3px;
+
+      :global(.light) & {
+        background: #d1d5db;
+      }
     }
   }
 }
@@ -183,11 +229,20 @@
   &:hover {
     background-color: rgba(156, 163, 175, 0.3);
     color: #d1d5db;
+
+    :global(.light) & {
+      background-color: rgba(107, 114, 128, 0.15);
+      color: #374151;
+    }
   }
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+
+  :global(.light) & {
+    color: #6b7280;
   }
 
   input {
@@ -216,6 +271,14 @@
 
   &:hover {
     color: #d1d5db;
+
+    :global(.light) & {
+      color: #374151;
+    }
+  }
+
+  :global(.light) & {
+    color: #6b7280;
   }
 
   &.active {
@@ -307,6 +370,10 @@
     &:hover {
       background-color: rgba(156, 163, 175, 0.3);
       color: #f87171;
+
+      :global(.light) & {
+        background-color: rgba(239, 68, 68, 0.1);
+      }
     }
   }
 
@@ -317,6 +384,15 @@
     &:hover {
       background-color: rgba(255, 255, 255, 0.8);
     }
+
+    :global(.light) & {
+      background-color: #d0df00;
+      color: #000000;
+
+      &:hover {
+        background-color: #b8c700;
+      }
+    }
   }
 
   &.empty {
@@ -326,6 +402,15 @@
     &:hover {
       background-color: rgba(156, 163, 175, 0.3);
       color: #d1d5db;
+
+      :global(.light) & {
+        background-color: rgba(107, 114, 128, 0.15);
+        color: #374151;
+      }
+    }
+
+    :global(.light) & {
+      color: #6b7280;
     }
   }
 
@@ -342,6 +427,10 @@
   border-radius: 12px;
   margin-bottom: 8px;
   border: 1px solid rgba(139, 92, 246, 0.2);
+
+  :global(.light) & {
+    background: rgba(139, 92, 246, 0.08);
+  }
 }
 
 .recordingContent {
@@ -369,6 +458,10 @@
   font-size: 14px;
   color: #d1d5db;
   font-weight: 500;
+
+  :global(.light) & {
+    color: #374151;
+  }
 }
 
 .recordingTimer {

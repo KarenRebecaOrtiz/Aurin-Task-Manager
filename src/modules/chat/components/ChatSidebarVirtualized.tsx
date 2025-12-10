@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, memo, useMemo } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUserDataStore } from "@/stores/userDataStore";
 import { useSidebarStateStore } from "@/stores/sidebarStateStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useShallow } from "zustand/react/shallow";
@@ -33,7 +33,14 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
   onClose,
   users = [],
 }) => {
-  const { user } = useUser();
+  // ✅ Obtener datos del usuario desde userDataStore (Single Source of Truth)
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
+  const userName = useUserDataStore((state) => state.userData?.fullName || 'Usuario');
+  const userFirstName = useUserDataStore((state) => {
+    const fullName = state.userData?.fullName || '';
+    return fullName.split(' ')[0] || fullName;
+  });
+
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Obtener taskId del store global
@@ -176,8 +183,8 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
             clientName={clientName}
             users={users}
             messages={messages}
-            userId={user?.id || ''}
-            userName={user?.fullName || 'Usuario'}
+            userId={userId}
+            userName={userName}
             onOpenManualTimeEntry={handleOpenManualTimeEntry}
           />
         </div>
@@ -193,7 +200,7 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
             onLoadMore={loadMoreMessages}
             onInitialLoad={initialLoad}
             renderMessage={(message, prevMessage, nextMessage) => {
-              const isOwn = message.senderId === user?.id;
+              const isOwn = message.senderId === userId;
 
               return (
                 <MessageItem
@@ -203,7 +210,7 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
                   nextMessage={nextMessage}
                   users={users}
                   isOwn={isOwn}
-                  userId={user?.id || ''}
+                  userId={userId}
                   taskId={task?.id || ''}
                   onImagePreview={setImagePreviewSrc}
                   onRetryMessage={resendMessage}
@@ -221,9 +228,9 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
         <div className={styles.inputArea}>
           <InputChat
             taskId={task.id}
-            userId={user?.id || ''}
-            userName={user?.fullName || 'Usuario'}
-            userFirstName={user?.firstName || user?.fullName}
+            userId={userId}
+            userName={userName}
+            userFirstName={userFirstName}
             onSendMessage={handleSendMessage}
             replyingTo={replyingTo as any}
             onCancelReply={() => setReplyingTo(null)}
@@ -269,8 +276,8 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
         taskId={task.id}
         taskName={task.name}
         taskDescription={task.description}
-        userId={user?.id || ''}
-        userName={user?.fullName || 'Usuario'}
+        userId={userId}
+        userName={userName}
       />
     </>
   );

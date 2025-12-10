@@ -56,7 +56,7 @@ export const validateImageFile = (
 };
 
 /**
- * Sube una imagen de perfil al servidor
+ * Sube una imagen de perfil al servidor usando Vercel Blob
  */
 export const uploadProfileImage = async (
   file: File,
@@ -70,27 +70,33 @@ export const uploadProfileImage = async (
     formData.append('userId', userId);
     formData.append('type', 'profile');
 
-    const response = await fetch('/api/upload', {
+    const response = await fetch('/api/upload-blob', {
       method: 'POST',
       body: formData,
       headers: { 'x-clerk-user-id': userId },
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.details || data.error || 'Error al subir la imagen de perfil');
+      throw new Error(result.details || result.error || 'Error al subir la imagen de perfil');
     }
 
-    const { url } = await response.json();
+    // La respuesta viene envuelta en { success: true, data: { url, ... } }
+    const url = result.data?.url || result.url;
+    
+    if (!url) {
+      throw new Error('No se recibió URL de la imagen subida');
+    }
+
     return url;
   } catch (err) {
-    console.error('[imageProcessing] uploadProfileImage: Error', err);
     throw err;
   }
 };
 
 /**
- * Sube una imagen de portada al servidor
+ * Sube una imagen de portada al servidor usando Vercel Blob
  */
 export const uploadCoverImage = async (
   file: File,
@@ -104,31 +110,87 @@ export const uploadCoverImage = async (
     formData.append('userId', userId);
     formData.append('type', 'cover');
 
-    const response = await fetch('/api/upload', {
+    const response = await fetch('/api/upload-blob', {
       method: 'POST',
       body: formData,
       headers: { 'x-clerk-user-id': userId },
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-      const data = await response.text();
-      throw new Error(data || 'Error al subir la imagen de portada');
+      throw new Error(result.details || result.error || 'Error al subir la imagen de portada');
     }
 
-    const { url } = await response.json();
+    // La respuesta viene envuelta en { success: true, data: { url, ... } }
+    const url = result.data?.url || result.url;
+
+    if (!url) {
+      throw new Error('No se recibió URL de la imagen subida');
+    }
+
     return url;
   } catch (err) {
-    console.error('[imageProcessing] uploadCoverImage: Error', err);
     throw err;
   }
 };
 
 /**
- * Elimina una imagen del servidor (Google Cloud Storage)
+ * Extrae el pathname de una URL de Vercel Blob
+ */
+export const extractBlobPathname = (url: string): string | null => {
+  if (!url) return null;
+  
+  try {
+    // Las URLs de Vercel Blob tienen el formato:
+    // https://<account>.public.blob.vercel-storage.com/<pathname>
+    const urlObj = new URL(url);
+    // El pathname incluye el "/" inicial, lo necesitamos sin él
+    return urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+  } catch {
+    // Error parsing URL
+    return null;
+  }
+};
+
+/**
+ * Elimina una imagen del servidor (Vercel Blob Storage)
+ */
+export const deleteImageFromBlob = async (url: string, userId: string): Promise<void> => {
+  try {
+    // Extraer el pathname de la URL del blob
+    const pathname = extractBlobPathname(url);
+    if (!pathname) {
+      return;
+    }
+
+    const response = await fetch('/api/delete-blob', {
+      method: 'DELETE',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-clerk-user-id': userId,
+      },
+      body: JSON.stringify({ pathname }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      if (response.status !== 404) {
+        throw new Error(data.details || data.error || 'Error deleting blob');
+      }
+    }
+  } catch (err) {
+    // Error deleting blob - log but don't throw
+    throw err;
+  }
+};
+
+/**
+ * Elimina una imagen del servidor (Google Cloud Storage) - LEGACY
+ * @deprecated Use deleteImageFromBlob instead
  */
 export const deleteImageFromGCS = async (filePath: string): Promise<void> => {
   try {
-    console.log('[imageProcessing] Attempting to delete image from GCS:', filePath);
     const response = await fetch('/api/delete-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -137,22 +199,18 @@ export const deleteImageFromGCS = async (filePath: string): Promise<void> => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      if (response.status === 404) {
-        console.warn('[imageProcessing] Delete failed: File not found in GCS:', filePath);
-      } else {
+      if (response.status !== 404) {
         throw new Error(errorText || 'Error deleting image from GCS');
       }
-    } else {
-      console.log('[imageProcessing] Image deleted from GCS:', filePath);
     }
   } catch (err) {
-    console.error('[imageProcessing] deleteImageFromGCS: Error', err);
     throw err;
   }
 };
 
 /**
- * Extrae el path de un archivo desde una URL de GCS
+ * Extrae el path de un archivo desde una URL de GCS - LEGACY
+ * @deprecated Use extractBlobPathname instead
  */
 export const extractFilePathFromUrl = (url: string, bucket = 'aurin-plattform'): string | null => {
   if (!url) return null;
@@ -166,6 +224,20 @@ export const extractFilePathFromUrl = (url: string, bucket = 'aurin-plattform'):
  */
 export const isClerkImage = (url: string): boolean => {
   return url.includes('clerk.com');
+};
+
+/**
+ * Verifica si una URL es de Vercel Blob
+ */
+export const isVercelBlobImage = (url: string): boolean => {
+  return url.includes('blob.vercel-storage.com');
+};
+
+/**
+ * Verifica si una URL es de Google Cloud Storage
+ */
+export const isGCSImage = (url: string): boolean => {
+  return url.includes('storage.googleapis.com') || url.includes('firebasestorage.app');
 };
 
 /**

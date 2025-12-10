@@ -56,7 +56,6 @@ interface KanbanColumnProps {
   actionMenuRef: React.RefObject<HTMLDivElement>;
   isTouchDevice: boolean;
   clients: Client[];
-  users: User[];
   normalizeStatus: (status: string) => string;
 }
 
@@ -75,7 +74,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   actionMenuRef,
   isTouchDevice,
   clients,
-  users,
   normalizeStatus,
 }) => {
   const { setNodeRef } = useDroppable({ id: columnId });
@@ -109,7 +107,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               actionMenuRef={actionMenuRef}
               isTouchDevice={isTouchDevice}
               clients={clients}
-              users={users}
               normalizeStatus={normalizeStatus}
             />
           ))}

@@ -18,6 +18,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDoc,
   query,
   orderBy,
   limit,
@@ -59,6 +60,23 @@ export class FirebaseService {
       dateString?: string;
     }
   ): Promise<string> {
+    // ✅ Validar si es invitado y si puede escribir
+    // IMPORTANTE: Solo validamos para invitados (userId === 'guest')
+    // Los usuarios autenticados de Clerk pueden escribir siempre
+    if (messageData.senderId === 'guest') {
+      const taskRef = doc(db, `tasks/${taskId}`);
+      const taskSnap = await getDoc(taskRef);
+
+      if (taskSnap.exists()) {
+        const taskData = taskSnap.data();
+        if (!taskData.commentsEnabled) {
+          throw new Error('Esta tarea está en modo solo lectura. No puedes enviar mensajes.');
+        }
+      } else {
+        throw new Error('Tarea no encontrada');
+      }
+    }
+
     const docRef = await addDoc(collection(db, `tasks/${taskId}/messages`), {
       senderId: messageData.senderId,
       senderName: messageData.senderName,

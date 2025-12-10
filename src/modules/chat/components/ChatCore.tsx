@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, memo } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUserDataStore } from "@/stores/userDataStore";
 import Image from "next/image";
 import styles from "../styles/ChatSidebar.module.scss";
 import { ChatHeader } from "./organisms";
@@ -46,7 +46,10 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
   guestNameSet = true,
   onOpenManualTimeEntry,
 }) => {
-  const { user, isLoaded: isUserLoaded } = useUser();
+  // ✅ Obtener datos del usuario desde userDataStore
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
+  const userName = useUserDataStore((state) => state.userData?.fullName || 'Usuario');
+  const isLoading = useUserDataStore((state) => state.isLoading);
 
   // Estados locales
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
@@ -95,11 +98,11 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
   const handleSendMessage = useCallback(
     async (messageData: Partial<Message>) => {
       // Si hay usuario autenticado, enviar con su info
-      if (user && isUserLoaded) {
+      if (userId && !isLoading) {
         await sendMessage({
           ...messageData,
-          senderId: user.id,
-          senderName: user.fullName || user.firstName || 'Usuario',
+          senderId: userId,
+          senderName: userName,
         });
       } else if (isPublicView) {
         // Si es invitado en vista pública
@@ -111,18 +114,18 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
         });
       }
     },
-    [sendMessage, user, isUserLoaded, guestName, guestNameSet, isPublicView]
+    [sendMessage, userId, userName, isLoading, guestName, guestNameSet, isPublicView]
   );
 
   const handleDeleteMessage = useCallback(
     async (messageId: string) => {
       // Solo usuarios autenticados pueden eliminar
-      if (!user || !isUserLoaded) return;
+      if (!userId || isLoading) return;
       if (confirm("¿Estás seguro de que quieres eliminar este mensaje?")) {
         await deleteMessage(messageId);
       }
     },
-    [deleteMessage, user, isUserLoaded]
+    [deleteMessage, userId, isLoading]
   );
 
   const handleCopyMessage = useCallback(async (text: string) => {
@@ -151,7 +154,7 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
     prevMessage: Message | null,
     nextMessage: Message | null
   ) => {
-    const isOwn = message.senderId === (user?.id || 'guest');
+    const isOwn = message.senderId === (userId || 'guest');
 
     return (
       <MessageItem
@@ -162,7 +165,7 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
         users={users}
         usersMap={usersMap}
         isOwn={isOwn}
-        userId={user?.id || 'guest'}
+        userId={userId || 'guest'}
         taskId={task.id}
         onImagePreview={setImagePreviewSrc}
         onRetryMessage={resendMessage}
@@ -172,11 +175,11 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
         onDownload={handleDownloadFile}
       />
     );
-  }, [user, users, usersMap, task.id, resendMessage, handleCopyMessage, handleDeleteMessage, handleDownloadFile]);
+  }, [userId, users, usersMap, task.id, resendMessage, handleCopyMessage, handleDeleteMessage, handleDownloadFile]);
 
   // Computed values
   const publicTaskData = isPublicView && 'commentsEnabled' in task
-    ? { commentsEnabled: task.commentsEnabled, isActive: task.isActive }
+    ? { commentsEnabled: task.commentsEnabled, isActive: (task as any).isActive }
     : { commentsEnabled: true, isActive: true };
 
   // ============================================================================
@@ -196,8 +199,8 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
           clientName={clientName}
           users={users}
           messages={messages}
-          userId={user?.id || 'guest'}
-          userName={user?.fullName || guestName || 'Invitado'}
+          userId={userId || 'guest'}
+          userName={userName || guestName || 'Invitado'}
           onOpenManualTimeEntry={onOpenManualTimeEntry || (() => {})}
           isPublicView={isPublicView}
         />
@@ -221,9 +224,9 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
       <div className={styles.footer}>
         <InputChat
           taskId={task.id}
-          userId={user?.id || 'guest'}
-          userName={user?.fullName || guestName || 'Invitado'}
-          userFirstName={user?.firstName || guestName}
+          userId={userId || 'guest'}
+          userName={userName || guestName || 'Invitado'}
+          userFirstName={userName.split(' ')[0] || guestName}
           onSendMessage={handleSendMessage}
           replyingTo={replyingTo ? {
             ...replyingTo,
@@ -232,7 +235,7 @@ export const ChatCore: React.FC<ChatCoreProps> = memo(({
           onCancelReply={handleCancelReply}
           disabled={
             isPublicView
-              ? (user && isUserLoaded ? false : (!publicTaskData.commentsEnabled || !publicTaskData.isActive))
+              ? (userId && !isLoading ? false : (!publicTaskData.commentsEnabled || !publicTaskData.isActive))
               : false
           }
         />

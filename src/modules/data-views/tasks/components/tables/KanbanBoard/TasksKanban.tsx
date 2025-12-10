@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useEffect, useRef, useCallback } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -12,6 +11,7 @@ import {
   CollisionDetection,
 } from '@dnd-kit/core';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserDataStore } from '@/stores/userDataStore';
 import { KanbanSkeletonLoader, EmptyTableState } from '@/modules/data-views/components/shared';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
@@ -91,7 +91,8 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   onDeleteTaskOpen,
   onArchiveTableOpen,
 }) => {
-  const { user } = useUser();
+  // ✅ Obtener userId desde userDataStore (Single Source of Truth)
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
   const { isAdmin } = useAuth();
 
   // ✅ Datos del dataStore (como antes)
@@ -154,7 +155,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
     statusColumns,
     normalizeStatus,
     getInvolvedUserIds,
-    userId: user?.id || '',
+    userId,
     isAdmin,
     searchQuery,
     searchCategory,
@@ -169,8 +170,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
   const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const lastOverId = useRef<string | null>(null);
   const recentlyMovedToNewContainer = useRef(false);
-
-  const userId = useMemo(() => user?.id || '', [user]);
 
   /**
    * Custom collision detection strategy optimized for:
@@ -382,7 +381,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               actionMenuRef={actionMenuRef}
               isTouchDevice={isTouchDevice}
               clients={effectiveClients}
-              users={effectiveUsers}
               normalizeStatus={normalizeStatus}
             />
           ))}
@@ -395,7 +393,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               isAdmin={isAdmin}
               isTouchDevice={isTouchDevice}
               clients={effectiveClients}
-              users={effectiveUsers}
               userId={userId}
             />
           ) : null}

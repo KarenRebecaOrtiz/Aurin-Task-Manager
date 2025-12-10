@@ -45,7 +45,6 @@ interface KanbanDragOverlayProps {
   isAdmin: boolean;
   isTouchDevice: boolean;
   clients: Client[];
-  users: User[];
   userId: string;
 }
 
@@ -60,7 +59,6 @@ export const KanbanDragOverlay: React.FC<KanbanDragOverlayProps> = ({
   isAdmin,
   isTouchDevice,
   clients,
-  users,
   userId,
 }) => {
   const client = clients.find((c) => c.id === task.clientId);
@@ -108,7 +106,6 @@ export const KanbanDragOverlay: React.FC<KanbanDragOverlayProps> = ({
         <AvatarGroup
           assignedUserIds={task.AssignedTo}
           leadedByUserIds={task.LeadedBy}
-          users={users}
           currentUserId={userId}
           maxAvatars={5}
         />

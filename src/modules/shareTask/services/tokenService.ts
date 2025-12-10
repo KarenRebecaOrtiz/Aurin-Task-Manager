@@ -104,8 +104,9 @@ export const isTokenExpired = (expiresAt: Date | null): boolean => {
  * ```
  */
 export const buildShareUrl = (token: string): string => {
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
-  return `${baseUrl}/p/${token}`;
+  // Import dynamically to avoid circular dependencies
+  const { buildTokenShareUrl } = require('@/lib/url-utils');
+  return buildTokenShareUrl(token);
 };
 
 /**

@@ -1,0 +1,133 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║           REPORTE DE ANÁLISIS DE MIGRACIÓN                       ║
+║           Generado: 12/9/2025, 6:02:53 PM                        
+╚══════════════════════════════════════════════════════════════════╝
+
+📋 RESUMEN
+───────────────────────────────────────────────────────────────────
+• Usuarios en Development (CSV):     14
+• Colecciones analizadas:            8
+• Colecciones CON referencias:       3
+• Total documentos a migrar:         172
+
+👥 USUARIOS DE DEVELOPMENT
+───────────────────────────────────────────────────────────────────
+• Nayeli Quinto (quinto@sodio.net)
+  ID: user_2y40r8oOP4NdMrwUg3yLeJwGfr8
+
+• Jovani Olguin (jovani@sodio.net)
+  ID: user_2y9aFFDgCdShjp2ZIl8pof5SRsi
+
+• Karen Rebeca Ortiz (karen@sodio.net)
+  ID: user_2yHDV3l5yqe3wxigQvLw1vDUlQ7
+
+• Elias Aquique (aquique@sodio.net)
+  ID: user_2yvkx8AOoixsc1o9ttHDZjtpIhc
+
+• Julieta Cuevas (julieta@sodio.net)
+  ID: user_2yyLqCL78Otu5TnXrvtVCnuku8A
+
+• Ximena Narez (ximena@sodio.net)
+  ID: user_2yyMuD2Zvuz5IBnnYerLa7ZOj0A
+
+• Gabriela Flores (gabriela@sodio.net)
+  ID: user_2yyN1guSnhLrPdDGzrbFknRSgp3
+
+• Marco Arcos (marco@sodio.net)
+  ID: user_2z0S66HxpBI0VN6Dy9tVhGlIVLU
+
+• Carolina Valdez (carolina@sodio.net)
+  ID: user_2z0SGbnmYm5Jp9roiTjCQt2rhrM
+
+• Isaí Mateo Reyes (isai@sodio.net)
+  ID: user_2z0SQQM5BI2CmbXDQDJTfeuz0u6
+
+• Janelly Bahena (janelly@sodio.net)
+  ID: user_2zLBWG1OwdiUFuQqylYBhNPD72U
+
+• Marcela Lavat (lml@sodio.net)
+  ID: user_2zLBobHXsSHaI82l9mgAbNAmX98
+
+• Mauricio Martinez (mauricio@sodio.net)
+  ID: user_2zLBsTPMUXwTPFGvdngpKT6Bxe8
+
+• Pepinillos Ortiz (karen.ortizg@yahoo.com)
+  ID: user_2zN9ubYgmQjFeYct8Ed78yKgKjh
+
+
+📁 DETALLE POR COLECCIÓN
+───────────────────────────────────────────────────────────────────
+
+tasks (129 docs) - ⚠️  REQUIERE MIGRACIÓN
+   Documentos afectados: 129
+   Campos con referencias:
+      • CreatedBy: 125 referencias
+      • LeadedBy: 1 referencias
+      • lastViewedBy: 212 referencias
+      • AssignedTo: 1 referencias
+      • archivedBy: 5 referencias
+      • updatedBy: 1 referencias
+   Ejemplos:
+      Doc ID: 00srVsQraHcOFopaKQd2
+         - CreatedBy: "user_2y40r8oOP4NdMrwUg3yLeJwGfr8" (string)
+         - LeadedBy: ["user_2y40r8oOP4NdMrwUg3yLeJwGfr8"] (array)
+         - lastViewedBy: ["user_2y40r8oOP4NdMrwUg3yLeJwGfr8","user_2yHDV3l5yqe3wxigQvLw1vDUlQ7"] (object-keys)
+      Doc ID: 0T6oi5sO1MotKfdP1xuo
+         - CreatedBy: "user_2z0SQQM5BI2CmbXDQDJTfeuz0u6" (string)
+         - LeadedBy: ["user_2z0SQQM5BI2CmbXDQDJTfeuz0u6","user_2y40r8oOP4NdMrwUg3yLeJwGfr8"] (array)
+      Doc ID: 0nNlPrxJFoKGOshG35EO
+         - CreatedBy: "user_2yvkx8AOoixsc1o9ttHDZjtpIhc" (string)
+         - AssignedTo: ["user_2zLBWG1OwdiUFuQqylYBhNPD72U"] (array)
+         - LeadedBy: ["user_2yyN1guSnhLrPdDGzrbFknRSgp3"] (array)
+         - lastViewedBy: ["user_2yHDV3l5yqe3wxigQvLw1vDUlQ7","user_2zLBWG1OwdiUFuQqylYBhNPD72U","user_2yyN1guSnhLrPdDGzrbFknRSgp3"] (object-keys)
+
+users (14 docs) - ⚠️  REQUIERE MIGRACIÓN
+   Documentos afectados: 13
+   Campos con referencias:
+      • userId: 13 referencias
+      • _documentId_: 13 referencias
+   Ejemplos:
+      Doc ID: user_2y40r8oOP4NdMrwUg3yLeJwGfr8
+         - userId: "user_2y40r8oOP4NdMrwUg3yLeJwGfr8" (string)
+         - _documentId_: "user_2y40r8oOP4NdMrwUg3yLeJwGfr8" (doc-id)
+      Doc ID: user_2y9aFFDgCdShjp2ZIl8pof5SRsi
+         - userId: "user_2y9aFFDgCdShjp2ZIl8pof5SRsi" (string)
+         - _documentId_: "user_2y9aFFDgCdShjp2ZIl8pof5SRsi" (doc-id)
+      Doc ID: user_2yHDV3l5yqe3wxigQvLw1vDUlQ7
+         - userId: "user_2yHDV3l5yqe3wxigQvLw1vDUlQ7" (string)
+         - _documentId_: "user_2yHDV3l5yqe3wxigQvLw1vDUlQ7" (doc-id)
+
+clients (32 docs) - ⚠️  REQUIERE MIGRACIÓN
+   Documentos afectados: 30
+   Campos con referencias:
+      • createdBy: 30 referencias
+   Ejemplos:
+      Doc ID: 1o8yuJtwXdwb7uflcyQ5
+         - createdBy: "user_2yvkx8AOoixsc1o9ttHDZjtpIhc" (string)
+      Doc ID: 4Jkr5nYVIiz91m8jzTec
+         - createdBy: "user_2yvkx8AOoixsc1o9ttHDZjtpIhc" (string)
+      Doc ID: 7BjngtV3vfsgOQiD9n72
+         - createdBy: "user_2yvkx8AOoixsc1o9ttHDZjtpIhc" (string)
+
+projects (0 docs) - ✅ Sin cambios necesarios
+
+notifications (0 docs) - ✅ Sin cambios necesarios
+
+comments (0 docs) - ✅ Sin cambios necesarios
+
+timeEntries (0 docs) - ✅ Sin cambios necesarios
+
+activityLogs (0 docs) - ✅ Sin cambios necesarios
+
+═══════════════════════════════════════════════════════════════════
+                    FIN DEL REPORTE
+═══════════════════════════════════════════════════════════════════
+
+⚠️  PRÓXIMOS PASOS (si decides continuar):
+1. Revisa este reporte cuidadosamente
+2. Haz un BACKUP de tu Firestore antes de cualquier migración
+3. El script de migración creará los usuarios en producción
+4. Luego actualizará las referencias con los nuevos IDs
+
+🛑 IMPORTANTE: Este análisis NO modificó ningún dato.

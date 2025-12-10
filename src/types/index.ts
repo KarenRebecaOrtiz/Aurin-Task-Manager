@@ -50,6 +50,13 @@ export interface Task {
   archived?: boolean;
   archivedAt?: string;
   archivedBy?: string;
+  // Sharing fields
+  shared?: boolean;
+  shareToken?: string | null;
+  commentsEnabled?: boolean;
+  shareExpiresAt?: string | null;
+  shareAccessCount?: number;
+  shareLastAccess?: string | null;
   // Time tracking - New structured approach
   timeTracking?: {
     totalHours: number;

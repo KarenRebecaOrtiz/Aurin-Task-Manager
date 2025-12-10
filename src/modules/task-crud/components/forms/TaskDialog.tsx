@@ -7,7 +7,7 @@ import { ClientDialog } from "@/modules/client-crud"
 import { useState, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTaskFormData } from "../../hooks/data/useTaskData"
-import { useUser } from "@clerk/nextjs"
+import { useUserDataStore } from "@/stores/userDataStore"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
 import { taskService } from "../../services/taskService"
 import { validateTaskDates } from "../../utils/validation"
@@ -34,7 +34,8 @@ export function TaskDialog({
   onTaskCreated,
   taskId,
 }: TaskDialogProps) {
-  const { user } = useUser()
+  // ✅ Obtener userId desde userDataStore (Single Source of Truth)
+  const userId = useUserDataStore((state) => state.userData?.userId || '')
   const { clients, users } = useTaskFormData()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
@@ -114,7 +115,7 @@ export function TaskDialog({
   const handleSubmit = useCallback(async (formData: TaskFormData) => {
     console.log('[TaskDialog] handleSubmit called with formData:', formData)
 
-    if (!user) {
+    if (!userId) {
       console.error('[TaskDialog] No user found')
       showError('Sesión expirada', 'Por favor, inicia sesión nuevamente.')
       return
@@ -178,7 +179,7 @@ export function TaskDialog({
         }
 
         console.log('[TaskDialog] API form data prepared:', apiFormData);
-        const response = await taskService.createTask(apiFormData, user.id)
+        const response = await taskService.createTask(apiFormData, userId)
 
         if (!response.success) {
           throw new Error(response.error || 'Error al crear la tarea')
@@ -204,7 +205,7 @@ export function TaskDialog({
     } finally {
       setIsSubmitting(false)
     }
-  }, [user, isEditMode, taskId, onTaskCreated, onOpenChange, showSuccess, showError])
+  }, [userId, isEditMode, taskId, onTaskCreated, onOpenChange, showSuccess, showError])
 
   const handleCancel = useCallback(() => {
     onOpenChange(false)

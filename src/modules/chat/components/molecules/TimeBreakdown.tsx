@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { ChevronDown, Clock, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserAvatar } from "@/modules/shared/components/atoms/Avatar/UserAvatar";
+import { useDataStore } from "@/stores/dataStore";
 import styles from "../../styles/TimeBreakdown.module.scss";
 
 interface TeamMember {
@@ -15,12 +16,17 @@ interface TeamMember {
 interface TimeBreakdownProps {
   totalHours: number;
   memberHours?: { [userId: string]: number };
-  teamMembers: TeamMember[];
+  teamMembers?: TeamMember[]; // ✅ Ahora opcional - fallback a dataStore
 }
 
 /**
- * TimeBreakdown Component
- * 
+ * TimeBreakdown Component - Migrado a dataStore
+ *
+ * Cambios:
+ * - teamMembers ahora es opcional - usa dataStore como fallback
+ * - Busca miembros en dataStore por userId si no se pasan
+ * - Backward compatible con código existente
+ *
  * Shows total registered time with a dropdown that breaks down
  * individual time per team member.
  */
@@ -31,6 +37,10 @@ export const TimeBreakdown: React.FC<TimeBreakdownProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // ✅ Si no se pasan teamMembers, obtener usuarios del dataStore
+  const storeUsers = useDataStore((state) => state.users);
+  const effectiveMembers = teamMembers || storeUsers;
 
   // Close on outside click
   useEffect(() => {
@@ -47,29 +57,29 @@ export const TimeBreakdown: React.FC<TimeBreakdownProps> = ({
   // Format hours display
   const formatHours = useCallback((hours: number): string => {
     if (hours === 0) return "0h";
-    
+
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
-    
+
     if (h === 0) return `${m}m`;
     if (m === 0) return `${h}h`;
     return `${h}h ${m}m`;
   }, []);
 
-  // Build member time entries with user info
+  // Build member time entries with user info - usa dataStore como fallback
   const memberTimeEntries = useMemo(() => {
     return Object.entries(memberHours)
       .map(([userId, hours]) => {
-        const member = teamMembers.find(m => m.id === userId);
+        const member = effectiveMembers.find(m => m.id === userId);
         return {
           userId,
           hours,
           fullName: member?.fullName || "Usuario desconocido",
-          imageUrl: member?.imageUrl || "",
+          imageUrl: member?.imageUrl || "/default-avatar.svg",
         };
       })
       .sort((a, b) => b.hours - a.hours); // Sort by most hours first
-  }, [memberHours, teamMembers]);
+  }, [memberHours, effectiveMembers]);
 
   const hasMemberData = memberTimeEntries.length > 0;
 

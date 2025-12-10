@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
         hostname: 'img.clerk.com',
         pathname: '**',
       },
@@ -73,9 +78,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   // Ensure server-only modules are not bundled for client
-  experimental: {
-    serverComponentsExternalPackages: ['nodemailer'],
-  },
+  serverExternalPackages: ['nodemailer', 'pdf-parse', 'pdfjs-dist'],
 };
 
 export default withSentryConfig(nextConfig, {

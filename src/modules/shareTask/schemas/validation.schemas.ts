@@ -214,6 +214,13 @@ export function sanitizeTaskForPublic(task: any, participants?: any[]): PublicTa
   
   const isActive = isTaskActiveNow(startDateStr, endDateStr);
 
+  // Map participants to the expected format
+  const mappedParticipants = (participants || []).map(p => ({
+    id: p.id,
+    name: p.displayName || p.name || 'Usuario Desconocido',
+    avatar: p.photoURL || p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.displayName || p.name || 'Usuario')}&background=random`,
+  }));
+
   const sanitized = {
     id: task.id,
     name: task.name,
@@ -226,7 +233,7 @@ export function sanitizeTaskForPublic(task: any, participants?: any[]): PublicTa
     createdAt: createdAtStr,
     isActive,
     commentsEnabled: task.commentsEnabled || false,
-    participants: participants || [],
+    participants: mappedParticipants,
   };
 
   // Validate with Zod to ensure type safety

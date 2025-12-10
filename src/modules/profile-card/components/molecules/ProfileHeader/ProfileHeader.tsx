@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useUser } from '@clerk/nextjs';
 import { UserAvatar } from '@/modules/shared/components/atoms/Avatar/UserAvatar';
 import Badge from '@/components/Badge';
 import { ActionButton } from '../../atoms/ActionButton/ActionButton';
@@ -23,8 +24,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onConfigClick,
   onMessageClick,
 }) => {
-  const avatarUrl = profile.profilePhoto || '';
+  const { user: currentUser } = useUser();
   const isOwnProfile = userId === currentUserId;
+
+  // For own profile: fallback to Clerk image if no custom photo
+  // For other profiles: use their photo or empty
+  const avatarUrl = profile.profilePhoto ||
+    (isOwnProfile && currentUser?.imageUrl ? currentUser.imageUrl : '');
 
   return (
     <>
@@ -54,8 +60,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           userId={userId}
           imageUrl={avatarUrl}
           userName={profile.fullName || 'Usuario'}
-          size="xl"
-          showStatus={true}
+          size="2xl"
+          showStatus={false}
         />
       </motion.div>
 
@@ -65,15 +71,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <h2 className={styles.name}>{profile.fullName || 'Sin nombre'}</h2>
 
           <div className={styles.actionButtons}>
-            {/* Botón de configuración solo para perfil propio */}
-            {isOwnProfile && onConfigClick && (
-              <ActionButton
-                variant="config"
-                onClick={onConfigClick}
-                ariaLabel="Abrir configuración de perfil"
-                title="Configuración"
-              />
-            )}
+      
 
             {/* Botón mensaje solo para otros usuarios */}
             {!isOwnProfile && (

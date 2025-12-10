@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useUserDataStore } from '@/stores/userDataStore';
 import type { ProfileStore, UserProfile } from '../types';
 
 const useProfileCardStore = create<ProfileStore>((set, get) => ({
@@ -11,6 +12,14 @@ const useProfileCardStore = create<ProfileStore>((set, get) => ({
 
   fetchProfile: (userId) => {
     if (!userId || get().profiles.has(userId) || get().loading.has(userId)) {
+      return;
+    }
+
+    // Check if this is the current user - if so, use userDataStore instead
+    const currentUserId = useUserDataStore.getState().currentUserId;
+    if (userId === currentUserId) {
+      // Don't create a duplicate subscription - userDataStore already handles this
+      // Just return early, ProfileDialog will use userDataStore directly
       return;
     }
 
@@ -78,6 +87,23 @@ const useProfileCardStore = create<ProfileStore>((set, get) => ({
         return { subscriptions: newSubscriptions };
       });
     }
+  },
+
+  // Invalida el cache de un usuario para forzar recarga
+  invalidateProfile: (userId) => {
+    const unsubscribe = get().subscriptions.get(userId);
+    if (unsubscribe) {
+      unsubscribe();
+    }
+    set((state) => {
+      const newProfiles = new Map(state.profiles);
+      newProfiles.delete(userId);
+      const newSubscriptions = new Map(state.subscriptions);
+      newSubscriptions.delete(userId);
+      return { profiles: newProfiles, subscriptions: newSubscriptions };
+    });
+    // Re-fetch para crear nuevo listener
+    get().fetchProfile(userId);
   },
   
   clearStore: () => {

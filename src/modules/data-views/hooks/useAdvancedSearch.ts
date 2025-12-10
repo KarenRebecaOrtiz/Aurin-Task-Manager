@@ -1,11 +1,11 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { Task } from '@/types';
 
 /**
  * Tipos de datos soportados para búsqueda avanzada
  */
 export interface SearchableTask extends Task {
-  [key: string]: any; // Allow additional properties from Task type
+  [key: string]: unknown; // Allow additional properties from Task type
 }
 
 export interface SearchableClient {
@@ -41,69 +41,50 @@ export const useAdvancedSearch = (
   tasks: SearchableTask[],
   clients: SearchableClient[],
   users: SearchableUser[],
-  searchQuery: string,
+  keywords: string[],
   getInvolvedUserIds?: (task: SearchableTask) => string[],
   searchCategory?: 'task' | 'client' | 'member' | null
 ) => {
   return useMemo(() => {
-    if (!searchQuery.trim()) {
+    if (!keywords || keywords.length === 0) {
       return tasks;
     }
 
-    const lowerQuery = searchQuery.toLowerCase();
+    // Lowercase keywords for case-insensitive search
+    const lowerKeywords = keywords.map((kw) => kw.toLowerCase());
 
     return tasks.filter((task) => {
-      // 1. Search in task fields
-      const matchesTaskName = task.name?.toLowerCase().includes(lowerQuery);
-      const matchesDescription = task.description?.toLowerCase().includes(lowerQuery);
-      const matchesStatus = task.status?.toLowerCase().includes(lowerQuery);
-      const matchesPriority = task.priority?.toLowerCase().includes(lowerQuery);
-
-      // 2. Search in client name
-      const client = clients.find((c) => c.id === task.clientId);
-      const matchesClientName = client?.name?.toLowerCase().includes(lowerQuery);
-
-      // 3. Search in assigned/lead user names
-      let matchesUserName = false;
-      if (getInvolvedUserIds) {
-        const involvedUserIds = getInvolvedUserIds(task);
-        matchesUserName = involvedUserIds.some((userId) => {
-          const user = users.find((u) => u.id === userId);
-          return user?.fullName?.toLowerCase().includes(lowerQuery);
+      // Collect searchable fields
+      const fields: string[] = [];
+      if (searchCategory === 'task' || !searchCategory) {
+        fields.push(task.name || '', task.description || '', task.status || '', task.priority || '');
+      }
+      if ((searchCategory === 'client' || !searchCategory) && task.clientId) {
+        const client = clients.find((c) => c.id === task.clientId);
+        if (client?.name) fields.push(client.name);
+      }
+      if ((searchCategory === 'member' || !searchCategory) && getInvolvedUserIds) {
+        const userIds = getInvolvedUserIds(task);
+        userIds.forEach((uid) => {
+          const user = users.find((u) => u.id === uid);
+          if (user?.fullName) fields.push(user.fullName);
         });
-      } else {
+      } else if ((searchCategory === 'member' || !searchCategory)) {
         // Fallback: search directly in task user fields
         const allUserIds = new Set<string>();
         if (task.LeadedBy) task.LeadedBy.forEach((id) => allUserIds.add(id));
         if (task.AssignedTo) task.AssignedTo.forEach((id) => allUserIds.add(id));
         if (task.CreatedBy) allUserIds.add(task.CreatedBy);
-
-        matchesUserName = Array.from(allUserIds).some((userId) => {
+        Array.from(allUserIds).forEach((userId) => {
           const user = users.find((u) => u.id === userId);
-          return user?.fullName?.toLowerCase().includes(lowerQuery);
+          if (user?.fullName) fields.push(user.fullName);
         });
       }
-
-      // Apply category filter if specified
-      if (searchCategory === 'task') {
-        return matchesTaskName || matchesDescription || matchesStatus || matchesPriority;
-      } else if (searchCategory === 'client') {
-        return matchesClientName;
-      } else if (searchCategory === 'member') {
-        return matchesUserName;
-      }
-
-      // Default: search in all fields
-      return (
-        matchesTaskName ||
-        matchesDescription ||
-        matchesStatus ||
-        matchesPriority ||
-        matchesClientName ||
-        matchesUserName
-      );
+      const searchable = fields.join(' ').toLowerCase();
+      // Check if all keywords are present
+      return lowerKeywords.every((kw) => searchable.includes(kw));
     });
-  }, [tasks, clients, users, searchQuery, getInvolvedUserIds, searchCategory]);
+  }, [tasks, clients, users, keywords, getInvolvedUserIds, searchCategory]);
 };
 
 /**
@@ -121,7 +102,7 @@ export const useTaskFiltering = (
   clients: SearchableClient[],
   users: SearchableUser[],
   filters: {
-    searchQuery?: string;
+    searchQuery?: string[]; // ahora es array de keywords
     priorityFilter?: string;
     statusFilter?: string;
     clientFilter?: string;
@@ -131,7 +112,7 @@ export const useTaskFiltering = (
   getInvolvedUserIds?: (task: SearchableTask) => string[]
 ) => {
   const {
-    searchQuery = '',
+    searchQuery: rawSearchQuery = '',
     priorityFilter = '',
     statusFilter = '',
     clientFilter = '',
@@ -139,12 +120,23 @@ export const useTaskFiltering = (
     userId = '',
   } = filters;
 
+  // Normalizar el query para evitar el error de 'never'
+  let normalizedQuery: string[] = [];
+  if (Array.isArray(rawSearchQuery)) {
+    normalizedQuery = rawSearchQuery as string[];
+  } else if (typeof rawSearchQuery === 'string') {
+    normalizedQuery = (rawSearchQuery as string)
+      .split('+')
+      .map((kw) => kw.trim())
+      .filter((kw) => kw.length > 0);
+  }
+
   // Apply advanced search first
   const searchFiltered = useAdvancedSearch(
     tasks,
     clients,
     users,
-    searchQuery,
+    normalizedQuery,
     getInvolvedUserIds
   );
 

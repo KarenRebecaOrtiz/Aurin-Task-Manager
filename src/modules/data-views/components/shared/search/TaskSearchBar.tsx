@@ -34,7 +34,7 @@ export interface StatusFilter {
 }
 
 interface TaskSearchBarProps {
-  onSearch: (query: string, category: SearchCategory | null) => void;
+  onSearch: (keywords: string[], category: SearchCategory | null) => void;
   onPriorityFiltersChange?: (priorities: PriorityLevel[]) => void;
   onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
   placeholder?: string;
@@ -154,7 +154,12 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    onSearch(debouncedQuery, selectedCategory);
+    // Split query by '+' and trim each keyword
+    const keywords = debouncedQuery
+      .split('+')
+      .map((kw) => kw.trim())
+      .filter((kw) => kw.length > 0);
+    onSearch(keywords, selectedCategory);
   }, [debouncedQuery, selectedCategory, onSearch]);
 
   useEffect(() => {

@@ -29,6 +29,8 @@ const MAX_SIZES = {
   thumbnail: 1 * 1024 * 1024,  // 1MB - thumbnails
   attachment: 4 * 1024 * 1024, // 4MB - adjuntos pequeños
   cache: 5 * 1024 * 1024,      // 5MB - archivos de cache
+  profile: 5 * 1024 * 1024,    // 5MB - fotos de perfil
+  cover: 10 * 1024 * 1024,     // 10MB - fotos de portada
 };
 
 // Extensiones permitidas (más restrictivo para seguridad)
@@ -37,6 +39,8 @@ const VALID_EXTENSIONS = {
   thumbnail: ['jpg', 'jpeg', 'png', 'webp'],
   attachment: ['jpg', 'jpeg', 'png', 'gif', 'pdf'],
   cache: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp'],
+  profile: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+  cover: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
 };
 
 /**
@@ -67,6 +71,12 @@ function getBlobPath(
 
     case 'cache':
       return `cache/${userId}/${timestamp}_${sanitizedFilename}`;
+
+    case 'profile':
+      return `users/${userId}/profile_${timestamp}_${sanitizedFilename}`;
+
+    case 'cover':
+      return `users/${userId}/cover_${timestamp}_${sanitizedFilename}`;
 
     default:
       throw new Error(`Invalid upload type: ${type}`);
@@ -110,7 +120,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Validar que el tipo sea compatible con Vercel Blob
-    const validBlobTypes = ['avatar', 'thumbnail', 'attachment', 'cache'];
+    const validBlobTypes = ['avatar', 'thumbnail', 'attachment', 'cache', 'profile', 'cover'];
     if (!validBlobTypes.includes(type)) {
       console.error('[API/upload-blob] Invalid type for Vercel Blob:', type);
       return apiBadRequest(
@@ -190,16 +200,18 @@ export async function GET() {
     endpoint: '/api/upload-blob',
     method: 'POST',
     configured: isConfigured,
-    supportedTypes: ['avatar', 'thumbnail', 'attachment', 'cache'],
+    supportedTypes: ['avatar', 'thumbnail', 'attachment', 'cache', 'profile', 'cover'],
     maxSizes: {
       avatar: '2MB',
       thumbnail: '1MB',
       attachment: '4MB',
       cache: '5MB',
+      profile: '5MB',
+      cover: '10MB',
     },
     body: {
       file: '<File>',
-      type: 'avatar | thumbnail | attachment | cache',
+      type: 'avatar | thumbnail | attachment | cache | profile | cover',
       conversationId: 'string (required for attachment)',
     },
   });

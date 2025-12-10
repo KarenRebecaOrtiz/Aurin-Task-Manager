@@ -5,6 +5,7 @@ import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { ClientAvatar } from '@/modules/shared/components/atoms/Avatar';
 import { Badge, BadgeVariant } from '@/modules/shared/components/atoms/Badge';
+import { SharedBadge } from '@/modules/shared/components/ui';
 import styles from './KanbanTaskCard.module.scss';
 
 interface Client {
@@ -40,6 +41,11 @@ interface Task {
   archived?: boolean;
   archivedAt?: string;
   archivedBy?: string;
+  shared?: boolean;
+  shareToken?: string;
+  commentsEnabled?: boolean;
+  sharedAt?: string | null;
+  sharedBy?: string;
 }
 
 interface KanbanTaskCardProps {
@@ -55,7 +61,6 @@ interface KanbanTaskCardProps {
   actionMenuRef: React.RefObject<HTMLDivElement>;
   isTouchDevice: boolean;
   clients: Client[];
-  users: User[];
   normalizeStatus: (status: string) => string;
 }
 
@@ -94,7 +99,6 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   actionMenuRef,
   isTouchDevice,
   clients,
-  users,
   normalizeStatus,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -160,7 +164,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         )}
       </div>
 
-      {/* Segunda fila: Tags de estado y prioridad */}
+      {/* Segunda fila: Tags de estado, prioridad y compartido */}
       <div className={styles.badgesRow}>
         <Badge variant={getStatusVariant(task.status, normalizeStatus)} size="small">
           {normalizeStatus(task.status)}
@@ -168,6 +172,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         <Badge variant={getPriorityVariant(task.priority)} size="small">
           {task.priority}
         </Badge>
+        {task.shared && <SharedBadge iconOnly iconSize={11} />}
       </div>
 
       {/* Tercera fila: Avatar Group */}
@@ -175,7 +180,6 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         <AvatarGroup
           assignedUserIds={task.AssignedTo}
           leadedByUserIds={task.LeadedBy}
-          users={users}
           currentUserId={userId}
           maxAvatars={5}
         />

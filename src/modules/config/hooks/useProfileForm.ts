@@ -1,7 +1,14 @@
 /**
  * @module config/hooks/useProfileForm
  * @description Hook para manejar la lógica del formulario de perfil
- * Optimizado con sistema de cache modular y dependencias estables
+ * 
+ * IMPORTANTE: Este hook consume datos del userDataStore (Single Source of Truth)
+ * y solo hace fallback a Firestore si el store no tiene datos.
+ * 
+ * Al guardar:
+ * - Guarda directamente en Firestore
+ * - El onSnapshot del userDataStore detecta el cambio automáticamente
+ * - Se invalida el cache local del formulario
  */
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -11,6 +18,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileFormStore } from '../stores';
 import { useConfigPageStore } from '../stores';
+import { useUserDataStore } from '@/stores/userDataStore';
 import { Config } from '../types';
 import {
   validateConfigForm,
@@ -19,10 +27,13 @@ import {
   shouldBypassCache,
   uploadProfileImage,
   uploadCoverImage,
+  deleteImageFromBlob,
   deleteImageFromGCS,
   extractFilePathFromUrl,
   isClerkImage,
   isDefaultImage,
+  isVercelBlobImage,
+  isGCSImage,
 } from '../utils';
 import { useDebouncedCallback } from '../utils/useDebouncedCallback';
 
@@ -191,9 +202,12 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
   }, [hasDraft]);
 
   /**
-   * Carga los datos del usuario desde cache o Firestore (optimizado)
-   * Solo hace fetch si no hay datos en cache o el userId cambió
-   * Waits for Firebase Auth to be synced before making queries
+   * Carga los datos del usuario priorizando el userDataStore (Single Source of Truth)
+   * Orden de prioridad:
+   * 1. Draft de localStorage (si el usuario tiene cambios sin guardar)
+   * 2. userDataStore (Single Source of Truth - tiene datos de onSnapshot)
+   * 3. configCache (cache local del módulo config)
+   * 4. Firestore getDoc (último recurso)
    */
   useEffect(() => {
     // Wait for Clerk to load and Firebase Auth to sync
@@ -201,7 +215,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
 
     // Si el userId no ha cambiado y ya tenemos datos, no recargar
     if (currentUserId === userId && formData?.userId === userId) {
-      console.log('[useProfileForm] Datos ya cargados para userId:', userId);
       return;
     }
 
@@ -210,35 +223,43 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         setIsLoading(true);
         setCurrentUserId(userId);
 
-        // 1. Intentar cargar desde draft de localStorage primero
+        // 1. Intentar cargar desde draft de localStorage primero (cambios sin guardar)
         const draftData = loadDraftFromLocalStorage(userId);
         if (draftData && draftData.userId === userId) {
-          console.log('[useProfileForm] Usando draft de localStorage');
           setFormData(draftData);
           setIsLoading(false);
           return;
         }
 
-        // 2. Intentar cargar desde cache (si no está bypass activado)
+        // 2. Intentar cargar desde userDataStore (Single Source of Truth)
+        const storeData = useUserDataStore.getState().userData;
+        if (storeData && storeData.userId === userId) {
+          // El store ya tiene los datos del usuario - usar como fuente principal
+          const formDataFromStore = transformConfigToFormData(storeData as unknown as Config, userId, currentUser);
+          setFormData(formDataFromStore);
+          setIsLoading(false);
+          return;
+        }
+
+        // 3. Intentar cargar desde configCache (si no está bypass activado)
         if (!shouldBypassCache()) {
           const cachedData = configCache.get(userId);
           if (cachedData) {
-            console.log('[useProfileForm] Usando datos del cache');
             setFormData(transformConfigToFormData(cachedData.config, userId, currentUser));
             setIsLoading(false);
             return;
           }
         }
 
-        // 3. Fetch desde Firestore si no hay cache
-        console.log('[useProfileForm] Fetching desde Firestore para userId:', userId);
+        // 4. Último recurso: Fetch desde Firestore directamente
+        // Esto solo debería pasar si el userDataStore aún no ha cargado
         const userDocRef = doc(db, 'users', userId);
         const docSnap = await getDoc(userDocRef);
 
         if (docSnap.exists()) {
           const data = docSnap.data() as Config & { id: string };
 
-          // Guardar en cache para futuros usos
+          // Guardar en configCache para futuros usos del form
           configCache.set(userId, data as Config);
 
           const formDataToSet = transformConfigToFormData(data, userId, currentUser);
@@ -248,8 +269,7 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
           const defaultFormData = getDefaultFormData(userId, currentUser);
           setFormData(defaultFormData);
         }
-      } catch (error) {
-        console.error('[useProfileForm] Error loading user data:', error);
+      } catch {
         if (onErrorRef.current) {
           onErrorRef.current('Error al cargar los datos del usuario');
         }
@@ -263,6 +283,7 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
 
   /**
    * Guarda automáticamente en localStorage cuando cambia formData (con debounce y flag)
+   * No guarda URLs temporales (blob:) para evitar problemas al recargar
    */
   const saveToLocalStorage = useDebouncedCallback(() => {
     if (!formData || !userId) return;
@@ -271,12 +292,21 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
       const dataKey = `configFormData_${userId}`;
       const flagKey = `configFormDraft_${userId}_exists`;
 
-      localStorage.setItem(dataKey, JSON.stringify(formData));
-      localStorage.setItem(flagKey, 'true'); // Flag para optimización
+      // Crear una copia sin URLs temporales
+      const dataToSave = {
+        ...formData,
+        // No guardar URLs temporales de blob
+        profilePhoto: formData.profilePhoto?.startsWith('blob:') ? '' : formData.profilePhoto,
+        coverPhoto: formData.coverPhoto?.startsWith('blob:') ? '' : formData.coverPhoto,
+        // No guardar archivos en localStorage
+        profilePhotoFile: null,
+        coverPhotoFile: null,
+      };
 
-      console.log('[useProfileForm] Saved draft to localStorage');
-    } catch (err) {
-      console.warn('[useProfileForm] Failed to save draft to localStorage:', err);
+      localStorage.setItem(dataKey, JSON.stringify(dataToSave));
+      localStorage.setItem(flagKey, 'true'); // Flag para optimización
+    } catch {
+      // Error saving to localStorage
     }
   }, 500);
 
@@ -374,20 +404,33 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
     try {
       setIsSaving(true);
 
-      let profilePhotoUrl = formData.profilePhoto;
-      let coverPhotoUrl = formData.coverPhoto;
+      // Inicializar con los valores actuales del form
+      // IMPORTANTE: Si la foto actual es de Clerk, no la guardamos en Firestore
+      // Firestore solo debe tener URLs de Vercel Blob o estar vacío
+      let profilePhotoUrl = formData.profilePhoto || '';
+      let coverPhotoUrl = formData.coverPhoto || '';
+
+      // Si la foto actual es de Clerk, limpiarla para no guardarla en Firestore
+      if (isClerkImage(profilePhotoUrl)) {
+        profilePhotoUrl = '';
+      }
 
       // Subir imagen de perfil si hay un archivo nuevo
       if (formData.profilePhotoFile) {
         // Eliminar imagen anterior si existe y no es de Clerk o por defecto
         if (formData.profilePhoto && !isClerkImage(formData.profilePhoto) && !isDefaultImage(formData.profilePhoto, 'profile')) {
-          const filePath = extractFilePathFromUrl(formData.profilePhoto);
-          if (filePath) {
-            try {
-              await deleteImageFromGCS(filePath);
-            } catch (err) {
-              console.warn('[useProfileForm] Failed to delete old profile image:', err);
+          try {
+            // Determinar si es Vercel Blob o GCS y eliminar apropiadamente
+            if (isVercelBlobImage(formData.profilePhoto)) {
+              await deleteImageFromBlob(formData.profilePhoto, userId);
+            } else if (isGCSImage(formData.profilePhoto)) {
+              const filePath = extractFilePathFromUrl(formData.profilePhoto);
+              if (filePath) {
+                await deleteImageFromGCS(filePath);
+              }
             }
+          } catch {
+            // Solo advertencia, no fallar todo el proceso
           }
         }
 
@@ -397,8 +440,8 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         // Actualizar imagen de perfil en Clerk
         try {
           await currentUser.setProfileImage({ file: formData.profilePhotoFile });
-        } catch (err) {
-          console.warn('[useProfileForm] Failed to update Clerk profile image:', err);
+        } catch {
+          // Solo advertencia, no fallar
         }
       }
 
@@ -406,13 +449,18 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
       if (formData.coverPhotoFile) {
         // Eliminar imagen anterior si existe y no es por defecto
         if (formData.coverPhoto && !isDefaultImage(formData.coverPhoto, 'cover')) {
-          const filePath = extractFilePathFromUrl(formData.coverPhoto);
-          if (filePath) {
-            try {
-              await deleteImageFromGCS(filePath);
-            } catch (err) {
-              console.warn('[useProfileForm] Failed to delete old cover image:', err);
+          try {
+            // Determinar si es Vercel Blob o GCS y eliminar apropiadamente
+            if (isVercelBlobImage(formData.coverPhoto)) {
+              await deleteImageFromBlob(formData.coverPhoto, userId);
+            } else if (isGCSImage(formData.coverPhoto)) {
+              const filePath = extractFilePathFromUrl(formData.coverPhoto);
+              if (filePath) {
+                await deleteImageFromGCS(filePath);
+              }
             }
+          } catch {
+            // Solo advertencia, no fallar todo el proceso
           }
         }
 
@@ -459,11 +507,15 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
 
       await updateDoc(userDocRef, dataToSave);
 
-      // Invalidar cache para que se recargue con datos frescos
+      // Invalidar caches para que se recarguen con datos frescos
+      // El onSnapshot del userDataStore detectará el cambio automáticamente
       configCache.invalidate(userId);
-      console.log('[useProfileForm] Cache invalidated after save');
+      
+      // También invalidar el userDataStore cache (sessionStorage)
+      // Esto asegura que cualquier componente que lea del cache obtenga datos frescos
+      useUserDataStore.getState().invalidateCache();
 
-      // Limpiar archivos temporales del estado
+      // Actualizar formData con las URLs finales de las imágenes
       updateFormData({
         profilePhotoFile: null,
         coverPhotoFile: null,

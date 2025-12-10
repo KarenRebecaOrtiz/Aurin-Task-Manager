@@ -5,6 +5,7 @@ import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare } from 'l
 import { CrudDialog } from '../organisms/CrudDialog';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { cn } from '@/lib/utils';
+import { buildGuestTaskUrl } from '@/lib/url-utils';
 import styles from '../../styles/Dialog.module.scss';
 import {
   toggleTaskSharingAction,
@@ -230,6 +231,9 @@ export function ShareDialog({
     setTimeout(() => setCopiedToken(null), 2000);
   }, [success]);
 
+  // Get the guest task URL using the centralized utility
+  const guestTaskUrl = buildGuestTaskUrl(taskId);
+
   return (
     <CrudDialog
       isOpen={isOpen}
@@ -297,10 +301,13 @@ export function ShareDialog({
                 <MessageSquare size={18} className={styles.shareOptionIcon} />
                 <div className={styles.shareOptionText}>
                   <label htmlFor="comments" className={styles.shareLabel}>
-                    Habilitar comentarios
+                    Permitir interacción a invitados
                   </label>
                   <p className={styles.shareDescription}>
-                    Los invitados podrán dejar comentarios en la tarea
+                    {commentsEnabled
+                      ? 'Los invitados pueden escribir y responder mensajes'
+                      : 'Modo solo lectura: los invitados solo pueden ver la tarea'
+                    }
                   </p>
                 </div>
               </div>
@@ -329,16 +336,16 @@ export function ShareDialog({
                 <input
                   type="text"
                   readOnly
-                  value={`${window.location.origin}/guest/${taskId}`}
+                  value={guestTaskUrl}
                   className={styles.shareLinkInput}
                   onClick={(_e) => _e.currentTarget.select()}
                 />
                 <button
-                  onClick={() => handleCopy(`${window.location.origin}/guest/${taskId}`)}
+                  onClick={() => handleCopy(guestTaskUrl)}
                   className={styles.shareLinkCopyButton}
                   disabled={isSubmitting}
                 >
-                  {copiedToken === `${window.location.origin}/guest/${taskId}` ? (
+                  {copiedToken === guestTaskUrl ? (
                     <CheckIcon size={16} className={styles.iconSuccess} />
                   ) : (
                     <CopyIcon size={16} />

@@ -9,6 +9,8 @@ import { StatusDropdown } from "../molecules/StatusDropdown";
 import { TimeBreakdown } from "../molecules/TimeBreakdown";
 import { TimerDropdown } from "../../timer/components/molecules/TimerDropdown";
 import { ShareButton } from "../atoms/ShareButton";
+import { SharedBadge } from "@/modules/shared/components/ui";
+import { useDataStore } from "@/stores/dataStore";
 import styles from "../../styles/ChatHeader.module.scss";
 import type { Task, Message } from "../../types";
 
@@ -16,7 +18,7 @@ interface ChatHeaderProps {
   task: Task;
   clientName: string;
   clientImageUrl?: string;
-  users?: { id: string; fullName: string; imageUrl: string }[];
+  users?: { id: string; fullName: string; imageUrl: string }[]; // Ahora opcional - fallback a dataStore
   messages?: Message[];
   userId: string;
   userName: string;
@@ -27,13 +29,17 @@ interface ChatHeaderProps {
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   task,
   clientName,
-  users = [],
+  users, // Ya no tiene default value
   userId,
   userName,
   onOpenManualTimeEntry,
   isPublicView = false, // Por defecto es vista privada
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // ✅ Si no se pasan users como prop, obtenerlos del dataStore centralizado
+  const storeUsers = useDataStore((state) => state.users);
+  const effectiveUsers = users || storeUsers;
 
   const formatDateRange = (start: string | null, end: string | null) => {
     if (!start || !end) return null;
@@ -48,14 +54,14 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     return `${startDate} - ${endDate}`;
   };
 
-  // Obtener usuarios del equipo
+  // Obtener usuarios del equipo desde dataStore si no se pasaron como prop
   const teamMembers = useMemo(() => {
     const memberIds = [
       ...(task.LeadedBy || []),
       ...(task.AssignedTo || []),
     ];
-    return users.filter(user => memberIds.includes(user.id));
-  }, [task.LeadedBy, task.AssignedTo, users]);
+    return effectiveUsers.filter(user => memberIds.includes(user.id));
+  }, [task.LeadedBy, task.AssignedTo, effectiveUsers]);
 
   // Leer horas totales desde el nuevo campo timeTracking (con fallback a campo legacy)
   // NO desde mensajes, porque con paginación los mensajes antiguos no están cargados
@@ -118,7 +124,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       {/* Task Info */}
       <div className={styles.taskInfo}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className={styles.taskTitle}>{task.name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h1 className={styles.taskTitle}>{task.name}</h1>
+            {!isPublicView && task.shared && <SharedBadge iconSize={14} />}
+          </div>
           <p className={`${styles.taskDescription} ${isDetailsOpen ? styles.expanded : styles.collapsed}`}>
             {task.description}
           </p>
@@ -159,7 +168,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               transition={{ delay: 0.1, duration: 0.3 }}
             >
               {/* Status Card - Now with Dropdown */}
-              <motion.div 
+              <motion.div
                 className={styles.detailCard}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -169,6 +178,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 <StatusDropdown
                   taskId={task.id}
                   currentStatus={task.status}
+                  createdBy={task.CreatedBy}
+                  userId={userId}
                 />
               </motion.div>
 

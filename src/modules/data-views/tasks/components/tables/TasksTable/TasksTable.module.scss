@@ -619,7 +619,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  
+
   @include dark-mode {
     color: $color-text-dark-primary;
   }

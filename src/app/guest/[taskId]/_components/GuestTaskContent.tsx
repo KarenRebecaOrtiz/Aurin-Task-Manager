@@ -1,5 +1,6 @@
 'use client';
 
+import { useUser } from '@clerk/nextjs';
 import { useGuestAuth } from '@/contexts/GuestAuthContext';
 import { TokenAuthForm } from './TokenAuthForm';
 import { PublicTaskView } from '@/app/p/[token]/_components/PublicTaskView';
@@ -12,7 +13,10 @@ interface GuestTaskContentProps {
 }
 
 export function GuestTaskContent({ taskId, task }: GuestTaskContentProps) {
-  const { guestSession, isLoading } = useGuestAuth();
+  const { user, isLoaded: isUserLoaded } = useUser();
+  const { guestSession, isLoading: isGuestLoading } = useGuestAuth();
+
+  const isLoading = !isUserLoaded || isGuestLoading;
 
   if (isLoading) {
     return (
@@ -25,6 +29,37 @@ export function GuestTaskContent({ taskId, task }: GuestTaskContentProps) {
     );
   }
 
+  // ✅ NUEVA LÓGICA: Si hay usuario autenticado de Clerk, acceso directo sin token
+  if (user) {
+    return (
+      <>
+        <InteractiveBackground />
+        <LightRaysWrapper
+          raysOrigin="top-center"
+          raysColor="#ffffff1b"
+          raysSpeed={0.3}
+          lightSpread={1}
+          rayLength={1.5}
+          saturation={0.6}
+          followMouse={false}
+          mouseInfluence={0}
+          introAnimation={true}
+        />
+        <PublicTaskView
+          task={task}
+          token="authenticated-user"
+          tokenStatus="pending"
+          guestSession={{
+            taskId: taskId,
+            guestName: user.fullName || user.firstName || 'Usuario',
+            avatar: user.imageUrl,
+          }}
+        />
+      </>
+    );
+  }
+
+  // Si no hay usuario de Clerk, verificar sesión de invitado
   return (
     <>
       {/* Background Effects */}

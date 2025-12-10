@@ -7,6 +7,8 @@ import { CrudDialog, DialogHeader, DialogActions } from "@/modules/dialogs"
 import { useConfigPageStore } from "../../stores"
 import { useProfileFormStore } from "../../stores"
 import { useProfileForm } from "../../hooks"
+import useProfileCardStore from "@/modules/profile-card/stores/profileCardStore"
+import { useUserDataStore } from "@/stores/userDataStore"
 import { ConfigForm } from "./ConfigForm"
 import { ProfileHeader } from "../header"
 import { MobileLoader } from "../ui"
@@ -28,12 +30,32 @@ export function ConfigDialog({
   const { success: showSuccess, error: showError } = useSonnerToast()
   const { isLoading, isSaving } = useProfileFormStore()
   const { hasUnsavedChanges } = useConfigPageStore()
+  const invalidateCache = useUserDataStore((state) => state.invalidateCache)
 
   // Callbacks para success/error que se pasan a useProfileForm
   const handleSuccess = useCallback((message: string) => {
     showSuccess(message)
+    
+    // Limpiar localStorage para evitar datos stale
+    try {
+      const dataKey = `configFormData_${userId}`
+      const flagKey = `configFormDraft_${userId}_exists`
+      localStorage.removeItem(dataKey)
+      localStorage.removeItem(flagKey)
+    } catch {
+      // Ignore localStorage errors
+    }
+    
+    // Invalidar el cache del userDataStore (Single Source of Truth)
+    invalidateCache()
+    
+    // Invalidar el perfil en el ProfileCardStore para que se recargue con los nuevos datos
+    useProfileCardStore.getState().invalidateProfile(userId)
+    
+    // Forzar recarga del store para la próxima apertura
+    useProfileFormStore.getState().forceReload()
     onOpenChange(false)
-  }, [showSuccess, onOpenChange])
+  }, [showSuccess, onOpenChange, userId, invalidateCache])
 
   // Hook para manejar el formulario - nos da acceso a handleSubmit y handleDiscard
   const { handleSubmit, handleDiscard } = useProfileForm({

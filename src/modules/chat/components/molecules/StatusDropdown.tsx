@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useUser } from "@clerk/nextjs";
+import { useUserDataStore } from "@/stores/userDataStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { updateTaskActivity } from "@/lib/taskUtils";
@@ -25,25 +26,29 @@ type StatusValue = typeof STATUS_OPTIONS[number]["value"];
 interface StatusDropdownProps {
   taskId: string;
   currentStatus: string;
+  createdBy?: string; // ID of the user who created the task (optional)
+  userId: string; // Current user ID
   onStatusChange?: (newStatus: string) => void;
 }
 
 export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   taskId,
   currentStatus,
+  createdBy,
+  userId,
   onStatusChange,
 }) => {
-  const { user } = useUser();
+  // ✅ Obtener userId desde userDataStore y isAdmin desde AuthContext
+  const currentUserId = useUserDataStore((state) => state.userData?.userId || '');
+  const { isAdmin } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Check if user can edit - using 'access' metadata like AuthContext
-  // Admin can always edit, creators can edit tasks they created
-  const userAccess = user?.publicMetadata?.access as string | undefined;
-  const isAdmin = userAccess === "admin";
-  const isCreator = userAccess === "creator";
-  const canEdit = isAdmin || isCreator;
+  // Check if user can edit - Only admins or the task creator can edit
+  const isTaskCreator = createdBy ? (userId || currentUserId) === createdBy : false;
+  const canEdit = isAdmin || isTaskCreator;
 
   // Get current status config
   const currentStatusConfig = STATUS_OPTIONS.find(s => s.value === currentStatus) || STATUS_OPTIONS[0];
