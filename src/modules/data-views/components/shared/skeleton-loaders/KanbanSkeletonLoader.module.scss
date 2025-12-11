@@ -1,103 +1,125 @@
-@keyframes shimmer {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-}
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+/**
+ * KanbanSkeletonLoader Styles
+ *
+ * These styles complement KanbanColumn.module.scss and KanbanTaskCard.module.scss
+ * to create a seamless skeleton-to-content transition.
+ * The component uses columnStyles and cardStyles from the real components for base layout.
+ */
+
+// ============================================================
+// KANBAN BOARD CONTAINER
+// ============================================================
 
 .kanbanSkeleton {
   display: flex;
-  gap: 20px;
-  padding: 20px;
+  gap: $spacing-lg;
+  padding: $spacing-md 0;
   overflow-x: auto;
-  min-height: 400px;
   width: 100%;
+  min-height: calc(100vh - 300px);
+
+  @include crystallized-scrollbar;
 }
 
-.kanbanColumn {
-  min-width: 280px;
-  max-width: 320px;
-  flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-  height: fit-content;
+// ============================================================
+// SKELETON COLUMN OVERRIDES
+// ============================================================
+
+.skeletonColumn {
+  pointer-events: none;
+  min-width: 300px;
+  flex-shrink: 0;
 }
+
+// ============================================================
+// COLUMN HEADER
+// ============================================================
 
 .columnHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-md;
 }
 
-.columnTitle {
-  height: 20px;
-  width: 120px;
-  border-radius: 4px;
-  opacity: 0.7;
-  transition: all 0.3s ease;
-}
-
-.columnCount {
-  height: 16px;
-  width: 30px;
-  border-radius: 12px;
-  opacity: 0.7;
-  transition: all 0.3s ease;
-}
-
-.columnCards {
+.columnHeaderContent {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.skeletonKanbanCard {
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
-  min-height: 120px;
-  border-radius: 8px;
-  padding: 12px;
+  gap: $spacing-md;
+}
+
+.skeletonTitle {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonCount {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+// ============================================================
+// SKELETON CARD OVERRIDES
+// ============================================================
+
+.skeletonCard {
+  pointer-events: none;
+  cursor: default !important;
+
+  // Remove hover effects on skeleton cards
+  &:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// ============================================================
+// SKELETON ELEMENTS
+// ============================================================
+
+.skeletonAvatar {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.skeletonAvatarSmall {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.skeletonAvatarGroup {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  opacity: 0.7;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: center;
 }
 
-.skeletonCardHeader {
-  height: 16px;
-  width: 80%;
-  border-radius: 4px;
-  opacity: 0.7;
-  transition: all 0.3s ease;
+.skeletonText {
+  position: relative;
+  overflow: hidden;
 }
 
-.skeletonCardContent {
-  height: 12px;
-  width: 90%;
-  border-radius: 4px;
-  opacity: 0.7;
-  transition: all 0.3s ease;
+.skeletonBadge {
+  position: relative;
+  overflow: hidden;
 }
 
-.skeletonCardFooter {
-  height: 20px;
-  width: 60%;
-  border-radius: 4px;
-  opacity: 0.7;
-  margin-top: auto;
-  transition: all 0.3s ease;
+.skeletonAction {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
 }
+
+// ============================================================
+// SHIMMER ANIMATION
+// ============================================================
 
 .shimmerOverlay {
   position: absolute;
@@ -105,70 +127,36 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.6),
-    transparent
-  );
-  transform: translateX(-100%);
   pointer-events: none;
-  transition: all 0.3s ease;
+  transform: translateX(-100%);
 }
 
-// Dark mode support
-:global(.dark) {
-  .kanbanColumn {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-  }
+// ============================================================
+// RESPONSIVE ADJUSTMENTS
+// ============================================================
 
-  .columnHeader {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .skeletonKanbanCard {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .columnTitle,
-  .columnCount,
-  .skeletonCardHeader,
-  .skeletonCardContent,
-  .skeletonCardFooter {
-    background: rgba(60, 60, 60, 0.6) !important;
-  }
-
-  .shimmerOverlay {
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.1),
-      transparent
-    );
-  }
-}
-
-// Mobile responsiveness
 @media (max-width: 768px) {
   .kanbanSkeleton {
-    padding: 12px;
-    gap: 12px;
+    gap: $spacing-md;
+    padding: $spacing-sm 0;
   }
 
-  .kanbanColumn {
-    min-width: 240px;
-    padding: 12px;
+  .skeletonColumn {
+    min-width: 260px;
   }
 
-  .skeletonKanbanCard {
-    padding: 10px;
-    min-height: 100px;
+  .skeletonAvatar {
+    width: 28px !important;
+    height: 28px !important;
   }
 
-  .columnHeader {
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+  .skeletonAvatarSmall {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .skeletonBadge {
+    width: 60px !important;
+    height: 18px !important;
   }
 }

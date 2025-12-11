@@ -1,9 +1,28 @@
 'use client';
 
 import { memo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
+import {
+  skeletonContainerVariants,
+  skeletonRowVariants,
+  skeletonCellVariants,
+  shimmerVariants,
+  tableHeaderVariants,
+} from '@/modules/data-views/animations/entryAnimations';
 import styles from './TableSkeletonLoader.module.scss';
+import tableStyles from '../table/Table.module.scss';
+
+/**
+ * Column configuration for skeleton cells
+ */
+interface SkeletonColumn {
+  key: string;
+  label: string;
+  width: string;
+  mobileWidth?: string;
+  mobileVisible?: boolean;
+}
 
 /**
  * Props for TableSkeletonLoader component
@@ -19,259 +38,266 @@ interface TableSkeletonLoaderProps {
 
 /**
  * TableSkeletonLoader - Loading state component for data tables
- * Part of the data-views module for consistent table loading states
+ *
+ * Renders a skeleton that matches the exact structure of the populated Table.tsx
+ * Uses the same CSS classes and layout as the real table for seamless transitions.
  */
-const TableSkeletonLoader: React.FC<TableSkeletonLoaderProps> = memo(({ 
-  type, 
-  rows = 5,
-  className = ''
+const TableSkeletonLoader: React.FC<TableSkeletonLoaderProps> = memo(({
+  type,
+  rows = 10,
+  className = '',
 }) => {
   const { isDarkMode } = useTheme();
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
-  };
-
-  const tableVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 20 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: "easeOut" as const }
-    }
-  };
-
-  const rowVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { 
-      opacity: 1, 
-      x: 0,
-      transition: { duration: 0.3 }
-    }
-  };
-
-  const cellVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { duration: 0.2 }
-    }
-  };
-
-  const shimmerVariants = {
-    animate: {
-      x: ['-100%', '100%'],
-      transition: {
-        duration: 1.5,
-        repeat: Infinity,
-        ease: 'linear' as const
-      }
-    }
-  };
-
-  const baseShimmerStyle = {
-    position: 'relative' as const,
-    overflow: 'hidden' as const,
-    backgroundColor: isDarkMode ? 'rgba(60, 60, 60, 0.6)' : 'rgba(240, 240, 240, 0.6)',
-    borderRadius: '4px',
-  };
-
-  const shimmerOverlay = (
-    <motion.div
-      className={styles.shimmerOverlay}
-      variants={shimmerVariants}
-      animate="animate"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: isDarkMode 
-          ? 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)'
-          : 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent)',
-        transform: 'translateX(-100%)',
-      }}
-    />
-  );
-
   /**
    * Get column configuration based on table type
+   * These match the actual column definitions in TasksTable, ClientsTable, etc.
    */
-  const getColumns = () => {
+  const getColumns = (): SkeletonColumn[] => {
     switch (type) {
       case 'tasks':
         return [
-          { key: 'name', label: 'Tarea', width: '30%' },
-          { key: 'client', label: 'Cuenta', width: '15%' },
-          { key: 'priority', label: 'Prioridad', width: '10%' },
-          { key: 'status', label: 'Estado', width: '10%' },
-          { key: 'assigned', label: 'Asignados', width: '20%' },
-          { key: 'action', label: 'Acciones', width: '15%' },
+          { key: 'clientId', label: 'Cuenta', width: '30%', mobileVisible: true, mobileWidth: '25%' },
+          { key: 'name', label: 'Tarea', width: '50%', mobileVisible: true, mobileWidth: '60%' },
+          { key: 'notificationDot', label: '', width: '20%', mobileVisible: false },
+          { key: 'assignedTo', label: 'Asignados', width: '20%', mobileVisible: false },
+          { key: 'status', label: 'Estado', width: '30%', mobileVisible: false },
+          { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false },
+          { key: 'action', label: 'Acciones', width: '10%', mobileVisible: true, mobileWidth: '15%' },
         ];
       case 'clients':
         return [
-          { key: 'image', label: '', width: '20%' },
-          { key: 'name', label: 'Cuentas', width: '50%' },
-          { key: 'projects', label: 'Proyectos Asignados', width: '20%' },
-          { key: 'action', label: 'Acciones', width: '10%' },
+          { key: 'image', label: '', width: '10%', mobileVisible: true },
+          { key: 'name', label: 'Cuentas', width: '50%', mobileVisible: true },
+          { key: 'projects', label: 'Proyectos Asignados', width: '30%', mobileVisible: false },
+          { key: 'action', label: 'Acciones', width: '10%', mobileVisible: true },
         ];
       case 'members':
         return [
-          { key: 'avatar', label: '', width: '15%' },
-          { key: 'name', label: 'Nombre', width: '25%' },
-          { key: 'role', label: 'Rol', width: '20%' },
-          { key: 'status', label: 'Estado', width: '15%' },
-          { key: 'tasks', label: 'Tareas', width: '15%' },
-          { key: 'action', label: 'Acciones', width: '10%' },
+          { key: 'avatar', label: '', width: '10%', mobileVisible: true },
+          { key: 'name', label: 'Nombre', width: '30%', mobileVisible: true },
+          { key: 'role', label: 'Rol', width: '20%', mobileVisible: false },
+          { key: 'status', label: 'Estado', width: '15%', mobileVisible: false },
+          { key: 'tasks', label: 'Tareas', width: '15%', mobileVisible: false },
+          { key: 'action', label: 'Acciones', width: '10%', mobileVisible: true },
         ];
       case 'archive':
         return [
-          { key: 'name', label: 'Tarea', width: '30%' },
-          { key: 'client', label: 'Cuenta', width: '15%' },
-          { key: 'priority', label: 'Prioridad', width: '10%' },
-          { key: 'status', label: 'Estado', width: '10%' },
-          { key: 'assigned', label: 'Asignados', width: '20%' },
-          { key: 'action', label: 'Acciones', width: '15%' },
+          { key: 'clientId', label: 'Cuenta', width: '30%', mobileVisible: true, mobileWidth: '25%' },
+          { key: 'name', label: 'Tarea', width: '50%', mobileVisible: true, mobileWidth: '60%' },
+          { key: 'assignedTo', label: 'Asignados', width: '20%', mobileVisible: false },
+          { key: 'status', label: 'Estado', width: '30%', mobileVisible: false },
+          { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false },
+          { key: 'action', label: 'Acciones', width: '10%', mobileVisible: true, mobileWidth: '15%' },
         ];
       default:
         return [];
     }
   };
 
+  const columns = getColumns();
+
   /**
-   * Render skeleton cell based on column type
+   * Shimmer overlay component
    */
-  const renderSkeletonCell = (column: { key: string; width: string }) => {
+  const ShimmerOverlay = () => (
+    <motion.div
+      className={styles.shimmerOverlay}
+      variants={shimmerVariants}
+      animate="animate"
+      style={{
+        background: isDarkMode
+          ? 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent)'
+          : 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent)',
+      }}
+    />
+  );
+
+  /**
+   * Get skeleton element based on column type
+   */
+  const renderSkeletonCell = (column: SkeletonColumn) => {
+    const baseStyle = {
+      backgroundColor: isDarkMode ? 'rgba(60, 60, 60, 0.5)' : 'rgba(230, 230, 230, 0.8)',
+      borderRadius: '4px',
+      position: 'relative' as const,
+      overflow: 'hidden' as const,
+    };
+
     switch (column.key) {
       case 'image':
       case 'avatar':
         return (
-          <motion.div 
+          <div
             className={styles.skeletonAvatar}
-            style={baseShimmerStyle}
-            variants={rowVariants}
+            style={{ ...baseStyle, borderRadius: '50%' }}
           >
-            {shimmerOverlay}
-          </motion.div>
+            <ShimmerOverlay />
+          </div>
         );
-      case 'assigned':
+
+      case 'clientId':
         return (
-          <motion.div 
-            className={styles.skeletonAvatarGroup}
-            variants={rowVariants}
-          >
-            <motion.div className={styles.skeletonAvatar} style={baseShimmerStyle}>
-              {shimmerOverlay}
-            </motion.div>
-            <motion.div className={styles.skeletonAvatar} style={baseShimmerStyle}>
-              {shimmerOverlay}
-            </motion.div>
-            <motion.div className={styles.skeletonAvatar} style={baseShimmerStyle}>
-              {shimmerOverlay}
-            </motion.div>
-          </motion.div>
+          <div className={styles.skeletonClientCell}>
+            <div
+              className={styles.skeletonAvatar}
+              style={{ ...baseStyle, borderRadius: '50%', width: 32, height: 32 }}
+            >
+              <ShimmerOverlay />
+            </div>
+            <div
+              className={styles.skeletonText}
+              style={{ ...baseStyle, width: '70%', height: 14 }}
+            >
+              <ShimmerOverlay />
+            </div>
+          </div>
         );
+
+      case 'assignedTo':
+        return (
+          <div className={styles.skeletonAvatarGroup}>
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className={styles.skeletonAvatarSmall}
+                style={{
+                  ...baseStyle,
+                  borderRadius: '50%',
+                  marginLeft: i > 0 ? -8 : 0,
+                }}
+              >
+                <ShimmerOverlay />
+              </div>
+            ))}
+          </div>
+        );
+
       case 'action':
         return (
-          <motion.div 
+          <div
             className={styles.skeletonAction}
-            style={baseShimmerStyle}
-            variants={rowVariants}
+            style={{ ...baseStyle, width: 32, height: 32, borderRadius: '8px' }}
           >
-            {shimmerOverlay}
-          </motion.div>
+            <ShimmerOverlay />
+          </div>
         );
+
       case 'priority':
         return (
-          <motion.div 
+          <div
             className={styles.skeletonBadge}
-            style={baseShimmerStyle}
-            variants={rowVariants}
+            style={{ ...baseStyle, width: 70, height: 24, borderRadius: '12px' }}
           >
-            {shimmerOverlay}
-          </motion.div>
+            <ShimmerOverlay />
+          </div>
         );
+
       case 'status':
         return (
-          <motion.div 
+          <div
             className={styles.skeletonStatus}
-            style={baseShimmerStyle}
-            variants={rowVariants}
+            style={{ ...baseStyle, width: 90, height: 24, borderRadius: '12px' }}
           >
-            {shimmerOverlay}
-          </motion.div>
+            <ShimmerOverlay />
+          </div>
         );
+
+      case 'notificationDot':
+        return null;
+
+      case 'name':
+        return (
+          <div
+            className={styles.skeletonText}
+            style={{ ...baseStyle, width: '85%', height: 16 }}
+          >
+            <ShimmerOverlay />
+          </div>
+        );
+
       default:
         return (
-          <motion.div 
+          <div
             className={styles.skeletonText}
-            style={baseShimmerStyle}
-            variants={rowVariants}
+            style={{ ...baseStyle, width: '80%', height: 14 }}
           >
-            {shimmerOverlay}
-          </motion.div>
+            <ShimmerOverlay />
+          </div>
         );
     }
   };
 
   return (
-    <motion.div
-      className={`${styles.skeletonContainer} ${className}`}
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div className={styles.skeletonTable} variants={tableVariants}>
-        {/* Table Header */}
-        <motion.div className={styles.skeletonHeader} variants={rowVariants}>
-          {getColumns().map((column) => (
-            <motion.div
-              key={column.key}
-              className={styles.skeletonHeaderCell}
-              style={{ width: column.width }}
-              variants={cellVariants}
-            >
-              <motion.div className={styles.skeletonText} style={baseShimmerStyle}>
-                {shimmerOverlay}
-              </motion.div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Table Body */}
-        <motion.div className={styles.skeletonBody}>
-          {Array.from({ length: rows }).map((_, rowIndex) => (
-            <motion.div
-              key={rowIndex}
-              className={styles.skeletonRow}
-              variants={rowVariants}
-            >
-              {getColumns().map((column) => (
+    <AnimatePresence mode="wait">
+      <motion.div
+        className={`${tableStyles.tableContainer} ${className}`}
+        data-table={type}
+        variants={skeletonContainerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <div className={tableStyles.table}>
+          {/* Header - matches TableHeader structure */}
+          <motion.div
+            className={`${tableStyles.header} ${styles.skeletonHeader}`}
+            variants={tableHeaderVariants}
+          >
+            {columns.map((column) => (
+              <div
+                key={column.key}
+                className={`${tableStyles.headerCell} ${!column.mobileVisible ? tableStyles.hideOnMobile : ''}`}
+                style={{ width: column.width }}
+              >
                 <motion.div
-                  key={column.key}
-                  className={styles.skeletonCell}
-                  style={{ width: column.width }}
-                  variants={cellVariants}
+                  variants={skeletonCellVariants}
+                  className={styles.skeletonHeaderText}
+                  style={{
+                    backgroundColor: isDarkMode ? 'rgba(60, 60, 60, 0.4)' : 'rgba(220, 220, 220, 0.6)',
+                    borderRadius: '4px',
+                    height: 12,
+                    width: column.label ? '60%' : 0,
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
                 >
-                  {renderSkeletonCell(column)}
+                  {column.label && <ShimmerOverlay />}
                 </motion.div>
-              ))}
-            </motion.div>
-          ))}
-        </motion.div>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Body rows - matches Table row structure */}
+          <motion.div
+            className={styles.skeletonBody}
+            variants={skeletonContainerVariants}
+          >
+            {Array.from({ length: rows }).map((_, rowIndex) => (
+              <motion.div
+                key={`skeleton-row-${rowIndex}`}
+                className={`${tableStyles.row} ${styles.skeletonRow}`}
+                variants={skeletonRowVariants}
+                custom={rowIndex}
+              >
+                {columns.map((column) => (
+                  <motion.div
+                    key={column.key}
+                    className={`${tableStyles.cell} ${!column.mobileVisible ? tableStyles.hideOnMobile : ''} ${
+                      column.key === 'action' ? tableStyles.actionCell : ''
+                    }`}
+                    style={{ width: column.width }}
+                    variants={skeletonCellVariants}
+                  >
+                    {renderSkeletonCell(column)}
+                  </motion.div>
+                ))}
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </motion.div>
-    </motion.div>
+    </AnimatePresence>
   );
 });
 

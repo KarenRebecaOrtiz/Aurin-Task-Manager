@@ -2,15 +2,14 @@
 
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  kanbanColumnVariants,
+  kanbanCardVariants,
+} from '@/modules/data-views/animations/entryAnimations';
 import { KanbanColumnHeader } from './KanbanColumnHeader';
 import { KanbanTaskCard } from './KanbanTaskCard';
 import styles from './KanbanColumn.module.scss';
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-}
 
 interface User {
   id: string;
@@ -55,7 +54,6 @@ interface KanbanColumnProps {
   actionButtonRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
   actionMenuRef: React.RefObject<HTMLDivElement>;
   isTouchDevice: boolean;
-  clients: Client[];
   normalizeStatus: (status: string) => string;
 }
 
@@ -73,16 +71,19 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   actionButtonRefs,
   actionMenuRef,
   isTouchDevice,
-  clients,
   normalizeStatus,
 }) => {
   const { setNodeRef } = useDroppable({ id: columnId });
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
       className={`${styles.kanbanColumn} ${tasks.length === 0 ? styles.empty : ''}`}
       style={{ touchAction: 'manipulation' }}
+      variants={kanbanColumnVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
     >
       <KanbanColumnHeader title={title} taskCount={tasks.length} status={columnId} />
 
@@ -92,27 +93,37 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         strategy={verticalListSortingStrategy}
       >
         <div className={styles.taskList}>
-          {tasks.map((task, index) => (
-            <KanbanTaskCard
-              key={`${task.id}-${index}`}
-              task={task}
-              isAdmin={isAdmin}
-              userId={userId}
-              onEditTaskOpen={onEditTaskOpen}
-              onDeleteTaskOpen={onDeleteTaskOpen}
-              onArchiveTask={onArchiveTask}
-              onCardClick={onCardClick}
-              animateClick={animateClick}
-              actionButtonRefs={actionButtonRefs}
-              actionMenuRef={actionMenuRef}
-              isTouchDevice={isTouchDevice}
-              clients={clients}
-              normalizeStatus={normalizeStatus}
-            />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {tasks.map((task, index) => (
+              <motion.div
+                key={task.id}
+                variants={kanbanCardVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                custom={index}
+                layout
+              >
+                <KanbanTaskCard
+                  task={task}
+                  isAdmin={isAdmin}
+                  userId={userId}
+                  onEditTaskOpen={onEditTaskOpen}
+                  onDeleteTaskOpen={onDeleteTaskOpen}
+                  onArchiveTask={onArchiveTask}
+                  onCardClick={onCardClick}
+                  animateClick={animateClick}
+                  actionButtonRefs={actionButtonRefs}
+                  actionMenuRef={actionMenuRef}
+                  isTouchDevice={isTouchDevice}
+                  normalizeStatus={normalizeStatus}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </SortableContext>
-    </div>
+    </motion.div>
   );
 };
 

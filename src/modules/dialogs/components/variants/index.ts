@@ -8,3 +8,4 @@ export { TaskDialog } from './TaskDialog';
 export { ClientDialog } from './ClientDialog';
 export { AddNoteDialog } from './AddNoteDialog';
 export { ManualTimeDialog } from './ManualTimeDialog';
+export { ChatDialog } from './ChatDialog';

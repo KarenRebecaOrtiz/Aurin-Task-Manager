@@ -1,38 +1,52 @@
 "use client";
 
 import React, { useState, useRef, useCallback, memo, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useUserDataStore } from "@/stores/userDataStore";
 import { useSidebarStateStore } from "@/stores/sidebarStateStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useShallow } from "zustand/react/shallow";
+import { useClientData } from "@/hooks/useClientData";
+import {
+  sidebarContainerVariants,
+  overlayVariants,
+  sidebarHeaderVariants,
+  sidebarContentVariants,
+  sidebarInputVariants,
+  imagePreviewOverlayVariants,
+  imagePreviewContentVariants,
+} from "../animations";
 import styles from "../styles/ChatSidebar.module.scss";
 import { ChatHeader } from "./organisms";
 import { VirtualizedMessageList } from "./organisms/VirtualizedMessageList";
-import { InputChat } from "./organisms/InputChat"; // ✅ Usando InputChat MODULAR que replica el original
+import { InputChat } from "./organisms/InputChat";
 import { MessageItem } from "./molecules/MessageItem";
-import { useEncryption } from "@/hooks/useEncryption"; // ✅ USAR HOOK ORIGINAL
-import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages"; // ✅ NUEVO HOOK con virtuoso
-import { useMessageActions } from "@/hooks/useMessageActions"; // ✅ USAR HOOK ORIGINAL
+import { useEncryption } from "@/hooks/useEncryption";
+import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages";
+import { useMessageActions } from "@/hooks/useMessageActions";
 import { ManualTimeDialog } from "@/modules/dialogs";
 import { toast } from "@/components/ui/use-toast";
 import type { ChatSidebarProps } from "../types";
 
 /**
- * ChatSidebar - Componente Principal Modularizado
+ * ChatSidebar - Componente Principal con Animaciones Motion Dev
  *
- * Sidebar de chat completamente modularizado con:
- * - Soporte multi-task (cambiar entre tareas sin perder estado)
- * - Paginación de mensajes
- * - Encriptación end-to-end
- * - ✅ InputChat MODULAR con Timer integrado
- * - Estilos SCSS modules (no Tailwind)
+ * Sidebar de chat con animaciones suaves de entrada y salida:
+ * - Container: Desliza desde la derecha con spring physics
+ * - Overlay: Fade in/out con blur animado
+ * - Header: Desliza hacia abajo con blur
+ * - Content: Fade in con scale sutil
+ * - Input: Desliza hacia arriba con spring
+ *
+ * IMPORTANTE: Este componente debe estar envuelto en AnimatePresence
+ * en el nivel del layout para que las exit animations funcionen.
  */
 const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
   isOpen,
   onClose,
   users = [],
 }) => {
-  // ✅ Obtener datos del usuario desde userDataStore (Single Source of Truth)
+  // Obtener datos del usuario desde userDataStore (Single Source of Truth)
   const userId = useUserDataStore((state) => state.userData?.userId || '');
   const userName = useUserDataStore((state) => state.userData?.fullName || 'Usuario');
   const userFirstName = useUserDataStore((state) => {
@@ -41,7 +55,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
   });
 
   const sidebarRef = useRef<HTMLDivElement>(null);
-  
+
   // Obtener taskId del store global
   const chatSidebar = useSidebarStateStore(useShallow(state => state.chatSidebar));
   const taskId = chatSidebar.taskId;
@@ -50,22 +64,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
   // Obtener la tarea actualizada desde dataStore (para tener timeTracking actualizado)
   const tasks = useDataStore(useShallow(state => state.tasks));
   const task = useMemo(() => {
-    if (!taskId) return chatSidebar.task; // Fallback to sidebar task if no taskId
+    if (!taskId) return chatSidebar.task;
     return tasks.find(t => t.id === taskId) || chatSidebar.task;
   }, [taskId, tasks, chatSidebar.task]);
-  
-  // Obtener información del cliente desde dataStore
-  const clients = useDataStore(useShallow(state => state.clients));
-  const clientData = useMemo(() => {
-    if (!task?.clientId) return null;
-    const client = clients.find(c => c.id === task.clientId);
-    return client ? {
-      id: client.id,
-      name: client.name,
-      imageUrl: client.imageUrl || '/empty-image.png'
-    } : null;
-  }, [task?.clientId, clients]);
 
+  // Obtener información del cliente desde clientsDataStore centralizado - O(1) access
+  const clientFromStore = useClientData(task?.clientId || '');
+  const clientData = useMemo(() => {
+    if (!task?.clientId || !clientFromStore) return null;
+    return {
+      id: clientFromStore.id,
+      name: clientFromStore.name,
+      imageUrl: clientFromStore.imageUrl || '/empty-image.png'
+    };
+  }, [task?.clientId, clientFromStore]);
 
   // Estados locales
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
@@ -76,14 +88,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
     setIsManualTimeModalOpen(true);
   }, []);
 
-  // ✅ Hooks ORIGINALES que ya funcionan
-  const { encryptMessage, decryptMessage } = useEncryption(task?.id || '');
+  // Memoize taskId for stable hook dependencies
+  const stableTaskId = taskId || '';
+
+  // Hooks de encriptación y mensajes
+  const { encryptMessage, decryptMessage } = useEncryption(stableTaskId);
 
   const handleNewMessage = useCallback(() => {
     // Callback para nuevos mensajes en tiempo real
   }, []);
 
-  // ✅ Hook nuevo con virtuoso (infinite scroll + ordenamiento correcto)
+  // Hook con virtuoso (infinite scroll + ordenamiento correcto)
   const {
     messages,
     groupCounts,
@@ -93,13 +108,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
     loadMoreMessages,
     initialLoad,
   } = useVirtuosoMessages({
-    taskId: task?.id || '',
+    taskId: stableTaskId,
     pageSize: 50,
     decryptMessage,
     onNewMessage: handleNewMessage,
   });
 
-  // ✅ Hook original de acciones (sin optimistic UI, usa real-time listener)
+  // Hook de acciones de mensajes - pass null-safe task
+  // Create a stable empty task object to prevent null errors during unmount animations
+  const safeTask = useMemo(() => task || { id: '', name: '', description: '' }, [task]);
+
   const {
     sendMessage,
     editMessage,
@@ -107,9 +125,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
     resendMessage,
     sendTimeMessage,
   } = useMessageActions({
-    task: task as any, // Cast temporal
+    task: safeTask as any,
     encryptMessage,
-    addOptimisticMessage: () => {}, // No usado - real-time listener maneja nuevos mensajes
+    addOptimisticMessage: () => {},
     updateOptimisticMessage: () => {},
   });
 
@@ -132,21 +150,30 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
 
   return (
     <>
-      {/* Overlay - Debe estar detrás del sidebar */}
-      {isOpen && (
-        <div
-          className={styles.overlay}
-          onClick={handleClose}
-        />
-      )}
+      {/* Animated Overlay - siempre visible cuando el sidebar está montado */}
+      <motion.div
+        className={styles.overlay}
+        onClick={handleClose}
+        variants={overlayVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      />
 
-      {/* Sidebar Container */}
-      <div
+      {/* Animated Sidebar Container */}
+      <motion.div
         ref={sidebarRef}
-        className={`${styles.container} ${isOpen ? styles.open : ''}`}
+        className={styles.container}
+        variants={sidebarContainerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
       >
-        {/* Header */}
-        <div className={styles.header}>
+        {/* Animated Header */}
+        <motion.div
+          className={styles.header}
+          variants={sidebarHeaderVariants}
+        >
           <ChatHeader
             task={task}
             clientName={clientName}
@@ -156,10 +183,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
             userName={userName}
             onOpenManualTimeEntry={handleOpenManualTimeEntry}
           />
-        </div>
+        </motion.div>
 
-        {/* Content (Messages) - ✅ Lista virtualizada con infinite scroll */}
-        <div className={styles.content}>
+        {/* Animated Content (Messages) */}
+        <motion.div
+          className={styles.content}
+          variants={sidebarContentVariants}
+        >
           <VirtualizedMessageList
             messages={messages}
             groupCounts={groupCounts}
@@ -178,7 +208,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
                   users={users}
                   isOwn={isOwn}
                   userId={userId}
-                  taskId={task?.id || ''}
+                  taskId={stableTaskId}
                   onImagePreview={(url) => setImagePreviewSrc(url)}
                   onRetryMessage={(msg) => resendMessage(msg)}
                   onCopy={async (text) => {
@@ -203,12 +233,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
               );
             }}
           />
-        </div>
+        </motion.div>
 
-        {/* Input Area - ✅ InputChat MODULAR con Timer integrado */}
-        <div className={styles.inputArea}>
+        {/* Animated Input Area */}
+        <motion.div
+          className={styles.inputArea}
+          variants={sidebarInputVariants}
+        >
           <InputChat
-            taskId={task.id}
+            taskId={stableTaskId}
             userId={userId}
             userName={userName}
             userFirstName={userFirstName}
@@ -224,47 +257,56 @@ const ChatSidebar: React.FC<ChatSidebarProps> = memo(({
             }}
             onOpenManualEntry={handleOpenManualTimeEntry}
           />
-        </div>
+        </motion.div>
+      </motion.div>
 
-      </div>
-
-      {/* Image Preview Overlay */}
-      {imagePreviewSrc && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.9)',
-            zIndex: 100002,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-          onClick={() => setImagePreviewSrc(null)}
-        >
-          <img
-            src={imagePreviewSrc}
-            alt="Preview"
+      {/* Animated Image Preview Overlay */}
+      <AnimatePresence>
+        {imagePreviewSrc && (
+          <motion.div
             style={{
-              maxWidth: '90%',
-              maxHeight: '90%',
-              objectFit: 'contain',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.9)',
+              zIndex: 100002,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
             }}
-          />
-        </div>
-      )}
+            onClick={() => setImagePreviewSrc(null)}
+            variants={imagePreviewOverlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <motion.img
+              src={imagePreviewSrc}
+              alt="Preview"
+              style={{
+                maxWidth: '90%',
+                maxHeight: '90%',
+                objectFit: 'contain',
+              }}
+              variants={imagePreviewContentVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Manual Time Entry Dialog */}
       <ManualTimeDialog
         open={isManualTimeModalOpen}
         onOpenChange={setIsManualTimeModalOpen}
-        taskId={task.id}
-        taskName={task.name}
-        taskDescription={task.description}
+        taskId={safeTask.id}
+        taskName={safeTask.name}
+        taskDescription={safeTask.description || ''}
         userId={userId}
         userName={userName}
       />

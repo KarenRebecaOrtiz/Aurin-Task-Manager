@@ -3,13 +3,8 @@
 import Image from 'next/image';
 import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { ClientAvatar } from '@/modules/shared/components/atoms/Avatar';
+import { useClientData } from '@/hooks/useClientData';
 import styles from './KanbanDragOverlay.module.scss';
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-}
 
 interface User {
   id: string;
@@ -44,7 +39,6 @@ interface KanbanDragOverlayProps {
   task: Task;
   isAdmin: boolean;
   isTouchDevice: boolean;
-  clients: Client[];
   userId: string;
 }
 
@@ -58,10 +52,10 @@ export const KanbanDragOverlay: React.FC<KanbanDragOverlayProps> = ({
   task,
   isAdmin,
   isTouchDevice,
-  clients,
   userId,
 }) => {
-  const client = clients.find((c) => c.id === task.clientId);
+  // ✅ Use centralized clientsDataStore - O(1) access instead of O(n) array.find()
+  const client = useClientData(task.clientId);
 
   return (
     <div

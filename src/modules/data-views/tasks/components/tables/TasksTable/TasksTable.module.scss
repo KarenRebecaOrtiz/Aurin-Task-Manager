@@ -1058,3 +1058,52 @@
   height: 100%;
 }
 
+// Estilos para tareas pineadas
+.pinnedRow {
+  position: relative;
+  background: linear-gradient(135deg,
+    rgba(55, 56, 56, 0.06) 0%,
+    rgba(41, 42, 45, 0.03) 50%,
+    rgba(48, 53, 60, 0.06) 100%) !important;
+  border-left:rgb(208, 223, 0) !important;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: rgb(208, 223, 0);
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg,
+      rgba(59, 130, 246, 0.1) 0%,
+      rgba(59, 130, 246, 0.05) 50%,
+      rgba(59, 130, 246, 0.1) 100%) !important;
+  }
+
+  :global(body.dark) & {
+    background: linear-gradient(135deg,
+      rgba(59, 130, 246, 0.1) 0%,
+      rgba(59, 130, 246, 0.05) 50%,
+      rgba(59, 130, 246, 0.1) 100%) !important;
+    border-left-color: rgba(96, 165, 250, 0.6) !important;
+
+    &::before {
+      background: #60a5fa;
+    }
+
+    &:hover {
+      background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.15) 0%,
+        rgba(59, 130, 246, 0.08) 50%,
+        rgba(59, 130, 246, 0.15) 100%) !important;
+    }
+  }
+}
+

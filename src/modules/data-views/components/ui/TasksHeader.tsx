@@ -7,8 +7,8 @@ import { ViewSwitcher } from './ViewSwitcher';
 import styles from './TasksHeader.module.scss';
 
 interface TasksHeaderProps {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
+  searchQuery: string[] | string;
+  setSearchQuery: (query: string[]) => void;
   searchCategory: SearchCategory | null;
   setSearchCategory: (category: SearchCategory | null) => void;
   onNewTaskOpen: () => void;

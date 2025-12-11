@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import TasksPageModals from '@/modules/data-views/tasks/components/modals/TasksPageModals';
 import { useSharedTasksState } from '@/hooks/useSharedTasksState';
 import { useUserDataSubscription } from '@/hooks/useUserDataSubscription';
+import { usePinnedTasksSubscription } from '@/modules/data-views/tasks/hooks/usePinnedTasksSubscription';
 import tasksStyles from './tasks/styles/TasksPage.module.scss';
 import { ChatbotWidget } from '@/modules/n8n-chatbot';
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
@@ -34,6 +35,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   // 🚀 Initialize user data subscription (Single Source of Truth)
   useUserDataSubscription();
+
+  // 🚀 Initialize pinned tasks subscription (per-user Firestore sync)
+  usePinnedTasksSubscription();
 
   // 🚀 LOAD DATA ONCE HERE - all pages use the global store
   useSharedTasksState(user?.id);
@@ -140,22 +144,25 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Independent ChatSidebar component
+// Independent ChatSidebar component with AnimatePresence for exit animations
 const IndependentChatSidebarRenderer = () => {
   const { isOpen, sidebarType, chatSidebar, closeChatSidebar } = useSidebarStateStore();
   const users = useDataStore.getState().users;
 
-  if (!isOpen || sidebarType !== 'chat' || !chatSidebar.task) {
-    return null;
-  }
+  // Determine if sidebar should be shown
+  const shouldShow = isOpen && sidebarType === 'chat' && chatSidebar.task;
 
   return (
-    <ResponsiveChatSidebar
-      key="chat-sidebar"
-      isOpen={true}
-      onClose={closeChatSidebar}
-      users={users}
-    />
+    <AnimatePresence mode="wait">
+      {shouldShow && (
+        <ResponsiveChatSidebar
+          key="chat-sidebar"
+          isOpen={true}
+          onClose={closeChatSidebar}
+          users={users}
+        />
+      )}
+    </AnimatePresence>
   );
 };
 

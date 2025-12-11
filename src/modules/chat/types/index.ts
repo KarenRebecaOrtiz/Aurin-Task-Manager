@@ -125,6 +125,13 @@ export interface Task {
   hasUnreadUpdates?: boolean;
   lastViewedBy?: { [userId: string]: string };
 
+  // Sharing fields
+  shared?: boolean;
+  shareToken?: string;
+  commentsEnabled?: boolean;
+  sharedAt?: string | null;
+  sharedBy?: string;
+
   // Time tracking - New structured approach
   timeTracking?: {
     totalHours: number;

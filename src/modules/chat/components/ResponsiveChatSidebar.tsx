@@ -21,6 +21,7 @@ import { useUserDataStore } from "@/stores/userDataStore";
 import { useSidebarStateStore } from "@/stores/sidebarStateStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useShallow } from "zustand/react/shallow";
+import { useClientData } from "@/hooks/useClientData";
 import { useEncryption } from "@/hooks/useEncryption";
 import { useVirtuosoMessages } from "../hooks/useVirtuosoMessages";
 import { useMessageActions } from "@/hooks/useMessageActions";
@@ -90,17 +91,16 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
     return tasks.find(t => t.id === taskId) || chatSidebar.task;
   }, [taskId, tasks, chatSidebar.task]);
 
-  // Obtener información del cliente desde dataStore
-  const clients = useDataStore(useShallow(state => state.clients));
+  // ✅ Obtener información del cliente desde clientsDataStore centralizado - O(1) access
+  const clientFromStore = useClientData(task?.clientId || '');
   const clientData = useMemo(() => {
-    if (!task?.clientId) return null;
-    const client = clients.find(c => c.id === task.clientId);
-    return client ? {
-      id: client.id,
-      name: client.name,
-      imageUrl: client.imageUrl || '/empty-image.png'
-    } : null;
-  }, [task?.clientId, clients]);
+    if (!task?.clientId || !clientFromStore) return null;
+    return {
+      id: clientFromStore.id,
+      name: clientFromStore.name,
+      imageUrl: clientFromStore.imageUrl || '/empty-image.png'
+    };
+  }, [task?.clientId, clientFromStore]);
 
   // Estados locales
   const [imagePreviewSrc, setImagePreviewSrc] = useStateReact<string | null>(null);

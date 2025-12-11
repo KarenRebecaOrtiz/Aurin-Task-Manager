@@ -2,6 +2,13 @@
 
 import React, { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  tableContainerVariants,
+  tableBodyVariants,
+  tableRowVariants,
+  tableHeaderVariants,
+} from '@/modules/data-views/animations/entryAnimations';
 import styles from './Table.module.scss';
 import TableHeader, { Column as TableHeaderColumn } from './TableHeader';
 
@@ -66,7 +73,7 @@ const Table = memo(
     };
 
     document.addEventListener('resetPagination', handleResetPagination as EventListener);
-    
+
     return () => {
       document.removeEventListener('resetPagination', handleResetPagination as EventListener);
     };
@@ -84,10 +91,10 @@ const Table = memo(
       const checkMobile = () => {
         setIsMobile(window.innerWidth <= 768);
       };
-      
+
       checkMobile();
       window.addEventListener('resize', checkMobile);
-      
+
       return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
@@ -103,11 +110,11 @@ const Table = memo(
       if (event.defaultPrevented) {
         return;
       }
-      
+
       if (column.key === 'action') {
         return;
       }
-      
+
       if (onRowClick) {
         onRowClick(item, column.key);
       }
@@ -163,7 +170,12 @@ const Table = memo(
       const content = getEmptyStateContent();
 
       return (
-        <div className={styles.emptyState}>
+        <motion.div
+          className={styles.emptyState}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        >
           <Image
             src="/emptyStateImage.png"
             alt="No hay datos"
@@ -178,44 +190,70 @@ const Table = memo(
               {content.subtitle}
             </div>
           </div>
-        </div>
+        </motion.div>
       );
     };
 
     return (
-      <div className={`${styles.tableContainer} ${className || ''}`} data-table={emptyStateType}>
-
+      <motion.div
+        className={`${styles.tableContainer} ${className || ''}`}
+        data-table={emptyStateType}
+        variants={tableContainerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <div ref={tableRef} className={styles.table}>
-          <TableHeader
-            columns={columns}
-            sortKey={sortKey}
-            sortDirection={sortDirection}
-            onSort={onSort}
-            isMobile={isMobile}
-          />
+          {/* Animated Header */}
+          <motion.div variants={tableHeaderVariants}>
+            <TableHeader
+              columns={columns}
+              sortKey={sortKey}
+              sortDirection={sortDirection}
+              onSort={onSort}
+              isMobile={isMobile}
+            />
+          </motion.div>
+
+          {/* Table Body with AnimatePresence for row transitions */}
           {paginatedData.length === 0 ? (
             <EmptyState />
           ) : (
-            paginatedData.map((item, index) => (
-              <div key={item.id || `row-${index}`} className={`${styles.row} ${getRowClassName?.(item) || ''}`}>
-                {columns.map((column) => (
-                  <div
-                    key={column.key}
-                    className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
-                      column.key === 'action' ? styles.actionCell : styles.clickableCell
-                    }`}
-                    style={{ width: getColumnWidth(column) }}
-                    onClick={createCellClickHandler(item, column)}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`table-body-${currentPage}`}
+                variants={tableBodyVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                {paginatedData.map((item, index) => (
+                  <motion.div
+                    key={item.id || `row-${index}`}
+                    className={`${styles.row} ${getRowClassName?.(item) || ''}`}
+                    variants={tableRowVariants}
+                    custom={index}
                   >
-                    {column.render
-                      ? column.render(item)
-                      : column.key === 'action'
-                      ? ''
-                      : String((item as Record<string, unknown>)[column.key] ?? '')}
-                  </div>
+                    {columns.map((column) => (
+                      <div
+                        key={column.key}
+                        className={`${styles.cell} ${!column.mobileVisible ? styles.hideOnMobile : ''} ${
+                          column.key === 'action' ? styles.actionCell : styles.clickableCell
+                        }`}
+                        style={{ width: getColumnWidth(column) }}
+                        onClick={createCellClickHandler(item, column)}
+                      >
+                        {column.render
+                          ? column.render(item)
+                          : column.key === 'action'
+                          ? ''
+                          : String((item as Record<string, unknown>)[column.key] ?? '')}
+                      </div>
+                    ))}
+                  </motion.div>
                 ))}
-              </div>
-            ))
+              </motion.div>
+            </AnimatePresence>
           )}
         </div>
         {totalPages > 1 && data.length > 0 && (
@@ -257,7 +295,7 @@ const Table = memo(
             </button>
           </div>
         )}
-      </div>
+      </motion.div>
     );
   },
   (prevProps, nextProps) => {

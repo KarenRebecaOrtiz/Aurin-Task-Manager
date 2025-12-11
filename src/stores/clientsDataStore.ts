@@ -75,9 +75,17 @@ type ClientsDataStore = ClientsDataState & ClientsDataActions;
 // --- Helper Functions ---
 
 /**
+ * Check if we're running in a browser environment.
+ */
+const isBrowser = typeof window !== 'undefined';
+
+/**
  * Load clients from SessionStorage.
  */
 const loadFromSessionStorage = (): Map<string, Client> | null => {
+  // Skip on server-side
+  if (!isBrowser) return null;
+
   try {
     const cached = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!cached) return null;
@@ -108,6 +116,9 @@ const loadFromSessionStorage = (): Map<string, Client> | null => {
  * Save clients to SessionStorage.
  */
 const saveToSessionStorage = (clients: Map<string, Client>): void => {
+  // Skip on server-side
+  if (!isBrowser) return;
+
   try {
     // Convert Map to plain object for JSON serialization
     const clientsObj = Object.fromEntries(clients);

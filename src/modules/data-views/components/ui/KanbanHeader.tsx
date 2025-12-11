@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Dropdown, type DropdownItem } from '@/modules/shared/components/molecules/Dropdown';
 import { Small, Muted } from '@/components/ui/Typography';
+import { useClientName } from '@/hooks/useClientData';
+import { useOtherUserDisplayName } from '@/hooks/useOtherUserData';
 import styles from '@/modules/data-views/tasks/components/tables/KanbanBoard/TasksKanban.module.scss';
 
 interface Client {
@@ -57,6 +59,9 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
   isLoadingClients = false,
   isLoadingUsers = false,
 }) => {
+  // ✅ Use centralized stores for filter display names - O(1) access
+  const selectedClientName = useClientName(clientFilter || '');
+  const selectedUserName = useOtherUserDisplayName(userFilter === 'me' ? '' : userFilter || '');
   // Crear items para los dropdowns
   const priorityItems: DropdownItem[] = [
     { id: 'all', label: 'Todos', value: '' },
@@ -245,9 +250,9 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
               <div className={styles.dropdownTrigger}>
                 <Image className="filterIcon" src="/filter.svg" alt="Client" width={12} height={12} />
                 <span>
-                  {isLoadingClients 
-                    ? 'Cargando...' 
-                    : clients.find((c) => c.id === clientFilter)?.name || 'Cuenta'
+                  {isLoadingClients
+                    ? 'Cargando...'
+                    : clientFilter ? selectedClientName : 'Cuenta'
                   }
                 </span>
               </div>
@@ -267,13 +272,13 @@ const KanbanHeader: React.FC<KanbanHeaderProps> = ({
                 <div className={styles.dropdownTrigger}>
                   <Image className="filterIcon" src="/filter.svg" alt="User" width={12} height={12} />
                   <span>
-                    {isLoadingUsers 
+                    {isLoadingUsers
                       ? 'Cargando...'
                       : userFilter === ''
                         ? 'Todos'
                         : userFilter === 'me'
                         ? 'Mis tareas'
-                        : users.find((u) => u.id === userFilter)?.fullName || 'Usuario'
+                        : selectedUserName || 'Usuario'
                     }
                   </span>
                 </div>

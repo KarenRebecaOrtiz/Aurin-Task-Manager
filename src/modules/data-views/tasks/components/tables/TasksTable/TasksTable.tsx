@@ -24,6 +24,7 @@ import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon'
 // Stores
 import { tasksTableStore } from '@/modules/data-views/tasks/stores/tasksTableStore';
 import { useTasksTableActionsStore } from '@/modules/data-views/tasks/stores/tasksTableActionsStore';
+import { usePinnedTasksStore } from '@/modules/data-views/tasks/stores/pinnedTasksStore';
 
 // Utils and components
 import { normalizeStatus } from '@/modules/data-views/utils';
@@ -176,15 +177,35 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     }
   }, [tableState.sortKey, tableState.sortDirection, tableState.setSortKey, tableState.setSortDirection]);
 
+  // Pinned tasks store
+  const pinnedTaskIds = usePinnedTasksStore(state => state.pinnedTaskIds);
+
   const sortedTasks = useMemo(() => {
     const sorted = [...tableState.filteredTasks];
     if (!tableState.sortKey || tableState.sortKey === '') {
       sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return sorted;
     }
     // ... other sorting logic
-    return sorted;
-  }, [tableState.filteredTasks, tableState.sortKey, tableState.sortDirection, tableState.effectiveClients, tableState.effectiveUsers]);
+
+    // Pinned tasks go first, maintaining their pin order
+    const pinnedTasks: Task[] = [];
+    const unpinnedTasks: Task[] = [];
+
+    sorted.forEach(task => {
+      if (pinnedTaskIds.includes(task.id)) {
+        pinnedTasks.push(task);
+      } else {
+        unpinnedTasks.push(task);
+      }
+    });
+
+    // Sort pinned tasks by their position in pinnedTaskIds array
+    pinnedTasks.sort((a, b) => {
+      return pinnedTaskIds.indexOf(a.id) - pinnedTaskIds.indexOf(b.id);
+    });
+
+    return [...pinnedTasks, ...unpinnedTasks];
+  }, [tableState.filteredTasks, tableState.sortKey, tableState.sortDirection, tableState.effectiveClients, tableState.effectiveUsers, pinnedTaskIds]);
 
   const handleViewButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     animateClick(e.currentTarget);
@@ -201,9 +222,12 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     openNewTask();
   }, [animateClick, openNewTask]);
 
-  const getRowClassName = useCallback(() => {
+  const getRowClassName = useCallback((task: Task) => {
+    if (pinnedTaskIds.includes(task.id)) {
+      return styles.pinnedRow;
+    }
     return '';
-  }, []);
+  }, [pinnedTaskIds]);
 
   const renderClientColumn = useCallback((client: Client | undefined) => <ClientCell client={client} />, []);
   const renderTaskNameColumn = useCallback((task: Task) => {
@@ -275,6 +299,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         onEdit={handleEditTaskForActionMenu(task.id)}
         onDelete={handleDeleteTaskForActionMenu(task.id)}
         onArchive={handleArchiveTaskForActionMenu(task)}
+        showPinOption={true}
         animateClick={animateClick}
         actionMenuRef={actionMenuRef}
         actionButtonRef={handleActionButtonRef(task.id)}

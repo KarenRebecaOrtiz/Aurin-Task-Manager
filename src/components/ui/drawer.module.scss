@@ -101,13 +101,11 @@
   padding: 1rem;
   flex-shrink: 0;
   background-color: #ffffff;
-  border-top: 1px solid #e4e4e7;
 
   // Dark mode
   :global(.dark) &,
   :global(body.dark) & {
     background-color: #18181b;
-    border-top-color: rgba(255, 255, 255, 0.1);
   }
 }
 

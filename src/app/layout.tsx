@@ -80,7 +80,7 @@ export default function RootLayout({
             <InteractiveBackground />
             <LightRaysWrapper
               raysOrigin="top-center"
-              raysColor="#ffffff1b"
+              raysColor="#ffffff0c"
               raysSpeed={0.3}
               lightSpread={1}
               rayLength={1.5}

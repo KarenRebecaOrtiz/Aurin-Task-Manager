@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
   DndContext,
   DragOverlay,
@@ -18,6 +19,7 @@ import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiving';
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
 import { KANBAN_COLUMNS } from '@/modules/data-views/constants';
+import { kanbanBoardVariants } from '@/modules/data-views/animations/entryAnimations';
 
 // ✅ Importar componentes modulares
 import { KanbanColumn, KanbanDragOverlay } from './components';
@@ -363,7 +365,13 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         onDragEnd={handleDragEnd}
         sensors={sensors}
       >
-        <div className={styles.kanbanBoard}>
+        <motion.div
+          className={styles.kanbanBoard}
+          variants={kanbanBoardVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
           {statusColumns.map((column) => (
             <KanbanColumn
               key={column.id}
@@ -384,7 +392,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               normalizeStatus={normalizeStatus}
             />
           ))}
-        </div>
+        </motion.div>
 
         <DragOverlay>
           {activeTask ? (

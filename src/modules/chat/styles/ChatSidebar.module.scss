@@ -22,9 +22,9 @@
   flex-direction: column;
   justify-content: space-between;
   z-index: $chat-sidebar-z-index;
-  transform: translateX(100%);
   overflow: hidden;
-  transition: all $transition-speed $transition-easing;
+  // Note: Animations now handled by Motion Dev (framer-motion)
+  // transform and transition removed - controlled by sidebarContainerVariants
   box-shadow:
     -5px 1px 11px rgba(0, 0, 0, 0.05),
     -19px 3px 19px rgba(0, 0, 0, 0.009),
@@ -40,10 +40,6 @@
   box-shadow: none;
 }
 
-.open {
-  transform: translateX(0);
-}
-
 // ============================================================================
 // OVERLAY (Mobile Backdrop)
 // ============================================================================
@@ -57,17 +53,7 @@
   background: rgba(0, 0, 0, 0.5);
   z-index: calc($chat-sidebar-z-index - 1);
   backdrop-filter: blur(4px);
-  opacity: 0;
-  animation: fadeIn 0.15s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  // Note: opacity animation now handled by Motion Dev (overlayVariants)
 }
 
 :global(body.dark) .overlay {

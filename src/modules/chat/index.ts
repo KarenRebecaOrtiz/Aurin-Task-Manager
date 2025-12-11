@@ -17,6 +17,9 @@ export { ChatHeader } from './components/organisms/ChatHeader';
 export { MessageList } from './components/organisms/MessageList';
 export { VirtualizedMessageList } from './components/organisms/VirtualizedMessageList';
 
+// Dialog Variant (re-export from dialogs module for convenience)
+export { ChatDialog } from '@/modules/dialogs';
+
 // Molecules
 export { MessageItem } from './components/molecules/MessageItem';
 export { ReplyPreview } from './components/molecules/ReplyPreview';
@@ -45,6 +48,42 @@ export { useVirtuosoMessages } from './hooks/useVirtuosoMessages';
 
 export { useChatStore } from './stores/chatStore';
 export type { ChatStore } from './types';
+
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
+
+export {
+  // Sidebar container animations
+  sidebarContainerVariants,
+  sidebarScaleVariants,
+  overlayVariants,
+  sidebarHeaderVariants,
+  sidebarContentVariants,
+  sidebarInputVariants,
+
+  // Mobile drawer animations
+  drawerContainerVariants,
+  drawerContentVariants,
+
+  // Image preview animations
+  imagePreviewOverlayVariants,
+  imagePreviewContentVariants,
+
+  // Message animations
+  messageEntryVariants,
+
+  // Utilities & presets
+  getSidebarTransition,
+  withDelay,
+  sidebarAnimationPresets,
+} from './animations';
+
+export type {
+  SidebarAnimationPreset,
+  DesktopSidebarVariants,
+  MobileSidebarVariants,
+} from './animations';
 
 // ============================================================================
 // TYPES

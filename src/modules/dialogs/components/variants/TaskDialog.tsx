@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { useUser } from "@clerk/nextjs"
 import { CrudDialog } from "../organisms/CrudDialog"
 import { useSonnerToast } from "@/modules/sonner/hooks/useSonnerToast"
@@ -10,12 +10,13 @@ import { taskService } from "@/modules/task-crud/services/taskService"
 import { validateTaskDates } from "@/modules/task-crud/utils/validation"
 import { FormFooter } from "@/modules/task-crud/components/forms/FormFooter"
 import { ClientDialog } from "./ClientDialog"
+import { useTaskState } from "@/hooks/useTaskData"
 
 interface TaskDialogProps {
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
   onTaskCreated: () => void
-  taskId?: string  
+  taskId?: string
 }
 
 export function TaskDialog({
@@ -28,79 +29,48 @@ export function TaskDialog({
   const { clients, users } = useTaskFormData()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
-  const [isLoadingTask, setIsLoadingTask] = useState(false)
-  const [initialData, setInitialData] = useState<TaskFormData | null>(null)
-  const [originalAssignedTo, setOriginalAssignedTo] = useState<string[]>([])
-  const [originalLeadedBy, setOriginalLeadedBy] = useState<string[]>([])
   const { success: showSuccess, error: showError } = useSonnerToast()
 
   const isEditMode = !!taskId
 
-  // Load task data when in edit mode
+  // Use centralized task data store with real-time updates
+  const { taskData, isLoading: isLoadingTask, error: taskError } = useTaskState(taskId || '', {
+    autoSubscribe: isOpen && isEditMode && !!taskId,
+    unsubscribeOnUnmount: true,
+  })
+
+  // Show error if task not found
   useEffect(() => {
-    if (!isOpen || !isEditMode || !taskId) {
-      setInitialData(null)
-      return
+    if (taskError && isOpen && isEditMode) {
+      showError('Tarea no encontrada', 'No se pudo cargar la información de la tarea.')
     }
+  }, [taskError, isOpen, isEditMode, showError])
 
-    const loadTaskData = async () => {
-      try {
-        setIsLoadingTask(true)
-        const { doc, getDoc } = await import('firebase/firestore')
-        const { db } = await import('@/lib/firebase')
+  // Convert task data to form initial data
+  const initialData: TaskFormData | null = useMemo(() => {
+    if (!isEditMode || !taskData) return null
 
-        const taskDoc = await getDoc(doc(db, 'tasks', taskId))
+    // Convert ISO strings to Dates for the form
+    const startDate = taskData.startDate ? new Date(taskData.startDate) : undefined
+    const endDate = taskData.endDate ? new Date(taskData.endDate) : undefined
 
-        if (!taskDoc.exists()) {
-          showError('Tarea no encontrada', 'No se pudo cargar la información de la tarea.')
-          setIsLoadingTask(false)
-          return
-        }
-
-        const taskData = taskDoc.data()
-
-        // Convert Firestore Timestamps to Dates
-        const startDate = taskData.startDate?.toDate?.() || undefined
-        const endDate = taskData.endDate?.toDate?.() || undefined
-
-        // Set initial data
-        setInitialData({
-          clientId: taskData.clientId || '',
-          project: taskData.project || '',
-          name: taskData.name || '',
-          description: taskData.description || '',
-          startDate,
-          endDate,
-          LeadedBy: taskData.LeadedBy || [],
-          AssignedTo: taskData.AssignedTo || [],
-          priority: taskData.priority || 'Media',
-          status: taskData.status || 'Por Iniciar',
-        })
-
-        // Store original team members for notification comparison
-        setOriginalAssignedTo(taskData.AssignedTo || [])
-        setOriginalLeadedBy(taskData.LeadedBy || [])
-
-        setIsLoadingTask(false)
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-        showError('Error al cargar la tarea', errorMessage)
-        setIsLoadingTask(false)
-      }
+    return {
+      clientId: taskData.clientId || '',
+      project: taskData.project || '',
+      name: taskData.name || '',
+      description: taskData.description || '',
+      startDate,
+      endDate,
+      LeadedBy: taskData.LeadedBy || [],
+      AssignedTo: taskData.AssignedTo || [],
+      priority: taskData.priority || 'Media',
+      status: taskData.status || 'Por Iniciar',
     }
+  }, [isEditMode, taskData])
 
-    loadTaskData()
-  }, [isOpen, isEditMode, taskId, showError])
-
-  // Reset when closing
-  useEffect(() => {
-    if (!isOpen) {
-      setInitialData(null)
-      setIsLoadingTask(false)
-      setOriginalAssignedTo([])
-      setOriginalLeadedBy([])
-    }
-  }, [isOpen])
+  // Store original team members for notification comparison
+  const originalAssignedTo = useMemo(() => taskData?.AssignedTo || [], [taskData?.AssignedTo])
+  const originalLeadedBy = useMemo(() => taskData?.LeadedBy || [], [taskData?.LeadedBy])
 
   const handleSubmit = useCallback(async (formData: TaskFormData) => {
     console.log('[TaskDialog] handleSubmit called with formData:', formData)

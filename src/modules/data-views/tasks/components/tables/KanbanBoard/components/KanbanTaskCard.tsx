@@ -6,13 +6,8 @@ import { AvatarGroup } from '@/modules/shared/components/atoms/Avatar';
 import { ClientAvatar } from '@/modules/shared/components/atoms/Avatar';
 import { Badge, BadgeVariant } from '@/modules/shared/components/atoms/Badge';
 import { SharedBadge } from '@/modules/shared/components/ui';
+import { useClientData } from '@/hooks/useClientData';
 import styles from './KanbanTaskCard.module.scss';
-
-interface Client {
-  id: string;
-  name: string;
-  imageUrl: string;
-}
 
 interface User {
   id: string;
@@ -60,7 +55,6 @@ interface KanbanTaskCardProps {
   actionButtonRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
   actionMenuRef: React.RefObject<HTMLDivElement>;
   isTouchDevice: boolean;
-  clients: Client[];
   normalizeStatus: (status: string) => string;
 }
 
@@ -98,13 +92,15 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   actionButtonRefs,
   actionMenuRef,
   isTouchDevice,
-  clients,
   normalizeStatus,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     disabled: !isAdmin,
   });
+
+  // ✅ Use centralized clientsDataStore - O(1) access instead of O(n) array.find()
+  const client = useClientData(task.clientId);
 
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -114,8 +110,6 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
     cursor: isAdmin ? 'grab' : 'pointer',
     touchAction: isAdmin ? 'none' : 'manipulation',
   };
-
-  const client = clients.find((c) => c.id === task.clientId);
 
   return (
     <div

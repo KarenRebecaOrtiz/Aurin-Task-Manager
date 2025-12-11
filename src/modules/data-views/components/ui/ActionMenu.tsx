@@ -16,7 +16,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Pencil, Archive, Trash2 } from 'lucide-react';
+import { Pencil, Archive, Trash2, Pin, PinOff } from 'lucide-react';
+import { usePinnedTasksStore, MAX_PINNED } from '@/modules/data-views/tasks/stores/pinnedTasksStore';
+import { useSonnerToast } from '@/modules/sonner';
 
 interface Task {
   id: string;
@@ -43,6 +45,8 @@ interface ActionMenuProps {
   onEdit: () => void;
   onDelete: () => void;
   onArchive?: () => void;
+  onPin?: (taskId: string) => void;
+  showPinOption?: boolean;
   animateClick: (element: HTMLElement) => void;
   actionMenuRef: React.RefObject<HTMLDivElement>;
   actionButtonRef: (el: HTMLButtonElement | null) => void;
@@ -54,6 +58,8 @@ const ActionMenu = memo<ActionMenuProps>(({
   onEdit,
   onDelete,
   onArchive,
+  onPin,
+  showPinOption = false,
   animateClick,
   actionMenuRef,
   actionButtonRef
@@ -66,6 +72,11 @@ const ActionMenu = memo<ActionMenuProps>(({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 767px)');
+
+  // Pin functionality
+  const { isPinned, togglePin, canPin } = usePinnedTasksStore();
+  const taskIsPinned = isPinned(task.id);
+  const { success: toastSuccess, warning: toastWarning } = useSonnerToast();
 
   // Selectors optimizados con shallow
   const { 
@@ -136,6 +147,29 @@ const ActionMenu = memo<ActionMenuProps>(({
     onDelete();
     setIsDrawerOpen(false);
   }, [onDelete]);
+
+  // Pin handler (async for Firestore sync)
+  const handlePinToggle = useCallback(async () => {
+    const result = await togglePin(task.id);
+
+    if (result.success) {
+      if (result.action === 'pinned') {
+        toastSuccess('Tarea fijada arriba de la tabla', { playSound: false });
+      } else {
+        toastSuccess('Tarea desfijada', { playSound: false });
+      }
+      onPin?.(task.id);
+    } else if (result.reason === 'limit_reached') {
+      toastWarning(`Máximo ${MAX_PINNED} tareas fijadas permitidas`, { playSound: false });
+    }
+
+    setOpenMenuId(null);
+  }, [task.id, togglePin, toastSuccess, toastWarning, onPin, setOpenMenuId]);
+
+  const handleDrawerPin = useCallback(async () => {
+    await handlePinToggle();
+    setIsDrawerOpen(false);
+  }, [handlePinToggle]);
 
   // Efectos optimizados
   useEffect(() => {
@@ -211,6 +245,26 @@ const ActionMenu = memo<ActionMenuProps>(({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.18, ease: 'easeInOut' }}
             >
+              {showPinOption && (
+                <div
+                  className={`${styles.dropdownItem} ${taskIsPinned ? styles.pinnedItem : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    animateClick(e.currentTarget);
+                    handlePinToggle();
+                  }}
+                  title={taskIsPinned ? "Desfijar Tarea" : "Fijar Tarea"}
+                >
+                  {taskIsPinned ? (
+                    <PinOff size={18} className={styles.pinIcon} />
+                  ) : (
+                    <Pin size={18} className={styles.pinIcon} />
+                  )}
+                  <span className={styles.tooltip}>
+                    {taskIsPinned ? "Desfijar Tarea" : "Fijar Tarea"}
+                  </span>
+                </div>
+              )}
               <div
                 className={styles.dropdownItem}
                 onClick={(e) => {
@@ -221,12 +275,12 @@ const ActionMenu = memo<ActionMenuProps>(({
                 }}
                 title="Editar Tarea"
               >
-                <Image 
-                  src="/pencil.svg" 
-                  alt="Editar" 
-                  width={18} 
-                  height={18} 
-                  style={{ width: 'auto', height: 'auto' }} 
+                <Image
+                  src="/pencil.svg"
+                  alt="Editar"
+                  width={18}
+                  height={18}
+                  style={{ width: 'auto', height: 'auto' }}
                 />
                 <span className={styles.tooltip}>Editar Tarea</span>
               </div>
@@ -289,6 +343,22 @@ const ActionMenu = memo<ActionMenuProps>(({
               </DrawerHeader>
 
               <div className={styles.drawerBody}>
+                {showPinOption && (
+                  <button
+                    className={`${styles.drawerItem} ${taskIsPinned ? styles.drawerPinnedItem : ''}`}
+                    onClick={handleDrawerPin}
+                  >
+                    {taskIsPinned ? (
+                      <PinOff size={20} className={styles.drawerIcon} />
+                    ) : (
+                      <Pin size={20} className={styles.drawerIcon} />
+                    )}
+                    <span className={styles.drawerText}>
+                      {taskIsPinned ? "Desfijar Tarea" : "Fijar Tarea"}
+                    </span>
+                  </button>
+                )}
+
                 <button
                   className={styles.drawerItem}
                   onClick={handleDrawerEdit}
@@ -333,7 +403,9 @@ const ActionMenu = memo<ActionMenuProps>(({
     prevProps.userId === nextProps.userId &&
     prevProps.onEdit === nextProps.onEdit &&
     prevProps.onDelete === nextProps.onDelete &&
-    prevProps.onArchive === nextProps.onArchive
+    prevProps.onArchive === nextProps.onArchive &&
+    prevProps.onPin === nextProps.onPin &&
+    prevProps.showPinOption === nextProps.showPinOption
   );
 });
 

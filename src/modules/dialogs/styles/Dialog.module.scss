@@ -1706,3 +1706,637 @@
   }
 }
 
+// ============================================================================
+// SHARE DIALOG V2 - VERCEL-LIKE COMPACT STYLES
+// ============================================================================
+
+.shareSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+// Warning Banner - Shown when disabling sharing with active invitations
+.warningBanner {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 0.5rem;
+  animation: slideDown 0.2s ease-out;
+
+  :global(.dark) & {
+    background-color: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.3);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.warningIcon {
+  flex-shrink: 0;
+  color: #d97706;
+  margin-top: 0.125rem;
+
+  :global(.dark) & {
+    color: #fbbf24;
+  }
+}
+
+.warningContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+}
+
+.warningText {
+  font-size: 0.8125rem;
+  color: #92400e;
+  margin: 0;
+
+  strong {
+    font-weight: 600;
+  }
+
+  :global(.dark) & {
+    color: #fcd34d;
+  }
+}
+
+.warningSubtext {
+  font-size: 0.75rem;
+  color: #a16207;
+  margin: 0;
+  line-height: 1.4;
+
+  :global(.dark) & {
+    color: #fbbf24;
+    opacity: 0.8;
+  }
+}
+
+.warningActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.warningButtonCancel {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: transparent;
+  border: 1px solid #d97706;
+  border-radius: 0.375rem;
+  color: #92400e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(217, 119, 6, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    border-color: rgba(251, 191, 36, 0.5);
+    color: #fbbf24;
+
+    &:hover:not(:disabled) {
+      background-color: rgba(251, 191, 36, 0.1);
+    }
+  }
+}
+
+.warningButtonConfirm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #dc2626;
+  border: none;
+  border-radius: 0.375rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #b91c1c;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Invitation Header - Compact row with title and counter
+.invitationHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.invitationTitle {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #52525b;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.invitationCount {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #71717a;
+  background-color: #f4f4f5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-variant-numeric: tabular-nums;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+    background-color: #27272a;
+  }
+}
+
+.invitationCountLimit {
+  color: #dc2626;
+  background-color: #fef2f2;
+
+  :global(.dark) & {
+    color: #fca5a5;
+    background-color: rgba(220, 38, 38, 0.15);
+  }
+}
+
+// Invitation List - Table-like compact rows
+.invitationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.5rem;
+  overflow: hidden;
+
+  :global(.dark) & {
+    border-color: #3f3f46;
+  }
+}
+
+.invitationRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background-color: white;
+  border-bottom: 1px solid #e4e4e7;
+  transition: background-color 0.1s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: #fafafa;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-bottom-color: #27272a;
+
+    &:hover {
+      background-color: #1f1f23;
+    }
+  }
+}
+
+.invitationInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.invitationName {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #18181b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.dark) & {
+    color: #fafafa;
+  }
+}
+
+.invitationDate {
+  font-size: 0.6875rem;
+  color: #a1a1aa;
+
+  :global(.dark) & {
+    color: #71717a;
+  }
+}
+
+.invitationExpiry {
+  color: #d97706;
+
+  :global(.dark) & {
+    color: #fbbf24;
+  }
+}
+
+.invitationToken {
+  display: flex;
+  align-items: center;
+}
+
+.maskedToken {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 0.6875rem;
+  color: #71717a;
+  background-color: #f4f4f5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  letter-spacing: 0.05em;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+    background-color: #27272a;
+  }
+}
+
+.invitationActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.invitationActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  background-color: transparent;
+  border-radius: 0.375rem;
+  color: #71717a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #f4f4f5;
+    color: #18181b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #d0df00;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    color: #71717a;
+
+    &:hover:not(:disabled) {
+      background-color: #27272a;
+      color: #fafafa;
+    }
+  }
+}
+
+.invitationActionDanger {
+  &:hover:not(:disabled) {
+    background-color: #fef2f2;
+    color: #dc2626;
+  }
+
+  :global(.dark) & {
+    &:hover:not(:disabled) {
+      background-color: rgba(220, 38, 38, 0.15);
+      color: #fca5a5;
+    }
+  }
+}
+
+// Empty State - Friendly message when no invitations
+.emptyInvitations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 1.5rem 1rem;
+  border: 1px dashed #d4d4d8;
+  border-radius: 0.5rem;
+  background-color: #fafafa;
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+  }
+}
+
+.emptyText {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #52525b;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.emptySubtext {
+  font-size: 0.75rem;
+  color: #a1a1aa;
+  margin: 0;
+  text-align: center;
+
+  :global(.dark) & {
+    color: #71717a;
+  }
+}
+
+// Create Invitation Form - Footer action area
+.createInvitationForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.createInvitationInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  background-color: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  color: #18181b;
+  transition: all 0.15s ease;
+
+  &::placeholder {
+    color: #a1a1aa;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #d0df00;
+    box-shadow: 0 0 0 3px rgba(208, 223, 0, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #f4f4f5;
+  }
+
+  :global(.dark) & {
+    background-color: #18181b;
+    border-color: #3f3f46;
+    color: #fafafa;
+
+    &::placeholder {
+      color: #71717a;
+    }
+
+    &:focus {
+      border-color: #d0df00;
+      box-shadow: 0 0 0 3px rgba(208, 223, 0, 0.15);
+    }
+
+    &:disabled {
+      background-color: #27272a;
+    }
+  }
+}
+
+.createInvitationButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background-color: #18181b;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background-color: #27272a;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #d0df00;
+    outline-offset: 2px;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #fafafa;
+    color: #18181b;
+
+    &:hover:not(:disabled) {
+      background-color: #e4e4e7;
+    }
+  }
+}
+
+.createInvitationButtonDisabled {
+  background-color: #e4e4e7;
+  color: #a1a1aa;
+
+  &:hover:not(:disabled) {
+    background-color: #e4e4e7;
+  }
+
+  :global(.dark) & {
+    background-color: #3f3f46;
+    color: #71717a;
+
+    &:hover:not(:disabled) {
+      background-color: #3f3f46;
+    }
+  }
+}
+
+// Spinner animation for loading states
+.spinnerIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Loading and Error States
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 1rem;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid #e4e4e7;
+  border-top-color: #d0df00;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+
+  :global(.dark) & {
+    border-color: #3f3f46;
+    border-top-color: #d0df00;
+  }
+}
+
+.loadingText {
+  font-size: 0.875rem;
+  color: #71717a;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #a1a1aa;
+  }
+}
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+}
+
+.errorText {
+  font-size: 0.875rem;
+  color: #dc2626;
+  margin: 0;
+  text-align: center;
+
+  :global(.dark) & {
+    color: #fca5a5;
+  }
+}
+
+.retryButton {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background-color: transparent;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.375rem;
+  color: #18181b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: #f4f4f5;
+    border-color: #d4d4d8;
+  }
+
+  :global(.dark) & {
+    border-color: #3f3f46;
+    color: #fafafa;
+
+    &:hover {
+      background-color: #27272a;
+      border-color: #52525b;
+    }
+  }
+}
+
+// Responsive adjustments for mobile
+@media (max-width: 480px) {
+  .invitationRow {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .invitationInfo {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .invitationToken {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .invitationActions {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    flex-direction: column;
+  }
+
+  .createInvitationForm {
+    flex-direction: column;
+  }
+
+  .createInvitationButton {
+    width: 100%;
+    padding: 0.625rem 1rem;
+  }
+
+  .warningActions {
+    flex-direction: column;
+  }
+
+  .warningButtonCancel,
+  .warningButtonConfirm {
+    width: 100%;
+    padding: 0.5rem;
+  }
+}
+

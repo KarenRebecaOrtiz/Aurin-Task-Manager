@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare } from 'lucide-react';
+import { CheckIcon, CopyIcon, PlusCircle, Trash2, Link2, MessageSquare, AlertTriangle, Loader2, LinkIcon } from 'lucide-react';
 import { CrudDialog } from '../organisms/CrudDialog';
+import { useDialog } from '../../hooks/useDialog';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { cn } from '@/lib/utils';
 import { buildGuestTaskUrl } from '@/lib/url-utils';
@@ -42,6 +43,22 @@ interface ShareDialogProps {
   showCloseButton?: boolean;
 }
 
+// Utility function to mask tokens - only show last 4 characters
+const maskToken = (token: string): string => {
+  if (token.length <= 4) return token;
+  return `•••• ${token.slice(-4).toUpperCase()}`;
+};
+
+// Utility function to format date
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 export function ShareDialog({
   isOpen,
   onOpenChange,
@@ -52,17 +69,22 @@ export function ShareDialog({
   closeOnEscape = true,
   showCloseButton = true,
 }: ShareDialogProps) {
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [isShared, setIsShared] = useState(false);
   const [commentsEnabled, setCommentsEnabled] = useState(false);
   const [guestTokens, setGuestTokens] = useState<GuestToken[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateToken, setShowCreateToken] = useState(false);
-  const [tokenName, setTokenName] = useState('');
+  const [invitationName, setInvitationName] = useState('');
+  const [showDisableWarning, setShowDisableWarning] = useState(false);
 
   const { success, error: showError } = useSonnerToast();
+  const { openConfirm } = useDialog();
+
+  const MAX_INVITATIONS = 3;
+  const isAtLimit = guestTokens.length >= MAX_INVITATIONS;
 
   const loadShareData = useCallback(async () => {
     try {
@@ -80,7 +102,6 @@ export function ShareDialog({
       }
 
       if (tokensResult.success && 'tokens' in tokensResult) {
-        // Map tokens to ensure all fields are present
         const mappedTokens = tokensResult.tokens.map((token: any) => ({
           id: token.id,
           token: token.token,
@@ -94,7 +115,7 @@ export function ShareDialog({
         }));
         setGuestTokens(mappedTokens);
       } else if (!tokensResult.success) {
-        const errorMsg = tokensResult.error || 'Error al cargar los tokens de invitado.';
+        const errorMsg = tokensResult.error || 'Error al cargar las invitaciones.';
         setError(errorMsg);
       }
     } catch (err) {
@@ -110,19 +131,28 @@ export function ShareDialog({
     if (isOpen) {
       setIsInitialLoading(true);
       setError(null);
+      setShowDisableWarning(false);
       loadShareData();
     } else {
-      // Reset state when closing
       setIsInitialLoading(true);
       setError(null);
+      setInvitationName('');
+      setShowDisableWarning(false);
     }
   }, [isOpen, loadShareData]);
 
   const handleToggleSharing = useCallback(async () => {
     if (isSubmitting) return;
 
+    // If trying to disable and there are tokens, show warning first
+    if (isShared && guestTokens.length > 0 && !showDisableWarning) {
+      setShowDisableWarning(true);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
+    setShowDisableWarning(false);
 
     try {
       const result = await toggleTaskSharingAction({
@@ -138,10 +168,9 @@ export function ShareDialog({
         if (newIsShared) {
           success('¡Compartir activado! Se ha generado un enlace público para tu tarea');
         } else {
-          success('Compartir desactivado. La tarea ya no está disponible públicamente');
+          success('Compartir desactivado. Todas las invitaciones han sido revocadas');
           setGuestTokens([]);
-          setShowCreateToken(false);
-          setTokenName('');
+          setInvitationName('');
         }
       } else {
         const errorMsg = result.error || 'Error al cambiar el estado de compartición.';
@@ -151,7 +180,11 @@ export function ShareDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [taskId, isShared, commentsEnabled, success, showError, isSubmitting]);
+  }, [taskId, isShared, commentsEnabled, success, showError, isSubmitting, guestTokens.length, showDisableWarning]);
+
+  const handleCancelDisable = useCallback(() => {
+    setShowDisableWarning(false);
+  }, []);
 
   const handleToggleComments = useCallback(async () => {
     setIsSubmitting(true);
@@ -175,63 +208,68 @@ export function ShareDialog({
     setIsSubmitting(false);
   }, [taskId, commentsEnabled, success, showError]);
 
-  const handleGenerateToken = useCallback(async () => {
-    if (!showCreateToken) {
-      // Mostrar el formulario de crear token
-      setShowCreateToken(true);
+  const handleGenerateInvitation = useCallback(async () => {
+    if (isAtLimit || !invitationName.trim()) {
+      if (!invitationName.trim()) {
+        showError('Error', 'Ingresa un nombre para la invitación');
+      }
       return;
     }
 
-    // Validar que el nombre no esté vacío
-    if (!tokenName.trim()) {
-      showError('Error', 'Debes ingresar un nombre para el token');
-      return;
-    }
-
-    setIsSubmitting(true);
+    setIsGenerating(true);
     setError(null);
-    const result = await generateGuestTokenAction({ taskId, tokenName: tokenName.trim() });
+    const result = await generateGuestTokenAction({ taskId, tokenName: invitationName.trim() });
     if (result.success) {
-      success(`¡Token creado exitosamente! Token para "${tokenName.trim()}" está listo para usar`);
-      setTokenName('');
-      setShowCreateToken(false);
+      success(`¡Invitación creada! Clave de acceso para "${invitationName.trim()}" lista`);
+      setInvitationName('');
       await loadShareData();
     } else {
-      const errorMsg = result.error || 'Error al generar el token.';
+      const errorMsg = result.error || 'Error al crear la invitación.';
       setError(errorMsg);
-      showError('Error al crear token', errorMsg);
+      showError('Error al crear invitación', errorMsg);
     }
-    setIsSubmitting(false);
-  }, [taskId, tokenName, showCreateToken, loadShareData, success, showError]);
+    setIsGenerating(false);
+  }, [taskId, invitationName, isAtLimit, loadShareData, success, showError]);
 
-  const handleRevokeToken = useCallback(async (tokenId: string, tokenUserName?: string) => {
-    if (!confirm('¿Revocar este token?\n\nAl revocar este token, el usuario asignado ya no podrá acceder a la tarea compartida. Esta acción no se puede deshacer.')) {
-      return;
-    }
+  const handleRevokeToken = useCallback((tokenId: string, tokenUserName?: string) => {
+    const displayName = tokenUserName || 'Invitado';
 
-    setIsSubmitting(true);
-    const result = await revokeGuestTokenAction({ taskId, tokenId });
-    if (result.success) {
-      const message = tokenUserName
-        ? `Token revocado. El acceso de "${tokenUserName}" ha sido revocado`
-        : 'Token revocado exitosamente';
-      success(message);
-      await loadShareData();
-    } else {
-      const errorMsg = result.error || 'Error al revocar el token.';
-      showError('Error al revocar', errorMsg);
-    }
-    setIsSubmitting(false);
-  }, [taskId, loadShareData, success, showError]);
+    openConfirm({
+      title: `¿Revocar acceso de "${displayName}"?`,
+      description: 'Esta persona ya no podrá acceder a la tarea compartida. Esta acción no se puede deshacer.',
+      variant: 'danger',
+      confirmText: 'Revocar acceso',
+      cancelText: 'Cancelar',
+      onConfirm: async () => {
+        setIsSubmitting(true);
+        const result = await revokeGuestTokenAction({ taskId, tokenId });
+        if (result.success) {
+          success(`Acceso de "${displayName}" revocado`);
+          await loadShareData();
+        } else {
+          const errorMsg = result.error || 'Error al revocar la invitación.';
+          showError('Error al revocar', errorMsg);
+        }
+        setIsSubmitting(false);
+      },
+    });
+  }, [taskId, loadShareData, success, showError, openConfirm]);
 
-  const handleCopy = useCallback((url: string) => {
+  const handleCopyLink = useCallback((url: string, label?: string) => {
     navigator.clipboard.writeText(url);
-    setCopiedToken(url);
-    success('¡Enlace copiado! El enlace está listo para compartir');
-    setTimeout(() => setCopiedToken(null), 2000);
+    setCopiedItem(url);
+    success(label ? `Enlace de "${label}" copiado` : '¡Enlace copiado!');
+    setTimeout(() => setCopiedItem(null), 2000);
   }, [success]);
 
-  // Get the guest task URL using the centralized utility
+  const handleCopyMagicLink = useCallback((token: GuestToken) => {
+    const magicLink = `${token.shareUrl}?token=${token.token}`;
+    navigator.clipboard.writeText(magicLink);
+    setCopiedItem(`magic-${token.id}`);
+    success(`Enlace directo para "${token.tokenName || token.guestName || 'Invitado'}" copiado`);
+    setTimeout(() => setCopiedItem(null), 2000);
+  }, [success]);
+
   const guestTaskUrl = buildGuestTaskUrl(taskId);
 
   return (
@@ -240,7 +278,7 @@ export function ShareDialog({
       onOpenChange={onOpenChange}
       mode="view"
       title="Compartir Tarea"
-      description={`Gestiona el acceso público a "${taskName}"`}
+      description={`Gestiona quién puede acceder a "${taskName}"`}
       size={size}
       isLoading={false}
       isSubmitting={isSubmitting}
@@ -264,49 +302,20 @@ export function ShareDialog({
         </div>
       ) : (
         <div className={styles.shareContent}>
-        {/* Toggle para compartir */}
-        <div className={styles.shareOption}>
-          <div className={styles.shareOptionHeader}>
-            <Link2 size={18} className={styles.shareOptionIcon} />
-            <div className={styles.shareOptionText}>
-              <label htmlFor="enable-sharing" className={styles.shareLabel}>
-                Compartir públicamente
-              </label>
-              <p className={styles.shareDescription}>
-                Permite el acceso público a esta tarea mediante enlace
-              </p>
-            </div>
-          </div>
-          <div className={styles.switchContainer}>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isShared}
-              onClick={handleToggleSharing}
-              disabled={isSubmitting}
-              className={cn(styles.switch, isShared && styles.switchActive)}
-            >
-              <span className={styles.switchThumb} />
-            </button>
-          </div>
-        </div>
-
-        {isShared && (
-          <>
-            <div className={styles.divider} />
-
-            {/* Toggle para comentarios */}
+          {/* Section: Global Configuration */}
+          <div className={styles.shareSection}>
+            {/* Toggle para compartir */}
             <div className={styles.shareOption}>
               <div className={styles.shareOptionHeader}>
-                <MessageSquare size={18} className={styles.shareOptionIcon} />
+                <Link2 size={18} className={styles.shareOptionIcon} />
                 <div className={styles.shareOptionText}>
-                  <label htmlFor="comments" className={styles.shareLabel}>
-                    Permitir interacción a invitados
+                  <label htmlFor="enable-sharing" className={styles.shareLabel}>
+                    Habilitar enlace compartido
                   </label>
                   <p className={styles.shareDescription}>
-                    {commentsEnabled
-                      ? 'Los invitados pueden escribir y responder mensajes'
-                      : 'Modo solo lectura: los invitados solo pueden ver la tarea'
+                    {isShared
+                      ? 'Esta tarea es accesible mediante enlace público'
+                      : 'Activa para generar un enlace de acceso público'
                     }
                   </p>
                 </div>
@@ -315,167 +324,240 @@ export function ShareDialog({
                 <button
                   type="button"
                   role="switch"
-                  aria-checked={commentsEnabled}
-                  onClick={handleToggleComments}
+                  aria-checked={isShared}
+                  onClick={handleToggleSharing}
                   disabled={isSubmitting}
-                  className={cn(styles.switch, commentsEnabled && styles.switchActive)}
+                  className={cn(styles.switch, isShared && styles.switchActive)}
                 >
                   <span className={styles.switchThumb} />
                 </button>
               </div>
             </div>
 
-            <div className={styles.divider} />
-
-            {/* Enlace público */}
-            <div className={styles.shareLink}>
-              <label className={styles.shareLinkLabel}>
-                Enlace público
-              </label>
-              <div className={styles.shareLinkInputWrapper}>
-                <input
-                  type="text"
-                  readOnly
-                  value={guestTaskUrl}
-                  className={styles.shareLinkInput}
-                  onClick={(_e) => _e.currentTarget.select()}
-                />
-                <button
-                  onClick={() => handleCopy(guestTaskUrl)}
-                  className={styles.shareLinkCopyButton}
-                  disabled={isSubmitting}
-                >
-                  {copiedToken === guestTaskUrl ? (
-                    <CheckIcon size={16} className={styles.iconSuccess} />
-                  ) : (
-                    <CopyIcon size={16} />
-                  )}
-                </button>
+            {/* Warning when disabling with active tokens */}
+            {showDisableWarning && (
+              <div className={styles.warningBanner}>
+                <AlertTriangle size={16} className={styles.warningIcon} />
+                <div className={styles.warningContent}>
+                  <p className={styles.warningText}>
+                    <strong>¿Desactivar acceso compartido?</strong>
+                  </p>
+                  <p className={styles.warningSubtext}>
+                    Se revocarán {guestTokens.length} {guestTokens.length === 1 ? 'invitación activa' : 'invitaciones activas'}. Los invitados perderán acceso inmediatamente.
+                  </p>
+                  <div className={styles.warningActions}>
+                    <button
+                      onClick={handleCancelDisable}
+                      className={styles.warningButtonCancel}
+                      disabled={isSubmitting}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleToggleSharing}
+                      className={styles.warningButtonConfirm}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Desactivando...' : 'Sí, desactivar'}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className={styles.divider} />
+            {isShared && !showDisableWarning && (
+              <>
+                {/* Toggle para comentarios */}
+                <div className={styles.shareOption}>
+                  <div className={styles.shareOptionHeader}>
+                    <MessageSquare size={18} className={styles.shareOptionIcon} />
+                    <div className={styles.shareOptionText}>
+                      <label htmlFor="comments" className={styles.shareLabel}>
+                        Permitir a invitados comentar
+                      </label>
+                      <p className={styles.shareDescription}>
+                        {commentsEnabled
+                          ? 'Los invitados pueden escribir y responder mensajes'
+                          : 'Modo solo lectura: los invitados solo pueden ver'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className={styles.switchContainer}>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={commentsEnabled}
+                      onClick={handleToggleComments}
+                      disabled={isSubmitting}
+                      className={cn(styles.switch, commentsEnabled && styles.switchActive)}
+                    >
+                      <span className={styles.switchThumb} />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
-            {/* Lista de tokens de invitado */}
-            <div className={styles.tokenSection}>
-              <div className={styles.tokenHeader}>
-                <h3 className={styles.tokenTitle}>
-                  Tokens Activos
-                </h3>
-                <p className={styles.tokenCount}>
-                  {String(guestTokens.length).padStart(2, '0')}/03
-                </p>
+          {isShared && !showDisableWarning && (
+            <>
+              <div className={styles.divider} />
+
+              {/* Section: Master Link */}
+              <div className={styles.shareSection}>
+                <div className={styles.shareLink}>
+                  <label className={styles.shareLinkLabel}>
+                    Enlace de acceso
+                  </label>
+                  <div className={styles.shareLinkInputWrapper}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={guestTaskUrl}
+                      className={styles.shareLinkInput}
+                      onClick={(e) => e.currentTarget.select()}
+                    />
+                    <button
+                      onClick={() => handleCopyLink(guestTaskUrl)}
+                      className={styles.shareLinkCopyButton}
+                      disabled={isSubmitting}
+                      title="Copiar enlace"
+                    >
+                      {copiedItem === guestTaskUrl ? (
+                        <CheckIcon size={16} className={styles.iconSuccess} />
+                      ) : (
+                        <CopyIcon size={16} />
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className={styles.divider} />
 
-              {guestTokens.length > 0 && (
-                <div className={styles.tokenList}>
-                  {guestTokens.map((token) => (
-                    <div key={token.id} className={styles.tokenItem}>
-                      <div className={styles.tokenItemContent}>
-                        <div className={styles.tokenItemLabel}>
-                          {token.tokenName || token.guestName || 'Invitado'}
-                        </div>
-                        <div className={styles.tokenItemToken}>
-                          {token.token}
-                        </div>
-                        {token.expiresAt && (
-                          <div className={styles.tokenItemDetails}>
-                            <TokenCountdown expiresAt={token.expiresAt} />
-                          </div>
-                        )}
-                      </div>
-                      <div className={styles.tokenItemActions}>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(token.token);
-                            setCopiedToken(token.token);
-                            success(`Token copiado. Token de "${token.tokenName || token.guestName || 'Invitado'}" copiado`);
-                            setTimeout(() => setCopiedToken(null), 2000);
-                          }}
-                          className={styles.copyTokenButton}
-                          disabled={isSubmitting}
-                          title="Copiar token"
-                        >
-                          {copiedToken === token.token ? (
-                            <CheckIcon size={16} className={styles.iconSuccess} />
-                          ) : (
-                            <CopyIcon size={16} />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleRevokeToken(token.id, token.tokenName || token.guestName || undefined)}
-                          className={styles.revokeTokenButton}
-                          disabled={isSubmitting}
-                          title="Revocar token"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {/* Section: Guest Management */}
+              <div className={styles.shareSection}>
+                <div className={styles.invitationHeader}>
+                  <h3 className={styles.invitationTitle}>
+                    Accesos Activos
+                  </h3>
+                  <span className={cn(
+                    styles.invitationCount,
+                    isAtLimit && styles.invitationCountLimit
+                  )}>
+                    {guestTokens.length}/{MAX_INVITATIONS}
+                  </span>
                 </div>
-              )}
 
-              {/* Formulario para crear token */}
-              {showCreateToken && (
-                <div className={styles.createTokenForm}>
-                  <label className={styles.createTokenLabel}>
-                    Nombre de usuario del token
-                  </label>
+                {/* Invitation List - Compact Table-like Rows */}
+                {guestTokens.length > 0 ? (
+                  <div className={styles.invitationList}>
+                    {guestTokens.map((token) => (
+                      <div key={token.id} className={styles.invitationRow}>
+                        <div className={styles.invitationInfo}>
+                          <span className={styles.invitationName}>
+                            {token.tokenName || token.guestName || 'Invitado'}
+                          </span>
+                          <span className={styles.invitationDate}>
+                            {formatDate(token.createdAt)}
+                            {token.expiresAt && (
+                              <span className={styles.invitationExpiry}>
+                                {' · '}<TokenCountdown expiresAt={token.expiresAt} />
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className={styles.invitationToken}>
+                          <code className={styles.maskedToken}>
+                            {maskToken(token.token)}
+                          </code>
+                        </div>
+                        <div className={styles.invitationActions}>
+                          <button
+                            onClick={() => handleCopyMagicLink(token)}
+                            className={styles.invitationActionButton}
+                            disabled={isSubmitting}
+                            title="Copiar enlace directo con clave"
+                          >
+                            {copiedItem === `magic-${token.id}` ? (
+                              <CheckIcon size={14} className={styles.iconSuccess} />
+                            ) : (
+                              <LinkIcon size={14} />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleRevokeToken(token.id, token.tokenName || token.guestName || undefined)}
+                            className={cn(styles.invitationActionButton, styles.invitationActionDanger)}
+                            disabled={isSubmitting}
+                            title="Revocar acceso"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.emptyInvitations}>
+                    <p className={styles.emptyText}>
+                      No hay invitaciones activas
+                    </p>
+                    <p className={styles.emptySubtext}>
+                      Crea una invitación para que otros puedan acceder con su clave única
+                    </p>
+                  </div>
+                )}
+
+                {/* Create Invitation Form - Footer */}
+                <div className={styles.createInvitationForm}>
                   <input
                     type="text"
-                    value={tokenName}
-                    onChange={(e) => setTokenName(e.target.value)}
-                    placeholder="Ej: Juan Pérez"
-                    className={styles.createTokenInput}
-                    autoFocus
-                    disabled={isSubmitting}
+                    value={invitationName}
+                    onChange={(e) => setInvitationName(e.target.value)}
+                    placeholder={isAtLimit ? 'Límite de invitaciones alcanzado' : 'Nombre para la invitación (ej. Cliente)'}
+                    className={styles.createInvitationInput}
+                    disabled={isSubmitting || isGenerating || isAtLimit}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isAtLimit && invitationName.trim()) {
+                        handleGenerateInvitation();
+                      }
+                    }}
                   />
+                  <button
+                    onClick={handleGenerateInvitation}
+                    disabled={isSubmitting || isGenerating || isAtLimit || !invitationName.trim()}
+                    className={cn(
+                      styles.createInvitationButton,
+                      isAtLimit && styles.createInvitationButtonDisabled
+                    )}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 size={16} className={styles.spinnerIcon} />
+                        <span>Creando...</span>
+                      </>
+                    ) : isAtLimit ? (
+                      <span>Límite alcanzado</span>
+                    ) : (
+                      <>
+                        <PlusCircle size={16} />
+                        <span>Crear Invitación</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
+              </div>
+            </>
+          )}
 
-              {/* Botón de acción */}
-              <button
-                onClick={handleGenerateToken}
-                disabled={isSubmitting || (!showCreateToken && guestTokens.length >= 3)}
-                className={cn(styles.generateButton, styles.generateButtonPrimary)}
-              >
-                <PlusCircle size={16} />
-                <span>{showCreateToken ? 'Confirmar y crear token' : 'Generar nuevo token'}</span>
-              </button>
-
-              {/* Textos de ayuda */}
-              {!showCreateToken && guestTokens.length === 0 && (
-                <p className={styles.helperText}>
-                  Por seguridad, necesitas crear al menos un token para que los invitados puedan acceder.
-                  Cada invitado deberá ingresar su token asignado.
-                  <br />
-                  <span>Puedes generar hasta 3 tokens por tarea.</span>
-                </p>
-              )}
-              {showCreateToken && (
-                <p className={styles.helperText}>
-                  Una vez creado, el nombre del token no se puede modificar. Para cambiarlo, deberás revocarlo y crear uno nuevo.
-                </p>
-              )}
-              {!showCreateToken && guestTokens.length >= 3 && (
-                <p className={styles.helperTextError}>
-                  Has alcanzado el límite máximo de 3 tokens por tarea.
-                </p>
-              )}
+          {!isShared && !showDisableWarning && (
+            <div className={styles.infoMessage}>
+              <p>
+                Activa &quot;Habilitar enlace compartido&quot; para generar invitaciones y compartir esta tarea con personas externas.
+              </p>
             </div>
-          </>
-        )}
-
-        {!isShared && (
-          <div className={styles.infoMessage}>
-            <p>
-              Activa &quot;Compartir públicamente&quot; para generar enlaces de invitado y compartir esta tarea con personas externas.
-            </p>
-          </div>
-        )}
+          )}
         </div>
       )}
     </CrudDialog>

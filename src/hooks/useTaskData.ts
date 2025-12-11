@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { useTasksDataStore } from '@/stores/tasksDataStore';
+import { useShallow } from 'zustand/react/shallow';
 import { Task } from '@/types';
 
 // --- Options ---
@@ -66,13 +67,7 @@ export function useTaskData(
   }, [taskId, autoSubscribe, unsubscribeOnUnmount, subscribeToTask, unsubscribeFromTask]);
 
   // Use selector to only re-render when this specific task changes
-  const taskData = useTasksDataStore(
-    (state) => state.getTask(taskId),
-    (prev, next) => {
-      // Custom equality: only re-render if task data actually changed
-      return JSON.stringify(prev) === JSON.stringify(next);
-    }
-  );
+  const taskData = useTasksDataStore((state) => state.getTask(taskId));
 
   return taskData;
 }

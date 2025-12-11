@@ -1,97 +1,62 @@
 /**
  * useTaskData Hook
  * Manages task data fetching and operations
+ *
+ * ✅ MIGRATED: Now uses centralized stores for data fetching
+ * - Tasks: useTaskState from @/hooks/useTaskData (tasksDataStore)
+ * - Clients: useClientsDataStore (clientsDataStore)
+ * - Users: useDataStore (existing pattern)
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCallback } from 'react';
 import { Client } from '../../types/domain';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
+import { useTaskState as useCentralizedTaskState } from '@/hooks/useTaskData';
+import { useClientsDataStore } from '@/stores/clientsDataStore';
 
-// Hook for fetching clients
+// ✅ Hook for fetching clients - Now uses centralized clientsDataStore
 export const useClients = () => {
-  const { isSynced } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use useShallow to prevent infinite loops when getAllClients returns new array
+  const clients = useClientsDataStore(
+    useShallow((state) => Array.from(state.clients.values()))
+  ) as Client[];
+  const isLoading = useClientsDataStore((state) => state.isLoading);
+  const error = useClientsDataStore((state) => state.error);
 
-  useEffect(() => {
-    // Wait for Firebase Auth to be synced before making queries
-    if (!isSynced) {
-      return;
-    }
-
-    setIsLoading(true);
-    const clientsCollection = collection(db, 'clients');
-
-    const unsubscribe = onSnapshot(
-      clientsCollection,
-      (snapshot) => {
-        const clientsData: Client[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          imageUrl: doc.data().imageUrl || '',
-          projects: doc.data().projects || [],
-          createdBy: doc.data().createdBy || '',
-        }));
-        setClients(clientsData);
-        setIsLoading(false);
-        setError(null);
-      },
-      (error) => {
-        console.error('[useClients] Error listening to clients:', error);
-        setError(error.message);
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [isSynced]);
-
-  return { clients, isLoading, error };
+  return {
+    clients,
+    isLoading,
+    error: error?.message || null
+  };
 };
 
-// Hook for fetching users from dataStore
+// Hook for fetching users from dataStore (already centralized)
 export const useUsers = () => {
   const users = useDataStore(useShallow((state) => state.users));
   return { users };
 };
 
-// Hook for fetching a single task
+// ✅ Hook for fetching a single task - Now uses centralized tasksDataStore
 export const useTask = (taskId: string | null) => {
-  const [task, setTask] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { taskData, isLoading, error } = useCentralizedTaskState(taskId || '', {
+    autoSubscribe: !!taskId,
+    unsubscribeOnUnmount: true,
+  });
 
-  const fetchTask = useCallback(async () => {
-    if (!taskId) return;
+  // Provide refetch function for backwards compatibility
+  const refetch = useCallback(() => {
+    // The centralized store handles real-time updates automatically
+    // This is kept for API compatibility but is a no-op
+    console.log('[useTask] refetch called - data is already real-time');
+  }, []);
 
-    setIsLoading(true);
-    try {
-      const taskDoc = await getDoc(doc(db, 'tasks', taskId));
-      if (!taskDoc.exists()) {
-        throw new Error('Task not found');
-      }
-      const taskData = taskDoc.data();
-      setTask({ id: taskDoc.id, ...taskData });
-      setError(null);
-    } catch (err) {
-      console.error('[useTask] Error fetching task:', err);
-      setError(err instanceof Error ? err.message : 'Error fetching task');
-      setTask(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [taskId]);
-
-  useEffect(() => {
-    fetchTask();
-  }, [fetchTask]);
-
-  return { task, isLoading, error, refetch: fetchTask };
+  return {
+    task: taskData,
+    isLoading,
+    error: error?.message || null,
+    refetch
+  };
 };
 
 // Combined hook for task form data (clients + users)
