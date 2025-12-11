@@ -1,9 +1,21 @@
 'use client';
 
-import { Button } from '@/components/ui/buttons';
-import { CirclePlus } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TaskSearchBar, type SearchCategory, type PriorityLevel, type StatusLevel } from '@/modules/data-views/components/shared/search';
 import { ViewSwitcher } from './ViewSwitcher';
+import { WorkspacesDropdown } from '@/components/ui/workspaces';
+import { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
+// CreateWorkspaceDialog se conserva para futura feature de chats grupales de equipo
+// import { CreateWorkspaceDialog } from '@/modules/workspaces/components/CreateWorkspaceDialog';
+import {
+  useWorkspacesStore,
+  ALL_WORKSPACES_ID,
+  type Workspace,
+} from '@/stores/workspacesStore';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataStore } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useUserDataStore } from '@/stores/userDataStore';
 import styles from './TasksHeader.module.scss';
 
 interface TasksHeaderProps {
@@ -11,7 +23,6 @@ interface TasksHeaderProps {
   setSearchQuery: (query: string[]) => void;
   searchCategory: SearchCategory | null;
   setSearchCategory: (category: SearchCategory | null) => void;
-  onNewTaskOpen: () => void;
   onPriorityFiltersChange?: (priorities: string[]) => void;
   onStatusFiltersChange?: (statuses: StatusLevel[]) => void;
   currentView?: 'table' | 'kanban' | 'archive';
@@ -22,11 +33,75 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   setSearchQuery,
   searchCategory,
   setSearchCategory,
-  onNewTaskOpen,
   onPriorityFiltersChange,
   onStatusFiltersChange,
   currentView = 'table',
 }) => {
+  // Estado para crear nueva cuenta (cliente)
+  const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
+  const { workspaces, selectedWorkspaceId, setWorkspacesFromClients, setSelectedWorkspace } = useWorkspacesStore();
+
+  // Auth y datos del usuario
+  const { isAdmin } = useAuth();
+  const userId = useUserDataStore((state) => state.userData?.userId || '');
+
+  // Obtener clientes y tareas del store global (dataStore es la fuente de verdad)
+  const { allClients, tasks } = useDataStore(
+    useShallow((state) => ({
+      allClients: state.clients,
+      tasks: state.tasks,
+    }))
+  );
+
+  // Calcular qué clientes puede ver el usuario basado en sus tareas
+  const userVisibleClientIds = useMemo(() => {
+    // Si no hay tareas aún, no podemos calcular
+    if (tasks.length === 0) {
+      return null;
+    }
+
+    if (isAdmin) {
+      return null; // Admin ve todos los clientes
+    }
+
+    // Usuario normal: solo clientes de tareas donde está involucrado
+    const clientIds = new Set<string>();
+    tasks.forEach((task) => {
+      const isInvolved =
+        task.CreatedBy === userId ||
+        (Array.isArray(task.AssignedTo) && task.AssignedTo.includes(userId)) ||
+        (Array.isArray(task.LeadedBy) && task.LeadedBy.includes(userId));
+
+      if (isInvolved && task.clientId) {
+        clientIds.add(task.clientId);
+      }
+    });
+
+    // Si el usuario no tiene tareas asignadas, mostrar set vacío (no verá clientes)
+    return clientIds;
+  }, [isAdmin, tasks, userId]);
+
+  // Inicializar workspaces desde clientes reales
+  useEffect(() => {
+    // Solo ejecutar cuando tengamos clientes cargados
+    if (allClients.length === 0) {
+      return;
+    }
+
+    // Para admin o cuando userVisibleClientIds es null, mostrar todos
+    // Para usuarios normales, filtrar por sus clientes visibles
+    setWorkspacesFromClients(allClients, userVisibleClientIds ?? undefined);
+  }, [allClients, userVisibleClientIds, setWorkspacesFromClients]);
+
+  // Handle workspace change
+  const handleWorkspaceChange = useCallback((workspace: Workspace | null) => {
+    setSelectedWorkspace(workspace?.id || ALL_WORKSPACES_ID);
+  }, [setSelectedWorkspace]);
+
+  // Handle create account (crear cuenta/cliente)
+  const handleCreateAccount = useCallback(() => {
+    setIsCreateClientOpen(true);
+  }, []);
 
   // Convert PriorityLevel[] to string[] for the store
   const handlePriorityFiltersChange = (priorities: PriorityLevel[]) => {
@@ -39,42 +114,43 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   };
 
   return (
-    <div className={styles.toolbar}>
-      <div className={styles.searchSection}>
-        <div className={styles.leftActions}>
-          {/* View Switcher - Uses router.push() for navigation */}
-          <ViewSwitcher />
-        </div>
+    <>
+      <div className={styles.headerWrapper}>
+        {/* Main Toolbar */}
+        <div className={styles.toolbar}>
+          <div className={styles.searchSection}>
+            {/* Account/Client Selector (Workspace) */}
+            <WorkspacesDropdown
+              workspaces={workspaces}
+              selectedWorkspaceId={selectedWorkspaceId}
+              onWorkspaceChange={handleWorkspaceChange}
+              onCreateWorkspace={handleCreateAccount}
+            />
 
-        {/* Advanced Task Search Bar */}
-        <TaskSearchBar
-          onSearch={(query, category) => {
-            setSearchQuery(query);
-            setSearchCategory(category);
-          }}
-          onPriorityFiltersChange={handlePriorityFiltersChange}
-          onStatusFiltersChange={handleStatusFiltersChange}
-          placeholder="Buscar tareas, cuentas o miembros..."
-        />
-      </div>
-
-      <div className={styles.actionsSection}>
-        {/* Right Actions */}
-        <div className={styles.rightActions}>
-          <div className={styles.buttonWithTooltip}>
-            <Button
-              intent="primary"
-              size="lg"
-              leftIcon={CirclePlus}
-              onClick={onNewTaskOpen}
-            >
-              Crear Tarea
-            </Button>
-            <span className={styles.tooltip}>Crear Nueva Tarea</span>
+            {/* Advanced Task Search Bar */}
+            <TaskSearchBar
+              onSearch={(query, category) => {
+                setSearchQuery(query);
+                setSearchCategory(category);
+              }}
+              onPriorityFiltersChange={handlePriorityFiltersChange}
+              onStatusFiltersChange={handleStatusFiltersChange}
+              placeholder="Buscar tareas, cuentas o miembros..."
+            />
           </div>
         </div>
+
+        {/* View Switcher - Floating dock at bottom */}
+        <ViewSwitcher />
       </div>
-    </div>
+
+      {/* Create Client/Account Dialog */}
+      <ClientDialog
+        isOpen={isCreateClientOpen}
+        onOpenChange={setIsCreateClientOpen}
+        mode="create"
+      />
+    </>
   );
 };
 

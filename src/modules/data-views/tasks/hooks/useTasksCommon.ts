@@ -1,9 +1,9 @@
 /**
  * useTasksCommon Hook
- * 
+ *
  * Centraliza toda la lógica compartida entre TasksTable, ArchiveTable y TasksKanban:
  * - Datos centralizados (tasks, clients, users)
- * - Lógica de filtros unificada
+ * - Lógica de filtros unificada (incluye workspace/cliente global)
  * - Manejo de dropdowns
  * - Permisos y utilidades comunes
  * - Animaciones y UI helpers
@@ -13,6 +13,7 @@ import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataStore } from '@/stores/dataStore';
 import { useUserDataStore } from '@/stores/userDataStore';
+import { useWorkspacesStore, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
 import { useShallow } from 'zustand/react/shallow';
 import { animateClick as animateClickHelper, animateFilterIcon } from '@/modules/data-views/animations';
 
@@ -62,7 +63,11 @@ export interface UseTasksCommonReturn {
   isLoadingTasks: boolean;
   isLoadingClients: boolean;
   isLoadingUsers: boolean;
-  
+
+  // Workspace (filtro global de cliente)
+  selectedWorkspaceId: string | null;
+  isFilteringByWorkspace: boolean;
+
   // Funciones de filtrado
   applyTaskFilters: (
     tasks: Task[],
@@ -71,6 +76,7 @@ export interface UseTasksCommonReturn {
       priorityFilter?: string;
       clientFilter?: string;
       userFilter?: string;
+      applyWorkspaceFilter?: boolean; // Por defecto true
     }
   ) => Task[];
   
@@ -109,6 +115,10 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
 
   // ✅ Datos del usuario desde userDataStore (Single Source of Truth)
   const userId = useUserDataStore((state) => state.userData?.userId || '');
+
+  // 🏢 Workspace seleccionado (filtro global de cliente)
+  const selectedWorkspaceId = useWorkspacesStore((state) => state.selectedWorkspaceId);
+  const isFilteringByWorkspace = selectedWorkspaceId !== null && selectedWorkspaceId !== ALL_WORKSPACES_ID;
 
   // Datos centralizados del store
   const {
@@ -156,9 +166,16 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
       priorityFilter?: string;
       clientFilter?: string;
       userFilter?: string;
+      applyWorkspaceFilter?: boolean;
     }
   ): Task[] => {
-    const { searchQuery = '', priorityFilter = '', clientFilter = '', userFilter = '' } = filters;
+    const {
+      searchQuery = '',
+      priorityFilter = '',
+      clientFilter = '',
+      userFilter = '',
+      applyWorkspaceFilter = true,
+    } = filters;
 
     return tasksToFilter.filter((task) => {
       // 🔒 Filtro de permisos primero
@@ -166,14 +183,21 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
         return false;
       }
 
+      // 🏢 Filtro GLOBAL de workspace (cliente) - aplicar antes que otros filtros
+      if (applyWorkspaceFilter && isFilteringByWorkspace) {
+        if (task.clientId !== selectedWorkspaceId) {
+          return false;
+        }
+      }
+
       // 🔍 Filtro de búsqueda
-      const matchesSearch = !searchQuery || 
+      const matchesSearch = !searchQuery ||
         task.name.toLowerCase().includes(searchQuery.toLowerCase());
 
       // 🎯 Filtro de prioridad
       const matchesPriority = !priorityFilter || task.priority === priorityFilter;
 
-      // 🏢 Filtro de cliente
+      // 🏢 Filtro de cliente (adicional al workspace, por si se usa en dropdown)
       const matchesClient = !clientFilter || task.clientId === clientFilter;
 
       // 👤 Filtro de usuario
@@ -186,7 +210,7 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
 
       return matchesSearch && matchesPriority && matchesClient && matchesUser;
     });
-  }, [canUserViewTask, getInvolvedUserIds, userId]);
+  }, [canUserViewTask, getInvolvedUserIds, userId, isFilteringByWorkspace, selectedWorkspaceId]);
 
   // 🏢 Obtener nombre del cliente
   const getClientName = useCallback((clientId: string): string => {
@@ -319,24 +343,28 @@ export const useTasksCommon = (): UseTasksCommonReturn => {
     isLoadingTasks,
     isLoadingClients,
     isLoadingUsers,
-    
+
+    // Workspace (filtro global de cliente)
+    selectedWorkspaceId,
+    isFilteringByWorkspace,
+
     // Funciones de filtrado
     applyTaskFilters,
-    
+
     // Utilidades de permisos
     getInvolvedUserIds,
     canUserViewTask,
     canUserArchiveTask,
-    
+
     // Utilidades de UI
     getClientName,
     animateClick,
-    
+
     // Factory functions para handlers
     createPrioritySelectHandler,
     createClientSelectHandler,
     createUserFilterHandler,
-    
+
     // Utilidades de estado
     normalizeStatus,
     getPriorityOrder,

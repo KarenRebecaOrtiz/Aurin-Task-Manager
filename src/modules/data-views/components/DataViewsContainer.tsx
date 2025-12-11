@@ -131,7 +131,6 @@ export default function DataViewsContainer() {
       {mountedViews.has('kanban') && (
         <div style={{ display: currentView === 'kanban' ? 'block' : 'none' }}>
           <TasksKanban
-            onNewTaskOpen={handleNewTaskOpen}
             onNewClientOpen={handleNewClientOpen}
             onEditTaskOpen={handleEditTask}
             onViewChange={handleViewChange}

@@ -18,6 +18,7 @@ import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiv
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
 import { useArchiveTableState } from './hooks/useArchiveTableState';
 import { useAdvancedSearch } from '@/modules/data-views/hooks/useAdvancedSearch';
+import { useWorkspacesStore, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
 
 interface Task {
   id: string;
@@ -113,7 +114,11 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       getClientName,
       animateClick,
     } = useTasksCommon();
-    
+
+    // 🏢 Workspace (Filtro Global de Cuenta)
+    const selectedWorkspaceId = useWorkspacesStore((state) => state.selectedWorkspaceId);
+    const isFilteringByWorkspace = selectedWorkspaceId !== null && selectedWorkspaceId !== ALL_WORKSPACES_ID;
+
     // Hook para detectar el viewport
     const [isMobile, setIsMobile] = useState(false);
 
@@ -165,12 +170,17 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
         return canViewTask;
       });
 
+      // 🏢 FILTRO GLOBAL DE WORKSPACE (CUENTA) - Aplicar PRIMERO
+      if (isFilteringByWorkspace) {
+        result = result.filter(task => task.clientId === selectedWorkspaceId);
+      }
+
       // Filter by priority
       if (priorityFilter) {
         result = result.filter(task => task.priority === priorityFilter);
       }
 
-      // Filter by client
+      // Filter by client (filtro secundario, adicional al workspace)
       if (clientFilter) {
         result = result.filter(task => task.clientId === clientFilter);
       }
@@ -184,7 +194,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
       }
 
       return filteredByUser;
-    }, [searchFiltered, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
+    }, [searchFiltered, isFilteringByWorkspace, selectedWorkspaceId, priorityFilter, clientFilter, userFilter, userId, getInvolvedUserIds, isAdmin]);
 
     useEffect(() => {
       setFilteredTasks(memoizedFilteredTasks as Task[]);
@@ -523,7 +533,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
             setSearchQuery={setSearchQuery}
             searchCategory={searchCategory}
             setSearchCategory={setSearchCategory}
-            onNewTaskOpen={handleNewTaskOpen}
             currentView="archive"
           />
 
@@ -548,7 +557,6 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
           setSearchQuery={setSearchQuery}
           searchCategory={searchCategory}
           setSearchCategory={setSearchCategory}
-          onNewTaskOpen={handleNewTaskOpen}
           currentView="archive"
         />
 

@@ -229,16 +229,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     return '';
   }, [pinnedTaskIds]);
 
-  const renderClientColumn = useCallback((client: Client | undefined) => <ClientCell client={client} />, []);
   const renderTaskNameColumn = useCallback((task: Task) => {
-    // Debug log (remove after testing)
-    if (task.name === 'Hola Karen') {
-      console.log('[TasksTable] Hola Karen task data:', {
-        name: task.name,
-        shared: task.shared,
-        hasSharedField: 'shared' in task
-      });
-    }
     return (
       <div className={styles.taskNameWrapper}>
         <span className={styles.taskName}>{task.name}</span>
@@ -246,7 +237,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
       </div>
     );
   }, []);
-  const renderNotificationDotColumn = useCallback(() => null, []);
+
+  const renderProjectColumn = useCallback((task: Task) => {
+    return (
+      <div className={styles.projectWrapper}>
+        <span className={styles.projectName}>{task.project || 'Sin proyecto'}</span>
+      </div>
+    );
+  }, []);
   const renderAssignedToColumn = useCallback((task: Task) => (
     <UserCell assignedUserIds={task.AssignedTo} leadedByUserIds={task.LeadedBy} currentUserId={userId} />
   ), [userId]);
@@ -307,21 +305,23 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     );
   }, [isAdmin, userId, handleEditTaskForActionMenu, handleDeleteTaskForActionMenu, handleArchiveTaskForActionMenu, animateClick, actionMenuRef, handleActionButtonRef]);
 
+  // Columnas ordenadas: Tarea, Asignados, Proyecto, Estado, Prioridad, Acciones
+  // Mobile: solo Tarea, Proyecto y Acciones visibles
+  // Desktop: 35% + 15% + 18% + 12% + 10% + 10% = 100%
+  // Mobile: 50% + 35% + 15% = 100%
   const baseColumns = [
-    { key: 'clientId', label: 'Cuenta', width: '30%', mobileVisible: true, mobileWidth: '25%', sortable: true },
-    { key: 'name', label: 'Tarea', width: '50%', mobileVisible: true, mobileWidth: '60%', sortable: true },
-    { key: 'notificationDot', label: '', width: '20%', mobileVisible: false, sortable: true, notificationCount: true },
-    { key: 'assignedTo', label: 'Asignados', width: '20%', mobileVisible: false, sortable: true },
-    { key: 'status', label: 'Estado', width: '30%', mobileVisible: false, sortable: true },
+    { key: 'name', label: 'Tarea', width: '35%', mobileVisible: true, mobileWidth: '50%', sortable: true },
+    { key: 'assignedTo', label: 'Asignados', width: '15%', mobileVisible: false, sortable: true },
+    { key: 'project', label: 'Proyecto', width: '18%', mobileVisible: true, mobileWidth: '35%', sortable: true },
+    { key: 'status', label: 'Estado', width: '12%', mobileVisible: false, sortable: true },
     { key: 'priority', label: 'Prioridad', width: '10%', mobileVisible: false, sortable: true },
     { key: 'action', label: 'Acciones', width: '10%', mobileVisible: true, mobileWidth: '15%', sortable: false },
   ];
 
   const columns = baseColumns.map((col) => {
-    if (col.key === 'clientId') return { ...col, render: (task: Task) => renderClientColumn(tableState.effectiveClients.find((c) => c.id === task.clientId) as Client | undefined) };
     if (col.key === 'name') return { ...col, render: renderTaskNameColumn };
-    if (col.key === 'notificationDot') return { ...col, render: renderNotificationDotColumn };
     if (col.key === 'assignedTo') return { ...col, render: renderAssignedToColumn };
+    if (col.key === 'project') return { ...col, render: renderProjectColumn };
     if (col.key === 'status') return { ...col, render: renderStatusColumn };
     if (col.key === 'priority') return { ...col, render: renderPriorityColumn };
     if (col.key === 'action') return { ...col, render: renderActionColumn };
@@ -368,7 +368,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
           setSearchQuery={tableState.setSearchQuery}
           searchCategory={tableState.searchCategory}
           setSearchCategory={tableState.setSearchCategory}
-          onNewTaskOpen={openNewTask}
           onPriorityFiltersChange={tableState.setPriorityFilters}
           onStatusFiltersChange={tableState.setStatusFilters}
           currentView="table"
@@ -386,7 +385,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         setSearchQuery={tableState.setSearchQuery}
         searchCategory={tableState.searchCategory}
         setSearchCategory={tableState.setSearchCategory}
-        onNewTaskOpen={openNewTask}
         onPriorityFiltersChange={tableState.setPriorityFilters}
         onStatusFiltersChange={tableState.setStatusFilters}
         currentView="table"

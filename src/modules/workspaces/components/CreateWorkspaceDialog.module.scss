@@ -1,0 +1,393 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+// Input Group Styles
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: $font-weight-semibold;
+  color: #1f2937;
+  letter-spacing: 0.01em;
+
+  :global(.dark) & {
+    color: #e5e7eb;
+  }
+}
+
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  font-size: 15px;
+  font-weight: $font-weight-normal;
+  color: #0F172A;
+  transition: $transition-base;
+
+  &::placeholder {
+    color: rgba(15, 23, 42, 0.4);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 0 0 4px rgba(59, 130, 246, 0.15);
+  }
+
+  &.inputError {
+    border-color: $color-error;
+    box-shadow:
+      inset -2px -2px 4px rgba(255, 255, 255, 0.9),
+      inset 2px 2px 6px rgba(0, 0, 0, 0.08),
+      0 0 0 4px rgba(239, 68, 68, 0.2);
+  }
+
+  :global(.dark) & {
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    color: #e5e5e5;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    &:focus {
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    }
+
+    &.inputError {
+      border-color: #f87171;
+      box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.3);
+    }
+  }
+}
+
+.errorText {
+  font-size: 12px;
+  font-weight: $font-weight-normal;
+  color: $color-error;
+  padding-left: 4px;
+
+  :global(.dark) & {
+    color: #f87171;
+  }
+}
+
+// Users Section
+.usersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism(rgba(248, 250, 252, 0.6));
+
+  :global(.dark) & {
+    background: rgba(42, 42, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.usersSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid $color-border-subtle;
+
+  :global(.dark) & {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.usersSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: $font-weight-semibold;
+  color: #1f2937;
+
+  svg {
+    color: #3b82f6;
+  }
+
+  :global(.dark) & {
+    color: #e5e7eb;
+
+    svg {
+      color: #60a5fa;
+    }
+  }
+}
+
+.selectedCount {
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(59, 130, 246, 0.2);
+  }
+}
+
+// Search Container
+.searchContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  color: $color-text-secondary;
+  pointer-events: none;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.searchInput {
+  width: 100%;
+  height: 40px;
+  padding: 8px 14px 8px 40px;
+  border-radius: 8px;
+  border: 1px solid $color-border-subtle;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  color: #0F172A;
+  transition: $transition-base;
+
+  &::placeholder {
+    color: rgba(15, 23, 42, 0.4);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.4);
+    background: white;
+  }
+
+  :global(.dark) & {
+    background: rgba(42, 42, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e5e5e5;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    &:focus {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: #333;
+    }
+  }
+}
+
+// Select All Button
+.selectAllButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  color: #3b82f6;
+  cursor: pointer;
+  transition: $transition-base;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  :global(.dark) & {
+    color: #60a5fa;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.15);
+    }
+  }
+}
+
+// Checkbox
+.checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid $color-border-subtle;
+  background: white;
+  transition: $transition-base;
+  flex-shrink: 0;
+
+  &.checked {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+  }
+
+  :global(.dark) & {
+    background: #333;
+    border-color: rgba(255, 255, 255, 0.2);
+
+    &.checked {
+      background: #3b82f6;
+      border-color: #3b82f6;
+    }
+  }
+}
+
+// Users Table
+.usersTable {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  @include crystallized-scrollbar;
+  padding-right: 4px;
+}
+
+.emptyState {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: $color-text-secondary;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: $transition-base;
+  text-align: left;
+
+  &:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.12);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.8;
+  }
+
+  :global(.dark) & {
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &.selected {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.25);
+    }
+  }
+}
+
+.userAvatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.avatarFallback {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  font-weight: $font-weight-semibold;
+  font-size: 14px;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.userName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  :global(.dark) & {
+    color: #e5e5e5;
+  }
+}
+
+.youBadge {
+  font-size: 11px;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(59, 130, 246, 0.2);
+  }
+}
+
+.userRole {
+  font-size: 12px;
+  color: $color-text-secondary;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}

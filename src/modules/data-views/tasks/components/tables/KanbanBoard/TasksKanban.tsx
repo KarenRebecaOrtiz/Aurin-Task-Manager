@@ -77,7 +77,6 @@ export const cleanupTasksKanbanListeners = () => {
 };
 
 interface TasksKanbanProps {
-  onNewTaskOpen: () => void;
   onNewClientOpen?: () => void;
   onEditTaskOpen: (taskId: string) => void;
   onViewChange: (view: TaskView) => void;
@@ -86,7 +85,6 @@ interface TasksKanbanProps {
 }
 
 const TasksKanban: React.FC<TasksKanbanProps> = ({
-  onNewTaskOpen,
   onNewClientOpen,
   onEditTaskOpen,
   onViewChange,
@@ -334,7 +332,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
           setSearchQuery={setSearchQuery}
           searchCategory={searchCategory}
           setSearchCategory={setSearchCategory}
-          onNewTaskOpen={onNewTaskOpen}
           onPriorityFiltersChange={setPriorityFilters}
           currentView="kanban"
         />
@@ -354,7 +351,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         setSearchQuery={setSearchQuery}
         searchCategory={searchCategory}
         setSearchCategory={setSearchCategory}
-        onNewTaskOpen={onNewTaskOpen}
         onPriorityFiltersChange={setPriorityFilters}
         currentView="kanban"
       />

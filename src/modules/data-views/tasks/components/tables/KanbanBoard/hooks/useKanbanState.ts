@@ -48,7 +48,7 @@ interface UseKanbanStateReturn {
 
   // Filter state
   searchQuery: string;
-  searchCategory: 'task' | 'client' | 'member' | null;
+  searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
   clientFilter: string;

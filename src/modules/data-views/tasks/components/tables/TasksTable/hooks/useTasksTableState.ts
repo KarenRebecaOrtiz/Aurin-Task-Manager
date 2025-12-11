@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { tasksTableStore } from '@/modules/data-views/tasks/stores/tasksTableStore';
 import { useDataStore } from '@/stores/dataStore';
+import { useWorkspacesStore, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
 import { Task, Client, User } from '@/types';
 import { sortTasks } from '@/modules/data-views/utils/sortingUtils';
 import { TaskSortKey, SortDirection } from '@/modules/data-views/constants/sortingConstants';
@@ -62,6 +63,10 @@ export const useTasksTableState = ({
   const isLoadingClients = useDataStore(useShallow((state) => state.isLoadingClients));
   const isLoadingUsers = useDataStore(useShallow((state) => state.isLoadingUsers));
 
+  // ==================== Workspace (Filtro Global de Cuenta) ====================
+  const selectedWorkspaceId = useWorkspacesStore((state) => state.selectedWorkspaceId);
+  const isFilteringByWorkspace = selectedWorkspaceId !== null && selectedWorkspaceId !== ALL_WORKSPACES_ID;
+
   // ==================== Effective Data ====================
   const effectiveTasks = useMemo(
     () => externalTasks || tasks,
@@ -119,26 +124,31 @@ export const useTasksTableState = ({
     // 1. Filter by permissions
     result = result.filter(canUserViewTask);
 
-    // 2. Filter by priority (support both single and multiple filters)
+    // 2. 🏢 FILTRO GLOBAL DE WORKSPACE (CUENTA) - Aplicar PRIMERO
+    if (isFilteringByWorkspace) {
+      result = result.filter(task => task.clientId === selectedWorkspaceId);
+    }
+
+    // 3. Filter by priority (support both single and multiple filters)
     if (priorityFilter) {
       result = result.filter(task => task.priority === priorityFilter);
     } else if (priorityFilters.length > 0) {
       result = result.filter(task => priorityFilters.includes(task.priority));
     }
 
-    // 3. Filter by status (support both single and multiple filters)
+    // 4. Filter by status (support both single and multiple filters)
     if (statusFilter) {
       result = result.filter(task => task.status === statusFilter);
     } else if (statusFilters.length > 0) {
       result = result.filter(task => statusFilters.includes(task.status));
     }
 
-    // 4. Filter by client
+    // 5. Filter by client (filtro secundario, adicional al workspace)
     if (clientFilter) {
       result = result.filter(task => task.clientId === clientFilter);
     }
 
-    // 5. Filter by user
+    // 6. Filter by user
     if (userFilter) {
       if (userFilter === 'me') {
         result = result.filter(task => {
@@ -157,6 +167,8 @@ export const useTasksTableState = ({
   }, [
     searchFiltered,
     canUserViewTask,
+    isFilteringByWorkspace,
+    selectedWorkspaceId,
     priorityFilter,
     priorityFilters,
     statusFilter,

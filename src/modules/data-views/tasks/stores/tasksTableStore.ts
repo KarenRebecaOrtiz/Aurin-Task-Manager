@@ -26,7 +26,7 @@ interface Task {
 type TasksTableState = {
   filteredTasks: Task[];
   searchQuery: string;
-  searchCategory: 'task' | 'client' | 'member' | null;
+  searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string; // Keep for backward compatibility with PriorityFilter component
   priorityFilters: string[]; // New array for multiple priority filters
   statusFilter: string;
@@ -50,7 +50,7 @@ type TasksTableState = {
 type TasksTableActions = {
   setFilteredTasks: (tasks: Task[]) => void;
   setSearchQuery: (query: string) => void;
-  setSearchCategory: (category: 'task' | 'client' | 'member' | null) => void;
+  setSearchCategory: (category: 'task' | 'project' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
   setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
   setStatusFilter: (filter: string) => void;

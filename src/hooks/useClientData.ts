@@ -10,7 +10,9 @@
  * - useAllClients() - All clients as array
  */
 
+import { useMemo } from 'react';
 import { useClientsDataStore } from '@/stores/clientsDataStore';
+import { useShallow } from 'zustand/react/shallow';
 import { Client } from '@/types';
 
 // --- Individual Hooks (Optimized Selectors) ---
@@ -57,6 +59,7 @@ export function useClientImageUrl(clientId: string): string {
 /**
  * Get all clients as an array.
  * Use this for dropdowns, filters, etc.
+ * Uses useShallow to prevent infinite re-renders.
  *
  * @example
  * const clients = useAllClients();
@@ -69,7 +72,12 @@ export function useClientImageUrl(clientId: string): string {
  * );
  */
 export function useAllClients(): Client[] {
-  return useClientsDataStore((state) => state.getAllClients());
+  // Get the Map directly and memoize the array conversion
+  const clientsMap = useClientsDataStore(useShallow((state) => state.clients));
+
+  return useMemo(() => {
+    return Array.from(clientsMap.values());
+  }, [clientsMap]);
 }
 
 // --- State Hooks ---

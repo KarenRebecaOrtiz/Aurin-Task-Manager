@@ -625,6 +625,32 @@
   }
 }
 
+// Estilos para la columna de Proyecto
+.projectWrapper {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.projectName {
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 8px;
+  background: rgba(100, 116, 139, 0.1);
+  border-radius: 6px;
+  max-width: 100%;
+
+  @include dark-mode {
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.15);
+  }
+}
+
 .updateDot {
   width: 8px;
   height: 8px;

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAdvancedSearch } from '@/modules/data-views/hooks/useAdvancedSearch';
+import { useWorkspacesStore, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
 
 interface Task {
   id: string;
@@ -52,7 +53,7 @@ interface UseKanbanGroupingProps {
   userId: string;
   isAdmin: boolean;
   searchQuery: string;
-  searchCategory: 'task' | 'client' | 'member' | null;
+  searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
   clientFilter: string;
@@ -75,9 +76,13 @@ export const useKanbanGrouping = ({
   clientFilter,
   userFilter,
 }: UseKanbanGroupingProps) => {
+  // 🏢 Workspace (Filtro Global de Cuenta)
+  const selectedWorkspaceId = useWorkspacesStore((state) => state.selectedWorkspaceId);
+  const isFilteringByWorkspace = selectedWorkspaceId !== null && selectedWorkspaceId !== ALL_WORKSPACES_ID;
+
   // Apply advanced search first (like TasksTable)
-  const nonArchivedTasks = useMemo(() => 
-    effectiveTasks.filter((task) => !task.archived), 
+  const nonArchivedTasks = useMemo(() =>
+    effectiveTasks.filter((task) => !task.archived),
     [effectiveTasks]
   );
 
@@ -104,7 +109,14 @@ export const useKanbanGrouping = ({
       .filter((task) => {
         // 🔒 FILTRO DE PERMISOS: Solo admins o usuarios involucrados pueden ver la tarea
         const canViewTask = isAdmin || getInvolvedUserIds(task as Task).includes(userId);
-        return canViewTask;
+        if (!canViewTask) return false;
+
+        // 🏢 FILTRO GLOBAL DE WORKSPACE (CUENTA) - Aplicar PRIMERO
+        if (isFilteringByWorkspace && task.clientId !== selectedWorkspaceId) {
+          return false;
+        }
+
+        return true;
       })
       .forEach((task) => {
         const normalizedStatus = normalizeStatus(task.status);
@@ -167,6 +179,8 @@ export const useKanbanGrouping = ({
     getInvolvedUserIds,
     userId,
     isAdmin,
+    isFilteringByWorkspace,
+    selectedWorkspaceId,
     priorityFilter,
     priorityFilters,
     clientFilter,

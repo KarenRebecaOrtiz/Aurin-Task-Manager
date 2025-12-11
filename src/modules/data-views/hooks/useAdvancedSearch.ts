@@ -20,21 +20,23 @@ export interface SearchableUser {
 
 /**
  * Hook centralizado para búsqueda avanzada en tablas
- * 
+ *
  * Busca en:
  * - Nombre de tarea
  * - Descripción de tarea
  * - Estado de tarea
  * - Prioridad de tarea
- * - Nombre de cliente
+ * - Proyecto de tarea
  * - Nombre de miembros (LeadedBy, AssignedTo, CreatedBy)
- * 
+ *
+ * NOTA: La búsqueda por Cuenta/Cliente se hace con el WorkspacesDropdown global
+ *
  * @param tasks - Array de tareas a filtrar
  * @param clients - Array de clientes disponibles
  * @param users - Array de usuarios disponibles
  * @param searchQuery - Término de búsqueda
  * @param getInvolvedUserIds - Función para obtener IDs de usuarios involucrados
- * @param searchCategory - Categoría de búsqueda ('task', 'client', 'member') o null para buscar en todo
+ * @param searchCategory - Categoría de búsqueda ('task', 'project', 'member') o null para buscar en todo
  * @returns Array de tareas filtradas por búsqueda
  */
 export const useAdvancedSearch = (
@@ -43,7 +45,7 @@ export const useAdvancedSearch = (
   users: SearchableUser[],
   keywords: string[],
   getInvolvedUserIds?: (task: SearchableTask) => string[],
-  searchCategory?: 'task' | 'client' | 'member' | null
+  searchCategory?: 'task' | 'project' | 'member' | null
 ) => {
   return useMemo(() => {
     if (!keywords || keywords.length === 0) {
@@ -59,9 +61,9 @@ export const useAdvancedSearch = (
       if (searchCategory === 'task' || !searchCategory) {
         fields.push(task.name || '', task.description || '', task.status || '', task.priority || '');
       }
-      if ((searchCategory === 'client' || !searchCategory) && task.clientId) {
-        const client = clients.find((c) => c.id === task.clientId);
-        if (client?.name) fields.push(client.name);
+      // Buscar por proyecto (campo 'project' de la tarea)
+      if ((searchCategory === 'project' || !searchCategory) && task.project) {
+        fields.push(task.project);
       }
       if ((searchCategory === 'member' || !searchCategory) && getInvolvedUserIds) {
         const userIds = getInvolvedUserIds(task);

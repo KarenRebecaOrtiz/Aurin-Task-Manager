@@ -1,3 +1,10 @@
+// Header wrapper containing toolbar and view switcher
+.headerWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .toolbar {
   display: flex;
   flex-direction: row;
@@ -14,6 +21,19 @@
     padding: 12px;
     width: 100%;
     align-items: center;
+  }
+}
+
+// View Switcher row - aligned right, no bottom margin
+.viewSwitcherRow {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    padding: 0 12px;
   }
 }
 

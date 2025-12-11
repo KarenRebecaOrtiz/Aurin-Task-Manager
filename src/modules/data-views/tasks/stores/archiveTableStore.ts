@@ -27,7 +27,7 @@ type ArchiveTableState = {
   sortKey: string;
   sortDirection: 'asc' | 'desc';
   searchQuery: string;
-  searchCategory: 'task' | 'client' | 'member' | null;
+  searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
   clientFilter: string;
@@ -45,7 +45,7 @@ type ArchiveTableActions = {
   setSortKey: (key: string) => void;
   setSortDirection: (dir: 'asc' | 'desc') => void;
   setSearchQuery: (query: string) => void;
-  setSearchCategory: (category: 'task' | 'client' | 'member' | null) => void;
+  setSearchCategory: (category: 'task' | 'project' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
   setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
   setClientFilter: (filter: string) => void;

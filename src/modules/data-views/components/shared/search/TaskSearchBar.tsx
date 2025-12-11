@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence, easeOut } from 'framer-motion';
-import { Search, X, ClipboardCheck, GalleryHorizontalEnd, Users } from 'lucide-react';
+import { Search, X, ClipboardCheck, FolderKanban, Users } from 'lucide-react';
 import { Small } from '@/components/ui/Typography';
 import styles from './TaskSearchBar.module.scss';
 import chipStyles from '@/modules/task-crud/components/forms/ChipSelector.module.scss';
 
-export type SearchCategory = 'task' | 'client' | 'member';
+// 'client' removido - ahora se filtra con el WorkspacesDropdown global
+export type SearchCategory = 'task' | 'project' | 'member';
 export type PriorityLevel = 'Alta' | 'Media' | 'Baja';
 export type StatusLevel = 'por-iniciar' | 'en-proceso' | 'por-finalizar' | 'finalizado';
 
@@ -40,6 +41,7 @@ interface TaskSearchBarProps {
   placeholder?: string;
 }
 
+// Categorías de búsqueda (Cuenta se filtra con el dropdown principal)
 const SEARCH_CATEGORIES: SearchAction[] = [
   {
     id: 'task',
@@ -48,10 +50,10 @@ const SEARCH_CATEGORIES: SearchAction[] = [
     icon: <ClipboardCheck className="w-4 h-4" />,
   },
   {
-    id: 'client',
-    label: 'Cuenta',
-    category: 'client',
-    icon: <GalleryHorizontalEnd className="w-4 h-4" />,
+    id: 'project',
+    label: 'Proyecto',
+    category: 'project',
+    icon: <FolderKanban className="w-4 h-4" />,
   },
   {
     id: 'member',
@@ -143,7 +145,7 @@ export const TaskSearchBar: React.FC<TaskSearchBarProps> = ({
   onSearch,
   onPriorityFiltersChange,
   onStatusFiltersChange,
-  placeholder = 'Buscar tareas, cuentas o miembros...',
+  placeholder = 'Buscar tareas, proyectos o miembros...',
 }) => {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
