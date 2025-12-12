@@ -6,17 +6,17 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { CrudDialog } from '@/modules/dialogs/components/organisms';
 import { clientService } from '../services/clientService';
 import { useClientForm } from '../hooks/form/useClientForm';
-import { useImageUpload } from '../hooks/ui/useImageUpload';
 import { ClientForm } from './forms/ClientForm';
 import { ClientDialogActions } from './forms/ClientDialogActions';
 import { ClientDialogProps } from '../types/form';
-import { UI_CONSTANTS, TOAST_MESSAGES } from '../config';
+import { TOAST_MESSAGES } from '../config';
+import { useDataStore } from '@/stores/dataStore';
 
 export function ClientDialog({
   isOpen,
@@ -27,7 +27,7 @@ export function ClientDialog({
   mode: initialMode = 'create',
 }: ClientDialogProps) {
   // eslint-disable-next-line no-console
-  console.log('[ClientDialog] Rendering - isOpen:', isOpen, 'mode:', initialMode, 'clientId:', clientId);
+  // console.log('[ClientDialog] Rendering - isOpen:', isOpen, 'mode:', initialMode, 'clientId:', clientId);
   
   const { user } = useUser();
   const { success: showSuccess, error: showError } = useSonnerToast();
@@ -35,10 +35,19 @@ export function ClientDialog({
   // Check if user is admin
   const isAdmin = user?.publicMetadata?.role === 'admin' || user?.publicMetadata?.role === 'Admin';
 
+  // Get clients from dataStore (already loaded, no API call needed)
+  const allClients = useDataStore((state) => state.clients);
+
+  // Find the client data from the store
+  const clientFromStore = useMemo(() => {
+    if (!clientId || initialMode === 'create') return null;
+    return allClients.find((c) => c.id === clientId) || null;
+  }, [clientId, initialMode, allClients]);
+
   // State
   const [mode, setMode] = useState<'create' | 'view' | 'edit'>(initialMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingClient, setIsLoadingClient] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Form hook
   const {
@@ -50,76 +59,48 @@ export function ClientDialog({
     removeProject,
     validate,
     reset: resetForm,
+    getClientInitials,
   } = useClientForm();
 
-  // Image upload hook
-  const {
-    imageFile,
-    imagePreview,
-    handleImageChange,
-    resetImage,
-    setPreview,
-  } = useImageUpload({
-    onError: showError,
-  });
-
-  // Load client data when in view/edit mode
-  const loadClientData = useCallback(async () => {
-    // Wait for user to be loaded before making authenticated requests
-    if (!clientId || mode === 'create' || !user || isLoadingClient) return;
-
-    try {
-      setIsLoadingClient(true);
-      const response = await clientService.getClient(clientId);
-
-      if (!response.success || !response.data) {
-        showError('No se pudo cargar la información del cliente.');
-        setIsLoadingClient(false);
-        return;
-      }
-
-      const client = response.data;
-
-      // Update form with client data
-      Object.entries(client).forEach(([key, value]) => {
+  // Load client data from store when in view/edit mode (instant, no API call)
+  useEffect(() => {
+    if (isOpen && clientFromStore && initialMode !== 'create' && !isDataLoaded) {
+      // Update form with client data from store
+      Object.entries(clientFromStore).forEach(([key, value]) => {
         if (key in formData) {
           updateField(key as keyof typeof formData, value);
         }
       });
-
-      if (client.imageUrl) {
-        setPreview(client.imageUrl);
-      }
-
-      setIsLoadingClient(false);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showError(errorMessage);
-      setIsLoadingClient(false);
+      setIsDataLoaded(true);
     }
-  }, [clientId, mode, user, isLoadingClient, showError, updateField, setPreview, formData]);
+  }, [isOpen, clientFromStore, initialMode, isDataLoaded, formData, updateField]);
 
+  // Sync mode with initialMode when dialog opens
   useEffect(() => {
-    if (isOpen && clientId && mode !== 'create') {
-      loadClientData();
+    if (isOpen) {
+      setMode(initialMode);
     }
-  }, [isOpen, clientId, mode, loadClientData]);
+  }, [isOpen, initialMode]);
 
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
       resetForm();
-      resetImage();
-      setMode(initialMode);
+      setIsDataLoaded(false);
     }
-  }, [isOpen, initialMode, resetForm, resetImage]);
+  }, [isOpen, resetForm]);
 
-  // Image click handler
-  const handleImageClick = useCallback(() => {
-    document.getElementById('client-image-input')?.click();
-  }, []);
+  // Handle gradient selection
+  const handleGradientSelect = useCallback((gradientId: string) => {
+    updateField('gradientId', gradientId);
+  }, [updateField]);
 
-  // Dialog close handler  
+  // Handle image upload from GradientAvatarSelector
+  const handleImageUpload = useCallback((url: string) => {
+    updateField('imageUrl', url);
+  }, [updateField]);
+
+  // Dialog close handler
   const handleDialogClose = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
@@ -127,7 +108,7 @@ export function ClientDialog({
   // Submit handler
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
-    
+
     if (!user) {
       showError(TOAST_MESSAGES.SESSION_EXPIRED.description);
       return;
@@ -140,32 +121,8 @@ export function ClientDialog({
     setIsSubmitting(true);
 
     try {
-      // Upload image if new file is provided
-      let imageUrl = formData.imageUrl;
-      if (imageFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', imageFile);
-        uploadFormData.append('userId', user.id);
-        uploadFormData.append('type', 'profile');
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData,
-          headers: { 'x-clerk-user-id': user.id },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to upload image');
-        }
-
-        const { url } = await response.json();
-        imageUrl = url;
-      }
-
       const clientData = {
         ...formData,
-        imageUrl: imageUrl !== UI_CONSTANTS.IMAGE_PREVIEW_DEFAULT ? imageUrl : undefined,
         projects: (formData.projects || []).filter((p) => p.trim()),
       };
 
@@ -180,7 +137,6 @@ export function ClientDialog({
       }
 
       resetForm();
-      resetImage();
       onOpenChange(false);
       window.location.reload();
     } catch (error: unknown) {
@@ -189,13 +145,12 @@ export function ClientDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, user, formData, imageFile, mode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm, resetImage]);
+  }, [isSubmitting, user, formData, mode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm]);
 
   const handleCancel = useCallback(() => {
     resetForm();
-    resetImage();
     onOpenChange(false);
-  }, [resetForm, resetImage, onOpenChange]);
+  }, [resetForm, onOpenChange]);
 
   const handleEdit = useCallback(() => {
     setMode('edit');
@@ -229,7 +184,7 @@ export function ClientDialog({
       description={getDescription()}
       mode={mode === 'create' ? 'create' : 'view'}
       size="xl"
-      isLoading={isLoadingClient}
+      isLoading={false}
       loadingMessage="Cargando información del cliente..."
       closeOnOverlayClick={false}
       closeOnEscape={true}
@@ -240,14 +195,14 @@ export function ClientDialog({
         <ClientForm
           formData={formData}
           errors={errors}
-          imagePreview={imagePreview}
           isReadOnly={isReadOnly}
           isSubmitting={isSubmitting}
           isAdmin={isAdmin}
           clientId={clientId}
+          clientInitials={getClientInitials()}
           onFieldChange={updateField}
-          onImageClick={handleImageClick}
-          onImageChange={handleImageChange}
+          onGradientSelect={handleGradientSelect}
+          onImageUpload={handleImageUpload}
           onProjectChange={updateProject}
           onAddProject={addProject}
           onRemoveProject={removeProject}

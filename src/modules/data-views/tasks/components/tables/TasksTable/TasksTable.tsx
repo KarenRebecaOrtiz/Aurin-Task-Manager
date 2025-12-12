@@ -8,6 +8,7 @@ import ActionMenu from '@/modules/data-views/components/ui/ActionMenu';
 import { SharedBadge } from '@/modules/shared/components/ui';
 import { useUserDataStore } from '@/stores/userDataStore';
 import styles from './TasksTable.module.scss';
+import { Folder } from 'lucide-react';
 
 // Components
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
@@ -239,9 +240,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, []);
 
   const renderProjectColumn = useCallback((task: Task) => {
+    // Truncate project name if too long
+    const projectName = task.project || 'Sin proyecto';
+    const truncatedName = projectName.length > 24 ? projectName.slice(0, 21) + '...' : projectName;
     return (
       <div className={styles.projectWrapper}>
-        <span className={styles.projectName}>{task.project || 'Sin proyecto'}</span>
+        <span className={styles.projectName}>
+          <Folder size={16} style={{ marginRight: 4, verticalAlign: 'middle', display: 'inline-block' }} />
+          <span style={{ verticalAlign: 'middle', display: 'inline-block', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{truncatedName}</span>
+        </span>
       </div>
     );
   }, []);

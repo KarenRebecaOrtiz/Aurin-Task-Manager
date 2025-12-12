@@ -1,17 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { CirclePlus, MessageCircle } from 'lucide-react';
+import { CirclePlus, Users } from 'lucide-react';
 import { List } from '@/components/animate-ui/icons/list';
 import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
-import { useChatbotControl } from '@/modules/n8n-chatbot';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -25,9 +24,10 @@ const VIEW_ROUTES = {
   table: '/dashboard/tasks',
   kanban: '/dashboard/kanban',
   archive: '/dashboard/archive',
+  teams: '/dashboard/teams',
 } as const;
 
-type ViewType = 'table' | 'kanban' | 'archive';
+type ViewType = 'table' | 'kanban' | 'archive' | 'teams';
 
 interface DesktopFloatingNavProps {
   currentView?: ViewType;
@@ -97,7 +97,6 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const openCreateTask = useTasksPageStore((state) => state.openCreateTask);
-  const { openChat } = useChatbotControl();
   const [mounted, setMounted] = useState(false);
 
   // Mount portal
@@ -111,26 +110,25 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
     router.prefetch(VIEW_ROUTES.table);
     router.prefetch(VIEW_ROUTES.kanban);
     router.prefetch(VIEW_ROUTES.archive);
+    router.prefetch(VIEW_ROUTES.teams);
   }, [router]);
 
   // Determine current view from pathname if not provided
-  const getCurrentView = (): ViewType => {
+  const getViewFromPathname = useCallback((): ViewType => {
     if (currentView) return currentView;
     if (pathname.includes('/kanban')) return 'kanban';
     if (pathname.includes('/archive')) return 'archive';
+    if (pathname.includes('/teams')) return 'teams';
     return 'table';
-  };
+  }, [currentView, pathname]);
 
-  const [activeView, setActiveView] = useState<ViewType>(getCurrentView());
+  const [activeView, setActiveView] = useState<ViewType>(() => getViewFromPathname());
 
   // Sync with pathname changes
   useEffect(() => {
-    const newView = getCurrentView();
-    if (newView !== activeView) {
-      setActiveView(newView);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+    const newView = getViewFromPathname();
+    setActiveView(newView);
+  }, [getViewFromPathname]);
 
   const handleViewChange = (view: ViewType) => {
     setActiveView(view);
@@ -138,12 +136,19 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
     if (onViewChange) {
       onViewChange(view);
     } else {
-      // 🚀 PERFORMANCE: Use window.history.pushState for instant navigation without remount
       const route = VIEW_ROUTES[view];
       if (route) {
-        window.history.pushState(null, '', route);
-        // Trigger popstate event for DataViewsContainer to detect change
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        // Teams is a separate page, use router.push for full navigation
+        // Also use router.push when navigating FROM teams to other views
+        const isNavigatingToOrFromTeams = view === 'teams' || activeView === 'teams';
+        if (isNavigatingToOrFromTeams) {
+          router.push(route);
+        } else {
+          // 🚀 PERFORMANCE: Use window.history.pushState for instant navigation without remount
+          window.history.pushState(null, '', route);
+          // Trigger popstate event for DataViewsContainer to detect change
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
       }
     }
   };
@@ -204,13 +209,13 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
           tooltip="Crear Nueva Tarea"
         />
 
-        {/* Chat */}
+        {/* Teams */}
         <NavButton
-          icon={<MessageCircle className={styles.navIcon} />}
-          label="Chat"
-          isActive={false}
-          onClick={openChat}
-          tooltip="Abrir Chat"
+          icon={<Users className={styles.navIcon} />}
+          label="Teams"
+          isActive={activeView === 'teams'}
+          onClick={() => handleViewChange('teams')}
+          tooltip="Teams"
         />
 
         {/* Archive View */}

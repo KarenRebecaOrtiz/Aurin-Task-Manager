@@ -431,3 +431,244 @@ export async function getShareInfo(
     };
   }
 }
+
+// ============================================================================
+// TEAM SHARING FUNCTIONS
+// ============================================================================
+
+/**
+ * Helper to check if user can share a team
+ */
+async function canUserShareTeam(userId: string, team: any): Promise<boolean> {
+  // User is the creator of the team
+  if (team.createdBy === userId) return true;
+  // User is a member of the team
+  if (team.memberIds?.includes(userId)) return true;
+  return false;
+}
+
+/**
+ * Enable sharing for a team
+ */
+export async function enableTeamSharing(
+  teamId: string,
+  userId: string,
+  options: {
+    commentsEnabled?: boolean;
+    expiresInDays?: number;
+  } = {}
+): Promise<{ success: boolean; shareUrl?: string; error?: string }> {
+  try {
+    const adminDb = getAdminDb();
+
+    const teamRef = adminDb.collection('teams').doc(teamId);
+    const teamSnap = await teamRef.get();
+
+    if (!teamSnap.exists) {
+      return { success: false, error: 'Equipo no encontrado' };
+    }
+
+    const team = teamSnap.data();
+    if (!team) {
+      return { success: false, error: 'Datos de equipo invalidos' };
+    }
+
+    // Authorization check
+    const canShare = await canUserShareTeam(userId, team);
+    if (!canShare) {
+      return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+    }
+
+    // Update team with sharing fields
+    await teamRef.update({
+      shared: true,
+      commentsEnabled: options.commentsEnabled || false,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('[ShareService.Server] Error enabling team sharing:', error);
+    return {
+      success: false,
+      error: 'Error al activar compartir. Intenta de nuevo.',
+    };
+  }
+}
+
+/**
+ * Disable sharing for a team
+ */
+export async function disableTeamSharing(
+  teamId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminDb = getAdminDb();
+
+    const teamRef = adminDb.collection('teams').doc(teamId);
+    const teamSnap = await teamRef.get();
+
+    if (!teamSnap.exists) {
+      return { success: false, error: 'Equipo no encontrado' };
+    }
+
+    const team = teamSnap.data();
+    if (!team) {
+      return { success: false, error: 'Datos de equipo invalidos' };
+    }
+
+    // Authorization check
+    const canShare = await canUserShareTeam(userId, team);
+    if (!canShare) {
+      return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+    }
+
+    // Clear sharing fields
+    await teamRef.update({
+      shared: false,
+      shareToken: null,
+      commentsEnabled: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    // Delete all guest tokens
+    const tokensRef = teamRef.collection('shareTokens');
+    const tokensSnap = await tokensRef.get();
+    const batch = adminDb.batch();
+    tokensSnap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+
+    return { success: true };
+  } catch (error) {
+    console.error('[ShareService.Server] Error disabling team sharing:', error);
+    return {
+      success: false,
+      error: 'Error al desactivar compartir. Intenta de nuevo.',
+    };
+  }
+}
+
+/**
+ * Update comments enabled setting for a team
+ */
+export async function updateTeamCommentsEnabled(
+  teamId: string,
+  userId: string,
+  enabled: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminDb = getAdminDb();
+
+    const teamRef = adminDb.collection('teams').doc(teamId);
+    const teamSnap = await teamRef.get();
+
+    if (!teamSnap.exists) {
+      return { success: false, error: 'Equipo no encontrado' };
+    }
+
+    const team = teamSnap.data();
+    if (!team) {
+      return { success: false, error: 'Datos de equipo invalidos' };
+    }
+
+    // Authorization check
+    const canShare = await canUserShareTeam(userId, team);
+    if (!canShare) {
+      return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+    }
+
+    if (!team.shared) {
+      return { success: false, error: 'El equipo no esta compartido' };
+    }
+
+    await teamRef.update({
+      commentsEnabled: enabled,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('[ShareService.Server] Error updating team comments setting:', error);
+    return {
+      success: false,
+      error: 'Error al actualizar configuracion. Intenta de nuevo.',
+    };
+  }
+}
+
+/**
+ * Get share info for a team (for admin view)
+ */
+export async function getTeamShareInfo(
+  teamId: string,
+  userId: string
+): Promise<{
+  success: boolean;
+  info?: {
+    isShared: boolean;
+    shareUrl?: string;
+    commentsEnabled?: boolean;
+    expiresAt?: string | null;
+    accessCount?: number;
+    lastAccess?: string | null;
+  };
+  error?: string;
+}> {
+  try {
+    const adminDb = getAdminDb();
+
+    const teamRef = adminDb.collection('teams').doc(teamId);
+    const teamSnap = await teamRef.get();
+
+    if (!teamSnap.exists) {
+      return { success: false, error: 'Equipo no encontrado' };
+    }
+
+    const team = teamSnap.data();
+    if (!team) {
+      return { success: false, error: 'Datos de equipo invalidos' };
+    }
+
+    // Authorization check
+    const canView = await canUserShareTeam(userId, team);
+    if (!canView) {
+      return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+    }
+
+    if (!team.shared) {
+      return {
+        success: true,
+        info: {
+          isShared: false,
+        },
+      };
+    }
+
+    const shareUrl = team.shareToken ? buildShareUrl(team.shareToken) : undefined;
+
+    const lastAccess = team.shareLastAccess
+      ? team.shareLastAccess.toDate
+        ? team.shareLastAccess.toDate().toISOString()
+        : team.shareLastAccess
+      : null;
+
+    return {
+      success: true,
+      info: {
+        isShared: true,
+        shareUrl,
+        commentsEnabled: team.commentsEnabled || false,
+        expiresAt: team.shareExpiresAt || null,
+        accessCount: team.shareAccessCount || 0,
+        lastAccess,
+      },
+    };
+  } catch (error) {
+    console.error('[ShareService.Server] Error getting team share info:', error);
+    return {
+      success: false,
+      error: 'Error al obtener informacion.',
+    };
+  }
+}

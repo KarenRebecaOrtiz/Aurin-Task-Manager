@@ -14,6 +14,7 @@ export interface ClientFormData {
   taxId?: string;
   notes?: string;
   imageUrl?: string;
+  gradientId?: string; // Gradient identifier for avatar
   projects?: string[];
   isActive?: boolean;
   createdAt?: string;

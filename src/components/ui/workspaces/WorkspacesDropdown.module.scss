@@ -164,6 +164,9 @@
 }
 
 .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid $color-border-subtle;
 
@@ -181,6 +184,67 @@
 
   :global(.dark) & {
     color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// Edit button in header
+.editButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: $transition-base;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+  }
+
+  &.editButtonActive {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+  }
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    &.editButtonActive {
+      background: rgba(59, 130, 246, 0.25);
+      color: #60a5fa;
+    }
+  }
+}
+
+// Edit mode indicator
+.editModeIndicator {
+  padding: 8px 16px;
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+
+  span {
+    font-size: 12px;
+    color: #3b82f6;
+    font-weight: $font-weight-medium;
+  }
+
+  :global(.dark) & {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.25);
+
+    span {
+      color: #60a5fa;
+    }
   }
 }
 

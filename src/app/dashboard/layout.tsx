@@ -145,12 +145,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 // Independent ChatSidebar component with AnimatePresence for exit animations
+// Soporta tanto chats de tareas ('chat') como de equipos ('team')
 const IndependentChatSidebarRenderer = () => {
-  const { isOpen, sidebarType, chatSidebar, closeChatSidebar } = useSidebarStateStore();
+  const { isOpen, sidebarType, chatSidebar, teamSidebar, closeChatSidebar, closeTeamSidebar } = useSidebarStateStore();
   const users = useDataStore.getState().users;
 
-  // Determine if sidebar should be shown
-  const shouldShow = isOpen && sidebarType === 'chat' && chatSidebar.task;
+  // Determine if sidebar should be shown - soporta 'chat' y 'team'
+  const isTaskChat = sidebarType === 'chat' && chatSidebar.task;
+  const isTeamChat = sidebarType === 'team' && teamSidebar.team;
+  const shouldShow = isOpen && (isTaskChat || isTeamChat);
+
+  // Usar la función de cierre correcta según el tipo
+  const handleClose = isTeamChat ? closeTeamSidebar : closeChatSidebar;
 
   return (
     <AnimatePresence mode="wait">
@@ -158,7 +164,7 @@ const IndependentChatSidebarRenderer = () => {
         <ResponsiveChatSidebar
           key="chat-sidebar"
           isOpen={true}
-          onClose={closeChatSidebar}
+          onClose={handleClose}
           users={users}
         />
       )}

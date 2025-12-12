@@ -7,6 +7,10 @@ import {
   disableTaskSharing,
   updateCommentsEnabled,
   getShareInfo,
+  enableTeamSharing,
+  disableTeamSharing,
+  updateTeamCommentsEnabled,
+  getTeamShareInfo,
 } from '../services/shareService.server';
 import {
   ToggleSharingInputSchema,
@@ -15,15 +19,19 @@ import {
   safeValidate,
 } from '../schemas/validation.schemas';
 
+/** Entity type for sharing - supports both tasks and teams */
+export type ShareEntityType = 'task' | 'team';
+
 /**
- * Server Action: Toggle Task Sharing
- * Enables or disables public sharing for a task
+ * Server Action: Toggle Task/Team Sharing
+ * Enables or disables public sharing for a task or team
  */
 export async function toggleTaskSharingAction(input: {
   taskId: string;
   enabled: boolean;
   commentsEnabled?: boolean;
   expiresInDays?: number;
+  entityType?: ShareEntityType;
 }) {
   try {
     // Get authenticated user
@@ -39,18 +47,30 @@ export async function toggleTaskSharingAction(input: {
     }
 
     const { taskId, enabled, commentsEnabled, expiresInDays } = validation.data!;
+    const entityType = input.entityType || 'task';
 
-    // Enable or disable sharing
-    if (enabled) {
-      return await enableTaskSharing(taskId, userId, {
-        commentsEnabled,
-        expiresInDays,
-      });
+    // Enable or disable sharing based on entity type
+    if (entityType === 'team') {
+      if (enabled) {
+        return await enableTeamSharing(taskId, userId, {
+          commentsEnabled,
+          expiresInDays,
+        });
+      } else {
+        return await disableTeamSharing(taskId, userId);
+      }
     } else {
-      return await disableTaskSharing(taskId, userId);
+      if (enabled) {
+        return await enableTaskSharing(taskId, userId, {
+          commentsEnabled,
+          expiresInDays,
+        });
+      } else {
+        return await disableTaskSharing(taskId, userId);
+      }
     }
   } catch (error) {
-    console.error('[ShareActions] Error toggling task sharing:', error);
+    console.error('[ShareActions] Error toggling sharing:', error);
     return {
       success: false,
       error: 'Error al procesar la solicitud. Intenta de nuevo.',
@@ -89,11 +109,12 @@ export async function revokeShareAccessAction(input: { taskId: string }) {
 
 /**
  * Server Action: Update Comments Setting
- * Toggle comments on/off for a shared task
+ * Toggle comments on/off for a shared task or team
  */
 export async function updateCommentsEnabledAction(input: {
   taskId: string;
   enabled: boolean;
+  entityType?: ShareEntityType;
 }) {
   try {
     const { userId } = await auth();
@@ -101,8 +122,11 @@ export async function updateCommentsEnabledAction(input: {
       return { success: false, error: 'No autenticado' };
     }
 
-    const { taskId, enabled } = input;
+    const { taskId, enabled, entityType = 'task' } = input;
 
+    if (entityType === 'team') {
+      return await updateTeamCommentsEnabled(taskId, userId, enabled);
+    }
     return await updateCommentsEnabled(taskId, userId, enabled);
   } catch (error) {
     console.error('[ShareActions] Error updating comments setting:', error);
@@ -117,13 +141,16 @@ export async function updateCommentsEnabledAction(input: {
  * Server Action: Get Share Info
  * Returns sharing status and metadata for admin view
  */
-export async function getShareInfoAction(taskId: string) {
+export async function getShareInfoAction(taskId: string, entityType: ShareEntityType = 'task') {
   try {
     const { userId } = await auth();
     if (!userId) {
       return { success: false, error: 'No autenticado' };
     }
 
+    if (entityType === 'team') {
+      return await getTeamShareInfo(taskId, userId);
+    }
     return await getShareInfo(taskId, userId);
   } catch (error) {
     console.error('[ShareActions] Error getting share info:', error);

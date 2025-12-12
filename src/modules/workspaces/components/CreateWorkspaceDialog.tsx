@@ -8,6 +8,7 @@ import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { getUsers } from '@/services/userService';
 import { useWorkspacesStore, type Workspace } from '@/stores/workspacesStore';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { AvatarPicker, type GradientConfig } from '@/components/ui/avatar-picker';
 import { Check, Search, Users } from 'lucide-react';
 import type { User } from '@/types';
 import styles from './CreateWorkspaceDialog.module.scss';
@@ -43,6 +44,7 @@ export function CreateWorkspaceDialog({
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<GradientConfig | null>(null);
 
   // Load users when dialog opens
   useEffect(() => {
@@ -77,6 +79,7 @@ export function CreateWorkspaceDialog({
       setSelectedUserIds([]);
       setSearchQuery('');
       setNameError(null);
+      setSelectedAvatar(null);
     }
   }, [isOpen]);
 
@@ -147,11 +150,18 @@ export function CreateWorkspaceDialog({
     setIsSubmitting(true);
 
     try {
+      // Generate logo from selected avatar gradient or use default
+      const logoUrl = selectedAvatar
+        ? `data:image/svg+xml,${encodeURIComponent(
+            `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:${selectedAvatar.colors[0]}"/><stop offset="50%" style="stop-color:${selectedAvatar.colors[1]}"/><stop offset="100%" style="stop-color:${selectedAvatar.colors[2]}"/></linearGradient></defs><rect width="100" height="100" fill="url(#g)"/></svg>`
+          )}`
+        : `https://avatar.vercel.sh/${encodeURIComponent(workspaceName.trim())}`;
+
       // Create workspace object (in real implementation, this would go to Firestore)
       const newWorkspace: Workspace = {
         id: `ws-${Date.now()}`, // Temporary ID - replace with Firestore ID
         name: workspaceName.trim(),
-        logo: `https://avatar.vercel.sh/${encodeURIComponent(workspaceName.trim())}`,
+        logo: logoUrl,
         memberIds: selectedUserIds.length > 0 ? selectedUserIds : [user.id],
         createdBy: user.id,
         createdAt: new Date().toISOString(),
@@ -243,6 +253,15 @@ export function CreateWorkspaceDialog({
             <span className={styles.errorText}>{nameError}</span>
           )}
         </div>
+
+        {/* Avatar Picker */}
+        <AvatarPicker
+          selectedId={selectedAvatar?.id}
+          onSelect={setSelectedAvatar}
+          label="Avatar del Workspace"
+          count={6}
+          showShuffle
+        />
 
         {/* Users Selection Section */}
         <div className={styles.usersSection}>

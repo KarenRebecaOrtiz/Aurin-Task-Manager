@@ -1,0 +1,1 @@
+export { GradientAvatarSelector } from './GradientAvatarSelector';

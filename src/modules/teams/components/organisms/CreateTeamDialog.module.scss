@@ -1,0 +1,588 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+// Users Section
+.usersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid $color-border-subtle;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  max-height: 500px;
+  overflow: hidden;
+
+  :global(.dark) & {
+    background: rgb(12, 12, 12);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &.hidden {
+    opacity: 0;
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    pointer-events: none;
+  }
+}
+
+.usersSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid $color-border-subtle;
+
+  :global(.dark) & {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.usersSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: $font-weight-semibold;
+  color: #1f2937;
+
+  svg {
+    color: #3b82f6;
+  }
+
+  :global(.dark) & {
+    color: #e5e7eb;
+
+    svg {
+      color: #60a5fa;
+    }
+  }
+}
+
+.selectedCount {
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(59, 130, 246, 0.2);
+  }
+}
+
+// Search Container
+.searchContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  color: $color-text-secondary;
+  pointer-events: none;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.searchInput {
+  width: 100%;
+  height: 40px;
+  padding: 8px 14px 8px 40px;
+  border-radius: 8px;
+  border: 1px solid $color-border-subtle;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  color: #0F172A;
+  transition: $transition-base;
+
+  &::placeholder {
+    color: rgba(15, 23, 42, 0.4);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.4);
+    background: white;
+  }
+
+  :global(.dark) & {
+    background: rgba(42, 42, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e5e5e5;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    &:focus {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: #333;
+    }
+  }
+}
+
+// Select All Button
+.selectAllButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  color: #3b82f6;
+  cursor: pointer;
+  transition: $transition-base;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  :global(.dark) & {
+    color: #60a5fa;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.15);
+    }
+  }
+}
+
+// Checkbox
+.checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid $color-border-subtle;
+  background: white;
+  transition: $transition-base;
+  flex-shrink: 0;
+
+  &.checked {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+  }
+
+  :global(.dark) & {
+    background: #333;
+    border-color: rgba(255, 255, 255, 0.2);
+
+    &.checked {
+      background: #3b82f6;
+      border-color: #3b82f6;
+    }
+  }
+}
+
+// Users Table
+.usersTable {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  @include crystallized-scrollbar;
+  padding-right: 4px;
+}
+
+.emptyState {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: $color-text-secondary;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: $transition-base;
+  text-align: left;
+
+  &:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.12);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.8;
+  }
+
+  :global(.dark) & {
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &.selected {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.25);
+    }
+  }
+}
+
+.userAvatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.avatarFallback {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  font-weight: $font-weight-semibold;
+  font-size: 14px;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.userName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  :global(.dark) & {
+    color: #e5e5e5;
+  }
+}
+
+.youBadge {
+  font-size: 11px;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(59, 130, 246, 0.2);
+  }
+}
+
+.userRole {
+  font-size: 12px;
+  color: $color-text-secondary;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.errorText {
+  font-size: 12px;
+  font-weight: $font-weight-normal;
+  color: $color-error;
+  padding-left: 4px;
+
+  :global(.dark) & {
+    color: #f87171;
+  }
+}
+
+// Toggle Section
+.toggleSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism(rgba(248, 250, 252, 0.6));
+
+  :global(.dark) & {
+    background: #0c0c0c;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.toggleInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggleIcon {
+  color: #3b82f6;
+
+  :global(.dark) & {
+    color: #60a5fa;
+  }
+}
+
+.toggleIconMuted {
+  color: $color-text-secondary;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.toggleText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggleLabel {
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  color: #0F172A;
+
+  :global(.dark) & {
+    color: #e5e5e5;
+  }
+}
+
+.toggleDescription {
+  font-size: 12px;
+  color: $color-text-secondary;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// ============================================================================
+// SHARE OPTION SWITCH STYLES (similar to ShareDialog)
+// ============================================================================
+
+.shareOption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid $color-border-subtle;
+  background: rgba(255, 255, 255, 0.6);
+
+  :global(.dark) & {
+    background: rgb(12, 12, 12);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.shareOptionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.shareOptionIcon {
+  flex-shrink: 0;
+  color: #3b82f6;
+  margin-top: 2px;
+
+  :global(.dark) & {
+    color: #60a5fa;
+  }
+}
+
+.shareOptionIconMuted {
+  flex-shrink: 0;
+  color: #a1a1aa;
+  margin-top: 2px;
+
+  :global(.dark) & {
+    color: #71717a;
+  }
+}
+
+.shareOptionText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shareLabel {
+  font-size: 14px;
+  font-weight: $font-weight-semibold;
+  color: #0F172A;
+  cursor: pointer;
+
+  :global(.dark) & {
+    color: #e5e5e5;
+  }
+}
+
+.shareDescription {
+  font-size: 13px;
+  color: $color-text-secondary;
+  line-height: 1.4;
+  margin: 0;
+
+  :global(.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.switchContainer {
+  flex-shrink: 0;
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-color: #e4e4e7;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+
+  &:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: #d4d4d8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    background-color: #3f3f46;
+
+    &:hover:not(:disabled) {
+      background-color: #52525b;
+    }
+  }
+}
+
+.switchActive {
+  background-color: #3b82f6;
+
+  &:hover:not(:disabled) {
+    background-color: #2563eb;
+  }
+
+  :global(.dark) & {
+    background-color: #3b82f6;
+
+    &:hover:not(:disabled) {
+      background-color: #2563eb;
+    }
+  }
+}
+
+.switchThumb {
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background-color: white;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(0.125rem);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+
+  .switchActive & {
+    transform: translateX(1.375rem);
+  }
+}
+
+// ============================================================================
+// FOOTER STYLES
+// ============================================================================
+
+.footerContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+.deleteButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.dark) & {
+    color: #f87171;
+
+    &:hover:not(:disabled) {
+      background: rgba(248, 113, 113, 0.15);
+      border-color: rgba(248, 113, 113, 0.25);
+    }
+  }
+}

@@ -24,6 +24,7 @@ interface ChatHeaderProps {
   userName: string;
   onOpenManualTimeEntry?: () => void;
   isPublicView?: boolean; // Nueva prop para ocultar elementos privados
+  isTeamChat?: boolean; // Para chats de equipo - oculta timer, status, fechas
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -34,6 +35,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   userName,
   onOpenManualTimeEntry,
   isPublicView = false, // Por defecto es vista privada
+  isTeamChat = false, // Por defecto es chat de tarea
 }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
@@ -96,12 +98,17 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <div className={styles.leftSection}>
           <div className={styles.breadcrumb}>
             {clientName}
-            <span className={styles.separator}>/</span>
-            {task.project}
+            {!isTeamChat && task.project && (
+              <>
+                <span className={styles.separator}>/</span>
+                {task.project}
+              </>
+            )}
           </div>
         </div>
         
         {/* Action Buttons - Share & Timer (hidden on mobile, timer shown in InputChat instead) */}
+        {/* Timer solo para tareas, no para equipos */}
         {!isPublicView && (
           <div className={styles.timerWrapper}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -109,13 +116,16 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 taskId={task.id}
                 taskName={task.name}
                 className={styles.shareButton}
+                entityType={isTeamChat ? 'team' : 'task'}
               />
-              <TimerDropdown
-                taskId={task.id}
-                userId={userId}
-                userName={userName}
-                onOpenManualEntry={onOpenManualTimeEntry}
-              />
+              {!isTeamChat && (
+                <TimerDropdown
+                  taskId={task.id}
+                  userId={userId}
+                  userName={userName}
+                  onOpenManualEntry={onOpenManualTimeEntry}
+                />
+              )}
             </div>
           </div>
         )}
@@ -167,23 +177,25 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
             >
-              {/* Status Card - Now with Dropdown */}
-              <motion.div
-                className={styles.detailCard}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.15, duration: 0.3 }}
-              >
-                <div className={styles.detailLabel}>Estado</div>
-                <StatusDropdown
-                  taskId={task.id}
-                  currentStatus={task.status}
-                  createdBy={task.CreatedBy}
-                  userId={userId}
-                />
-              </motion.div>
+              {/* Status Card - Now with Dropdown (solo para tareas, no equipos) */}
+              {!isTeamChat && (
+                <motion.div
+                  className={styles.detailCard}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15, duration: 0.3 }}
+                >
+                  <div className={styles.detailLabel}>Estado</div>
+                  <StatusDropdown
+                    taskId={task.id}
+                    currentStatus={task.status}
+                    createdBy={task.CreatedBy}
+                    userId={userId}
+                  />
+                </motion.div>
+              )}
 
-              {/* Team Card - Improved Avatar Group */}
+              {/* Team Card - Improved Avatar Group (visible para tareas y equipos) */}
               <motion.div 
                 className={styles.detailCard}
                 initial={{ opacity: 0, x: -20 }}
@@ -224,36 +236,40 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 </div>
               </motion.div>
 
-              {/* Dates Card - Now with White Pill */}
-              <motion.div 
-                className={styles.detailCard}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.25, duration: 0.3 }}
-              >
-                <div className={styles.detailLabel}>Fechas</div>
-                <div className={styles.datePill}>
-                  <Calendar size={14} className={styles.dateIcon} />
-                  {formatDateRange(task.startDate, task.endDate) || (
-                    <span className={styles.noDate}>Sin fechas</span>
-                  )}
-                </div>
-              </motion.div>
+              {/* Dates Card - Now with White Pill (solo para tareas, no equipos) */}
+              {!isTeamChat && (
+                <motion.div
+                  className={styles.detailCard}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.25, duration: 0.3 }}
+                >
+                  <div className={styles.detailLabel}>Fechas</div>
+                  <div className={styles.datePill}>
+                    <Calendar size={14} className={styles.dateIcon} />
+                    {formatDateRange(task.startDate, task.endDate) || (
+                      <span className={styles.noDate}>Sin fechas</span>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
-              {/* Time Registered Card - Now with Breakdown Dropdown */}
-              <motion.div 
-                className={styles.detailCard}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3, duration: 0.3 }}
-              >
-                <div className={styles.detailLabel}>Tiempo Registrado</div>
-                <TimeBreakdown
-                  totalHours={totalHours}
-                  memberHours={memberHours}
-                  teamMembers={teamMembers}
-                />
-              </motion.div>
+              {/* Time Registered Card - Now with Breakdown Dropdown (solo para tareas, no equipos) */}
+              {!isTeamChat && (
+                <motion.div
+                  className={styles.detailCard}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3, duration: 0.3 }}
+                >
+                  <div className={styles.detailLabel}>Tiempo Registrado</div>
+                  <TimeBreakdown
+                    totalHours={totalHours}
+                    memberHours={memberHours}
+                    teamMembers={teamMembers}
+                  />
+                </motion.div>
+              )}
             </motion.div>
           </motion.div>
         )}

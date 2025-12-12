@@ -21,7 +21,8 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     website: initialData?.website || '',
     taxId: initialData?.taxId || '',
     notes: initialData?.notes || '',
-    imageUrl: initialData?.imageUrl || '/empty-image.png',
+    imageUrl: initialData?.imageUrl || undefined,
+    gradientId: initialData?.gradientId || 'default',
     projects: initialData?.projects || [''],
     isActive: initialData?.isActive ?? true,
     createdAt: initialData?.createdAt,
@@ -113,12 +114,25 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
       website: '',
       taxId: '',
       notes: '',
-      imageUrl: '/empty-image.png',
+      imageUrl: undefined,
+      gradientId: 'default',
       projects: [''],
       isActive: true,
     });
     setErrors({});
   }, []);
+
+  // Get client initials from name
+  const getClientInitials = useCallback((): string => {
+    const name = formData.name.trim();
+    if (!name) return 'C';
+
+    const words = name.split(' ').filter(Boolean);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }, [formData.name]);
 
   return {
     formData,
@@ -131,5 +145,6 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     validate,
     handleSubmit,
     reset,
+    getClientInitials,
   };
 }

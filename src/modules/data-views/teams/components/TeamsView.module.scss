@@ -1,0 +1,256 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// Container matches TasksTable.module.scss
+.container {
+  padding: $spacing-2xl;
+  font-family: $font-family-table;
+  display: block;
+  flex-direction: column;
+  gap: $spacing-lg;
+  min-height: calc(100vh - 200px);
+  border-radius: 50px;
+
+  @media (max-width: 768px) {
+    padding: $spacing-lg;
+  }
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+// Empty state when no workspace selected
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-2xl;
+  text-align: center;
+  min-height: 400px;
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  color: #3b82f6;
+  margin-bottom: $spacing-md;
+
+  :global(.dark) & {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+    color: #60a5fa;
+  }
+}
+
+.emptyTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #f1f5f9;
+  }
+}
+
+.emptyDescription {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.5;
+
+  :global(.dark) & {
+    color: #94a3b8;
+  }
+}
+
+// Workspace content area
+.workspaceContent {
+  flex: 1;
+  border-radius: 16px;
+  padding: 16px;
+  min-height: 656px;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+      background: rgb(15, 15, 15);
+    border: 1px solid rgba(255, 255, 255, 0.0509803922);
+}
+
+.placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-2xl;
+  text-align: center;
+  min-height: 400px;
+  background: rgba(241, 245, 249, 0.5);
+  border-radius: 16px;
+  border: 2px dashed rgba(59, 130, 246, 0.3);
+
+  :global(.dark) & {
+    background: rgba(30, 41, 59, 0.5);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+.placeholderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+
+  :global(.dark) & {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+}
+
+.placeholderTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #f1f5f9;
+  }
+}
+
+.placeholderDescription {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #94a3b8;
+  }
+}
+
+// Workspace header with title and create button
+.workspaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-lg;
+  padding-bottom: $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+  margin-bottom: $spacing-lg;
+
+  :global(.dark) & {
+    border-bottom-color: #2a2a2a;
+  }
+}
+
+.workspaceInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workspaceTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #f1f5f9;
+  }
+}
+
+.workspaceSubtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #94a3b8;
+  }
+}
+
+// Teams grid
+.teamsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: $spacing-lg;
+  padding: $spacing-sm 0;
+}
+
+// No teams state
+.noTeams {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-2xl;
+  text-align: center;
+  min-height: 300px;
+  background: rgba(241, 245, 249, 0.5);
+  border-radius: 16px;
+  border: 2px dashed rgba(59, 130, 246, 0.3);
+
+  :global(.dark) & {
+    background: rgba(30, 41, 59, 0.5);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+.noTeamsIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+
+  :global(.dark) & {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+}
+
+.noTeamsTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+
+  :global(.dark) & {
+    color: #f1f5f9;
+  }
+}
+
+.noTeamsDescription {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  max-width: 360px;
+  line-height: 1.5;
+
+  :global(.dark) & {
+    color: #94a3b8;
+  }
+}

@@ -41,6 +41,7 @@ interface ShareDialogProps {
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
   showCloseButton?: boolean;
+  entityType?: 'task' | 'team'; // Tipo de entidad a compartir
 }
 
 // Utility function to mask tokens - only show last 4 characters
@@ -68,7 +69,11 @@ export function ShareDialog({
   closeOnOverlayClick = true,
   closeOnEscape = true,
   showCloseButton = true,
+  entityType = 'task',
 }: ShareDialogProps) {
+  // Textos dinámicos según el tipo de entidad
+  const entityLabel = entityType === 'team' ? 'equipo' : 'tarea';
+  const entityLabelCapital = entityType === 'team' ? 'Equipo' : 'Tarea';
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [isShared, setIsShared] = useState(false);
   const [commentsEnabled, setCommentsEnabled] = useState(false);
@@ -89,8 +94,8 @@ export function ShareDialog({
   const loadShareData = useCallback(async () => {
     try {
       const [infoResult, tokensResult] = await Promise.all([
-        getShareInfoAction(taskId),
-        getGuestTokensAction(taskId),
+        getShareInfoAction(taskId, entityType),
+        getGuestTokensAction(taskId, entityType),
       ]);
 
       if (infoResult.success && infoResult.info) {
@@ -125,7 +130,7 @@ export function ShareDialog({
     } finally {
       setIsInitialLoading(false);
     }
-  }, [taskId]);
+  }, [taskId, entityType]);
 
   useEffect(() => {
     if (isOpen) {
@@ -159,6 +164,7 @@ export function ShareDialog({
         taskId,
         enabled: !isShared,
         commentsEnabled: !isShared ? commentsEnabled : false,
+        entityType,
       });
 
       if (result.success) {
@@ -166,7 +172,7 @@ export function ShareDialog({
         setIsShared(newIsShared);
 
         if (newIsShared) {
-          success('¡Compartir activado! Se ha generado un enlace público para tu tarea');
+          success(`¡Compartir activado! Se ha generado un enlace público para ${entityType === 'team' ? 'tu equipo' : 'tu tarea'}`);
         } else {
           success('Compartir desactivado. Todas las invitaciones han sido revocadas');
           setGuestTokens([]);
@@ -180,7 +186,7 @@ export function ShareDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [taskId, isShared, commentsEnabled, success, showError, isSubmitting, guestTokens.length, showDisableWarning]);
+  }, [taskId, isShared, commentsEnabled, success, showError, isSubmitting, guestTokens.length, showDisableWarning, entityType]);
 
   const handleCancelDisable = useCallback(() => {
     setShowDisableWarning(false);
@@ -192,13 +198,14 @@ export function ShareDialog({
     const result = await updateCommentsEnabledAction({
       taskId,
       enabled: !commentsEnabled,
+      entityType,
     });
     if (result.success) {
       setCommentsEnabled(!commentsEnabled);
       if (!commentsEnabled) {
-        success('Interacción permitida. Los invitados ahora pueden interactuar con la tarea');
+        success(`Interacción permitida. Los invitados ahora pueden interactuar con ${entityType === 'team' ? 'el equipo' : 'la tarea'}`);
       } else {
-        success('Interacción desactivada. Los invitados solo podrán ver la tarea');
+        success(`Interacción desactivada. Los invitados solo podrán ver ${entityType === 'team' ? 'el equipo' : 'la tarea'}`);
       }
     } else {
       const errorMsg = result.error || 'Error al actualizar los comentarios.';
@@ -206,7 +213,7 @@ export function ShareDialog({
       showError('Error', errorMsg);
     }
     setIsSubmitting(false);
-  }, [taskId, commentsEnabled, success, showError]);
+  }, [taskId, commentsEnabled, success, showError, entityType]);
 
   const handleGenerateInvitation = useCallback(async () => {
     if (isAtLimit || !invitationName.trim()) {
@@ -218,7 +225,7 @@ export function ShareDialog({
 
     setIsGenerating(true);
     setError(null);
-    const result = await generateGuestTokenAction({ taskId, tokenName: invitationName.trim() });
+    const result = await generateGuestTokenAction({ taskId, tokenName: invitationName.trim(), entityType });
     if (result.success) {
       success(`¡Invitación creada! Clave de acceso para "${invitationName.trim()}" lista`);
       setInvitationName('');
@@ -229,20 +236,20 @@ export function ShareDialog({
       showError('Error al crear invitación', errorMsg);
     }
     setIsGenerating(false);
-  }, [taskId, invitationName, isAtLimit, loadShareData, success, showError]);
+  }, [taskId, invitationName, isAtLimit, loadShareData, success, showError, entityType]);
 
   const handleRevokeToken = useCallback((tokenId: string, tokenUserName?: string) => {
     const displayName = tokenUserName || 'Invitado';
 
     openConfirm({
       title: `¿Revocar acceso de "${displayName}"?`,
-      description: 'Esta persona ya no podrá acceder a la tarea compartida. Esta acción no se puede deshacer.',
+      description: `Esta persona ya no podrá acceder ${entityType === 'team' ? 'al equipo compartido' : 'a la tarea compartida'}. Esta acción no se puede deshacer.`,
       variant: 'danger',
       confirmText: 'Revocar acceso',
       cancelText: 'Cancelar',
       onConfirm: async () => {
         setIsSubmitting(true);
-        const result = await revokeGuestTokenAction({ taskId, tokenId });
+        const result = await revokeGuestTokenAction({ taskId, tokenId, entityType });
         if (result.success) {
           success(`Acceso de "${displayName}" revocado`);
           await loadShareData();
@@ -253,7 +260,7 @@ export function ShareDialog({
         setIsSubmitting(false);
       },
     });
-  }, [taskId, loadShareData, success, showError, openConfirm]);
+  }, [taskId, loadShareData, success, showError, openConfirm, entityType]);
 
   const handleCopyLink = useCallback((url: string, label?: string) => {
     navigator.clipboard.writeText(url);
@@ -277,7 +284,7 @@ export function ShareDialog({
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       mode="view"
-      title="Compartir Tarea"
+      title={`Compartir ${entityLabelCapital}`}
       description={`Gestiona quién puede acceder a "${taskName}"`}
       size={size}
       isLoading={false}
@@ -314,7 +321,7 @@ export function ShareDialog({
                   </label>
                   <p className={styles.shareDescription}>
                     {isShared
-                      ? 'Esta tarea es accesible mediante enlace público'
+                      ? `Este ${entityLabel} es accesible mediante enlace público`
                       : 'Activa para generar un enlace de acceso público'
                     }
                   </p>
@@ -554,7 +561,7 @@ export function ShareDialog({
           {!isShared && !showDisableWarning && (
             <div className={styles.infoMessage}>
               <p>
-                Activa &quot;Habilitar enlace compartido&quot; para generar invitaciones y compartir esta tarea con personas externas.
+                Activa &quot;Habilitar enlace compartido&quot; para generar invitaciones y compartir {entityType === 'team' ? 'este equipo' : 'esta tarea'} con personas externas.
               </p>
             </div>
           )}

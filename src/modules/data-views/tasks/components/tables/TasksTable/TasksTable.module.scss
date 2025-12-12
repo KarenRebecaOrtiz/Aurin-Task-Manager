@@ -633,6 +633,7 @@
   width: 100%;
 }
 
+  
 .projectName {
   font-size: 13px;
   font-weight: $font-weight-medium;
@@ -642,8 +643,10 @@
   white-space: nowrap;
   padding: 4px 8px;
   background: rgba(100, 116, 139, 0.1);
-  border-radius: 6px;
-  max-width: 100%;
+  border-radius: 100px;
+  max-width: 160px;
+  display: inline-flex;
+  align-items: center;
 
   @include dark-mode {
     color: #94a3b8;

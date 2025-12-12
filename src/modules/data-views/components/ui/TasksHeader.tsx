@@ -37,8 +37,11 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   onStatusFiltersChange,
   currentView = 'table',
 }) => {
-  // Estado para crear nueva cuenta (cliente)
-  const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
+  // Estado para diálogo de cliente (crear/editar)
+  const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
+  const [clientDialogMode, setClientDialogMode] = useState<'create' | 'edit'>('create');
+  const [editingClientId, setEditingClientId] = useState<string | undefined>(undefined);
+
   const { workspaces, selectedWorkspaceId, setWorkspacesFromClients, setSelectedWorkspace } = useWorkspacesStore();
 
   // Auth y datos del usuario
@@ -100,18 +103,33 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
 
   // Handle create account (crear cuenta/cliente)
   const handleCreateAccount = useCallback(() => {
-    setIsCreateClientOpen(true);
+    setClientDialogMode('create');
+    setEditingClientId(undefined);
+    setIsClientDialogOpen(true);
   }, []);
 
+  // Handle edit account (editar cuenta/cliente) - Solo admins
+  const handleEditAccount = useCallback((clientId: string) => {
+    setClientDialogMode('edit');
+    setEditingClientId(clientId);
+    setIsClientDialogOpen(true);
+  }, []);
+
+  // Handle search - memoized to prevent infinite loops
+  const handleSearch = useCallback((query: string[], category: SearchCategory | null) => {
+    setSearchQuery(query);
+    setSearchCategory(category);
+  }, [setSearchQuery, setSearchCategory]);
+
   // Convert PriorityLevel[] to string[] for the store
-  const handlePriorityFiltersChange = (priorities: PriorityLevel[]) => {
+  const handlePriorityFiltersChange = useCallback((priorities: PriorityLevel[]) => {
     onPriorityFiltersChange?.(priorities as string[]);
-  };
+  }, [onPriorityFiltersChange]);
 
   // Convert StatusLevel[] to string[] for the store
-  const handleStatusFiltersChange = (statuses: StatusLevel[]) => {
+  const handleStatusFiltersChange = useCallback((statuses: StatusLevel[]) => {
     onStatusFiltersChange?.(statuses);
-  };
+  }, [onStatusFiltersChange]);
 
   return (
     <>
@@ -124,15 +142,13 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
               workspaces={workspaces}
               selectedWorkspaceId={selectedWorkspaceId}
               onWorkspaceChange={handleWorkspaceChange}
-              onCreateWorkspace={handleCreateAccount}
+              onCreateWorkspace={isAdmin ? handleCreateAccount : undefined}
+              onEditWorkspace={isAdmin ? handleEditAccount : undefined}
             />
 
             {/* Advanced Task Search Bar */}
             <TaskSearchBar
-              onSearch={(query, category) => {
-                setSearchQuery(query);
-                setSearchCategory(category);
-              }}
+              onSearch={handleSearch}
               onPriorityFiltersChange={handlePriorityFiltersChange}
               onStatusFiltersChange={handleStatusFiltersChange}
               placeholder="Buscar tareas, cuentas o miembros..."
@@ -144,11 +160,12 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
         <ViewSwitcher />
       </div>
 
-      {/* Create Client/Account Dialog */}
+      {/* Client/Account Dialog (Create/Edit) */}
       <ClientDialog
-        isOpen={isCreateClientOpen}
-        onOpenChange={setIsCreateClientOpen}
-        mode="create"
+        isOpen={isClientDialogOpen}
+        onOpenChange={setIsClientDialogOpen}
+        mode={clientDialogMode}
+        clientId={editingClientId}
       />
     </>
   );

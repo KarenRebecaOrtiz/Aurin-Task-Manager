@@ -7,6 +7,9 @@ import {
   revokeGuestToken,
   getGuestTokens,
   redeemGuestToken,
+  generateTeamGuestToken,
+  revokeTeamGuestToken,
+  getTeamGuestTokens,
 } from '../services/guestToken.server';
 import {
   safeValidate,
@@ -15,10 +18,17 @@ import {
   RedeemGuestTokenInputSchema,
 } from '../schemas/validation.schemas';
 
+/** Entity type for sharing - supports both tasks and teams */
+export type ShareEntityType = 'task' | 'team';
+
 /**
- * Server Action: Generate a new guest token for a task
+ * Server Action: Generate a new guest token for a task or team
  */
-export async function generateGuestTokenAction(input: { taskId: string; tokenName?: string }) {
+export async function generateGuestTokenAction(input: {
+  taskId: string;
+  tokenName?: string;
+  entityType?: ShareEntityType;
+}) {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -31,6 +41,11 @@ export async function generateGuestTokenAction(input: { taskId: string; tokenNam
     }
 
     const { taskId, tokenName } = validation.data!;
+    const entityType = input.entityType || 'task';
+
+    if (entityType === 'team') {
+      return await generateTeamGuestToken(taskId, userId, tokenName);
+    }
     return await generateGuestToken(taskId, userId, tokenName);
   } catch (error) {
     console.error('[GuestTokenActions] Error generating guest token:', error);
@@ -44,7 +59,11 @@ export async function generateGuestTokenAction(input: { taskId: string; tokenNam
 /**
  * Server Action: Revoke a guest token
  */
-export async function revokeGuestTokenAction(input: { taskId: string; tokenId: string }) {
+export async function revokeGuestTokenAction(input: {
+  taskId: string;
+  tokenId: string;
+  entityType?: ShareEntityType;
+}) {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -57,6 +76,11 @@ export async function revokeGuestTokenAction(input: { taskId: string; tokenId: s
     }
 
     const { taskId, tokenId } = validation.data!;
+    const entityType = input.entityType || 'task';
+
+    if (entityType === 'team') {
+      return await revokeTeamGuestToken(taskId, userId, tokenId);
+    }
     return await revokeGuestToken(taskId, userId, tokenId);
   } catch (error) {
     console.error('[GuestTokenActions] Error revoking guest token:', error);
@@ -68,15 +92,18 @@ export async function revokeGuestTokenAction(input: { taskId: string; tokenId: s
 }
 
 /**
- * Server Action: Get all guest tokens for a task
+ * Server Action: Get all guest tokens for a task or team
  */
-export async function getGuestTokensAction(taskId: string) {
+export async function getGuestTokensAction(taskId: string, entityType: ShareEntityType = 'task') {
   try {
     const { userId } = await auth();
     if (!userId) {
       return { success: false, error: 'No autenticado' };
     }
 
+    if (entityType === 'team') {
+      return await getTeamGuestTokens(taskId, userId);
+    }
     return await getGuestTokens(taskId, userId);
   } catch (error) {
     console.error('[GuestTokenActions] Error getting guest tokens:', error);

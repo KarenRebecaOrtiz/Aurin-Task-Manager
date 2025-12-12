@@ -46,3 +46,25 @@ export async function canUserShareTask(
 
   return isInvolved;
 }
+
+/**
+ * Check if user can share a team
+ * Admin OR member of team (creator or member)
+ */
+export async function canUserShareTeam(
+  userId: string,
+  team: any
+): Promise<boolean> {
+  // Check if admin
+  const isAdmin = await isUserAdmin(userId);
+  if (isAdmin) {
+    return true;
+  }
+
+  // Check if member of team
+  const isMember =
+    team.createdBy === userId ||
+    team.memberIds?.includes(userId);
+
+  return isMember;
+}

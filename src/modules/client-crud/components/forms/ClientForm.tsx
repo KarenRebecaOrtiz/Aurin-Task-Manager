@@ -8,10 +8,10 @@
 import { motion } from 'framer-motion';
 import { CrystalInput, CrystalTextarea, CrystalDropdown } from '@/components/ui/inputs';
 import { FormSection } from '@/modules/task-crud/components/forms/FormSection';
+import { GradientAvatarSelector } from '@/modules/teams/components/atoms';
 import { PLACEHOLDERS, INDUSTRIES } from '../../config';
 import { ClientFormData } from '../../types/form';
 import { ClientTasksTable } from '../ClientTasksTable';
-import Image from 'next/image';
 import { Calendar } from 'lucide-react';
 import styles from './ClientMetadata.module.scss';
 
@@ -23,14 +23,14 @@ const fadeInUp = {
 interface ClientFormProps {
   formData: ClientFormData;
   errors: Partial<Record<keyof ClientFormData, string>>;
-  imagePreview: string;
   isReadOnly: boolean;
   isSubmitting: boolean;
   isAdmin: boolean;
   clientId?: string;
+  clientInitials: string;
   onFieldChange: <K extends keyof ClientFormData>(field: K, value: ClientFormData[K]) => void;
-  onImageClick: () => void;
-  onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onGradientSelect: (gradientId: string) => void;
+  onImageUpload: (url: string) => void;
   onProjectChange: (index: number, value: string) => void;
   onAddProject: () => void;
   onRemoveProject: (index: number) => void;
@@ -39,14 +39,14 @@ interface ClientFormProps {
 export function ClientForm({
   formData,
   errors,
-  imagePreview,
   isReadOnly,
   isSubmitting,
   isAdmin,
   clientId,
+  clientInitials,
   onFieldChange,
-  onImageClick,
-  onImageChange,
+  onGradientSelect,
+  onImageUpload,
   onProjectChange,
   onAddProject,
   onRemoveProject,
@@ -55,27 +55,18 @@ export function ClientForm({
     <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
       {/* Basic Information */}
       <FormSection>
-          {/* Image Upload */}
-          <motion.div variants={fadeInUp} className="md:col-span-2 flex justify-center">
-            <div
-              className={`relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors ${
-                !isReadOnly ? 'cursor-pointer' : ''
-              }`}
-              onClick={!isReadOnly ? onImageClick : undefined}
-            >
-              <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-              {!isReadOnly && (
-                <input
-                  id="client-image-input"
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  style={{ display: 'none' }}
-                  onChange={onImageChange}
-                  disabled={isSubmitting}
-                />
-              )}
-            </div>
-          </motion.div>
+          {/* Avatar Selector with Gradients and Image Upload */}
+          {!isReadOnly && (
+            <motion.div variants={fadeInUp} className="md:col-span-2">
+              <GradientAvatarSelector
+                selectedGradientId={formData.gradientId || 'default'}
+                onSelect={onGradientSelect}
+                teamInitials={clientInitials}
+                customImageUrl={formData.imageUrl}
+                onImageUpload={onImageUpload}
+              />
+            </motion.div>
+          )}
 
           {/* Client Name */}
           <motion.div variants={fadeInUp} className="md:col-span-2">

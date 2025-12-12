@@ -5,7 +5,7 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { generateShareToken, buildShareUrl } from './tokenService';
 import { ERROR_MESSAGES } from '../utils/constants';
-import { canUserShareTask } from '../utils/authHelpers.server';
+import { canUserShareTask, canUserShareTeam } from '../utils/authHelpers.server';
 
 const MAX_GUEST_TOKENS = 3;
 
@@ -184,4 +184,139 @@ export async function redeemGuestToken(
   });
 
   return { success: true, taskId: taskRef.id, taskName: taskData?.name };
+}
+
+// ============================================
+// TEAM GUEST TOKEN FUNCTIONS
+// ============================================
+
+/**
+ * Generate a new guest token for a team
+ * @param teamId - Team ID
+ * @param userId - User ID creating the token
+ * @param tokenName - Optional name for the token (e.g. "Token para Juan")
+ */
+export async function generateTeamGuestToken(
+  teamId: string,
+  userId: string,
+  tokenName?: string
+) {
+  const adminDb = getAdminDb();
+  const teamRef = adminDb.collection('teams').doc(teamId);
+  const shareTokensRef = teamRef.collection('shareTokens');
+
+  // Check authorization
+  const teamSnap = await teamRef.get();
+  if (!teamSnap.exists) {
+    return { success: false, error: 'Equipo no encontrado' };
+  }
+  const teamData = teamSnap.data()!;
+
+  // Authorization check - admin OR member of team
+  const canShare = await canUserShareTeam(userId, teamData);
+  if (!canShare) {
+    return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+  }
+
+  // Check token limit
+  const tokensSnap = await shareTokensRef.get();
+  if (tokensSnap.size >= MAX_GUEST_TOKENS) {
+    return {
+      success: false,
+      error: `No se pueden generar más de ${MAX_GUEST_TOKENS} tokens por equipo.`,
+    };
+  }
+
+  // Generate new token
+  const token = generateShareToken();
+  const newTokenRef = shareTokensRef.doc();
+
+  await newTokenRef.set({
+    token,
+    status: 'pending',
+    tokenName: tokenName || null,
+    guestName: null,
+    avatar: null,
+    createdAt: FieldValue.serverTimestamp(),
+    expiresAt: null,
+    redeemedAt: null,
+  });
+
+  return {
+    success: true,
+    token: {
+      id: newTokenRef.id,
+      token,
+      status: 'pending',
+      tokenName: tokenName || null,
+      guestName: null,
+      avatar: null,
+    },
+  };
+}
+
+/**
+ * Revoke a guest token for a team
+ */
+export async function revokeTeamGuestToken(teamId: string, userId: string, tokenId: string) {
+  const adminDb = getAdminDb();
+  const teamRef = adminDb.collection('teams').doc(teamId);
+  const tokenRef = teamRef.collection('shareTokens').doc(tokenId);
+
+  // Authorization check
+  const teamSnap = await teamRef.get();
+  if (!teamSnap.exists) {
+    return { success: false, error: 'Equipo no encontrado' };
+  }
+  const teamData = teamSnap.data()!;
+
+  // Authorization check - admin OR member of team
+  const canShare = await canUserShareTeam(userId, teamData);
+  if (!canShare) {
+    return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+  }
+
+  await tokenRef.delete();
+
+  return { success: true };
+}
+
+/**
+ * Get all guest tokens for a team
+ */
+export async function getTeamGuestTokens(teamId: string, userId: string) {
+  const adminDb = getAdminDb();
+  const teamRef = adminDb.collection('teams').doc(teamId);
+  const shareTokensRef = teamRef.collection('shareTokens');
+
+  // Authorization check
+  const teamSnap = await teamRef.get();
+  if (!teamSnap.exists) {
+    return { success: false, error: 'Equipo no encontrado' };
+  }
+  const teamData = teamSnap.data()!;
+
+  // Authorization check - admin OR member of team
+  const canShare = await canUserShareTeam(userId, teamData);
+  if (!canShare) {
+    return { success: false, error: ERROR_MESSAGES.UNAUTHORIZED };
+  }
+
+  const tokensSnap = await shareTokensRef.orderBy('createdAt', 'desc').get();
+  const tokens = tokensSnap.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      token: data.token,
+      status: data.status,
+      tokenName: data.tokenName || null,
+      guestName: data.guestName,
+      avatar: data.avatar,
+      createdAt: data.createdAt.toDate().toISOString(),
+      expiresAt: data.expiresAt ? data.expiresAt.toDate().toISOString() : null,
+      shareUrl: buildShareUrl(data.token),
+    };
+  });
+
+  return { success: true, tokens };
 }

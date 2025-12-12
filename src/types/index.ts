@@ -4,6 +4,7 @@ export interface Client {
   id: string;
   name: string;
   imageUrl: string;
+  gradientId?: string; // Gradient identifier for avatar
   projects?: string[];
   projectCount?: number;
   createdBy?: string;

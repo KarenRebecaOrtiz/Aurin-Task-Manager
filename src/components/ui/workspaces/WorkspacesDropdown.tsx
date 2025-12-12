@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronsUpDown, Check, Plus, Building2 } from 'lucide-react';
+import { ChevronsUpDown, Check, Plus, Building2, Pencil } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +32,7 @@ interface WorkspacesDropdownProps {
   selectedWorkspaceId?: string | null;
   onWorkspaceChange: (workspace: Workspace | null) => void;
   onCreateWorkspace?: () => void;
+  onEditWorkspace?: (workspaceId: string) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -45,10 +46,12 @@ export function WorkspacesDropdown({
   selectedWorkspaceId,
   onWorkspaceChange,
   onCreateWorkspace,
+  onEditWorkspace,
   disabled = false,
   className = '',
 }: WorkspacesDropdownProps) {
   const [open, setOpen] = React.useState(false);
+  const [editMode, setEditMode] = React.useState(false);
   const { isAdmin } = useAuth();
 
   // Check if "View All" is selected
@@ -63,6 +66,14 @@ export function WorkspacesDropdown({
   // Handle workspace selection
   const handleSelect = React.useCallback(
     (workspace: Workspace) => {
+      // Si estamos en modo edición y es una cuenta (no "Ver Todos"), abrir diálogo de edición
+      if (editMode && workspace.id !== ALL_WORKSPACES_ID) {
+        onEditWorkspace?.(workspace.id);
+        setEditMode(false);
+        setOpen(false);
+        return;
+      }
+
       if (workspace.id === ALL_WORKSPACES_ID) {
         onWorkspaceChange(null); // null significa "Ver Todos"
       } else {
@@ -70,8 +81,14 @@ export function WorkspacesDropdown({
       }
       setOpen(false);
     },
-    [onWorkspaceChange]
+    [onWorkspaceChange, editMode, onEditWorkspace]
   );
+
+  // Toggle edit mode
+  const handleToggleEditMode = React.useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditMode((prev) => !prev);
+  }, []);
 
   // Handle create workspace (cuenta) click
   const handleCreateClick = React.useCallback(
@@ -83,9 +100,17 @@ export function WorkspacesDropdown({
     [onCreateWorkspace]
   );
 
+  // Reset edit mode when dropdown closes
+  const handleOpenChange = React.useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setEditMode(false);
+    }
+  }, []);
+
   return (
     <div className={`${styles.container} ${className}`}>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <motion.button
             type="button"
@@ -133,7 +158,24 @@ export function WorkspacesDropdown({
                 {/* Header */}
                 <div className={styles.header}>
                   <span className={styles.headerTitle}>Cuentas</span>
+                  {isAdmin && onEditWorkspace && (
+                    <button
+                      type="button"
+                      onClick={handleToggleEditMode}
+                      className={`${styles.editButton} ${editMode ? styles.editButtonActive : ''}`}
+                      title={editMode ? 'Cancelar edición' : 'Editar cuentas'}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
                 </div>
+
+                {/* Edit mode indicator */}
+                {editMode && (
+                  <div className={styles.editModeIndicator}>
+                    <span>Selecciona una cuenta para editar</span>
+                  </div>
+                )}
 
                 {/* "View All" Option - Always first */}
                 <div className={styles.list} role="listbox">

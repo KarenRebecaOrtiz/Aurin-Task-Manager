@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 interface SidebarState {
   isOpen: boolean;
-  sidebarType: 'chat' | 'message' | null;
+  sidebarType: 'chat' | 'message' | 'team' | null;
   sidebarId: string | null;
   // Estado específico para MessageSidebar
   messageSidebar: {
@@ -15,7 +15,7 @@ senderId: string | null;
     } | null;
     conversationId: string | null;
   };
-  // Estado específico para ChatSidebar
+  // Estado específico para ChatSidebar (tareas)
   chatSidebar: {
     taskId: string | null;
     task: {
@@ -44,25 +44,46 @@ senderId: string | null;
     } | null;
     clientName: string | null;
   };
+  // Estado específico para TeamChatSidebar (equipos)
+  teamSidebar: {
+    teamId: string | null;
+    team: {
+      id: string;
+      name: string;
+      description?: string;
+      memberIds: string[];
+      isPublic: boolean;
+      gradientId: string;
+      createdBy: string;
+      createdAt: string;
+      clientId: string;
+    } | null;
+    clientName: string | null;
+  };
 }
 
 interface SidebarActions {
   // Acciones generales
-  openSidebar: (type: 'chat' | 'message', id: string) => void;
+  openSidebar: (type: 'chat' | 'message' | 'team', id: string) => void;
   closeSidebar: () => void;
-  
+
   // Acciones específicas para MessageSidebar
   openMessageSidebar: (senderId: string, receiver: SidebarState['messageSidebar']['receiver'], conversationId: string) => void;
   closeMessageSidebar: () => void;
-  
-  // Acciones específicas para ChatSidebar
+
+  // Acciones específicas para ChatSidebar (tareas)
   openChatSidebar: (task: SidebarState['chatSidebar']['task'], clientName: string) => void;
   closeChatSidebar: () => void;
-  
+
+  // Acciones específicas para TeamChatSidebar (equipos)
+  openTeamSidebar: (team: SidebarState['teamSidebar']['team'], clientName: string) => void;
+  closeTeamSidebar: () => void;
+
   // Getters
-  getSidebarState: () => { isOpen: boolean; type: 'chat' | 'message' | null; id: string | null };
+  getSidebarState: () => { isOpen: boolean; type: 'chat' | 'message' | 'team' | null; id: string | null };
   getMessageSidebarState: () => SidebarState['messageSidebar'];
   getChatSidebarState: () => SidebarState['chatSidebar'];
+  getTeamSidebarState: () => SidebarState['teamSidebar'];
 }
 
 type SidebarStateStore = SidebarState & SidebarActions;
@@ -80,6 +101,11 @@ export const useSidebarStateStore = create<SidebarStateStore>()((set, get) => ({
   chatSidebar: {
     taskId: null,
     task: null,
+    clientName: null,
+  },
+  teamSidebar: {
+    teamId: null,
+    team: null,
     clientName: null,
   },
 
@@ -207,6 +233,57 @@ export const useSidebarStateStore = create<SidebarStateStore>()((set, get) => ({
     }
   },
 
+  // Acciones específicas para TeamChatSidebar (equipos)
+  openTeamSidebar: (team, clientName) => {
+    const current = get();
+
+    const shouldUpdate =
+      current.sidebarType !== 'team' ||
+      current.sidebarId !== team?.id ||
+      !current.isOpen ||
+      current.teamSidebar.teamId !== team?.id ||
+      current.teamSidebar.clientName !== clientName;
+
+    if (shouldUpdate) {
+      set({
+        isOpen: true,
+        sidebarType: 'team',
+        sidebarId: team?.id || null,
+        teamSidebar: {
+          teamId: team?.id || null,
+          team,
+          clientName,
+        },
+      });
+    }
+  },
+
+  closeTeamSidebar: () => {
+    const current = get();
+    if (current.isOpen && current.sidebarType === 'team') {
+      set({
+        isOpen: false,
+        sidebarType: null,
+        sidebarId: null,
+        messageSidebar: {
+          senderId: null,
+          receiver: null,
+          conversationId: null,
+        },
+        chatSidebar: {
+          taskId: null,
+          task: null,
+          clientName: null,
+        },
+        teamSidebar: {
+          teamId: null,
+          team: null,
+          clientName: null,
+        },
+      });
+    }
+  },
+
   // Getters
   getSidebarState: () => {
     const state = get();
@@ -223,5 +300,9 @@ export const useSidebarStateStore = create<SidebarStateStore>()((set, get) => ({
 
   getChatSidebarState: () => {
     return get().chatSidebar;
+  },
+
+  getTeamSidebarState: () => {
+    return get().teamSidebar;
   },
 })); 

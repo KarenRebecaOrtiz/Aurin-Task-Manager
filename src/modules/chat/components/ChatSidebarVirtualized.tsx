@@ -43,17 +43,47 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Obtener taskId del store global
+  // Obtener tipo de sidebar y datos del store global
+  const sidebarType = useSidebarStateStore(useShallow(state => state.sidebarType));
   const chatSidebar = useSidebarStateStore(useShallow(state => state.chatSidebar));
-  const taskId = chatSidebar.taskId;
-  const clientName = chatSidebar.clientName;
+  const teamSidebar = useSidebarStateStore(useShallow(state => state.teamSidebar));
 
-  // Obtener la tarea actualizada desde dataStore (para tener timeTracking actualizado)
+  // Determinar si es chat de equipo o de tarea
+  const isTeamChat = sidebarType === 'team';
+
+  // Obtener ID y clientName según el tipo
+  const entityId = isTeamChat ? teamSidebar.teamId : chatSidebar.taskId;
+  const clientName = isTeamChat ? teamSidebar.clientName : chatSidebar.clientName;
+
+  // Obtener la tarea actualizada desde dataStore (solo para tareas)
   const tasks = useDataStore(useShallow(state => state.tasks));
+
+  // Para chats de equipo, crear un objeto compatible con Task para reutilizar la UI
   const task = useMemo(() => {
-    if (!taskId) return chatSidebar.task; // Fallback to sidebar task if no taskId
-    return tasks.find(t => t.id === taskId) || chatSidebar.task;
-  }, [taskId, tasks, chatSidebar.task]);
+    if (isTeamChat) {
+      // Usar directamente el team del sidebar
+      const team = teamSidebar.team;
+      if (!team) return null;
+      // Convertir Team a formato compatible con Task para reutilizar ChatHeader/Input
+      return {
+        id: team.id,
+        clientId: team.clientId,
+        project: '', // Equipos no tienen proyecto
+        name: team.name,
+        description: team.description || '',
+        status: 'active',
+        priority: 'medium',
+        startDate: team.createdAt,
+        endDate: null,
+        LeadedBy: [],
+        AssignedTo: team.memberIds,
+        CreatedBy: team.createdBy,
+      };
+    }
+    // Para tareas, buscar la tarea actualizada en el store
+    if (!entityId) return chatSidebar.task;
+    return tasks.find(t => t.id === entityId) || chatSidebar.task;
+  }, [isTeamChat, entityId, tasks, chatSidebar.task, teamSidebar.team]);
 
   // Estados locales
   const [imagePreviewSrc, setImagePreviewSrc] = useState<string | null>(null);
@@ -185,7 +215,8 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
             messages={messages}
             userId={userId}
             userName={userName}
-            onOpenManualTimeEntry={handleOpenManualTimeEntry}
+            onOpenManualTimeEntry={isTeamChat ? undefined : handleOpenManualTimeEntry}
+            isTeamChat={isTeamChat}
           />
         </div>
 
@@ -269,16 +300,18 @@ const ChatSidebarVirtualized: React.FC<ChatSidebarProps> = memo(({
         </div>
       )}
 
-      {/* Manual Time Entry Dialog */}
-      <ManualTimeDialog
-        open={isManualTimeModalOpen}
-        onOpenChange={setIsManualTimeModalOpen}
-        taskId={task.id}
-        taskName={task.name}
-        taskDescription={task.description}
-        userId={userId}
-        userName={userName}
-      />
+      {/* Manual Time Entry Dialog - Solo para tareas, no equipos */}
+      {!isTeamChat && (
+        <ManualTimeDialog
+          open={isManualTimeModalOpen}
+          onOpenChange={setIsManualTimeModalOpen}
+          taskId={task.id}
+          taskName={task.name}
+          taskDescription={task.description}
+          userId={userId}
+          userName={userName}
+        />
+      )}
     </>
   );
 });
