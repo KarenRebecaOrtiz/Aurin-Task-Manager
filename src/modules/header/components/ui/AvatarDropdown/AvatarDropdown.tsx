@@ -19,10 +19,11 @@ import { ConfigDialog } from '@/modules/config';
 import { LogOut } from '@/components/animate-ui/icons';
 import { Sun } from '@/components/animate-ui/icons/sun';
 import { Moon } from '@/components/animate-ui/icons/moon';
-import { Settings } from 'lucide-react';
+import { Settings, Users } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useMediaQuery } from '@/modules/dialogs/hooks/useMediaQuery';
 import { SettingsDrawer } from './SettingsDrawer';
+import { UsersDialog } from '@/modules/dialogs';
 
 // Clerk icon component for admin panel
 const ClerkIcon = ({ className }: { className?: string }) => (
@@ -70,6 +71,7 @@ const AvatarDropdown = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
+  const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -157,6 +159,11 @@ const AvatarDropdown = () => {
     setIsDropdownOpen(false);
   }, [toggleTheme]);
 
+  const handleUsersManagement = useCallback(() => {
+    setIsUsersDialogOpen(true);
+    setIsDropdownOpen(false);
+  }, []);
+
   // Get status color based on current status
   const getStatusColor = useCallback((status: string) => {
     switch (status) {
@@ -228,18 +235,15 @@ const AvatarDropdown = () => {
                 <>
                   <div className={styles.dropdownMenu}>
                     <div className={styles.sectionLabel}>Administración</div>
-                    <motion.a
-                      href="https://dashboard.clerk.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <motion.button
                       className={styles.dropdownItem}
                       {...dropdownAnimations.item(0)}
                       role="menuitem"
-                      onClick={handleCloseDropdown}
+                      onClick={handleUsersManagement}
                     >
-                      <ClerkIcon className={styles.dropdownIcon} />
+                      <Users size={16} className={styles.dropdownIcon} />
                       Gestionar Usuarios
-                    </motion.a>
+                    </motion.button>
                     <motion.a
                       href="https://aurin-payload-cms.vercel.app/admin"
                       target="_blank"
@@ -329,6 +333,14 @@ const AvatarDropdown = () => {
         onClose={handleCloseSettingsDrawer}
         userId={user?.id}
       />
+
+      {/* Users Management Dialog (Admin only) */}
+      {isAdmin && (
+        <UsersDialog
+          isOpen={isUsersDialogOpen}
+          onOpenChange={setIsUsersDialogOpen}
+        />
+      )}
     </>
   );
 };

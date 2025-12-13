@@ -52,7 +52,7 @@ interface UseKanbanGroupingProps {
   getInvolvedUserIds: (task: Task) => string[];
   userId: string;
   isAdmin: boolean;
-  searchQuery: string;
+  searchQuery: string[];
   searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters

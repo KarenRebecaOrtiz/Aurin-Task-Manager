@@ -47,7 +47,7 @@ interface UseKanbanStateReturn {
   isLoadingTasks: boolean;
 
   // Filter state
-  searchQuery: string;
+  searchQuery: string[];
   searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
@@ -61,8 +61,8 @@ interface UseKanbanStateReturn {
   isTouchDevice: boolean;
 
   // Actions
-  setSearchQuery: (query: string) => void;
-  setSearchCategory: (category: 'task' | 'client' | 'member' | null) => void;
+  setSearchQuery: (query: string[]) => void;
+  setSearchCategory: (category: 'task' | 'project' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
   setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
   setClientFilter: (filter: string) => void;

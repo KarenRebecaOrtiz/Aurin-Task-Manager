@@ -23,7 +23,7 @@ interface Task {
 }
 
 type TasksKanbanState = {
-  searchQuery: string;
+  searchQuery: string[];
   searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
@@ -40,7 +40,7 @@ type TasksKanbanState = {
 };
 
 type TasksKanbanActions = {
-  setSearchQuery: (query: string) => void;
+  setSearchQuery: (query: string[]) => void;
   setSearchCategory: (category: 'task' | 'project' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
   setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
@@ -59,7 +59,7 @@ type TasksKanbanActions = {
 type TasksKanbanStore = TasksKanbanState & TasksKanbanActions;
 
 export const tasksKanbanStore = createStore<TasksKanbanStore>()((set) => ({
-  searchQuery: '',
+  searchQuery: [],
   searchCategory: null,
   priorityFilter: '',
   priorityFilters: [], // Initialize empty array for multiple priorities

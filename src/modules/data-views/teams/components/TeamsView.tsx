@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useWorkspacesStore, ALL_WORKSPACES_ID } from '@/stores/workspacesStore';
+import { useDataStore, type Team } from '@/stores/dataStore';
+import { useShallow } from 'zustand/react/shallow';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
-import type { SearchCategory, StatusLevel } from '@/modules/data-views/components/shared/search';
-import { useTeamsStore, useTeamsByClient, teamService } from '@/modules/teams';
+import type { SearchCategory } from '@/modules/data-views/components/shared/search';
 import { CreateTeamDialog, TeamCard } from '@/modules/teams';
-import type { Team } from '@/modules/teams';
 import { Button } from '@/components/ui/buttons';
 import { Plus, Users } from 'lucide-react';
 import styles from './TeamsView.module.scss';
@@ -17,19 +17,19 @@ import styles from './TeamsView.module.scss';
  *
  * Displays team collaboration space filtered by workspace.
  * Follows the same container pattern as TasksTable.
+ * Uses the unified dataStore for teams data.
  */
 export default function TeamsView() {
   const { user } = useUser();
   const selectedWorkspaceId = useWorkspacesStore((state) => state.selectedWorkspaceId);
   const workspaces = useWorkspacesStore((state) => state.workspaces);
 
-  // Teams store
-  const { setTeams, setLoading, setError } = useTeamsStore();
-
-  // State for all visible teams (when "Todas las cuentas" is selected)
-  const [allVisibleTeams, setAllVisibleTeams] = useState<Team[]>([]);
-  const teams = useTeamsByClient(
-    selectedWorkspaceId !== ALL_WORKSPACES_ID ? selectedWorkspaceId : null
+  // Get teams from unified dataStore
+  const { teams: allTeams, isLoadingTeams } = useDataStore(
+    useShallow((state) => ({
+      teams: state.teams,
+      isLoadingTeams: state.isLoadingTeams,
+    }))
   );
 
   // Search state (matches TasksTable pattern)
@@ -58,61 +58,28 @@ export default function TeamsView() {
 
   const isAllWorkspaces = selectedWorkspaceId === ALL_WORKSPACES_ID || !selectedWorkspaceId;
 
-  // Subscribe to teams for selected workspace
-  useEffect(() => {
-    if (isAllWorkspaces || !selectedWorkspaceId) {
-      return;
-    }
-
-    setLoading(true);
-    const unsubscribe = teamService.subscribeToTeamsByClient(
-      selectedWorkspaceId,
-      (fetchedTeams) => {
-        setTeams(fetchedTeams);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('[TeamsView] Error fetching teams:', error);
-        setError(error);
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [selectedWorkspaceId, isAllWorkspaces, setTeams, setLoading, setError]);
-
-  // Subscribe to all visible teams when "Todas las cuentas" is selected
-  useEffect(() => {
-    if (!isAllWorkspaces || !user?.id) {
-      setAllVisibleTeams([]);
-      return;
-    }
-
-    setLoading(true);
-    const unsubscribe = teamService.subscribeToAllVisibleTeams(
-      user.id,
-      (fetchedTeams) => {
-        setAllVisibleTeams(fetchedTeams);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('[TeamsView] Error fetching all visible teams:', error);
-        setError(error);
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [isAllWorkspaces, user?.id, setLoading, setError]);
-
-  // Get the appropriate teams list based on selection
+  // Filter teams based on selected workspace and user visibility
   const displayedTeams = useMemo(() => {
-    return isAllWorkspaces ? allVisibleTeams : teams;
-  }, [isAllWorkspaces, allVisibleTeams, teams]);
+    if (!allTeams || allTeams.length === 0) return [];
+
+    // Filter by visibility (user's teams or public teams)
+    const visibleTeams = allTeams.filter((team) => {
+      // User sees teams where they are a member
+      if (team.memberIds?.includes(user?.id || '')) return true;
+      // User sees public teams
+      if (team.isPublic) return true;
+      // User sees teams they created
+      if (team.createdBy === user?.id) return true;
+      return false;
+    });
+
+    // If specific workspace selected, filter by clientId
+    if (!isAllWorkspaces && selectedWorkspaceId) {
+      return visibleTeams.filter((team) => team.clientId === selectedWorkspaceId);
+    }
+
+    return visibleTeams;
+  }, [allTeams, user?.id, isAllWorkspaces, selectedWorkspaceId]);
 
   // Handle create team button click
   const handleCreateTeam = useCallback(() => {

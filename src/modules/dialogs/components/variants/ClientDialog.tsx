@@ -12,11 +12,10 @@ import { CrudDialog } from '../organisms/CrudDialog';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { clientService } from '@/modules/client-crud/services/clientService';
 import { useClientForm } from '@/modules/client-crud/hooks/form/useClientForm';
-import { useImageUpload } from '@/modules/client-crud/hooks/ui/useImageUpload';
 import { ClientForm } from '@/modules/client-crud/components/forms/ClientForm';
 import { ClientDialogActions } from '@/modules/client-crud/components/forms/ClientDialogActions';
 import { ClientDialogProps } from '@/modules/client-crud/types/form';
-import { UI_CONSTANTS, TOAST_MESSAGES } from '@/modules/client-crud/config';
+import { TOAST_MESSAGES } from '@/modules/client-crud/config';
 
 export function ClientDialog({
   isOpen,
@@ -48,18 +47,9 @@ export function ClientDialog({
     removeProject,
     validate,
     reset: resetForm,
+    getClientInitials,
   } = useClientForm();
 
-  // Image upload hook
-  const {
-    imageFile,
-    imagePreview,
-    handleImageChange,
-    resetImage,
-    setPreview,
-  } = useImageUpload({
-    onError: showError,
-  });
 
   // Load client data when in view/edit mode - ONLY ONCE when dialog opens
   useEffect(() => {
@@ -97,10 +87,6 @@ export function ClientDialog({
           }
         });
 
-        if (client.imageUrl) {
-          setPreview(client.imageUrl);
-        }
-
         setClientDataLoaded(true);
         setIsLoadingClient(false);
       } catch (error: unknown) {
@@ -123,16 +109,20 @@ export function ClientDialog({
   useEffect(() => {
     if (!isOpen) {
       resetForm();
-      resetImage();
       setMode(initialMode);
       setClientDataLoaded(false); // Reset loaded flag when dialog closes
     }
-  }, [isOpen, initialMode, resetForm, resetImage]);
+  }, [isOpen, initialMode, resetForm]);
 
-  // Image click handler
-  const handleImageClick = useCallback(() => {
-    document.getElementById('client-image-input')?.click();
-  }, []);
+  // Handle gradient selection
+  const handleGradientSelect = useCallback((gradientId: string) => {
+    updateField('gradientId', gradientId);
+  }, [updateField]);
+
+  // Handle image upload from GradientAvatarSelector
+  const handleImageUpload = useCallback((url: string) => {
+    updateField('imageUrl', url);
+  }, [updateField]);
 
   // Dialog close handler  
   const handleDialogClose = useCallback(() => {
@@ -153,32 +143,8 @@ export function ClientDialog({
     setIsSubmitting(true);
 
     try {
-      // Upload image if new file is provided
-      let imageUrl = formData.imageUrl;
-      if (imageFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', imageFile);
-        uploadFormData.append('userId', user.id);
-        uploadFormData.append('type', 'profile');
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData,
-          headers: { 'x-clerk-user-id': user.id },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to upload image');
-        }
-
-        const { url } = await response.json();
-        imageUrl = url;
-      }
-
       const clientData = {
         ...formData,
-        imageUrl: imageUrl !== UI_CONSTANTS.IMAGE_PREVIEW_DEFAULT ? imageUrl : undefined,
         projects: (formData.projects || []).filter((p) => p.trim()),
       };
 
@@ -193,9 +159,7 @@ export function ClientDialog({
       }
 
       resetForm();
-      resetImage();
       onOpenChange(false);
-      // Removed window.location.reload() - callbacks should handle state refresh
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       showError(
@@ -205,13 +169,12 @@ export function ClientDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, formData, imageFile, mode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm, resetImage]);
+  }, [user, formData, mode, clientId, validate, showSuccess, showError, onClientCreated, onClientUpdated, onOpenChange, resetForm]);
 
   const handleCancel = useCallback(() => {
     resetForm();
-    resetImage();
     onOpenChange(false);
-  }, [resetForm, resetImage, onOpenChange]);
+  }, [resetForm, onOpenChange]);
 
   const handleEdit = useCallback(() => {
     setMode('edit');
@@ -266,14 +229,14 @@ export function ClientDialog({
       <ClientForm
         formData={formData}
         errors={errors}
-        imagePreview={imagePreview}
         isReadOnly={isReadOnly}
         isSubmitting={isSubmitting}
         isAdmin={isAdmin}
         clientId={clientId}
+        clientInitials={getClientInitials()}
         onFieldChange={updateField}
-        onImageClick={handleImageClick}
-        onImageChange={handleImageChange}
+        onGradientSelect={handleGradientSelect}
+        onImageUpload={handleImageUpload}
         onProjectChange={updateProject}
         onAddProject={addProject}
         onRemoveProject={removeProject}

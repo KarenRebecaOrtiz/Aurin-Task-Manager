@@ -25,6 +25,13 @@ import { Task } from '@/types';
 
 const MAX_TASKS_IN_MEMORY = 100; // LRU limit
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Helper to clone LruMap (for Zustand immutability)
+const cloneLruMap = <K, V>(source: LruMap<K, V>): LruMap<K, V> => {
+  const newMap = new LruMap<K, V>(MAX_TASKS_IN_MEMORY);
+  source.forEach((value, key) => newMap.set(key, value));
+  return newMap;
+};
 const CLEANUP_INTERVAL = 5 * 60 * 1000; // Run cleanup every 5 minutes
 const SESSION_STORAGE_PREFIX = 'tasks_cache_';
 
@@ -154,8 +161,6 @@ const mapFirestoreToTask = (docId: string, data: any): Task => {
     shared: data.shared || false,
     shareToken: data.shareToken || undefined,
     commentsEnabled: data.commentsEnabled !== undefined ? data.commentsEnabled : true,
-    sharedAt: safeTimestampToISOOrNull(data.sharedAt),
-    sharedBy: data.sharedBy || undefined,
     timeTracking: data.timeTracking ? {
       totalHours: data.timeTracking.totalHours || 0,
       totalMinutes: data.timeTracking.totalMinutes || 0,
@@ -263,7 +268,7 @@ export const useTasksDataStore = create<TasksDataStore>((set, get) => {
       const cachedEntry = loadFromSessionStorage(taskId);
       if (cachedEntry) {
         state.tasks.set(taskId, cachedEntry);
-        set({ tasks: new LruMap(state.tasks) }); // Trigger re-render
+        set({ tasks: cloneLruMap(state.tasks) }); // Trigger re-render
         set((prev) => ({
           stats: { ...prev.stats, hits: prev.stats.hits + 1 },
         }));
@@ -305,7 +310,7 @@ export const useTasksDataStore = create<TasksDataStore>((set, get) => {
             newErrors.delete(taskId);
 
             set({
-              tasks: new LruMap(currentState.tasks),
+              tasks: cloneLruMap(currentState.tasks),
               loadingTasks: newLoadingTasks,
               errors: newErrors,
             });
@@ -440,7 +445,7 @@ export const useTasksDataStore = create<TasksDataStore>((set, get) => {
       newErrors.delete(taskId);
 
       set({
-        tasks: new LruMap(state.tasks),
+        tasks: cloneLruMap(state.tasks),
         errors: newErrors,
       });
     },
@@ -466,7 +471,7 @@ export const useTasksDataStore = create<TasksDataStore>((set, get) => {
       }
 
       set({
-        tasks: new LruMap(state.tasks),
+        tasks: cloneLruMap(state.tasks),
         errors: new Map(),
       });
     },
@@ -496,7 +501,7 @@ export const useTasksDataStore = create<TasksDataStore>((set, get) => {
 
       if (cleanedCount > 0) {
         console.log(`[tasksDataStore] Cleaned ${cleanedCount} expired entries`);
-        set({ tasks: new LruMap(state.tasks) });
+        set({ tasks: cloneLruMap(state.tasks) });
       }
 
       return cleanedCount;

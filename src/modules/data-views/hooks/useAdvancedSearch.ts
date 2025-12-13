@@ -4,9 +4,7 @@ import { Task } from '@/types';
 /**
  * Tipos de datos soportados para búsqueda avanzada
  */
-export interface SearchableTask extends Task {
-  [key: string]: unknown; // Allow additional properties from Task type
-}
+export type SearchableTask = Task;
 
 export interface SearchableClient {
   id: string;

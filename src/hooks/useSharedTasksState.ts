@@ -16,8 +16,8 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { auth } from '@/lib/firebase';
-import { useDataStore } from '@/stores/dataStore';
-import { getTasks, getClients, getUsers } from '@/services';
+import { useDataStore, type Team } from '@/stores/dataStore';
+import { getTasks, getClients, getUsers, getTeams } from '@/services';
 import type { Task, Client, User } from '@/types';
 
 export function useSharedTasksState(userId: string | undefined) {
@@ -27,9 +27,11 @@ export function useSharedTasksState(userId: string | undefined) {
     setTasks,
     setClients,
     setUsers,
+    setTeams,
     setIsLoadingTasks,
     setIsLoadingClients,
     setIsLoadingUsers,
+    setIsLoadingTeams,
     setIsInitialLoadComplete,
     setLoadingProgress,
   } = dataStore;
@@ -38,14 +40,17 @@ export function useSharedTasksState(userId: string | undefined) {
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [localClients, setLocalClients] = useState<Client[]>([]);
   const [localUsers, setLocalUsers] = useState<User[]>([]);
+  const [localTeams, setLocalTeams] = useState<Team[]>([]);
   const [localIsLoadingTasks, setLocalIsLoadingTasks] = useState(true);
   const [localIsLoadingClients, setLocalIsLoadingClients] = useState(true);
   const [localIsLoadingUsers, setLocalIsLoadingUsers] = useState(true);
+  const [localIsLoadingTeams, setLocalIsLoadingTeams] = useState(true);
   const [localIsInitialLoadComplete, setLocalIsInitialLoadComplete] = useState(false);
   const [localLoadingProgress, setLocalLoadingProgress] = useState({
     tasks: false,
     clients: false,
     users: false,
+    teams: false,
   });
 
   // Track if Firebase Auth is ready
@@ -56,14 +61,15 @@ export function useSharedTasksState(userId: string | undefined) {
   const lastTasksHashRef = useRef<string>('');
   const lastClientsHashRef = useRef<string>('');
   const lastUsersHashRef = useRef<string>('');
+  const lastTeamsHashRef = useRef<string>('');
 
   // Check if initial load is complete
   const checkInitialLoadComplete = useCallback(() => {
-    if (hasInitializedRef.current && !localIsLoadingTasks && !localIsLoadingClients && !localIsLoadingUsers) {
+    if (hasInitializedRef.current && !localIsLoadingTasks && !localIsLoadingClients && !localIsLoadingUsers && !localIsLoadingTeams) {
       setLocalIsInitialLoadComplete(true);
       setIsInitialLoadComplete(true);
     }
-  }, [localIsLoadingTasks, localIsLoadingClients, localIsLoadingUsers, setIsInitialLoadComplete]);
+  }, [localIsLoadingTasks, localIsLoadingClients, localIsLoadingUsers, localIsLoadingTeams, setIsInitialLoadComplete]);
 
   // Verify Firebase Auth
   useEffect(() => {
@@ -210,26 +216,66 @@ export function useSharedTasksState(userId: string | undefined) {
       setIsLoadingUsers(false);
     }
 
+    // ===== TEAMS =====
+    try {
+      setLocalIsLoadingTeams(true);
+      setIsLoadingTeams(true);
+
+      const teamsResult = await getTeams();
+
+      // Update state only if data changed
+      const teamsDataString = JSON.stringify(teamsResult.data);
+      if (teamsDataString !== lastTeamsHashRef.current) {
+        lastTeamsHashRef.current = teamsDataString;
+        setLocalTeams(teamsResult.data);
+        setTeams(teamsResult.data);
+      }
+
+      setLocalIsLoadingTeams(false);
+      setIsLoadingTeams(false);
+      setLocalLoadingProgress(prev => ({ ...prev, teams: true }));
+      setLoadingProgress({ teams: true });
+
+      // Background refresh
+      if (teamsResult.promise) {
+        teamsResult.promise.then((freshTeams) => {
+          const freshDataString = JSON.stringify(freshTeams);
+          if (freshDataString !== lastTeamsHashRef.current) {
+            lastTeamsHashRef.current = freshDataString;
+            setLocalTeams(freshTeams);
+            setTeams(freshTeams);
+          }
+        }).catch(() => {
+          // Background refresh failed - silently continue
+        });
+      }
+    } catch {
+      setLocalIsLoadingTeams(false);
+      setIsLoadingTeams(false);
+    }
+
     // Mark as initialized
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
 
       // Check if initial load is complete immediately
-      const isNotLoading = !localIsLoadingTasks && !localIsLoadingClients && !localIsLoadingUsers;
+      const isNotLoading = !localIsLoadingTasks && !localIsLoadingClients && !localIsLoadingUsers && !localIsLoadingTeams;
       if (isNotLoading) {
         setLocalIsInitialLoadComplete(true);
         setIsInitialLoadComplete(true);
       }
     }
-  }, [userId, setTasks, setClients, setUsers, setIsLoadingTasks, setIsLoadingClients, setIsLoadingUsers, setLoadingProgress, setIsInitialLoadComplete]);
+  }, [userId, setTasks, setClients, setUsers, setTeams, setIsLoadingTasks, setIsLoadingClients, setIsLoadingUsers, setIsLoadingTeams, setLoadingProgress, setIsInitialLoadComplete]);
 
   return {
     tasks: localTasks,
     clients: localClients,
     users: localUsers,
+    teams: localTeams,
     isLoadingTasks: localIsLoadingTasks,
     isLoadingClients: localIsLoadingClients,
     isLoadingUsers: localIsLoadingUsers,
+    isLoadingTeams: localIsLoadingTeams,
     isInitialLoadComplete: localIsInitialLoadComplete,
     loadingProgress: localLoadingProgress,
   };

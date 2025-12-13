@@ -90,7 +90,7 @@ export const useArchiveTableState = () => {
   }, [sortKey, sortDirection, setSortKey, setSortDirection]);
 
   const clearFilters = useCallback(() => {
-    setSearchQuery('');
+    setSearchQuery([]);
     setSearchCategory(null);
     setPriorityFilter('');
     setClientFilter('');
@@ -98,7 +98,7 @@ export const useArchiveTableState = () => {
   }, [setSearchQuery, setSearchCategory, setPriorityFilter, setClientFilter, setUserFilter]);
 
   const hasActiveFilters = useMemo(() => {
-    return !!(searchQuery || searchCategory || priorityFilter || clientFilter || userFilter);
+    return !!(searchQuery.length > 0 || searchCategory || priorityFilter || clientFilter || userFilter);
   }, [searchQuery, searchCategory, priorityFilter, clientFilter, userFilter]);
 
   return {

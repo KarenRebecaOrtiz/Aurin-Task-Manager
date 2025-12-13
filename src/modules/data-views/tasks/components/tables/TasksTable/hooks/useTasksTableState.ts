@@ -203,7 +203,7 @@ export const useTasksTableState = ({
   }, [sortKey, sortDirection, setSortKey, setSortDirection]);
 
   const clearFilters = useCallback(() => {
-    setSearchQuery('');
+    setSearchQuery([]);
     setSearchCategory(null);
     setPriorityFilter('');
     setPriorityFilters([]);
@@ -214,7 +214,7 @@ export const useTasksTableState = ({
   }, [setSearchQuery, setSearchCategory, setPriorityFilter, setPriorityFilters, setStatusFilter, setStatusFilters, setClientFilter, setUserFilter]);
 
   const hasActiveFilters = useMemo(() => {
-    return !!(searchQuery || priorityFilter || priorityFilters.length > 0 || statusFilter || clientFilter || userFilter);
+    return !!(searchQuery.length > 0 || priorityFilter || priorityFilters.length > 0 || statusFilter || clientFilter || userFilter);
   }, [searchQuery, priorityFilter, priorityFilters, statusFilter, clientFilter, userFilter]);
 
   // Loading state

@@ -26,7 +26,7 @@ type ArchiveTableState = {
   filteredTasks: Task[];
   sortKey: string;
   sortDirection: 'asc' | 'desc';
-  searchQuery: string;
+  searchQuery: string[];
   searchCategory: 'task' | 'project' | 'member' | null;
   priorityFilter: string;
   priorityFilters: string[]; // New array for multiple priority filters
@@ -44,7 +44,7 @@ type ArchiveTableActions = {
   setFilteredTasks: (tasks: Task[]) => void;
   setSortKey: (key: string) => void;
   setSortDirection: (dir: 'asc' | 'desc') => void;
-  setSearchQuery: (query: string) => void;
+  setSearchQuery: (query: string[]) => void;
   setSearchCategory: (category: 'task' | 'project' | 'member' | null) => void;
   setPriorityFilter: (filter: string) => void;
   setPriorityFilters: (filters: string[]) => void; // New action for multiple priorities
@@ -64,7 +64,7 @@ export const archiveTableStore = createStore<ArchiveTableStore>()((set) => ({
   filteredTasks: [],
   sortKey: '',
   sortDirection: 'desc',
-  searchQuery: '',
+  searchQuery: [],
   searchCategory: null,
   priorityFilter: '',
   priorityFilters: [], // Initialize empty array for multiple priorities

@@ -1,0 +1,871 @@
+@use '@/app/styles/variables' as *;
+@use '@/app/styles/mixins' as *;
+
+// ============================================================================
+// CONTAINER
+// ============================================================================
+
+.container {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+// ============================================================================
+// TRIGGER (Input de búsqueda)
+// ============================================================================
+
+.trigger {
+  @include flex-center;
+  width: 100%;
+  height: 48px;
+  padding: $spacing-sm $spacing-lg;
+  padding-right: 80px; // Espacio para el shortcut hint
+  border-radius: $radius-lg;
+  border: 1px solid $color-border-subtle;
+  @include neomorphic-shadow(light);
+  @include typography(14px, $font-weight-medium, $color-text-primary);
+  cursor: text;
+  transition: $transition-base;
+  background: transparent;
+  text-align: left;
+
+  &::placeholder {
+    font-size: 14px;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  &:focus-within,
+  &.focused {
+    outline: none;
+    transform: translateY(-2px);
+    @include glassmorphism-hover;
+    @include neomorphic-shadow-hover(light);
+  }
+
+  :global(body.dark) & {
+    background: $color-bg-dark;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.53);
+
+    &:hover {
+      background: #27272a;
+      border-color: #52525b;
+      transform: translateY(-1px);
+      box-shadow: none;
+    }
+
+    &:focus-within,
+    &.focused {
+      background: #27272a;
+      border-color: #52525b;
+      transform: translateY(-2px);
+      box-shadow: none;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    height: 46px;
+    padding: $spacing-sm 16px;
+    padding-right: 70px;
+    font-size: 13px;
+  }
+
+  @media (max-width: 768px) {
+    height: 43px;
+    padding: $spacing-xs $spacing-md;
+    padding-right: 60px;
+    font-size: 12px;
+  }
+}
+
+.triggerContent {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.triggerIcon {
+  width: 16px;
+  height: 16px;
+  color: $color-text-secondary;
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.triggerPlaceholder {
+  @include typography(14px, $font-weight-normal, $color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.triggerShortcut {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.shortcutKey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  @include typography(11px, $font-weight-medium, $color-text-secondary);
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// ============================================================================
+// DROPDOWN PANEL
+// ============================================================================
+
+.panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-height: 480px;
+  overflow: hidden;
+  border-radius: $radius-xl;
+  border: 1px solid $color-border-subtle;
+  @include glassmorphism($color-bg-glass);
+  @include neomorphic-shadow(light);
+  display: flex;
+  flex-direction: column;
+
+  :global(body.dark) & {
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 70vh;
+    border-radius: $radius-xl $radius-xl 0 0;
+    border-bottom: none;
+  }
+}
+
+// ============================================================================
+// HEADER (SearchInput + Breadcrumb)
+// ============================================================================
+
+.header {
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+
+  :global(body.dark) & {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.searchInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  flex: 1;
+  height: 40px;
+  padding: 0 $spacing-md;
+  padding-left: 36px;
+  border: none;
+  background: transparent;
+  @include typography(14px, $font-weight-normal, $color-text-primary);
+
+  &:focus {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: $color-text-secondary;
+  }
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+  }
+}
+
+.searchInputIcon {
+  position: absolute;
+  left: $spacing-sm;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: $color-text-secondary;
+  pointer-events: none;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.searchHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: $spacing-sm;
+  @include typography(11px, $font-weight-normal, $color-text-secondary);
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+// ============================================================================
+// BREADCRUMB
+// ============================================================================
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm 0;
+  margin-top: $spacing-sm;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.breadcrumbItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 4px 8px;
+  border-radius: $radius-sm;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  @include typography(12px, $font-weight-medium, $color-text-secondary);
+  transition: $transition-base;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: $color-text-primary;
+  }
+
+  &.active {
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    &.active {
+      color: rgba(255, 255, 255, 0.9);
+    }
+  }
+}
+
+.breadcrumbSeparator {
+  color: $color-text-secondary;
+  font-size: 10px;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  cursor: pointer;
+  color: $color-text-secondary;
+  transition: $transition-base;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: $color-text-primary;
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  :global(body.dark) & {
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+// ============================================================================
+// CATEGORY CHIPS
+// ============================================================================
+
+.categoryChips {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-lg;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid $color-border-subtle;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  :global(body.dark) & {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.categoryChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid $color-border-subtle;
+  cursor: pointer;
+  @include typography(12px, $font-weight-medium, $color-text-secondary);
+  transition: $transition-base;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: $color-text-primary;
+  }
+
+  &.active {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+  }
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    &.active {
+      background: rgba(96, 165, 250, 0.2);
+      border-color: rgba(96, 165, 250, 0.4);
+      color: #60a5fa;
+    }
+  }
+}
+
+.categoryChipIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+// ============================================================================
+// CONTENT AREA
+// ============================================================================
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-sm 0;
+  @include crystallized-scrollbar;
+}
+
+// ============================================================================
+// SECTION
+// ============================================================================
+
+.section {
+  padding: $spacing-sm 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs $spacing-lg;
+  margin-bottom: $spacing-xs;
+}
+
+.sectionTitle {
+  @include typography(11px, $font-weight-semibold, $color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  align-items: center ;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.sectionCount {
+  @include typography(11px, $font-weight-normal, $color-text-secondary);
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+// ============================================================================
+// COMMAND ITEM
+// ============================================================================
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  padding: $spacing-md $spacing-lg;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: $transition-base;
+  text-align: left;
+
+  &:hover,
+  &.selected {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.08);
+  }
+
+  :global(body.dark) & {
+    &:hover,
+    &.selected {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &.selected {
+      background: rgba(96, 165, 250, 0.15);
+    }
+  }
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-md;
+  background: rgba(0, 0, 0, 0.04);
+  color: $color-text-secondary;
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+.itemAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.itemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitle {
+  @include typography(14px, $font-weight-medium, $color-text-primary);
+  white-space: nowrap;
+  margin-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.itemSubtitle {
+  @include typography(12px, $font-weight-normal, $color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.itemBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: rgba(59, 130, 246, 0.1);
+  @include typography(11px, $font-weight-semibold, #2563eb);
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    background: rgba(96, 165, 250, 0.2);
+    color: #60a5fa;
+  }
+}
+
+.itemMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.itemShortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  @include typography(10px, $font-weight-medium, $color-text-secondary);
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.itemChevron {
+  color: $color-text-secondary;
+  opacity: 0.4;
+  flex-shrink: 0;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// ============================================================================
+// ACTION ITEM (variant)
+// ============================================================================
+
+.itemAction {
+  &.danger {
+    .itemTitle {
+      color: #dc2626;
+    }
+
+    .itemIcon {
+      color: #dc2626;
+      background: rgba(220, 38, 38, 0.1);
+    }
+
+    :global(body.dark) & {
+      .itemTitle {
+        color: #f87171;
+      }
+
+      .itemIcon {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.15);
+      }
+    }
+  }
+
+  &.ai {
+    .itemIcon {
+      color: #8b5cf6;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15));
+    }
+
+    :global(body.dark) & {
+      .itemIcon {
+        color: #a78bfa;
+        background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(244, 114, 182, 0.2));
+      }
+    }
+  }
+}
+
+// ============================================================================
+// PRIORITY BADGE (dentro de items de tarea)
+// ============================================================================
+
+.priorityBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  @include typography(10px, $font-weight-semibold, white);
+
+  &.high {
+    background: #ef4444;
+  }
+
+  &.medium {
+    background: #f59e0b;
+  }
+
+  &.low {
+    background: #22c55e;
+  }
+}
+
+// ============================================================================
+// FOOTER (Keyboard hints)
+// ============================================================================
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-lg;
+  border-top: 1px solid $color-border-subtle;
+  background: rgba(0, 0, 0, 0.02);
+
+  :global(body.dark) & {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+  }
+}
+
+.footerHints {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+}
+
+.footerHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  @include typography(11px, $font-weight-normal, $color-text-secondary);
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.footerKey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  @include typography(10px, $font-weight-medium, $color-text-secondary);
+
+  :global(body.dark) & {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// ============================================================================
+// EMPTY STATE
+// ============================================================================
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl * 2;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-md;
+  opacity: 0.5;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.emptyTitle {
+  @include typography(14px, $font-weight-medium, $color-text-secondary);
+  margin-bottom: $spacing-xs;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.emptyDescription {
+  @include typography(12px, $font-weight-normal, $color-text-secondary);
+  max-width: 280px;
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+// ============================================================================
+// LOADING STATE
+// ============================================================================
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-lg;
+}
+
+.loadingItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+}
+
+.loadingSkeleton {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: $radius-sm;
+
+  &.circle {
+    border-radius: 50%;
+  }
+
+  :global(body.dark) & {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.06) 75%);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// ============================================================================
+// AI PROMPT MODE
+// ============================================================================
+
+.aiPromptMode {
+  padding: $spacing-lg;
+}
+
+.aiPromptHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.aiPromptIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-md;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15));
+  color: #8b5cf6;
+
+  :global(body.dark) & {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(244, 114, 182, 0.2));
+    color: #a78bfa;
+  }
+}
+
+.aiPromptTitle {
+  @include typography(16px, $font-weight-semibold, $color-text-primary);
+
+  :global(body.dark) & {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.aiSuggestions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}

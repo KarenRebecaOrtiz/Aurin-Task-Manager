@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { TaskSearchBar, type SearchCategory, type PriorityLevel, type StatusLevel } from '@/modules/data-views/components/shared/search';
+import { CommandPalette, type SearchCategory, type PriorityLevel, type StatusLevel } from '@/modules/command-palette';
 import { ViewSwitcher } from './ViewSwitcher';
 import { WorkspacesDropdown } from '@/components/ui/workspaces';
 import { ClientDialog } from '@/modules/client-crud/components/ClientDialog';
-// CreateWorkspaceDialog se conserva para futura feature de chats grupales de equipo
-// import { CreateWorkspaceDialog } from '@/modules/workspaces/components/CreateWorkspaceDialog';
+import ProfileCard from '@/modules/profile-card/components/ProfileCard';
+import { useTasksPageStore } from '@/stores/tasksPageStore';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import {
   useWorkspacesStore,
   ALL_WORKSPACES_ID,
@@ -42,17 +43,22 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   const [clientDialogMode, setClientDialogMode] = useState<'create' | 'edit'>('create');
   const [editingClientId, setEditingClientId] = useState<string | undefined>(undefined);
 
+  // Estado para ProfileCard
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(undefined);
+
   const { workspaces, selectedWorkspaceId, setWorkspacesFromClients, setSelectedWorkspace } = useWorkspacesStore();
 
   // Auth y datos del usuario
   const { isAdmin } = useAuth();
   const userId = useUserDataStore((state) => state.userData?.userId || '');
 
-  // Obtener clientes y tareas del store global (dataStore es la fuente de verdad)
-  const { allClients, tasks } = useDataStore(
+  // Obtener clientes, tareas y teams del store global (dataStore es la fuente de verdad)
+  const { allClients, tasks, teams } = useDataStore(
     useShallow((state) => ({
       allClients: state.clients,
       tasks: state.tasks,
+      teams: state.teams,
     }))
   );
 
@@ -115,12 +121,6 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
     setIsClientDialogOpen(true);
   }, []);
 
-  // Handle search - memoized to prevent infinite loops
-  const handleSearch = useCallback((query: string[], category: SearchCategory | null) => {
-    setSearchQuery(query);
-    setSearchCategory(category);
-  }, [setSearchQuery, setSearchCategory]);
-
   // Convert PriorityLevel[] to string[] for the store
   const handlePriorityFiltersChange = useCallback((priorities: PriorityLevel[]) => {
     onPriorityFiltersChange?.(priorities as string[]);
@@ -130,6 +130,54 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
   const handleStatusFiltersChange = useCallback((statuses: StatusLevel[]) => {
     onStatusFiltersChange?.(statuses);
   }, [onStatusFiltersChange]);
+
+  // Handle workspace selection from CommandPalette
+  const handleWorkspaceSelectFromPalette = useCallback((workspaceId: string | null) => {
+    setSelectedWorkspace(workspaceId || ALL_WORKSPACES_ID);
+  }, [setSelectedWorkspace]);
+
+  // Handle task selection from CommandPalette
+  const handleTaskSelect = useCallback((taskId: string) => {
+    // Abrir el sidebar de la tarea usando el store
+    const { openEditTask } = useTasksPageStore.getState();
+    openEditTask(taskId);
+  }, []);
+
+  // Handle edit task from CommandPalette
+  const handleEditTask = useCallback((taskId: string) => {
+    const { openEditTask } = useTasksPageStore.getState();
+    openEditTask(taskId);
+  }, []);
+
+  // Handle delete task from CommandPalette
+  const handleDeleteTask = useCallback((taskId: string) => {
+    const { openDeletePopup } = useTasksPageStore.getState();
+    openDeletePopup('task', taskId);
+  }, []);
+
+  // Handle member selection from CommandPalette - Abre ProfileCard
+  const handleMemberSelect = useCallback((memberId: string) => {
+    setSelectedMemberId(memberId);
+    setIsProfileOpen(true);
+  }, []);
+
+  // Handle profile close
+  const handleProfileClose = useCallback(() => {
+    setIsProfileOpen(false);
+    setSelectedMemberId(undefined);
+  }, []);
+
+  // Handle team selection from CommandPalette - Abre el chat del equipo
+  const handleTeamSelect = useCallback((teamId: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+
+    const client = allClients.find((c) => c.id === team.clientId);
+    const clientName = client?.name || 'Sin cuenta';
+
+    const { openTeamSidebar } = useSidebarStateStore.getState();
+    openTeamSidebar(team, clientName);
+  }, [teams, allClients]);
 
   return (
     <>
@@ -146,12 +194,17 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
               onEditWorkspace={isAdmin ? handleEditAccount : undefined}
             />
 
-            {/* Advanced Task Search Bar */}
-            <TaskSearchBar
-              onSearch={handleSearch}
+            {/* Enhanced Command Palette Search */}
+            <CommandPalette
               onPriorityFiltersChange={handlePriorityFiltersChange}
               onStatusFiltersChange={handleStatusFiltersChange}
-              placeholder="Buscar tareas, cuentas o miembros..."
+              onWorkspaceSelect={handleWorkspaceSelectFromPalette}
+              onMemberSelect={handleMemberSelect}
+              onTaskSelect={handleTaskSelect}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onTeamSelect={handleTeamSelect}
+              placeholder="Buscar proyectos, tareas o miembros..."
             />
           </div>
         </div>
@@ -167,6 +220,15 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
         mode={clientDialogMode}
         clientId={editingClientId}
       />
+
+      {/* Profile Card Dialog */}
+      {selectedMemberId && (
+        <ProfileCard
+          isOpen={isProfileOpen}
+          userId={selectedMemberId}
+          onClose={handleProfileClose}
+        />
+      )}
     </>
   );
 };

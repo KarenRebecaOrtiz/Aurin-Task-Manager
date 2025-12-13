@@ -92,6 +92,21 @@ interface Message {
   isLoading?: boolean; // Indicates if this message is a loading state (for AI operations)
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  memberIds: string[];
+  isPublic: boolean;
+  gradientId: string;
+  avatarUrl?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+  lastMessageAt?: string;
+  clientId: string;
+}
+
 interface DataStore {
   // Messages
   messages: { [key: string]: Message[] };
@@ -130,7 +145,16 @@ interface DataStore {
   deleteUser: (userId: string) => void;
   isLoadingUsers: boolean;
   setIsLoadingUsers: (loading: boolean) => void;
-  
+
+  // Teams
+  teams: Team[];
+  setTeams: (teams: Team[]) => void;
+  updateTeam: (teamId: string, updates: Partial<Team>) => void;
+  addTeam: (team: Team) => void;
+  deleteTeam: (teamId: string) => void;
+  isLoadingTeams: boolean;
+  setIsLoadingTeams: (loading: boolean) => void;
+
   // Global loading state
   isInitialLoadComplete: boolean;
   setIsInitialLoadComplete: (complete: boolean) => void;
@@ -140,14 +164,16 @@ interface DataStore {
     tasks: boolean;
     clients: boolean;
     users: boolean;
+    teams: boolean;
   };
-  setLoadingProgress: (progress: { tasks?: boolean; clients?: boolean; users?: boolean }) => void;
-  
+  setLoadingProgress: (progress: { tasks?: boolean; clients?: boolean; users?: boolean; teams?: boolean }) => void;
+
   // Cache management
   clearCache: () => void;
   getTaskById: (taskId: string) => Task | undefined;
   getClientById: (clientId: string) => Client | undefined;
   getUserById: (userId: string) => User | undefined;
+  getTeamById: (teamId: string) => Team | undefined;
   
   // UI State
   actionMenuState: {
@@ -372,7 +398,39 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     })),
   isLoadingUsers: true,
   setIsLoadingUsers: (loading) => set({ isLoadingUsers: loading }),
-  
+
+  // Teams
+  teams: [],
+  setTeams: (teams) => set((state) => {
+    // Optimization: avoid re-renders if content hasn't changed
+    const currentTeamsString = JSON.stringify(state.teams);
+    const newTeamsString = JSON.stringify(teams);
+
+    if (currentTeamsString === newTeamsString) {
+      return state;
+    }
+
+    return { teams };
+  }),
+  updateTeam: (teamId, updates) =>
+    set((state) => ({
+      teams: state.teams.map((team) =>
+        team.id === teamId
+          ? { ...team, ...updates, updatedAt: new Date().toISOString() }
+          : team
+      ),
+    })),
+  addTeam: (team) =>
+    set((state) => ({
+      teams: [...state.teams, team],
+    })),
+  deleteTeam: (teamId) =>
+    set((state) => ({
+      teams: state.teams.filter((team) => team.id !== teamId),
+    })),
+  isLoadingTeams: true,
+  setIsLoadingTeams: (loading) => set({ isLoadingTeams: loading }),
+
   // Global loading state
   isInitialLoadComplete: false,
   setIsInitialLoadComplete: (complete) => set({ isInitialLoadComplete: complete }),
@@ -382,9 +440,10 @@ export const useDataStore = create<DataStore>()((set, get) => ({
     tasks: false,
     clients: false,
     users: false,
+    teams: false,
   },
   setLoadingProgress: (progress) => set({ loadingProgress: { ...get().loadingProgress, ...progress } }),
-  
+
   // Cache management
   clearCache: () =>
     set({
@@ -392,19 +451,23 @@ export const useDataStore = create<DataStore>()((set, get) => ({
       tasks: [],
       clients: [],
       users: [],
+      teams: [],
       isLoadingTasks: true,
       isLoadingClients: true,
       isLoadingUsers: true,
+      isLoadingTeams: true,
       isInitialLoadComplete: false,
       loadingProgress: {
         tasks: false,
         clients: false,
         users: false,
+        teams: false,
       },
     }),
   getTaskById: (taskId) => get().tasks.find((task) => task.id === taskId),
   getClientById: (clientId) => get().clients.find((client) => client.id === clientId),
   getUserById: (userId) => get().users.find((user) => user.id === userId),
+  getTeamById: (teamId) => get().teams.find((team) => team.id === teamId),
   
   // UI State
   actionMenuState: {
@@ -448,10 +511,12 @@ export const useSortedMessages = (taskId: string) =>
 export const useTasks = () => useDataStore(useShallow((state) => state.tasks));
 export const useClients = () => useDataStore(useShallow((state) => state.clients));
 export const useUsers = () => useDataStore(useShallow((state) => state.users));
+export const useTeams = () => useDataStore(useShallow((state) => state.teams));
 
 export const useTasksLoading = () => useDataStore(useShallow((state) => state.isLoadingTasks));
 export const useClientsLoading = () => useDataStore(useShallow((state) => state.isLoadingClients));
 export const useUsersLoading = () => useDataStore(useShallow((state) => state.isLoadingUsers));
+export const useTeamsLoading = () => useDataStore(useShallow((state) => state.isLoadingTeams));
 export const useInitialLoadComplete = () => useDataStore(useShallow((state) => state.isInitialLoadComplete));
 
 // Helper to get filtered tasks - OPTIMIZADO
@@ -460,6 +525,15 @@ export const useFilteredTasks = (filterFn?: (task: Task) => boolean) =>
     useShallow((state) => {
       if (!filterFn) return state.tasks;
       return state.tasks.filter(filterFn);
+    })
+  );
+
+// Helper to get filtered teams - OPTIMIZADO
+export const useFilteredTeams = (filterFn?: (team: Team) => boolean) =>
+  useDataStore(
+    useShallow((state) => {
+      if (!filterFn) return state.teams;
+      return state.teams.filter(filterFn);
     })
   );
 

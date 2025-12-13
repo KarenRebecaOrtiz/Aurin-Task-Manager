@@ -10,12 +10,11 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { GradientAvatarSelector } from '../atoms';
 import { useTeamForm } from '../../hooks';
 import { teamService } from '../../services';
-import { useTeamsStore, useTeamById } from '../../stores';
 import { useDataStore } from '@/stores/dataStore';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import type { CreateTeamDialogProps } from '../../types';
-import { Lock, Globe, Users, Search, Check, Trash2, AlertTriangle } from 'lucide-react';
+import { Lock, Globe, Users, Search, Check, Trash2 } from 'lucide-react';
 import { useDialog } from '@/modules/dialogs/hooks/useDialog';
 import styles from './CreateTeamDialog.module.scss';
 
@@ -33,12 +32,28 @@ export function CreateTeamDialog({
   const { success: showSuccess, error: showError } = useSonnerToast();
   const { openConfirm } = useDialog();
 
-  // Get existing team if editing
-  const existingTeam = useTeamById(teamId || null);
-  const { updateTeam: updateTeamInStore, removeTeam } = useTeamsStore();
+  // Get teams, users and store actions from unified dataStore
+  const {
+    teams,
+    users,
+    updateTeam: updateTeamInStore,
+    deleteTeam: removeTeam,
+    addTeam,
+  } = useDataStore(
+    useShallow((state) => ({
+      teams: state.teams,
+      users: state.users,
+      updateTeam: state.updateTeam,
+      deleteTeam: state.deleteTeam,
+      addTeam: state.addTeam,
+    }))
+  );
 
-  // Get users from data store
-  const users = useDataStore(useShallow((state) => state.users));
+  // Get existing team if editing
+  const existingTeam = useMemo(() => {
+    if (!teamId) return null;
+    return teams.find((t) => t.id === teamId) || null;
+  }, [teams, teamId]);
 
   // Form hook
   const {
@@ -164,20 +179,14 @@ export function CreateTeamDialog({
 
     try {
       if (mode === 'create') {
-        // Debug: log formData before creating team
-        console.log('[CreateTeamDialog] Creating team with formData:', {
-          ...formData,
-          avatarUrl: formData.avatarUrl,
-          gradientId: formData.gradientId,
-        });
-
-        // No llamamos addTeam() porque la suscripción en tiempo real
-        // de TeamsView detectará el nuevo equipo automáticamente
-        await teamService.createTeam({
+        // Create team in Firebase and get the new team with ID
+        const newTeam = await teamService.createTeam({
           ...formData,
           clientId,
           createdBy: user.id,
         });
+        // Add to unified dataStore for immediate UI update
+        addTeam(newTeam);
         showSuccess(`El equipo "${formData.name}" se ha creado exitosamente.`);
         onTeamCreated?.();
       } else if (mode === 'edit' && teamId) {
@@ -203,6 +212,7 @@ export function CreateTeamDialog({
     mode,
     teamId,
     formData,
+    addTeam,
     updateTeamInStore,
     showSuccess,
     showError,

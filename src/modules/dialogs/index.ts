@@ -53,6 +53,7 @@ export { AddNoteDialog } from './components/variants/AddNoteDialog';
 export { ManualTimeDialog } from './components/variants/ManualTimeDialog';
 export { ShareDialog } from './components/variants/ShareDialog';
 export { ChatDialog } from './components/variants/ChatDialog';
+export { UsersDialog, CreateUserDialog } from './components/variants/UsersDialog';
 
 // Components - Atoms
 export {

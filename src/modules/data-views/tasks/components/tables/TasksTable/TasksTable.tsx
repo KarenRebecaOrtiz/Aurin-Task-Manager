@@ -19,7 +19,6 @@ import { TableSkeletonLoader } from '@/modules/data-views/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTasksTableState } from './hooks/useTasksTableState';
 import { useTasksTableDropdowns } from './hooks/useTasksTableDropdowns';
-import { useTaskFilters } from './hooks/useTaskFilters';
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
 
 // Stores
@@ -28,9 +27,7 @@ import { useTasksTableActionsStore } from '@/modules/data-views/tasks/stores/tas
 import { usePinnedTasksStore } from '@/modules/data-views/tasks/stores/pinnedTasksStore';
 
 // Utils and components
-import { normalizeStatus } from '@/modules/data-views/utils';
-import { StatusCell, PriorityCell, ClientCell, UserCell } from '@/modules/data-views/components/shared/cells';
-import { getLastActivityTimestamp } from '@/lib/taskUtils';
+import { StatusCell, PriorityCell, UserCell } from '@/modules/data-views/components/shared/cells';
 
 const cleanupTasksTableListeners = () => {
   // Placeholder for cleanup logic
@@ -63,20 +60,14 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const dropdowns = useTasksTableDropdowns();
 
   const {
-    openNewTask,
-    openNewClient,
     openEditTask,
     openDeleteTask,
-    openArchiveTable,
-    changeView
   } = useTasksTableActionsStore();
 
   // Get state and actions from the main tasks store using the vanilla API
   const archiveTask = useStore(tasksTableStore, state => state.archiveTask);
   const undoStack = useStore(tasksTableStore, state => state.undoStack);
   const showUndo = useStore(tasksTableStore, state => state.showUndo);
-  // This is a placeholder for the undo action, which should also be in the store
-  const unarchiveTask = () => console.log("Undo action needs to be implemented in the store");
 
 
   // ==================== LOCAL STATE & REFS ====================
@@ -91,18 +82,6 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     () => tableState.effectiveTasks.map(t => t.id).join(','),
     [tableState.effectiveTasks]
   );
-
-  const filters = useTaskFilters({
-    clients: tableState.effectiveClients,
-    users: tableState.effectiveUsers,
-    priorityFilter: tableState.priorityFilter,
-    clientFilter: tableState.clientFilter,
-    userFilter: tableState.userFilter,
-    setPriorityFilter: tableState.setPriorityFilter,
-    setClientFilter: tableState.setClientFilter,
-    setUserFilter: tableState.setUserFilter,
-    isAdmin,
-  });
 
   const {
     getClientName,
@@ -206,22 +185,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
     });
 
     return [...pinnedTasks, ...unpinnedTasks];
-  }, [tableState.filteredTasks, tableState.sortKey, tableState.sortDirection, tableState.effectiveClients, tableState.effectiveUsers, pinnedTaskIds]);
-
-  const handleViewButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    animateClick(e.currentTarget);
-    changeView('kanban');
-  }, [animateClick, changeView]);
-
-  const handleArchiveButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    animateClick(e.currentTarget);
-    openArchiveTable();
-  }, [animateClick, openArchiveTable]);
-
-  const handleNewTaskButtonClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    animateClick(e.currentTarget);
-    openNewTask();
-  }, [animateClick, openNewTask]);
+  }, [tableState.filteredTasks, tableState.sortKey, pinnedTaskIds]);
 
   const getRowClassName = useCallback((task: Task) => {
     if (pinnedTaskIds.includes(task.id)) {
@@ -338,9 +302,8 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   const handleUndoClick = useCallback(() => {
     const lastAction = undoStack[undoStack.length - 1];
     if (lastAction) {
-      // Call the undo action from the store (which needs to be created)
+      // TODO: Call the undo action from the store (which needs to be created)
       // unarchiveTask(lastAction.task.id);
-      console.log("Undo clicked for:", lastAction);
     }
   }, [undoStack]);
 
@@ -355,9 +318,10 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
   }, []);
 
   useEffect(() => {
+    const timeoutRef = undoTimeoutRef.current;
     return () => {
       cleanupTasksTableListeners();
-      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+      if (timeoutRef) clearTimeout(timeoutRef);
     };
   }, []);
 
@@ -408,7 +372,7 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         getRowClassName={getRowClassName}
         emptyStateType="tasks"
       />
-      {tableState.filteredTasks.length === 0 && (tableState.searchQuery || tableState.priorityFilters.length > 0 || tableState.statusFilters.length > 0 || tableState.clientFilter || tableState.userFilter) && (
+      {tableState.filteredTasks.length === 0 && (tableState.searchQuery.length > 0 || tableState.priorityFilters.length > 0 || tableState.statusFilters.length > 0 || tableState.clientFilter || tableState.userFilter) && (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
           <h3>No se encontraron tareas</h3>
           <p>Intenta ajustar los filtros de búsqueda</p>

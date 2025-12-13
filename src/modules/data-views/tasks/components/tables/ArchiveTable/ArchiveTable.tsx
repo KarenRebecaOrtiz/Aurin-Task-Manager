@@ -525,7 +525,7 @@ const ArchiveTable: React.FC<ArchiveTableProps> = memo(
 
     // ✅ NUEVO: Mostrar estado vacío elegante cuando no hay tareas archivadas
     const hasArchivedTasks = effectiveTasks.some(task => task.archived);
-    if (!hasArchivedTasks && !searchQuery) {
+    if (!hasArchivedTasks && searchQuery.length === 0) {
       return (
         <div className={styles.container}>
           <TasksHeader

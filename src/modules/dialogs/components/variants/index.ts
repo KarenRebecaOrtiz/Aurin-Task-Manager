@@ -9,3 +9,4 @@ export { ClientDialog } from './ClientDialog';
 export { AddNoteDialog } from './AddNoteDialog';
 export { ManualTimeDialog } from './ManualTimeDialog';
 export { ChatDialog } from './ChatDialog';
+export { UsersDialog, CreateUserDialog } from './UsersDialog';

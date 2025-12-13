@@ -384,7 +384,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               actionButtonRefs={actionButtonRefs}
               actionMenuRef={actionMenuRef}
               isTouchDevice={isTouchDevice}
-              clients={effectiveClients}
               normalizeStatus={normalizeStatus}
             />
           ))}
@@ -396,7 +395,6 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
               task={activeTask}
               isAdmin={isAdmin}
               isTouchDevice={isTouchDevice}
-              clients={effectiveClients}
               userId={userId}
             />
           ) : null}
