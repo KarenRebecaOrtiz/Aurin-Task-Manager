@@ -83,19 +83,22 @@ export const TeamChatDialog: React.FC<TeamChatDialogProps> = memo(({
   });
 
   // Create a pseudo-task object for useMessageActions compatibility
-  const pseudoTask = useMemo(() => ({
-    id: team.id,
-    clientId: team.clientId,
-    project: '',
-    name: team.name,
-    description: team.description || '',
-    status: 'active',
-    priority: 'medium',
-    startDate: team.createdAt,
-    endDate: '',
-    LeadedBy: [],
-    AssignedTo: team.memberIds,
-  }), [team]);
+  const pseudoTask = useMemo(() => {
+    if (!team) return null;
+    return {
+      id: team.id,
+      clientId: team.clientId,
+      project: '',
+      name: team.name,
+      description: team.description || '',
+      status: 'active',
+      priority: 'medium',
+      startDate: team.createdAt,
+      endDate: '',
+      LeadedBy: [],
+      AssignedTo: team.memberIds,
+    };
+  }, [team]);
 
   // Actions hook
   const {
@@ -225,7 +228,7 @@ export const TeamChatDialog: React.FC<TeamChatDialogProps> = memo(({
           size="lg"
           className={styles.dialogContent}
           showCloseButton={false}
-          closeOnOverlayClick={false}
+          closeOnOverlayClick={true}
         >
           {/* Accessible title for screen readers */}
           <VisuallyHidden>

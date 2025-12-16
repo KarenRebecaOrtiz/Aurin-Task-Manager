@@ -7,12 +7,19 @@
 // =================================================================
 
 .container {
+  position: relative;
   padding: $spacing-2xl;
   font-family: $font-family-primary;
   @include flex-column;
   gap: $spacing-lg;
   min-height: calc(100vh - 200px);
   border-radius: 50px;
+}
+
+.viewToggleWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: $spacing-md;
 }
 
 // ==============================================================

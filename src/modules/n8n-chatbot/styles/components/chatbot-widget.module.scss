@@ -8,18 +8,18 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background-color: #d0df00;
+  background-color: #b8c700;
   color: black;
-  box-shadow: 0 10px 25px rgba(208, 223, 0, 0.25);
+  box-shadow: 0 10px 25px rgba(184, 199, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   cursor: pointer;
 
-  :global(.light) & {
-    background-color: #b8c700;
-    box-shadow: 0 10px 25px rgba(184, 199, 0, 0.3);
+  :global(.dark) & {
+    background-color: #d0df00;
+    box-shadow: 0 10px 25px rgba(208, 223, 0, 0.25);
   }
 }
 
@@ -42,8 +42,9 @@
 .desktopContainer {
   position: fixed;
   z-index: 40;
-  background-color: #171717;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  background-color: #ffffff;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -54,10 +55,10 @@
   max-height: 80vh;
   border-radius: 16px;
 
-  :global(.light) & {
-    background-color: #ffffff;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-    border: 1px solid #e5e7eb;
+  :global(.dark) & {
+    background-color: #171717;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    border: none;
   }
 
   &.mobile {
@@ -66,22 +67,19 @@
     width: 100%;
     height: 100%;
     max-height: 100vh;
-
-    :global(.light) & {
-      border: none;
-    }
+    border: none;
   }
 }
 
 .responsiveDialog {
-  background-color: #171717;
+  background-color: #ffffff;
   display: flex;
   flex-direction: column;
   height: 100%;
   max-height: 80vh;
 
-  :global(.light) & {
-    background-color: #ffffff;
+  :global(.dark) & {
+    background-color: #171717;
   }
 
   @media (max-width: 768px) {

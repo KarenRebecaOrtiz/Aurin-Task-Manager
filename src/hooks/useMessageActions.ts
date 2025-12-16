@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Message, Task } from '@/types';
 
 interface UseMessageActionsProps {
-  task: Task;
+  task: Task | null;
   encryptMessage: (text: string) => Promise<{ encryptedData: string; nonce: string; tag: string; salt: string }>;
   addOptimisticMessage: (message: Message) => void;
   updateOptimisticMessage: (clientId: string, updates: Partial<Message>) => void;
@@ -26,7 +26,7 @@ export const useMessageActions = ({
     isAudio = false,
     audioUrl?: string,
   ) => {
-    if (!messageData.senderId || isSending) return;
+    if (!task || !messageData.senderId || isSending) return;
     setIsSending(true);
 
     const clientId = messageData.clientId || crypto.randomUUID();
@@ -86,10 +86,10 @@ export const useMessageActions = ({
     } finally {
       setIsSending(false);
     }
-  }, [task.id, isSending, encryptMessage, addOptimisticMessage, updateOptimisticMessage]);
+  }, [task?.id, isSending, encryptMessage, addOptimisticMessage, updateOptimisticMessage]);
 
   const editMessage = useCallback(async (messageId: string, newText: string) => {
-    if (!newText.trim()) {
+    if (!task || !newText.trim()) {
       throw new Error('El mensaje no puede estar vacío.');
     }
 
@@ -114,9 +114,10 @@ export const useMessageActions = ({
       // Error logging removed for production
       throw new Error('Error al editar el mensaje. Verifica que seas el autor del mensaje o intenta de nuevo.');
     }
-  }, [task.id, encryptMessage]);
+  }, [task?.id, encryptMessage]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
+    if (!task) return;
     try {
       // Debug logging removed for production
       const messageRef = doc(db, `tasks/${task.id}/messages`, messageId);
@@ -162,10 +163,10 @@ export const useMessageActions = ({
       // Error logging removed for production
       throw new Error('Error al eliminar el mensaje');
     }
-  }, [task.id]);
+  }, [task?.id]);
 
   const resendMessage = useCallback(async (message: Message) => {
-    if (isSending) {
+    if (!task || isSending) {
       return;
     }
 
@@ -217,10 +218,10 @@ export const useMessageActions = ({
     } finally {
       setIsSending(false);
     }
-  }, [task.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage, isSending]);
+  }, [task?.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage, isSending]);
 
   const markMessagesAsRead = useCallback(async (messageIds: string[]) => {
-    if (messageIds.length === 0) return;
+    if (!task || messageIds.length === 0) return;
 
     try {
       const updatePromises = messageIds.map(messageId =>
@@ -233,7 +234,7 @@ export const useMessageActions = ({
     } catch {
       // Error logging removed for production
     }
-  }, [task.id]);
+  }, [task?.id]);
 
   // Helper para crear timestamp con la hora actual del día seleccionado
   const getCurrentTimeTimestamp = (date: Date): Timestamp => {
@@ -303,6 +304,7 @@ export const useMessageActions = ({
     dateString?: string,
     comment?: string
   ) => {
+    if (!task) return;
     const timeMessageClientId = uuidv4();
     const commentClientId = uuidv4();
     const timeMessageTempId = `temp-time-${timeMessageClientId}`;
@@ -425,7 +427,7 @@ export const useMessageActions = ({
       
       throw new Error(`Error al añadir la entrada de tiempo: ${error instanceof Error ? error.message : 'Inténtalo de nuevo.'}`);
     }
-  }, [task.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage]);
+  }, [task?.id, encryptMessage, addOptimisticMessage, updateOptimisticMessage]);
 
   return {
     isSending,

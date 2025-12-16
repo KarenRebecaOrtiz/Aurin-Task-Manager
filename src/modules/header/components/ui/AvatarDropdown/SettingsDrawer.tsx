@@ -99,7 +99,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   return (
     <>
       <Drawer open={isOpen} onOpenChange={handleOpenChange}>
-        <DrawerContent className={styles.drawerContent}>
+        <DrawerContent compact className={styles.drawerContent}>
           <DrawerHeader className={styles.drawerHeader}>
             <DrawerTitle className={styles.drawerTitle}>Configuración</DrawerTitle>
           </DrawerHeader>

@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserDataStore } from '@/stores/userDataStore';
 import { KanbanSkeletonLoader, EmptyTableState } from '@/modules/data-views/components/shared';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
+import { ViewToggle } from '@/modules/data-views/components/ui/ViewToggle';
 import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { useTaskArchiving } from '@/modules/data-views/tasks/hooks/useTaskArchiving';
 import { useTasksCommon } from '@/modules/data-views/tasks/hooks/useTasksCommon';
@@ -77,6 +78,7 @@ export const cleanupTasksKanbanListeners = () => {
 };
 
 interface TasksKanbanProps {
+  currentView?: 'table' | 'kanban' | 'archive';
   onNewClientOpen?: () => void;
   onEditTaskOpen: (taskId: string) => void;
   onViewChange: (view: TaskView) => void;
@@ -85,6 +87,7 @@ interface TasksKanbanProps {
 }
 
 const TasksKanban: React.FC<TasksKanbanProps> = ({
+  currentView = 'kanban',
   onNewClientOpen,
   onEditTaskOpen,
   onViewChange,
@@ -354,6 +357,13 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({
         onPriorityFiltersChange={setPriorityFilters}
         currentView="kanban"
       />
+      {/* View Toggle - Below header */}
+      <div className={styles.viewToggleWrapper}>
+        <ViewToggle
+          currentView={currentView as 'table' | 'kanban'}
+          onViewChange={onViewChange}
+        />
+      </div>
 
       <DndContext
         collisionDetection={collisionDetectionStrategy}

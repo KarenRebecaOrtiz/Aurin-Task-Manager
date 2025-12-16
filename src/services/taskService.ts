@@ -12,7 +12,6 @@ import { get, set } from 'idb-keyval';
 import { Task } from '@/types';
 import {
   globalRequestCache,
-  generateCacheKey,
   createRequestMetrics,
   type RequestMetrics,
 } from '@/shared/utils/request-cache';
@@ -21,9 +20,6 @@ import {
   addRejectedIntent,
   addRetryAction,
   addContext,
-  createHttpError,
-  type ErrorIntent,
-  type RetryAction,
 } from '@/shared/utils/error-metadata';
 import { useDataStore } from '@/stores/dataStore';
 

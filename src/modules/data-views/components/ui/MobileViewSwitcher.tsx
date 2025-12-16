@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { CirclePlus, Bot } from 'lucide-react';
-import { List } from '@/components/animate-ui/icons/list';
-import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard';
+import { CirclePlus, Bot, ClipboardList, Users } from 'lucide-react';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useChatbotControl } from '@/modules/n8n-chatbot';
@@ -15,14 +13,16 @@ import styles from './MobileViewSwitcher.module.scss';
 
 // Route mapping for prefetch
 const VIEW_ROUTES = {
-  table: '/dashboard/tasks',
-  kanban: '/dashboard/kanban',
+  tasks: '/dashboard/tasks',
   archive: '/dashboard/archive',
+  teams: '/dashboard/teams',
 } as const;
 
+type ViewType = 'tasks' | 'archive' | 'teams';
+
 interface MobileViewSwitcherProps {
-  currentView?: 'table' | 'kanban' | 'archive';
-  onViewChange?: (view: 'table' | 'kanban' | 'archive') => void;
+  currentView?: ViewType;
+  onViewChange?: (view: ViewType) => void;
 }
 
 interface MobileControlProps {
@@ -66,20 +66,21 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
 
   // 🚀 PREFETCH: Preload all view routes on mount for instant navigation
   useEffect(() => {
-    router.prefetch(VIEW_ROUTES.table);
-    router.prefetch(VIEW_ROUTES.kanban);
+    router.prefetch(VIEW_ROUTES.tasks);
     router.prefetch(VIEW_ROUTES.archive);
+    router.prefetch(VIEW_ROUTES.teams);
   }, [router]);
 
   // Determine current view from pathname if not provided
-  const getCurrentView = (): 'table' | 'kanban' | 'archive' => {
+  const getCurrentView = useCallback((): ViewType => {
     if (currentView) return currentView;
-    if (pathname.includes('/kanban')) return 'kanban';
     if (pathname.includes('/archive')) return 'archive';
-    return 'table';
-  };
+    if (pathname.includes('/teams')) return 'teams';
+    // Both /tasks and /kanban are part of "tasks" section now
+    return 'tasks';
+  }, [currentView, pathname]);
 
-  const [activeView, setActiveView] = useState<'table' | 'kanban' | 'archive'>(getCurrentView());
+  const [activeView, setActiveView] = useState<ViewType>(getCurrentView());
 
   // Sync with pathname changes
   useEffect(() => {
@@ -87,24 +88,42 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
     if (newView !== activeView) {
       setActiveView(newView);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, getCurrentView, activeView]);
 
-  const handleViewChange = (view: 'table' | 'kanban' | 'archive') => {
+  const handleViewChange = useCallback((view: ViewType) => {
     setActiveView(view);
 
     if (onViewChange) {
       onViewChange(view);
     } else {
-      // 🚀 PERFORMANCE: Use window.history.pushState for instant navigation without remount
       const route = VIEW_ROUTES[view];
       if (route) {
-        window.history.pushState(null, '', route);
-        // Trigger popstate event for DataViewsContainer to detect change
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        // Teams is a separate page, use router.push for full navigation
+        // Also use router.push when navigating FROM teams to other views
+        const isNavigatingToOrFromTeams = view === 'teams' || activeView === 'teams';
+        if (isNavigatingToOrFromTeams) {
+          router.push(route);
+        } else {
+          // 🚀 PERFORMANCE: Use window.history.pushState for instant navigation without remount
+          window.history.pushState(null, '', route);
+          // Trigger popstate event for DataViewsContainer to detect change
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
       }
     }
-  };
+  }, [onViewChange, activeView, router]);
+
+  const handleTasksClick = useCallback(() => {
+    handleViewChange('tasks');
+  }, [handleViewChange]);
+
+  const handleTeamsClick = useCallback(() => {
+    handleViewChange('teams');
+  }, [handleViewChange]);
+
+  const handleArchiveClick = useCallback(() => {
+    handleViewChange('archive');
+  }, [handleViewChange]);
 
   // Don't render on server or if not mounted
   if (!mounted || typeof window === 'undefined') {
@@ -116,22 +135,22 @@ export const MobileViewSwitcher: React.FC<MobileViewSwitcherProps> = ({ currentV
       <nav className={styles.mobileNav}>
         <div className={styles.navContainer}>
           <MobileControl
-            icon={<List animateOnHover />}
-            label="Tabla"
-            isActive={activeView === 'table'}
-            onClick={() => handleViewChange('table')}
+            icon={<ClipboardList />}
+            label="Tareas"
+            isActive={activeView === 'tasks'}
+            onClick={handleTasksClick}
           />
           <MobileControl
-            icon={<LayoutDashboard animateOnHover />}
-            label="Kanban"
-            isActive={activeView === 'kanban'}
-            onClick={() => handleViewChange('kanban')}
+            icon={<Users />}
+            label="Teams"
+            isActive={activeView === 'teams'}
+            onClick={handleTeamsClick}
           />
           <MobileControl
             icon={<Unplug animateOnHover />}
             label="Archivo"
             isActive={activeView === 'archive'}
-            onClick={() => handleViewChange('archive')}
+            onClick={handleArchiveClick}
           />
           <MobileControl
             icon={<Bot />}

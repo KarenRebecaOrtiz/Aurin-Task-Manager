@@ -199,11 +199,10 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
           </VisuallyHidden>
 
           {/* Header */}
-          <DrawerHeader className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 pb-0">
+          <DrawerHeader className="flex-shrink-0 pb-0">
             <ChatHeader
               task={task}
               clientName={clientName || clientData?.name || 'Cliente'}
-              users={[]}
               userId={userId}
               userName={userName}
               onOpenManualTimeEntry={isTeamChat ? undefined : handleOpenManualTimeEntry}
@@ -266,7 +265,7 @@ const MobileChatDrawer: React.FC<ChatSidebarProps> = memo(({
           </div>
 
           {/* Input Footer */}
-          <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex-shrink-0">
             <InputChat
               taskId={task.id}
               userId={userId}

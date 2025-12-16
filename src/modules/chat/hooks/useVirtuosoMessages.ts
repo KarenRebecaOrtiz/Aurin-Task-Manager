@@ -73,8 +73,7 @@ export const useVirtuosoMessages = ({
       if (msg.encrypted && decryptMessage) {
         try {
           decryptedText = await decryptMessage(msg.encrypted);
-        } catch (error) {
-          console.error('[useVirtuosoMessages] Error decrypting:', error);
+        } catch {
         }
       }
 
@@ -162,7 +161,7 @@ export const useVirtuosoMessages = ({
   const initialLoad = useCallback(async () => {
     if (!taskId || !isInitialLoad) return;
 
-    console.log('[useVirtuosoMessages] Initial load for task:', taskId);
+  // ...
     setIsLoadingMore(true);
 
     try {
@@ -182,8 +181,8 @@ export const useVirtuosoMessages = ({
 
       // Track processed IDs
       sorted.forEach((msg) => processedIdsRef.current.add(msg.id));
-    } catch (error) {
-      console.error('[useVirtuosoMessages] Error loading initial messages:', error);
+    } catch {
+      // ...
     } finally {
       setIsLoadingMore(false);
       setIsInitialLoad(false);
@@ -196,18 +195,13 @@ export const useVirtuosoMessages = ({
    */
   const loadMoreMessages = useCallback(async () => {
     if (isLoadingRef.current || !hasMore || !taskId) {
-      console.log('[useVirtuosoMessages] Skipping loadMore:', {
-        isLoading: isLoadingRef.current,
-        hasMore,
-        taskId,
-      });
       return;
     }
 
     isLoadingRef.current = true;
     setIsLoadingMore(true);
 
-    console.log('[useVirtuosoMessages] Loading more messages...');
+  // ...
 
     try {
       const { messages: olderMessages, lastDoc: newLastDoc } =
@@ -241,8 +235,8 @@ export const useVirtuosoMessages = ({
       if (olderMessages.length < pageSize) {
         setHasMore(false);
       }
-    } catch (error) {
-      console.error('[useVirtuosoMessages] Error loading more messages:', error);
+    } catch {
+      // ...
     } finally {
       isLoadingRef.current = false;
       setIsLoadingMore(false);
@@ -259,7 +253,7 @@ export const useVirtuosoMessages = ({
       return;
     }
 
-    console.log('[useVirtuosoMessages] Setting up real-time listener for:', taskId);
+  // ...
 
     // Limpiar listener anterior
     if (unsubscribeRef.current) {
@@ -282,14 +276,12 @@ export const useVirtuosoMessages = ({
           if (change.type === 'added') {
             // Verificar duplicación TANTO en ref como en array actual
             if (processedIdsRef.current.has(messageData.id)) {
-              console.log('[useVirtuosoMessages] Skipping duplicate message:', messageData.id);
               continue;
             }
 
             // Doble check: verificar si ya existe en el array
             setMessages((prev) => {
               if (prev.some(msg => msg.id === messageData.id)) {
-                console.log('[useVirtuosoMessages] Message already in array:', messageData.id);
                 return prev;
               }
 
@@ -315,8 +307,8 @@ export const useVirtuosoMessages = ({
           }
         }
       },
-      (error) => {
-        console.error('[useVirtuosoMessages] Snapshot error:', error);
+      (_error) => {
+        // ...
       }
     );
 

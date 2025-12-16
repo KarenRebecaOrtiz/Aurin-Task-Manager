@@ -2,26 +2,24 @@
 
 .inputContainer {
   padding: 12px;
-  background-color: #171717;
 
-  :global(.light) & {
-    background-color: #ffffff;
-    border-top: 1px solid #e5e7eb;
+  :global(.dark) & {
+    background-color: #171717;
+    border-top: none;
   }
 }
 
 .inputWrapper {
   border-radius: 24px;
-  border: 1px solid #444444;
-  background-color: #1F2023;
+  border: 1px solid #d1d5db;
   padding: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 
-  :global(.light) & {
-    border-color: #d1d5db;
-    background-color: #f9fafb;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  :global(.dark) & {
+    border-color: #444444;
+    background-color: #1F2023;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.24);
   }
 
   &.isRecording {
@@ -29,10 +27,10 @@
   }
 
   &.isDragging {
-    border-color: rgba(208, 223, 0, 0.7);
+    border-color: rgba(140, 160, 0, 0.7);
 
-    :global(.light) & {
-      border-color: rgba(140, 160, 0, 0.7);
+    :global(.dark) & {
+      border-color: rgba(208, 223, 0, 0.7);
     }
   }
 }
@@ -83,23 +81,24 @@
       gap: 8px;
       padding: 8px 12px;
       border-radius: 12px;
-      background-color: #262626;
+      background-color: #f3f4f6;
+      border: 1px solid #e5e7eb;
 
-      :global(.light) & {
-        background-color: #f3f4f6;
-        border: 1px solid #e5e7eb;
+      :global(.dark) & {
+        background-color: #262626;
+        border: none;
       }
 
       .fileName {
         font-size: 14px;
-        color: #d4d4d4;
+        color: #374151;
         max-width: 150px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
 
-        :global(.light) & {
-          color: #374151;
+        :global(.dark) & {
+          color: #d4d4d4;
         }
       }
 
@@ -109,18 +108,18 @@
         background: transparent;
         border: none;
         cursor: pointer;
-        color: #9ca3af;
+        color: #6b7280;
 
         &:hover {
-          background-color: #404040;
+          background-color: #e5e7eb;
 
-          :global(.light) & {
-            background-color: #e5e7eb;
+          :global(.dark) & {
+            background-color: #404040;
           }
         }
 
-        :global(.light) & {
-          color: #6b7280;
+        :global(.dark) & {
+          color: #9ca3af;
         }
       }
     }
@@ -144,21 +143,17 @@
     background: transparent;
     padding: 12px;
     font-size: 16px;
-    color: #f3f4f6;
+    color: #111827;
     min-height: 44px;
     max-height: 240px;
     resize: none;
 
-    :global(.light) & {
-      color: #111827;
+    :global(.dark) & {
+      color: #f3f4f6;
     }
 
     &::placeholder {
       color: #9ca3af;
-
-      :global(.light) & {
-        color: #9ca3af;
-      }
     }
 
     &:focus-visible {
@@ -181,11 +176,11 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #444444;
+      background: #d1d5db;
       border-radius: 3px;
 
-      :global(.light) & {
-        background: #d1d5db;
+      :global(.dark) & {
+        background: #444444;
       }
     }
   }
@@ -217,7 +212,7 @@
   display: flex;
   height: 32px;
   width: 32px;
-  color: #9ca3af;
+  color: #6b7280;
   cursor: pointer;
   align-items: center;
   justify-content: center;
@@ -226,23 +221,23 @@
   background: transparent;
   border: none;
 
-  &:hover {
-    background-color: rgba(156, 163, 175, 0.3);
-    color: #d1d5db;
+  :global(.dark) & {
+    color: #9ca3af;
+  }
 
-    :global(.light) & {
-      background-color: rgba(107, 114, 128, 0.15);
-      color: #374151;
+  &:hover {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: #374151;
+
+    :global(.dark) & {
+      background-color: rgba(156, 163, 175, 0.3);
+      color: #d1d5db;
     }
   }
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.5;
-  }
-
-  :global(.light) & {
-    color: #6b7280;
   }
 
   input {
@@ -266,19 +261,19 @@
   border: 1px solid transparent;
   height: 32px;
   background: transparent;
-  color: #9ca3af;
+  color: #6b7280;
   cursor: pointer;
 
-  &:hover {
-    color: #d1d5db;
-
-    :global(.light) & {
-      color: #374151;
-    }
+  :global(.dark) & {
+    color: #9ca3af;
   }
 
-  :global(.light) & {
-    color: #6b7280;
+  &:hover {
+    color: #374151;
+
+    :global(.dark) & {
+      color: #d1d5db;
+    }
   }
 
   &.active {
@@ -368,49 +363,49 @@
     color: #ef4444;
 
     &:hover {
-      background-color: rgba(156, 163, 175, 0.3);
+      background-color: rgba(239, 68, 68, 0.1);
       color: #f87171;
 
-      :global(.light) & {
-        background-color: rgba(239, 68, 68, 0.1);
+      :global(.dark) & {
+        background-color: rgba(156, 163, 175, 0.3);
       }
     }
   }
 
   &.hasContent {
-    background-color: white;
-    color: #1F2023;
+    background-color: #d0df00;
+    color: #000000;
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.8);
+      background-color: #b8c700;
     }
 
-    :global(.light) & {
-      background-color: #d0df00;
-      color: #000000;
+    :global(.dark) & {
+      background-color: white;
+      color: #1F2023;
 
       &:hover {
-        background-color: #b8c700;
+        background-color: rgba(255, 255, 255, 0.8);
       }
     }
   }
 
   &.empty {
     background: transparent;
-    color: #9ca3af;
+    color: #6b7280;
 
-    &:hover {
-      background-color: rgba(156, 163, 175, 0.3);
-      color: #d1d5db;
-
-      :global(.light) & {
-        background-color: rgba(107, 114, 128, 0.15);
-        color: #374151;
-      }
+    :global(.dark) & {
+      color: #9ca3af;
     }
 
-    :global(.light) & {
-      color: #6b7280;
+    &:hover {
+      background-color: rgba(107, 114, 128, 0.15);
+      color: #374151;
+
+      :global(.dark) & {
+        background-color: rgba(156, 163, 175, 0.3);
+        color: #d1d5db;
+      }
     }
   }
 
@@ -423,13 +418,13 @@
 // Recording UI Styles
 .recordingUI {
   padding: 12px;
-  background: rgba(139, 92, 246, 0.05);
+  background: rgba(139, 92, 246, 0.08);
   border-radius: 12px;
   margin-bottom: 8px;
   border: 1px solid rgba(139, 92, 246, 0.2);
 
-  :global(.light) & {
-    background: rgba(139, 92, 246, 0.08);
+  :global(.dark) & {
+    background: rgba(139, 92, 246, 0.05);
   }
 }
 
@@ -456,11 +451,11 @@
 
 .recordingText {
   font-size: 14px;
-  color: #d1d5db;
+  color: #374151;
   font-weight: 500;
 
-  :global(.light) & {
-    color: #374151;
+  :global(.dark) & {
+    color: #d1d5db;
   }
 }
 

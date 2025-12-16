@@ -35,60 +35,30 @@ const DrawerOverlay = React.forwardRef<
 ))
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
+interface DrawerContentProps extends React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> {
+  compact?: boolean
+}
+
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => {
-  const [shouldExpand, setShouldExpand] = React.useState(false)
-  const contentRef = React.useRef<HTMLDivElement>(null)
-
-  // Check if content exceeds 30% of viewport height
-  React.useEffect(() => {
-    const checkContentHeight = () => {
-      if (contentRef.current) {
-        const viewportHeight = window.innerHeight
-        const threshold = viewportHeight * 0.3
-        const contentHeight = contentRef.current.scrollHeight
-        setShouldExpand(contentHeight > threshold)
-      }
-    }
-
-    // Initial check with delay to ensure content is rendered
-    const timeoutId = setTimeout(checkContentHeight, 50)
-
-    // Re-check on resize
-    window.addEventListener('resize', checkContentHeight)
-
-    // Observe content changes
-    const resizeObserver = new ResizeObserver(checkContentHeight)
-    if (contentRef.current) {
-      resizeObserver.observe(contentRef.current)
-    }
-
-    return () => {
-      clearTimeout(timeoutId)
-      window.removeEventListener('resize', checkContentHeight)
-      resizeObserver.disconnect()
-    }
-  }, [children])
-
+  DrawerContentProps
+>(({ className, children, compact = false, ...props }, ref) => {
   return (
     <DrawerPortal>
       <DrawerOverlay />
       <DrawerPrimitive.Content
         ref={ref}
-        className={cn(styles.content, className)}
-        style={{
-          // Si el contenido supera el 30vh, expande al 90vh, sino usa auto (fit-content)
-          height: shouldExpand ? '90vh' : 'auto',
-          maxHeight: '96vh',
-        }}
+        className={cn(
+          styles.content,
+          compact && styles.contentCompact,
+          className
+        )}
         {...props}
       >
         <div className={styles.handleContainer}>
           <div className={styles.handle} />
         </div>
-        <div ref={contentRef} className={styles.innerContainer}>
+        <div className={styles.innerContainer}>
           {children}
         </div>
       </DrawerPrimitive.Content>

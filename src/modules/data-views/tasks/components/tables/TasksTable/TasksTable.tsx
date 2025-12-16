@@ -14,6 +14,7 @@ import { Folder } from 'lucide-react';
 import { TasksHeader } from '@/modules/data-views/components/ui/TasksHeader';
 import { NotesWrapper } from '@/modules/data-views/components/ui/NotesWrapper';
 import { TableSkeletonLoader } from '@/modules/data-views/components/shared';
+import { ViewToggle } from '@/modules/data-views/components/ui/ViewToggle';
 
 // Hooks
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,12 +38,16 @@ interface TasksTableProps {
   externalTasks?: Task[];
   externalClients?: Client[];
   externalUsers?: User[];
+  currentView?: 'table' | 'kanban' | 'archive';
+  onViewChange?: (view: 'table' | 'kanban') => void;
 }
 
 const TasksTable: React.FC<TasksTableProps> = memo(({
   externalTasks,
   externalClients,
   externalUsers,
+  currentView = 'table',
+  onViewChange,
 }) => {
   // ✅ Obtener userId desde userDataStore (Single Source of Truth)
   const userId = useUserDataStore((state) => state.userData?.userId || '');
@@ -360,6 +365,15 @@ const TasksTable: React.FC<TasksTableProps> = memo(({
         onStatusFiltersChange={tableState.setStatusFilters}
         currentView="table"
       />
+      {/* View Toggle - Below header */}
+      {onViewChange && (
+        <div className={styles.viewToggleWrapper}>
+          <ViewToggle
+            currentView={currentView as 'table' | 'kanban'}
+            onViewChange={onViewChange}
+          />
+        </div>
+      )}
       <Table
         key={`tasks-table-${effectiveTasksIds}-${tableState.filteredTasks.length}`}
         data={sortedTasks}

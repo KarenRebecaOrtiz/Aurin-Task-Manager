@@ -277,7 +277,18 @@
   }
 
   .memberAvatars {
-    display: none; // Hide on mobile to save space
+    padding-right: 2rem;
+  }
+
+  .memberAvatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  .moreMembers {
+    width: 24px;
+    height: 24px;
+    font-size: 0.5625rem;
   }
 
   .dialogFooter {

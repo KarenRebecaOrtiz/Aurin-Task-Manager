@@ -201,16 +201,14 @@ export class FirebaseService {
       const cached = chatCache.get(taskId);
 
       if (cached) {
-        console.log(`[FirebaseService] ⚡ Cache HIT: Returning ${cached.messages.length} cached messages`);
         return {
           messages: cached.messages,
           lastDoc: cached.lastDoc,
         };
       }
-
-      console.log('[FirebaseService] ❌ Cache MISS: Fetching from Firestore');
+      // ...
     } else {
-      console.log('[FirebaseService] Pagination request: Fetching older messages from Firestore');
+      // ...
     }
 
     // Fetch desde Firestore
@@ -236,8 +234,8 @@ export class FirebaseService {
     // ✅ Cachear solo la carga inicial
     if (!lastDoc) {
       const hasMore = messages.length >= pageSize;
-      chatCache.set(taskId, messages, lastVisible, hasMore, 0);
-      console.log(`[FirebaseService] Cached ${messages.length} messages for task ${taskId}`);
+  chatCache.set(taskId, messages, lastVisible, hasMore, 0);
+  // ...
     }
 
     return { messages, lastDoc: lastVisible };

@@ -68,12 +68,11 @@ class SimpleChatCache {
     // Verificar si expiró
     const age = Date.now() - entry.timestamp;
     if (age > this.TTL_MS) {
-      console.log(`[SimpleChatCache] Cache expired for task ${taskId} (age: ${Math.round(age / 1000)}s)`);
       this.cache.delete(taskId);
       return null;
     }
 
-    console.log(`[SimpleChatCache] ⚡ Cache HIT for task ${taskId} (${entry.messages.length} messages)`);
+  // ...
     return entry;
   }
 
@@ -101,7 +100,7 @@ class SimpleChatCache {
       timestamp: Date.now(),
     });
 
-    console.log(`[SimpleChatCache] Cached ${messages.length} messages for task ${taskId}`);
+  // ...
   }
 
   /**
@@ -145,10 +144,8 @@ class SimpleChatCache {
    * @param taskId - ID de la tarea
    */
   invalidate(taskId: string): void {
-    const deleted = this.cache.delete(taskId);
-    if (deleted) {
-      console.log(`[SimpleChatCache] Invalidated cache for task ${taskId}`);
-    }
+  this.cache.delete(taskId);
+  // ...
   }
 
   /**
@@ -156,9 +153,8 @@ class SimpleChatCache {
    * Útil para logout o cambio de usuario
    */
   clear(): void {
-    const size = this.cache.size;
-    this.cache.clear();
-    console.log(`[SimpleChatCache] Cleared entire cache (${size} entries)`);
+  this.cache.clear();
+  // ...
   }
 
   /**
@@ -180,9 +176,7 @@ class SimpleChatCache {
       }
     }
 
-    if (removed > 0) {
-      console.log(`[SimpleChatCache] Cleaned ${removed} expired entries`);
-    }
+  // ...
 
     return removed;
   }
@@ -280,7 +274,7 @@ export function saveScrollBeforeSwitch(
   const scrollY = scrollContainer.scrollTop;
   chatCache.updateScrollPosition(taskId, scrollY);
 
-  console.log(`[SimpleChatCache] Saved scroll position ${scrollY}px for task ${taskId}`);
+  // ...
 }
 
 /**
@@ -304,7 +298,7 @@ export function restoreScrollPosition(
   // Usar requestAnimationFrame para asegurar que el DOM se actualizó
   requestAnimationFrame(() => {
     scrollContainer.scrollTop = scrollY;
-    console.log(`[SimpleChatCache] Restored scroll position to ${scrollY}px`);
+  // ...
   });
 }
 

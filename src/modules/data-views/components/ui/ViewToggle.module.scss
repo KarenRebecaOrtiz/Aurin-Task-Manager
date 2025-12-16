@@ -1,0 +1,57 @@
+.toggleGroup {
+  display: inline-flex;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 2px;
+
+  :global(body.dark) & {
+    background: #27272a;
+  }
+}
+
+.toggleItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: #374151;
+  }
+
+  :global(body.dark) & {
+    color: #a1a1aa;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e4e4e7;
+    }
+  }
+}
+
+.toggleItem.active {
+  background: #ffffff;
+  color: #09090b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  :global(body.dark) & {
+    background: #3f3f46;
+    color: #fafafa;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+}

@@ -64,15 +64,53 @@
 .grid {
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
+  justify-content: flex-start;
+  align-items: center;
   gap: 10px;
+  padding: 20px 10px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+
+  // Hide last items progressively on smaller viewports
+  // Starting at 650px, hide one more avatar every 80px decrease
+  @media (max-width: 650px) {
+    .avatarButton:nth-child(n + 11) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 570px) {
+    .avatarButton:nth-child(n + 10) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 490px) {
+    .avatarButton:nth-child(n + 9) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 410px) {
+    .avatarButton:nth-child(n + 8) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 330px) {
+    .avatarButton:nth-child(n + 7) {
+      display: none;
+    }
+  }
 }
 
 .avatarButton {
   position: relative;
-  aspect-ratio: 1;
-  width: 100%;
-  max-width: 45px;
+  aspect-ratio: 1 / 1;
+  width: 45px;
+  min-width: 45px;
+  height: 45px;
+  flex-shrink: 0;
   overflow: hidden;
   border-radius: 50%;
   border: none;

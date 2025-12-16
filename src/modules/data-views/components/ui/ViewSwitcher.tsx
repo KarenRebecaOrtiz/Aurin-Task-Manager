@@ -4,9 +4,11 @@ import React from 'react';
 import { MobileViewSwitcher } from './MobileViewSwitcher';
 import { DesktopFloatingNav } from './DesktopFloatingNav';
 
+type ViewType = 'tasks' | 'archive' | 'teams';
+
 interface ViewSwitcherProps {
-  currentView?: 'table' | 'kanban' | 'archive';
-  onViewChange?: (view: 'table' | 'kanban' | 'archive') => void;
+  currentView?: ViewType;
+  onViewChange?: (view: ViewType) => void;
 }
 
 export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ currentView, onViewChange }) => {

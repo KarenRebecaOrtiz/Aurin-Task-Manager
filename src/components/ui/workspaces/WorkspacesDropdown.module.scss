@@ -22,17 +22,17 @@
   color: #0F172A;
   cursor: pointer;
   transition: $transition-base;
-  background: rgba(255, 255, 255, 0.8);
+  background: #ffffff;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px) scale(1.01);
-    background: rgb(15, 15, 15);
-    border: 1px solid rgba(255, 255, 255, 0.0509803922);
+    background: #f8fafc;
+    border-color: #cbd5e1;
   }
 
   &:active:not(:disabled) {
     transform: scale(0.98);
-    background: rgba(241, 245, 249, 0.6);
+    background: #f1f5f9;
     @include neomorphic-inset(light);
   }
 
@@ -43,18 +43,20 @@
 
   :global(.dark) & {
     background: rgb(15, 15, 15);
-    border: 1px solid rgba(255, 255, 255, 0.0509803922);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
     color: #e5e5e5;
 
     &:hover:not(:disabled) {
-      background: #333333;
-      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px) scale(1.01);
+      background: #262626;
+      border-color: rgba(255, 255, 255, 0.15);
       box-shadow: none;
     }
 
     &:active:not(:disabled) {
-      background: #262626;
+      transform: scale(0.98);
+      background: #1a1a1a;
       box-shadow: none;
     }
   }

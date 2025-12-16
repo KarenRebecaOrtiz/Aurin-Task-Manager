@@ -123,7 +123,7 @@ export default function DataViewsContainer() {
       {/* Table View - Lazy mounted, hidden when not active */}
       {mountedViews.has('table') && (
         <div style={{ display: currentView === 'table' ? 'block' : 'none' }}>
-          <TasksTableIsolated />
+          <TasksTableIsolated currentView={currentView} onViewChange={handleViewChange} />
         </div>
       )}
 
@@ -131,6 +131,7 @@ export default function DataViewsContainer() {
       {mountedViews.has('kanban') && (
         <div style={{ display: currentView === 'kanban' ? 'block' : 'none' }}>
           <TasksKanban
+            currentView={currentView}
             onNewClientOpen={handleNewClientOpen}
             onEditTaskOpen={handleEditTask}
             onViewChange={handleViewChange}

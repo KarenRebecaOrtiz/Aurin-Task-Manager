@@ -7,10 +7,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: #171717;
+  background-color: #f9fafb;
 
-  :global(.light) & {
-    background-color: #f9fafb;
+  :global(.dark) & {
+    background-color: #171717;
   }
 
   /* Custom scrollbar */
@@ -23,19 +23,19 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #404040;
+    background: #d1d5db;
     border-radius: 3px;
 
-    :global(.light) & {
-      background: #d1d5db;
+    :global(.dark) & {
+      background: #404040;
     }
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: #525252;
+    background: #9ca3af;
 
-    :global(.light) & {
-      background: #9ca3af;
+    :global(.dark) & {
+      background: #525252;
     }
   }
 }

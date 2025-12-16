@@ -118,6 +118,10 @@ $error-color: #EF4444;
     color: #e5e5e5 !important;
     opacity: 1 !important;
   }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .triggerText {

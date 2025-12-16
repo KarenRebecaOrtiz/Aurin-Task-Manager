@@ -133,8 +133,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
       {/* Task Info */}
       <div className={styles.taskInfo}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className={styles.taskInfoContent}>
+          <div className={styles.titleRow}>
             <h1 className={styles.taskTitle}>{task.name}</h1>
             {!isPublicView && task.shared && <SharedBadge iconSize={14} />}
           </div>

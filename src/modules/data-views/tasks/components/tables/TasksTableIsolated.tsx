@@ -8,7 +8,12 @@ import { useTasksPageStore } from '@/stores/tasksPageStore';
 import { useOrphanedTimerCleanup } from '@/modules/chat/timer';
 import TasksTable from './TasksTable';
 
-export default function TasksTableIsolated() {
+interface TasksTableIsolatedProps {
+  currentView?: 'table' | 'kanban' | 'archive';
+  onViewChange?: (view: 'table' | 'kanban') => void;
+}
+
+export default function TasksTableIsolated({ currentView, onViewChange }: TasksTableIsolatedProps) {
   const { user } = useUser();
 
   // ✅ SOLUCIÓN: Usar directamente useDataStore para actualización inmediata
@@ -89,6 +94,8 @@ export default function TasksTableIsolated() {
       externalTasks={tasks}
       externalClients={clients}
       externalUsers={users}
+      currentView={currentView}
+      onViewChange={onViewChange}
     />
   );
 }

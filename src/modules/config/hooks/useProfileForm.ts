@@ -192,11 +192,11 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
       const savedDraft = localStorage.getItem(dataKey);
 
       if (savedDraft) {
-        console.log('[useProfileForm] Loaded draft from localStorage');
+  // ...
         return JSON.parse(savedDraft);
       }
     } catch (err) {
-      console.warn('[useProfileForm] Failed to load draft from localStorage:', err);
+  // ...
     }
     return null;
   }, [hasDraft]);
@@ -529,9 +529,9 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         const flagKey = `configFormDraft_${userId}_exists`;
         localStorage.removeItem(dataKey);
         localStorage.removeItem(flagKey);
-        console.log('[useProfileForm] localStorage cleared');
-      } catch (err) {
-        console.warn('[useProfileForm] Failed to clear localStorage:', err);
+        // ...
+      } catch {
+        // ...
       }
 
       useConfigPageStore.getState().clearTabChanges(activeTab);
@@ -540,7 +540,6 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
         onSuccessRef.current('Configuración guardada exitosamente');
       }
     } catch (error) {
-      console.error('[useProfileForm] Error saving data:', error);
       if (onErrorRef.current) {
         onErrorRef.current('Error al guardar la configuración', error instanceof Error ? error.message : 'Error desconocido');
       }
@@ -560,9 +559,9 @@ export const useProfileForm = ({ userId, onSuccess, onError }: UseProfileFormOpt
       const flagKey = `configFormDraft_${userId}_exists`;
       localStorage.removeItem(dataKey);
       localStorage.removeItem(flagKey);
-      console.log('[useProfileForm] Draft discarded');
-    } catch (err) {
-      console.warn('[useProfileForm] Failed to clear localStorage:', err);
+  // ...
+    } catch {
+      // ...
     }
 
     // Limpiar cambios del tab actual

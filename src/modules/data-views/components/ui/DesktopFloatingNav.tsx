@@ -6,11 +6,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { CirclePlus, Users } from 'lucide-react';
-import { List } from '@/components/animate-ui/icons/list';
-import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard';
+import { CirclePlus, Users, ClipboardList } from 'lucide-react';
 import { Unplug } from '@/components/animate-ui/icons/unplug';
 import { useTasksPageStore } from '@/stores/tasksPageStore';
+import { useSidebarStateStore } from '@/stores/sidebarStateStore';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -21,13 +20,12 @@ import styles from './DesktopFloatingNav.module.scss';
 
 // Route mapping for prefetch
 const VIEW_ROUTES = {
-  table: '/dashboard/tasks',
-  kanban: '/dashboard/kanban',
+  tasks: '/dashboard/tasks',
   archive: '/dashboard/archive',
   teams: '/dashboard/teams',
 } as const;
 
-type ViewType = 'table' | 'kanban' | 'archive' | 'teams';
+type ViewType = 'tasks' | 'archive' | 'teams';
 
 interface DesktopFloatingNavProps {
   currentView?: ViewType;
@@ -97,6 +95,7 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const openCreateTask = useTasksPageStore((state) => state.openCreateTask);
+  const isSidebarOpen = useSidebarStateStore((state) => state.isOpen);
   const [mounted, setMounted] = useState(false);
 
   // Mount portal
@@ -107,8 +106,7 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
 
   // 🚀 PREFETCH: Preload all view routes on mount for instant navigation
   useEffect(() => {
-    router.prefetch(VIEW_ROUTES.table);
-    router.prefetch(VIEW_ROUTES.kanban);
+    router.prefetch(VIEW_ROUTES.tasks);
     router.prefetch(VIEW_ROUTES.archive);
     router.prefetch(VIEW_ROUTES.teams);
   }, [router]);
@@ -116,10 +114,10 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
   // Determine current view from pathname if not provided
   const getViewFromPathname = useCallback((): ViewType => {
     if (currentView) return currentView;
-    if (pathname.includes('/kanban')) return 'kanban';
     if (pathname.includes('/archive')) return 'archive';
     if (pathname.includes('/teams')) return 'teams';
-    return 'table';
+    // Both /tasks and /kanban are part of "tasks" section now
+    return 'tasks';
   }, [currentView, pathname]);
 
   const [activeView, setActiveView] = useState<ViewType>(() => getViewFromPathname());
@@ -130,7 +128,7 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
     setActiveView(newView);
   }, [getViewFromPathname]);
 
-  const handleViewChange = (view: ViewType) => {
+  const handleViewChange = useCallback((view: ViewType) => {
     setActiveView(view);
 
     if (onViewChange) {
@@ -151,7 +149,19 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
         }
       }
     }
-  };
+  }, [onViewChange, activeView, router]);
+
+  const handleTasksClick = useCallback(() => {
+    handleViewChange('tasks');
+  }, [handleViewChange]);
+
+  const handleTeamsClick = useCallback(() => {
+    handleViewChange('teams');
+  }, [handleViewChange]);
+
+  const handleArchiveClick = useCallback(() => {
+    handleViewChange('archive');
+  }, [handleViewChange]);
 
   // Don't render on server or if not mounted
   if (!mounted || typeof window === 'undefined') {
@@ -162,13 +172,15 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
     <motion.nav
       className={styles.floatingNav}
       initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      animate={isSidebarOpen
+        ? { y: 100, opacity: 0, pointerEvents: 'none' as const }
+        : { y: 0, opacity: 1, pointerEvents: 'auto' as const }
+      }
       exit={{ y: 100, opacity: 0 }}
       transition={{
         type: 'spring',
-        stiffness: 260,
-        damping: 20,
-        delay: 0.1,
+        stiffness: 300,
+        damping: 25,
       }}
     >
       <motion.div
@@ -182,22 +194,31 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
           delay: 0.2,
         }}
       >
-        {/* Table View */}
+        {/* Tasks Section (includes table/kanban views) */}
         <NavButton
-          icon={<List animateOnHover className={styles.navIcon} />}
-          label="Tabla"
-          isActive={activeView === 'table'}
-          onClick={() => handleViewChange('table')}
-          tooltip="Vista de Tabla"
+          icon={<ClipboardList className={styles.navIcon} />}
+          label="Tareas"
+          isActive={activeView === 'tasks'}
+          onClick={handleTasksClick}
+          tooltip="Tareas"
         />
 
-        {/* Kanban View */}
+        {/* Teams */}
         <NavButton
-          icon={<LayoutDashboard animateOnHover className={styles.navIcon} />}
-          label="Kanban"
-          isActive={activeView === 'kanban'}
-          onClick={() => handleViewChange('kanban')}
-          tooltip="Vista Kanban"
+          icon={<Users className={styles.navIcon} />}
+          label="Teams"
+          isActive={activeView === 'teams'}
+          onClick={handleTeamsClick}
+          tooltip="Teams"
+        />
+
+        {/* Archive View */}
+        <NavButton
+          icon={<Unplug animateOnHover className={styles.navIcon} />}
+          label="Archivo"
+          isActive={activeView === 'archive'}
+          onClick={handleArchiveClick}
+          tooltip="Archivo Muerto"
         />
 
         {/* Create Task - Primary Action */}
@@ -207,24 +228,6 @@ export const DesktopFloatingNav: React.FC<DesktopFloatingNavProps> = ({
           onClick={openCreateTask}
           variant="primary"
           tooltip="Crear Nueva Tarea"
-        />
-
-        {/* Teams */}
-        <NavButton
-          icon={<Users className={styles.navIcon} />}
-          label="Teams"
-          isActive={activeView === 'teams'}
-          onClick={() => handleViewChange('teams')}
-          tooltip="Teams"
-        />
-
-        {/* Archive View */}
-        <NavButton
-          icon={<Unplug animateOnHover className={styles.navIcon} />}
-          label="Archivo"
-          isActive={activeView === 'archive'}
-          onClick={() => handleViewChange('archive')}
-          tooltip="Archivo Muerto"
         />
       </motion.div>
     </motion.nav>

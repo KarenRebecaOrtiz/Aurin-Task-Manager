@@ -42,4 +42,14 @@
       margin: 0;
     }
   }
+
+  // En viewports pequeños, ocultar el texto y mostrar solo el icono
+  @media (max-width: 480px) {
+    padding: 4px;
+    gap: 0;
+
+    span {
+      display: none;
+    }
+  }
 }
