@@ -17,6 +17,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { useDataStore, type Team } from '@/stores/dataStore';
+import { useClientsDataStore } from '@/stores/clientsDataStore';
 import { getTasks, getClients, getUsers, getTeams } from '@/services';
 import type { Task, Client, User } from '@/types';
 
@@ -153,6 +154,8 @@ export function useSharedTasksState(userId: string | undefined) {
         lastClientsHashRef.current = clientsDataString;
         setLocalClients(clientsResult.data);
         setClients(clientsResult.data);
+        // ✅ Also populate clientsDataStore for optimized hooks
+        useClientsDataStore.getState().setClients(clientsResult.data);
       }
 
       setLocalIsLoadingClients(false);
@@ -168,6 +171,8 @@ export function useSharedTasksState(userId: string | undefined) {
             lastClientsHashRef.current = freshDataString;
             setLocalClients(freshClients);
             setClients(freshClients);
+            // ✅ Also update clientsDataStore
+            useClientsDataStore.getState().setClients(freshClients);
           }
         }).catch(() => {
           // Background refresh failed - silently continue

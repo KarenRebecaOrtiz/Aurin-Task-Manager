@@ -10,13 +10,17 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSonnerToast } from '@/modules/sonner/hooks/useSonnerToast';
 import { CrudDialog } from '@/modules/dialogs/components/organisms';
+import { DestructiveConfirmDialog } from '@/modules/dialogs/components/variants';
 import { clientService } from '../services/clientService';
 import { useClientForm } from '../hooks/form/useClientForm';
 import { ClientForm } from './forms/ClientForm';
 import { ClientDialogActions } from './forms/ClientDialogActions';
 import { ClientDialogProps } from '../types/form';
 import { TOAST_MESSAGES } from '../config';
+import { phoneToStorageString, type PhoneNumber } from '../utils/validation';
 import { useDataStore } from '@/stores/dataStore';
+import { useClientsDataStore } from '@/stores/clientsDataStore';
+import { invalidateClientsCache } from '@/lib/cache-utils';
 
 export function ClientDialog({
   isOpen,
@@ -32,11 +36,17 @@ export function ClientDialog({
   const { user } = useUser();
   const { success: showSuccess, error: showError } = useSonnerToast();
 
-  // Check if user is admin
-  const isAdmin = user?.publicMetadata?.role === 'admin' || user?.publicMetadata?.role === 'Admin';
+  // Check if user is admin (check both 'role' and 'access' fields for compatibility)
+  const isAdmin =
+    user?.publicMetadata?.role === 'admin' ||
+    user?.publicMetadata?.role === 'Admin' ||
+    user?.publicMetadata?.access === 'admin' ||
+    user?.publicMetadata?.access === 'Admin';
 
   // Get clients from dataStore (already loaded, no API call needed)
   const allClients = useDataStore((state) => state.clients);
+  const setClients = useDataStore((state) => state.setClients);
+  const removeClientFromStore = useClientsDataStore((state) => state.removeClient);
 
   // Find the client data from the store
   const clientFromStore = useMemo(() => {
@@ -48,6 +58,8 @@ export function ClientDialog({
   const [mode, setMode] = useState<'create' | 'view' | 'edit'>(initialMode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Form hook
   const {
@@ -57,6 +69,8 @@ export function ClientDialog({
     updateProject,
     addProject,
     removeProject,
+    updatePhone,
+    handleRFCBlur,
     validate,
     reset: resetForm,
     getClientInitials,
@@ -91,8 +105,11 @@ export function ClientDialog({
   }, [isOpen, resetForm]);
 
   // Handle gradient selection
-  const handleGradientSelect = useCallback((gradientId: string) => {
+  const handleGradientSelect = useCallback((gradientId: string, colors?: string[]) => {
     updateField('gradientId', gradientId);
+    if (colors) {
+      updateField('gradientColors', colors);
+    }
   }, [updateField]);
 
   // Handle image upload from GradientAvatarSelector
@@ -121,8 +138,16 @@ export function ClientDialog({
     setIsSubmitting(true);
 
     try {
+      // Transform phone to storage format
+      const phoneForStorage = formData.phone
+        ? typeof formData.phone === 'string'
+          ? formData.phone
+          : phoneToStorageString(formData.phone as PhoneNumber)
+        : undefined;
+
       const clientData = {
         ...formData,
+        phone: phoneForStorage,
         projects: (formData.projects || []).filter((p) => p.trim()),
       };
 
@@ -160,6 +185,50 @@ export function ClientDialog({
     setMode('view');
     // Reload client data would go here
   }, []);
+
+  // Delete handlers
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!isAdmin || !clientId) {
+      showError('Solo los administradores pueden eliminar cuentas.');
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      // Call API to delete from Firestore
+      await clientService.deleteClient(clientId);
+
+      // Update clientsDataStore
+      removeClientFromStore(clientId);
+
+      // Update dataStore (legacy store)
+      const updatedClients = allClients.filter((c) => c.id !== clientId);
+      setClients(updatedClients);
+
+      // Invalidate cache
+      invalidateClientsCache();
+
+      showSuccess('La cuenta ha sido eliminada exitosamente.');
+
+      // Close dialogs
+      setShowDeleteConfirm(false);
+      onOpenChange(false);
+
+      // Reload to refresh the list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      showError(`Error al eliminar la cuenta: ${errorMessage}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [isAdmin, clientId, removeClientFromStore, allClients, setClients, showSuccess, showError, onOpenChange]);
 
   // Dialog title/description
   const getTitle = () => {
@@ -206,16 +275,32 @@ export function ClientDialog({
           onProjectChange={updateProject}
           onAddProject={addProject}
           onRemoveProject={removeProject}
+          onPhoneChange={updatePhone}
+          onRFCBlur={handleRFCBlur}
         />
         
         <ClientDialogActions
           mode={mode}
           isSubmitting={isSubmitting}
+          isDeleting={isDeleting}
+          isAdmin={isAdmin}
           onCancel={handleCancel}
           onSubmit={handleSubmit}
           onEdit={handleEdit}
           onCancelEdit={handleCancelEdit}
           onClose={handleDialogClose}
+          onDelete={clientId ? handleDeleteClick : undefined}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <DestructiveConfirmDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+          title="Eliminar Cuenta"
+          itemName={formData.name}
+          warningMessage="Las tareas sin cuenta asignada no aparecerán en los filtros del sistema ni podrán ser relacionadas con otras tareas hasta ser reasignadas."
+          onConfirm={handleConfirmDelete}
+          isLoading={isDeleting}
         />
       </div>
     </CrudDialog>

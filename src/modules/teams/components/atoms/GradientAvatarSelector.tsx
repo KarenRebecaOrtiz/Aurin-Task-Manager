@@ -19,7 +19,7 @@ interface GradientConfig {
 
 interface GradientAvatarSelectorProps {
   selectedGradientId: string;
-  onSelect: (gradientId: string) => void;
+  onSelect: (gradientId: string, colors?: string[]) => void;
   teamInitials?: string;
   className?: string;
   customImageUrl?: string;
@@ -215,7 +215,7 @@ export function GradientAvatarSelector({
             <button
               key={gradient.id}
               type="button"
-              onClick={() => onSelect(gradient.id)}
+              onClick={() => onSelect(gradient.id, gradient.colors)}
               className={cn(
                 styles.avatarButton,
                 isSelected && styles.selected,

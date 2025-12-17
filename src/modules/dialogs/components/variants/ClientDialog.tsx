@@ -16,6 +16,7 @@ import { ClientForm } from '@/modules/client-crud/components/forms/ClientForm';
 import { ClientDialogActions } from '@/modules/client-crud/components/forms/ClientDialogActions';
 import { ClientDialogProps } from '@/modules/client-crud/types/form';
 import { TOAST_MESSAGES } from '@/modules/client-crud/config';
+import { phoneToStorageString, type PhoneNumber } from '@/modules/client-crud/utils/validation';
 
 export function ClientDialog({
   isOpen,
@@ -143,8 +144,16 @@ export function ClientDialog({
     setIsSubmitting(true);
 
     try {
+      // Transform phone to storage format before sending to API
+      const phoneForStorage = formData.phone
+        ? typeof formData.phone === 'string'
+          ? formData.phone
+          : phoneToStorageString(formData.phone as PhoneNumber)
+        : undefined;
+
       const clientData = {
         ...formData,
+        phone: phoneForStorage,
         projects: (formData.projects || []).filter((p) => p.trim()),
       };
 

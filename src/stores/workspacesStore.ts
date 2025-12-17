@@ -25,6 +25,8 @@ export interface Workspace {
   id: string;
   name: string;
   logo?: string;
+  gradientId?: string; // Gradient identifier for avatar
+  gradientColors?: string[]; // Array of 3 gradient colors
   memberIds: string[]; // IDs de usuarios que pueden ver este workspace
   createdBy: string;
   createdAt: string;
@@ -73,6 +75,8 @@ const clientToWorkspace = (client: Client, taskCount?: number): Workspace => ({
   id: client.id,
   name: client.name,
   logo: client.imageUrl,
+  gradientId: client.gradientId,
+  gradientColors: client.gradientColors,
   memberIds: [],
   createdBy: client.createdBy || '',
   createdAt: client.createdAt || new Date().toISOString(),

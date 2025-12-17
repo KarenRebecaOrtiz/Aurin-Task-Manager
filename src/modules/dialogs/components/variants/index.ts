@@ -1,6 +1,8 @@
 // Existing variants
 export { AlertDialog } from './AlertDialog';
 export { ConfirmDialog } from './ConfirmDialog';
+export { DestructiveConfirmDialog } from './DestructiveConfirmDialog';
+export type { DestructiveConfirmDialogProps } from './DestructiveConfirmDialog';
 export { FormDialog } from './FormDialog';
 
 // New centralized variants

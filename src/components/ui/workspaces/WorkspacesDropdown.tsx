@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronsUpDown, Check, Plus, Building2, Pencil } from 'lucide-react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { GradientAvatar } from '@/components/ui/gradient-avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/AuthContext';
 import { dropdownAnimations } from '@/modules/shared/components/molecules/Dropdown/animations';
@@ -126,15 +126,14 @@ export function WorkspacesDropdown({
                   <Building2 size={18} />
                 </div>
               ) : (
-                <Avatar className={styles.avatar}>
-                  <AvatarImage
-                    src={selectedWorkspace.logo}
-                    alt={selectedWorkspace.name}
-                  />
-                  <AvatarFallback className={styles.avatarFallback}>
-                    {selectedWorkspace.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <GradientAvatar
+                  imageUrl={selectedWorkspace.logo}
+                  gradientId={selectedWorkspace.gradientId}
+                  gradientColors={selectedWorkspace.gradientColors}
+                  name={selectedWorkspace.name}
+                  className={styles.avatar}
+                  size="sm"
+                />
               )}
               <span className={styles.workspaceName}>
                 {selectedWorkspace.name}
@@ -231,15 +230,14 @@ export function WorkspacesDropdown({
                           {...dropdownAnimations.item(index + 1)}
                         >
                           <div className={styles.itemContent}>
-                            <Avatar className={styles.itemAvatar}>
-                              <AvatarImage
-                                src={workspace.logo}
-                                alt={workspace.name}
-                              />
-                              <AvatarFallback className={styles.avatarFallback}>
-                                {workspace.name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <GradientAvatar
+                              imageUrl={workspace.logo}
+                              gradientId={workspace.gradientId}
+                              gradientColors={workspace.gradientColors}
+                              name={workspace.name}
+                              className={styles.itemAvatar}
+                              size="sm"
+                            />
                             <div className={styles.itemText}>
                               <span className={styles.itemName}>{workspace.name}</span>
                               {workspace.taskCount !== undefined && (

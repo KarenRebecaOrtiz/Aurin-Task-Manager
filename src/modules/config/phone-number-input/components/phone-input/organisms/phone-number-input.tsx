@@ -166,15 +166,7 @@ export const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({
 
       {/* Input Group - Unified visual container */}
       <motion.div
-        className={cn(
-          // Unified border wrapper for cohesive look
-          "relative flex items-stretch",
-          // Rounded corners on the group
-          "rounded-lg",
-          // Focus-within ring for accessibility
-          "focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-background",
-          hasError ? "focus-within:ring-destructive" : "focus-within:ring-ring",
-        )}
+        className="relative flex items-stretch"
         animate={{
           // Subtle shake animation on error
           x: hasError && hasBlurred ? [0, -4, 4, -4, 4, 0] : 0,

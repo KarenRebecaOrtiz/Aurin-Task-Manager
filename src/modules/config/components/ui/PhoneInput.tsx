@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { CrystalInput } from '@/components/ui';
-import { CountrySelect, getCountryByDialCode, getDefaultCountry, type Country } from '../phone-input';
+import { CountrySelect, PhoneField, getCountryByDialCode, getDefaultCountry, type Country } from '../phone-input';
+import { ErrorMessage } from '@/modules/config/phone-number-input/components/phone-input/atoms/error-message';
 import styles from './PhoneInput.module.scss';
 
 interface PhoneInputProps {
@@ -27,8 +27,6 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   disabled = false,
   error,
   placeholder = 'XXX-XXX-XX-XX',
-  maxLength = 15,
-  onKeyDown,
 }) => {
   // Find country by dial code (lada)
   const currentCountry = React.useMemo(() => {
@@ -44,6 +42,13 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     onLadaChange(country.dialCode);
   };
 
+  // Extract only digits from the phone value for PhoneField
+  const rawPhoneValue = phoneValue.replace(/\D/g, '');
+
+  const handlePhoneFieldChange = (value: string) => {
+    onPhoneChange(value);
+  };
+
   return (
     <div className={styles.phoneInputWrapper}>
       {label && <div className={styles.label}>{label}</div>}
@@ -54,18 +59,17 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           disabled={disabled}
           hasError={!!error}
         />
-        <CrystalInput
-          name="phone"
-          value={phoneValue}
-          onChange={onPhoneChange}
-          placeholder={placeholder}
+        <PhoneField
+          id="config-phone"
+          value={rawPhoneValue}
+          onChange={handlePhoneFieldChange}
+          countryCode={currentCountry?.code || 'MX'}
+          hasError={!!error}
           disabled={disabled}
-          maxLength={maxLength}
-          onKeyDown={onKeyDown}
-          error={error}
-          variant="no-icon"
+          placeholder={placeholder}
         />
       </div>
+      <ErrorMessage message={error} />
     </div>
   );
 };

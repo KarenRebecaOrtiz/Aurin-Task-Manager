@@ -57,6 +57,9 @@ interface ClientsDataActions {
   // Get all clients as array
   getAllClients: () => Client[];
 
+  // Remove a client from cache (after deletion)
+  removeClient: (clientId: string) => void;
+
   // Set loading state
   setLoading: (isLoading: boolean) => void;
 
@@ -192,6 +195,22 @@ export const useClientsDataStore = create<ClientsDataStore>((set, get) => {
      */
     getAllClients: () => {
       return Array.from(get().clients.values());
+    },
+
+    /**
+     * Remove a client from cache (after deletion).
+     */
+    removeClient: (clientId: string) => {
+      const state = get();
+      const newClients = new Map(state.clients);
+      newClients.delete(clientId);
+
+      // Update SessionStorage
+      saveToSessionStorage(newClients);
+
+      set({
+        clients: newClients,
+      });
     },
 
     /**

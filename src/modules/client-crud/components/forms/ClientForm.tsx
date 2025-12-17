@@ -9,9 +9,11 @@ import { motion } from 'framer-motion';
 import { CrystalInput, CrystalTextarea, CrystalDropdown } from '@/components/ui/inputs';
 import { FormSection } from '@/modules/task-crud/components/forms/FormSection';
 import { GradientAvatarSelector } from '@/modules/teams/components/atoms';
+import { PhoneNumberInput, type PhoneNumberValue } from '@/modules/config/phone-number-input/components/phone-input';
 import { PLACEHOLDERS, INDUSTRIES } from '../../config';
 import { ClientFormData } from '../../types/form';
 import { ClientTasksTable } from '../ClientTasksTable';
+import { type PhoneNumber } from '../../utils/validation';
 import { Calendar } from 'lucide-react';
 import styles from './ClientMetadata.module.scss';
 
@@ -34,6 +36,8 @@ interface ClientFormProps {
   onProjectChange: (index: number, value: string) => void;
   onAddProject: () => void;
   onRemoveProject: (index: number) => void;
+  onPhoneChange?: (phone: PhoneNumber, isValid: boolean) => void;
+  onRFCBlur?: () => void;
 }
 
 export function ClientForm({
@@ -50,7 +54,15 @@ export function ClientForm({
   onProjectChange,
   onAddProject,
   onRemoveProject,
+  onPhoneChange,
+  onRFCBlur,
 }: ClientFormProps) {
+  // Convert phone to PhoneNumberValue format for the input component
+  const phoneValue: PhoneNumberValue | undefined = formData.phone
+    ? typeof formData.phone === 'string'
+      ? { country: formData.phoneCountry || 'MX', number: formData.phone }
+      : { country: formData.phone.country, number: formData.phone.number }
+    : undefined;
   return (
     <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
       {/* Basic Information */}
@@ -96,7 +108,7 @@ export function ClientForm({
             />
           </motion.div>
 
-          {/* Tax ID (RFC) */}
+          {/* Tax ID (RFC) - Mexican Tax ID */}
           <motion.div variants={fadeInUp} className="md:col-span-1">
             <CrystalInput
               label="RFC"
@@ -104,9 +116,12 @@ export function ClientForm({
               id="taxId"
               placeholder={PLACEHOLDERS.TAX_ID}
               value={formData.taxId || ''}
-              onChange={(value) => onFieldChange('taxId', value)}
+              onChange={(value) => onFieldChange('taxId', value.toUpperCase())}
+              onBlur={onRFCBlur}
               disabled={isReadOnly || isSubmitting}
+              error={errors.taxId}
               variant="no-icon"
+              maxLength={13}
             />
           </motion.div>
         </FormSection>
@@ -132,18 +147,33 @@ export function ClientForm({
             />
           </motion.div>
 
-          {/* Phone */}
-          <motion.div variants={fadeInUp} className="md:col-span-1">
-            <CrystalInput
-              label="Teléfono de Contacto"
-              type="tel"
-              id="phone"
-              placeholder={PLACEHOLDERS.PHONE}
-              value={formData.phone || ''}
-              onChange={(value) => onFieldChange('phone', value)}
-              disabled={isReadOnly || isSubmitting}
-              variant="no-icon"
-            />
+          {/* Phone with Country Code */}
+          <motion.div variants={fadeInUp} className="md:col-span-1 self-end">
+            {isReadOnly ? (
+              <CrystalInput
+                label="Teléfono de Contacto"
+                type="tel"
+                id="phone"
+                placeholder={PLACEHOLDERS.PHONE}
+                value={phoneValue ? `+${phoneValue.country === 'MX' ? '52' : ''} ${phoneValue.number}` : ''}
+                onChange={() => {}}
+                disabled={true}
+                variant="no-icon"
+              />
+            ) : (
+              <PhoneNumberInput
+                id="client-phone"
+                label="Teléfono de Contacto"
+                value={phoneValue}
+                onChange={(value, isValid) => {
+                  if (onPhoneChange) {
+                    onPhoneChange({ country: value.country, number: value.number }, isValid);
+                  }
+                }}
+                error={errors.phone}
+                disabled={isSubmitting}
+              />
+            )}
           </motion.div>
 
           {/* Website */}

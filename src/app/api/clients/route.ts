@@ -17,13 +17,15 @@ import { clerkClient } from '@clerk/nextjs/server';
 
 /**
  * Helper to check if user is admin
- * Note: Uses 'access' field from Clerk publicMetadata (matching AuthContext)
+ * Note: Checks both 'access' and 'role' fields from Clerk publicMetadata for compatibility
  */
 async function isAdmin(userId: string): Promise<boolean> {
   try {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
-    return user.publicMetadata?.access === 'admin' || user.publicMetadata?.access === 'Admin';
+    const access = user.publicMetadata?.access;
+    const role = user.publicMetadata?.role;
+    return access === 'admin' || access === 'Admin' || role === 'admin' || role === 'Admin';
   } catch (error) {
     console.error('[API] Error checking admin status:', error);
     return false;

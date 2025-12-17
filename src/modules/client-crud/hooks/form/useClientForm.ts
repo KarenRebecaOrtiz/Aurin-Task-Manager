@@ -5,17 +5,39 @@
 
 import { useState, useCallback } from 'react';
 import { ClientFormData } from '../../types/form';
+import {
+  validateClientForm,
+  hasValidationErrors,
+  formatRFC,
+  parsePhoneString,
+  type PhoneNumber,
+} from '../../utils/validation';
 
 interface UseClientFormProps {
   initialData?: Partial<ClientFormData>;
   onSubmit?: (data: ClientFormData) => Promise<void>;
 }
 
+/**
+ * Parse initial phone value - handle both legacy string and structured format
+ */
+function parseInitialPhone(phone?: string | PhoneNumber, phoneCountry?: string): PhoneNumber {
+  if (!phone) {
+    return { country: phoneCountry || 'MX', number: '' };
+  }
+  if (typeof phone === 'object' && 'country' in phone) {
+    return phone;
+  }
+  // Legacy string format
+  return parsePhoneString(phone, phoneCountry || 'MX');
+}
+
 export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}) {
   const [formData, setFormData] = useState<ClientFormData>({
     name: initialData?.name || '',
     email: initialData?.email || '',
-    phone: initialData?.phone || '',
+    phone: parseInitialPhone(initialData?.phone, initialData?.phoneCountry),
+    phoneCountry: initialData?.phoneCountry || 'MX',
     address: initialData?.address || '',
     industry: initialData?.industry || '',
     website: initialData?.website || '',
@@ -23,6 +45,7 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     notes: initialData?.notes || '',
     imageUrl: initialData?.imageUrl || undefined,
     gradientId: initialData?.gradientId || 'default',
+    gradientColors: initialData?.gradientColors || undefined,
     projects: initialData?.projects || [''],
     isActive: initialData?.isActive ?? true,
     createdAt: initialData?.createdAt,
@@ -74,22 +97,17 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
   }, []);
 
   const validate = useCallback((): boolean => {
-    const newErrors: Partial<Record<keyof ClientFormData, string>> = {};
+    // Use comprehensive validation from utils
+    const validationErrors = validateClientForm({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      website: formData.website,
+      taxId: formData.taxId,
+    });
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es requerido';
-    }
-
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email inválido';
-    }
-
-    if (formData.website && formData.website.trim() && !/^https?:\/\/.+/.test(formData.website)) {
-      newErrors.website = 'URL inválida (debe comenzar con http:// o https://)';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(validationErrors);
+    return !hasValidationErrors(validationErrors);
   }, [formData]);
 
   const handleSubmit = useCallback(async () => {
@@ -108,7 +126,8 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     setFormData({
       name: '',
       email: '',
-      phone: '',
+      phone: { country: 'MX', number: '' },
+      phoneCountry: 'MX',
       address: '',
       industry: '',
       website: '',
@@ -116,6 +135,7 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
       notes: '',
       imageUrl: undefined,
       gradientId: 'default',
+      gradientColors: undefined,
       projects: [''],
       isActive: true,
     });
@@ -134,6 +154,35 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     return name.slice(0, 2).toUpperCase();
   }, [formData.name]);
 
+  // Handle phone number change from PhoneNumberInput component
+  const updatePhone = useCallback((phone: PhoneNumber, isValid: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      phone,
+      phoneCountry: phone.country,
+    }));
+    // Clear phone error if valid
+    if (isValid) {
+      setErrors(prev => {
+        if (prev.phone) {
+          const { phone: _, ...rest } = prev;
+          return rest;
+        }
+        return prev;
+      });
+    }
+  }, []);
+
+  // Format RFC on blur
+  const handleRFCBlur = useCallback(() => {
+    if (formData.taxId) {
+      const formatted = formatRFC(formData.taxId);
+      if (formatted !== formData.taxId) {
+        setFormData(prev => ({ ...prev, taxId: formatted }));
+      }
+    }
+  }, [formData.taxId]);
+
   return {
     formData,
     errors,
@@ -142,6 +191,8 @@ export function useClientForm({ initialData, onSubmit }: UseClientFormProps = {}
     addProject,
     removeProject,
     updateProject,
+    updatePhone,
+    handleRFCBlur,
     validate,
     handleSubmit,
     reset,

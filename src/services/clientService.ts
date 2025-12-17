@@ -127,10 +127,25 @@ async function fetchClientsFromFirebase(requestStartTime?: number): Promise<Clie
         id: doc.id,
         name: data.name || '',
         imageUrl: data.imageUrl || '/empty-image.png',
+        gradientId: data.gradientId,
+        gradientColors: data.gradientColors,
+        // Contact information
+        email: data.email,
+        phone: data.phone,
+        phoneCountry: data.phoneCountry,
+        address: data.address,
+        industry: data.industry,
+        website: data.website,
+        taxId: data.taxId,
+        notes: data.notes,
+        isActive: data.isActive,
+        // Metadata
         projectCount: data.projectCount || 0,
         projects: data.projects || [],
         createdBy: data.createdBy || '',
         createdAt: safeTimestampToISO(data.createdAt),
+        lastModified: data.lastModified ? safeTimestampToISO(data.lastModified) : undefined,
+        lastModifiedBy: data.lastModifiedBy,
       };
     });
 

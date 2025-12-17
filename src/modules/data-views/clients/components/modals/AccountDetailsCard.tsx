@@ -17,9 +17,12 @@ import { DialogHeader } from '@/modules/shared/components/molecules';
 import { CrystalButton } from '@/modules/shared/components/atoms/CrystalButton';
 import { Label } from '@/components/ui/label';
 import { SwitchToggle } from '@/components/ui/switch-toggle';
-import { Briefcase, Calendar, User, Mail, Phone, MapPin, Building2, Tag, FileText } from 'lucide-react';
+import { Briefcase, Calendar, User, Mail, Phone, MapPin, Building2, Tag, FileText, Trash2, AlertTriangle } from 'lucide-react';
 import styles from './AccountDetailsCard.module.scss';
 import { invalidateClientsCache } from '@/lib/cache-utils';
+import { clientService } from '@/modules/client-crud/services/clientService';
+import { useClientsDataStore } from '@/stores/clientsDataStore';
+import { useDataStore } from '@/stores/dataStore';
 
 interface AccountDetailsCardProps {
   isOpen: boolean;
@@ -27,6 +30,7 @@ interface AccountDetailsCardProps {
   client?: Client | null;
   mode?: 'view' | 'edit' | 'create';
   onSave?: (client: Client) => Promise<void>;
+  onDelete?: (clientId: string) => Promise<void>;
 }
 
 type AccountDetailsCardComponentProps = AccountDetailsCardProps;
@@ -37,12 +41,19 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
   client,
   mode: initialMode = 'view',
   onSave,
+  onDelete,
 }) => {
   const { isAdmin } = useAuth();
   const { user } = useUser();
   const [mode, setMode] = useState<'view' | 'edit'>(initialMode === 'create' ? 'edit' : initialMode);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const removeClient = useClientsDataStore((state) => state.removeClient);
+  const setClients = useDataStore((state) => state.setClients);
+  const clients = useDataStore((state) => state.clients);
 
   // Form state
   const [formData, setFormData] = useState<Client>({
@@ -247,6 +258,60 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
       onClose();
     }
   }, [mode, initialMode, client, onClose]);
+
+  // Handle delete confirmation
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteConfirm(true);
+    setDeleteConfirmText('');
+  }, []);
+
+  const handleCancelDelete = useCallback(() => {
+    setShowDeleteConfirm(false);
+    setDeleteConfirmText('');
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!isAdmin || !client?.id) {
+      alert('Solo los administradores pueden eliminar cuentas.');
+      return;
+    }
+
+    if (deleteConfirmText !== 'Eliminar') {
+      alert('Por favor, escribe "Eliminar" para confirmar.');
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      // Call API to delete from Firestore
+      await clientService.deleteClient(client.id);
+
+      // Update clientsDataStore
+      removeClient(client.id);
+
+      // Update dataStore (legacy store)
+      const updatedClients = clients.filter((c) => c.id !== client.id);
+      setClients(updatedClients);
+
+      // Invalidate cache
+      invalidateClientsCache();
+
+      // Call onDelete callback if provided
+      if (onDelete) {
+        await onDelete(client.id);
+      }
+
+      // Close dialogs
+      setShowDeleteConfirm(false);
+      onClose();
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      alert('Error al eliminar la cuenta. Por favor, intenta de nuevo.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [isAdmin, client?.id, deleteConfirmText, removeClient, clients, setClients, onDelete, onClose]);
 
   const isViewMode = mode === 'view';
   const isCreateMode = initialMode === 'create';
@@ -585,22 +650,112 @@ export const AccountDetailsCard: React.FC<AccountDetailsCardComponentProps> = ({
                 </div>
 
                 <DialogFooter className={styles.dialogFooter}>
-                  <CrystalButton variant="secondary" onClick={handleCancel} disabled={isSaving}>
-                    {isViewMode ? 'Cerrar' : 'Cancelar'}
-                  </CrystalButton>
-
-                  {isViewMode && isAdmin && (
-                    <CrystalButton variant="primary" onClick={() => setMode('edit')}>
-                      Editar
+                  {/* Delete button - only for admins in edit mode, not create mode */}
+                  {!isViewMode && isAdmin && !isCreateMode && client?.id && (
+                    <CrystalButton
+                      variant="secondary"
+                      onClick={handleDeleteClick}
+                      disabled={isSaving || isDeleting}
+                      className={styles.deleteButton}
+                    >
+                      <Trash2 size={16} />
+                      Eliminar
                     </CrystalButton>
                   )}
 
-                  {!isViewMode && (
-                    <CrystalButton variant="primary" onClick={handleSave} loading={isSaving} disabled={isSaving}>
-                      {isSaving ? 'Guardando...' : 'Guardar'}
+                  <div className={styles.footerActions}>
+                    <CrystalButton variant="secondary" onClick={handleCancel} disabled={isSaving || isDeleting}>
+                      {isViewMode ? 'Cerrar' : 'Cancelar'}
                     </CrystalButton>
-                  )}
+
+                    {isViewMode && isAdmin && (
+                      <CrystalButton variant="primary" onClick={() => setMode('edit')}>
+                        Editar
+                      </CrystalButton>
+                    )}
+
+                    {!isViewMode && (
+                      <CrystalButton variant="primary" onClick={handleSave} loading={isSaving} disabled={isSaving || isDeleting}>
+                        {isSaving ? 'Guardando...' : 'Guardar'}
+                      </CrystalButton>
+                    )}
+                  </div>
                 </DialogFooter>
+
+                {/* Delete Confirmation Dialog */}
+                <AnimatePresence>
+                  {showDeleteConfirm && (
+                    <motion.div
+                      className={styles.deleteConfirmOverlay}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={handleCancelDelete}
+                    >
+                      <motion.div
+                        className={styles.deleteConfirmDialog}
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.95, opacity: 0 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className={styles.deleteConfirmHeader}>
+                          <AlertTriangle className={styles.warningIcon} size={24} />
+                          <h3>Eliminar Cuenta</h3>
+                        </div>
+
+                        <div className={styles.deleteConfirmContent}>
+                          <p className={styles.deleteWarning}>
+                            <strong>Esta acción no se puede deshacer.</strong>
+                          </p>
+                          <p>
+                            Al eliminar la cuenta <strong>&ldquo;{client?.name}&rdquo;</strong>, las tareas asociadas
+                            no serán eliminadas, pero deberán ser reasignadas manualmente a otra cuenta.
+                          </p>
+                          <p className={styles.deleteNote}>
+                            <AlertTriangle size={14} />
+                            Las tareas sin cuenta asignada no aparecerán en los filtros del sistema ni podrán
+                            ser relacionadas con otras tareas hasta ser reasignadas.
+                          </p>
+
+                          <div className={styles.deleteConfirmInput}>
+                            <label htmlFor="deleteConfirm">
+                              Escribe <strong>&ldquo;Eliminar&rdquo;</strong> para confirmar:
+                            </label>
+                            <input
+                              id="deleteConfirm"
+                              type="text"
+                              value={deleteConfirmText}
+                              onChange={(e) => setDeleteConfirmText(e.target.value)}
+                              placeholder="Eliminar"
+                              autoFocus
+                              disabled={isDeleting}
+                            />
+                          </div>
+                        </div>
+
+                        <div className={styles.deleteConfirmActions}>
+                          <CrystalButton
+                            variant="secondary"
+                            onClick={handleCancelDelete}
+                            disabled={isDeleting}
+                          >
+                            Cancelar
+                          </CrystalButton>
+                          <CrystalButton
+                            variant="primary"
+                            onClick={handleConfirmDelete}
+                            loading={isDeleting}
+                            disabled={deleteConfirmText !== 'Eliminar' || isDeleting}
+                            className={styles.deleteConfirmButton}
+                          >
+                            {isDeleting ? 'Eliminando...' : 'Confirmar Eliminación'}
+                          </CrystalButton>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </DialogContent>
             </motion.div>
           </motion.div>

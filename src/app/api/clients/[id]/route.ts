@@ -19,15 +19,16 @@ import { clerkClient } from '@clerk/nextjs/server';
 
 /**
  * Helper to check if user is admin
- * Note: Uses 'access' field from Clerk publicMetadata (matching AuthContext)
+ * Note: Checks both 'access' and 'role' fields from Clerk publicMetadata for compatibility
  */
 async function isAdmin(userId: string): Promise<boolean> {
   try {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const access = user.publicMetadata?.access;
-    console.log('[API] Checking admin status for user:', userId, 'Access:', access, 'PublicMetadata:', JSON.stringify(user.publicMetadata));
-    return access === 'admin' || access === 'Admin';
+    const role = user.publicMetadata?.role;
+    console.log('[API] Checking admin status for user:', userId, 'Access:', access, 'Role:', role, 'PublicMetadata:', JSON.stringify(user.publicMetadata));
+    return access === 'admin' || access === 'Admin' || role === 'admin' || role === 'Admin';
   } catch (error) {
     console.error('[API] Error checking admin status:', error);
     return false;
@@ -125,15 +126,25 @@ export const PUT = withAuth(async (userId, request: NextRequest, context: { para
     const updateData = validationResult.data;
 
     // Prepare updated client data
-    const updatedClient: any = {
+    // Handle undefined values for older documents that may not have all fields
+    const updatedClient: Record<string, any> = {
       ...existingClient,
       ...updateData,
       id: clientId,
-      createdBy: existingClient.createdBy, // Preserve creator
-      createdAt: existingClient.createdAt, // Preserve creation date
+      // Preserve creator or set to current user if not set (for legacy documents)
+      createdBy: existingClient.createdBy || userId,
+      // Preserve creation date or set to now if not set (for legacy documents)
+      createdAt: existingClient.createdAt || FieldValue.serverTimestamp(),
       lastModified: FieldValue.serverTimestamp(),
       lastModifiedBy: userId,
     };
+
+    // Remove undefined values to prevent Firestore errors
+    Object.keys(updatedClient).forEach(key => {
+      if (updatedClient[key] === undefined) {
+        delete updatedClient[key];
+      }
+    });
 
     // Save updated client
     await adminDb.collection('clients').doc(clientId).set(updatedClient);

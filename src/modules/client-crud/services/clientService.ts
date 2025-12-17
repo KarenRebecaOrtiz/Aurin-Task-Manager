@@ -40,6 +40,8 @@ export interface ClientFormData {
   taxId?: string;
   notes?: string;
   imageUrl?: string;
+  gradientId?: string;
+  gradientColors?: string[];
   projects?: string[];
   isActive?: boolean;
 }

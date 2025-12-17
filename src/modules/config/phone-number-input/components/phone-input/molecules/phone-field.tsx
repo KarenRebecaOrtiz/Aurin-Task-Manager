@@ -4,6 +4,7 @@ import * as React from "react"
 import { AsYouType, type CountryCode, getExampleNumber } from "libphonenumber-js"
 import examples from "libphonenumber-js/mobile/examples"
 import { cn } from "@/lib/utils"
+import styles from "./phone-field.module.scss"
 
 /**
  * PhoneField Molecule
@@ -140,24 +141,8 @@ export const PhoneField = React.forwardRef<HTMLInputElement, PhoneFieldProps>(
         aria-invalid={hasError}
         aria-describedby={ariaDescribedBy}
         className={cn(
-          // Layout - Grows to fill available space
-          "h-11 flex-1 rounded-r-lg border-y border-r px-3 py-2",
-          // Remove left border to merge with country select
-          "border-l-0",
-          // Typography
-          "text-base font-normal text-foreground",
-          "placeholder:text-muted-foreground",
-          // Background
-          "bg-background",
-          // Focus state
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          "focus-visible:ring-offset-background focus-visible:z-10",
-          // Disabled
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          // Transition
-          "transition-colors duration-200",
-          // Border color based on error state
-          hasError ? "border-destructive" : "border-input",
+          styles.phoneField,
+          hasError && styles.error,
           className,
         )}
       />

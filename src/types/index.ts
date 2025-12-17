@@ -5,16 +5,21 @@ export interface Client {
   name: string;
   imageUrl: string;
   gradientId?: string; // Gradient identifier for avatar
+  gradientColors?: string[]; // Array of 3 gradient colors (e.g., ["rgb(183, 252, 118)", "rgb(56, 76, 252)", "rgb(252, 109, 116)"])
   projects?: string[];
   projectCount?: number;
   createdBy?: string;
   createdAt?: string;
   // Extended fields for detailed client information
   email?: string;
+  /** Phone in storage format "COUNTRY:NUMBER" (e.g., "MX:5551234567") or legacy format */
   phone?: string;
+  /** ISO country code for phone (e.g., "MX", "US") */
+  phoneCountry?: string;
   address?: string;
   industry?: string;
   website?: string;
+  /** Mexican RFC (Tax ID) - 12 chars (empresa) or 13 chars (persona física) */
   taxId?: string;
   notes?: string;
   isActive?: boolean;

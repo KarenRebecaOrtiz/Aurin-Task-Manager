@@ -11,6 +11,8 @@ export {
   type PhoneNumberValue,
   CountrySelect,
   type CountrySelectProps,
+  PhoneField,
+  type PhoneFieldProps,
   FlagIcon,
   type FlagIconProps,
   countries,
